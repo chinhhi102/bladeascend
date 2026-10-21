@@ -50,6 +50,8 @@ func main() {
 		run(mg, jobs, assets, runOpts{conc: *conc, redo: *redo, limit: *limit})
 	case "prep":
 		prepAll(jobs, assets)
+	case "status":
+		writeStatus(jobs, assets, filepath.Join(filepath.Dir(assets), "docs", "ASSETS_STATUS.md"))
 	default:
 		log.Fatalf("unknown command %q", os.Args[1])
 	}
@@ -77,6 +79,40 @@ func matchesAny(name, list string) bool {
 }
 
 func rawPath(assets string, j Job) string { return filepath.Join(assets, "_raw", j.Name+".png") }
+
+// writeStatus lists which art exists and which is still a placeholder (M6 deliverable).
+func writeStatus(jobs []Job, assets, out string) {
+	var done, missing []string
+	for _, j := range jobs {
+		line := fmt.Sprintf("| `%s` | p%d | %s |", j.Name, j.Priority, jobOutputs(j))
+		if _, err := os.Stat(rawPath(assets, j)); err == nil {
+			done = append(done, line)
+		} else {
+			missing = append(missing, line)
+		}
+	}
+	var b strings.Builder
+	b.WriteString("# Tình trạng art\n\nTạo lại file này: `cd server && go run ./cmd/artgen status`.\n")
+	b.WriteString("Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.\n")
+	b.WriteString("Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.\n\n")
+	fmt.Fprintf(&b, "## Còn thiếu (%d ảnh)\n\n| Job | Ưu tiên | Ra file |\n|---|---|---|\n%s\n\n", len(missing), strings.Join(missing, "\n"))
+	fmt.Fprintf(&b, "## Đã có (%d ảnh)\n\n| Job | Ưu tiên | Ra file |\n|---|---|---|\n%s\n", len(done), strings.Join(done, "\n"))
+	if err := os.WriteFile(out, []byte(b.String()), 0o644); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%d done, %d missing → %s\n", len(done), len(missing), out)
+}
+
+func jobOutputs(j Job) string {
+	if j.Mode != modeSheet {
+		return j.Out
+	}
+	var parts []string
+	for _, s := range j.Segs {
+		parts = append(parts, fmt.Sprintf("%s (%s ×%d)", s.Out, s.Anim, s.Frames))
+	}
+	return strings.Join(parts, ", ")
+}
 
 func plan(jobs []Job, assets string) {
 	done := 0

@@ -23,6 +23,8 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			for i := 0; i < max(1, d.N); i++ {
 				r.G.AddSword(p)
 			}
+		case "die":
+			r.G.DebugKill(p)
 		case "buff":
 			if d.N >= 0 && d.N < game.BuffCount {
 				r.G.ApplyBuff(p, game.BuffNames[d.N])

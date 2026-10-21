@@ -40,6 +40,7 @@ export class Hud {
       this.banner,
       h('div', 'corner', this.ping, mute),
       this.debugHelp,
+      h('div', 'rotate-hint', STR.rotateHint),
     );
     this.debugHelp.style.display = 'none';
   }

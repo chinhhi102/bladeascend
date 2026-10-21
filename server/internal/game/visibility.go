@@ -17,10 +17,13 @@ func (g *Game) InView(viewer *Player, pos Vec) bool {
 // CanSee applies stealth and bush hiding (spec §6, §8.3). Hidden players are never sent
 // to viewers who cannot see them, so a modified client cannot reveal them.
 func (g *Game) CanSee(viewer, target *Player) bool {
+	if target.Dead && g.Time-target.DiedAt > g.Cfg.Player.DeathAnimSecs {
+		return false // corpses stay visible only while the death animation plays
+	}
 	if viewer == target {
 		return true
 	}
-	if target.Dead || target.Hidden(g.Time) || !g.InView(viewer, target.Pos) {
+	if target.Hidden(g.Time) || !g.InView(viewer, target.Pos) {
 		return false
 	}
 	d := viewer.Pos.Dist(target.Pos)

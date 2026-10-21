@@ -109,6 +109,15 @@ func (g *Game) kill(a, b *Player) {
 	g.emit(Event{Kind: "KillFeed", Global: true, S: feed, A: a.ID, B: b.ID})
 }
 
+// DebugKill kills a player without an attacker (debug key only).
+func (g *Game) DebugKill(b *Player) {
+	g.dropDeathSwords(b)
+	b.Dead, b.DiedAt, b.KilledBy, b.Moving = true, g.Time, 0, false
+	b.KillerName, b.KillerChar = "", ""
+	g.setMood(b, MoodDeath, g.Cfg.Player.DeathAnimSecs)
+	g.emit(Event{Kind: "Death", B: b.ID, X: float32(b.Pos.X), Y: float32(b.Pos.Y)})
+}
+
 // resolveSwordSword applies spec §5.2 to every pair of overlapping rings.
 func (g *Game) resolveSwordSword() {
 	players := g.PlayerList()

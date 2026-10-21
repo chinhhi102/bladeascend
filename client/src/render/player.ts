@@ -178,6 +178,7 @@ export class PlayerSprite {
     }
     this.root.alpha = a;
     this.ring.alpha = flags & FLAG.stealth ? 0.45 : 1;
+    this.ring.visible = !(flags & FLAG.dead);
   }
 
   // ---- sword ring ----------------------------------------------------------

@@ -19,6 +19,7 @@ const DEBUG_KEYS: Record<string, Record<string, unknown>> = {
   KeyE: { cmd: 'exp', n: 100 },
   KeyR: { cmd: 'realm', n: 0 },
   KeyK: { cmd: 'sword', n: 1 },
+  KeyX: { cmd: 'die', n: 0 },
 };
 
 /** fpsCap: 60 on PC, 45 on phones to save battery; override with ?fps=30 (M7). */
