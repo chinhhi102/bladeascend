@@ -52,12 +52,27 @@ func whiteness(c color.NRGBA) float64 {
 // removeBackground picks the keying method from the corner colour: flat magenta (current
 // prompts, ART_PROMPTS §5.1) or white (images generated before the switch).
 func removeBackground(img *image.NRGBA) {
-	defer eraseGridLines(img)
-	if isMagenta(img.NRGBAAt(2, 2)) && isMagenta(img.NRGBAAt(img.Bounds().Dx()-3, img.Bounds().Dy()-3)) {
+	if magentaShare(img) > 0.15 {
 		removeMagenta(img)
 		return
 	}
 	removeWhite(img)
+}
+
+// magentaShare samples the image and returns the fraction of clearly magenta pixels; corners
+// alone are unreliable because some sheets have a cell border drawn on the image edge.
+func magentaShare(img *image.NRGBA) float64 {
+	b := img.Bounds()
+	n, m := 0, 0
+	for y := b.Min.Y; y < b.Max.Y; y += 7 {
+		for x := b.Min.X; x < b.Max.X; x += 7 {
+			n++
+			if isMagenta(img.NRGBAAt(x, y)) {
+				m++
+			}
+		}
+	}
+	return float64(m) / float64(max(n, 1))
 }
 
 func magentaStrength(c color.NRGBA) float64 {
@@ -73,7 +88,11 @@ func isMagenta(c color.NRGBA) bool {
 func removeMagenta(img *image.NRGBA) {
 	b := img.Bounds()
 	w, h := b.Dx(), b.Dy()
-	bg := floodFrom(img, w, h, isMagenta)
+	// Seed from the border and from every strongly magenta pixel: grid borders can wall cells
+	// off from the image edge.
+	bg := floodFromSeeds(img, w, h, isMagenta, func(c color.NRGBA) bool {
+		return magentaStrength(c) > 200 && c.R > 220 && c.B > 220
+	})
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			c := img.NRGBAAt(x, y)
@@ -118,6 +137,35 @@ func unmixMagenta(c color.NRGBA, a float64) color.NRGBA {
 }
 
 func geomClamp(v, lo, hi float64) float64 { return math.Max(lo, math.Min(hi, v)) }
+
+// floodFromSeeds is floodFrom plus extra seed pixels anywhere in the image.
+func floodFromSeeds(img *image.NRGBA, w, h int, pred, seed func(color.NRGBA) bool) []bool {
+	bg := floodFrom(img, w, h, pred)
+	stack := []int{}
+	for i := range bg {
+		if !bg[i] && seed(img.NRGBAAt(i%w, i/w)) {
+			bg[i] = true
+			stack = append(stack, i)
+		}
+	}
+	for len(stack) > 0 {
+		i := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		x, y := i%w, i/w
+		for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+			nx, ny := x+d[0], y+d[1]
+			if nx < 0 || ny < 0 || nx >= w || ny >= h {
+				continue
+			}
+			j := ny*w + nx
+			if !bg[j] && pred(img.NRGBAAt(nx, ny)) {
+				bg[j] = true
+				stack = append(stack, j)
+			}
+		}
+	}
+	return bg
+}
 
 // floodFrom marks pixels matching pred that are connected to the image border.
 func floodFrom(img *image.NRGBA, w, h int, pred func(color.NRGBA) bool) []bool {
@@ -296,38 +344,54 @@ func lineHasInk(img *image.NRGBA, r image.Rectangle, vertical bool, i int) bool 
 }
 
 // eraseGridLines clears straight dark lines that cross almost the whole image (cell borders
-// some tools draw despite the prompt); they would glue every frame into one blob.
-func eraseGridLines(img *image.NRGBA) {
+// some tools draw despite the prompt) and returns the y positions of the horizontal ones, which
+// are reliable row boundaries, plus the x positions of full-height vertical ones (cell borders).
+func eraseGridLines(img *image.NRGBA) ([]int, []int) {
 	b := img.Bounds()
 	w, h := b.Dx(), b.Dy()
 	dark := func(x, y int) bool {
 		c := img.NRGBAAt(x, y)
 		return c.A > 128 && int(c.R)+int(c.G)+int(c.B) < 3*90
 	}
+	var cols, rows []int
 	for x := 0; x < w; x++ {
-		n := 0
-		for y := 0; y < h; y++ {
-			if dark(x, y) {
-				n++
-			}
-		}
-		if float64(n) > 0.8*float64(h) {
-			for y := 0; y < h; y++ {
-				img.SetNRGBA(x, y, color.NRGBA{})
-			}
+		if countLine(h, func(i int) bool { return dark(x, i) }) > 0.8*float64(h) {
+			cols = append(cols, x)
 		}
 	}
 	for y := 0; y < h; y++ {
-		n := 0
-		for x := 0; x < w; x++ {
-			if dark(x, y) {
-				n++
-			}
+		if countLine(w, func(i int) bool { return dark(i, y) }) > 0.8*float64(w) {
+			rows = append(rows, y)
 		}
-		if float64(n) > 0.8*float64(w) {
-			for x := 0; x < w; x++ {
-				img.SetNRGBA(x, y, color.NRGBA{})
+	}
+	// Clear 2 px around each line as well: anti-aliased edges would leave a faint border.
+	for _, x := range cols {
+		for dx := -2; dx <= 2; dx++ {
+			for y := 0; y < h; y++ {
+				if x+dx >= 0 && x+dx < w {
+					img.SetNRGBA(x+dx, y, color.NRGBA{})
+				}
 			}
 		}
 	}
+	for _, y := range rows {
+		for dy := -2; dy <= 2; dy++ {
+			for x := 0; x < w; x++ {
+				if y+dy >= 0 && y+dy < h {
+					img.SetNRGBA(x, y+dy, color.NRGBA{})
+				}
+			}
+		}
+	}
+	return rows, cols
+}
+
+func countLine(n int, dark func(int) bool) float64 {
+	c := 0
+	for i := 0; i < n; i++ {
+		if dark(i) {
+			c++
+		}
+	}
+	return float64(c)
 }

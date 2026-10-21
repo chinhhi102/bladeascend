@@ -34,6 +34,37 @@ function fitSprite(tex: Texture, s: Shape): Sprite {
   return sp;
 }
 
+const TILE_MIN = 120; // smallest drawn obstacle piece, world units
+const TILE_PER_THICKNESS = 2.4; // a 3/4-view piece is drawn taller than its footprint
+const TILE_OVERLAP = 0.85; // neighbouring pieces overlap a little so long walls look continuous
+
+/**
+ * tiledObstacle keeps the art's aspect ratio and repeats it along long fences/walls,
+ * standing each piece on the hitbox like a 3/4 view, instead of stretching one image.
+ */
+function tiledObstacle(tex: Texture, s: Shape): Container {
+  const b = bounds(s);
+  const horizontal = b.w >= b.h;
+  const long = horizontal ? b.w : b.h;
+  const thick = horizontal ? b.h : b.w;
+  const size = Math.min(Math.max(thick * TILE_PER_THICKNESS, TILE_MIN), long / ART_FILL);
+  const n = Math.max(1, Math.round(long / (size * TILE_OVERLAP)));
+  const c = new Container();
+  for (let i = 0; i < n; i++) {
+    const sp = new Sprite(tex);
+    sp.anchor.set(0.5, 0.95);
+    sp.width = sp.height = size;
+    const t = (i + 0.5) / n;
+    if (horizontal) {
+      sp.position.set(b.x + b.w * t, b.y + b.h);
+    } else {
+      sp.position.set(b.x + b.w / 2, b.y + b.h * ((i + 1) / n));
+    }
+    c.addChild(sp);
+  }
+  return c;
+}
+
 type ObstacleLook = 'intact' | 'cracked' | 'nearly_broken' | 'rubble';
 
 interface ObstacleNode {
@@ -259,7 +290,7 @@ export class MapView {
   private obstacleArt(o: MapObstacle, look: ObstacleLook, frac: number): Container {
     const tex = assets.texture(`obstacles/${o.k}/${look}.png`);
     if (tex) {
-      return fitSprite(tex, o.s);
+      return o.s.c ? fitSprite(tex, o.s) : tiledObstacle(tex, o.s);
     }
     // Placeholder: indestructible walls keep their colour; breakable ones show HP as colour.
     const color = o.hp > 0 ? hpColor(frac) : OBSTACLE_COLOR[o.k] ?? 0x5b6b5b;

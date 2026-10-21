@@ -304,16 +304,18 @@ func decorID(d string) string {
 	return strings.ReplaceAll(d, " ", "_")
 }
 
+// Obstacle canvases are square: the client keeps the art's aspect and repeats it along long
+// fences and walls instead of stretching it to the hitbox.
 var obstacles = []struct {
 	id, desc string
 	w, h     int
 }{
-	{"fence", "a straight horizontal bamboo fence segment tied with rope", 1024, 256},
+	{"fence", "a straight horizontal bamboo fence segment tied with rope", 512, 512},
 	{"stall", "a street market stall with a striped canopy and fruit baskets", 512, 512},
 	{"cart", "a wooden street food cart with a small stove", 512, 512},
-	{"brick", "a short horizontal red brick wall segment with moss", 1024, 512},
+	{"brick", "a short horizontal red brick wall segment with moss", 512, 512},
 	{"boulder", "a huge round grey boulder with cartoon crack lines", 1024, 1024},
-	{"stone_wall", "an ancient mossy horizontal stone wall with carved patterns", 1024, 512},
+	{"stone_wall", "an ancient mossy horizontal stone wall with carved patterns", 512, 512},
 }
 
 func obstacleJobs() []Job {

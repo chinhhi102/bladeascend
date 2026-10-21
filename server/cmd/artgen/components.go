@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"image/color"
 	"image/draw"
 	"log"
 	"sort"
@@ -138,8 +139,24 @@ func isolate(img *image.NRGBA, band image.Rectangle, labels []int32, ids []int32
 	return tight
 }
 
-// rowFrames cuts one sheet row into frame images.
+// rowFrames cuts one sheet row into frame images. When the row has drawn cell borders, each
+// cell is one frame; otherwise frames are found by connected pixel regions.
 func rowFrames(img *image.NRGBA, band image.Rectangle, w rowWant) []*image.NRGBA {
+	cells := cellsBetween(img, band, w.cutXs)
+	if len(cells) < 2 {
+		cells = gridCells(img, band)
+	}
+	if len(cells) > 1 {
+		debugf("  grid row: %d cells", len(cells))
+		labels, _ := labelBand(img, band)
+		var out []*image.NRGBA
+		for _, c := range cells {
+			if f := isolateAll(img, band, labels, c); f != nil {
+				out = append(out, f)
+			}
+		}
+		return out
+	}
 	labels, blobs := labelBand(img, band)
 	groups := groupBlobs(blobs, w.n)
 	cols := make([][2]int, len(groups))
@@ -199,4 +216,73 @@ func sum(xs []int) int {
 		t += x
 	}
 	return t
+}
+
+// gridCells finds vertical border lines inside a band, erases them and returns the cells
+// between them (band-relative). Returns nil when the band has no borders.
+func gridCells(img *image.NRGBA, band image.Rectangle) []image.Rectangle {
+	h := band.Dy()
+	var xs []int
+	for x := band.Min.X; x < band.Max.X; x++ {
+		n := countLine(h, func(i int) bool {
+			c := img.NRGBAAt(x, band.Min.Y+i)
+			return c.A > 128 && int(c.R)+int(c.G)+int(c.B) < 3*90
+		})
+		if n > 0.85*float64(h) {
+			xs = append(xs, x-band.Min.X)
+		}
+	}
+	if len(xs) == 0 {
+		return nil
+	}
+	for _, x := range xs {
+		for dx := -2; dx <= 2; dx++ {
+			if x+dx < 0 || x+dx >= band.Dx() {
+				continue
+			}
+			for y := band.Min.Y; y < band.Max.Y; y++ {
+				img.SetNRGBA(band.Min.X+x+dx, y, color.NRGBA{})
+			}
+		}
+	}
+	return cellsBetween(img, band, xs)
+}
+
+// cellsBetween splits a band at the given x positions (band-relative) into inked cells.
+func cellsBetween(img *image.NRGBA, band image.Rectangle, xs []int) []image.Rectangle {
+	if len(xs) == 0 {
+		return nil
+	}
+	h := band.Dy()
+	cuts := []int{0}
+	for i, x := range xs {
+		if i == 0 || x-xs[i-1] > 2 {
+			cuts = append(cuts, x)
+		}
+	}
+	cuts = append(cuts, band.Dx())
+	var cells []image.Rectangle
+	for i := 0; i+1 < len(cuts); i++ {
+		r := image.Rect(cuts[i], 0, cuts[i+1], h)
+		if !alphaBBox(img, r.Add(band.Min)).Empty() {
+			cells = append(cells, r)
+		}
+	}
+	return cells
+}
+
+// isolateAll copies every drawn pixel inside clip (band-relative) into a tight image.
+func isolateAll(img *image.NRGBA, band image.Rectangle, labels []int32, clip image.Rectangle) *image.NRGBA {
+	seen := map[int32]bool{}
+	var ids []int32
+	w := band.Dx()
+	for y := clip.Min.Y; y < clip.Max.Y; y++ {
+		for x := clip.Min.X; x < clip.Max.X; x++ {
+			if l := labels[y*w+x]; l != 0 && !seen[l] {
+				seen[l] = true
+				ids = append(ids, l)
+			}
+		}
+	}
+	return isolate(img, band, labels, ids, clip)
 }

@@ -4,7 +4,7 @@ import { sound } from './audio/sound';
 import { type GameConfig, levelThresholds, loadConfig } from './config';
 import { Input } from './input';
 import { Conn } from './net/conn';
-import type { DeadMsg, GameMap, ServerMsg, Welcome } from './net/protocol';
+import type { DeadMsg, GameMap, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
 import { GameScene } from './render/scene';
@@ -41,6 +41,10 @@ class App {
   private readonly thresholds: number[];
   private profile: Profile | null = null;
   private playing = false;
+  // Snapshots that arrive while the map is still loading: the first ones carry names and
+  // characters (sent only once per player), so they must not be dropped.
+  private joining = false;
+  private early: Snapshot[] = [];
   private debug = false;
 
   constructor(private readonly cfg: GameConfig, private readonly overlay: HTMLElement, stage: HTMLElement) {
@@ -100,15 +104,13 @@ class App {
       case 'welcome':
         void this.onWelcome(m);
         break;
-      case 'snap': {
-        if (!this.playing) {
-          return;
+      case 'snap':
+        if (this.joining) {
+          this.early.push(m);
+        } else if (this.playing) {
+          this.applySnapshot(m);
         }
-        const events = this.world.applySnapshot(m);
-        this.scene.handleEvents(events);
-        this.hud.onEvents(events, this.world.myId);
         break;
-      }
       case 'lb':
         this.hud.setLeaderboard(m, this.world.myId);
         break;
@@ -127,7 +129,15 @@ class App {
     }
   }
 
+  private applySnapshot(m: Snapshot): void {
+    const events = this.world.applySnapshot(m);
+    this.scene.handleEvents(events);
+    this.hud.onEvents(events, this.world.myId);
+  }
+
   private async onWelcome(w: Welcome): Promise<void> {
+    this.joining = true;
+    this.early = [];
     const res = await fetch(`/api/map/${w.map}`);
     const map = (await res.json()) as GameMap;
     this.world.reset(w, map);
@@ -137,6 +147,11 @@ class App {
     this.screens.show(null);
     this.overlay.appendChild(this.hud.root);
     this.playing = true;
+    this.joining = false;
+    for (const snap of this.early) {
+      this.applySnapshot(snap);
+    }
+    this.early = [];
     this.input.enabled = true;
     sound.play('respawn');
   }

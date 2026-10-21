@@ -5,12 +5,19 @@ import (
 	"kiemxoay/server/internal/netproto"
 )
 
-const leaderboardTop = 10
+const (
+	leaderboardTop = 10
+	nameResendSecs = 2.0
+)
 
 // broadcast sends each client a snapshot filtered by its area of interest (spec §13.3).
 func (r *Room) broadcast() {
 	events := r.pending
 	r.pending = nil
+	r.namesDue = r.G.Time-r.namesAt >= nameResendSecs
+	if r.namesDue {
+		r.namesAt = r.G.Time
+	}
 	r.sendFeeds(events)
 	for id, c := range r.clients {
 		viewer, ok := r.G.Players[id]
@@ -25,12 +32,15 @@ func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) 
 	g := r.G
 	s := netproto.Snapshot{T: "snap", Tick: r.tick, Time: g.Time, Ack: viewer.LastSeq}
 	seen := map[uint32]bool{}
+	// Names go out the first time a client sees a player, and again every couple of seconds
+	// so a client that missed the first packet still recovers.
+	resendNames := r.namesDue
 	for _, p := range g.PlayerList() {
 		if !g.CanSee(viewer, p) {
 			continue
 		}
 		seen[p.ID] = true
-		s.Players = append(s.Players, playerState(g, p, !c.knownPlayers[p.ID]))
+		s.Players = append(s.Players, playerState(g, p, resendNames || !c.knownPlayers[p.ID]))
 		c.knownPlayers[p.ID] = true
 	}
 	for id := range c.knownPlayers {

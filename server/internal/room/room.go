@@ -45,6 +45,8 @@ type Room struct {
 	closed    bool
 	snapEvery float64
 	snapAcc   float64
+	namesAt   float64
+	namesDue  bool
 }
 
 func newRoom(id string, cfg *config.Config, m *world.Map, mgr *Manager, rec Recorder, seed int64) *Room {

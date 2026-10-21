@@ -54,6 +54,7 @@ func prepJob(j Job, raw, assets string) error {
 		return savePNG(out, resize(img, coverRect(img.Bounds(), j.W, j.H), j.W, j.H))
 	case modeSprite:
 		removeBackground(img)
+		_, _ = eraseGridLines(img)
 		box := alphaBBox(img, img.Bounds())
 		if box.Empty() {
 			return fmt.Errorf("empty image after background removal")
@@ -101,19 +102,16 @@ func rowLayout(j Job) [][]rowPart {
 // by a single animation keeps however many frames the model actually drew.
 func prepSheet(img *image.NRGBA, j Job, assets string) error {
 	removeBackground(img)
-	layout := rowLayout(j)
-	frames := make([][]*image.NRGBA, len(j.Segs))
-	for r, row := range sheetRows(img, j.Rows) {
-		fi := 0
-		for _, part := range layout[r] {
-			n := part.count
-			if len(layout[r]) == 1 {
-				n = len(row)
-			}
-			for k := 0; k < n && fi < len(row); k, fi = k+1, fi+1 {
-				frames[part.seg] = append(frames[part.seg], row[fi])
-			}
-		}
+	gridRows, gridCols := eraseGridLines(img)
+	rows := sheetRows(img, j.Rows, gridLines{rows: gridRows, cols: gridCols})
+	var frames [][]*image.NRGBA
+	if len(rows) == len(j.Rows) {
+		frames = assignByRow(j, rows)
+	} else {
+		// The model used a different row layout: read frames in order and give each
+		// animation its expected count (the last one keeps any extras).
+		debugf("  %d rows found, %d expected → reading order", len(rows), len(j.Rows))
+		frames = assignInOrder(j, rows)
 	}
 	scales := sharedScales(j, frames)
 	for si, sg := range j.Segs {
@@ -136,20 +134,97 @@ func prepSheet(img *image.NRGBA, j Job, assets string) error {
 	return nil
 }
 
-// sheetRows splits the sheet into row bands and each band into isolated frame images.
-func sheetRows(img *image.NRGBA, rows []int) [][]*image.NRGBA {
+// assignByRow gives each row's frames to the animations laid out on it; a row owned by one
+// animation keeps however many frames the model drew.
+func assignByRow(j Job, rows [][]*image.NRGBA) [][]*image.NRGBA {
+	layout := rowLayout(j)
+	frames := make([][]*image.NRGBA, len(j.Segs))
+	for r, row := range rows {
+		fi := 0
+		for _, part := range layout[r] {
+			n := part.count
+			if len(layout[r]) == 1 {
+				n = len(row)
+			}
+			for k := 0; k < n && fi < len(row); k, fi = k+1, fi+1 {
+				frames[part.seg] = append(frames[part.seg], row[fi])
+			}
+		}
+	}
+	return frames
+}
+
+func assignInOrder(j Job, rows [][]*image.NRGBA) [][]*image.NRGBA {
+	var all []*image.NRGBA
+	for _, r := range rows {
+		all = append(all, r...)
+	}
+	frames := make([][]*image.NRGBA, len(j.Segs))
+	for si, sg := range j.Segs {
+		n := sg.Frames
+		if si == len(j.Segs)-1 {
+			n = len(all)
+		}
+		n = min(n, len(all))
+		frames[si], all = all[:n], all[n:]
+	}
+	return frames
+}
+
+// sheetRows splits the sheet into row bands (grid lines when present, else empty gaps) and
+// each band into isolated frame images. It never invents rows the model did not draw.
+// gridLines are cell borders found (and erased) in the image.
+type gridLines struct{ rows, cols []int }
+
+func sheetRows(img *image.NRGBA, rows []int, grid gridLines) [][]*image.NRGBA {
 	b := img.Bounds()
 	raw := spans(img, b, false, minSheetGap)
-	bands := fitSpans(raw, len(rows), b.Dy())
+	if len(grid.rows) > 0 {
+		raw = bandsBetweenLines(img, grid.rows)
+	}
+	bands := raw
+	if len(raw) > len(rows) {
+		bands = fitSpans(raw, len(rows), b.Dy())
+	}
 	debugf("row spans %v → %v", raw, bands)
 	rects := make([]image.Rectangle, len(bands))
 	for i, rs := range bands {
 		rects[i] = image.Rect(b.Min.X, b.Min.Y+rs[0], b.Max.X, b.Min.Y+rs[1])
 	}
-	single := singleFrameWidth(groupWidths(img, rects, rows))
+	want := func(i int) int {
+		if len(rects) == len(rows) {
+			return rows[i]
+		}
+		return rows[min(i, len(rows)-1)] // layout differs: use a neighbouring row's count as a hint
+	}
+	hints := make([]int, len(rects))
+	for i := range hints {
+		hints[i] = want(i)
+	}
+	single := singleFrameWidth(groupWidths(img, rects, hints))
 	out := make([][]*image.NRGBA, len(rects))
 	for i, band := range rects {
-		out[i] = rowFrames(img, band, rowWant{n: rows[i], single: single})
+		out[i] = rowFrames(img, band, rowWant{n: hints[i], single: single, cutXs: grid.cols})
+	}
+	return out
+}
+
+// bandsBetweenLines turns grid-line y positions into the inked bands between them.
+func bandsBetweenLines(img *image.NRGBA, ys []int) [][2]int {
+	b := img.Bounds()
+	cuts := []int{0}
+	for i, y := range ys {
+		if i == 0 || y-ys[i-1] > 2 {
+			cuts = append(cuts, y)
+		}
+	}
+	cuts = append(cuts, b.Dy())
+	var out [][2]int
+	for i := 0; i+1 < len(cuts); i++ {
+		r := image.Rect(b.Min.X, b.Min.Y+cuts[i], b.Max.X, b.Min.Y+cuts[i+1])
+		if !alphaBBox(img, r).Empty() {
+			out = append(out, [2]int{cuts[i], cuts[i+1]})
+		}
 	}
 	return out
 }
@@ -242,6 +317,7 @@ func singleFrameWidth(rows [][][2]int) float64 {
 }
 
 type rowWant struct {
+	cutXs  []int // full-height cell borders already erased from the image
 	n      int
 	single float64 // estimated width of one frame
 }
@@ -257,7 +333,9 @@ func framesPerSpan(cols [][2]int, w rowWant) []int {
 		est += counts[i]
 		total += c[1] - c[0]
 	}
-	if est == w.n || est < w.n-1 || est > w.n+1 || w.n < len(cols) {
+	// Only force the requested count when some span really holds touching frames; if every
+	// span is a single frame, the model simply drew fewer frames — keep them whole.
+	if est == len(cols) || est == w.n || est < w.n-1 || est > w.n+1 || w.n < len(cols) {
 		return counts
 	}
 	// Largest-remainder split of w.n frames proportional to span width, at least 1 each.

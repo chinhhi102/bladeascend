@@ -4,31 +4,10 @@ Tạo lại file này: `cd server && go run ./cmd/artgen status`.
 Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.
 Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.
 
-## Còn thiếu (157 ảnh)
+## Còn thiếu (136 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
-| `char_cu_rua_run` | p1 | characters/cu_rua/frames (run ×8) |
-| `mon_banh_bao_cau` | p1 | monsters/banh_bao_cau/frames (idle ×4), monsters/banh_bao_cau/frames (hurt ×2), monsters/banh_bao_cau/frames (death ×6) |
-| `mon_dep_lao` | p1 | monsters/dep_lao/frames (idle ×4), monsters/dep_lao/frames (hurt ×2), monsters/dep_lao/frames (death ×6) |
-| `mon_noi_com` | p1 | monsters/noi_com/frames (idle ×4), monsters/noi_com/frames (hurt ×2), monsters/noi_com/frames (death ×6) |
-| `mon_ga_hoang` | p1 | monsters/ga_hoang/frames (idle ×4), monsters/ga_hoang/frames (hurt ×2), monsters/ga_hoang/frames (death ×6) |
-| `mon_muoi` | p1 | monsters/muoi/frames (idle ×4), monsters/muoi/frames (hurt ×2), monsters/muoi/frames (death ×6) |
-| `mon_vua_ghe` | p1 | monsters/vua_ghe/frames (idle ×4), monsters/vua_ghe/frames (hurt ×2), monsters/vua_ghe/frames (death ×6) |
-| `tile_grass` | p1 | tiles/grass.png |
-| `tile_concrete` | p1 | tiles/concrete.png |
-| `tile_dirt` | p1 | tiles/dirt.png |
-| `tile_mud` | p1 | tiles/mud.png |
-| `zone_bush` | p1 | zones/bush.png |
-| `obs_fence_states` | p1 | obstacles/fence (states ×4) |
-| `obs_stall_states` | p1 | obstacles/stall (states ×4) |
-| `obs_cart_states` | p1 | obstacles/cart (states ×4) |
-| `obs_brick_states` | p1 | obstacles/brick (states ×4) |
-| `obs_boulder_states` | p1 | obstacles/boulder (states ×4) |
-| `obs_stone_wall_states` | p1 | obstacles/stone_wall (states ×4) |
-| `gate_purple` | p1 | gates/purple (idle ×6), gates/purple (warn ×4), gates/purple (burst ×6) |
-| `gate_blue` | p1 | gates/blue (idle ×6), gates/blue (warn ×4), gates/blue (burst ×6) |
-| `gate_orange` | p1 | gates/orange (idle ×6), gates/orange (warn ×4), gates/orange (burst ×6) |
 | `chest` | p2 | items/chest (idle ×4), items/chest (open ×6) |
 | `char_a_hon_hit` | p2 | characters/a_hon/frames (hit ×4) |
 | `char_a_hon_death` | p2 | characters/a_hon/frames (death ×8) |
@@ -166,7 +145,7 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_shipper_ref` | p9 | characters/shipper/ref_sheet.png |
 | `char_cu_rua_ref` | p9 | characters/cu_rua/ref_sheet.png |
 
-## Đã có (39 ảnh)
+## Đã có (60 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
@@ -209,3 +188,24 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_shipper_idle` | p1 | characters/shipper/frames (idle ×4) |
 | `char_shipper_run` | p1 | characters/shipper/frames (run ×8) |
 | `char_cu_rua_idle` | p1 | characters/cu_rua/frames (idle ×4) |
+| `char_cu_rua_run` | p1 | characters/cu_rua/frames (run ×8) |
+| `mon_banh_bao_cau` | p1 | monsters/banh_bao_cau/frames (idle ×4), monsters/banh_bao_cau/frames (hurt ×2), monsters/banh_bao_cau/frames (death ×6) |
+| `mon_dep_lao` | p1 | monsters/dep_lao/frames (idle ×4), monsters/dep_lao/frames (hurt ×2), monsters/dep_lao/frames (death ×6) |
+| `mon_noi_com` | p1 | monsters/noi_com/frames (idle ×4), monsters/noi_com/frames (hurt ×2), monsters/noi_com/frames (death ×6) |
+| `mon_ga_hoang` | p1 | monsters/ga_hoang/frames (idle ×4), monsters/ga_hoang/frames (hurt ×2), monsters/ga_hoang/frames (death ×6) |
+| `mon_muoi` | p1 | monsters/muoi/frames (idle ×4), monsters/muoi/frames (hurt ×2), monsters/muoi/frames (death ×6) |
+| `mon_vua_ghe` | p1 | monsters/vua_ghe/frames (idle ×4), monsters/vua_ghe/frames (hurt ×2), monsters/vua_ghe/frames (death ×6) |
+| `tile_grass` | p1 | tiles/grass.png |
+| `tile_concrete` | p1 | tiles/concrete.png |
+| `tile_dirt` | p1 | tiles/dirt.png |
+| `tile_mud` | p1 | tiles/mud.png |
+| `zone_bush` | p1 | zones/bush.png |
+| `obs_fence_states` | p1 | obstacles/fence (states ×4) |
+| `obs_stall_states` | p1 | obstacles/stall (states ×4) |
+| `obs_cart_states` | p1 | obstacles/cart (states ×4) |
+| `obs_brick_states` | p1 | obstacles/brick (states ×4) |
+| `obs_boulder_states` | p1 | obstacles/boulder (states ×4) |
+| `obs_stone_wall_states` | p1 | obstacles/stone_wall (states ×4) |
+| `gate_purple` | p1 | gates/purple (idle ×6), gates/purple (warn ×4), gates/purple (burst ×6) |
+| `gate_blue` | p1 | gates/blue (idle ×6), gates/blue (warn ×4), gates/blue (burst ×6) |
+| `gate_orange` | p1 | gates/orange (idle ×6), gates/orange (warn ×4), gates/orange (burst ×6) |
