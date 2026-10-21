@@ -189,7 +189,11 @@ func sharedScales(j Job, frames [][]*image.NRGBA) map[string]float64 {
 func fitScale(sg Seg, w, h int) float64 {
 	W, H := float64(sg.W), float64(sg.H)
 	if sg.Pivot == "feet" {
-		return math.Min(charHeight*H/float64(h), 0.95*W/float64(w))
+		k := sg.HeightK
+		if k == 0 {
+			k = 1
+		}
+		return math.Min(charHeight*k*H/float64(h), 0.95*W/float64(w))
 	}
 	return math.Min(centerFill*W/float64(w), centerFill*H/float64(h))
 }

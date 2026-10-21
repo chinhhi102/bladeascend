@@ -25,7 +25,10 @@ type Seg struct {
 	H      int      `json:"h"`
 	Pivot  string   `json:"pivot"`          // "feet" (y=460 on 512) | "center"
 	Each   bool     `json:"each,omitempty"` // scale every frame on its own (different objects)
-	Poses  string   `json:"-"`
+	// HeightK is the tallest frame's height relative to standing idle. Each animation is a
+	// separate image, so without it a crouched run would be scaled up to idle height.
+	HeightK float64 `json:"height_k,omitempty"`
+	Poses   string  `json:"-"`
 }
 
 // Job is one minigen request plus how to turn its image into game assets.
@@ -131,6 +134,12 @@ var charAnims = map[string]anim{
 	"teleport_in":  {"teleport_in", "1) spat out in mid-air 2) flailing 3) landing staggering 4) spiral eyes dizzy", 4},
 }
 
+// poseHeight: tallest frame of each animation relative to the standing idle pose.
+var poseHeight = map[string]float64{
+	"idle": 1, "run": 0.88, "chase": 0.85, "flee": 0.95, "hit": 0.92, "levelup": 1,
+	"breakthrough": 1.15, "realm_drop": 1, "death": 0.95, "respawn": 1, "teleport_out": 1, "teleport_in": 1,
+}
+
 // charSheets: one animation per image (ART_PROMPTS §5.1) laid out on an exact grid.
 var charSheets = []struct {
 	anim     string
@@ -167,7 +176,8 @@ func characterJobs() []Job {
 			if gag, ok := ch.gags[cs.anim]; ok {
 				poses += "; comedy gag of this character in this animation: " + gag
 			}
-			segs := []Seg{{Anim: an.name, Frames: an.frames, Out: "characters/" + ch.id + "/frames", W: 512, H: 512, Pivot: "feet", Poses: poses}}
+			segs := []Seg{{Anim: an.name, Frames: an.frames, Out: "characters/" + ch.id + "/frames", W: 512, H: 512, Pivot: "feet",
+				HeightK: poseHeight[an.name], Poses: poses}}
 			jobs = append(jobs, Job{Name: "char_" + ch.id + "_" + cs.anim, Priority: cs.priority, Mode: modeSheet,
 				Rows: cs.rows, Segs: segs, Prompt: sheetPrompt(style, subject, cs.rows, segs, true)})
 		}

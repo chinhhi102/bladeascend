@@ -4,19 +4,10 @@ Tạo lại file này: `cd server && go run ./cmd/artgen status`.
 Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.
 Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.
 
-## Còn thiếu (176 ảnh)
+## Còn thiếu (167 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
-| `char_a_hon_idle` | p1 | characters/a_hon/frames (idle ×4) |
-| `char_a_hon_run` | p1 | characters/a_hon/frames (run ×8) |
-| `char_ba_tam_loa_idle` | p1 | characters/ba_tam_loa/frames (idle ×4) |
-| `char_ba_tam_loa_run` | p1 | characters/ba_tam_loa/frames (run ×8) |
-| `char_ong_ba_vong_idle` | p1 | characters/ong_ba_vong/frames (idle ×4) |
-| `char_ong_ba_vong_run` | p1 | characters/ong_ba_vong/frames (run ×8) |
-| `char_dai_ca_dep_idle` | p1 | characters/dai_ca_dep/frames (idle ×4) |
-| `char_dai_ca_dep_run` | p1 | characters/dai_ca_dep/frames (run ×8) |
-| `char_map_tra_sua_idle` | p1 | characters/map_tra_sua/frames (idle ×4) |
 | `char_map_tra_sua_run` | p1 | characters/map_tra_sua/frames (run ×8) |
 | `char_co_ba_ganh_idle` | p1 | characters/co_ba_ganh/frames (idle ×4) |
 | `char_co_ba_ganh_run` | p1 | characters/co_ba_ganh/frames (run ×8) |
@@ -185,7 +176,7 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_shipper_ref` | p9 | characters/shipper/ref_sheet.png |
 | `char_cu_rua_ref` | p9 | characters/cu_rua/ref_sheet.png |
 
-## Đã có (20 ảnh)
+## Đã có (29 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
@@ -209,3 +200,12 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `buff_shield` | p0 | buffs/shield.png |
 | `buff_exp2` | p0 | buffs/exp2.png |
 | `buff_stealth` | p0 | buffs/stealth.png |
+| `char_a_hon_idle` | p1 | characters/a_hon/frames (idle ×4) |
+| `char_a_hon_run` | p1 | characters/a_hon/frames (run ×8) |
+| `char_ba_tam_loa_idle` | p1 | characters/ba_tam_loa/frames (idle ×4) |
+| `char_ba_tam_loa_run` | p1 | characters/ba_tam_loa/frames (run ×8) |
+| `char_ong_ba_vong_idle` | p1 | characters/ong_ba_vong/frames (idle ×4) |
+| `char_ong_ba_vong_run` | p1 | characters/ong_ba_vong/frames (run ×8) |
+| `char_dai_ca_dep_idle` | p1 | characters/dai_ca_dep/frames (idle ×4) |
+| `char_dai_ca_dep_run` | p1 | characters/dai_ca_dep/frames (run ×8) |
+| `char_map_tra_sua_idle` | p1 | characters/map_tra_sua/frames (idle ×4) |
