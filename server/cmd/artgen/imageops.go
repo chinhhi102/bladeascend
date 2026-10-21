@@ -52,6 +52,7 @@ func whiteness(c color.NRGBA) float64 {
 // removeBackground picks the keying method from the corner colour: flat magenta (current
 // prompts, ART_PROMPTS §5.1) or white (images generated before the switch).
 func removeBackground(img *image.NRGBA) {
+	defer eraseGridLines(img)
 	if isMagenta(img.NRGBAAt(2, 2)) && isMagenta(img.NRGBAAt(img.Bounds().Dx()-3, img.Bounds().Dy()-3)) {
 		removeMagenta(img)
 		return
@@ -292,4 +293,41 @@ func lineHasInk(img *image.NRGBA, r image.Rectangle, vertical bool, i int) bool 
 		}
 	}
 	return count > 2
+}
+
+// eraseGridLines clears straight dark lines that cross almost the whole image (cell borders
+// some tools draw despite the prompt); they would glue every frame into one blob.
+func eraseGridLines(img *image.NRGBA) {
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	dark := func(x, y int) bool {
+		c := img.NRGBAAt(x, y)
+		return c.A > 128 && int(c.R)+int(c.G)+int(c.B) < 3*90
+	}
+	for x := 0; x < w; x++ {
+		n := 0
+		for y := 0; y < h; y++ {
+			if dark(x, y) {
+				n++
+			}
+		}
+		if float64(n) > 0.8*float64(h) {
+			for y := 0; y < h; y++ {
+				img.SetNRGBA(x, y, color.NRGBA{})
+			}
+		}
+	}
+	for y := 0; y < h; y++ {
+		n := 0
+		for x := 0; x < w; x++ {
+			if dark(x, y) {
+				n++
+			}
+		}
+		if float64(n) > 0.8*float64(w) {
+			for x := 0; x < w; x++ {
+				img.SetNRGBA(x, y, color.NRGBA{})
+			}
+		}
+	}
 }

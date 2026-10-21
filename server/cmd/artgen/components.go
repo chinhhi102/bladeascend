@@ -84,8 +84,12 @@ func groupBlobs(blobs []*blob, want int) []*blob {
 		default:
 		}
 	}
+	maxGap := 0
+	if len(big) > 0 {
+		maxGap = big[0].rect.Dy() / 6 // fragments farther than this are stray marks (watermark sparkle)
+	}
 	for _, s := range small {
-		if near := nearestBlob(big, s.rect); near != nil {
+		if near, gap := nearestBlob(big, s.rect); near != nil && gap <= maxGap*maxGap {
 			near.ids = append(near.ids, s.ids...)
 			near.rect = near.rect.Union(s.rect)
 		}
@@ -96,7 +100,7 @@ func groupBlobs(blobs []*blob, want int) []*blob {
 	return big
 }
 
-func nearestBlob(blobs []*blob, r image.Rectangle) *blob {
+func nearestBlob(blobs []*blob, r image.Rectangle) (*blob, int) {
 	var best *blob
 	bestD := 1 << 30
 	for _, b := range blobs {
@@ -106,7 +110,7 @@ func nearestBlob(blobs []*blob, r image.Rectangle) *blob {
 			best, bestD = b, d
 		}
 	}
-	return best
+	return best, bestD
 }
 
 // isolate copies only the pixels of the given labels inside clip (band-relative) into a

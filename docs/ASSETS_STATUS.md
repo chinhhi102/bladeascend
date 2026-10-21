@@ -4,20 +4,10 @@ Tạo lại file này: `cd server && go run ./cmd/artgen status`.
 Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.
 Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.
 
-## Còn thiếu (167 ảnh)
+## Còn thiếu (157 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
-| `char_map_tra_sua_run` | p1 | characters/map_tra_sua/frames (run ×8) |
-| `char_co_ba_ganh_idle` | p1 | characters/co_ba_ganh/frames (idle ×4) |
-| `char_co_ba_ganh_run` | p1 | characters/co_ba_ganh/frames (run ×8) |
-| `char_su_phu_mi_idle` | p1 | characters/su_phu_mi/frames (idle ×4) |
-| `char_su_phu_mi_run` | p1 | characters/su_phu_mi/frames (run ×8) |
-| `char_be_ti_idle` | p1 | characters/be_ti/frames (idle ×4) |
-| `char_be_ti_run` | p1 | characters/be_ti/frames (run ×8) |
-| `char_shipper_idle` | p1 | characters/shipper/frames (idle ×4) |
-| `char_shipper_run` | p1 | characters/shipper/frames (run ×8) |
-| `char_cu_rua_idle` | p1 | characters/cu_rua/frames (idle ×4) |
 | `char_cu_rua_run` | p1 | characters/cu_rua/frames (run ×8) |
 | `mon_banh_bao_cau` | p1 | monsters/banh_bao_cau/frames (idle ×4), monsters/banh_bao_cau/frames (hurt ×2), monsters/banh_bao_cau/frames (death ×6) |
 | `mon_dep_lao` | p1 | monsters/dep_lao/frames (idle ×4), monsters/dep_lao/frames (hurt ×2), monsters/dep_lao/frames (death ×6) |
@@ -176,7 +166,7 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_shipper_ref` | p9 | characters/shipper/ref_sheet.png |
 | `char_cu_rua_ref` | p9 | characters/cu_rua/ref_sheet.png |
 
-## Đã có (29 ảnh)
+## Đã có (39 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
@@ -209,3 +199,13 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_dai_ca_dep_idle` | p1 | characters/dai_ca_dep/frames (idle ×4) |
 | `char_dai_ca_dep_run` | p1 | characters/dai_ca_dep/frames (run ×8) |
 | `char_map_tra_sua_idle` | p1 | characters/map_tra_sua/frames (idle ×4) |
+| `char_map_tra_sua_run` | p1 | characters/map_tra_sua/frames (run ×8) |
+| `char_co_ba_ganh_idle` | p1 | characters/co_ba_ganh/frames (idle ×4) |
+| `char_co_ba_ganh_run` | p1 | characters/co_ba_ganh/frames (run ×8) |
+| `char_su_phu_mi_idle` | p1 | characters/su_phu_mi/frames (idle ×4) |
+| `char_su_phu_mi_run` | p1 | characters/su_phu_mi/frames (run ×8) |
+| `char_be_ti_idle` | p1 | characters/be_ti/frames (idle ×4) |
+| `char_be_ti_run` | p1 | characters/be_ti/frames (run ×8) |
+| `char_shipper_idle` | p1 | characters/shipper/frames (idle ×4) |
+| `char_shipper_run` | p1 | characters/shipper/frames (run ×8) |
+| `char_cu_rua_idle` | p1 | characters/cu_rua/frames (idle ×4) |
