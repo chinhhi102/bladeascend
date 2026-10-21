@@ -130,7 +130,7 @@ type Item struct {
 	Kind       string
 	Pos        Vec
 	Value      float64
-	Owner      uint32  // only this player may pick it up until OwnerUntil
+	Owner      uint32 // only this player may pick it up until OwnerUntil
 	OwnerUntil float64
 }
 
