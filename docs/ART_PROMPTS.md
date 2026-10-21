@@ -172,7 +172,13 @@ Mỗi nhân vật: **CHARACTER_DESCRIPTION** (dán vào prompt) + **gag riêng c
 Thêm nhân vật mới: giữ công thức **1 nghề/đặc điểm đời thường + 1 đạo cụ biểu tượng + 3 dấu ấn bựa (mục 2.1)**.
 
 ### 5.1 Sửa lỗi kỹ thuật thấy trong bản sinh thử
-- **Lưới không đều** (ví dụ hàng trên 5 hình, hàng dưới 8 hình, kích thước nhân vật khác nhau): ghi rõ trong prompt `exactly {COLS} columns and {ROWS} rows, equal cell size, character the same height in every cell, feet on the same baseline`. Mỗi sheet chỉ chứa **1 animation**.
+- **Lưới không đều** (ví dụ hàng trên 5 hình, hàng dưới 8 hình, kích thước nhân vật khác nhau): ghi rõ trong prompt `exactly {COLS} columns and {ROWS} rows, equal cell size, character the same height in every cell, feet on the same baseline`. **Nhân vật: mỗi sheet chỉ chứa 1 animation.**
+- **Asset khác được gộp** để tiết kiệm quota, theo quy tắc:
+  - Ảnh tĩnh 1 frame (decor, huy hiệu, icon item, skin kiếm, huy chương): gộp thoải mái nhiều món/1 ảnh.
+  - Vật cản: 4 trạng thái của **cùng 1 vật cản** nên nằm chung 1 ảnh (giúp cùng góc nhìn, cùng kích thước); anim `break` và `regrow` tách riêng.
+  - Quái, cổng, Rương Báu, VFX nhiều frame: gộp nhiều anim của **cùng 1 đối tượng** vào 1 ảnh, **mỗi anim 1 hàng riêng**, ghi rõ trong prompt `row 1: idle 4 frames, row 2: hurt 2 frames, ...`. Không trộn 2 đối tượng khác nhau trong 1 ảnh có animation.
+  - Ảnh gộp nào ra lệch lưới → chỉ sinh lại phần lỗi dưới dạng sheet tách riêng.
+- **Cắt frame**: tool cắt nên tìm từng hình theo vùng pixel liền nhau (connected components / bounding box) thay vì chia lưới cứng, rồi căn lại pivot. Như vậy sheet hơi lệch lưới vẫn dùng được, đỡ phải sinh lại. Với nhân vật, giữ nguyên tỉ lệ gốc (không tự co giãn từng frame), chỉ căn chân về y=460.
 - **Hướng nhìn lẫn lộn** (lúc chính diện, lúc nghiêng): thêm `every frame facing right in 3/4 view`.
 - **Nền trắng**: script hậu kỳ xóa nền, nhưng viền trắng quanh nhân vật sẽ lộ trên nền cỏ → yêu cầu nền `pure flat magenta #FF00FF background` để xóa sạch hơn (nếu tool không ra được nền trong suốt).
 

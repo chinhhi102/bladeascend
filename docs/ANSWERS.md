@@ -16,3 +16,13 @@
 **Đổi: có rơi.** Chết (người và bot) → `floor(n * death_sword_drop)` kiếm (mặc định 0.5) văng ra thành item kiếm quanh xác. Người chém có phần thưởng, người khác có cơ hội "hôi của". Thêm `death_sword_drop: 0.5` vào config. Spec mục 7.
 
 → Việc cần làm: cập nhật config/game.json, sửa code Q1/Q2/Q4/Q5, thêm unit test tương ứng (xem checklist mục 17), xóa các câu đã trả lời khỏi QUESTIONS.md.
+
+## Q6 — "1 animation/sheet" có áp dụng cho quái, cổng, VFX?
+**Đồng ý (a), kèm quy tắc gộp** (đã ghi vào ART_PROMPTS §5.1):
+- Nhân vật: 1 anim/ảnh (120 ảnh).
+- Ảnh tĩnh (decor, huy hiệu, icon, skin kiếm): gộp thoải mái.
+- Vật cản: 4 trạng thái của cùng 1 vật cản chung 1 ảnh; `break`/`regrow` tách riêng.
+- Quái, cổng, Rương Báu, VFX nhiều frame: gộp các anim của **cùng 1 đối tượng**, **mỗi anim 1 hàng**, ghi rõ số frame từng hàng trong prompt. Không trộn 2 đối tượng có animation trong 1 ảnh.
+- Ảnh gộp bị lệch → chỉ sinh lại phần lỗi dưới dạng tách riêng.
+
+**Việc cần làm thêm trong `cmd/artgen`**: bộ cắt frame tìm từng hình theo vùng pixel liền nhau (connected components) thay vì chia lưới cứng, sau đó căn pivot (nhân vật: chân về y=460, không co giãn từng frame; vật thể/VFX: căn giữa). Sheet hơi lệch lưới vẫn dùng được → tiết kiệm quota sinh lại.

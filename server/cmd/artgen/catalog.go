@@ -76,7 +76,7 @@ func sheetPrompt(st, subject string, rows []int, segs []Seg, sameCharacter bool)
 	}
 	fmt.Fprintf(&b, "%s Sprite sheet of %s with %d frames in total. ", st, subject, total)
 	if cols, ok := uniformGrid(rows); ok {
-		fmt.Fprintf(&b, "Exactly %d columns and %d rows, equal cell size. ", cols, len(rows))
+		fmt.Fprintf(&b, "Exactly %d %s and %d %s, equal cell size. ", cols, plural(cols, "column"), len(rows), plural(len(rows), "row"))
 	} else {
 		for i, n := range rows {
 			fmt.Fprintf(&b, "Row %d has exactly %d frames. ", i+1, n)
@@ -92,6 +92,13 @@ func sheetPrompt(st, subject string, rows []int, segs []Seg, sameCharacter bool)
 	b.WriteString("Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers.")
 	b.WriteString(negative)
 	return b.String()
+}
+
+func plural(n int, word string) string {
+	if n == 1 {
+		return word
+	}
+	return word + "s"
 }
 
 // uniformGrid reports whether every row has the same number of frames.
@@ -178,7 +185,7 @@ func monsterJobs() []Job {
 			{Anim: "hurt", Frames: 2, Out: out, W: 512, H: 512, Pivot: "feet", Poses: "1) flinching with angry tears 2) squashed in pain"},
 			{Anim: "death", Frames: 6, Out: out, W: 512, H: 512, Pivot: "feet", Poses: "1) inflating 2) cracking 3) bursting 4) exploding into glowing spirit orbs 5) orbs scattering 6) only sparkles left"},
 		}
-		rows := []int{4, 8}
+		rows := []int{4, 2, 6} // one animation per row (ART_PROMPTS §5.1)
 		jobs = append(jobs, Job{Name: "mon_" + m.id, Priority: 1, Mode: modeSheet, Rows: rows, Segs: segs,
 			Prompt: sheetPrompt(style, m.prompt+", 3/4 top-down view facing right", rows, segs, true)})
 	}
@@ -266,14 +273,17 @@ func mapJobs() []Job {
 	segs := []Seg{
 		{Anim: "decor", Frames: 10, Out: "decor", Names: names, W: 256, H: 256, Pivot: "center", Each: true,
 			Poses: "ten different props in this order: " + strings.Join(decorList, ", ")},
-		{Anim: "wind", Frames: 4, Out: "zones", W: 256, H: 256, Pivot: "center",
-			Poses: "a white cartoon wind gust arrow with swirl lines and light blue outline pointing right, sliding right a little more each frame"},
 		{Anim: "wall", Frames: 1, Out: "decor", Names: []string{"wall_border"}, W: 1024, H: 256, Pivot: "center", Each: true,
 			Poses: "one wide seamless horizontal stone and bamboo fence segment, tileable left-right"},
 	}
-	rows := []int{5, 5, 4, 1}
-	jobs = append(jobs, Job{Name: "decor_sheet", Priority: 3, Mode: modeSheet, Rows: rows, Segs: segs,
-		Prompt: sheetPrompt(styleObject, "top-down 3/4 view decoration props", rows, segs, false)})
+	rows := []int{5, 5, 1}
+	wind := []Seg{{Anim: "wind", Frames: 4, Out: "zones", W: 256, H: 256, Pivot: "center",
+		Poses: "a white cartoon wind gust arrow with swirl lines and light blue outline pointing right, sliding right a little more each frame"}}
+	jobs = append(jobs,
+		Job{Name: "decor_sheet", Priority: 3, Mode: modeSheet, Rows: rows, Segs: segs,
+			Prompt: sheetPrompt(styleObject, "top-down 3/4 view decoration props", rows, segs, false)},
+		Job{Name: "zone_wind", Priority: 3, Mode: modeSheet, Rows: []int{4}, Segs: wind,
+			Prompt: sheetPrompt(styleObject, "a wind gust effect", []int{4}, wind, false)})
 	return jobs
 }
 
@@ -309,12 +319,14 @@ func obstacleJobs() []Job {
 		if o.id == "stone_wall" {
 			continue
 		}
-		anims := []Seg{
+		for _, an := range []Seg{
 			{Anim: "break", Frames: 6, Out: dir + "/break", W: o.w, H: o.h, Pivot: "center", Poses: "1) shaking 2) cracking 3) bursting apart 4) debris flying 5) dust cloud 6) rubble pile"},
 			{Anim: "regrow", Frames: 6, Out: dir + "/regrow", W: o.w, H: o.h, Pivot: "center", Poses: "1) glowing rubble 2) pieces rising with light 3) half rebuilt glowing 4) almost whole 5) whole with sparkles 6) intact and solid"},
+		} {
+			segs := []Seg{an}
+			jobs = append(jobs, Job{Name: "obs_" + o.id + "_" + an.Anim, Priority: 4, Mode: modeSheet, Rows: []int{3, 3}, Segs: segs,
+				Prompt: sheetPrompt(styleObject, subject, []int{3, 3}, segs, true)})
 		}
-		jobs = append(jobs, Job{Name: "obs_" + o.id + "_anims", Priority: 4, Mode: modeSheet, Rows: []int{6, 6}, Segs: anims,
-			Prompt: sheetPrompt(styleObject, subject, []int{6, 6}, anims, true)})
 	}
 	return jobs
 }
@@ -341,27 +353,30 @@ func vfxSeg(id string, n int, poses string) Seg {
 	return Seg{Anim: id, Frames: n, Out: "vfx/" + id, W: 256, H: 256, Pivot: "center", Poses: poses}
 }
 
+// vfxJobs: one image per effect (never two animated effects in one image, ART_PROMPTS §5.1).
 func vfxJobs() []Job {
-	a := []Seg{
-		vfxSeg("clash_spark", 6, "comic sword clash spark burst, white and yellow star shapes, expanding then fading"),
-		vfxSeg("sword_shatter", 6, "a cartoon sword shattering into sharp shards flying outward"),
-		vfxSeg("death_smoke", 6, "comic white-grey smoke puff cloud with dark outline, expanding then dissipating"),
+	list := []struct {
+		seg  Seg
+		rows []int
+		pri  int
+	}{
+		{vfxSeg("clash_spark", 6, "comic sword clash spark burst, white and yellow star shapes, expanding then fading"), []int{3, 3}, 2},
+		{vfxSeg("sword_shatter", 6, "a cartoon sword shattering into sharp shards flying outward"), []int{3, 3}, 2},
+		{vfxSeg("death_smoke", 6, "comic white-grey smoke puff cloud with dark outline, expanding then dissipating"), []int{3, 3}, 2},
+		{vfxSeg("levelup_aura", 6, "rising golden aura ring with sparkles"), []int{3, 3}, 3},
+		{vfxSeg("lightning", 6, "thick cartoon lightning bolt striking down from the top"), []int{3, 3}, 3},
+		{vfxSeg("shield_break", 6, "golden bubble shield cracking and bursting into glass shards"), []int{3, 3}, 3},
+		{vfxSeg("stun_stars", 4, "ring of small yellow cartoon stars orbiting"), []int{4}, 3},
+		{vfxSeg("run_dust", 4, "small brown dust puffs behind running feet"), []int{4}, 4},
 	}
-	b := []Seg{
-		vfxSeg("levelup_aura", 6, "rising golden aura ring with sparkles"),
-		vfxSeg("lightning", 6, "thick cartoon lightning bolt striking down from the top"),
-		vfxSeg("shield_break", 6, "golden bubble shield cracking and bursting into glass shards"),
-		vfxSeg("stun_stars", 4, "ring of small yellow cartoon stars orbiting"),
-		vfxSeg("run_dust", 4, "small brown dust puffs behind running feet"),
+	var jobs []Job
+	for _, v := range list {
+		segs := []Seg{v.seg}
+		jobs = append(jobs, Job{Name: "vfx_" + v.seg.Anim, Priority: v.pri, Mode: modeSheet, Rows: v.rows, Segs: segs,
+			Prompt: sheetPrompt(styleObject, "a game visual effect", v.rows, segs, false)})
 	}
-	return []Job{
-		{Name: "vfx_a", Priority: 2, Mode: modeSheet, Rows: []int{6, 6, 6}, Segs: a,
-			Prompt: sheetPrompt(styleObject, "game visual effects", []int{6, 6, 6}, a, false)},
-		{Name: "vfx_b", Priority: 3, Mode: modeSheet, Rows: []int{6, 6, 6, 8}, Segs: b,
-			Prompt: sheetPrompt(styleObject, "game visual effects", []int{6, 6, 6, 8}, b, false)},
-		{Name: "vfx_crack", Priority: 3, Mode: modeSprite, Out: "vfx/crack.png", W: 256, H: 256, Pivot: "center",
-			Prompt: styleObject + " Thin dark grey crack lines overlay pattern like broken glass, sparse, centered." + negative},
-	}
+	return append(jobs, Job{Name: "vfx_crack", Priority: 3, Mode: modeSprite, Out: "vfx/crack.png", W: 256, H: 256, Pivot: "center",
+		Prompt: styleObject + " Thin dark grey crack lines overlay pattern like broken glass, sparse, centered." + negative})
 }
 
 var badgeThemes = []string{"bamboo green", "kitchen steel grey", "peach wood red", "polished silver", "flame orange",

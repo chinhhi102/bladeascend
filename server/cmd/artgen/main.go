@@ -50,6 +50,8 @@ func main() {
 		run(mg, jobs, assets, runOpts{conc: *conc, redo: *redo, limit: *limit})
 	case "prep":
 		prepAll(jobs, assets)
+	case "prompts":
+		writePrompts(jobs, assets, filepath.Join(filepath.Dir(assets), "docs", "ART_JOBS.md"))
 	case "status":
 		writeStatus(jobs, assets, filepath.Join(filepath.Dir(assets), "docs", "ASSETS_STATUS.md"))
 	default:
@@ -101,6 +103,53 @@ func writeStatus(jobs []Job, assets, out string) {
 		log.Fatal(err)
 	}
 	fmt.Printf("%d done, %d missing → %s\n", len(done), len(missing), out)
+}
+
+// writePrompts exports every missing job's prompt so images can be made with any tool and
+// dropped into assets/_raw/<job>.png before running `artgen prep`.
+func writePrompts(jobs []Job, assets, out string) {
+	var b strings.Builder
+	b.WriteString("# Danh sách prompt cần sinh ảnh\n\n")
+	b.WriteString("Tạo lại file này: `cd server && go run ./cmd/artgen prompts` (chỉ liệt kê ảnh còn thiếu, xếp theo ưu tiên).\n\n")
+	b.WriteString("**Cách dùng**\n")
+	b.WriteString("1. Dán prompt vào công cụ sinh ảnh bất kỳ (Gemini, ChatGPT, Midjourney…). Nếu công cụ trả lời bằng chữ, thêm vào đầu: `Generate an image:`.\n")
+	b.WriteString("2. Ảnh nên khổ ngang 16:9 (hoặc vuông với ảnh 1 món), độ phân giải càng cao càng tốt.\n")
+	b.WriteString("3. Lưu đúng tên ở dòng **Lưu thành** (đuôi `.png`; ảnh JPEG đổi tên thành .png vẫn được).\n")
+	b.WriteString("4. Chạy `cd server && go run ./cmd/artgen prep` → tool tự xóa nền magenta/trắng, cắt frame, căn pivot, ghép atlas.\n")
+	b.WriteString("5. Sheet lệch nhẹ vẫn dùng được (tool cắt theo vùng pixel liền nhau). Nhân vật sai số frame vẫn chạy; chỉ sinh lại khi hình dính chồng lên nhau.\n\n")
+	n := 0
+	for _, j := range jobs {
+		if _, err := os.Stat(rawPath(assets, j)); err == nil {
+			continue
+		}
+		n++
+		fmt.Fprintf(&b, "## %d. `%s` · ưu tiên %d\n\n", n, j.Name, j.Priority)
+		fmt.Fprintf(&b, "- **Lưu thành**: `assets/_raw/%s.png`\n", j.Name)
+		fmt.Fprintf(&b, "- **Bố cục**: %s\n", jobLayout(j))
+		fmt.Fprintf(&b, "- **Ra file game**: %s\n\n", jobOutputs(j))
+		fmt.Fprintf(&b, "```text\n%s\n```\n\n", j.Prompt)
+	}
+	if err := os.WriteFile(out, []byte(b.String()), 0o644); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%d prompts → %s\n", n, out)
+}
+
+func jobLayout(j Job) string {
+	switch j.Mode {
+	case modeSheet:
+		parts := make([]string, len(j.Rows))
+		for i, r := range j.Rows {
+			parts[i] = fmt.Sprintf("hàng %d: %d hình", i+1, r)
+		}
+		return "sprite sheet, " + strings.Join(parts, " · ") + ", nền magenta #FF00FF"
+	case modeTile:
+		return "texture vuông lặp liền mạch, phủ kín ảnh"
+	case modeWide:
+		return "tranh ngang 16:9, có nền"
+	default:
+		return "1 hình ở giữa, nền magenta #FF00FF"
+	}
 }
 
 func jobOutputs(j Job) string {

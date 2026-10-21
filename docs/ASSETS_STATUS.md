@@ -4,7 +4,7 @@ Tạo lại file này: `cd server && go run ./cmd/artgen status`.
 Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.
 Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.
 
-## Còn thiếu (164 ảnh)
+## Còn thiếu (176 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
@@ -69,7 +69,9 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_shipper_death` | p2 | characters/shipper/frames (death ×8) |
 | `char_cu_rua_hit` | p2 | characters/cu_rua/frames (hit ×4) |
 | `char_cu_rua_death` | p2 | characters/cu_rua/frames (death ×8) |
-| `vfx_a` | p2 | vfx/clash_spark (clash_spark ×6), vfx/sword_shatter (sword_shatter ×6), vfx/death_smoke (death_smoke ×6) |
+| `vfx_clash_spark` | p2 | vfx/clash_spark (clash_spark ×6) |
+| `vfx_sword_shatter` | p2 | vfx/sword_shatter (sword_shatter ×6) |
+| `vfx_death_smoke` | p2 | vfx/death_smoke (death_smoke ×6) |
 | `ui_badges` | p2 | ui (badge ×9), ui (medal ×3) |
 | `ui_speech` | p2 | ui/speech_bubble.png |
 | `ui_home_bg` | p2 | ui/home_bg.png |
@@ -93,8 +95,12 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_shipper_flee` | p3 | characters/shipper/frames (flee ×8) |
 | `char_cu_rua_chase` | p3 | characters/cu_rua/frames (chase ×8) |
 | `char_cu_rua_flee` | p3 | characters/cu_rua/frames (flee ×8) |
-| `decor_sheet` | p3 | decor (decor ×10), zones (wind ×4), decor (wall ×1) |
-| `vfx_b` | p3 | vfx/levelup_aura (levelup_aura ×6), vfx/lightning (lightning ×6), vfx/shield_break (shield_break ×6), vfx/stun_stars (stun_stars ×4), vfx/run_dust (run_dust ×4) |
+| `decor_sheet` | p3 | decor (decor ×10), decor (wall ×1) |
+| `zone_wind` | p3 | zones (wind ×4) |
+| `vfx_levelup_aura` | p3 | vfx/levelup_aura (levelup_aura ×6) |
+| `vfx_lightning` | p3 | vfx/lightning (lightning ×6) |
+| `vfx_shield_break` | p3 | vfx/shield_break (shield_break ×6) |
+| `vfx_stun_stars` | p3 | vfx/stun_stars (stun_stars ×4) |
 | `vfx_crack` | p3 | vfx/crack.png |
 | `ui_scroll` | p3 | ui/scroll.png |
 | `char_a_hon_levelup` | p4 | characters/a_hon/frames (levelup ×6) |
@@ -157,11 +163,17 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_cu_rua_respawn` | p4 | characters/cu_rua/frames (respawn ×6) |
 | `char_cu_rua_teleport_out` | p4 | characters/cu_rua/frames (teleport_out ×4) |
 | `char_cu_rua_teleport_in` | p4 | characters/cu_rua/frames (teleport_in ×4) |
-| `obs_fence_anims` | p4 | obstacles/fence/break (break ×6), obstacles/fence/regrow (regrow ×6) |
-| `obs_stall_anims` | p4 | obstacles/stall/break (break ×6), obstacles/stall/regrow (regrow ×6) |
-| `obs_cart_anims` | p4 | obstacles/cart/break (break ×6), obstacles/cart/regrow (regrow ×6) |
-| `obs_brick_anims` | p4 | obstacles/brick/break (break ×6), obstacles/brick/regrow (regrow ×6) |
-| `obs_boulder_anims` | p4 | obstacles/boulder/break (break ×6), obstacles/boulder/regrow (regrow ×6) |
+| `obs_fence_break` | p4 | obstacles/fence/break (break ×6) |
+| `obs_fence_regrow` | p4 | obstacles/fence/regrow (regrow ×6) |
+| `obs_stall_break` | p4 | obstacles/stall/break (break ×6) |
+| `obs_stall_regrow` | p4 | obstacles/stall/regrow (regrow ×6) |
+| `obs_cart_break` | p4 | obstacles/cart/break (break ×6) |
+| `obs_cart_regrow` | p4 | obstacles/cart/regrow (regrow ×6) |
+| `obs_brick_break` | p4 | obstacles/brick/break (break ×6) |
+| `obs_brick_regrow` | p4 | obstacles/brick/regrow (regrow ×6) |
+| `obs_boulder_break` | p4 | obstacles/boulder/break (break ×6) |
+| `obs_boulder_regrow` | p4 | obstacles/boulder/regrow (regrow ×6) |
+| `vfx_run_dust` | p4 | vfx/run_dust (run_dust ×4) |
 | `char_a_hon_ref` | p9 | characters/a_hon/ref_sheet.png |
 | `char_ba_tam_loa_ref` | p9 | characters/ba_tam_loa/ref_sheet.png |
 | `char_ong_ba_vong_ref` | p9 | characters/ong_ba_vong/ref_sheet.png |
