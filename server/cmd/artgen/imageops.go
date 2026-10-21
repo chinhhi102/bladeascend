@@ -49,16 +49,82 @@ func whiteness(c color.NRGBA) float64 {
 	return math.Max(0, (lo-200)/55)
 }
 
-// removeBackground flood-fills near-white pixels connected to the border and makes them
-// transparent. The thick black outline of the style keeps white inside the sprite intact.
+// removeBackground picks the keying method from the corner colour: flat magenta (current
+// prompts, ART_PROMPTS §5.1) or white (images generated before the switch).
 func removeBackground(img *image.NRGBA) {
+	if isMagenta(img.NRGBAAt(2, 2)) && isMagenta(img.NRGBAAt(img.Bounds().Dx()-3, img.Bounds().Dy()-3)) {
+		removeMagenta(img)
+		return
+	}
+	removeWhite(img)
+}
+
+func magentaStrength(c color.NRGBA) float64 {
+	return math.Min(float64(c.R), float64(c.B)) - float64(c.G)
+}
+
+func isMagenta(c color.NRGBA) bool {
+	return c.R > 150 && c.B > 150 && magentaStrength(c) > 60
+}
+
+// removeMagenta floods magenta from the border, keys pure magenta holes anywhere, and
+// un-mixes magenta out of the anti-aliased edge band so no pink fringe is left.
+func removeMagenta(img *image.NRGBA) {
 	b := img.Bounds()
 	w, h := b.Dx(), b.Dy()
+	bg := floodFrom(img, w, h, isMagenta)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			c := img.NRGBAAt(x, y)
+			if bg[y*w+x] || (magentaStrength(c) > 200 && c.R > 220 && c.B > 220) {
+				bg[y*w+x] = true
+				a := magentaAlpha(c)
+				if a < 0.25 {
+					a = 0 // background noise
+				}
+				img.SetNRGBA(x, y, unmixMagenta(c, a))
+			}
+		}
+	}
+	// Edge band: up to 2 px next to the background, partially covered by magenta.
+	for pass := 0; pass < 2; pass++ {
+		next := append([]bool(nil), bg...)
+		for i := range bg {
+			x, y := i%w, i/w
+			c := img.NRGBAAt(x, y)
+			if bg[i] || !touchesBG(bg, x, y, w, h) || magentaStrength(c) < 30 {
+				continue
+			}
+			img.SetNRGBA(x, y, unmixMagenta(c, magentaAlpha(c)))
+			next[i] = true
+		}
+		bg = next
+	}
+}
+
+// magentaAlpha estimates subject coverage from how magenta a pixel is (foreground ≈ not magenta).
+func magentaAlpha(c color.NRGBA) float64 {
+	return geomClamp((255-magentaStrength(c))/255, 0, 1)
+}
+
+// unmixMagenta recovers the foreground colour of a pixel blended over #FF00FF with coverage a.
+func unmixMagenta(c color.NRGBA, a float64) color.NRGBA {
+	if a < 0.02 {
+		return color.NRGBA{}
+	}
+	un := func(v, bgv float64) uint8 { return uint8(geomClamp((v-(1-a)*bgv)/a, 0, 255)) }
+	return color.NRGBA{R: un(float64(c.R), 255), G: un(float64(c.G), 0), B: un(float64(c.B), 255), A: uint8(a * 255)}
+}
+
+func geomClamp(v, lo, hi float64) float64 { return math.Max(lo, math.Min(hi, v)) }
+
+// floodFrom marks pixels matching pred that are connected to the image border.
+func floodFrom(img *image.NRGBA, w, h int, pred func(color.NRGBA) bool) []bool {
 	bg := make([]bool, w*h)
 	stack := make([]int, 0, w*4)
 	push := func(x, y int) {
 		i := y*w + x
-		if bg[i] || whiteness(img.NRGBAAt(x, y)) < 0.55 {
+		if bg[i] || !pred(img.NRGBAAt(x, y)) {
 			return
 		}
 		bg[i] = true
@@ -89,6 +155,15 @@ func removeBackground(img *image.NRGBA) {
 			push(x, y+1)
 		}
 	}
+	return bg
+}
+
+// removeWhite flood-fills near-white pixels connected to the border and makes them
+// transparent. The thick black outline of the style keeps white inside the sprite intact.
+func removeWhite(img *image.NRGBA) {
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	bg := floodFrom(img, w, h, func(c color.NRGBA) bool { return whiteness(c) >= 0.55 })
 	applyMask(img, bg, w, h)
 }
 

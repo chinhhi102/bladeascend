@@ -43,22 +43,29 @@ type Job struct {
 	Segs     []Seg  `json:"segs,omitempty"`
 }
 
-// Style lock from ART_PROMPTS §2. Gemini cannot output alpha, so we ask for pure white
-// and remove it in post-processing.
-const style = "STYLE: 2D mobile game sprite, chibi cartoon caricature, exaggerated comedic facial expressions, " +
-	"big head small body (head about 40% of height), thick black outline, flat colors with simple cel shading, vibrant saturated palette, " +
-	"clean vector-like look, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, " +
-	"plain solid pure white background (#FFFFFF), no text, no watermark, no ground shadow, full body visible."
+// Style lock from ART_PROMPTS §2 ("bựa": ugly-funny, not cute). Gemini cannot output alpha, so
+// we ask for flat magenta (ART_PROMPTS §5.1) and key it out in post-processing.
+const bgMagenta = "pure flat magenta #FF00FF background filling everything around the subject"
 
-const styleObject = "STYLE: 2D mobile game asset, cartoon, thick black outline, flat colors with simple cel shading, " +
-	"vibrant saturated palette, clean vector-like look, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, " +
-	"plain solid pure white background (#FFFFFF), no text, no watermark, no ground shadow."
+const style = "STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, " +
+	"huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, " +
+	"bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, " +
+	"rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, " +
+	"cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, " +
+	"Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, " + bgMagenta +
+	", no text, no watermark, no ground shadow, full body visible."
+
+// Objects (swords, props, effects) keep the cartoon look without the face caricature rules.
+const styleObject = "STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, " +
+	"Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, " + bgMagenta + ", no text, no watermark, no ground shadow. " +
+	"Do not use magenta or pink-purple in the subject itself."
 
 const styleOpaque = "STYLE: 2D mobile game art, cartoon, flat colors with simple cel shading, vibrant saturated palette, " +
 	"clean vector-like look, no text, no watermark."
 
-const negative = " Avoid: realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, " +
-	"watermark, background scenery, grid lines, frame borders, inconsistent outfit."
+const negative = " Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, " +
+	"3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, " +
+	"multiple different characters, inconsistent outfit, nudity, grid lines, frame borders."
 
 // sheetPrompt describes a multi-row sheet: which frames go on which row and what each segment shows.
 func sheetPrompt(st, subject string, rows []int, segs []Seg, sameCharacter bool) string {
@@ -67,20 +74,34 @@ func sheetPrompt(st, subject string, rows []int, segs []Seg, sameCharacter bool)
 	for _, n := range rows {
 		total += n
 	}
-	fmt.Fprintf(&b, "%s Sprite sheet of %s with %d rows and %d frames in total. ", st, subject, len(rows), total)
-	for i, n := range rows {
-		fmt.Fprintf(&b, "Row %d has exactly %d frames. ", i+1, n)
+	fmt.Fprintf(&b, "%s Sprite sheet of %s with %d frames in total. ", st, subject, total)
+	if cols, ok := uniformGrid(rows); ok {
+		fmt.Fprintf(&b, "Exactly %d columns and %d rows, equal cell size. ", cols, len(rows))
+	} else {
+		for i, n := range rows {
+			fmt.Fprintf(&b, "Row %d has exactly %d frames. ", i+1, n)
+		}
 	}
 	b.WriteString("Frames are read left-to-right, top-to-bottom: ")
 	for _, s := range segs {
 		fmt.Fprintf(&b, "[%s, %d frames] %s. ", s.Anim, s.Frames, s.Poses)
 	}
 	if sameCharacter {
-		b.WriteString("Identical character in every frame: same outfit, colors, proportions and size, facing right in 3/4 top-down view, feet aligned on the same baseline in each row. ")
+		b.WriteString("Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. ")
 	}
-	b.WriteString("Leave plenty of empty white space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers.")
+	b.WriteString("Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers.")
 	b.WriteString(negative)
 	return b.String()
+}
+
+// uniformGrid reports whether every row has the same number of frames.
+func uniformGrid(rows []int) (int, bool) {
+	for _, n := range rows[1:] {
+		if n != rows[0] {
+			return 0, false
+		}
+	}
+	return rows[0], len(rows) > 0
 }
 
 type anim struct {
@@ -103,18 +124,24 @@ var charAnims = map[string]anim{
 	"teleport_in":  {"teleport_in", "1) spat out in mid-air 2) flailing 3) landing staggering 4) spiral eyes dizzy", 4},
 }
 
-// charSheets groups the 12 animations of ART_PROMPTS §4.4 into 5 images per character.
+// charSheets: one animation per image (ART_PROMPTS §5.1) laid out on an exact grid.
 var charSheets = []struct {
-	key      string
+	anim     string
 	rows     []int
-	anims    []string
 	priority int
 }{
-	{"core", []int{4, 8}, []string{"idle", "run"}, 1},
-	{"combat", []int{4, 8}, []string{"hit", "death"}, 2},
-	{"moods", []int{8, 8}, []string{"chase", "flee"}, 3},
-	{"events", []int{6, 6, 8}, []string{"levelup", "realm_drop", "teleport_out", "teleport_in"}, 4},
-	{"big", []int{5, 5, 6}, []string{"breakthrough", "respawn"}, 4},
+	{"idle", []int{4}, 1},
+	{"run", []int{4, 4}, 1},
+	{"hit", []int{4}, 2},
+	{"death", []int{4, 4}, 2},
+	{"chase", []int{4, 4}, 3},
+	{"flee", []int{4, 4}, 3},
+	{"levelup", []int{3, 3}, 4},
+	{"realm_drop", []int{3, 3}, 4},
+	{"breakthrough", []int{5, 5}, 4},
+	{"respawn", []int{3, 3}, 4},
+	{"teleport_out", []int{4}, 4},
+	{"teleport_in", []int{4}, 4},
 }
 
 func characterJobs() []Job {
@@ -125,16 +152,16 @@ func characterJobs() []Job {
 			Name: "char_" + ch.id + "_ref", Priority: 9, Mode: modeRaw, Out: "characters/" + ch.id + "/ref_sheet.png",
 			Prompt: style + " Character reference sheet of " + subject + ". Show 3 views in a row: front, 3/4 facing right, " +
 				"side facing right. Below: 6 facial expressions (neutral, screaming, evil grin, panicked, crying, shocked). " +
-				"Same outfit and colors in every view. White background separated panels." + negative,
+				"Same outfit and colors in every view, separated panels." + negative,
 		})
 		for _, cs := range charSheets {
-			var segs []Seg
-			for _, a := range cs.anims {
-				an := charAnims[a]
-				segs = append(segs, Seg{Anim: an.name, Frames: an.frames, Out: "characters/" + ch.id + "/frames",
-					W: 512, H: 512, Pivot: "feet", Poses: an.poses})
+			an := charAnims[cs.anim]
+			poses := an.poses
+			if gag, ok := ch.gags[cs.anim]; ok {
+				poses += "; comedy gag of this character in this animation: " + gag
 			}
-			jobs = append(jobs, Job{Name: "char_" + ch.id + "_" + cs.key, Priority: cs.priority, Mode: modeSheet,
+			segs := []Seg{{Anim: an.name, Frames: an.frames, Out: "characters/" + ch.id + "/frames", W: 512, H: 512, Pivot: "feet", Poses: poses}}
+			jobs = append(jobs, Job{Name: "char_" + ch.id + "_" + cs.anim, Priority: cs.priority, Mode: modeSheet,
 				Rows: cs.rows, Segs: segs, Prompt: sheetPrompt(style, subject, cs.rows, segs, true)})
 		}
 	}

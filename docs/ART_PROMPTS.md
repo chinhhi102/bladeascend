@@ -22,18 +22,36 @@ Lưu ý về scale: nhân vật to tới 5× trong thế giới nhưng camera l�
 
 ## 2. Style lock (dán vào ĐẦU mọi prompt)
 
+Mục tiêu: **xấu mà mắc cười, bựa, vô duyên một cách đáng yêu** — không phải "cute sạch sẽ".
+
 ```
-STYLE: 2D mobile game sprite, chibi cartoon caricature, exaggerated comedic facial expressions,
-big head small body, thick black outline, flat colors with simple cel shading, vibrant saturated palette,
-clean vector-like look, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy,
+STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon,
+huge head on a small scrawny or saggy body, shamelessly exaggerated facial features:
+crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin,
+moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin,
+over-the-top smug or stupid facial expressions, cheap mismatched clothes with stains,
+thick wobbly black outline, flat saturated colors with simple cel shading,
+Vietnamese street comedy vibe mixed with wuxia cultivation fantasy,
 transparent background, no text, no watermark, no ground shadow, centered, full body visible
 ```
 
 Negative prompt (nếu tool hỗ trợ):
 ```
-realistic, photo, 3d render, blurry, extra limbs, cropped body, text, logo, watermark, background scenery,
-multiple characters, inconsistent outfit
+cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized,
+realistic, photo, 3d render, blurry, extra limbs, cropped body, text, logo, watermark,
+background scenery, multiple characters, inconsistent outfit, nudity
 ```
+
+### 2.1 Công thức "bựa" cho mỗi nhân vật
+Mỗi nhân vật chọn đúng **3 "dấu ấn bựa" cố định** và nhắc lại nguyên văn trong MỌI prompt frame (đây là chìa khóa giữ nhất quán — chi tiết càng nhiều thì càng dễ lệch giữa các frame):
+1. **Một khuyết điểm trên mặt** (răng, mắt, nốt ruồi, lông mũi, son lem...).
+2. **Một thói quen vô duyên** (ngoáy mũi, ợ, gãi mông, liếm môi, hút rột rột...) → dùng cho `idle` và `chase`.
+3. **Một món đồ rẻ tiền lố bịch** (dép tổ ong, dây chuyền xích chó, quần sịp hoa lộ ra...).
+
+Biểu cảm phải **"quá lố 200%"**: cười thì toét tới mang tai, khóc thì nước mắt thành vòi, sợ thì mặt tái mét lồi mắt. Khi thấy frame nào "dễ thương" quá → sinh lại.
+
+### 2.2 Giới hạn
+Bựa nhưng không: khỏa thân, tình dục, máu me, chế giễu dân tộc/vùng miền/tôn giáo/khuyết tật hay giới tính. Hài đến từ thói quen và tình huống, không đến từ việc nhạo một nhóm người.
 
 ## 3. Quy trình giữ nhất quán khi sinh keyframe
 
@@ -95,24 +113,68 @@ Identical character in every cell, same size, feet aligned on same baseline, tra
 
 Tổng: 76 frame / nhân vật.
 
-## 5. Dàn nhân vật (nguyên bản)
+## 5. Dàn nhân vật (nguyên bản, bản "bựa")
 
-> Nhân vật trong game nên là thiết kế của riêng bạn để tránh rủi ro bản quyền và hình ảnh diễn viên thật khi phát hành. Dưới đây là 10 nhân vật gốc theo tinh thần "dân phố võ lâm tấu hài".
+> Nhân vật là thiết kế riêng của bạn để tránh rủi ro bản quyền và hình ảnh người thật.
 
-| # | Tên | CHARACTER_DESCRIPTION (prompt) | Palette |
-|---|---|---|---|
-| 1 | A Hớn Bánh Bao | `a loud-mouthed young street vendor wearing a giant steamed bun as a hat, sleeveless white undershirt, baggy red shorts, flip-flops, huge buck teeth` | #FFFFFF #E63946 #F4A261 #2B2D42 |
-| 2 | Bà Tám Loa | `a sturdy middle-aged fish market lady holding a megaphone, floral blouse, rubber apron, tall green rubber boots, bun hair with a pencil stuck in it` | #2A9D8F #E9C46A #F28482 #264653 |
-| 3 | Ông Ba Võng | `a sleepy skinny old man carrying a folded hammock on his back like a cape, white tank top, striped pajama pants, half-closed eyes, toothpick in mouth` | #8D99AE #EDF2F4 #6D597A #B56576 |
-| 4 | Đại Ca Dép Tổ Ong | `a pompous gang boss in an oversized shiny purple suit, tiny black sunglasses, gold chain, wearing cheap honeycomb plastic sandals, slicked-back hair` | #7209B7 #FFD60A #000000 #F72585 |
-| 5 | Thằng Mập Trà Sữa | `a round chubby teen always clutching a giant bubble tea cup with a fat straw, oversized hoodie, cheeks puffed, tapioca pearls flying around` | #CDB4DB #A47148 #FFC8DD #3D405B |
-| 6 | Cô Ba Gánh Hàng | `a fast nimble young woman balancing a bamboo shoulder pole with two baskets of fruit, conical hat, simple brown blouse, determined eyebrows` | #BC6C25 #DDA15E #606C38 #FEFAE0 |
-| 7 | Sư Phụ Mì Gói | `an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, orange robe, holding chopsticks like weapons` | #FB8500 #FFB703 #8ECAE6 #023047 |
-| 8 | Bé Tí Cơ Bắp | `a very tiny man with absurdly huge bodybuilder muscles, baby face, sweatband, tiny shorts, flexing constantly` | #E76F51 #F4A261 #2A9D8F #1D3557 |
-| 9 | Anh Shipper Tia Chớp | `a delivery rider in a bright helmet and reflective vest carrying a big cube delivery box on his back, lightning bolt stickers, phone in hand` | #FFBE0B #FB5607 #3A86FF #222222 |
-| 10 | Cụ Rùa Thiền | `a slow ancient grandpa wearing a turtle shell backpack, long white eyebrows covering eyes, walking cane, peaceful smile` | #52B788 #D8F3DC #6F4E37 #F1FAEE |
+Mỗi nhân vật: **CHARACTER_DESCRIPTION** (dán vào prompt) + **gag riêng cho từng anim** (dán vào POSE_DESCRIPTION, thay cho mô tả chung ở bảng 4.4 khi phù hợp).
 
-Khi cần thêm nhân vật: giữ công thức **1 nghề/đặc điểm đời thường + 1 đạo cụ biểu tượng + 1 nét mặt cường điệu**.
+### 1. A Hớn Bánh Bao — `a_hon`
+- **Prompt**: `a loud-mouthed scrawny street vendor with a giant steamed bun as a hat that has a big bite missing, two huge yellowish buck teeth with one chipped, a mole on his cheek with one long curly hair, sweat-stained yellowed sleeveless undershirt riding up over a round hairy belly button, baggy red shorts, mismatched flip-flops`
+- **Palette**: #FFFFFF #E63946 #F4A261 #2B2D42
+- `idle`: ngoáy mũi, nhìn ngón tay, búng gỉ đi · `chase`: thè lưỡi liếm mép, nhướng một bên mày, xoa tay · `hit`: chiếc răng thỏ mẻ văng ra · `death`: bẹp dí, cái bánh bao trên đầu bị cắn thêm một miếng.
+
+### 2. Bà Tám Loa — `ba_tam_loa`
+- **Prompt**: `a stout loud fish market lady holding a dented megaphone, bright red lipstick smeared far outside her lips and stuck on her teeth, two perfectly round blotchy pink blush circles, eyebrows drawn way too high in pencil, a tiny pencil stuck in her hair bun, floral blouse with fish scales stuck on it, wet rubber apron, tall green rubber boots`
+- **Palette**: #2A9D8F #E9C46A #F28482 #264653
+- `run`: hét vào loa, nước bọt văng thành tia · `chase`: chu môi son lem hôn gió đe dọa · `flee`: loa úp ngược vào mặt, chạy mù · `hit`: một vệt son in lên mặt kẻ chém (VFX riêng).
+
+### 3. Ông Ba Võng — `ong_ba_vong`
+- **Prompt**: `a skinny lazy old man with only two teeth left, nose hairs so long they look like a mustache, three strands of hair combed over a shiny bald head, half-closed sleepy eyes, toothpick in mouth, folded hammock carried on his back like a cape, saggy white tank top, striped pajama pants slipping down showing flowery underwear waistband`
+- **Palette**: #8D99AE #EDF2F4 #6D597A #B56576
+- `idle`: ngủ gật đứng, bong bóng mũi phồng xẹp · `flee`: quần tụt tới gối, vừa chạy vừa kéo · `hit`: ba sợi tóc bay lên dựng đứng · `breakthrough`: tóc mọc lại dày đặc trong 1 frame rồi rụng sạch.
+
+### 4. Đại Ca Dép Tổ Ong — `dai_ca_dep`
+- **Prompt**: `a pompous short gang boss in an oversized shiny purple suit with shoulder pads, tiny round black sunglasses, a gold chain as thick as a dog leash, a thin pencil mustache, slicked-back hair so greasy that flies buzz around it, a gold front tooth, cheap honeycomb plastic sandals with socks`
+- **Palette**: #7209B7 #FFD60A #000000 #F72585
+- `idle`: soi răng vàng vào gương con · `chase`: búng tay gọi đàn em không tồn tại, cười khẩy · `hit`: kính rơi lộ đôi mắt lé · `realm_drop`: vest bung hết cúc.
+
+### 5. Thằng Mập Trà Sữa — `map_tra_sua`
+- **Prompt**: `a round chubby teen with huge jiggly cheeks and a double chin, tapioca pearls stuck around his mouth, clutching a giant bubble tea cup with a fat straw, oversized hoodie with sweat-soaked armpits, tiny shorts, untied sneakers`
+- **Palette**: #CDB4DB #A47148 #FFC8DD #3D405B
+- `idle`: ợ ra một bong bóng · `chase`: hút trà sữa rột rột, mắt híp gian · `hit`: phun trân châu như súng máy · `death`: bẹp, ly trà sữa đổ thành vũng.
+
+### 6. Cô Ba Gánh Hàng — `co_ba_ganh`
+- **Prompt**: `a hyperactive young fruit seller with one thick unibrow, a huge gap-toothed grin, two stiff braids sticking straight out sideways, a crooked conical hat, balancing a bamboo shoulder pole with two overflowing fruit baskets, patched brown blouse, mismatched plastic slippers`
+- **Palette**: #BC6C25 #DDA15E #606C38 #FEFAE0
+- `chase`: xoay đòn gánh như cánh quạt trực thăng · `flee`: trái cây văng tung tóe rơi trúng đầu mình · `hit`: hai bím tóc cuộn xoắn lò xo.
+
+### 7. Sư Phụ Mì Gói — `su_phu_mi`
+- **Prompt**: `an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon`
+- **Palette**: #FB8500 #FFB703 #8ECAE6 #023047
+- `idle`: gắp một sợi râu mì của mình ăn · `chase`: múa đũa, mắt lé nhìn hai hướng · `hit`: râu mì bị chém đứt văng tung tóe.
+
+### 8. Bé Tí Cơ Bắp — `be_ti`
+- **Prompt**: `a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing`
+- **Palette**: #E76F51 #F4A261 #2A9D8F #1D3557
+- `idle`: hôn bắp tay của mình · `chase`: gồng tới mức mặt đỏ, gân trán nổi · `hit`: cơ bắp xì hơi xẹp như bong bóng rồi phồng lại.
+
+### 9. Anh Shipper Tia Chớp — `shipper`
+- **Prompt**: `a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand`
+- **Palette**: #FFBE0B #FB5607 #3A86FF #222222
+- `chase`: giơ điện thoại lên, mặt "anh ơi xuống lấy hàng" · `flee`: thùng hàng bật nắp, đồ ăn bay ra · `hit`: điện thoại văng, màn hình nứt.
+
+### 10. Cụ Rùa Thiền — `cu_rua`
+- **Prompt**: `a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops`
+- **Palette**: #52B788 #D8F3DC #6F4E37 #F1FAEE
+- `run`: chân guồng siêu nhanh nhưng người gần như không nhích · `flee`: rụt đầu và tay chân vào mai, mai tự trượt · `hit`: lông mày quấn quanh đầu như khăn.
+
+Thêm nhân vật mới: giữ công thức **1 nghề/đặc điểm đời thường + 1 đạo cụ biểu tượng + 3 dấu ấn bựa (mục 2.1)**.
+
+### 5.1 Sửa lỗi kỹ thuật thấy trong bản sinh thử
+- **Lưới không đều** (ví dụ hàng trên 5 hình, hàng dưới 8 hình, kích thước nhân vật khác nhau): ghi rõ trong prompt `exactly {COLS} columns and {ROWS} rows, equal cell size, character the same height in every cell, feet on the same baseline`. Mỗi sheet chỉ chứa **1 animation**.
+- **Hướng nhìn lẫn lộn** (lúc chính diện, lúc nghiêng): thêm `every frame facing right in 3/4 view`.
+- **Nền trắng**: script hậu kỳ xóa nền, nhưng viền trắng quanh nhân vật sẽ lộ trên nền cỏ → yêu cầu nền `pure flat magenta #FF00FF background` để xóa sạch hơn (nếu tool không ra được nền trong suốt).
 
 ## 6. Quái (PvE)
 

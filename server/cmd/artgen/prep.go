@@ -130,6 +130,7 @@ func prepSheet(img *image.NRGBA, j Job, assets string) error {
 	}
 	scales := sharedScales(j, boxes)
 	for si, sg := range j.Segs {
+		clearStaleFrames(filepath.Join(assets, sg.Out), sg)
 		for f, box := range boxes[si] {
 			s := scales[groupKey(sg)]
 			if sg.Each {
@@ -145,6 +146,18 @@ func prepSheet(img *image.NRGBA, j Job, assets string) error {
 		}
 	}
 	return nil
+}
+
+// clearStaleFrames removes old {anim}_NN.png files so a re-generated animation with fewer
+// frames does not keep leftovers from the previous image.
+func clearStaleFrames(dir string, sg Seg) {
+	if len(sg.Names) > 0 {
+		return
+	}
+	old, _ := filepath.Glob(filepath.Join(dir, sg.Anim+"_[0-9][0-9].png"))
+	for _, f := range old {
+		_ = os.Remove(f)
+	}
 }
 
 func groupKey(sg Seg) string { return fmt.Sprintf("%dx%d/%s", sg.W, sg.H, sg.Pivot) }
