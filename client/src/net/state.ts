@@ -224,11 +224,23 @@ export class ClientWorld {
       if (z.k === 'mud') {
         mult *= this.cfg.zones.mud_mult;
       } else if (z.k === 'wind') {
-        const wd = z.wd ?? 0;
-        mult *= dir.x * Math.cos(wd) + dir.y * Math.sin(wd) >= 0 ? this.cfg.zones.wind_with : this.cfg.zones.wind_against;
+        mult *= this.windMult(dir, z.wd ?? 0);
       }
     }
     return mult;
+  }
+
+  /** Same thresholds as game.windMult on the server (spec §8.3). */
+  private windMult(dir: Vec, wd: number): number {
+    const cos = Math.max(-1, Math.min(1, dir.x * Math.cos(wd) + dir.y * Math.sin(wd)));
+    const deg = (Math.acos(cos) * 180) / Math.PI;
+    if (deg < this.cfg.zones.wind_with_max_deg) {
+      return this.cfg.zones.wind_with;
+    }
+    if (deg > this.cfg.zones.wind_against_min_deg) {
+      return this.cfg.zones.wind_against;
+    }
+    return 1;
   }
 
   private resolveBlocking(p: Vec, r: number): Vec {

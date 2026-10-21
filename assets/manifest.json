@@ -2,6 +2,10 @@
  "files": [
   "characters/a_hon/atlas.json",
   "characters/a_hon/atlas.png",
+  "characters/ba_tam_loa/atlas.json",
+  "characters/ba_tam_loa/atlas.png",
+  "characters/ong_ba_vong/atlas.json",
+  "characters/ong_ba_vong/atlas.png",
   "swords/realm_0.png"
  ]
 }

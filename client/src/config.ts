@@ -11,6 +11,9 @@ export interface GameConfig {
     realms: string[];
     tiers_per_realm: number;
     swords_per_realm: number;
+    exp_base: number;
+    realm_mult: number;
+    tier_step: number;
     scale_min: number;
     scale_max: number;
   };
@@ -24,8 +27,9 @@ export interface GameConfig {
     name_max: number;
   };
   buffs: Record<string, BuffCfg>;
-  zones: { mud_mult: number; wind_with: number; wind_against: number };
+  zones: { mud_mult: number; wind_with: number; wind_against: number; wind_with_max_deg: number; wind_against_min_deg: number };
   gates: { radius: number };
+  items: { item_r: number; chest_warn_secs: number };
   net: { tick_hz: number; snapshot_hz: number; interp_ms: number };
   characters: string[];
 }
@@ -52,4 +56,19 @@ export function maxSwords(cfg: GameConfig, realm: number): number {
 
 export function cameraViewHeight(cfg: GameConfig, scale: number): number {
   return cfg.player.camera_view_h * Math.pow(scale, cfg.player.camera_exp);
+}
+
+/** levelThresholds[L] = total EXP needed to reach level L (mirrors game.Progression). */
+export function levelThresholds(cfg: GameConfig): number[] {
+  const c = cfg.cultivation;
+  const levels = c.realms.length * c.tiers_per_realm;
+  const out: number[] = [];
+  let sum = 0;
+  for (let L = 0; L <= levels; L++) {
+    out.push(sum);
+    const r = Math.floor(L / c.tiers_per_realm);
+    const s = L % c.tiers_per_realm;
+    sum += Math.round(c.exp_base * Math.pow(c.realm_mult, r) * (1 + c.tier_step * s));
+  }
+  return out;
 }

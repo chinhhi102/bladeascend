@@ -67,31 +67,79 @@ func prepJob(j Job, raw, assets string) error {
 	}
 }
 
-// prepSheet writes each segment's frames under assets/<seg.Out>/.
+// rowPart is one segment's share of a sheet row.
+type rowPart struct {
+	seg   int
+	count int
+}
+
+// rowLayout maps each row to the segments drawn in it, following the expected frame order.
+func rowLayout(j Job) [][]rowPart {
+	out := make([][]rowPart, len(j.Rows))
+	si, left := 0, 0
+	if len(j.Segs) > 0 {
+		left = j.Segs[0].Frames
+	}
+	for r, n := range j.Rows {
+		for n > 0 && si < len(j.Segs) {
+			take := min(n, left)
+			out[r] = append(out[r], rowPart{si, take})
+			n, left = n-take, left-take
+			if left == 0 && si+1 < len(j.Segs) {
+				si++
+				left = j.Segs[si].Frames
+			} else if left == 0 {
+				si++
+			}
+		}
+	}
+	return out
+}
+
+// prepSheet writes each segment's frames under assets/<seg.Out>/. A row owned by a single
+// animation keeps however many frames the model actually drew (Gemini sometimes draws 5 or 6
+// instead of 4 or 8); rows shared by several animations are cut to the exact count.
 func prepSheet(img *image.NRGBA, j Job, assets string) error {
 	removeBackground(img)
-	cells := splitSheet(img, j.Rows)
-	boxes := make([]image.Rectangle, 0, len(cells))
-	for _, c := range cells {
-		b := alphaBBox(img, c)
-		if b.Empty() {
-			b = c
+	layout := rowLayout(j)
+	rows := splitSheet(img, j.Rows, layout)
+	type frame struct {
+		seg int
+		box image.Rectangle
+	}
+	var frames []frame
+	for r, cells := range rows {
+		ci := 0
+		for _, part := range layout[r] {
+			n := part.count
+			if len(layout[r]) == 1 {
+				n = len(cells)
+			}
+			for k := 0; k < n && ci < len(cells); k, ci = k+1, ci+1 {
+				b := alphaBBox(img, cells[ci])
+				if b.Empty() {
+					continue
+				}
+				frames = append(frames, frame{part.seg, b})
+			}
 		}
-		boxes = append(boxes, b)
+	}
+	boxes := make([][]image.Rectangle, len(j.Segs))
+	for _, f := range frames {
+		boxes[f.seg] = append(boxes[f.seg], f.box)
 	}
 	scales := sharedScales(j, boxes)
-	i := 0
-	for _, sg := range j.Segs {
-		for f := 0; f < sg.Frames && i < len(boxes); f, i = f+1, i+1 {
+	for si, sg := range j.Segs {
+		for f, box := range boxes[si] {
 			s := scales[groupKey(sg)]
 			if sg.Each {
-				s = fitScale(sg, boxes[i].Dx(), boxes[i].Dy())
+				s = fitScale(sg, box.Dx(), box.Dy())
 			}
 			name := fmt.Sprintf("%s_%02d.png", sg.Anim, f)
 			if f < len(sg.Names) {
 				name = sg.Names[f] + ".png"
 			}
-			if err := savePNG(filepath.Join(assets, sg.Out, name), placeOne(img, boxes[i], sg, s)); err != nil {
+			if err := savePNG(filepath.Join(assets, sg.Out, name), placeOne(img, box, sg, s)); err != nil {
 				return err
 			}
 		}
@@ -103,13 +151,12 @@ func groupKey(sg Seg) string { return fmt.Sprintf("%dx%d/%s", sg.W, sg.H, sg.Piv
 
 // sharedScales gives every non-"each" segment group one scale so a character keeps the same
 // size across all its animations.
-func sharedScales(j Job, boxes []image.Rectangle) map[string]float64 {
+func sharedScales(j Job, boxes [][]image.Rectangle) map[string]float64 {
 	maxW, maxH := map[string]int{}, map[string]int{}
-	i := 0
-	for _, sg := range j.Segs {
+	for si, sg := range j.Segs {
 		k := groupKey(sg)
-		for f := 0; f < sg.Frames && i < len(boxes); f, i = f+1, i+1 {
-			maxW[k], maxH[k] = max(maxW[k], boxes[i].Dx()), max(maxH[k], boxes[i].Dy())
+		for _, b := range boxes[si] {
+			maxW[k], maxH[k] = max(maxW[k], b.Dx()), max(maxH[k], b.Dy())
 		}
 	}
 	out := map[string]float64{}
@@ -141,24 +188,180 @@ func placeOne(img *image.NRGBA, b image.Rectangle, sg Seg, s float64) *image.NRG
 	return canvas
 }
 
-// splitSheet finds frame cells using empty gaps; rows[i] is the frame count of row i.
-func splitSheet(img *image.NRGBA, rows []int) []image.Rectangle {
+// splitSheet finds frame cells row by row using empty gaps.
+func splitSheet(img *image.NRGBA, rows []int, layout [][]rowPart) [][]image.Rectangle {
 	b := img.Bounds()
-	bands := fitSpans(spans(img, b, false, minSheetGap), len(rows), b.Dy())
-	var cells []image.Rectangle
+	raw := spans(img, b, false, minSheetGap)
+	bands := fitSpans(raw, len(rows), b.Dy())
+	debugf("row spans %v → %v", raw, bands)
+	bandRects := make([]image.Rectangle, len(bands))
+	colSpans := make([][][2]int, len(bands))
 	for ri, rs := range bands {
-		band := image.Rect(b.Min.X, b.Min.Y+rs[0], b.Max.X, b.Min.Y+rs[1])
-		cols := spans(img, band, true, minSheetGap)
-		if len(cols) < rows[ri] {
-			cols = inkCuts(img, band, rows[ri]) // frames touch: cut at the emptiest columns
-		}
-		for _, cs := range fitSpans(cols, rows[ri], b.Dx()) {
+		bandRects[ri] = image.Rect(b.Min.X, b.Min.Y+rs[0], b.Max.X, b.Min.Y+rs[1])
+		colSpans[ri] = mergeFragments(spans(img, bandRects[ri], true, minSheetGap))
+	}
+	single := singleFrameWidth(colSpans)
+	out := make([][]image.Rectangle, len(bands))
+	for ri, band := range bandRects {
+		for _, cs := range rowCells(img, band, colSpans[ri], rowWant{rows[ri], len(layout[ri]) > 1, single}) {
 			cell := image.Rect(b.Min.X+cs[0], band.Min.Y, b.Min.X+cs[1], band.Max.Y)
 			dropEdgeFragments(img, cell)
-			cells = append(cells, cell)
+			out[ri] = append(out[ri], cell)
 		}
 	}
-	return cells
+	return out
+}
+
+func debugf(format string, args ...any) {
+	if os.Getenv("ARTGEN_DEBUG") != "" {
+		log.Printf(format, args...)
+	}
+}
+
+// singleFrameWidth estimates one frame's width from spans that are not two frames touching.
+func singleFrameWidth(rows [][][2]int) float64 {
+	var widths []int
+	for _, sp := range rows {
+		if !hasWideSpan(sp) {
+			for _, s := range sp {
+				widths = append(widths, s[1]-s[0])
+			}
+		}
+	}
+	if len(widths) == 0 {
+		for _, sp := range rows {
+			for _, s := range sp {
+				widths = append(widths, s[1]-s[0])
+			}
+		}
+	}
+	if len(widths) == 0 {
+		return 0
+	}
+	sort.Ints(widths)
+	return float64(widths[len(widths)/2])
+}
+
+type rowWant struct {
+	n      int
+	exact  bool    // several animations share the row: must cut exactly n
+	single float64 // estimated width of one frame
+}
+
+// rowCells decides how to cut one row into frames. Rows owned by one animation keep the
+// number of frames the model actually drew.
+func rowCells(img *image.NRGBA, band image.Rectangle, cols [][2]int, w rowWant) [][2]int {
+	debugf("  want %d cols %v single %.0f", w.n, cols, w.single)
+	if len(cols) == w.n {
+		return cols
+	}
+	if w.exact {
+		if len(cols) > w.n {
+			return fitSpans(cols, w.n, band.Dx())
+		}
+		return inkCuts(img, band, w.n)
+	}
+	if w.single <= 0 {
+		return cols
+	}
+	counts := framesPerSpan(cols, w)
+	var out [][2]int
+	for i, c := range cols {
+		if counts[i] == 1 {
+			out = append(out, c)
+			continue
+		}
+		sub := image.Rect(band.Min.X+c[0], band.Min.Y, band.Min.X+c[1], band.Max.Y)
+		for _, p := range inkCuts(img, sub, counts[i]) {
+			out = append(out, [2]int{c[0] + p[0], c[0] + p[1]})
+		}
+	}
+	return out
+}
+
+// framesPerSpan estimates how many touching frames each span holds. When the estimate is
+// within one of the requested count, the requested count wins (spread by span width).
+func framesPerSpan(cols [][2]int, w rowWant) []int {
+	counts := make([]int, len(cols))
+	est, total := 0, 0
+	for i, c := range cols {
+		// Spans up to ~1.5 frames wide are one frame with a wide pose (arms out).
+		counts[i] = max(1, int(math.Round(float64(c[1]-c[0])/w.single-0.2)))
+		est += counts[i]
+		total += c[1] - c[0]
+	}
+	if est == w.n || est < w.n-1 || est > w.n+1 || w.n < len(cols) {
+		return counts
+	}
+	// Largest-remainder split of w.n frames proportional to span width, at least 1 each.
+	rem := make([]float64, len(cols))
+	given := 0
+	for i, c := range cols {
+		exact := float64(w.n) * float64(c[1]-c[0]) / float64(total)
+		counts[i] = max(1, int(exact))
+		rem[i] = exact - float64(counts[i])
+		given += counts[i]
+	}
+	for given < w.n {
+		best := 0
+		for i := range rem {
+			if rem[i] > rem[best] {
+				best = i
+			}
+		}
+		counts[best]++
+		rem[best] = -1
+		given++
+	}
+	return counts
+}
+
+// mergeFragments folds spans narrower than 35% of the median (sparks, sweat drops) into a neighbour.
+func mergeFragments(sp [][2]int) [][2]int {
+	for len(sp) > 1 {
+		med := medianWidth(sp)
+		idx := -1
+		for i, s := range sp {
+			if float64(s[1]-s[0]) < 0.35*med {
+				idx = i
+				break
+			}
+		}
+		if idx < 0 {
+			return sp
+		}
+		j := idx - 1
+		if j < 0 || (idx+1 < len(sp) && sp[idx+1][0]-sp[idx][1] < sp[idx][0]-sp[j][1]) {
+			j = idx + 1
+		}
+		lo, hi := min(idx, j), max(idx, j)
+		sp[lo] = [2]int{sp[lo][0], sp[hi][1]}
+		sp = append(sp[:hi], sp[hi+1:]...)
+	}
+	return sp
+}
+
+func medianWidth(sp [][2]int) float64 {
+	w := make([]int, len(sp))
+	for i, s := range sp {
+		w[i] = s[1] - s[0]
+	}
+	sort.Ints(w)
+	return float64(w[len(w)/2])
+}
+
+// hasWideSpan reports a span much wider than the others: two frames touching.
+func hasWideSpan(sp [][2]int) bool {
+	if len(sp) == 0 {
+		return true
+	}
+	med := medianWidth(sp)
+	for _, s := range sp {
+		if float64(s[1]-s[0]) > 1.6*med {
+			return true
+		}
+	}
+	return len(sp) == 1
 }
 
 // inkCuts splits a band into n cells, moving each even boundary to the column with the least ink nearby.

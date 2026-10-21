@@ -13,5 +13,6 @@ export default defineConfig({
       '/ws': { target: 'ws://localhost:8080', ws: true },
     },
   },
-  build: { chunkSizeWarningLimit: 1200 },
+  // '/assets/' is the game art served by the Go server, so built JS/CSS go to /static/.
+  build: { chunkSizeWarningLimit: 1200, assetsDir: 'static' },
 });
