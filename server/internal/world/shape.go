@@ -97,3 +97,6 @@ func (s Shape) SegmentHits(a, b geom.Vec, hw float64) bool {
 	}
 	return false
 }
+
+// Vec2 is a small helper for tests and tools.
+func Vec2(x, y float64) geom.Vec { return geom.Vec{X: x, Y: y} }

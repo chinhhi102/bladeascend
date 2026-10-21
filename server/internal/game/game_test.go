@@ -365,3 +365,30 @@ func TestMonsterOrbsReservedForKiller(t *testing.T) {
 		t.Fatalf("after the reservation B should collect 10 EXP, got %v", b.TotalExp)
 	}
 }
+
+// Spec §17: a scale-5 player cannot squeeze through a 150-wide alley; a small one can.
+func TestNarrowAlleyBlocksBigPlayers(t *testing.T) {
+	m := world.EmptyMap(12000)
+	m.Obstacles = []world.Obstacle{
+		{ID: 0, Kind: "stone_wall", Shape: world.Shape{X: 5000, Y: 4000, W: 120, H: 2000}},
+		{ID: 1, Kind: "stone_wall", Shape: world.Shape{X: 5270, Y: 4000, W: 120, H: 2000}},
+	}
+	g := quietGame(t, m)
+	small := g.AddPlayer(SpawnOptions{Name: "S", Level: 0, Swords: 1})
+	big := g.AddPlayer(SpawnOptions{Name: "B", Level: 89, Swords: 1})
+	place(g, small, Vec{X: 5195, Y: 3800}, 0)
+	place(g, big, Vec{X: 5195, Y: 3500}, 0)
+	for _, p := range []*Player{small, big} {
+		p.Moving, p.InputAngle = true, math.Pi/2
+	}
+	for i := 0; i < 30*12; i++ {
+		g.Tick(dt)
+		small.Pos.X, big.Pos.X = 5195, 5195 // walk straight down the alley axis
+	}
+	if small.Pos.Y < 6000 {
+		t.Fatalf("small player stuck at y=%v", small.Pos.Y)
+	}
+	if big.Pos.Y > 4000 {
+		t.Fatalf("big player squeezed into the alley: y=%v", big.Pos.Y)
+	}
+}
