@@ -34,3 +34,4 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
 10. Khi gặp câu hỏi về thiết kế game hoặc spec chưa rõ: KHÔNG tự đoán. Ghi câu hỏi vào
     docs/QUESTIONS.md (kèm bối cảnh ngắn: đang làm milestone nào, file nào, các phương án),
     rồi dừng lại báo tôi.
+11. Không bao giờ chờ art. Gameplay luôn ưu tiên trước; asset thiếu thì dùng placeholder tự động.

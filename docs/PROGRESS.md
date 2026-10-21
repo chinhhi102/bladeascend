@@ -10,10 +10,16 @@ cd server && go test ./... && go vet ./...
 cd client && npm run build
 cd server && go run ./cmd/sim --bots 40 --minutes 10     # giả lập cân bằng
 cd server && go run ./cmd/mapgen                         # tạo lại 3 bản đồ (ghi đè!)
-cd server && go run ./cmd/artgen status                  # xem art nào còn thiếu
+cd client && npm run assets:report                       # asset nào còn thiếu (thêm --all để xem cả cái đã có)
+cd server && go run ./cmd/artgen status                  # tình trạng theo từng ảnh cần sinh
 ```
 Phím test khi chơi (server chạy mặc định `-debug=true`): **E** +100 EXP · **R** lên cảnh giới · **K** +1 kiếm · **1–7** buff · **X** tự chết.
 Giả lập ping: thêm `?lag=150` vào địa chỉ (ví dụ `http://localhost:5173/?lag=150`). Giới hạn FPS: `?fps=30`.
+
+## Ưu tiên hiện tại (2026-10-22)
+**Gameplay trước, art sau.** Game chơi đầy đủ khi `assets/` trống (đã test: chạy server với thư mục asset rỗng → vào chơi, lên cảnh giới, buff, chết → Tổng kết → Chơi tiếp, không lỗi JS).
+Placeholder khi thiếu ảnh: nhân vật = hình tròn màu + chữ viết tắt (A Hớn → `AH`) + tên anim; vật cản phá được = hình chữ nhật đổi màu theo HP (xanh → vàng → đỏ, đống đổ nát màu xám); tường không phá = xám; kiếm = thanh dài màu theo cảnh giới; quái = hình tròn + số HP; vật phẩm = bong bóng màu.
+Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (dùng chung cho loader và `assets:report`).
 
 ## Đã làm
 | Milestone | Nội dung | Trạng thái |
@@ -26,6 +32,8 @@ Giả lập ping: thêm `?lag=150` vào địa chỉ (ví dụ `http://localhost
 | M5 | 7 buff + làm mới thời gian, Rương Báu (báo trước 10s), nội suy 100ms, dự đoán + hiệu chỉnh vị trí mình, AOI, không gửi người ẩn thân/trong bụi, giả lập ping `?lag=` | ✅ |
 | M6 | `artgen`: sinh ảnh minigen `/jobs` (gộp nhiều anim/1 ảnh), xóa nền, cắt sheet, căn pivot, ghép atlas + `manifest.json`; anim theo mood, VFX, 23 SFX + nhạc nền tự tổng hợp, UI đầy đủ. Danh sách art thiếu: `docs/ASSETS_STATUS.md` | ✅ (art còn thiếu, xem dưới) |
 | M7 | Joystick ảo, giao diện điện thoại (dọc/ngang + gợi ý xoay), giới hạn FPS (PC 60 / ĐT 45), hướng dẫn VPS + Caddy HTTPS: `docs/DEPLOY.md` | ✅ (chưa deploy thật — cần bạn thuê VPS) |
+
+Bổ sung gameplay 2026-10-22: đột phá cảnh giới → người xung quanh hiện emote kinh ngạc (§3.2); bị chém lộ khỏi bụi → emote "Lộ rồi!" (§12); vòng kiếm có vết nứt khi `crack > 0` (§5.2).
 
 Câu hỏi Q1–Q5 đã áp dụng theo `docs/ANSWERS.md` (thưởng hạ sát +30, gió theo góc 60°/120°, viên EXP thuộc người chém 1.5s, chết rơi 50% kiếm).
 

@@ -481,3 +481,43 @@ func TestChestAnnouncedThenBurstsIntoItems(t *testing.T) {
 		t.Fatalf("chest should burst into items (left %d)", n)
 	}
 }
+
+func TestBreakthroughShocksNearbyAndBushRevealEmotes(t *testing.T) {
+	m := world.EmptyMap(12000)
+	m.Zones = []world.Zone{{ID: 0, Kind: "bush", Shape: world.Shape{Circle: true, X: 6000, Y: 6000, R: 300}}}
+	g := quietGame(t, m)
+	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 9, Swords: 1})
+	near := g.AddPlayer(SpawnOptions{Name: "N", Swords: 1})
+	far := g.AddPlayer(SpawnOptions{Name: "F", Swords: 1})
+	place(g, p, Vec{X: 3000, Y: 3000}, 0)
+	place(g, near, Vec{X: 3300, Y: 3000}, 0)
+	place(g, far, Vec{X: 9000, Y: 9000}, 0)
+	g.DrainEvents()
+	g.GainExp(p, g.Prog.ExpNeeded(9), false)
+	shocked := map[uint32]bool{}
+	for _, e := range g.DrainEvents() {
+		if e.Kind == "Emote" && e.S == "shocked" {
+			shocked[e.A] = true
+		}
+	}
+	if !shocked[near.ID] || shocked[far.ID] || shocked[p.ID] {
+		t.Fatalf("shocked = %v", shocked)
+	}
+	// A player hiding in the bush gets a "revealed" bubble when hit.
+	hider := g.AddPlayer(SpawnOptions{Name: "H", Level: 15, Swords: 1})
+	att := g.AddPlayer(SpawnOptions{Name: "A", Swords: 1})
+	place(g, hider, Vec{X: 6000, Y: 6000}, math.Pi/2)
+	place(g, att, Vec{X: 6000 - att.Geom.Radius, Y: 6000}, 0)
+	hider.Bush = 0
+	g.DrainEvents()
+	g.applyBodyHit(att, hider)
+	found := false
+	for _, e := range g.DrainEvents() {
+		if e.Kind == "Emote" && e.S == "revealed" && e.A == hider.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("missing revealed emote")
+	}
+}

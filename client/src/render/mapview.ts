@@ -40,7 +40,22 @@ interface ObstacleNode {
   o: MapObstacle;
   node: Container;
   look: ObstacleLook | '';
+  hpDrawn: number;
   warnUntil: number;
+}
+
+const HP_FULL = 0x4caf50;
+const HP_MID = 0xffd23f;
+const HP_LOW = 0xe63946;
+
+function mixColor(a: number, b: number, t: number): number {
+  const ch = (shift: number): number => Math.round(((a >> shift) & 255) + (((b >> shift) & 255) - ((a >> shift) & 255)) * t);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
+/** hpColor: green at full HP → yellow at half → red when nearly broken (placeholder obstacles). */
+function hpColor(frac: number): number {
+  return frac > 0.5 ? mixColor(HP_MID, HP_FULL, (frac - 0.5) * 2) : mixColor(HP_LOW, HP_MID, frac * 2);
 }
 
 /** MapView draws the static map; obstacles change look with their HP (spec §8.2). */
@@ -62,7 +77,7 @@ export class MapView {
     this.buildGates();
     this.buildDecor();
     for (const o of map.obstacles) {
-      const n: ObstacleNode = { o, node: new Container(), look: '', warnUntil: 0 };
+      const n: ObstacleNode = { o, node: new Container(), look: '', hpDrawn: -1, warnUntil: 0 };
       this.obstacles.addChild(n.node);
       this.obstacleNodes.set(o.id, n);
     }
@@ -229,25 +244,28 @@ export class MapView {
     } else if (frac <= 0.66) {
       look = 'cracked';
     }
-    if (look !== n.look) {
+    const hasArt = assets.texture(`obstacles/${n.o.k}/${look}.png`) !== null;
+    if (look !== n.look || (!hasArt && hp !== n.hpDrawn)) {
       n.look = look;
+      n.hpDrawn = hp;
       n.node.removeChildren().forEach((c) => c.destroy());
-      n.node.addChild(this.obstacleArt(n.o, look));
+      n.node.addChild(this.obstacleArt(n.o, look, frac));
       n.node.zIndex = broken ? -1 : bounds(n.o.s).y + bounds(n.o.s).h;
     }
     // Blink 3s before regrowing (spec §8.2).
     n.node.alpha = broken && now < n.warnUntil ? 0.5 + 0.5 * Math.sin(now * 20) : 1;
   }
 
-  private obstacleArt(o: MapObstacle, look: ObstacleLook): Container {
+  private obstacleArt(o: MapObstacle, look: ObstacleLook, frac: number): Container {
     const tex = assets.texture(`obstacles/${o.k}/${look}.png`);
     if (tex) {
       return fitSprite(tex, o.s);
     }
-    const color = OBSTACLE_COLOR[o.k] ?? 0x888888;
+    // Placeholder: indestructible walls keep their colour; breakable ones show HP as colour.
+    const color = o.hp > 0 ? hpColor(frac) : OBSTACLE_COLOR[o.k] ?? 0x5b6b5b;
     const g = new Graphics();
     if (look === 'rubble') {
-      return drawShape(g, o.s).fill({ color, alpha: 0.25 });
+      return drawShape(g, o.s).fill({ color: 0x777777, alpha: 0.3 }).stroke({ color: 0x555555, width: 4, alpha: 0.5 });
     }
     drawShape(g, o.s).fill(color).stroke({ color: 0x000000, width: 6 });
     if (look !== 'intact') {

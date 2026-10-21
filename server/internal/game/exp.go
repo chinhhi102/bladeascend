@@ -33,6 +33,7 @@ func (g *Game) setTotalExp(p *Player, exp float64) {
 		g.setMood(p, MoodBreakthrough, g.Cfg.Mood.BreakthroughSecs)
 		g.emit(Event{Kind: "Breakthrough", A: p.ID, N: p.Level, X: float32(pos.X), Y: float32(pos.Y)})
 		g.emit(Event{Kind: "KillFeed", Global: true, S: "breakthrough", A: p.ID, N: newR})
+		g.shockNearby(p)
 	case p.Level > oldL:
 		g.setMood(p, MoodLevelup, g.Cfg.Mood.LevelupSecs)
 		g.emit(Event{Kind: "LevelUp", A: p.ID, N: p.Level, X: float32(pos.X), Y: float32(pos.Y)})
@@ -76,4 +77,14 @@ func (g *Game) LoseSwords(p *Player, n int) int {
 	p.Ring.Count -= lost
 	g.refreshDerived(p)
 	return lost
+}
+
+// shockNearby makes characters around a breakthrough show a surprised emote (spec §3.2).
+func (g *Game) shockNearby(p *Player) {
+	r := g.Cfg.Mood.NearR * p.Scale
+	for _, o := range g.PlayerList() {
+		if o != p && !o.Dead && o.Pos.Dist(p.Pos) <= r {
+			g.emote(o, "shocked")
+		}
+	}
 }

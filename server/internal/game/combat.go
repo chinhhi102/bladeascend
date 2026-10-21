@@ -59,6 +59,9 @@ func (g *Game) resolveSwordBody() {
 func (g *Game) applyBodyHit(a, b *Player) {
 	pc := g.Cfg.Player
 	a.Buffs[BuffStealth] = 0 // Ẩn Thân ends as soon as the owner's sword hits someone
+	if g.HiddenInBush(b) {
+		g.emote(b, "revealed") // spec §12: bubble when knocked out of hiding
+	}
 	b.InvulnUntil = g.Time + pc.InvulnOnHit
 	b.RevealedUntil = g.Time + g.Cfg.Zones.BushRevealOnHitSecs
 	push := b.Pos.Sub(a.Pos).Norm()

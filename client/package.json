@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "assets:report": "node --no-warnings scripts/assets-report.ts"
   },
   "dependencies": {
     "@msgpack/msgpack": "3.1.3",

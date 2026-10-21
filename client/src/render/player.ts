@@ -4,6 +4,7 @@ import { type GameConfig, realmOf } from '../config';
 import type { PlayerFrame } from '../net/state';
 import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
+import { animShort, initials } from './catalog';
 import { BUFF_COLORS, charColor, REALM_COLORS } from './palette';
 
 // Visual proportions relative to the body hitbox radius (not balance numbers).
@@ -29,6 +30,7 @@ const FALLBACK: Record<string, string[]> = {
 export class PlayerSprite {
   readonly root = new Container();
   readonly ring = new Container();
+  private readonly cracks = new Graphics();
   private readonly shadow = new Graphics();
   private readonly aura = new Graphics();
   private readonly bodyBox = new Container();
@@ -42,6 +44,7 @@ export class PlayerSprite {
   private tweenTo = 0;
   private tweenStart = 0;
   private bubble: Container | null = null;
+  private readonly animLabel = new Text({ text: '', style: { fontSize: 40, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x000000, width: 6 } } });
   private bubbleUntil = 0;
 
   constructor(
@@ -59,20 +62,25 @@ export class PlayerSprite {
     this.label.anchor.set(0.5, 1);
     this.root.addChild(this.shadow, this.aura, this.bodyBox, this.label);
     if (!this.atlas) {
-      this.body = this.placeholderBody(name);
+      this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
     }
   }
 
-  private placeholderBody(name: string): Container {
+  // Placeholder (no art yet): coloured circle + character initials + current animation name.
+  private placeholderBody(): Container {
     const [main, accent] = charColor(this.char);
     const c = new Container();
     const g = new Graphics().circle(0, 0, 1).fill(main).stroke({ color: 0x000000, width: 0.12 });
-    g.circle(0, -0.25, 0.35).fill(accent);
-    const t = new Text({ text: (name[0] ?? '?').toUpperCase(), style: { fontSize: 48, fontWeight: '900', fill: 0xffffff } });
+    g.circle(0, -0.55, 0.32).fill(accent);
+    const t = new Text({ text: initials(this.char || '?'), style: { fontSize: 44, fontWeight: '900', fill: 0xffffff, stroke: { color: 0x000000, width: 6 } } });
     t.anchor.set(0.5);
     t.scale.set(0.02);
-    c.addChild(g, t);
+    t.y = 0.1;
+    this.animLabel.anchor.set(0.5, 0);
+    this.animLabel.scale.set(0.016);
+    this.animLabel.y = 1.25;
+    c.addChild(g, t, this.animLabel);
     return c;
   }
 
@@ -107,7 +115,12 @@ export class PlayerSprite {
       return;
     }
     const body = this.body as Container;
-    body.scale.set(flip ? -r : r, r);
+    if (this.mood !== mood) {
+      this.mood = mood;
+      this.animLabel.text = animShort(mood);
+    }
+    // The placeholder circle is symmetric: never mirror it, so the initials stay readable.
+    body.scale.set(r, r);
     const squash = mood === 'hit' || mood === 'death' ? 0.7 : 1;
     body.scale.y = r * squash;
   }
@@ -200,7 +213,37 @@ export class PlayerSprite {
       sw.rotation = a + Math.PI / 2;
       this.sizeSword(sw, s.sl, s.sw);
     });
+    this.drawCracks(f);
     this.ring.zIndex = f.y + 1;
+  }
+
+  // Light crack lines across every sword while the ring carries crack damage (spec §5.2).
+  private drawCracks(f: PlayerFrame): void {
+    const g = this.cracks;
+    g.clear();
+    const ck = f.s.ck ?? 0;
+    if (ck <= 0 || !this.swords.length) {
+      return;
+    }
+    if (g.parent !== this.ring) {
+      this.ring.addChild(g);
+    }
+    this.ring.setChildIndex(g, this.ring.children.length - 1);
+    const len = f.s.sl;
+    for (const sw of this.swords) {
+      const a = sw.rotation - Math.PI / 2;
+      const dx = Math.cos(a);
+      const dy = Math.sin(a);
+      const px = -dy;
+      const py = dx;
+      const z = f.s.sw * 0.6;
+      const pts = [-0.35, -0.12, 0.05, 0.25].map((t, i) => ({ x: sw.x + dx * len * t + px * z * (i % 2 ? 1 : -1), y: sw.y + dy * len * t + py * z * (i % 2 ? 1 : -1) }));
+      g.moveTo(pts[0].x, pts[0].y);
+      for (const p of pts.slice(1)) {
+        g.lineTo(p.x, p.y);
+      }
+    }
+    g.stroke({ color: 0xffffff, width: Math.max(1.5, f.s.sw * 0.18), alpha: 0.35 + 0.5 * Math.min(1, ck) });
   }
 
   private rebuildSwords(n: number, realm: number, now: number): void {
@@ -208,7 +251,7 @@ export class PlayerSprite {
     this.tweenTo = n;
     this.tweenStart = now;
     if (realm !== this.swordRealm) {
-      this.ring.removeChildren().forEach((c) => c.destroy());
+      this.ring.removeChildren().forEach((c) => c !== this.cracks && c.destroy());
       this.swords = [];
       this.swordRealm = realm;
     }

@@ -84,6 +84,7 @@ export const STR = {
     breakthrough: ['Ta đã ngộ rồi!!!'],
     teleport_in: ['Đây là đâu???'],
     bush: ['Suỵt...'],
+    shocked: ['Hả???', 'Trời đất ơi!', 'Ghê vậy!'],
   } as Record<string, string[]>,
 
   characters: {
