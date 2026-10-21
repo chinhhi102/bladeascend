@@ -299,3 +299,69 @@ func TestMoveSpeedFormula(t *testing.T) {
 		t.Fatalf("speed = %v", s)
 	}
 }
+
+func TestKillRewardAndDeathSwordDrop(t *testing.T) {
+	g := quietGame(t, nil)
+	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 5, Swords: 1})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 0, Swords: 5})
+	place(g, a, Vec{X: 5000, Y: 5000}, 0)
+	place(g, b, Vec{X: 5000 + a.Geom.Radius, Y: 5000}, math.Pi/2+math.Pi/5)
+	a.InvulnUntil = 1e9
+	b.TotalExp = 80
+	aBefore := a.TotalExp
+	g.resolveSwordBody()
+	if !b.Dead {
+		t.Fatal("B should die at Luyện Khí 1")
+	}
+	if got, want := a.TotalExp-aBefore, 80*0.5+30; math.Abs(got-want) > 1e-9 {
+		t.Fatalf("killer gained %v, want %v (50%% + kill bonus)", got, want)
+	}
+	swords, orbs := 0, 0.0
+	for _, it := range g.Items {
+		switch it.Kind {
+		case "sword":
+			swords++
+		case "orb":
+			orbs += it.Value
+		}
+	}
+	if swords != 2 {
+		t.Fatalf("corpse dropped %d swords, want floor(5*0.5)=2", swords)
+	}
+	if orbs != 24 {
+		t.Fatalf("dropped orb EXP %v, want 24 (30%% of 80)", orbs)
+	}
+}
+
+func TestWindAngles(t *testing.T) {
+	g := quietGame(t, nil)
+	cases := []struct {
+		deg  float64
+		want float64
+	}{{0, 1.5}, {45, 1.5}, {90, 1}, {119, 1}, {130, 0.8}, {180, 0.8}}
+	for _, c := range cases {
+		dir := Vec{X: math.Cos(c.deg * math.Pi / 180), Y: math.Sin(c.deg * math.Pi / 180)}
+		if got := g.windMult(dir, 0); got != c.want {
+			t.Errorf("%v° off the wind → %v, want %v", c.deg, got, c.want)
+		}
+	}
+}
+
+func TestMonsterOrbsReservedForKiller(t *testing.T) {
+	g := quietGame(t, nil)
+	a := g.AddPlayer(SpawnOptions{Name: "A", Swords: 1})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Swords: 1})
+	place(g, a, Vec{X: 2000, Y: 2000}, 0)
+	place(g, b, Vec{X: 7000, Y: 7000}, 0)
+	m := &Monster{ID: g.newID(), Kind: "small", Pos: Vec{X: 7000, Y: 7000}, Exp: 10}
+	g.killMonster(m, a)
+	g.resolvePickups()
+	if b.TotalExp != 0 {
+		t.Fatalf("B stole reserved orbs: exp %v", b.TotalExp)
+	}
+	g.Time += g.Cfg.Player.OrbOwnerSecs + 0.01
+	g.resolvePickups()
+	if b.TotalExp != 10 {
+		t.Fatalf("after the reservation B should collect 10 EXP, got %v", b.TotalExp)
+	}
+}

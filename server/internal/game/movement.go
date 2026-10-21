@@ -27,24 +27,35 @@ func (g *Game) ZoneMult(pos Vec, dir Vec) float64 {
 		case "mud":
 			mult *= g.Cfg.Zones.MudMult
 		case "wind":
-			if dir.Dot(geom.FromAngle(z.WindDir)) >= 0 {
-				mult *= g.Cfg.Zones.WindWith
-			} else {
-				mult *= g.Cfg.Zones.WindAgainst
-			}
+			mult *= g.windMult(dir, z.WindDir)
 		default:
 		}
 	})
 	return mult
 }
 
-// InBush reports whether pos lies inside a bush zone.
-func (g *Game) InBush(pos Vec) bool {
-	found := false
+// windMult: within wind_with_max_deg of the wind → with; beyond wind_against_min_deg → against;
+// otherwise (crosswind) unchanged (spec §8.3).
+func (g *Game) windMult(dir Vec, windDir float64) float64 {
+	cos := geom.Clamp(dir.Dot(geom.FromAngle(windDir)), -1, 1)
+	deg := math.Acos(cos) * 180 / math.Pi
+	switch {
+	case deg < g.Cfg.Zones.WindWithMaxDeg:
+		return g.Cfg.Zones.WindWith
+	case deg > g.Cfg.Zones.WindAgainstMinDeg:
+		return g.Cfg.Zones.WindAgainst
+	default:
+		return 1
+	}
+}
+
+// BushAt returns the id of the bush zone containing pos, or -1.
+func (g *Game) BushAt(pos Vec) int {
+	found := -1
 	g.QueryZones(pos, 1, func(id int) {
 		z := g.Map.Zones[id]
 		if z.Kind == "bush" && z.Shape.Contains(pos) {
-			found = true
+			found = id
 		}
 	})
 	return found
@@ -56,7 +67,7 @@ func (g *Game) movePlayers(dt float64) {
 			continue
 		}
 		g.movePlayer(p, dt)
-		p.InBush = g.InBush(p.Pos)
+		p.Bush = g.BushAt(p.Pos)
 		g.checkGate(p)
 	}
 }

@@ -4,15 +4,15 @@ import "math"
 
 type Vec struct{ X, Y float64 }
 
-func (a Vec) Add(b Vec) Vec          { return Vec{a.X + b.X, a.Y + b.Y} }
-func (a Vec) Sub(b Vec) Vec          { return Vec{a.X - b.X, a.Y - b.Y} }
-func (a Vec) Mul(k float64) Vec      { return Vec{a.X * k, a.Y * k} }
-func (a Vec) Dot(b Vec) float64      { return a.X*b.X + a.Y*b.Y }
-func (a Vec) Len() float64           { return math.Hypot(a.X, a.Y) }
-func (a Vec) Dist(b Vec) float64     { return math.Hypot(a.X-b.X, a.Y-b.Y) }
-func (a Vec) Dist2(b Vec) float64    { dx, dy := a.X-b.X, a.Y-b.Y; return dx*dx + dy*dy }
-func FromAngle(a float64) Vec        { return Vec{math.Cos(a), math.Sin(a)} }
-func (a Vec) Angle() float64         { return math.Atan2(a.Y, a.X) }
+func (a Vec) Add(b Vec) Vec       { return Vec{a.X + b.X, a.Y + b.Y} }
+func (a Vec) Sub(b Vec) Vec       { return Vec{a.X - b.X, a.Y - b.Y} }
+func (a Vec) Mul(k float64) Vec   { return Vec{a.X * k, a.Y * k} }
+func (a Vec) Dot(b Vec) float64   { return a.X*b.X + a.Y*b.Y }
+func (a Vec) Len() float64        { return math.Hypot(a.X, a.Y) }
+func (a Vec) Dist(b Vec) float64  { return math.Hypot(a.X-b.X, a.Y-b.Y) }
+func (a Vec) Dist2(b Vec) float64 { dx, dy := a.X-b.X, a.Y-b.Y; return dx*dx + dy*dy }
+func FromAngle(a float64) Vec     { return Vec{math.Cos(a), math.Sin(a)} }
+func (a Vec) Angle() float64      { return math.Atan2(a.Y, a.X) }
 func (a Vec) Norm() Vec {
 	l := a.Len()
 	if l < 1e-9 {

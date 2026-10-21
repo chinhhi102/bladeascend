@@ -16,7 +16,8 @@
   "player": {
     "body_r": 30, "move_base": 260, "pickup_r": 60,
     "invuln_on_hit": 1.0, "invuln_on_spawn": 2.0,
-    "attacker_share": 0.5, "drop_share": 0.3,
+    "attacker_share": 0.5, "drop_share": 0.3, "kill_bonus_exp": 30,
+    "death_sword_drop": 0.5, "orb_owner_secs": 1.5,
     "camera_view_h": 900, "camera_exp": 0.85,
     "knockback": 140, "knockback_secs": 0.25,
     "death_anim_secs": 1.0,
@@ -54,7 +55,7 @@
     "stall_item_drop": 0.3,
     "hit_cooldown": 0.25
   },
-  "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
+  "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
   "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8, "feed_secs": 2 },
   "room": {
     "max_humans": 20, "bot_fill_target": 20, "map_size": 12000,
@@ -66,8 +67,12 @@
     "decide_min": 0.3, "decide_max": 0.6,
     "reaction_min": 0.2, "reaction_max": 0.6,
     "hunt_r": 600, "hunt_ratio": 0.8, "flee_r": 500, "flee_ratio": 1.25,
-    "path_grid": 100, "ambush_r": 500, "ambush_secs": 6
+    "path_grid": 100, "ambush_r": 500, "ambush_secs": 6,
+    "names": ["Tèo Kiếm Gỗ","Bé Na Xoay","Chú Tư Bún","Anh Ba Gà","Thằng Cu Đất","Cô Út Mắm","Bác Hai Lúa","Tí Sún","Lão Gàn","Mít Tơ Bean",
+              "Hai Lúa Kiếm","Bà Năm Chè","Cậu Vàng","Su Hào Kiếm","Ông Kẹ","Tám Chuyện","Chí Phèo Xoay","Xuân Tóc Đỏ","Nhỏ Bông","Sáu Khìa",
+              "Đức Bo","Tùng Tóc Xù","Mai Mì Tôm","Lan Lạc Đường","Hùng Hụt Hơi","Đạo Sĩ Ốc","Phi Hành Xe Ôm","Thánh Gióng Mini","Cậu Bé Bánh Mì","Thím Ba Bầu"]
   },
+  "characters": ["a_hon","ba_tam_loa","ong_ba_vong","dai_ca_dep","map_tra_sua","co_ba_ganh","su_phu_mi","be_ti","shipper","cu_rua"],
   "mood": {
     "min_secs": 0.5, "hit_secs": 0.6, "levelup_secs": 0.5, "breakthrough_secs": 0.8,
     "realm_drop_secs": 0.5, "respawn_secs": 0.5, "near_r": 700

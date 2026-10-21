@@ -67,11 +67,11 @@ type Player struct {
 	Moving     bool
 	LastSeq    uint32
 
-	TotalExp  float64
-	Level     int
-	Ring      Ring
-	Geom      RingGeom
-	Scale     float64
+	TotalExp float64
+	Level    int
+	Ring     Ring
+	Geom     RingGeom
+	Scale    float64
 
 	PeakExp   float64
 	PeakLevel int
@@ -93,12 +93,12 @@ type Player struct {
 	MoodUntil float64 // forced moods (hit, levelup…) hold until this time
 	MoodSince float64
 
-	InBush        bool
-	RevealedUntil float64 // bush reveal after being hit
-	GateReadyAt   float64
+	Bush           int     // bush zone id, -1 when not in a bush
+	RevealedUntil  float64 // bush reveal after being hit
+	GateReadyAt    float64
 	lastTeleportIn float64
-	Transit       *Transit
-	EmoteReady    map[string]float64
+	Transit        *Transit
+	EmoteReady     map[string]float64
 }
 
 func (p *Player) HasBuff(b int, now float64) bool { return p.Buffs[b] > now }
@@ -126,10 +126,12 @@ type Monster struct {
 
 // Item kinds: "sword", buff names, "orb" (EXP orb, Value = EXP), "chest".
 type Item struct {
-	ID    uint32
-	Kind  string
-	Pos   Vec
-	Value float64
+	ID         uint32
+	Kind       string
+	Pos        Vec
+	Value      float64
+	Owner      uint32  // only this player may pick it up until OwnerUntil
+	OwnerUntil float64
 }
 
 // ObstacleState is the dynamic state of a destructible obstacle (spec §8.2).

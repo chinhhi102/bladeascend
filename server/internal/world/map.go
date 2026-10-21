@@ -55,7 +55,25 @@ type Map struct {
 
 // EmptyMap is used by tests and when no .tmj file is available.
 func EmptyMap(size float64) *Map {
-	return &Map{ID: "empty", Name: "Bãi Trống", Size: size, Biome: "grass"}
+	m := &Map{ID: "empty", Name: "Bãi Trống", Size: size, Biome: "grass"}
+	m.normalize()
+	return m
+}
+
+// normalize replaces nil slices so the JSON for the client always has arrays.
+func (m *Map) normalize() {
+	if m.Obstacles == nil {
+		m.Obstacles = []Obstacle{}
+	}
+	if m.Zones == nil {
+		m.Zones = []Zone{}
+	}
+	if m.Gates == nil {
+		m.Gates = []Gate{}
+	}
+	if m.Decor == nil {
+		m.Decor = []Decor{}
+	}
 }
 
 // GatesInNetwork returns the other gates linked to gate g.
@@ -103,6 +121,7 @@ func LoadTMJ(path string, hp map[string]int) (*Map, error) {
 	for _, l := range t.Layers {
 		m.addLayer(l, hp)
 	}
+	m.normalize()
 	return m, nil
 }
 

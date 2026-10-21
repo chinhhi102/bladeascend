@@ -106,7 +106,7 @@ Thứ tự xử lý mỗi tick server:
 
 ### 5.1 Kiếm A chạm thân B
 (A ≠ B, B không bất tử, không có khiên, không đang dịch chuyển)
-- Nếu B ở Luyện Khí tầng 1 (`L == 0`) → B **chết** (mục 7).
+- Nếu B ở Luyện Khí tầng 1 (`L == 0`) → B **chết** (mục 7). Khi đó `loss = B.total_exp` hiện tại; A nhận 50% loss + **thưởng hạ sát `kill_bonus_exp` (30)**, rơi 30% loss thành viên EXP, cộng 1 kill cho A.
 - Ngược lại: `loss = exp_needed(level ngay dưới level hiện tại của B)`; `B.total_exp = max(0, B.total_exp - loss)` → B rớt 1 tầng (có thể rớt cảnh giới).
 - A nhận `50% * loss` EXP; rơi `30% * loss` dạng viên EXP quanh B.
 - B bất tử **1s** (nhấp nháy), bị đẩy lùi khỏi A.
@@ -144,7 +144,7 @@ Ví dụ Luyện Khí (r=0) vs Nguyên Anh (r=3) → k = 4: mỗi lần va, Luy�
 Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Chủ nhân hiện emote "Kiếm của taaa!".
 
 ### 5.3 Kiếm chạm quái / vật cản
-- Quái: 1 damage mỗi lần chạm, cooldown mỗi cặp (kiếm, quái) 0.25s.
+- Quái: 1 damage mỗi lần chạm, cooldown mỗi cặp (kiếm, quái) 0.25s. Quái chết → **toàn bộ EXP rơi thành viên EXP** tại chỗ. Trong `orb_owner_secs` (1.5s) đầu, chỉ người chém hạ quái được nhặt; sau đó ai cũng nhặt được.
 - Vật cản: `1 + r` damage (cảnh giới càng cao chém càng nhanh), cooldown mỗi cặp 0.25s. **Kiếm xuyên qua vật cản và không bị mất/bể** khi chém vật cản.
 - Kiếm không tương tác với chính chủ.
 
@@ -161,7 +161,7 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 | Song Bội Đan | EXP nhận × 2 | 20s | 5 |
 | Ẩn Thân Phù | Người khác không thấy mình (trừ khi ở rất gần: 120 × scale của họ); hết hiệu lực ngay khi kiếm mình chém trúng người | 6s | 3 |
 | Viên EXP nhỏ/vừa/lớn | +5 / +20 / +60 EXP | – | rơi từ quái |
-| **Rương Báu** (hiếm) | Nổ ra 5 item ngẫu nhiên | – | 1 rương mỗi 2 phút, báo trước toàn phòng 10s |
+| **Rương Báu** (hiếm) | Người đầu tiên **chạm vào** → rương nổ ra 5 item ngẫu nhiên văng xung quanh (ai lượm cũng được) | – | 1 rương mỗi 2 phút, báo trước toàn phòng 10s |
 
 - Nhặt lại buff đang có → làm mới thời gian (không cộng dồn).
 - HUD hiển thị icon buff + vòng đếm ngược. Mỗi buff có aura màu riêng trên nhân vật để người khác "đọc" được (trừ Ẩn Thân).
@@ -170,6 +170,7 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 
 ## 7. Chết & màn hình chờ
 
+- **Rơi kiếm khi chết** (người và bot): `floor(n * death_sword_drop)` kiếm (mặc định 50%) văng ra thành item kiếm quanh xác. Ví dụ chết với 5 kiếm → rơi 2.
 - **Người thật**: anim `death` 1s → rời phòng → **Màn hình Tổng kết** hiển thị:
   - Bị ai chém (tên + nhân vật), câu tấu hài random ("Bạn đã được tiễn về quê nuôi cá").
   - Cảnh giới cao nhất đạt được, tổng EXP đỉnh, số người đã chém, thời gian sống, hạng trong phòng.
@@ -209,7 +210,7 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 |---|---|---|
 | Bụi rậm | Ai đứng trong bụi thì người ngoài bụi không thấy (trừ khi đứng gần 150 × scale). Bị chém trúng thì lộ 2s | Phục kích, trốn |
 | Bùn lầy | Tốc chạy × 0.6 | Dụ kẻ đuổi vào bùn |
-| Đường gió | Tốc chạy × 1.5 khi đi theo hướng gió, × 0.8 khi ngược | Đường thoát nhanh |
+| Đường gió | Lệch so với hướng gió < 60° → × 1.5 (theo gió); > 120° → × 0.8 (ngược gió); còn lại × 1.0 (ngang gió) | Đường thoát nhanh |
 | Hẻm hẹp | Các lối đi rộng 150 / 250 / 350 giữa vật cản không phá được | Người to (thân rộng) không chui lọt, người nhỏ trốn vào được |
 
 ### 8.4 Cổng dịch chuyển
@@ -410,7 +411,8 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "player": {
     "body_r": 30, "move_base": 260, "pickup_r": 60,
     "invuln_on_hit": 1.0, "invuln_on_spawn": 2.0,
-    "attacker_share": 0.5, "drop_share": 0.3,
+    "attacker_share": 0.5, "drop_share": 0.3, "kill_bonus_exp": 30,
+    "death_sword_drop": 0.5, "orb_owner_secs": 1.5,
     "camera_view_h": 900, "camera_exp": 0.85
   },
   "buffs": {
@@ -431,7 +433,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "hp": { "fence": 30, "stall": 60, "brick": 150, "boulder": 400 },
     "stall_item_drop": 0.3
   },
-  "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
+  "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
   "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8 },
   "room": {
     "max_humans": 20, "bot_fill_target": 20, "map_size": 12000,
@@ -454,7 +456,9 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
 - [ ] Luyện Khí còn 3 kiếm va Nguyên Anh → Luyện Khí còn 1, Nguyên Anh chưa mất (nứt 2/4).
 - [ ] Không ai bao giờ có dưới 1 kiếm.
 - [ ] Bị chém ở Trúc Cơ tầng 1 → Luyện Khí tầng 10, kiếm thừa rơi ra đất.
-- [ ] Bị chém ở Luyện Khí tầng 1 → màn hình Tổng kết, bấm "Chơi tiếp" vào lại được.
+- [ ] Bị chém ở Luyện Khí tầng 1 → màn hình Tổng kết, bấm "Chơi tiếp" vào lại được; người chém nhận 50% EXP nạn nhân + 30; xác rơi 50% số kiếm.
+- [ ] Viên EXP từ quái chỉ người chém nhặt được trong 1.5s đầu.
+- [ ] Đi chéo 90° so với gió → tốc độ không đổi.
 - [ ] Vật cản bị chém vỡ → đi qua được → 30s sau mọc lại, không kẹt người.
 - [ ] Kiếm chém vật cản không bị mất.
 - [ ] Vào cổng → ra ở cổng khác, cổng đích lóe sáng trước, không có bất tử khi ra.

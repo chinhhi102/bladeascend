@@ -84,7 +84,7 @@ func (g *Game) resolvePickups() {
 		r := g.PickupRadius(p) + g.Cfg.Items.ItemR
 		r2 := r * r
 		for _, it := range g.Items {
-			if it.Pos.Dist2(p.Pos) <= r2 {
+			if it.Pos.Dist2(p.Pos) <= r2 && (it.Owner == 0 || it.Owner == p.ID || g.Time >= it.OwnerUntil) {
 				g.pickup(p, it)
 			}
 		}

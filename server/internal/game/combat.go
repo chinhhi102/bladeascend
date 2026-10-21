@@ -82,7 +82,7 @@ func (g *Game) applyBodyHit(a, b *Player) {
 	loss := g.Prog.ExpNeeded(b.Level - 1)
 	g.setTotalExp(b, b.TotalExp-loss)
 	g.GainExp(a, loss*pc.AttackerShare, true)
-	g.scatterOrbs(b.Pos, loss*pc.DropShare)
+	g.scatterOrbs(b.Pos, loss*pc.DropShare, 0)
 	if g.Prog.Realm(b.Level) < oldRealm {
 		g.emit(Event{Kind: "KillFeed", Global: true, S: "realm_drop", A: a.ID, B: b.ID, N: g.Prog.Realm(b.Level)})
 	}
@@ -91,10 +91,11 @@ func (g *Game) applyBodyHit(a, b *Player) {
 // kill handles a Luyện Khí 1 player being cut down (spec §7).
 func (g *Game) kill(a, b *Player) {
 	pc := g.Cfg.Player
-	// See docs/QUESTIONS.md Q1: EXP for a kill uses the victim's remaining EXP as "loss".
+	// Spec §5.1: at Luyện Khí 1 the "loss" is the victim's remaining EXP, plus a kill bonus.
 	loss := b.TotalExp
-	g.GainExp(a, loss*pc.AttackerShare, true)
-	g.scatterOrbs(b.Pos, loss*pc.DropShare)
+	g.GainExp(a, loss*pc.AttackerShare+pc.KillBonusExp, true)
+	g.scatterOrbs(b.Pos, loss*pc.DropShare, 0)
+	g.dropDeathSwords(b)
 	a.Kills++
 	b.Dead, b.DiedAt, b.KilledBy = true, g.Time, a.ID
 	b.KillerName, b.KillerChar = a.Name, a.Char
@@ -205,20 +206,21 @@ func (g *Game) hitMonsters(a *Player) {
 		m.HP--
 		m.FleeUntil, m.FleeFrom = g.Time+g.Cfg.Monsters.FleeSecs, a.Pos
 		if m.HP <= 0 {
-			g.killMonster(m)
+			g.killMonster(m, a)
 			continue
 		}
 		g.emit(Event{Kind: "MonsterHurt", A: m.ID, N: m.HP, X: float32(m.Pos.X), Y: float32(m.Pos.Y)})
 	}
 }
 
-func (g *Game) killMonster(m *Monster) {
+// killMonster drops the monster's EXP as orbs reserved for the killer for orb_owner_secs (spec §5.3).
+func (g *Game) killMonster(m *Monster, killer *Player) {
 	delete(g.Monsters, m.ID)
 	if m.Kind == "boss" {
 		g.bossCount--
 	}
 	g.emit(Event{Kind: "MonsterDie", A: m.ID, S: m.Kind, X: float32(m.Pos.X), Y: float32(m.Pos.Y)})
-	g.scatterOrbs(m.Pos, m.Exp)
+	g.scatterOrbs(m.Pos, m.Exp, killer.ID)
 	k := g.Cfg.Monsters.Kinds[m.Kind]
 	if g.Rng.Float64() < k.Drop {
 		for i := 0; i < k.DropItems; i++ {
@@ -307,18 +309,34 @@ func (g *Game) obstacleOccupied(id int) bool {
 	return false
 }
 
-// scatterOrbs drops total EXP as orbs around pos, using the largest orb sizes first.
-func (g *Game) scatterOrbs(pos Vec, total float64) {
+// dropDeathSwords spills floor(n * death_sword_drop) swords around a corpse (spec §7).
+func (g *Game) dropDeathSwords(b *Player) {
+	n := int(math.Floor(float64(b.Ring.Count) * g.Cfg.Player.DeathSwordDrop))
+	b.Ring.Count -= n
+	for i := 0; i < n; i++ {
+		g.spawnItemNear("sword", 0, b.Pos, b.Geom.Radius)
+	}
+}
+
+// scatterOrbs drops total EXP as orbs around pos, largest sizes first. A non-zero owner
+// reserves the orbs for that player for orb_owner_secs.
+func (g *Game) scatterOrbs(pos Vec, total float64, owner uint32) {
 	vals := g.Cfg.Items.OrbValues
 	sizes := []float64{vals["large"], vals["medium"], vals["small"]}
 	remaining := math.Round(total)
 	for _, v := range sizes {
 		for remaining >= v && v > 0 && g.orbCount < g.Cfg.Items.MaxOrbs {
-			g.spawnItemNear("orb", v, pos, g.Cfg.Items.ScatterR)
+			g.ownItem(g.spawnItemNear("orb", v, pos, g.Cfg.Items.ScatterR), owner)
 			remaining -= v
 		}
 	}
 	if remaining > 0 && g.orbCount < g.Cfg.Items.MaxOrbs {
-		g.spawnItemNear("orb", remaining, pos, g.Cfg.Items.ScatterR)
+		g.ownItem(g.spawnItemNear("orb", remaining, pos, g.Cfg.Items.ScatterR), owner)
+	}
+}
+
+func (g *Game) ownItem(it *Item, owner uint32) {
+	if owner != 0 {
+		it.Owner, it.OwnerUntil = owner, g.Time+g.Cfg.Player.OrbOwnerSecs
 	}
 }

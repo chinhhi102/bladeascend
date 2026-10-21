@@ -105,7 +105,7 @@ type SpawnOptions struct {
 
 func (g *Game) AddPlayer(o SpawnOptions) *Player {
 	p := &Player{ID: g.newID(), Name: o.Name, Char: o.Char, GuestID: o.GuestID, IsBot: o.IsBot,
-		EmoteReady: map[string]float64{}}
+		EmoteReady: map[string]float64{}, Bush: -1}
 	g.Players[p.ID] = p
 	g.order = append(g.order, p.ID)
 	g.resetPlayer(p, o.Level, o.Swords)

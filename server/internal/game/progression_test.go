@@ -14,7 +14,10 @@ func testProg(t *testing.T) *Progression {
 
 func TestExpNeededMatchesSpecTable(t *testing.T) {
 	p := testProg(t)
-	cases := []struct{ L int; want float64 }{
+	cases := []struct {
+		L    int
+		want float64
+	}{
 		{0, 100}, {9, 172}, {10, 120}, {19, 206}, {20, 144}, {29, 248},
 		{30, 173}, {39, 297}, {80, 430}, {89, 740},
 	}

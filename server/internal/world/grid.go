@@ -72,11 +72,11 @@ type pqItem struct {
 }
 type pq []pqItem
 
-func (q pq) Len() int            { return len(q) }
-func (q pq) Less(i, j int) bool  { return q[i].f < q[j].f }
-func (q pq) Swap(i, j int)       { q[i], q[j] = q[j], q[i] }
-func (q *pq) Push(x any)         { *q = append(*q, x.(pqItem)) }
-func (q *pq) Pop() any           { o := *q; it := o[len(o)-1]; *q = o[:len(o)-1]; return it }
+func (q pq) Len() int           { return len(q) }
+func (q pq) Less(i, j int) bool { return q[i].f < q[j].f }
+func (q pq) Swap(i, j int)      { q[i], q[j] = q[j], q[i] }
+func (q *pq) Push(x any)        { *q = append(*q, x.(pqItem)) }
+func (q *pq) Pop() any          { o := *q; it := o[len(o)-1]; *q = o[:len(o)-1]; return it }
 
 var dirs8 = [8][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}
 

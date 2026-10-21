@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	feetY        = 460.0 / 512.0 // pivot: feet on y=460 of a 512 canvas (ART_PROMPTS §1)
-	charHeight   = 0.72          // character ≈ 70% of canvas height
-	centerFill   = 0.9
-	minSheetGap  = 6
+	feetY       = 460.0 / 512.0 // pivot: feet on y=460 of a 512 canvas (ART_PROMPTS §1)
+	charHeight  = 0.72          // character ≈ 70% of canvas height
+	centerFill  = 0.9
+	minSheetGap = 6
 )
 
 func prepAll(jobs []Job, assets string) {
@@ -28,7 +28,7 @@ func prepAll(jobs []Job, assets string) {
 			log.Printf("prep %s: %v", j.Name, err)
 			continue
 		}
-		log.Printf("prep %s → %s", j.Name, j.Out)
+		log.Printf("prep %s", j.Name)
 	}
 	if err := buildAtlases(assets); err != nil {
 		log.Printf("atlas: %v", err)
@@ -58,18 +58,19 @@ func prepJob(j Job, raw, assets string) error {
 		if box.Empty() {
 			return fmt.Errorf("empty image after background removal")
 		}
-		frames := place(img, []image.Rectangle{box}, j)
-		return savePNG(out, frames[0])
+		sg := Seg{W: j.W, H: j.H, Pivot: j.Pivot}
+		return savePNG(out, placeOne(img, box, sg, fitScale(sg, box.Dx(), box.Dy())))
 	case modeSheet:
-		return prepSheet(img, j, out)
+		return prepSheet(img, j, assets)
 	default:
 		return fmt.Errorf("unknown mode %q", j.Mode)
 	}
 }
 
-func prepSheet(img *image.NRGBA, j Job, outDir string) error {
+// prepSheet writes each segment's frames under assets/<seg.Out>/.
+func prepSheet(img *image.NRGBA, j Job, assets string) error {
 	removeBackground(img)
-	cells := splitSheet(img, j)
+	cells := splitSheet(img, j.Rows)
 	boxes := make([]image.Rectangle, 0, len(cells))
 	for _, c := range cells {
 		b := alphaBBox(img, c)
@@ -78,34 +79,116 @@ func prepSheet(img *image.NRGBA, j Job, outDir string) error {
 		}
 		boxes = append(boxes, b)
 	}
-	for i, f := range place(img, boxes, j) {
-		name := fmt.Sprintf("%s_%02d.png", j.Anim, i)
-		if i < len(j.Names) {
-			name = j.Names[i] + ".png"
-		}
-		if err := savePNG(filepath.Join(outDir, name), f); err != nil {
-			return err
+	scales := sharedScales(j, boxes)
+	i := 0
+	for _, sg := range j.Segs {
+		for f := 0; f < sg.Frames && i < len(boxes); f, i = f+1, i+1 {
+			s := scales[groupKey(sg)]
+			if sg.Each {
+				s = fitScale(sg, boxes[i].Dx(), boxes[i].Dy())
+			}
+			name := fmt.Sprintf("%s_%02d.png", sg.Anim, f)
+			if f < len(sg.Names) {
+				name = sg.Names[f] + ".png"
+			}
+			if err := savePNG(filepath.Join(assets, sg.Out, name), placeOne(img, boxes[i], sg, s)); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-// splitSheet finds frame cells using empty gaps; falls back to an even grid.
-func splitSheet(img *image.NRGBA, j Job) []image.Rectangle {
-	b := img.Bounds()
-	rows := fitSpans(spans(img, b, false, minSheetGap), j.Rows, b.Dy())
-	var cells []image.Rectangle
-	for ri, rs := range rows {
-		band := image.Rect(b.Min.X, b.Min.Y+rs[0], b.Max.X, b.Min.Y+rs[1])
-		want := j.Cols
-		if ri == len(rows)-1 {
-			want = j.Frames - j.Cols*(j.Rows-1)
+func groupKey(sg Seg) string { return fmt.Sprintf("%dx%d/%s", sg.W, sg.H, sg.Pivot) }
+
+// sharedScales gives every non-"each" segment group one scale so a character keeps the same
+// size across all its animations.
+func sharedScales(j Job, boxes []image.Rectangle) map[string]float64 {
+	maxW, maxH := map[string]int{}, map[string]int{}
+	i := 0
+	for _, sg := range j.Segs {
+		k := groupKey(sg)
+		for f := 0; f < sg.Frames && i < len(boxes); f, i = f+1, i+1 {
+			maxW[k], maxH[k] = max(maxW[k], boxes[i].Dx()), max(maxH[k], boxes[i].Dy())
 		}
-		for _, cs := range fitSpans(spans(img, band, true, minSheetGap), want, b.Dx()) {
-			cells = append(cells, image.Rect(b.Min.X+cs[0], band.Min.Y, b.Min.X+cs[1], band.Max.Y))
+	}
+	out := map[string]float64{}
+	for _, sg := range j.Segs {
+		k := groupKey(sg)
+		out[k] = fitScale(sg, max(1, maxW[k]), max(1, maxH[k]))
+	}
+	return out
+}
+
+func fitScale(sg Seg, w, h int) float64 {
+	W, H := float64(sg.W), float64(sg.H)
+	if sg.Pivot == "feet" {
+		return math.Min(charHeight*H/float64(h), 0.95*W/float64(w))
+	}
+	return math.Min(centerFill*W/float64(w), centerFill*H/float64(h))
+}
+
+// placeOne scales box by s and draws it on a W×H canvas at the segment's pivot.
+func placeOne(img *image.NRGBA, b image.Rectangle, sg Seg, s float64) *image.NRGBA {
+	w, h := max(1, int(float64(b.Dx())*s)), max(1, int(float64(b.Dy())*s))
+	scaled := resize(img, b, w, h)
+	canvas := image.NewNRGBA(image.Rect(0, 0, sg.W, sg.H))
+	x, y := (sg.W-w)/2, (sg.H-h)/2
+	if sg.Pivot == "feet" {
+		y = max(0, int(feetY*float64(sg.H))-h)
+	}
+	draw.Draw(canvas, image.Rect(x, y, x+w, y+h), scaled, image.Point{}, draw.Over)
+	return canvas
+}
+
+// splitSheet finds frame cells using empty gaps; rows[i] is the frame count of row i.
+func splitSheet(img *image.NRGBA, rows []int) []image.Rectangle {
+	b := img.Bounds()
+	bands := fitSpans(spans(img, b, false, minSheetGap), len(rows), b.Dy())
+	var cells []image.Rectangle
+	for ri, rs := range bands {
+		band := image.Rect(b.Min.X, b.Min.Y+rs[0], b.Max.X, b.Min.Y+rs[1])
+		cols := spans(img, band, true, minSheetGap)
+		if len(cols) < rows[ri] {
+			cols = inkCuts(img, band, rows[ri]) // frames touch: cut at the emptiest columns
+		}
+		for _, cs := range fitSpans(cols, rows[ri], b.Dx()) {
+			cell := image.Rect(b.Min.X+cs[0], band.Min.Y, b.Min.X+cs[1], band.Max.Y)
+			dropEdgeFragments(img, cell)
+			cells = append(cells, cell)
 		}
 	}
 	return cells
+}
+
+// inkCuts splits a band into n cells, moving each even boundary to the column with the least ink nearby.
+func inkCuts(img *image.NRGBA, band image.Rectangle, n int) [][2]int {
+	w := band.Dx()
+	ink := make([]int, w)
+	for x := 0; x < w; x++ {
+		for y := band.Min.Y; y < band.Max.Y; y++ {
+			if img.NRGBAAt(band.Min.X+x, y).A > 40 {
+				ink[x]++
+			}
+		}
+	}
+	cuts := []int{0}
+	win := w / n / 3
+	for k := 1; k < n; k++ {
+		best := k * w / n
+		for x := max(0, best-win); x < min(w, k*w/n+win); x++ {
+			if ink[x] < ink[best] {
+				best = x
+			}
+		}
+		cuts = append(cuts, best)
+	}
+	cuts = append(cuts, w)
+	out := make([][2]int, n)
+	for i := range out {
+		out[i] = [2]int{cuts[i], cuts[i+1]}
+	}
+	return out
 }
 
 // fitSpans merges the closest spans until exactly want remain; too few → even split.
@@ -130,33 +213,6 @@ func fitSpans(sp [][2]int, want, total int) [][2]int {
 		even[i] = [2]int{i * total / want, (i + 1) * total / want}
 	}
 	return even
-}
-
-// place scales every box by one shared factor and draws it at the job's pivot.
-func place(img *image.NRGBA, boxes []image.Rectangle, j Job) []*image.NRGBA {
-	maxW, maxH := 1, 1
-	for _, b := range boxes {
-		maxW, maxH = max(maxW, b.Dx()), max(maxH, b.Dy())
-	}
-	W, H := float64(j.W), float64(j.H)
-	s := math.Min(centerFill*W/float64(maxW), centerFill*H/float64(maxH))
-	if j.Pivot == "feet" {
-		s = math.Min(charHeight*H/float64(maxH), 0.95*W/float64(maxW))
-	}
-	out := make([]*image.NRGBA, 0, len(boxes))
-	for _, b := range boxes {
-		w, h := max(1, int(float64(b.Dx())*s)), max(1, int(float64(b.Dy())*s))
-		scaled := resize(img, b, w, h)
-		canvas := image.NewNRGBA(image.Rect(0, 0, j.W, j.H))
-		x := (j.W - w) / 2
-		y := (j.H - h) / 2
-		if j.Pivot == "feet" {
-			y = max(0, int(feetY*H)-h)
-		}
-		draw.Draw(canvas, image.Rect(x, y, x+w, y+h), scaled, image.Point{}, draw.Over)
-		out = append(out, canvas)
-	}
-	return out
 }
 
 func centerSquare(b image.Rectangle) image.Rectangle {

@@ -41,6 +41,9 @@ type Player struct {
 	InvulnOnSpawn  float64 `json:"invuln_on_spawn"`
 	AttackerShare  float64 `json:"attacker_share"`
 	DropShare      float64 `json:"drop_share"`
+	KillBonusExp   float64 `json:"kill_bonus_exp"`
+	DeathSwordDrop float64 `json:"death_sword_drop"`
+	OrbOwnerSecs   float64 `json:"orb_owner_secs"`
 	CameraViewH    float64 `json:"camera_view_h"`
 	CameraExp      float64 `json:"camera_exp"`
 	Knockback      float64 `json:"knockback"`
@@ -102,6 +105,8 @@ type Zones struct {
 	MudMult             float64 `json:"mud_mult"`
 	WindWith            float64 `json:"wind_with"`
 	WindAgainst         float64 `json:"wind_against"`
+	WindWithMaxDeg      float64 `json:"wind_with_max_deg"`
+	WindAgainstMinDeg   float64 `json:"wind_against_min_deg"`
 	BushRevealR         float64 `json:"bush_reveal_r"`
 	BushRevealOnHitSecs float64 `json:"bush_reveal_on_hit_secs"`
 }
@@ -124,21 +129,22 @@ type Room struct {
 }
 
 type Bots struct {
-	SpawnEverySecs float64 `json:"spawn_every_secs"`
-	SpawnBatch     int     `json:"spawn_batch"`
-	RespawnSecs    float64 `json:"respawn_secs"`
-	RealmWeights   []int   `json:"realm_weights"`
-	DecideMin      float64 `json:"decide_min"`
-	DecideMax      float64 `json:"decide_max"`
-	ReactionMin    float64 `json:"reaction_min"`
-	ReactionMax    float64 `json:"reaction_max"`
-	HuntR          float64 `json:"hunt_r"`
-	HuntRatio      float64 `json:"hunt_ratio"`
-	FleeR          float64 `json:"flee_r"`
-	FleeRatio      float64 `json:"flee_ratio"`
-	PathGrid       float64 `json:"path_grid"`
-	AmbushR        float64 `json:"ambush_r"`
-	AmbushSecs     float64 `json:"ambush_secs"`
+	SpawnEverySecs float64  `json:"spawn_every_secs"`
+	SpawnBatch     int      `json:"spawn_batch"`
+	RespawnSecs    float64  `json:"respawn_secs"`
+	RealmWeights   []int    `json:"realm_weights"`
+	DecideMin      float64  `json:"decide_min"`
+	DecideMax      float64  `json:"decide_max"`
+	ReactionMin    float64  `json:"reaction_min"`
+	ReactionMax    float64  `json:"reaction_max"`
+	HuntR          float64  `json:"hunt_r"`
+	HuntRatio      float64  `json:"hunt_ratio"`
+	FleeR          float64  `json:"flee_r"`
+	FleeRatio      float64  `json:"flee_ratio"`
+	PathGrid       float64  `json:"path_grid"`
+	AmbushR        float64  `json:"ambush_r"`
+	AmbushSecs     float64  `json:"ambush_secs"`
+	Names          []string `json:"names"`
 }
 
 type Mood struct {
@@ -176,6 +182,7 @@ type Config struct {
 	Gates       Gates           `json:"gates"`
 	Room        Room            `json:"room"`
 	Bots        Bots            `json:"bots"`
+	Characters  []string        `json:"characters"`
 	Mood        Mood            `json:"mood"`
 	Net         Net             `json:"net"`
 }
