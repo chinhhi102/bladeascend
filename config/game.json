@@ -1,0 +1,80 @@
+{
+  "cultivation": {
+    "realms": ["Luyện Khí","Trúc Cơ","Kim Đan","Nguyên Anh","Hóa Thần","Luyện Hư","Hợp Thể","Độ Kiếp","Đại Thừa"],
+    "tiers_per_realm": 10, "swords_per_realm": 5,
+    "exp_base": 100, "realm_mult": 1.2, "tier_step": 0.08,
+    "scale_min": 1.0, "scale_max": 5.0
+  },
+  "sword": {
+    "start_count": 1, "min_count": 1,
+    "ring_min_r": 70, "spacing": 22, "length": 40, "width": 10,
+    "omega": 1.8, "flip_cooldown": 0.3,
+    "clash_ratio_base": 1,
+    "clash_ratio_per_realm": 1,
+    "tween_secs": 0.2
+  },
+  "player": {
+    "body_r": 30, "move_base": 260, "pickup_r": 60,
+    "invuln_on_hit": 1.0, "invuln_on_spawn": 2.0,
+    "attacker_share": 0.5, "drop_share": 0.3,
+    "camera_view_h": 900, "camera_exp": 0.85,
+    "knockback": 140, "knockback_secs": 0.25,
+    "death_anim_secs": 1.0,
+    "name_min": 2, "name_max": 16
+  },
+  "buffs": {
+    "spin":   { "mult": 1.6, "secs": 12 },
+    "haste":  { "mult": 1.4, "secs": 10 },
+    "magnet": { "mult": 3.0, "secs": 15 },
+    "long":   { "mult": 1.3, "secs": 12 },
+    "shield": { "secs": 8 },
+    "exp2":   { "mult": 2.0, "secs": 20 },
+    "stealth":{ "secs": 6, "reveal_r": 120 }
+  },
+  "items": {
+    "weights": { "sword": 40, "spin": 15, "haste": 15, "magnet": 8, "long": 7, "shield": 7, "exp2": 5, "stealth": 3 },
+    "count_per_room": 120, "overcap_exp": 20, "chest_every_secs": 120, "chest_items": 5,
+    "spawn_min_dist": 300, "chest_warn_secs": 10, "chest_hp": 1, "item_r": 26,
+    "orb_values": { "small": 5, "medium": 20, "large": 60 },
+    "orb_r": 14, "scatter_r": 90, "max_orbs": 600
+  },
+  "monsters": {
+    "hit_cooldown": 0.25,
+    "wander_speed": 70, "flee_speed": 170, "flee_secs": 1.5,
+    "kinds": {
+      "small":  { "hp": 3,  "exp": 10,  "drop": 0.10, "drop_items": 1, "weight": 60, "radius": 24, "max": 0 },
+      "medium": { "hp": 8,  "exp": 30,  "drop": 0.25, "drop_items": 1, "weight": 30, "radius": 34, "max": 0 },
+      "large":  { "hp": 20, "exp": 90,  "drop": 0.60, "drop_items": 1, "weight": 9,  "radius": 48, "max": 0 },
+      "boss":   { "hp": 80, "exp": 400, "drop": 1.00, "drop_items": 3, "weight": 1,  "radius": 80, "max": 1 }
+    }
+  },
+  "obstacles": {
+    "regrow_secs": 30, "regrow_warn_secs": 3,
+    "hp": { "fence": 30, "stall": 60, "cart": 60, "brick": 150, "boulder": 400 },
+    "stall_item_drop": 0.3,
+    "hit_cooldown": 0.25
+  },
+  "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
+  "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8, "feed_secs": 2 },
+  "room": {
+    "max_humans": 20, "bot_fill_target": 20, "map_size": 12000,
+    "monster_count": 150, "empty_close_secs": 60, "safe_spawn_r": 800
+  },
+  "bots": {
+    "spawn_every_secs": 2, "spawn_batch": 2, "respawn_secs": 3,
+    "realm_weights": [60, 30, 10],
+    "decide_min": 0.3, "decide_max": 0.6,
+    "reaction_min": 0.2, "reaction_max": 0.6,
+    "hunt_r": 600, "hunt_ratio": 0.8, "flee_r": 500, "flee_ratio": 1.25,
+    "path_grid": 100, "ambush_r": 500, "ambush_secs": 6
+  },
+  "mood": {
+    "min_secs": 0.5, "hit_secs": 0.6, "levelup_secs": 0.5, "breakthrough_secs": 0.8,
+    "realm_drop_secs": 0.5, "respawn_secs": 0.5, "near_r": 700
+  },
+  "net": {
+    "tick_hz": 30, "snapshot_hz": 20, "interp_ms": 100,
+    "aoi_margin": 500, "aoi_aspect": 2.0, "leaderboard_hz": 1,
+    "max_msgs_per_sec": 90, "max_conns_per_ip": 8, "leaderboard_cache_secs": 10
+  }
+}

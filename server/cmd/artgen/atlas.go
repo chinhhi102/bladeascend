@@ -1,0 +1,123 @@
+package main
+
+import (
+	"encoding/json"
+	"image"
+	"image/draw"
+	"io/fs"
+	"math"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+)
+
+const atlasCell = 256
+
+var frameRe = regexp.MustCompile(`^([a-z_]+)_(\d{2})\.png$`)
+
+// animFPS follows ART_PROMPTS §13: idle 6, locomotion 12, one-shots 12–15.
+var animFPS = map[string]int{"idle": 6, "run": 12, "chase": 12, "flee": 12, "hurt": 10}
+
+var loopAnims = map[string]bool{"idle": true, "run": true, "chase": true, "flee": true}
+
+type atlasRect struct {
+	X int `json:"x"`
+	Y int `json:"y"`
+	W int `json:"w"`
+	H int `json:"h"`
+}
+
+type atlasAnim struct {
+	Frames []string `json:"frames"`
+	FPS    int      `json:"fps"`
+	Loop   bool     `json:"loop"`
+}
+
+type atlasFile struct {
+	Cell   int                  `json:"cell"`
+	PivotX float64              `json:"pivot_x"`
+	PivotY float64              `json:"pivot_y"`
+	Frames map[string]atlasRect `json:"frames"`
+	Anims  map[string]atlasAnim `json:"anims"`
+}
+
+// buildAtlases packs characters/*/frames and monsters/*/frames into atlas.png + atlas.json.
+func buildAtlases(assets string) error {
+	dirs, _ := filepath.Glob(filepath.Join(assets, "characters", "*", "frames"))
+	more, _ := filepath.Glob(filepath.Join(assets, "monsters", "*", "frames"))
+	for _, d := range append(dirs, more...) {
+		if err := buildAtlas(d); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func buildAtlas(framesDir string) error {
+	files, _ := filepath.Glob(filepath.Join(framesDir, "*.png"))
+	sort.Strings(files)
+	if len(files) == 0 {
+		return nil
+	}
+	cols := int(math.Ceil(math.Sqrt(float64(len(files)))))
+	rows := (len(files) + cols - 1) / cols
+	sheet := image.NewNRGBA(image.Rect(0, 0, cols*atlasCell, rows*atlasCell))
+	af := atlasFile{Cell: atlasCell, PivotX: 0.5, PivotY: feetY, Frames: map[string]atlasRect{}, Anims: map[string]atlasAnim{}}
+	for i, f := range files {
+		img, err := loadImage(f)
+		if err != nil {
+			return err
+		}
+		x, y := (i%cols)*atlasCell, (i/cols)*atlasCell
+		draw.Draw(sheet, image.Rect(x, y, x+atlasCell, y+atlasCell), resize(img, img.Bounds(), atlasCell, atlasCell), image.Point{}, draw.Src)
+		name := strings.TrimSuffix(filepath.Base(f), ".png")
+		af.Frames[name] = atlasRect{x, y, atlasCell, atlasCell}
+		if m := frameRe.FindStringSubmatch(filepath.Base(f)); m != nil {
+			a := af.Anims[m[1]]
+			a.Frames = append(a.Frames, name)
+			a.FPS, a.Loop = fpsFor(m[1]), loopAnims[m[1]]
+			af.Anims[m[1]] = a
+		}
+	}
+	parent := filepath.Dir(framesDir)
+	if err := savePNG(filepath.Join(parent, "atlas.png"), sheet); err != nil {
+		return err
+	}
+	b, _ := json.MarshalIndent(af, "", " ")
+	return os.WriteFile(filepath.Join(parent, "atlas.json"), b, 0o644)
+}
+
+func fpsFor(anim string) int {
+	if f, ok := animFPS[anim]; ok {
+		return f
+	}
+	return 12
+}
+
+// writeManifest lists every usable asset so the client can fall back to placeholders.
+func writeManifest(assets string) error {
+	var files []string
+	err := filepath.WalkDir(assets, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(assets, p)
+		rel = filepath.ToSlash(rel)
+		if d.IsDir() && (rel == "_raw" || d.Name() == "frames") {
+			return filepath.SkipDir
+		}
+		if !d.IsDir() && (strings.HasSuffix(rel, ".png") || strings.HasSuffix(rel, ".json") ||
+			strings.HasSuffix(rel, ".mp3") || strings.HasSuffix(rel, ".ogg") || strings.HasSuffix(rel, ".wav")) && rel != "manifest.json" {
+			files = append(files, rel)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	sort.Strings(files)
+	b, _ := json.MarshalIndent(map[string]any{"files": files}, "", " ")
+	return os.WriteFile(filepath.Join(assets, "manifest.json"), b, 0o644)
+}

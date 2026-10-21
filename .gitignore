@@ -1,0 +1,18 @@
+# Secrets (minigen API key) — never commit
+docs/private/
+
+# Build / deps
+client/node_modules/
+client/dist/
+server/bin/
+*.exe
+
+# Runtime data
+server/data/
+*.db
+*.db-journal
+
+# Art pipeline scratch (raw downloads before post-processing)
+assets/_raw/
+
+.DS_Store

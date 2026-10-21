@@ -1,0 +1,218 @@
+// Package config loads config/game.json. Every balance number lives there.
+package config
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+type Cultivation struct {
+	Realms         []string `json:"realms"`
+	TiersPerRealm  int      `json:"tiers_per_realm"`
+	SwordsPerRealm int      `json:"swords_per_realm"`
+	ExpBase        float64  `json:"exp_base"`
+	RealmMult      float64  `json:"realm_mult"`
+	TierStep       float64  `json:"tier_step"`
+	ScaleMin       float64  `json:"scale_min"`
+	ScaleMax       float64  `json:"scale_max"`
+}
+
+type Sword struct {
+	StartCount         int     `json:"start_count"`
+	MinCount           int     `json:"min_count"`
+	RingMinR           float64 `json:"ring_min_r"`
+	Spacing            float64 `json:"spacing"`
+	Length             float64 `json:"length"`
+	Width              float64 `json:"width"`
+	Omega              float64 `json:"omega"`
+	FlipCooldown       float64 `json:"flip_cooldown"`
+	ClashRatioBase     int     `json:"clash_ratio_base"`
+	ClashRatioPerRealm int     `json:"clash_ratio_per_realm"`
+	TweenSecs          float64 `json:"tween_secs"`
+}
+
+type Player struct {
+	BodyR          float64 `json:"body_r"`
+	MoveBase       float64 `json:"move_base"`
+	PickupR        float64 `json:"pickup_r"`
+	InvulnOnHit    float64 `json:"invuln_on_hit"`
+	InvulnOnSpawn  float64 `json:"invuln_on_spawn"`
+	AttackerShare  float64 `json:"attacker_share"`
+	DropShare      float64 `json:"drop_share"`
+	CameraViewH    float64 `json:"camera_view_h"`
+	CameraExp      float64 `json:"camera_exp"`
+	Knockback      float64 `json:"knockback"`
+	KnockbackSecs  float64 `json:"knockback_secs"`
+	DeathAnimSecs  float64 `json:"death_anim_secs"`
+	NameMin        int     `json:"name_min"`
+	NameMax        int     `json:"name_max"`
+}
+
+type Buff struct {
+	Mult    float64 `json:"mult"`
+	Secs    float64 `json:"secs"`
+	RevealR float64 `json:"reveal_r"`
+}
+
+type Items struct {
+	Weights        map[string]int     `json:"weights"`
+	CountPerRoom   int                `json:"count_per_room"`
+	OvercapExp     float64            `json:"overcap_exp"`
+	ChestEverySecs float64            `json:"chest_every_secs"`
+	ChestItems     int                `json:"chest_items"`
+	SpawnMinDist   float64            `json:"spawn_min_dist"`
+	ChestWarnSecs  float64            `json:"chest_warn_secs"`
+	ChestHP        int                `json:"chest_hp"`
+	ItemR          float64            `json:"item_r"`
+	OrbValues      map[string]float64 `json:"orb_values"`
+	OrbR           float64            `json:"orb_r"`
+	ScatterR       float64            `json:"scatter_r"`
+	MaxOrbs        int                `json:"max_orbs"`
+}
+
+type MonsterKind struct {
+	HP        int     `json:"hp"`
+	Exp       float64 `json:"exp"`
+	Drop      float64 `json:"drop"`
+	DropItems int     `json:"drop_items"`
+	Weight    int     `json:"weight"`
+	Radius    float64 `json:"radius"`
+	Max       int     `json:"max"`
+}
+
+type Monsters struct {
+	HitCooldown float64                `json:"hit_cooldown"`
+	WanderSpeed float64                `json:"wander_speed"`
+	FleeSpeed   float64                `json:"flee_speed"`
+	FleeSecs    float64                `json:"flee_secs"`
+	Kinds       map[string]MonsterKind `json:"kinds"`
+}
+
+type Obstacles struct {
+	RegrowSecs     float64        `json:"regrow_secs"`
+	RegrowWarnSecs float64        `json:"regrow_warn_secs"`
+	HP             map[string]int `json:"hp"`
+	StallItemDrop  float64        `json:"stall_item_drop"`
+	HitCooldown    float64        `json:"hit_cooldown"`
+}
+
+type Zones struct {
+	MudMult             float64 `json:"mud_mult"`
+	WindWith            float64 `json:"wind_with"`
+	WindAgainst         float64 `json:"wind_against"`
+	BushRevealR         float64 `json:"bush_reveal_r"`
+	BushRevealOnHitSecs float64 `json:"bush_reveal_on_hit_secs"`
+}
+
+type Gates struct {
+	Radius       float64 `json:"radius"`
+	TransitSecs  float64 `json:"transit_secs"`
+	ExitWarnSecs float64 `json:"exit_warn_secs"`
+	CooldownSecs float64 `json:"cooldown_secs"`
+	FeedSecs     float64 `json:"feed_secs"`
+}
+
+type Room struct {
+	MaxHumans      int     `json:"max_humans"`
+	BotFillTarget  int     `json:"bot_fill_target"`
+	MapSize        float64 `json:"map_size"`
+	MonsterCount   int     `json:"monster_count"`
+	EmptyCloseSecs float64 `json:"empty_close_secs"`
+	SafeSpawnR     float64 `json:"safe_spawn_r"`
+}
+
+type Bots struct {
+	SpawnEverySecs float64 `json:"spawn_every_secs"`
+	SpawnBatch     int     `json:"spawn_batch"`
+	RespawnSecs    float64 `json:"respawn_secs"`
+	RealmWeights   []int   `json:"realm_weights"`
+	DecideMin      float64 `json:"decide_min"`
+	DecideMax      float64 `json:"decide_max"`
+	ReactionMin    float64 `json:"reaction_min"`
+	ReactionMax    float64 `json:"reaction_max"`
+	HuntR          float64 `json:"hunt_r"`
+	HuntRatio      float64 `json:"hunt_ratio"`
+	FleeR          float64 `json:"flee_r"`
+	FleeRatio      float64 `json:"flee_ratio"`
+	PathGrid       float64 `json:"path_grid"`
+	AmbushR        float64 `json:"ambush_r"`
+	AmbushSecs     float64 `json:"ambush_secs"`
+}
+
+type Mood struct {
+	MinSecs          float64 `json:"min_secs"`
+	HitSecs          float64 `json:"hit_secs"`
+	LevelupSecs      float64 `json:"levelup_secs"`
+	BreakthroughSecs float64 `json:"breakthrough_secs"`
+	RealmDropSecs    float64 `json:"realm_drop_secs"`
+	RespawnSecs      float64 `json:"respawn_secs"`
+	NearR            float64 `json:"near_r"`
+}
+
+type Net struct {
+	TickHz             int     `json:"tick_hz"`
+	SnapshotHz         int     `json:"snapshot_hz"`
+	InterpMs           int     `json:"interp_ms"`
+	AOIMargin          float64 `json:"aoi_margin"`
+	AOIAspect          float64 `json:"aoi_aspect"`
+	LeaderboardHz      int     `json:"leaderboard_hz"`
+	MaxMsgsPerSec      int     `json:"max_msgs_per_sec"`
+	MaxConnsPerIP      int     `json:"max_conns_per_ip"`
+	LeaderboardCacheSc float64 `json:"leaderboard_cache_secs"`
+}
+
+// Config mirrors config/game.json.
+type Config struct {
+	Cultivation Cultivation     `json:"cultivation"`
+	Sword       Sword           `json:"sword"`
+	Player      Player          `json:"player"`
+	Buffs       map[string]Buff `json:"buffs"`
+	Items       Items           `json:"items"`
+	Monsters    Monsters        `json:"monsters"`
+	Obstacles   Obstacles       `json:"obstacles"`
+	Zones       Zones           `json:"zones"`
+	Gates       Gates           `json:"gates"`
+	Room        Room            `json:"room"`
+	Bots        Bots            `json:"bots"`
+	Mood        Mood            `json:"mood"`
+	Net         Net             `json:"net"`
+}
+
+// Load reads and parses a config file. It returns the parsed config and raw bytes
+// (the raw bytes are served to clients at GET /api/config).
+func Load(path string) (*Config, []byte, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read config: %w", err)
+	}
+	var c Config
+	if err := json.Unmarshal(raw, &c); err != nil {
+		return nil, nil, fmt.Errorf("parse config: %w", err)
+	}
+	return &c, raw, nil
+}
+
+// FindRepoFile walks up from the working directory to locate a repo-relative path
+// such as "config/game.json", so commands work from both repo root and server/.
+func FindRepoFile(rel string) string {
+	dir, _ := os.Getwd()
+	for i := 0; i < 5; i++ {
+		p := filepath.Join(dir, rel)
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+		dir = filepath.Dir(dir)
+	}
+	return rel
+}
+
+// MustLoadDefault loads config/game.json found from the working directory; for tests and tools.
+func MustLoadDefault() *Config {
+	c, _, err := Load(FindRepoFile("config/game.json"))
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
