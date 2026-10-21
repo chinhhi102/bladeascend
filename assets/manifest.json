@@ -1,11 +1,30 @@
 {
  "files": [
+  "buffs/exp2.png",
+  "buffs/haste.png",
+  "buffs/long.png",
+  "buffs/magnet.png",
+  "buffs/shield.png",
+  "buffs/spin.png",
+  "buffs/stealth.png",
   "characters/a_hon/atlas.json",
   "characters/a_hon/atlas.png",
   "characters/ba_tam_loa/atlas.json",
   "characters/ba_tam_loa/atlas.png",
   "characters/ong_ba_vong/atlas.json",
   "characters/ong_ba_vong/atlas.png",
-  "swords/realm_0.png"
+  "items/orb_large.png",
+  "items/orb_medium.png",
+  "items/orb_small.png",
+  "items/sword.png",
+  "swords/realm_0.png",
+  "swords/realm_1.png",
+  "swords/realm_2.png",
+  "swords/realm_3.png",
+  "swords/realm_4.png",
+  "swords/realm_5.png",
+  "swords/realm_6.png",
+  "swords/realm_7.png",
+  "swords/realm_8.png"
  ]
 }

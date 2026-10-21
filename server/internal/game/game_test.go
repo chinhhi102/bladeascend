@@ -392,3 +392,92 @@ func TestNarrowAlleyBlocksBigPlayers(t *testing.T) {
 		t.Fatalf("big player squeezed into the alley: y=%v", big.Pos.Y)
 	}
 }
+
+func TestStealthAndBushVisibility(t *testing.T) {
+	m := world.EmptyMap(12000)
+	m.Zones = []world.Zone{{ID: 0, Kind: "bush", Shape: world.Shape{Circle: true, X: 6000, Y: 6000, R: 300}}}
+	g := quietGame(t, m)
+	viewer := g.AddPlayer(SpawnOptions{Name: "V", Swords: 1})
+	hider := g.AddPlayer(SpawnOptions{Name: "H", Swords: 1})
+	place(g, viewer, Vec{X: 5400, Y: 6000}, 0)
+	place(g, hider, Vec{X: 6000, Y: 6000}, 0)
+	g.Tick(dt) // updates bush membership
+	if g.CanSee(viewer, hider) {
+		t.Fatal("player in a bush must be hidden from outside")
+	}
+	viewer.Pos = Vec{X: 6000 - 140, Y: 6000}
+	if !g.CanSee(viewer, hider) {
+		t.Fatal("within 150 × scale the bush no longer hides")
+	}
+	hider.RevealedUntil = g.Time + 2
+	viewer.Pos = Vec{X: 5400, Y: 6000}
+	if !g.CanSee(viewer, hider) {
+		t.Fatal("being hit reveals the player for 2s")
+	}
+	// Stealth: far viewers cannot see, near ones (≤120 × scale) can.
+	hider.RevealedUntil = 0
+	hider.Pos = Vec{X: 8000, Y: 6000}
+	g.Tick(dt)
+	g.ApplyBuff(hider, "stealth")
+	viewer.Pos = Vec{X: 7500, Y: 6000}
+	if g.CanSee(viewer, hider) {
+		t.Fatal("stealthed player visible from 500 away")
+	}
+	viewer.Pos = Vec{X: 7900, Y: 6000}
+	if !g.CanSee(viewer, hider) {
+		t.Fatal("stealthed player should be visible from 100 away")
+	}
+}
+
+func TestStealthEndsWhenOwnerHitsSomeone(t *testing.T) {
+	g := quietGame(t, nil)
+	a := g.AddPlayer(SpawnOptions{Name: "A", Swords: 1})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 15, Swords: 1})
+	place(g, a, Vec{X: 5000, Y: 5000}, 0)
+	place(g, b, Vec{X: 5000 + a.Geom.Radius, Y: 5000}, math.Pi/2)
+	g.ApplyBuff(a, "stealth")
+	g.resolveSwordBody()
+	if a.HasBuff(BuffStealth, g.Time) {
+		t.Fatal("Ẩn Thân must end when the owner's sword hits a player")
+	}
+}
+
+func TestChestAnnouncedThenBurstsIntoItems(t *testing.T) {
+	g := quietGame(t, nil)
+	g.Cfg.Items.ChestEverySecs = 20
+	g.chestNextAt = 20
+	var announced bool
+	for g.Time < 21 {
+		g.Tick(dt)
+		for _, e := range g.DrainEvents() {
+			if e.Kind == "ChestIncoming" {
+				announced = true
+				if g.Time > 20-g.Cfg.Items.ChestWarnSecs+0.1 {
+					t.Fatalf("chest announced late at %v", g.Time)
+				}
+			}
+		}
+	}
+	var chest *Item
+	for _, it := range g.Items {
+		if it.Kind == "chest" {
+			chest = it
+		}
+	}
+	if !announced || chest == nil {
+		t.Fatalf("announced %v chest %v", announced, chest)
+	}
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
+	place(g, p, chest.Pos, 0)
+	g.resolvePickups()
+	n := 0
+	for _, it := range g.Items {
+		if it.Kind != "chest" && it.Kind != "orb" {
+			n++
+		}
+	}
+	// Picking up the chest also scoops up items that land within pickup range.
+	if _, still := g.Items[chest.ID]; still || n+p.Ring.Count-1 < 1 {
+		t.Fatalf("chest should burst into items (left %d)", n)
+	}
+}

@@ -136,3 +136,25 @@ func TestNameFilter(t *testing.T) {
 		t.Fatalf("profanity not masked: %q", got)
 	}
 }
+
+// Spec §17: a stealthed player never appears in packets for far-away viewers.
+func TestSnapshotOmitsHiddenPlayers(t *testing.T) {
+	m, _, _ := testManager(t)
+	cs := joinN(m, 2)
+	r := m.AllRooms()[0]
+	r.Step(1.0 / 30)
+	viewer, hider := r.G.Players[cs[0].PlayerID], r.G.Players[cs[1].PlayerID]
+	viewer.Pos, hider.Pos = r.G.Vec(3000, 3000), r.G.Vec(3400, 3000)
+	r.G.ApplyBuff(hider, "stealth")
+	snap := r.snapshotFor(cs[0], viewer, r.G.DrainEvents())
+	for _, p := range snap.Players {
+		if p.ID == hider.ID {
+			t.Fatal("stealthed player leaked into the snapshot")
+		}
+	}
+	for _, e := range snap.Events {
+		if e.A == hider.ID {
+			t.Fatalf("event %s about the hidden player leaked", e.Kind)
+		}
+	}
+}

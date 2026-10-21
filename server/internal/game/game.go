@@ -231,3 +231,6 @@ func (g *Game) Ranking() []*Player {
 	sort.SliceStable(out, func(i, j int) bool { return out[i].TotalExp > out[j].TotalExp })
 	return out
 }
+
+// Vec is a convenience constructor for other packages' tests.
+func (g *Game) Vec(x, y float64) Vec { return Vec{X: x, Y: y} }
