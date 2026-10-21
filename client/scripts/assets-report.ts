@@ -20,9 +20,10 @@ function exists(rel: string): boolean {
 interface Row {
   e: CatalogEntry;
   have: number;
+  usable: boolean;
 }
 
-const rows: Row[] = catalog().map((e) => ({ e, have: e.files.filter(exists).length }));
+const rows: Row[] = catalog().map((e) => ({ e, have: e.files.filter(exists).length, usable: (e.required ?? e.files).every(exists) }));
 const groups = [...new Set(rows.map((r) => r.e.group))];
 const showAll = process.argv.includes('--all');
 
@@ -30,31 +31,31 @@ console.log(`Thư mục asset: ${ASSETS}\n`);
 console.log('Nhóm'.padEnd(12), 'Đủ'.padStart(5), 'Thiếu'.padStart(7));
 for (const g of groups) {
   const rs = rows.filter((r) => r.e.group === g);
-  const full = rs.filter((r) => r.have === r.e.files.length).length;
+  const full = rs.filter((r) => r.usable).length;
   console.log(g.padEnd(12), String(full).padStart(5), String(rs.length - full).padStart(7));
 }
 
 const jobs = new Set<string>();
 for (const g of groups) {
-  const missing = rows.filter((r) => r.e.group === g && (showAll || r.have < r.e.files.length));
+  const missing = rows.filter((r) => r.e.group === g && (showAll || !r.usable));
   if (!missing.length) {
     continue;
   }
   console.log(`\n## ${g}`);
   for (const r of missing) {
-    const status = r.have === 0 ? 'THIẾU   ' : r.have < r.e.files.length ? `${r.have}/${r.e.files.length} frame` : 'đủ      ';
+    const status = r.have === 0 ? 'THIẾU   ' : !r.usable ? `${r.have}/${r.e.files.length} frame` : r.have < r.e.files.length ? `có (${r.have}/${r.e.files.length})` : 'đủ      ';
     const job = r.e.job ? `→ job ${r.e.job}` : '(âm thanh: tools/make_sfx.py hoặc tự thả file)';
     console.log(`  ${status.padEnd(10)} ${r.e.label.padEnd(30)} ${job}`);
-    if (r.have < r.e.files.length && r.e.job) {
+    if (!r.usable && r.e.job) {
       jobs.add(r.e.job);
     }
   }
 }
 
 const total = rows.length;
-const done = rows.filter((r) => r.have === r.e.files.length).length;
+const done = rows.filter((r) => r.usable).length;
 console.log(`\nTổng: ${done}/${total} asset đủ. Thiếu thì game tự vẽ placeholder.`);
 if (jobs.size) {
   console.log(`Cần sinh ${jobs.size} ảnh — prompt trong docs/ART_JOBS.md (tạo lại: cd server && go run ./cmd/artgen prompts).`);
-  console.log('Lưu ý: anim thiếu vài frame (ví dụ 5/8) vẫn chạy — model vẽ ít frame hơn yêu cầu.');
+  console.log('Lưu ý: anim có số frame khác yêu cầu (ví dụ 5/6) vẫn dùng được — xem chi tiết bằng --all.');
 }

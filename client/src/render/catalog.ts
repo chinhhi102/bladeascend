@@ -67,6 +67,9 @@ export interface CatalogEntry {
   label: string;
   files: string[]; // paths relative to assets/
   job: string; // `artgen` job (docs/ART_JOBS.md) that produces it
+  // Files that must exist for the asset to be usable: the first frame of each animation.
+  // Generators often draw a few more or fewer frames than asked, which is fine.
+  required?: string[];
 }
 
 function frames(dir: string, a: AnimSpec): string[] {
@@ -142,7 +145,10 @@ function fxUiAudioEntries(): CatalogEntry[] {
 }
 
 export function catalog(): CatalogEntry[] {
-  return [...characterEntries(), ...monsterEntries(), ...itemEntries(), ...mapEntries(), ...fxUiAudioEntries()];
+  return [...characterEntries(), ...monsterEntries(), ...itemEntries(), ...mapEntries(), ...fxUiAudioEntries()].map((e) => ({
+    ...e,
+    required: e.required ?? e.files.filter((f) => !/_\d\d\.png$/.test(f) || f.endsWith('_00.png')),
+  }));
 }
 
 /** Placeholder label for a character: initials of its id, e.g. "a_hon" → "AH". */
