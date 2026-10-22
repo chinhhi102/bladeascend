@@ -27,6 +27,16 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			if d.N >= 0 && d.N < game.BuffCount {
 				r.G.ApplyBuff(p, game.BuffNames[d.N])
 			}
+		case "bot":
+			// Thả một bot ngay cạnh mình để thử đánh nhau; d.N = cảnh giới (0 = như mình).
+			realm := d.N
+			if realm <= 0 {
+				realm = r.G.Prog.Realm(p.Level)
+			}
+			realm = min(realm, len(r.cfg.Cultivation.Realms)-1)
+			b := r.spawnBotAt(realm*r.G.Prog.Tiers(), r.G.Prog.MaxSwords(realm)/4+1)
+			b.Pos = p.Pos.Add(r.G.Vec(r.G.Geom(p).Reach+120, 0))
+			b.InvulnUntil = 0
 		default:
 		}
 	})

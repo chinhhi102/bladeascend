@@ -69,7 +69,8 @@ func (b *Brain) Update(g *game.Game) {
 		b.nextDecide = g.Time + bc.DecideMin + b.rng.Float64()*(bc.DecideMax-bc.DecideMin) + b.reaction*0.3
 	}
 	angle, moving := b.steer(g, me)
-	g.SetInput(b.ID, 0, angle, moving)
+	// Bot chỉ Thiêu Đốt Tinh Huyết khi đang chạy trốn — đúng lúc đáng đánh đổi EXP (§4.1c).
+	g.SetInput(b.ID, 0, angle, moving, b.State == StateFlee)
 }
 
 func (b *Brain) setGoal(p Vec, stopNear float64) {
@@ -81,6 +82,12 @@ func (b *Brain) decide(g *game.Game, me *game.Player) {
 	myPow := g.Power(me)
 	threat, prey := b.scanPlayers(g, me, myPow)
 	switch {
+	case me.Ring.Count == 0 && threat != nil:
+		// Spec §5.2 (v3.5): bị tước sạch kiếm thì chỉ còn nước chạy.
+		b.State = StateFlee
+		b.flee(g, me, threat)
+	case me.Ring.Count == 0:
+		b.farm(g, me) // không có kiếm thì đi nhặt đồ thay vì săn người
 	case threat != nil:
 		b.State = StateFlee
 		b.flee(g, me, threat)
@@ -109,10 +116,11 @@ func (b *Brain) scanPlayers(g *game.Game, me *game.Player, myPow float64) (*game
 		}
 		d := o.Pos.Dist(me.Pos)
 		pow := g.Power(o)
-		if pow > myPow*bc.FleeRatio && d < bc.FleeR*me.Scale && d < bestT {
+		sight := g.BotSightMult(o) // Ẩn Thân: bot chỉ phát hiện trong 50% tầm (spec §10)
+		if pow > myPow*bc.FleeRatio && d < bc.FleeR*me.Scale*sight && d < bestT {
 			threat, bestT = o, d
 		}
-		if pow < myPow*bc.HuntRatio && d < bc.HuntR*me.Scale && d < bestP && !o.Invulnerable(g.Time) {
+		if pow < myPow*bc.HuntRatio && d < bc.HuntR*me.Scale*sight && d < bestP && !o.Invulnerable(g.Time) {
 			prey, bestP = o, d
 		}
 	}

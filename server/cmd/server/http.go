@@ -52,21 +52,21 @@ func (s *server) handleConfig(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write(s.rawCfg)
 }
 
-// handleLeaderboard: GET /api/leaderboard?period=day|week|all&metric=exp|kills (spec §11).
+// handleLeaderboard: GET /api/leaderboard?period=day|week|all&board=score|hits|speed (spec §11.2).
 func (s *server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
-	period, metric := r.URL.Query().Get("period"), r.URL.Query().Get("metric")
+	period, board := r.URL.Query().Get("period"), r.URL.Query().Get("board")
 	if period == "" {
 		period = "all"
 	}
-	if metric == "" {
-		metric = "exp"
+	if board == "" {
+		board = "score" // Uy Danh là bảng chính
 	}
-	rows, err := s.store.Top(period, metric, time.Now())
+	rows, err := s.store.Top(period, board, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeJSON(w, map[string]any{"period": period, "metric": metric, "rows": rows})
+	writeJSON(w, map[string]any{"period": period, "board": board, "rows": rows})
 }
 
 func (s *server) handleRooms(w http.ResponseWriter, _ *http.Request) { writeJSON(w, s.mgr.Rooms()) }
@@ -99,6 +99,10 @@ func noListing(h http.Handler) http.Handler {
 }
 
 // spa serves the built client and falls back to index.html.
+//
+// index.html is never cached: its <script> points at a content-hashed bundle, so a plain F5
+// after a new build always picks the new game up. The hashed files under /static/ carry a
+// new name whenever they change, so they are safe to cache for a long time.
 func spa(dir string) http.Handler {
 	fs := http.FileServer(http.Dir(dir))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -108,8 +112,12 @@ func spa(dir string) http.Handler {
 				http.Error(w, "Client chưa được build. Chạy: cd client && npm run build (hoặc dùng npm run dev)", http.StatusNotFound)
 				return
 			}
+			w.Header().Set("Cache-Control", "no-store, must-revalidate")
 			http.ServeFile(w, r, filepath.Join(dir, "index.html"))
 			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/static/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		}
 		fs.ServeHTTP(w, r)
 	})

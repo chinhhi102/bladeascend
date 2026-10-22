@@ -83,6 +83,23 @@ func matchesAny(name, list string) bool {
 
 func rawPath(assets string, j Job) string { return filepath.Join(assets, "_raw", j.Name+".png") }
 
+// alreadyHave reports whether a job needs no quota: either its raw download is still around,
+// or `prep` has already turned it into the finished asset. assets/_raw is a scratch folder
+// that gets cleaned, so checking only there would re-generate art we already shipped.
+//
+// Jobs in redoReasons are the exception: their finished asset exists but was drawn under
+// older rules, so they count as missing until a fresh raw image lands.
+func alreadyHave(assets string, j Job) bool {
+	if _, err := os.Stat(rawPath(assets, j)); err == nil {
+		return true
+	}
+	if _, redo := redoReasons[j.Name]; redo {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(assets, filepath.FromSlash(j.Out)))
+	return err == nil
+}
+
 // writeStatus lists which art exists and which is still a placeholder (M6 deliverable).
 func writeStatus(jobs []Job, assets, out string) {
 	var done, missing []string
@@ -185,7 +202,7 @@ func plan(jobs []Job, assets string) {
 	done := 0
 	for _, j := range jobs {
 		mark := " "
-		if _, err := os.Stat(rawPath(assets, j)); err == nil {
+		if alreadyHave(assets, j) {
 			mark, done = "x", done+1
 		}
 		fmt.Printf("[%s] p%d %-32s → %s\n", mark, j.Priority, j.Name, j.Out)
@@ -261,7 +278,7 @@ func run(mg *minigen, jobs []Job, assets string, o runOpts) {
 	}
 	sent := 0
 	for _, j := range jobs {
-		if _, err := os.Stat(rawPath(assets, j)); err == nil && !o.redo {
+		if alreadyHave(assets, j) && !o.redo {
 			continue
 		}
 		if sent >= o.limit {

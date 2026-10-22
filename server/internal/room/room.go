@@ -118,14 +118,16 @@ func (r *Room) drainInbox() {
 
 func (r *Room) applyInputs() {
 	for id, c := range r.clients {
-		if seq, ang, mov, ok := c.takeInput(); ok {
-			r.G.SetInput(id, seq, ang, mov)
+		if seq, ang, mov, burn, ok := c.takeInput(); ok {
+			r.G.SetInput(id, seq, ang, mov, burn)
 		}
 	}
 }
 
 // addHuman spawns the client's player at Luyện Khí 1 with 1 sword (spec §7).
 func (r *Room) addHuman(c *Client, j netproto.Join) {
+	// Bảng phím test chỉ hiện cho người tự mở bằng ?debug=true (và server phải cho phép).
+	c.Debug = c.Debug || (r.mgr != nil && r.mgr.AllowDebug && j.Debug)
 	p := r.G.AddPlayer(game.SpawnOptions{Name: j.Name, Char: j.Char, GuestID: j.GuestID, Swords: r.cfg.Sword.StartCount})
 	c.PlayerID = p.ID
 	c.knownPlayers, c.knownItems = map[uint32]bool{}, map[uint32]bool{}
@@ -171,7 +173,9 @@ func (r *Room) handleDeaths() {
 			rank := r.rankOf(p)
 			r.record(p)
 			c.send(netproto.Dead{T: "dead", KillerName: p.KillerName, KillerChar: p.KillerChar, PeakLevel: p.PeakLevel,
-				PeakExp: p.PeakExp, Kills: p.Kills, SurviveSec: p.DiedAt - p.SpawnedAt, Rank: rank})
+				PeakExp: p.PeakExp, Kills: p.Kills, SurviveSec: p.DiedAt - p.SpawnedAt, Rank: rank,
+				Score: p.Score, Hits: p.Hits, ScoreBy: p.ScoreBy, BurnedExp: p.BurnedExp,
+				DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs})
 			r.detach(c)
 			continue
 		}
@@ -189,23 +193,17 @@ func (r *Room) record(p *game.Player) {
 	if !p.Dead {
 		end = r.G.Time
 	}
-	err := r.recorder.Record(store.Life{GuestID: p.GuestID, Name: p.Name, Character: p.Char, PeakExp: p.PeakExp,
-		PeakLevel: p.PeakLevel, Kills: p.Kills, SurviveSecs: end - p.SpawnedAt, Map: r.G.Map.ID, EndedAt: time.Now().Unix()})
+	err := r.recorder.Record(store.Life{GuestID: p.GuestID, Name: p.Name, Character: p.Char,
+		Score: p.Score, Hits: p.Hits, PeakExp: p.PeakExp, PeakLevel: p.PeakLevel, Kills: p.Kills,
+		DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs,
+		SurviveSecs: end - p.SpawnedAt, Map: r.G.Map.ID, EndedAt: time.Now().Unix()})
 	if err != nil {
 		log.Printf("record life: %v", err)
 	}
 }
 
-// rankOf is the player's 1-based rank by total_exp among everyone in the room.
-func (r *Room) rankOf(p *game.Player) int {
-	rank := 1
-	for _, o := range r.G.PlayerList() {
-		if o != p && !o.Dead && o.TotalExp > p.TotalExp {
-			rank++
-		}
-	}
-	return rank
-}
+// rankOf is the player's 1-based rank in the room board (spec §11.2: Uy Danh, then exp).
+func (r *Room) rankOf(p *game.Player) int { return r.G.RankOf(p) }
 
 func (r *Room) checkEmpty(dt float64) {
 	if len(r.clients) > 0 || r.mgr.humansOf(r) > 0 {

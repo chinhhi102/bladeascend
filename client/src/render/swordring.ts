@@ -5,7 +5,7 @@ import { BUFFS } from '../net/protocol';
 import type { PlayerFrame } from '../net/state';
 import { assets } from './assets';
 import { REALM_COLORS } from './palette';
-import { bladeLen, hiltR, type RingGeom, ringGeom, slotAngle, tipDist } from './ringgeom';
+import { bladeLen, hiltR, ringCap, type RingGeom, ringGeom, ringOf, ringStart, slotAngle, tipDist } from './ringgeom';
 
 // Drawing proportions (visual only, not balance numbers).
 const HILT_ANCHOR = 0.95; // blade art: hilt sits at 95% of the canvas height, tip at the top
@@ -110,7 +110,7 @@ export class SwordRing {
 
   /** slot is sword i's angle offset, tweened for tween_secs after the count changes. */
   private slot(i: number, n: number, g: RingGeom, t: number): number {
-    const to = slotAngle(g.perRing, n, i);
+    const to = slotAngle(g, n, i);
     const from = this.prevSlots[i];
     if (from === undefined || t >= 1) {
       return to;
@@ -140,8 +140,9 @@ export class SwordRing {
     for (let k = g.rings - 1; k >= 0; k--) {
       const h = hiltR(g, k);
       const tip = tipDist(g, k, tilt);
-      const inRing = Math.min(g.perRing, this.count - k * g.perRing);
-      const alpha = Math.min(0.4, (0.08 + 0.22 * (inRing / g.perRing)) * spin);
+      const cap = ringCap(g, k);
+      const inRing = Math.min(cap, this.count - ringStart(g, k));
+      const alpha = Math.min(0.4, (0.08 + 0.22 * (inRing / cap)) * spin);
       gr.circle(0, 0, (h + tip) / 2).stroke({ color: this.ringTint(k, realm, true), width: tip - h, alpha });
     }
   }
@@ -159,7 +160,7 @@ export class SwordRing {
   }
 
   private rebuild(n: number, realm: number, g: RingGeom, now: number): void {
-    this.prevSlots = this.blades.map((_, i) => slotAngle(g.perRing, this.count, i));
+    this.prevSlots = this.blades.map((_, i) => slotAngle(g, this.count, i));
     this.tweenStart = now;
     this.count = n;
     this.realm = realm;
@@ -170,7 +171,7 @@ export class SwordRing {
     const plain = placeholderBlade();
     const byRing: Blade[][] = [];
     for (let i = 0; i < n; i++) {
-      const k = Math.floor(i / g.perRing);
+      const k = ringOf(g, i);
       const tex = k === 0 && skinTex ? skinTex : plain;
       const tint = this.ringTint(k, realm, false);
       const mk = (alpha: number): Particle => new Particle({ texture: tex, anchorX: 0.5, anchorY: HILT_ANCHOR, tint, alpha });
@@ -200,7 +201,7 @@ export class SwordRing {
     const h = hiltR(g, 0);
     const len = bladeLen(g, 0);
     const z = g.width * 0.4;
-    for (let i = 0; i < Math.min(this.blades.length, g.perRing); i++) {
+    for (let i = 0; i < Math.min(this.blades.length, ringCap(g, 0)); i++) {
       const a = this.angles[i] ?? 0;
       const hx = Math.cos(a) * h;
       const hy = Math.sin(a) * h;
@@ -221,8 +222,8 @@ export class SwordRing {
       return;
     }
     for (let i = 0; i < f.s.n; i++) {
-      const k = Math.floor(i / g.perRing);
-      const a = f.ringAngle + slotAngle(g.perRing, f.s.n, i);
+      const k = ringOf(g, i);
+      const a = f.ringAngle + slotAngle(g, f.s.n, i);
       const h = hiltR(g, k);
       const hx = Math.cos(a) * h;
       const hy = Math.sin(a) * h;

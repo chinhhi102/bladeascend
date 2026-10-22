@@ -20,6 +20,7 @@ const DEBUG_KEYS: Record<string, Record<string, unknown>> = {
   KeyR: { cmd: 'realm', n: 0 },
   KeyK: { cmd: 'sword', n: 10 },
   KeyX: { cmd: 'die', n: 0 },
+  KeyB: { cmd: 'bot', n: 0 }, // thả 1 bot cùng cảnh giới ngay cạnh mình
 };
 
 /** fpsCap: 60 on PC, 45 on phones to save battery; override with ?fps=30 (M7). */
@@ -51,8 +52,9 @@ class App {
     this.screens = new Screens(overlay);
     this.scene = new GameScene(cfg);
     this.world = new ClientWorld(cfg);
-    this.hud = new Hud(cfg);
+    this.hud = new Hud(cfg, Input.isTouchDevice());
     this.input = new Input(stage);
+    this.bindBurnButton();
     this.conn = new Conn((m) => this.onMessage(m));
     this.thresholds = levelThresholds(cfg);
   }
@@ -61,7 +63,13 @@ class App {
     await this.scene.init(stage, fpsCap());
     this.scene.app.ticker.add((t) => this.frame(t.deltaMS / 1000));
     window.setInterval(() => this.sendInput(), 1000 / this.cfg.net.tick_hz);
-    window.addEventListener('keydown', (e) => this.debugKey(e));
+    window.addEventListener('keydown', (e) => {
+      if (this.playing && e.code === 'KeyM' && !e.repeat) {
+        this.hud.minimap.toggle(); // spec §12.1
+        return;
+      }
+      this.debugKey(e);
+    });
     this.conn.connect(
       () => undefined,
       () => {
@@ -94,7 +102,9 @@ class App {
         window.setTimeout(send, 300);
         return;
       }
-      this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId() });
+      // Mở game bằng ?debug=true để bật bảng phím test cho riêng mình.
+      const wantDebug = new URLSearchParams(location.search).get('debug') === 'true';
+      this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId(), debug: wantDebug });
     };
     send();
   }
@@ -142,6 +152,7 @@ class App {
     const map = (await res.json()) as GameMap;
     this.world.reset(w, map);
     this.scene.setWorld(this.world);
+    this.hud.minimap.setMap(map);
     this.debug = w.debug;
     this.hud.setDebug(w.debug);
     this.screens.show(null);
@@ -153,6 +164,7 @@ class App {
     }
     this.early = [];
     this.input.enabled = true;
+    this.hud.showGuide(); // hướng dẫn mờ trong lúc còn bất tử (spec §18.1)
     sound.play('respawn');
   }
 
@@ -170,12 +182,26 @@ class App {
     );
   }
 
+  /** bindBurnButton makes the on-screen 🔥 a hold button (spec §4.1c). */
+  private bindBurnButton(): void {
+    const b = this.hud.burnBtn;
+    const set = (on: boolean) => (e: Event): void => {
+      this.input.burnButton = on;
+      e.preventDefault();
+    };
+    b.addEventListener('touchstart', set(true), { passive: false });
+    b.addEventListener('touchend', set(false));
+    b.addEventListener('touchcancel', set(false));
+    b.addEventListener('mousedown', set(true));
+    window.addEventListener('mouseup', () => (this.input.burnButton = false));
+  }
+
   private sendInput(): void {
     if (!this.playing) {
       return;
     }
-    const { angle, moving } = this.input.read();
-    this.conn.send(this.world.makeInput(angle, moving));
+    const { angle, moving, burn } = this.input.read();
+    this.conn.send(this.world.makeInput(angle, moving, burn));
   }
 
   private debugKey(e: KeyboardEvent): void {
@@ -202,7 +228,12 @@ class App {
       return;
     }
     this.scene.render(dt);
-    this.hud.update(this.world.me(), this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
+    const me = this.world.me();
+    this.hud.update(me, this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
+    if (me) {
+      const view = this.scene.viewSize();
+      this.hud.minimap.render(me.x, me.y, me.f, view.w, view.h, performance.now() / 1000);
+    }
   }
 }
 

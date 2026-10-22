@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"kiemxoay/server/internal/config"
+	"kiemxoay/server/internal/game"
 	"kiemxoay/server/internal/netproto"
 	"kiemxoay/server/internal/store"
 )
@@ -66,6 +67,136 @@ func TestBotFillToTwenty(t *testing.T) {
 	if r.Bots() != 15 {
 		t.Fatalf("joining humans must not remove bots: bots = %d", r.Bots())
 	}
+}
+
+// Spec §9.3: phòng chưa đủ `spawn_rank` người thì bot sinh ra ở Luyện Khí.
+func TestBotsSpawnAtLuyenKhiWhenRoomIsSmall(t *testing.T) {
+	m, _, _ := testManager(t)
+	joinN(m, 1)
+	r := m.AllRooms()[0]
+	for i := 0; i < 200; i++ {
+		level, swords := r.randomBotLevel()
+		if realm := r.G.Prog.Realm(level); realm != 0 {
+			t.Fatalf("phòng ít người mà bot sinh ở cảnh giới %d (level %d), muốn Luyện Khí", realm, level)
+		}
+		if swords < 1 || swords > r.G.Prog.MaxSwords(0) {
+			t.Fatalf("bot sinh ra với %d kiếm, ngoài khoảng [1, %d]", swords, r.G.Prog.MaxSwords(0))
+		}
+	}
+}
+
+// Spec §9.3: đủ người thì bot sinh đúng ngang với người đang đứng hạng spawn_rank (11),
+// không còn trần cảnh giới nào cả.
+func TestBotsSpawnAtRank11NoRealmCap(t *testing.T) {
+	m, _, cfg := testManager(t)
+	joinN(m, 1)
+	r := m.AllRooms()[0]
+
+	// Dựng đủ người, hạng cao dần theo Uy Danh; hạng 11 rơi vào Nguyên Anh tầng 5 (level 34).
+	for i := 0; i < cfg.Bots.SpawnRank+3; i++ {
+		level := 34
+		if i < cfg.Bots.SpawnRank-1 {
+			level = 60 // Top 10 toàn người cảnh giới rất cao
+		}
+		p := r.G.AddPlayer(game.SpawnOptions{Name: "P", Level: level, Swords: 1, IsBot: true})
+		p.Score = float64(100 * (cfg.Bots.SpawnRank + 3 - i))
+	}
+	want := r.G.Ranking()[cfg.Bots.SpawnRank-1].Level
+	if r.G.Prog.Realm(want) <= 1 {
+		t.Fatalf("thiết lập sai: hạng 11 phải ở cảnh giới cao hơn Trúc Cơ, đang là level %d", want)
+	}
+	for i := 0; i < 50; i++ {
+		level, swords := r.randomBotLevel()
+		if level != want {
+			t.Fatalf("bot sinh ở level %d, muốn %d (ngang hạng %d, không bị chặn trần)",
+				level, want, cfg.Bots.SpawnRank)
+		}
+		if maxS := r.G.Prog.MaxSwords(r.G.Prog.Realm(level)); swords < 1 || swords > maxS {
+			t.Fatalf("bot sinh với %d kiếm, ngoài [1, %d]", swords, maxS)
+		}
+	}
+}
+
+// Spec §11.4: hạ một người trong Top 5 của phòng → dòng kill feed loan ra MỌI phòng.
+func TestTopFiveKillAnnouncedServerWide(t *testing.T) {
+	m, _, _ := testManager(t)
+	joinN(m, 1)
+	r := m.AllRooms()[0]
+	r.Step(1.0 / 30)
+
+	killer := r.G.AddPlayer(game.SpawnOptions{Name: "SátThủ", Level: 30, Swords: 20})
+	victim := r.G.AddPlayer(game.SpawnOptions{Name: "ĐạiCa", Level: 0, Swords: 1})
+	victim.Score = 9999 // đang đứng hạng 1 trong phòng
+	collected := map[string][]netproto.Feed{}
+	collect := func(room *Room) {
+		for _, c := range room.clients {
+			c.Conn = &feedSpy{room: room.ID, out: collected}
+		}
+	}
+	collect(r)
+
+	// Phòng thứ hai để kiểm tra tin có lan sang không.
+	other := m.createLocked()
+	c2 := NewClient(&fakeConn{}, false)
+	other.addHuman(c2, netproto.Join{Name: "NgườiPhòngKhác", Char: "a_hon"})
+	collect(other)
+
+	// Đặt nạn nhân nằm trong vòng kiếm của sát thủ rồi chạy tới khi chết thật.
+	killer.Pos = r.G.Vec(6000, 6000)
+	victim.Pos = r.G.Vec(6000+r.G.Geom(killer).Inner, 6000)
+	killer.InvulnUntil, victim.InvulnUntil = 0, 0
+	for i := 0; i < 120 && !victim.Dead; i++ {
+		r.Step(1.0 / 30)
+		victim.Pos = r.G.Vec(6000+r.G.Geom(killer).Inner, 6000)
+	}
+	if !victim.Dead {
+		t.Fatal("không chém chết được nạn nhân Luyện Khí")
+	}
+	other.drainInbox() // tin lan sang chạy trên goroutine phòng kia
+
+	// Bot trong phòng cũng sinh feed (đột phá, rớt cảnh giới…) nên phải lọc đúng dòng.
+	findKill := func(room string) (netproto.Feed, bool) {
+		for _, f := range collected[room] {
+			if f.B == "ĐạiCa" && (f.Kind == "kill" || f.Kind == "gate_kill") {
+				return f, true
+			}
+		}
+		return netproto.Feed{}, false
+	}
+	f, ok := findKill(r.ID)
+	if !ok {
+		t.Fatalf("phòng gốc không nhận được dòng kill feed: %+v", collected[r.ID])
+	}
+	if f.Top != 1 || f.Room != r.ID {
+		t.Fatalf("dòng feed: Top = %d, Room = %q; muốn 1 và %q", f.Top, f.Room, r.ID)
+	}
+	got, ok := findKill(other.ID)
+	if !ok {
+		t.Fatalf("phòng khác không nhận được tin loan toàn server: %+v", collected[other.ID])
+	}
+	if got.Top != 1 {
+		t.Fatalf("tin loan sang phòng khác sai: %+v", got)
+	}
+	// Phòng khác KHÔNG được nhận feed thường của phòng này.
+	for _, f := range collected[other.ID] {
+		if f.Top == 0 {
+			t.Fatalf("feed thường bị lọt sang phòng khác: %+v", f)
+		}
+	}
+}
+
+// feedSpy ghi lại các gói Feed gửi tới một client.
+type feedSpy struct {
+	room string
+	out  map[string][]netproto.Feed
+}
+
+func (s *feedSpy) Send(b []byte) bool {
+	var f netproto.Feed
+	if err := netproto.Decode(b, &f); err == nil && f.T == "feed" {
+		s.out[s.room] = append(s.out[s.room], f)
+	}
+	return true
 }
 
 func TestTwentyFirstHumanGetsNewRoom(t *testing.T) {
@@ -142,23 +273,31 @@ func TestNameFilter(t *testing.T) {
 }
 
 // Spec §17: a stealthed player never appears in packets for far-away viewers.
-func TestSnapshotOmitsHiddenPlayers(t *testing.T) {
+// Spec §6.2 / §13.3 (v3.3): người Ẩn Thân VẪN được gửi xuống kèm cờ stealth để client vẽ mờ,
+// nhưng không kèm tên và danh hiệu nên vẫn không lộ là ai.
+func TestSnapshotSendsStealthFlaggedWithoutName(t *testing.T) {
 	m, _, _ := testManager(t)
 	cs := joinN(m, 2)
 	r := m.AllRooms()[0]
 	r.Step(1.0 / 30)
 	viewer, hider := r.G.Players[cs[0].PlayerID], r.G.Players[cs[1].PlayerID]
 	viewer.Pos, hider.Pos = r.G.Vec(3000, 3000), r.G.Vec(3400, 3000)
+	hider.Title = 1
 	r.G.ApplyBuff(hider, "stealth")
 	snap := r.snapshotFor(cs[0], viewer, r.G.DrainEvents())
-	for _, p := range snap.Players {
+	var got *netproto.PlayerState
+	for i, p := range snap.Players {
 		if p.ID == hider.ID {
-			t.Fatal("stealthed player leaked into the snapshot")
+			got = &snap.Players[i]
 		}
 	}
-	for _, e := range snap.Events {
-		if e.A == hider.ID {
-			t.Fatalf("event %s about the hidden player leaked", e.Kind)
-		}
+	if got == nil {
+		t.Fatal("người Ẩn Thân phải vẫn có trong snapshot (vẽ mờ 20%)")
+	}
+	if got.Flags&netproto.FlagStealth == 0 {
+		t.Fatal("thiếu cờ stealth nên client không biết phải vẽ mờ")
+	}
+	if got.Name != "" || got.Title != 0 {
+		t.Fatalf("Ẩn Thân mà vẫn lộ tên/danh hiệu: %q, title %d", got.Name, got.Title)
 	}
 }

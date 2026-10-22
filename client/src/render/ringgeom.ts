@@ -9,14 +9,45 @@ export interface RingGeom {
   hiltStep: number;
   growth: number;
   compound: boolean;
-  perRing: number;
+  /** step: vòng thứ k chứa step × k kiếm (vòng 1 = 10, vòng 2 = 20… spec §4.1a). */
+  step: number;
   rings: number;
   reach: number; // farthest tip at rest tilt + half width
 }
 
+/** ringCap: số kiếm vòng k chứa được (server RingGeom.RingCap). */
+export function ringCap(g: RingGeom, k: number): number {
+  return g.step * (k + 1);
+}
+
+/** ringStart: chỉ số kiếm đầu tiên của vòng k (server RingGeom.RingStart). */
+export function ringStart(g: RingGeom, k: number): number {
+  return (g.step * k * (k + 1)) / 2;
+}
+
+/** ringOf: sword i thuộc vòng nào (server RingGeom.RingOf). */
+export function ringOf(g: RingGeom, i: number): number {
+  let k = Math.floor((Math.sqrt(1 + (8 * i) / g.step) - 1) / 2);
+  while (k > 0 && ringStart(g, k) > i) {
+    k--;
+  }
+  while (ringStart(g, k + 1) <= i) {
+    k++;
+  }
+  return k;
+}
+
+function ringsFor(step: number, n: number): number {
+  let r = 1;
+  while ((step * r * (r + 1)) / 2 < n) {
+    r++;
+  }
+  return r;
+}
+
 export function ringGeom(cfg: GameConfig, scale: number, n: number, longMult: number): RingGeom {
   const c = cfg.sword;
-  const perRing = Math.max(1, c.swords_per_ring);
+  const step = Math.max(1, c.ring_capacity_step);
   const g: RingGeom = {
     base: c.length * scale * longMult,
     inner: (cfg.player.body_r + c.hilt_gap) * scale,
@@ -24,8 +55,8 @@ export function ringGeom(cfg: GameConfig, scale: number, n: number, longMult: nu
     hiltStep: c.hilt_step,
     growth: c.ring_growth,
     compound: c.ring_growth_mode === 'compound',
-    perRing,
-    rings: Math.max(1, Math.ceil(n / perRing)),
+    step,
+    rings: ringsFor(step, n),
     reach: 0,
   };
   const tilt = (c.tilt_deg * Math.PI) / 180;
@@ -54,17 +85,17 @@ export function tipDist(g: RingGeom, k: number, tilt: number): number {
 }
 
 /** slotAngle: angle of sword i relative to the ring phase (spec §4.1a, server SlotAngle). */
-export function slotAngle(per: number, n: number, i: number): number {
-  if (n <= per) {
-    return (2 * Math.PI * i) / n;
+export function slotAngle(g: RingGeom, n: number, i: number): number {
+  const k = ringOf(g, i);
+  const cap = ringCap(g, k);
+  const start = ringStart(g, k);
+  const m = Math.min(cap, n - start);
+  if (m <= 0) {
+    return 0;
   }
-  const k = Math.floor(i / per);
-  const j = i % per;
-  const m = Math.min(per, n - k * per);
-  const slot = Math.round((j * per) / m);
-  const step = (2 * Math.PI) / per;
-  const rings = Math.ceil(n / per);
-  return slot * step + (k * step) / rings;
+  const slot = Math.round(((i - start) * cap) / m);
+  const step = (2 * Math.PI) / cap;
+  return slot * step + (k * step) / Math.max(g.rings, 1);
 }
 
 /** restTilt: blades trail behind the spin (server RestTilt). */

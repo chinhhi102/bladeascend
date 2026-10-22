@@ -125,7 +125,12 @@ func (g *Game) ApplyBuff(p *Player, name string) {
 	if !ok {
 		return
 	}
-	p.Buffs[b] = g.Time + g.Cfg.Buffs[name].Secs
+	cfg := g.Cfg.Buffs[name]
+	secs := cfg.Secs
+	if cfg.MaxSecs > 0 && secs > cfg.MaxSecs {
+		secs = cfg.MaxSecs // Ẩn Thân: nhặt lại chỉ làm mới, không vượt max_secs (spec §6.2)
+	}
+	p.Buffs[b] = g.Time + secs
 	g.refreshDerived(p)
 	g.emit(Event{Kind: "BuffStart", A: p.ID, S: name, N: int(g.Cfg.Buffs[name].Secs * 1000), X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }

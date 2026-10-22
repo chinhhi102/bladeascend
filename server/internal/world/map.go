@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -124,6 +125,32 @@ func (m *Map) GatesInNetwork(g Gate) []Gate {
 		}
 	}
 	return out
+}
+
+// GateExit is the one gate that g leads to. Gates in a network are paired two by two in ID
+// order (0↔1, 2↔3, …), so every gate is a fixed two-way door: whatever you came out of
+// takes you straight back. A network with an odd gate left over links it to the first one.
+func (m *Map) GateExit(g Gate) (Gate, bool) {
+	var net []Gate
+	for _, o := range m.Gates {
+		if o.Network == g.Network {
+			net = append(net, o)
+		}
+	}
+	if len(net) < 2 {
+		return Gate{}, false
+	}
+	sort.Slice(net, func(i, j int) bool { return net[i].ID < net[j].ID })
+	for i, o := range net {
+		if o.ID != g.ID {
+			continue
+		}
+		if pair := i ^ 1; pair < len(net) {
+			return net[pair], true
+		}
+		return net[0], true // lẻ cổng: nối về cổng đầu mạng
+	}
+	return Gate{}, false
 }
 
 // LoadDir loads every .tmj file in dir.

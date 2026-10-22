@@ -55,11 +55,16 @@ func prepJob(j Job, raw, assets string) error {
 	case modeSprite:
 		removeBackground(img)
 		_, _ = eraseGridLines(img)
-		box := alphaBBox(img, img.Bounds())
+		box := alphaBBoxDense(img, img.Bounds())
 		if box.Empty() {
 			return fmt.Errorf("empty image after background removal")
 		}
 		sg := Seg{W: j.W, H: j.H, Pivot: j.Pivot}
+		debugf("sprite %s: ảnh %v → khung nội dung %v (%dx%d)", j.Name, img.Bounds().Size(), box, box.Dx(), box.Dy())
+		if os.Getenv("ARTGEN_DEBUG") != "" {
+			// Ảnh ngay sau khi xoá nền, để soi xem cái gì còn sót làm khung nội dung bị rộng.
+			_ = savePNG(filepath.Join(assets, "_raw", "debug_"+j.Name+".png"), img)
+		}
 		return savePNG(out, placeOne(img, box, sg, fitScale(sg, box.Dx(), box.Dy())))
 	case modeSheet:
 		return prepSheet(img, j, assets)

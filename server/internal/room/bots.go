@@ -23,8 +23,12 @@ func (r *Room) updateBots(dt float64) {
 	}
 }
 
-func (r *Room) spawnBot() {
+func (r *Room) spawnBot() *game.Player {
 	level, swords := r.randomBotLevel()
+	return r.spawnBotAt(level, swords)
+}
+
+func (r *Room) spawnBotAt(level, swords int) *game.Player {
 	names := r.cfg.Bots.Names
 	p := r.G.AddPlayer(game.SpawnOptions{
 		Name:  names[r.rng.Intn(len(names))],
@@ -32,23 +36,23 @@ func (r *Room) spawnBot() {
 		IsBot: true, Level: level, Swords: swords,
 	})
 	r.brains[p.ID] = bot.New(p.ID, r.rng.Int63(), r.G)
+	return p
 }
 
-// randomBotLevel picks a realm by realm_weights, a random tier and [1, max] swords.
+// randomBotLevel decides what a new bot spawns as (spec §9.3).
+//
+// Bots slot in at `spawn_rank` (11) — level with whoever sits just below the room's Top 10 —
+// so they never show up strong enough to bully the leaders. A room without that many players
+// yet has nobody to measure against, so its bots start at Luyện Khí instead. There is no
+// realm ceiling: in a room full of Nguyên Anh, rank 11 is Nguyên Anh and so are new bots.
 func (r *Room) randomBotLevel() (int, int) {
-	total := 0
-	for _, w := range r.cfg.Bots.RealmWeights {
-		total += w
-	}
-	roll, realm := r.rng.Intn(max(1, total)), 0
-	for i, w := range r.cfg.Bots.RealmWeights {
-		if roll < w {
-			realm = i
-			break
+	level := r.rng.Intn(r.G.Prog.Tiers()) // mặc định: Luyện Khí, tầng ngẫu nhiên
+	if n := r.cfg.Bots.SpawnRank; n >= 1 {
+		if ranking := r.G.Ranking(); len(ranking) >= n {
+			level = ranking[n-1].Level
 		}
-		roll -= w
 	}
-	level := realm*r.G.Prog.Tiers() + r.rng.Intn(r.G.Prog.Tiers())
+	realm := r.G.Prog.Realm(level)
 	return level, 1 + r.rng.Intn(r.G.Prog.MaxSwords(realm))
 }
 

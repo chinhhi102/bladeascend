@@ -33,7 +33,7 @@ Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (d
 - **Còn lại / lỗi đã biết**:
   - Hàng rào/tường trong 3 bản đồ cũ được vẽ cao hơn hình trong Tiled (kiểu 3/4), nên vùng kiếm chém (theo hình Tiled) hơi thấp hơn phần nhìn thấy. Cần chỉnh bản đồ (`cmd/mapgen`) cho hình Tiled = hình vẽ.
   - Art cần sinh lại: 9 skin kiếm (lưỡi trắng/xám) và 3 nền đất (nhạt) — đã đánh dấu "Sinh lại" trong `docs/ART_JOBS.md`. Bó Kiếm chưa có tên art trong ART_PROMPTS → đang vẽ placeholder.
-  - Q8 (`docs/QUESTIONS.md`): checklist §17 còn số kiếm mất theo bản cũ.
+  - (Q8 đã xong: spec gốc v3.5 đặt `clash_unit` = 1 và sửa checklist §17 cho khớp.)
 
 ## Đã làm
 | Milestone | Nội dung | Trạng thái |
@@ -59,7 +59,7 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
   - `artgen run` giờ gửi **mỗi prompt đúng 1 lần**, tuần tự (`-c 1`), nghỉ 30s giữa prompt (`-gap`); hết quota thì chờ tới `reset_at` rồi gửi lại (lúc đó Gemini chưa vẽ gì).
   - `artgen prep`: sheet nhiều hàng mà cắt theo hàng ra sai (hàng dính nhau, ma bay tách khỏi xác) → tự cắt theo lưới cột × hàng, mỗi mảnh vào ô chứa tâm của nó.
   - **Lỗi đã biết (minigen):** sau khi sửa lỗi `metadata`, minigen dùng **chung 1 cuộc chat Gemini** cho mọi job (`chat_id` giống nhau) → Gemini lặp lại hình của prompt trước (5/11 ảnh sai: 4 ảnh vẽ rương, 1 ảnh chép sheet chết Ông Ba). Đã xóa ảnh sai. Cần minigen mở chat mới cho mỗi job trước khi sinh tiếp.
-- **2026-10-22: theo ART_PROMPTS mới** — style "bựa", mô tả nhân vật + gag riêng từng anim, **1 animation / ảnh** cho nhân vật (lưới đúng cột × hàng), nền **magenta #FF00FF** (artgen tự nhận nền magenta hay trắng và xóa sạch viền hồng). Nhân vật cũ (style "cute") giữ tạm tới khi ảnh mới về. Tổng 174 ảnh game, đã có 20. Câu hỏi Q6 trong `docs/QUESTIONS.md`.
+- **2026-10-22: theo ART_PROMPTS mới** — style "bựa", mô tả nhân vật + gag riêng từng anim, **1 animation / ảnh** cho nhân vật (lưới đúng cột × hàng), nền **magenta #FF00FF** (artgen tự nhận nền magenta hay trắng và xóa sạch viền hồng). Nhân vật cũ (style "cute") giữ tạm tới khi ảnh mới về. Tổng 174 ảnh game, đã có 20. Câu hỏi Q6 đã trả lời (xem `docs/QUESTIONS_DONE.md`).
 - Q6 (2026-10-22): nhân vật 1 anim/ảnh; quái/cổng/rương gộp các anim của cùng 1 đối tượng, mỗi anim 1 hàng; VFX mỗi hiệu ứng 1 ảnh; vật cản `break`/`regrow` tách riêng; ảnh tĩnh gộp thoải mái. Bộ cắt frame giờ tìm từng hình theo vùng pixel liền nhau (sheet lệch lưới vẫn dùng được). Tổng 186 ảnh game.
 - **Danh sách prompt để sinh bằng công cụ khác: `docs/ART_JOBS.md`** (tạo lại: `go run ./cmd/artgen prompts`). Lưu ảnh thành `assets/_raw/<tên job>.png` rồi chạy `go run ./cmd/artgen prep`.
 - Tự động: `bash tools/art_watch.sh` — chờ tài khoản minigen sẵn sàng, mỗi đợt 30 ảnh, nghỉ 2.5 giờ giữa các đợt.
@@ -81,6 +81,26 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 - Cổng 8080 trên máy dev hiện đang bị chương trình khác chiếm → chạy server với `-addr :8090` (khi dùng `npm run dev` thì chạy `KX_SERVER=http://localhost:8090 npm run dev`).
 - Cân bằng (sim 10 phút, 40 bot): lên Trúc Cơ trung bình ~7 phút, nhiều bot chết sớm ở Luyện Khí 1 — nếu thấy chậm, chỉnh `config/game.json` (ví dụ tăng EXP quái, giảm `exp_base`). Chưa đổi gì vì đây là quyết định cân bằng của bạn.
 - Dự đoán chuyển động phía client không mô phỏng đẩy lùi (knockback) → khi bị chém thấy giật nhẹ 1 nhịp.
+- **⚠ Nhịp farm đang lệch spec (22/10/2026)**: `--farm` đo được Luyện Khí → Trúc Cơ **165s**, §6.1 vẫn ghi 30–60s. Do ba thay đổi cộng lại: tốc độ chạy một nửa + EXP gấp đôi mỗi cảnh giới + mật độ giảm 50%. Đại Thừa giờ cần ≈7.7 giờ farm → bảng Thần Tốc sẽ trống. Phương án: **Q13 trong `docs/QUESTIONS.md`** — chờ chốt, chưa đổi gì.
+- **EXP mỗi cảnh giới gấp đôi cảnh giới trước (22/10/2026)**: `realm_mult` 1.2 → **2.0**. Tổng tới Đại Thừa 10: 28 288 → **694 960**.
+- **Mật độ giảm 50% (22/10/2026)**: `exp_orbs.cell` 160 → **226** (≈160×√2, số viên giảm một nửa), `items.count_per_room` 400 → **200**.
+- **Bot sinh ra tối đa Trúc Cơ (22/10/2026)**: `bots.realm_weights` [60,30,10] → **[60,40]**. Bot vẫn farm lên cao hơn sau khi sinh — đó là bình thường.
+- **⚠ Spec gốc chuyển sang `docs/_raw/` (22/10/2026)**: chỉ chủ dự án sửa, Claude không ghi vào đó. `docs/GAME_SPEC.md` cũ đã xoá để khỏi có hai bản. Bản `_raw` hiện **thiếu 13 thứ đã code hôm nay** → danh sách đầy đủ ở **Q14 trong QUESTIONS.md**, cần dán lại vào `_raw`.
+- **Tiên giới (22/10/2026, spec §3.4)**: 5 cảnh giới sau Đại Thừa (Chân Tiên → Đạo Tổ), không chia tầng, chỉ lên bằng **sát mạng** (mỗi cú chém trúng thân = 1, bot = 0.5, cùng nạn nhân 60s không tính, chỉ đếm từ Đại Thừa tầng 10). Bị chém rớt 1 cảnh giới và bộ đếm về mức khởi điểm. Level 90/100/110/120/130 nên `Realm(L) = L/10` vẫn đúng; `setTotalExp` không được đụng vào level của người Tiên giới. Hào quang sau lưng mỗi cảnh giới một màu, HUD đổi thanh Linh khí → Tiên khí vàng kim.
+- **Kiếm tối đa theo công thức (22/10/2026, §3.1)**: `max_swords[r] = 5(r+1)(r+2)` → 10, 30, 60, 100, 150, 210, 280, 360, 450, 550, 660, 780, 910, 1050. Cảnh giới r có đúng r+1 vòng. `ring_step` đổi tên thành `ring_capacity_step` cho khớp spec gốc.
+- **Bảng xếp hạng & danh hiệu (22/10/2026, spec v3.8)**: bảng phòng xếp theo **Uy Danh** (không còn theo cảnh giới), mỗi dòng ghi **danh hiệu** thay cảnh giới; cảnh giới+tầng chuyển lên **đầu nhân vật** (dưới danh hiệu, trên tên). Danh hiệu mở rộng Top 1→10, chữ nằm trong `config.titles` + `STR.titles` (phải sửa cả hai cho khớp).
+- **Tin loan toàn server (22/10/2026, §11.4)**: hạ người đang Top 5 của phòng → kill feed gửi tới mọi phòng, hiện nền đỏ viền vàng. Ngưỡng ở `serverWideTopN` trong `room/broadcast.go`.
+- **Bot sinh ngang hạng 11 (22/10/2026, §9.3)**: `bots.spawn_rank` = 11. Đủ người thì bot sinh bằng level người hạng 11; chưa đủ thì Luyện Khí. **Không còn trần cảnh giới** — `bots.realm_weights` đã bị xoá khỏi config vì hạng 11 tự nó là cái phanh.
+- **artgen cắt sprite lệch (sửa 22/10/2026)**: vài pixel rác sót lại sau khi xoá nền (có ảnh chỉ 3 pixel ở góc) kéo khung nội dung ra cả ảnh → sprite bị thu nhỏ và dồn sang trái. `alphaBBoxDense` giờ bỏ các mảng rời dưới 1% mảng lớn nhất. 9 skin kiếm đã prep lại, căn giữa đúng.
+- **artgen đếm sai ảnh đã có (sửa 22/10/2026)**: trước đây chỉ nhìn `assets/_raw/<job>.png`, mà thư mục đó là scratch nên bị dọn → `plan` báo "0 generated" và `run` sẽ vẽ lại toàn bộ 196 ảnh, đốt sạch quota. Giờ `alreadyHave` xét cả file đã prep trong `assets/`, đồng thời tôn trọng `redoReasons` (ảnh cần vẽ lại vì đổi luật vẫn tính là thiếu). Thực tế chỉ còn **22 ảnh** cần sinh: 9 skin kiếm + 3 nền (vẽ lại theo v3/v3.1) và 10 ref_sheet ưu tiên 9.
+- **Thiêu Đốt Tinh Huyết (22/10/2026, spec v3.7 §4.1c)**: giữ Shift (PC) hoặc nút 🔥 (điện thoại) khi đang chạy → tốc độ ×1.8, mỗi giây mất 8% EXP của tầng hiện tại. Không rớt cảnh giới (dừng ở đáy cảnh giới), Luyện Khí đốt cạn về 0 vẫn sống. Có vòng lửa cho cả phòng thấy. Số để chỉnh: `burn.mult`, `burn.exp_frac_per_sec`, `burn.keep_realm`.
+- **Va kiếm không đẩy văng nữa (22/10/2026)**: `clash_knockback` 150 → **0**. Hai người đứng mài nhau tới khi một bên hết kiếm. Đặt lại > 0 là bật lại kiểu cũ.
+- **Tốc độ chạy (22/10/2026)**: `move_base` 260 → **130** và bỏ hệ số `sqrt(scale)`. Spec dán vào sau đó cứ lùi lại về `260 * sqrt(scale)`; đang giữ theo yêu cầu nhắn trực tiếp — xem Q12.
+- **Tốc độ xoay kiếm (22/10/2026)**: `rev_secs` → **1.0** (1 vòng/giây theo spec v3.4), Tốc Kiếm trả về ×1.6.
+- **Số kiếm tối thiểu (22/10/2026)**: `min_count` 1 → **0** (spec v3.5). Bị tước sạch kiếm thì không chạm được ai, hiện emote `no_swords`, bot chuyển sang chạy/farm. **Không chết** — luật chết vẫn chỉ áp cho Luyện Khí bị chém vào thân.
+- **Spec v3.3–v3.6 đã code xong (22/10/2026)**: điểm Uy Danh + 3 bảng xếp hạng (Uy Danh/Sát Thần/Thần Tốc), danh hiệu Top 1–3 phòng, minimap, Ẩn Thân mờ 20%, clash_unit = 1 + chỉ đổi chiều khi cùng cảnh giới, damage vật cản theo người. Cổng dịch chuyển giờ ghép cặp 2 chiều cố định, `transit_secs` = 2s. Vật phẩm nhặt được bay hút vào người 0.22s.
+- Schema SQLite thêm cột `score/hits/dai_thua_secs/top1_secs`, tự nâng cấp database cũ khi mở. API đổi `metric=exp|kills` → `board=score|hits|speed`.
+- Môi trường dev: `~/go/pkg/mod` có một số thư mục thuộc quyền `root` (dấu vết của lần chạy `sudo go` trước) → `go build/test` báo "permission denied". Đang né bằng `GOMODCACHE=~/.cache/kx-gomod`. Sửa tận gốc: `sudo chown -R chinhdc:chinhdc ~/go/pkg/mod`. Ngoài ra `go` không còn trong PATH, đang dùng bản trong cache: `~/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.11.linux-amd64/bin/go`.
 
 ## Việc tiếp theo gợi ý
 1. Đăng nhập lại minigen → chạy các đợt art ở trên.

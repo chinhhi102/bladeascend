@@ -11,6 +11,7 @@ import { PlayerSprite } from './player';
 import { ringGeom } from './ringgeom';
 import { Vfx } from './vfx';
 
+const SUCK_SECS = 0.22; // vật phẩm nhặt được bay hút vào người trong 0.22s
 const MOOD_EMOTE_CHANCE = 0.12; // chance per mood change that a character shouts (run/chase/flee)
 
 /** GameScene renders the ClientWorld every frame with a camera that zooms out as you grow (spec §4.1). */
@@ -24,6 +25,9 @@ export class GameScene {
   private readonly players = new Map<number, PlayerSprite>();
   private readonly monsters = new Map<number, MonsterSprite>();
   private readonly items = new Map<number, ItemSprite>();
+  // Items picked up this snapshot: itemId → who grabbed it, so we can fly them in.
+  private readonly pickedBy = new Map<number, number>();
+  private readonly flying: { sp: ItemSprite; by: number; from: { x: number; y: number }; at: number }[] = [];
   private readonly lastMood = new Map<number, string>();
   private zoom = 1;
   private viewH = 900;
@@ -32,6 +36,11 @@ export class GameScene {
   private showHitbox = false;
 
   constructor(private readonly cfg: GameConfig) {}
+
+  /** viewSize is the world-space rectangle currently on screen (used by the minimap, §12.1). */
+  viewSize(): { w: number; h: number } {
+    return { w: this.viewH * (this.app.screen.width / Math.max(this.app.screen.height, 1)), h: this.viewH };
+  }
 
   async init(parent: HTMLElement, maxFps: number): Promise<void> {
     await this.app.init({
@@ -73,6 +82,11 @@ export class GameScene {
     for (const it of this.items.values()) {
       it.destroy();
     }
+    for (const f of this.flying) {
+      f.sp.destroy();
+    }
+    this.flying.length = 0;
+    this.pickedBy.clear();
     this.players.clear();
     this.monsters.clear();
     this.items.clear();
@@ -96,6 +110,7 @@ export class GameScene {
     this.syncPlayers(frames, now);
     this.syncMonsters(now);
     this.syncItems(now);
+    this.updateFlyingItems(now);
     const myBush = me && me.s.fl & 2 ? this.bushAt(me.x, me.y) : -1;
     this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha);
     this.vfx.update(now);
@@ -203,11 +218,38 @@ export class GameScene {
     }
     for (const [id, sp] of this.items) {
       if (!items.has(id)) {
-        sp.destroy();
         this.items.delete(id);
+        const by = this.pickedBy.get(id);
+        this.pickedBy.delete(id);
+        if (by === undefined) {
+          sp.destroy(); // hết hạn / ra khỏi tầm nhìn: biến mất luôn
+        } else {
+          // Bị nhặt → bay hút về phía người nhặt thay vì biến mất đột ngột.
+          this.flying.push({ sp, by, from: { x: sp.root.x, y: sp.root.y }, at: now });
+        }
         continue;
       }
       sp.update(now);
+    }
+  }
+
+  /** updateFlyingItems tweens picked-up items into their owner, then drops them. */
+  private updateFlyingItems(now: number): void {
+    for (let i = this.flying.length - 1; i >= 0; i--) {
+      const f = this.flying[i];
+      const t = Math.min(1, (now - f.at) / SUCK_SECS);
+      const owner = this.players.get(f.by)?.root;
+      const tx = owner?.x ?? f.from.x;
+      const ty = owner?.y ?? f.from.y;
+      // Ease-in: lề mề lúc đầu rồi lao vút vào người, giống bị hút.
+      const k = t * t;
+      f.sp.root.position.set(f.from.x + (tx - f.from.x) * k, f.from.y + (ty - f.from.y) * k);
+      f.sp.root.scale.set(1 - 0.7 * t);
+      f.sp.root.alpha = 1 - t * t;
+      if (t >= 1) {
+        f.sp.destroy();
+        this.flying.splice(i, 1);
+      }
     }
   }
 
@@ -284,6 +326,9 @@ export class GameScene {
   private handleWorldEvent(e: GameEvent, now: number, mine: boolean, size: number): void {
     switch (e.k) {
       case 'ItemPicked':
+        if (e.b !== undefined) {
+          this.pickedBy.set(e.b, e.a ?? 0); // syncItems biến nó thành hiệu ứng bay hút
+        }
         if (mine) {
           const s = e.s ?? '';
           sound.play(s === 'orb' ? 'pickup_exp' : s === 'sword' ? 'pickup_sword' : s === 'chest' ? 'chest_open' : 'pickup_buff');

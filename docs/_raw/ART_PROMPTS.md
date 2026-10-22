@@ -218,6 +218,11 @@ Tùy chọn giống quảng cáo — **lưỡi liềm cong**: `{STYLE} a single 
 | Hợp Thể | `a crackling lightning yellow sword` |
 | Độ Kiếp | `a dark purple cursed sword with smoky aura` |
 | Đại Thừa | `a radiant jade and gold celestial sword glowing white` |
+| Chân Tiên | `an elegant celestial sword wrapped in soft white clouds` |
+| Kim Tiên | `a pure golden immortal sword with floating golden runes` |
+| Thái Ất Ngọc Tiên | `a translucent white jade sword with a faint inner glow` |
+| Đại La Kim Tiên | `a cosmic sword with a starry night sky blade and gold edges` |
+| Đạo Tổ | `a sword made of swirling yin-yang black and white energy, radiant halo` |
 
 ## 8. Vật phẩm
 
@@ -335,6 +340,10 @@ Mỗi cặp/mạng cổng một màu (tím, xanh lam, cam) để người chơi 
 | Tia lửa va kiếm | 6 | `{STYLE} comic sword clash spark burst, white and yellow star shapes, frame {i} of 6 expanding then fading` |
 | Sao choáng | 4 loop | `{STYLE} ring of small yellow cartoon stars orbiting, frame {i} of 4` |
 | Hào quang lên cấp | 6 | `{STYLE} rising golden aura ring with sparkles, frame {i} of 6` |
+| Thiên Kiếp (Tiên giới) | 8 | `{STYLE} dark storm cloud gathering then three thick cartoon lightning bolts striking down in a row, frame {i} of 8` |
+| Hào quang Tiên (dùng chung, game tự nhuộm màu) | 6 loop | `{STYLE} large round glowing halo disc seen from the front, soft radiant light rays, painted in white and light grey only so it can be color-tinted in game, transparent background, 1024x1024, frame {i} of 6` |
+| Hào quang Đạo Tổ (riêng) | 6 loop | `{STYLE} large glowing yin-yang halo disc with a thin rainbow rim, soft light rays, slowly rotating, transparent background, 1024x1024, frame {i} of 6` |
+| Hạt trang trí hào quang | 4 loop mỗi loại | mây nhỏ (Chân Tiên), tia sáng (Kim Tiên), hạt sáng bay lên (Thái Ất), vòng sáng mảnh (Đại La) — vẽ trắng/xám để nhuộm |
 | Sét đột phá | 6 | `{STYLE} thick cartoon lightning bolt striking down from the top, frame {i} of 6` |
 | Khói chết | 6 | `{STYLE} comic white smoke puff cloud, frame {i} of 6 expanding then dissipating` |
 | Bụi chạy | 4 | `{STYLE} small dust puffs behind running feet, frame {i} of 4` |
