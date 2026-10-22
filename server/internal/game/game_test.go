@@ -172,13 +172,37 @@ func TestClashFlipsBothRings(t *testing.T) {
 	if a.Ring.Count != 7 || b.Ring.Count != 7 {
 		t.Fatalf("cùng cảnh giới phải mất đúng clash_unit = 1 mỗi bên: %d, %d", a.Ring.Count, b.Ring.Count)
 	}
-	away := b.Pos.Sub(a.Pos)
-	if a.KnockVel.Dot(away) >= 0 || b.KnockVel.Dot(away) <= 0 {
-		t.Fatalf("clash must push the two apart: %+v %+v", a.KnockVel, b.KnockVel)
+	// Spec §5.2: không còn đẩy văng, hai người đứng nguyên mài nhau.
+	if a.KnockUntil > g.Time || b.KnockUntil > g.Time {
+		t.Fatalf("va kiếm không được đẩy hai người ra: %+v %+v", a.KnockVel, b.KnockVel)
 	}
 	g.resolveSwordSword() // cooldown 0.3s prevents an immediate second clash
 	if a.Ring.Dir != -1 {
 		t.Fatal("clash cooldown not respected")
+	}
+}
+
+// Spec §5.2: hai vòng kiếm chạm nhau thì đứng yên mài nhau cho tới khi một bên hết kiếm —
+// không ai bị đẩy ra, và bên yếu hơn cạn kiếm trước.
+func TestClashGrindsUntilOneSideRunsOut(t *testing.T) {
+	g := quietGame(t, nil)
+	low := g.AddPlayer(SpawnOptions{Name: "Low", Level: 0, Swords: 6})
+	high := g.AddPlayer(SpawnOptions{Name: "High", Level: 30, Swords: 6})
+	place(g, low, Vec{X: 5000, Y: 5000}, 0)
+	touchSwords(g, low, high, math.Pi)
+	start := low.Pos
+	for i := 0; i < 30*10 && low.Ring.Count > 0; i++ {
+		g.resolveSwordSword()
+		g.Time += dt
+	}
+	if low.Ring.Count != 0 {
+		t.Fatalf("bên yếu còn %d kiếm, phải bị mài sạch", low.Ring.Count)
+	}
+	if high.Ring.Count == 0 {
+		t.Fatal("bên mạnh cũng hết kiếm: tỉ lệ đổi kiếm sai")
+	}
+	if low.Pos.Dist(start) > 1e-9 {
+		t.Fatalf("va kiếm làm người bị dịch chuyển: %+v → %+v", start, low.Pos)
 	}
 }
 

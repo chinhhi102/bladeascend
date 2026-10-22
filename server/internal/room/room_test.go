@@ -68,6 +68,34 @@ func TestBotFillToTwenty(t *testing.T) {
 	}
 }
 
+// Bot sinh ra không được quá Trúc Cơ. Kiểm tra mức SINH RA (randomBotLevel), không phải
+// cảnh giới sau đó — bot farm lên cao hơn là chuyện bình thường.
+func TestBotsSpawnNoHigherThanTrucCo(t *testing.T) {
+	m, _, cfg := testManager(t)
+	joinN(m, 1)
+	r := m.AllRooms()[0]
+	if n := len(cfg.Bots.RealmWeights); n != 2 {
+		t.Fatalf("realm_weights có %d cảnh giới, muốn 2 (Luyện Khí + Trúc Cơ)", n)
+	}
+	seenTrucCo := false
+	for i := 0; i < 500; i++ {
+		level, swords := r.randomBotLevel()
+		realm := r.G.Prog.Realm(level)
+		if realm > 1 {
+			t.Fatalf("bot sinh ra ở cảnh giới %d (level %d), không được quá Trúc Cơ", realm, level)
+		}
+		if realm == 1 {
+			seenTrucCo = true
+		}
+		if swords < 1 || swords > r.G.Prog.MaxSwords(realm) {
+			t.Fatalf("bot sinh ra với %d kiếm, ngoài khoảng [1, %d]", swords, r.G.Prog.MaxSwords(realm))
+		}
+	}
+	if !seenTrucCo {
+		t.Fatal("500 lần không có bot Trúc Cơ nào: realm_weights không được dùng")
+	}
+}
+
 func TestTwentyFirstHumanGetsNewRoom(t *testing.T) {
 	m, _, cfg := testManager(t)
 	joinN(m, cfg.Room.MaxHumans)

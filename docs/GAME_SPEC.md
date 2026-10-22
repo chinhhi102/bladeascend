@@ -71,20 +71,24 @@ Kiếm tối đa lấy từ mảng `max_swords` trong config (từ Nguyên Anh t
 ### 3.2 EXP
 
 ```
-exp_needed(r, s) = round(100 * 1.2^r * (1 + 0.08 * s))
+exp_needed(r, s) = round(100 * 2.0^r * (1 + 0.08 * s))
 ```
+
+**Mỗi cảnh giới tốn gấp đôi cảnh giới trước** (`realm_mult` = 2.0): Luyện Khí 1 360 → Trúc Cơ 2 720 → Kim Đan 5 440…
 
 | Cảnh giới | EXP/tầng (1 → 10) | Tổng cả cảnh giới |
 |---|---|---|
 | Luyện Khí | 100 → 172 | 1 360 |
-| Trúc Cơ | 120 → 206 | 1 632 |
-| Kim Đan | 144 → 248 | 1 958 |
-| Nguyên Anh | 173 → 297 | 2 350 |
-| Hóa Thần | 207 → 357 | 2 820 |
-| Luyện Hư | 249 → 428 | 3 384 |
-| Hợp Thể | 299 → 514 | 4 061 |
-| Độ Kiếp | 358 → 616 | 4 873 |
-| Đại Thừa | 430 → 740 | 5 848 |
+| Trúc Cơ | 200 → 344 | 2 720 |
+| Kim Đan | 400 → 688 | 5 440 |
+| Nguyên Anh | 800 → 1 376 | 10 880 |
+| Hóa Thần | 1 600 → 2 752 | 21 760 |
+| Luyện Hư | 3 200 → 5 504 | 43 520 |
+| Hợp Thể | 6 400 → 11 008 | 87 040 |
+| Độ Kiếp | 12 800 → 22 016 | 174 080 |
+| Đại Thừa | 25 600 → 44 032 | 348 160 |
+
+Tổng từ Luyện Khí 1 tới Đại Thừa 10: **694 960 EXP** (trước đây 28 288).
 
 - Lưu `total_exp` cộng dồn, level suy ra từ bảng ngưỡng tích lũy tính sẵn.
 - Đạt Đại Thừa tầng 10: `total_exp` dừng ở trần, EXP nhặt thêm bị bỏ (xếp hạng dùng Uy Danh §11, không dùng EXP).
@@ -167,7 +171,9 @@ Thứ tự xử lý mỗi tick server:
 
 ### 5.2 Kiếm A chạm kiếm B — bể kiếm
 
-Luôn: **hai người bị đẩy văng ra xa nhau** (`clash_knockback` = 150 đơn vị trong 0.2s, để vòng kiếm tách ra, không va liên tục), VFX tia lửa + SFX "keng". Cooldown mỗi cặp (A, B) 0.3s.
+Luôn: VFX tia lửa + SFX "keng". Cooldown mỗi cặp (A, B) 0.3s.
+
+**Không đẩy văng nữa** (`clash_knockback` = 0): hai người **đứng nguyên mà mài nhau**. Vòng kiếm chỉ có tác dụng chặn — còn kiếm thì đối thủ không chém được vào thân — nên trận đánh là cuộc đua xem **ai hết kiếm trước**. Bên hết kiếm trước lãnh trọn §5.1. Đặt `clash_knockback` > 0 để bật lại kiểu đẩy văng cũ.
 
 **Đổi chiều quay chỉ khi cùng cảnh giới**: `rA == rB` → cả hai vòng đổi chiều (`dir *= -1`). Khác cảnh giới → **không ai đổi chiều**, cả hai giữ nguyên chiều quay.
 
@@ -206,7 +212,7 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 ## 6. EXP rải khắp bản đồ & vật phẩm
 
 ### 6.1 Viên EXP môi trường (nguồn EXP chính)
-- Bản đồ luôn phủ đều viên EXP: mật độ mặc định **1 viên / 160×160 đơn vị** (≈ 5 600 viên trên bản đồ 12 000²).
+- Bản đồ luôn phủ đều viên EXP: mật độ mặc định **1 viên / 226×226 đơn vị** (≈ 2 800 viên trên bản đồ 12 000²). `cell` = 226 ≈ 160 × √2, tức **một nửa mật độ** so với bản trước (số viên tỉ lệ nghịch với `cell²`).
 - Tỉ lệ: nhỏ +5 (80%) · vừa +20 (18%) · lớn +60 (2%).
 - Viên bị nhặt → 5s sau mọc lại ở vị trí ngẫu nhiên **trong cùng ô lưới 1 000×1 000** (khu vực bị vét sạch sẽ tự đầy lại, không dồn về một chỗ).
 - Bán kính hút đồ mặc định: `90 * scale`.
@@ -228,7 +234,7 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 | Ẩn Thân Phù | Tàng hình **80%**: người khác thấy mình và vòng kiếm mờ (độ đậm 20%), không thấy tên, không hiện trên minimap. Ở rất gần (120 × scale của người nhìn) thì hiện rõ 100%. Hết hiệu lực ngay khi kiếm mình chém trúng người | **5s** (tối đa, nhặt lại chỉ làm mới về 5s) | 3 |
 | **Rương Báu** (hiếm) | Người đầu tiên **chạm vào** → nổ ra 8 item ngẫu nhiên văng xung quanh | – | 1 rương mỗi 60s, báo trước toàn phòng 10s |
 
-- Số vật phẩm duy trì: **400/phòng** (gấp hơn 3 lần trước), item bị nhặt → 3s sau mọc lại chỗ khác.
+- Số vật phẩm duy trì: **200/phòng** (giảm 50% so với 400), item bị nhặt → 3s sau mọc lại chỗ khác.
 - Nhặt lại buff đang có → làm mới thời gian (không cộng dồn).
 - **Hiệu ứng nhặt**: vật phẩm và viên EXP **bay hút về phía người nhặt** (0.22s, nhỏ dần và mờ dần) rồi mới biến mất, không biến mất đột ngột. Chỉ là hiệu ứng phía client; server vẫn xoá item ngay khi nhặt.
 - HUD hiển thị icon buff + vòng đếm ngược. Mỗi buff có aura màu riêng (trừ Ẩn Thân).
@@ -529,7 +535,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "cultivation": {
     "realms": ["Luyện Khí","Trúc Cơ","Kim Đan","Nguyên Anh","Hóa Thần","Luyện Hư","Hợp Thể","Độ Kiếp","Đại Thừa"],
     "tiers_per_realm": 10,
-    "exp_base": 100, "realm_mult": 1.2, "tier_step": 0.08,
+    "exp_base": 100, "realm_mult": 2.0, "tier_step": 0.08,
     "scale_min": 1.0, "scale_max": 5.0
   },
   "sword": {
@@ -539,7 +545,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
     "rev_secs": 1.0, "flip_cooldown": 0.3,
-    "clash_unit": 1, "flip_only_same_realm": true, "clash_knockback": 150, "drop_bundle_max": 10,
+    "clash_unit": 1, "flip_only_same_realm": true, "clash_knockback": 0, "drop_bundle_max": 10,
     "clash_ratio_base": 1,
     "clash_ratio_per_realm": 1
   },

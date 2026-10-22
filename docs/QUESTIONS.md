@@ -69,3 +69,24 @@ Sau đó anh dán spec mới **hai lần** (v3.4 rồi v3.5/v3.6), lần nào §
 3. Trả tốc độ về `260 * sqrt(scale)` đúng như spec đang ghi, giữ cell 160.
 
 Em chưa đổi gì thêm, chờ anh chọn.
+
+## Q13. Nhịp độ sau khi EXP gấp đôi + mật độ giảm 50% (22/10/2026)
+
+**Bối cảnh:** anh yêu cầu 3 thay đổi đều làm chậm tiến độ: tốc độ chạy còn một nửa (Q12), mỗi cảnh giới tốn gấp đôi cảnh giới trước (`realm_mult` 1.2 → 2.0), mật độ EXP và vật phẩm giảm 50% (`cell` 160 → 226, `count_per_room` 400 → 200). Em đã làm đủ cả ba.
+
+**Đo được (`sim --farm --bots 20 --seed 7`):**
+
+| Mốc | Trước hôm nay | Bây giờ | §6.1 đang ghi |
+|---|---|---|---|
+| Luyện Khí → Trúc Cơ | 40–46s | **165s** | 30–60s ❌ |
+| → Kim Đan | ~60s | **321s** | ≈1 phút ❌ |
+| → Nguyên Anh | ~72s | **417s** | ≈1.2 phút ❌ |
+| Tổng EXP tới Đại Thừa 10 | 28 288 | **694 960** | – |
+
+**Hai điểm cần anh quyết:**
+
+1. **§6.1 đang mâu thuẫn với config.** Spec vẫn ghi mục tiêu "Luyện Khí → Trúc Cơ 30–60s" nhưng thực tế 165s. Em không tự sửa mục tiêu trong spec (quy tắc 4). Nếu 165s là ý anh thì em sửa §6.1 thành "≈2.5–3 phút"; nếu không thì giảm `cell` lại.
+
+2. **Đại Thừa gần như không tới được.** Tốc độ farm đo được ≈25 EXP/s → 694 960 EXP ≈ **7.7 giờ farm liên tục**. Hệ quả: bảng **Thần Tốc** (thời gian lên Đại Thừa) sẽ mãi trống, và phần cuối cây tu luyện không ai thấy. Nếu muốn giữ EXP gấp đôi mà vẫn tới được Đại Thừa trong một ván .io (~10–20 phút), cần tăng nguồn EXP ở cảnh giới cao — ví dụ viên EXP to hơn theo cảnh giới, hoặc EXP từ quái/chém người nhân theo cảnh giới.
+
+Em chưa đổi gì thêm, chờ anh chốt.

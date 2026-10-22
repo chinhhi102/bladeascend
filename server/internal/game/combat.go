@@ -208,7 +208,12 @@ func sparseRingsTouch(a, b *Player) (Vec, bool) {
 
 func (g *Game) clash(a, b *Player, at Vec) {
 	ra, rb := g.Prog.Realm(a.Level), g.Prog.Realm(b.Level)
-	g.pushApart(a, b)
+	// Spec §5.2: va kiếm KHÔNG đẩy hai người ra nữa — vòng kiếm chỉ chặn không cho chém
+	// vào thân, hai bên đứng mài nhau cho tới khi một bên hết kiếm trước.
+	// Đặt clash_knockback > 0 trong config là bật lại kiểu đẩy văng cũ.
+	if g.Cfg.Sword.ClashKnockback > 0 {
+		g.pushApart(a, b)
+	}
 	// Spec §5.2 (v3.5): only an even match sends both rings spinning the other way; against a
 	// different realm nobody flips, so the stronger ring keeps grinding in the same direction.
 	if !g.Cfg.Sword.FlipOnlySameRealm || ra == rb {

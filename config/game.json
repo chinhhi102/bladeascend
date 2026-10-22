@@ -2,7 +2,7 @@
   "cultivation": {
     "realms": ["Luyện Khí","Trúc Cơ","Kim Đan","Nguyên Anh","Hóa Thần","Luyện Hư","Hợp Thể","Độ Kiếp","Đại Thừa"],
     "tiers_per_realm": 10,
-    "exp_base": 100, "realm_mult": 1.2, "tier_step": 0.08,
+    "exp_base": 100, "realm_mult": 2.0, "tier_step": 0.08,
     "scale_min": 1.0, "scale_max": 5.0
   },
   "sword": {
@@ -13,7 +13,7 @@
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
     "rev_secs": 1.0, "flip_cooldown": 0.3,
     "clash_unit": 1, "flip_only_same_realm": true,
-    "clash_knockback": 150, "clash_knockback_secs": 0.2, "drop_bundle_max": 10,
+    "clash_knockback": 0, "clash_knockback_secs": 0.2, "drop_bundle_max": 10,
     "clash_ratio_base": 1,
     "clash_ratio_per_realm": 1,
     "tween_secs": 0.2
@@ -41,13 +41,13 @@
   "items": {
     "weights": { "sword": 40, "bundle": 6, "spin": 12, "haste": 12, "magnet": 8, "long": 7, "shield": 7, "exp2": 5, "stealth": 3 },
     "sword_item_amount": 3, "bundle_amount": 15,
-    "count_per_room": 400, "respawn_secs": 3, "overcap_exp": 20, "chest_every_secs": 60, "chest_items": 8,
+    "count_per_room": 200, "respawn_secs": 3, "overcap_exp": 20, "chest_every_secs": 60, "chest_items": 8,
     "spawn_min_dist": 300, "chest_warn_secs": 10, "chest_hp": 1, "item_r": 26,
     "orb_values": { "small": 5, "medium": 20, "large": 60 },
     "orb_r": 14, "scatter_r": 90, "max_orbs": 600
   },
   "exp_orbs": {
-    "cell": 160, "values": [5, 20, 60], "weights": [80, 18, 2],
+    "cell": 226, "values": [5, 20, 60], "weights": [80, 18, 2],
     "respawn_secs": 5, "respawn_region": 1000
   },
   "monsters": {
@@ -84,7 +84,7 @@
   },
   "bots": {
     "spawn_every_secs": 2, "spawn_batch": 2, "respawn_secs": 3,
-    "realm_weights": [60, 30, 10],
+    "realm_weights": [60, 40],
     "decide_min": 0.3, "decide_max": 0.6,
     "reaction_min": 0.2, "reaction_max": 0.6,
     "hunt_r": 600, "hunt_ratio": 0.8, "flee_r": 500, "flee_ratio": 1.25,

@@ -25,11 +25,9 @@ func TestScoreUpsetExample(t *testing.T) {
 	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 10, Swords: 20, GuestID: "ga"}) // Trúc Cơ 1
 	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 30, Swords: 1, GuestID: "gb"})  // Nguyên Anh 1
 	hitOnce(t, g, a, b)
-	if math.Abs(a.Score-800) > 1e-9 {
-		t.Fatalf("điểm = %v, muốn 800", a.Score)
-	}
-	if a.ScoreBy[ScoreHit] != a.Score {
-		t.Fatalf("nguồn điểm sai: %v", a.ScoreBy)
+	// Chỉ xét nguồn "hit": EXP cướp được có thể đẩy A đột phá, cộng thêm điểm nguồn khác.
+	if math.Abs(a.ScoreBy[ScoreHit]-800) > 1e-9 {
+		t.Fatalf("điểm chém trúng = %v, muốn 800", a.ScoreBy[ScoreHit])
 	}
 }
 
@@ -79,8 +77,8 @@ func TestScoreBotVictimHalved(t *testing.T) {
 	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 10, Swords: 20, GuestID: "ga"})
 	bot := g.AddPlayer(SpawnOptions{Name: "Bot", Level: 30, Swords: 1, IsBot: true})
 	hitOnce(t, g, a, bot)
-	if math.Abs(a.Score-400) > 1e-9 {
-		t.Fatalf("điểm chém bot = %v, muốn 400 (một nửa của 800)", a.Score)
+	if math.Abs(a.ScoreBy[ScoreHit]-400) > 1e-9 {
+		t.Fatalf("điểm chém bot = %v, muốn 400 (một nửa của 800)", a.ScoreBy[ScoreHit])
 	}
 }
 
