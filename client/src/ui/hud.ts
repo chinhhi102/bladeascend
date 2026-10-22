@@ -140,16 +140,19 @@ export class Hud {
   setLeaderboard(lb: LeaderboardMsg, myId: number): void {
     this.minimap.setLeaderboard(lb);
     this.scoreBox.textContent = STR.scoreHud(lb.ms ?? 0);
+    // Xếp theo Uy Danh; mỗi dòng ghi danh hiệu thay cho cảnh giới (cảnh giới đã hiện
+    // trên đầu nhân vật trong trận — spec §11.2).
     const rows = lb.top.map((e, i) => {
       const line = h('div', `lb-line${e.id === myId ? ' me' : ''}`);
-      const realm = this.cfg.cultivation.realms[realmOf(this.cfg, e.L)] ?? '';
       const who = h('span', 'lb-who', `${i + 1}. ${e.nm}`);
-      if (e.ti) {
-        const badge = h('span', `lb-title t${e.ti}`, e.ti === 1 ? '👑' : '');
-        badge.title = STR.titles[e.ti - 1] ?? '';
-        who.prepend(badge);
+      if (e.ti === 1) {
+        who.prepend(h('span', 'lb-crown', '👑'));
       }
-      line.append(who, h('span', 'lb-realm', STR.realmTier(realm, tierOf(this.cfg, e.L))), h('span', 'lb-score', Math.round(e.sc ?? 0).toLocaleString('vi-VN')));
+      const titleText = STR.titles[(e.ti || i + 1) - 1] ?? '';
+      line.append(
+        h('div', 'lb-main', who, h('span', 'lb-score', Math.round(e.sc ?? 0).toLocaleString('vi-VN'))),
+        h('div', `lb-title t${Math.min(e.ti || i + 1, 3)}`, titleText),
+      );
       return line;
     });
     this.board.replaceChildren(h('div', 'board-title', STR.roomTop), ...rows, h('div', 'my-rank', STR.yourRank(lb.rank, lb.total)));
@@ -167,7 +170,7 @@ export class Hud {
 
   addFeed(f: FeedMsg): void {
     const realm = this.cfg.cultivation.realms[f.r] ?? '';
-    const text =
+    let text =
       f.k === 'kill' ? STR.feed.kill(f.a, f.b ?? '')
       : f.k === 'realm_drop' ? STR.feed.realm_drop(f.a, f.b ?? '', realm)
       : f.k === 'breakthrough' ? STR.feed.breakthrough(f.a, realm)
@@ -178,7 +181,11 @@ export class Hud {
     if (!text) {
       return;
     }
-    const line = h('div', 'feed-line', text);
+    const serverWide = (f.tp ?? 0) > 0;
+    if (serverWide) {
+      text = STR.feed.serverWide(f.tp ?? 0, text);
+    }
+    const line = h('div', `feed-line${serverWide ? ' server-wide' : ''}`, text);
     this.feed.prepend(line);
     while (this.feed.children.length > FEED_KEEP) {
       this.feed.lastElementChild?.remove();

@@ -95,6 +95,8 @@ export interface FeedMsg {
   a: string;
   b?: string;
   r: number;
+  tp?: number; // hạng của nạn nhân; > 0 = tin loan toàn server (spec §11.4)
+  rm?: string; // phòng xảy ra, chỉ có khi loan toàn server
 }
 
 export interface DeadMsg {

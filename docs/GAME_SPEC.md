@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v3.8:** bảng phòng xếp theo Uy Danh (không theo cảnh giới), cảnh giới chuyển lên đầu nhân vật, danh hiệu mở rộng Top 1–10; hạ người trong Top 5 thì loan toàn server; bot sinh ngang hạng 11 (§9.3, §11.2, §11.3, §11.4).
+
 **Thay đổi v3.7:** thêm **Thiêu Đốt Tinh Huyết** — giữ phím để chạy nhanh ×1.8, đổi bằng EXP mỗi giây, không bao giờ làm rớt cảnh giới (§4.1c).
 
 **Thay đổi v3.6:** vật cản cứng hơn — damage tính theo người (0.5s/lần) thay vì theo từng kiếm, HP tăng (§5.3, §8.2).
@@ -353,7 +355,11 @@ on bot death:
   if humans + (bots - 1) >= 20: remove bot
   else: respawn bot sau 3s
 ```
-- Bot spawn với level trọng số: 60% Luyện Khí, 30% Trúc Cơ, 10% Kim Đan; số kiếm ngẫu nhiên [1, max].
+**Cảnh giới lúc sinh ra** — bot phải lấp chỗ trống *dưới* nhóm dẫn đầu, không được sinh ra đã đủ mạnh để bắt nạt Top 10:
+- Phòng đã có ít nhất `bots.spawn_rank` (mặc định **11**) người → bot sinh **ngang level với người đang đứng hạng 11**.
+- Phòng chưa đủ người để có hạng đó → bot sinh ở **Luyện Khí**, tầng ngẫu nhiên.
+- `bots.realm_weights` giờ chỉ còn làm **trần cảnh giới**: bot không bao giờ sinh cao hơn cảnh giới `len(realm_weights) - 1` (hiện là **Trúc Cơ**). Muốn bỏ trần thì thêm phần tử vào mảng.
+- Số kiếm ngẫu nhiên [1, max của cảnh giới đó]. Bot vẫn tự farm lên cao hơn sau khi sinh — đó là chơi bình thường.
 - Bot dùng tên + nhân vật ngẫu nhiên, **không vào leaderboard toàn cục**.
 
 ## 10. Bot AI
@@ -394,7 +400,9 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 
 ### 11.2 Các bảng xếp hạng
 
-- **Trong phòng** (realtime, 1 lần/giây): top 10 theo **cảnh giới + tầng hiện tại**, hòa thì so `total_exp` (để biết ai đang mạnh mà né/săn), kèm Uy Danh. Top 1–3 có danh hiệu (§11.3).
+- **Trong phòng** (realtime, 1 lần/giây): top 10 theo **điểm Uy Danh**, hòa thì so `total_exp`. **Không xếp theo cảnh giới** — bảng này nói ai đang đánh hay, không phải ai farm lâu.
+  - Mỗi dòng ghi **danh hiệu** của người đó (§11.3) thay cho cảnh giới.
+  - **Cảnh giới + tầng hiện ngay trên đầu nhân vật trong trận** (dưới danh hiệu, trên tên) chứ không nằm trong bảng.
 - **Toàn cục**, tab **Hôm nay / Tuần này / Mọi thời đại**, 3 bảng:
   - **Uy Danh** (bảng chính): điểm Uy Danh cao nhất trong 1 mạng.
   - **Sát Thần**: số lần chém trúng người nhiều nhất trong 1 mạng.
@@ -403,19 +411,32 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 - API: `GET /api/leaderboard?period=day|week|all&board=score|hits|speed` → top 50, cache 10s.
 - Điểm do server tính → client không gian lận được. Bot không được ghi.
 
-### 11.3 Danh hiệu Top 3 phòng
+### 11.3 Danh hiệu Top 10 phòng
 
-| Hạng | Danh hiệu | Màu | Hiển thị trên đầu |
-|---|---|---|---|
-| Top 1 | **Bần tăng chưa ngán ai bao giờ** | Vàng kim, chữ có viền sáng | Vương miện + danh hiệu |
-| Top 2 | **Ngon thì nhào vô** | Bạc | Danh hiệu |
-| Top 3 | **Chỗ này nhiều máu nè** | Đồng | Danh hiệu |
+| Hạng | Danh hiệu | Màu |
+|---|---|---|
+| Top 1 | **Bần tăng chưa ngán ai bao giờ** | Vàng kim + vương miện 👑 |
+| Top 2 | **Ngon thì nhào vô** | Bạc |
+| Top 3 | **Chỗ này nhiều máu nè** | Đồng |
+| Top 4 | Chưa gặp đối thủ xứng tầm | trắng |
+| Top 5 | Đi nhẹ nói khẽ, chém hơi mạnh | trắng |
+| Top 6 | Cũng có số má đấy chứ | trắng |
+| Top 7 | Tạm gọi là biết múa kiếm | trắng |
+| Top 8 | Đang cố gắng từng ngày | trắng |
+| Top 9 | Thấy ai cũng chào trước | trắng |
+| Top 10 | Nấp giỏi nên còn sống | trắng |
 
-- Danh hiệu hiện **phía trên tên** nhân vật trong trận (ai cũng thấy), và cạnh tên trong bảng xếp hạng phòng.
+- Danh hiệu hiện **trên cùng, phía trên cảnh giới và tên** nhân vật trong trận (ai cũng thấy), và dưới tên trong bảng xếp hạng phòng.
 - Cập nhật theo bảng phòng (1 lần/giây), có **chống nhấp nháy**: phải giữ hạng mới liên tục 3s mới đổi danh hiệu.
 - Ai vừa giành Top 1 → kill feed: `"{A} đã lên ngôi 'Bần tăng chưa ngán ai bao giờ'!"` + SFX trống. Ai vừa mất Top 1 → `"{B} bị hạ bệ, bần tăng giờ đã ngán"`.
 - Người Ẩn Thân / trong bụi: danh hiệu ẩn theo (không làm lộ vị trí).
 - Danh hiệu nằm trong config (`titles`), sửa chữ không cần đụng code.
+
+### 11.4 Tin loan toàn server
+
+- Chém chết một người đang đứng **Top 5 của phòng họ** → dòng kill feed đó được gửi tới **mọi phòng trên server**, không chỉ phòng xảy ra.
+- Hiển thị khác hẳn feed thường: nền đỏ viền vàng, nhấp nháy 2 nhịp, có tiền tố `📢 TOÀN CÕI TU CHÂN · hạ Top {n}:`.
+- Ngưỡng nằm ở `serverWideTopN` trong `room/broadcast.go` (mặc định 5).
 
 ## 12. Trạng thái nhân vật, animation & tấu hài
 

@@ -118,15 +118,23 @@ func TestScoreTop1PerSecond(t *testing.T) {
 	}
 }
 
-// Spec §11.2: bảng phòng xếp theo cảnh giới+tầng trước, total_exp chỉ phá hòa.
-func TestRankingByLevelThenExp(t *testing.T) {
+// Spec §11.2: bảng phòng xếp theo Uy Danh, KHÔNG theo cảnh giới; total_exp chỉ phá hòa.
+func TestRankingByScoreNotRealm(t *testing.T) {
 	g := quietGame(t, nil)
-	low := g.AddPlayer(SpawnOptions{Name: "Low", Level: 5, Swords: 1})
-	high := g.AddPlayer(SpawnOptions{Name: "High", Level: 6, Swords: 1})
-	g.GainExp(low, 50, false) // nhiều EXP hơn trong tầng nhưng vẫn thấp tầng hơn
+	rich := g.AddPlayer(SpawnOptions{Name: "CảnhGiớiCao", Level: 60, Swords: 1})
+	fighter := g.AddPlayer(SpawnOptions{Name: "ÍtTuViNhiềuĐiểm", Level: 3, Swords: 1})
+	g.creditScore(fighter, ScoreHit, 500)
 	r := g.Ranking()
-	if r[0] != high || r[1] != low {
-		t.Fatalf("thứ tự sai: %s rồi %s", r[0].Name, r[1].Name)
+	if r[0] != fighter {
+		t.Fatalf("đứng đầu là %s, phải là người nhiều Uy Danh hơn", r[0].Name)
+	}
+	if g.RankOf(fighter) != 1 || g.RankOf(rich) != 2 {
+		t.Fatalf("hạng = %d, %d; muốn 1, 2", g.RankOf(fighter), g.RankOf(rich))
+	}
+	// Hòa điểm thì mới so tu vi.
+	g.creditScore(rich, ScoreHit, 500)
+	if r := g.Ranking(); r[0] != rich {
+		t.Fatalf("hòa điểm thì người nhiều EXP phải lên trước, đang là %s", r[0].Name)
 	}
 }
 

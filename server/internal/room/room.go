@@ -200,19 +200,8 @@ func (r *Room) record(p *game.Player) {
 	}
 }
 
-// rankOf is the player's 1-based rank in the room board (spec §11.2: realm+tier, then exp).
-func (r *Room) rankOf(p *game.Player) int {
-	rank := 1
-	for _, o := range r.G.PlayerList() {
-		if o == p || o.Dead {
-			continue
-		}
-		if o.Level > p.Level || (o.Level == p.Level && o.TotalExp > p.TotalExp) {
-			rank++
-		}
-	}
-	return rank
-}
+// rankOf is the player's 1-based rank in the room board (spec §11.2: Uy Danh, then exp).
+func (r *Room) rankOf(p *game.Player) int { return r.G.RankOf(p) }
 
 func (r *Room) checkEmpty(dt float64) {
 	if len(r.clients) > 0 || r.mgr.humansOf(r) > 0 {

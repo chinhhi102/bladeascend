@@ -93,18 +93,23 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 
 .room-board { position: absolute; right: 12px; top: 12px; background: rgba(0,0,0,.35); border-radius: 10px; padding: 8px 10px; font-size: 13px; min-width: 210px; }
 .board-title { color: var(--gold); margin-bottom: 4px; }
-.lb-line { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.lb-line { margin-bottom: 5px; }
 .lb-line.me { color: var(--gold); }
+.lb-main { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .lb-who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb-realm { opacity: .75; font-size: 11px; font-weight: 600; }
+.lb-crown { margin-right: 3px; }
 .lb-score { min-width: 44px; text-align: right; color: var(--gold); }
-.lb-title { margin-right: 2px; }
-.lb-title.t2, .lb-title.t3 { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
-.lb-title.t2 { background: #d8dde3; }
-.lb-title.t3 { background: #cd7f32; }
+/* Danh hiệu thay cho cảnh giới trong bảng phòng (spec §11.2, §11.3). */
+.lb-title { font-size: 10px; font-weight: 700; font-style: italic; opacity: .78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-title.t1 { color: #ffd700; opacity: 1; }
+.lb-title.t2 { color: #d8dde3; }
+.lb-title.t3 { color: #cd7f32; }
 .my-rank { margin-top: 4px; color: #cde; }
 .feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 14px; max-width: min(60vw, calc(100vw - 140px)); }
 .feed-line { background: rgba(0,0,0,.4); padding: 4px 8px; border-radius: 8px; }
+/* Tin loan toàn server: hạ một người trong Top 5 (spec §11.4). */
+.feed-line.server-wide { background: linear-gradient(90deg, rgba(192,41,15,.92), rgba(120,20,8,.82)); border: 2px solid var(--gold); color: #fff6c9; animation: feedPulse 1.2s ease-out 2; }
+@keyframes feedPulse { 0%, 100% { box-shadow: 0 0 0 rgba(255,215,0,0); } 50% { box-shadow: 0 0 14px rgba(255,215,0,.8); } }
 .banner { display: none; position: absolute; top: 18%; left: 50%; transform: translateX(-50%); background: rgba(230,57,70,.9); padding: 10px 18px; border-radius: 12px; border: 3px solid #000; font-size: 18px; text-align: center; }
 /* Nút giữ Thiêu Đốt Tinh Huyết trên điện thoại (spec §4.1c). */
 .burn-btn { position: absolute; right: 18px; bottom: 80px; width: 76px; height: 76px; border-radius: 50%; font-size: 32px; display: none; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, #ff8a3c, #c0290f); border: 3px solid #000; color: #fff; pointer-events: auto; touch-action: none; user-select: none; }

@@ -1,11 +1,11 @@
 import { AnimatedSprite, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 
-import type { GameConfig } from '../config';
+import { type GameConfig, realmOf, tierOf } from '../config';
 import type { PlayerFrame } from '../net/state';
 import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { animShort, initials } from './catalog';
-import { BUFF_COLORS, charColor, TITLE_COLORS } from './palette';
+import { BUFF_COLORS, charColor, REALM_COLORS, TITLE_COLORS } from './palette';
 import { STR } from '../ui/strings';
 import { SwordRing } from './swordring';
 
@@ -40,8 +40,10 @@ export class PlayerSprite {
   private readonly bodyBox = new Container();
   private body: AnimatedSprite | Container | null = null;
   private readonly label: Text;
-  private readonly title: Text; // danh hiệu Top 1–3 phòng (spec §11.3)
+  private readonly title: Text; // danh hiệu Top 1–10 phòng (spec §11.3)
   private titleRank = 0;
+  private readonly realmTag: Text; // cảnh giới + tầng, ngay trên tên (spec §11.2)
+  private realmLevel = -1;
   private readonly atlas: AnimSet | null;
   private mood = '';
   private bubble: Container | null = null;
@@ -68,7 +70,12 @@ export class PlayerSprite {
     });
     this.title.anchor.set(0.5, 1);
     this.title.visible = false;
-    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.label, this.title);
+    this.realmTag = new Text({
+      text: '',
+      style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '700', fill: 0xbfe9ff, stroke: { color: 0x000000, width: 4 } },
+    });
+    this.realmTag.anchor.set(0.5, 1);
+    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.label, this.realmTag, this.title);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -109,15 +116,31 @@ export class PlayerSprite {
       this.drawBurn(r, now); // vẽ đè lên aura buff
     }
     this.applyAlpha(s.fl, now);
+    // Xếp từ dưới lên: tên → cảnh giới → danh hiệu (spec §11.2, §11.3).
     const headY = -r * (CHAR_HEIGHT_PER_R - FEET_BELOW_CENTER) - 4 / zoom;
     this.label.position.set(0, headY);
     this.label.scale.set(1 / zoom);
-    this.updateTitle(s.ti ?? 0, headY, zoom);
+    const realmY = this.updateRealmTag(s.L, headY, zoom);
+    this.updateTitle(s.ti ?? 0, realmY, zoom);
     this.swordRing.update(f, now, showHitbox);
     this.updateBubble(r, zoom, now);
   }
 
-  // Danh hiệu nằm ngay trên tên. Server đã bỏ `ti` với người đang Ẩn Thân nên danh hiệu tự
+  /** updateRealmTag draws "Trúc Cơ tầng 3" above the name; returns the y to stack onto. */
+  private updateRealmTag(level: number, headY: number, zoom: number): number {
+    if (level !== this.realmLevel) {
+      this.realmLevel = level;
+      const r = realmOf(this.cfg, level);
+      this.realmTag.text = STR.realmTier(this.cfg.cultivation.realms[r] ?? '', tierOf(this.cfg, level));
+      this.realmTag.style.fill = REALM_COLORS[r] ?? 0xffffff;
+    }
+    const y = headY - this.label.height - 1 / zoom;
+    this.realmTag.position.set(0, y);
+    this.realmTag.scale.set(1 / zoom);
+    return y;
+  }
+
+  // Danh hiệu nằm trên cùng. Server đã bỏ `ti` với người đang Ẩn Thân nên danh hiệu tự
   // ẩn theo, không làm lộ vị trí (spec §11.3).
   private updateTitle(rank: number, headY: number, zoom: number): void {
     if (rank !== this.titleRank) {
@@ -240,6 +263,7 @@ export class PlayerSprite {
     }
     // Ẩn Thân giấu luôn tên và danh hiệu của người khác.
     this.label.visible = !stealth || this.isMe;
+    this.realmTag.visible = this.label.visible;
     if (stealth && !this.isMe) {
       this.title.visible = false;
     }

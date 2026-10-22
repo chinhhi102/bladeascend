@@ -103,8 +103,19 @@ export const STR = {
   top1Held: 'Thời gian giữ Top 1',
   notReached: 'Chưa đạt',
 
-  // Danh hiệu Top 1–3 trong phòng (spec §11.3). Thứ tự khớp config `titles`.
-  titles: ['Bần tăng chưa ngán ai bao giờ', 'Ngon thì nhào vô', 'Chỗ này nhiều máu nè'],
+  // Danh hiệu Top 1–10 trong phòng (spec §11.3). Thứ tự khớp config `titles`.
+  titles: [
+    'Bần tăng chưa ngán ai bao giờ',
+    'Ngon thì nhào vô',
+    'Chỗ này nhiều máu nè',
+    'Chưa gặp đối thủ xứng tầm',
+    'Đi nhẹ nói khẽ, chém hơi mạnh',
+    'Cũng có số má đấy chứ',
+    'Tạm gọi là biết múa kiếm',
+    'Đang cố gắng từng ngày',
+    'Thấy ai cũng chào trước',
+    'Nấp giỏi nên còn sống',
+  ],
 
   // Kill feed (spec §7) — mỗi dòng bốc ngẫu nhiên một cách nói cho đỡ nhàm
   feed: {
@@ -130,6 +141,8 @@ export const STR = {
       `${a} bước vào ${realm}, trời đất đổi màu`,
       `${a} vừa lên ${realm} — tuyệt đối điện ảnh`,
     ]),
+    // Tin loan toàn server khi hạ một người trong Top 5 của phòng họ (spec §11.4).
+    serverWide: (rank: number, text: string) => `📢 TOÀN CÕI TU CHÂN · hạ Top ${rank}: ${text}`,
     title_gain: (a: string) => `${a} đã lên ngôi "Bần tăng chưa ngán ai bao giờ"!`,
     title_lose: (a: string) => `${a} bị hạ bệ, bần tăng giờ đã ngán`,
     gate_kill: (a: string, b: string) => pick([

@@ -94,6 +94,25 @@ func (m *Manager) tryClose(r *Room) bool {
 	return true
 }
 
+// BroadcastFeed sends one kill-feed line to every room except `from` (spec §11.4: hạ một
+// người trong Top 5 thì cả server đều biết). Each room delivers it on its own goroutine.
+func (m *Manager) BroadcastFeed(f netproto.Feed, from *Room) {
+	m.mu.Lock()
+	rooms := append([]*Room(nil), m.rooms...)
+	m.mu.Unlock()
+	for _, r := range rooms {
+		if r == from {
+			continue // phòng gốc đã nhận qua đường thường
+		}
+		room := r
+		room.Do(func() {
+			for _, c := range room.clients {
+				c.send(f)
+			}
+		})
+	}
+}
+
 // RoomInfo is a summary for the status endpoint.
 type RoomInfo struct {
 	ID     string `json:"id"`

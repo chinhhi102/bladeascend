@@ -107,6 +107,7 @@ func (g *Game) kill(a, b *Player) {
 	g.scatterOrbs(b.Pos, loss*pc.DropShare, 0)
 	g.dropDeathSwords(b)
 	a.Kills++
+	victimRank := g.RankOf(b)
 	b.Dead, b.DiedAt, b.KilledBy = true, g.Time, a.ID
 	b.KillerName, b.KillerChar = a.Name, a.Char
 	b.Moving = false
@@ -116,7 +117,9 @@ func (g *Game) kill(a, b *Player) {
 	if b.lastTeleportIn > 0 && g.Time-b.lastTeleportIn < g.Cfg.Gates.FeedSecs {
 		feed = "gate_kill"
 	}
-	g.emit(Event{Kind: "KillFeed", Global: true, S: feed, A: a.ID, B: b.ID})
+	// N = hạng của nạn nhân trong bảng phòng lúc bị giết; hạ một người trong Top 5 thì
+	// dòng này được loan ra toàn server (spec §11.4). victimRank lấy TRƯỚC khi b.Dead = true.
+	g.emit(Event{Kind: "KillFeed", Global: true, S: feed, A: a.ID, B: b.ID, N: victimRank})
 }
 
 // DebugKill kills a player without an attacker (debug key only).

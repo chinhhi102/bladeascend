@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"kiemxoay/server/internal/config"
+	"kiemxoay/server/internal/game"
 	"kiemxoay/server/internal/netproto"
 	"kiemxoay/server/internal/store"
 )
@@ -68,32 +69,121 @@ func TestBotFillToTwenty(t *testing.T) {
 	}
 }
 
-// Bot sinh ra không được quá Trúc Cơ. Kiểm tra mức SINH RA (randomBotLevel), không phải
-// cảnh giới sau đó — bot farm lên cao hơn là chuyện bình thường.
-func TestBotsSpawnNoHigherThanTrucCo(t *testing.T) {
+// Spec §9.3: phòng chưa đủ `spawn_rank` người thì bot sinh ra ở Luyện Khí.
+func TestBotsSpawnAtLuyenKhiWhenRoomIsSmall(t *testing.T) {
+	m, _, _ := testManager(t)
+	joinN(m, 1)
+	r := m.AllRooms()[0]
+	for i := 0; i < 200; i++ {
+		level, swords := r.randomBotLevel()
+		if realm := r.G.Prog.Realm(level); realm != 0 {
+			t.Fatalf("phòng ít người mà bot sinh ở cảnh giới %d (level %d), muốn Luyện Khí", realm, level)
+		}
+		if swords < 1 || swords > r.G.Prog.MaxSwords(0) {
+			t.Fatalf("bot sinh ra với %d kiếm, ngoài khoảng [1, %d]", swords, r.G.Prog.MaxSwords(0))
+		}
+	}
+}
+
+// Spec §9.3: đủ người thì bot sinh ngang với người đang đứng hạng spawn_rank (11),
+// và không bao giờ vượt trần cảnh giới của realm_weights.
+func TestBotsSpawnAtRank11AndRespectCap(t *testing.T) {
 	m, _, cfg := testManager(t)
 	joinN(m, 1)
 	r := m.AllRooms()[0]
-	if n := len(cfg.Bots.RealmWeights); n != 2 {
-		t.Fatalf("realm_weights có %d cảnh giới, muốn 2 (Luyện Khí + Trúc Cơ)", n)
+	tiers := r.G.Prog.Tiers()
+	capLevel := (len(cfg.Bots.RealmWeights)-1)*tiers + tiers - 1
+
+	// Dựng đủ người: hạng 11 cố tình để ở Trúc Cơ tầng 4 (level 13).
+	for i := 0; i < cfg.Bots.SpawnRank+3; i++ {
+		p := r.G.AddPlayer(game.SpawnOptions{Name: "P", Level: 13, Swords: 1, IsBot: true})
+		p.Score = float64(100 * (cfg.Bots.SpawnRank + 3 - i)) // hạng theo Uy Danh giảm dần
 	}
-	seenTrucCo := false
-	for i := 0; i < 500; i++ {
-		level, swords := r.randomBotLevel()
-		realm := r.G.Prog.Realm(level)
-		if realm > 1 {
-			t.Fatalf("bot sinh ra ở cảnh giới %d (level %d), không được quá Trúc Cơ", realm, level)
-		}
-		if realm == 1 {
-			seenTrucCo = true
-		}
-		if swords < 1 || swords > r.G.Prog.MaxSwords(realm) {
-			t.Fatalf("bot sinh ra với %d kiếm, ngoài khoảng [1, %d]", swords, r.G.Prog.MaxSwords(realm))
+	want := r.G.Ranking()[cfg.Bots.SpawnRank-1].Level
+	for i := 0; i < 50; i++ {
+		level, _ := r.randomBotLevel()
+		if level != min(want, capLevel) {
+			t.Fatalf("bot sinh ở level %d, muốn %d (ngang hạng %d, trần %d)",
+				level, min(want, capLevel), cfg.Bots.SpawnRank, capLevel)
 		}
 	}
-	if !seenTrucCo {
-		t.Fatal("500 lần không có bot Trúc Cơ nào: realm_weights không được dùng")
+
+	// Đẩy hạng 11 lên rất cao → trần realm_weights phải chặn lại.
+	for _, p := range r.G.PlayerList() {
+		if p.IsBot {
+			r.G.Respawn(p, 70, 1) // Độ Kiếp
+			p.Score = 500
+		}
 	}
+	if level, _ := r.randomBotLevel(); level > capLevel {
+		t.Fatalf("bot sinh ở level %d, vượt trần %d", level, capLevel)
+	}
+}
+
+// Spec §11.4: hạ một người trong Top 5 của phòng → dòng kill feed loan ra MỌI phòng.
+func TestTopFiveKillAnnouncedServerWide(t *testing.T) {
+	m, _, _ := testManager(t)
+	joinN(m, 1)
+	r := m.AllRooms()[0]
+	r.Step(1.0 / 30)
+
+	killer := r.G.AddPlayer(game.SpawnOptions{Name: "SátThủ", Level: 30, Swords: 20})
+	victim := r.G.AddPlayer(game.SpawnOptions{Name: "ĐạiCa", Level: 0, Swords: 1})
+	victim.Score = 9999 // đang đứng hạng 1 trong phòng
+	collected := map[string][]netproto.Feed{}
+	collect := func(room *Room) {
+		for _, c := range room.clients {
+			c.Conn = &feedSpy{room: room.ID, out: collected}
+		}
+	}
+	collect(r)
+
+	// Phòng thứ hai để kiểm tra tin có lan sang không.
+	other := m.createLocked()
+	c2 := NewClient(&fakeConn{}, false)
+	other.addHuman(c2, netproto.Join{Name: "NgườiPhòngKhác", Char: "a_hon"})
+	collect(other)
+
+	// Đặt nạn nhân nằm trong vòng kiếm của sát thủ rồi chạy tới khi chết thật.
+	killer.Pos = r.G.Vec(6000, 6000)
+	victim.Pos = r.G.Vec(6000+r.G.Geom(killer).Inner, 6000)
+	killer.InvulnUntil, victim.InvulnUntil = 0, 0
+	for i := 0; i < 120 && !victim.Dead; i++ {
+		r.Step(1.0 / 30)
+		victim.Pos = r.G.Vec(6000+r.G.Geom(killer).Inner, 6000)
+	}
+	if !victim.Dead {
+		t.Fatal("không chém chết được nạn nhân Luyện Khí")
+	}
+	other.drainInbox() // tin lan sang chạy trên goroutine phòng kia
+
+	if len(collected[r.ID]) == 0 {
+		t.Fatal("phòng gốc không nhận được dòng kill feed")
+	}
+	f := collected[r.ID][0]
+	if f.Top != 1 || f.Room != r.ID {
+		t.Fatalf("dòng feed: Top = %d, Room = %q; muốn 1 và %q", f.Top, f.Room, r.ID)
+	}
+	if len(collected[other.ID]) == 0 {
+		t.Fatal("phòng khác không nhận được tin loan toàn server")
+	}
+	if got := collected[other.ID][0]; got.Top != 1 || got.B != "ĐạiCa" {
+		t.Fatalf("tin loan sang phòng khác sai: %+v", got)
+	}
+}
+
+// feedSpy ghi lại các gói Feed gửi tới một client.
+type feedSpy struct {
+	room string
+	out  map[string][]netproto.Feed
+}
+
+func (s *feedSpy) Send(b []byte) bool {
+	var f netproto.Feed
+	if err := netproto.Decode(b, &f); err == nil && f.T == "feed" {
+		s.out[s.room] = append(s.out[s.room], f)
+	}
+	return true
 }
 
 func TestTwentyFirstHumanGetsNewRoom(t *testing.T) {

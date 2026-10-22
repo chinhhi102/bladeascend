@@ -113,15 +113,30 @@ func (r *Room) eventVisible(viewer *game.Player, e game.Event, seen map[uint32]b
 	return true
 }
 
-// sendFeeds turns KillFeed events into named feed lines for everyone in the room.
+// serverWideTopN: hạ được người đứng trong Top N của phòng thì cả server nghe thấy (§11.4).
+const serverWideTopN = 5
+
+// sendFeeds turns KillFeed events into named feed lines for everyone in the room, and
+// relays the big ones to every other room.
 func (r *Room) sendFeeds(events []game.Event) {
 	for _, e := range events {
 		if e.Kind != "KillFeed" {
 			continue
 		}
 		f := netproto.Feed{T: "feed", Kind: e.S, A: r.nameOf(e.A), B: r.nameOf(e.B), Realm: e.N}
+		// Với dòng chém chết, e.N là hạng của nạn nhân chứ không phải cảnh giới.
+		kill := e.S == "kill" || e.S == "gate_kill"
+		if kill {
+			f.Realm = 0
+			if e.N >= 1 && e.N <= serverWideTopN {
+				f.Top, f.Room = e.N, r.ID
+			}
+		}
 		for _, c := range r.clients {
 			c.send(f)
+		}
+		if f.Top > 0 && r.mgr != nil {
+			r.mgr.BroadcastFeed(f, r)
 		}
 	}
 }

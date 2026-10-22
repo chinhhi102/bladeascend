@@ -160,12 +160,16 @@ type Leaderboard struct {
 }
 
 // Feed is a kill-feed line with names resolved on the server (spec §7).
+// Top > 0 means the victim was that high in their room board and the line was announced
+// to every room on the server (spec §11.4).
 type Feed struct {
 	T     string `msgpack:"t"`
 	Kind  string `msgpack:"k"`
 	A     string `msgpack:"a"`
 	B     string `msgpack:"b,omitempty"`
 	Realm int    `msgpack:"r"`
+	Top   int    `msgpack:"tp,omitempty"`
+	Room  string `msgpack:"rm,omitempty"` // phòng xảy ra, chỉ gửi khi loan toàn server
 }
 
 // Dead is the Tổng kết screen payload (spec §7, §11.1).

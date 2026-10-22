@@ -263,15 +263,29 @@ func (g *Game) Ranking() []*Player {
 			out = append(out, p)
 		}
 	}
-	// Spec §11.2: the room board ranks by current realm+tier so players can tell at a glance
-	// who is dangerous; total_exp only breaks ties within a tier.
+	// Spec §11.2: the room board ranks by Uy Danh — the board is about who is winning the
+	// fight, not who farmed longest. total_exp only breaks ties.
 	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Level != out[j].Level {
-			return out[i].Level > out[j].Level
+		if out[i].Score != out[j].Score {
+			return out[i].Score > out[j].Score
 		}
 		return out[i].TotalExp > out[j].TotalExp
 	})
 	return out
+}
+
+// RankOf is p's 1-based place in the room board (same order as Ranking).
+func (g *Game) RankOf(p *Player) int {
+	rank := 1
+	for _, o := range g.PlayerList() {
+		if o == p || o.Dead {
+			continue
+		}
+		if o.Score > p.Score || (o.Score == p.Score && o.TotalExp > p.TotalExp) {
+			rank++
+		}
+	}
+	return rank
 }
 
 // Vec is a convenience constructor for other packages' tests.

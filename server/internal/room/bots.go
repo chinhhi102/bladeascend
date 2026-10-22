@@ -34,21 +34,24 @@ func (r *Room) spawnBot() {
 	r.brains[p.ID] = bot.New(p.ID, r.rng.Int63(), r.G)
 }
 
-// randomBotLevel picks a realm by realm_weights, a random tier and [1, max] swords.
+// randomBotLevel decides what a new bot spawns as (spec §9.3).
+//
+// Bots slot in at `spawn_rank` (11) — level with whoever sits just below the room's Top 10 —
+// so they never show up strong enough to bully the leaders. A room without that many players
+// yet has nobody to measure against, so its bots start at Luyện Khí instead. `realm_weights`
+// is now only a ceiling: bots never spawn above realm len(realm_weights)-1.
 func (r *Room) randomBotLevel() (int, int) {
-	total := 0
-	for _, w := range r.cfg.Bots.RealmWeights {
-		total += w
-	}
-	roll, realm := r.rng.Intn(max(1, total)), 0
-	for i, w := range r.cfg.Bots.RealmWeights {
-		if roll < w {
-			realm = i
-			break
+	tiers := r.G.Prog.Tiers()
+	level := r.rng.Intn(tiers) // mặc định: Luyện Khí, tầng ngẫu nhiên
+	if n := r.cfg.Bots.SpawnRank; n >= 1 {
+		if ranking := r.G.Ranking(); len(ranking) >= n {
+			level = ranking[n-1].Level
 		}
-		roll -= w
 	}
-	level := realm*r.G.Prog.Tiers() + r.rng.Intn(r.G.Prog.Tiers())
+	if capRealm := len(r.cfg.Bots.RealmWeights) - 1; capRealm >= 0 {
+		level = min(level, capRealm*tiers+tiers-1)
+	}
+	realm := r.G.Prog.Realm(level)
 	return level, 1 + r.rng.Intn(r.G.Prog.MaxSwords(realm))
 }
 
