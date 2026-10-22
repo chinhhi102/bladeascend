@@ -4,8 +4,10 @@ Game multiplayer .io 2D trên trình duyệt: kiếm bay vòng quanh nhân vật
 Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích ngắn gọn bằng tiếng Việt, đưa lệnh cụ thể để chạy.
 
 ## Tài liệu (đọc trước khi làm)
-- `docs/GAME_SPEC.md` — luật chơi và kiến trúc. Đây là nguồn sự thật.
-- `docs/ART_PROMPTS.md` — quy chuẩn asset (canvas 512, pivot chân y=460, x=256; tên file).
+- `docs/_raw/GAME_SPEC.md` — luật chơi và kiến trúc. **Nguồn sự thật, CHỈ người sở hữu sửa.**
+  Claude không bao giờ ghi vào `docs/_raw/`. Thấy spec mâu thuẫn với code → ghi vào
+  `docs/QUESTIONS.md` và báo, để chủ dự án tự sửa spec.
+- `docs/_raw/ART_PROMPTS.md` — quy chuẩn asset (canvas 512, pivot chân y=460, x=256; tên file).
 - `docs/PROGRESS.md` — tiến độ. Cập nhật cuối mỗi phiên.
 
 ## Stack
@@ -33,5 +35,6 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
 9. Cuối phiên: cập nhật `docs/PROGRESS.md` (đã làm gì, còn gì, lỗi đã biết).
 10. Khi gặp câu hỏi về thiết kế game hoặc spec chưa rõ: KHÔNG tự đoán. Ghi câu hỏi vào
     docs/QUESTIONS.md (kèm bối cảnh ngắn: đang làm milestone nào, file nào, các phương án),
-    rồi dừng lại báo tôi.
+    rồi dừng lại báo tôi. Câu nào đã trả lời thì chuyển sang docs/QUESTIONS_DONE.md để
+    QUESTIONS.md chỉ còn việc đang chờ.
 11. Không bao giờ chờ art. Gameplay luôn ưu tiên trước; asset thiếu thì dùng placeholder tự động.

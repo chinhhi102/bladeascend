@@ -29,20 +29,22 @@ type RingGeom struct {
 	HiltStep float64
 	Growth   float64
 	Compound bool
-	PerRing  int
-	Rings    int     // R: number of rings currently drawn
+	// Step: vòng thứ k (đếm từ 1) chứa Step × k kiếm — vòng 1 là 10, vòng 2 là 20… (§4.1a).
+	Step  int
+	Rings int     // R: number of rings currently drawn
 	Reach    float64 // farthest blade tip at rest tilt + half width (camera, AI, display)
 	outer    float64 // farthest any blade point can be at any tilt (broad phase)
 }
 
 // ComputeRingGeom applies the §4.1a formulas; longMult is buff_long_sword (1.3 | 1.0).
 func ComputeRingGeom(c config.Sword, bodyR, scale float64, n int, longMult float64) RingGeom {
-	per := max(c.SwordsPerRing, 1)
+	step := max(c.RingStep, 1)
 	g := RingGeom{
 		Base: c.Length * scale * longMult, Inner: (bodyR + c.HiltGap) * scale, Width: c.Width * scale,
 		HiltStep: c.HiltStep, Growth: c.RingGrowth, Compound: c.RingGrowthMode == "compound",
-		PerRing: per, Rings: max(1, (n+per-1)/per),
+		Step: step,
 	}
+	g.Rings = g.RingsFor(n)
 	tilt := c.TiltDeg * math.Pi / 180
 	for k := 0; k < g.Rings; k++ {
 		g.Reach = math.Max(g.Reach, g.TipDist(k, tilt))
@@ -73,22 +75,49 @@ func (g RingGeom) TipDist(k int, tilt float64) float64 {
 // Outer bounds every blade point at any tilt (used for broad-phase tests).
 func (g RingGeom) Outer() float64 { return g.outer }
 
-// RingOf returns the ring index of sword i.
-func (g RingGeom) RingOf(i int) int { return i / g.PerRing }
+// RingCap is how many swords ring k holds: Step × (k+1), so rings get roomier outwards
+// (vòng 1 = 10 kiếm, vòng 2 = 20… spec §4.1a).
+func (g RingGeom) RingCap(k int) int { return g.Step * (k + 1) }
 
-// SlotAngle is the angle of sword i relative to the ring phase: n ≤ per → evenly spread;
-// otherwise 20 slots per ring, a partial ring spreads over the slots, and ring k is staggered
-// by k * slot / R so the rings share out the gap between two slots (spec §4.1a).
-func SlotAngle(per, n, i int) float64 {
-	if n <= per {
-		return 2 * math.Pi * float64(i) / float64(n)
+// RingStart is the index of ring k's first sword = Step × k(k+1)/2.
+func (g RingGeom) RingStart(k int) int { return g.Step * k * (k + 1) / 2 }
+
+// RingsFor is how many rings n swords need (at least one, even with no swords).
+func (g RingGeom) RingsFor(n int) int {
+	r := 1
+	for g.RingStart(r) < n {
+		r++
 	}
-	k, j := i/per, i%per
-	m := min(per, n-k*per)
-	slot := math.Round(float64(j*per) / float64(m))
-	step := 2 * math.Pi / float64(per)
-	rings := (n + per - 1) / per
-	return slot*step + float64(k)*step/float64(rings)
+	return r
+}
+
+// RingOf returns the ring index of sword i, inverting RingStart.
+func (g RingGeom) RingOf(i int) int {
+	// k = floor((sqrt(1 + 8i/Step) - 1) / 2), then nudged in case of float rounding.
+	k := int((math.Sqrt(1+8*float64(i)/float64(g.Step)) - 1) / 2)
+	for k > 0 && g.RingStart(k) > i {
+		k--
+	}
+	for g.RingStart(k+1) <= i {
+		k++
+	}
+	return k
+}
+
+// SlotAngle is the angle of sword i relative to the ring phase. Each ring has RingCap(k)
+// evenly spaced slots; a ring that is not full spreads its swords over those slots, and ring
+// k is staggered by a fraction of one slot so the rings share out the gaps (spec §4.1a).
+func (g RingGeom) SlotAngle(n, i int) float64 {
+	k := g.RingOf(i)
+	cap, start := g.RingCap(k), g.RingStart(k)
+	j := i - start
+	m := min(cap, n-start)
+	if m <= 0 {
+		return 0
+	}
+	slot := math.Round(float64(j*cap) / float64(m))
+	step := 2 * math.Pi / float64(cap)
+	return slot*step + float64(k)*step/float64(max(g.Rings, 1))
 }
 
 // SwordSegment returns the capsule centre-line (hilt → tip) of sword i around center.
@@ -99,7 +128,7 @@ func SwordSegment(center Vec, ring Ring, g RingGeom, i int) (Vec, Vec) {
 // swordAt is SwordSegment for an arbitrary ring phase (sub-steps of a sweep).
 func swordAt(center Vec, phase float64, ring Ring, g RingGeom, i int) (Vec, Vec) {
 	k := g.RingOf(i)
-	a := phase + SlotAngle(g.PerRing, ring.Count, i)
+	a := phase + g.SlotAngle(ring.Count, i)
 	hilt := center.Add(geom.FromAngle(a).Mul(g.HiltR(k)))
 	return hilt, hilt.Add(geom.FromAngle(a + ring.Tilt).Mul(g.Len(k)))
 }
@@ -152,8 +181,8 @@ func sweptHits(center Vec, ring Ring, g RingGeom, c Vec, r float64, hit func(i i
 			continue
 		}
 		off := bladeOffset(g, k, ring.Tilt, d)
-		for i := k * g.PerRing; i < min(ring.Count, (k+1)*g.PerRing); i++ {
-			start := ring.SweepLo + SlotAngle(g.PerRing, ring.Count, i) + off - margin
+		for i := g.RingStart(k); i < min(ring.Count, g.RingStart(k+1)); i++ {
+			start := ring.SweepLo + g.SlotAngle(ring.Count, i) + off - margin
 			if normPos(theta-start) <= ring.Sweep+2*margin && !hit(i) {
 				return
 			}
@@ -173,7 +202,7 @@ func normPos(a float64) float64 {
 // denseRing is true when the inner ring's swords sweep its whole annulus every tick, so the
 // annulus itself can be treated as the damage area (spec §4.1b).
 func denseRing(ring Ring, g RingGeom) bool {
-	m := min(ring.Count, g.PerRing)
+	m := min(ring.Count, g.RingCap(0))
 	return float64(m)*ring.Sweep >= 2*math.Pi
 }
 

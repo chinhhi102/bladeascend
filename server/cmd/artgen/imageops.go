@@ -322,6 +322,75 @@ func touchesBG(bg []bool, x, y, w, h int) bool {
 	return false
 }
 
+// alphaBBoxDense is alphaBBox that ignores specks: it keeps only connected blobs holding at
+// least 1% of the biggest blob's pixels. Background removal regularly leaves a handful of
+// stray pixels in a corner, and with a plain bounding box those alone stretch the content box
+// across the whole image — the sprite then comes out tiny and pushed to one side.
+func alphaBBoxDense(img *image.NRGBA, r image.Rectangle) image.Rectangle {
+	w, h := r.Dx(), r.Dy()
+	if w == 0 || h == 0 {
+		return image.Rectangle{}
+	}
+	opaque := func(x, y int) bool { return img.NRGBAAt(r.Min.X+x, r.Min.Y+y).A > 24 }
+	seen := make([]bool, w*h)
+	type blob struct {
+		n   int
+		box image.Rectangle
+	}
+	var blobs []blob
+	var stack []int
+	for i := range seen {
+		if seen[i] || !opaque(i%w, i/w) {
+			continue
+		}
+		seen[i] = true
+		stack = append(stack[:0], i)
+		b := blob{}
+		for len(stack) > 0 {
+			p := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			x, y := p%w, p/w
+			b.n++
+			px := image.Rect(x, y, x+1, y+1)
+			if b.box.Empty() {
+				b.box = px
+			} else {
+				b.box = b.box.Union(px)
+			}
+			for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+				nx, ny := x+d[0], y+d[1]
+				if nx < 0 || ny < 0 || nx >= w || ny >= h {
+					continue
+				}
+				if q := ny*w + nx; !seen[q] && opaque(nx, ny) {
+					seen[q] = true
+					stack = append(stack, q)
+				}
+			}
+		}
+		blobs = append(blobs, b)
+	}
+	if len(blobs) == 0 {
+		return image.Rectangle{}
+	}
+	biggest := 0
+	for _, b := range blobs {
+		biggest = max(biggest, b.n)
+	}
+	var out image.Rectangle
+	for _, b := range blobs {
+		if b.n*100 < biggest {
+			continue // dưới 1% mảng lớn nhất → bụi, bỏ
+		}
+		if out.Empty() {
+			out = b.box
+		} else {
+			out = out.Union(b.box)
+		}
+	}
+	return out.Add(r.Min)
+}
+
 // alphaBBox returns the bounding box of pixels with alpha above a threshold.
 func alphaBBox(img *image.NRGBA, r image.Rectangle) image.Rectangle {
 	minX, minY, maxX, maxY := r.Max.X, r.Max.Y, r.Min.X-1, r.Min.Y-1

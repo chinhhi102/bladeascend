@@ -49,7 +49,8 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	conn := &wsConn{out: make(chan []byte, sendQueue)}
 	go writeLoop(ctx, ws, conn.out, cancel)
-	client := room.NewClient(conn, s.debug)
+	// Debug bật theo từng người: server chỉ cho phép, client phải tự xin bằng ?debug=true.
+	client := room.NewClient(conn, false)
 	s.readLoop(ctx, ws, client)
 	if rm := client.Room(); rm != nil {
 		rm.RemoveClient(client)
@@ -114,7 +115,7 @@ func (s *server) dispatch(c *room.Client, t string, data []byte) {
 		}
 	case netproto.TDebug:
 		var d netproto.Debug
-		if s.debug && netproto.Decode(data, &d) == nil {
+		if s.debug && c.Debug && netproto.Decode(data, &d) == nil {
 			if rm := c.Room(); rm != nil {
 				rm.Debug(c, d)
 			}

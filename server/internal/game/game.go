@@ -122,6 +122,11 @@ func (g *Game) resetPlayer(p *Player, level, swords int) {
 	p.TotalExp = g.Prog.Threshold(level)
 	p.Level = level
 	p.PeakExp, p.PeakLevel, p.Kills = p.TotalExp, level, 0
+	// A new life starts from zero Uy Danh (spec §11.1).
+	p.Score, p.Hits, p.Top1Secs, p.DaiThuaSecs = 0, 0, 0, 0
+	p.Burning, p.BurnedExp, p.TienKills = false, 0, 0
+	p.ScoreBy, p.HitCooldown, p.ScoredRealms = map[string]float64{}, map[string]float64{}, map[int]bool{}
+	p.Title, p.pendingTitle, p.titleSince = 0, 0, 0
 	p.Ring = Ring{Count: max(g.Cfg.Sword.StartCount, swords), Dir: 1, Angle: g.Rng.Float64() * 2 * math.Pi}
 	p.Ring.Tilt = RestTilt(g.Cfg.Sword, p.Ring.Dir)
 	p.Buffs = [BuffCount]float64{}
@@ -147,12 +152,12 @@ func (g *Game) RemovePlayer(id uint32) {
 }
 
 // SetInput applies a client input (already validated by the caller).
-func (g *Game) SetInput(id uint32, seq uint32, angle float64, moving bool) {
+func (g *Game) SetInput(id uint32, seq uint32, angle float64, moving, burning bool) {
 	p, ok := g.Players[id]
 	if !ok {
 		return
 	}
-	p.InputAngle, p.Moving = angle, moving
+	p.InputAngle, p.Moving, p.Burning = angle, moving, burning
 	if seq > p.LastSeq {
 		p.LastSeq = seq
 	}
@@ -196,6 +201,8 @@ func (g *Game) Tick(dt float64) {
 	g.resolvePickups()
 	g.maintainSpawns()
 	g.updateMoods()
+	g.updateTop1(dt)
+	g.updateTitles()
 	if g.gridDirty {
 		g.Grid.Rebuild(g.ObstacleSolid)
 		g.gridDirty = false
@@ -219,6 +226,15 @@ func (g *Game) spinRing(p *Player, dt float64) {
 func pairKey(tag uint8, a, b uint32, sub int) uint64 {
 	return uint64(tag)<<60 | uint64(sub&0xff)<<52 | uint64(a&0x3ffffff)<<26 | uint64(b&0x3ffffff)
 }
+
+// onCooldown checks a cooldown without claiming it; pair it with startCooldown when the
+// action actually happens (cooldownReady does both at once).
+func (g *Game) onCooldown(key uint64) bool {
+	until, ok := g.cooldowns[key]
+	return ok && until > g.Time
+}
+
+func (g *Game) startCooldown(key uint64, secs float64) { g.cooldowns[key] = g.Time + secs }
 
 func (g *Game) cooldownReady(key uint64, secs float64) bool {
 	if until, ok := g.cooldowns[key]; ok && until > g.Time {
@@ -247,8 +263,29 @@ func (g *Game) Ranking() []*Player {
 			out = append(out, p)
 		}
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].TotalExp > out[j].TotalExp })
+	// Spec §11.2: the room board ranks by Uy Danh — the board is about who is winning the
+	// fight, not who farmed longest. total_exp only breaks ties.
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Score != out[j].Score {
+			return out[i].Score > out[j].Score
+		}
+		return out[i].TotalExp > out[j].TotalExp
+	})
 	return out
+}
+
+// RankOf is p's 1-based place in the room board (same order as Ranking).
+func (g *Game) RankOf(p *Player) int {
+	rank := 1
+	for _, o := range g.PlayerList() {
+		if o == p || o.Dead {
+			continue
+		}
+		if o.Score > p.Score || (o.Score == p.Score && o.TotalExp > p.TotalExp) {
+			rank++
+		}
+	}
+	return rank
 }
 
 // Vec is a convenience constructor for other packages' tests.

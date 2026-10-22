@@ -19,8 +19,8 @@ func TestExpNeededMatchesSpecTable(t *testing.T) {
 		L    int
 		want float64
 	}{
-		{0, 100}, {9, 172}, {10, 120}, {19, 206}, {20, 144}, {29, 248},
-		{30, 173}, {39, 297}, {80, 430}, {89, 740},
+		{0, 100}, {9, 172}, {10, 200}, {19, 344}, {20, 400}, {29, 688},
+		{30, 800}, {39, 1376}, {80, 25600}, {89, 44032},
 	}
 	for _, c := range cases {
 		if got := p.ExpNeeded(c.L); got != c.want {
@@ -29,9 +29,34 @@ func TestExpNeededMatchesSpecTable(t *testing.T) {
 	}
 }
 
+// Spec §3.2: mỗi cảnh giới cần gấp đôi EXP của cảnh giới trước.
+func TestEachRealmCostsDoubleThePrevious(t *testing.T) {
+	p := testProg(t)
+	realmTotal := func(r int) float64 {
+		sum := 0.0
+		for s := 0; s < p.Tiers(); s++ {
+			sum += p.ExpNeeded(r*p.Tiers() + s)
+		}
+		return sum
+	}
+	for r := 1; r < 9; r++ {
+		prev, cur := realmTotal(r-1), realmTotal(r)
+		if math.Abs(cur-prev*2) > 2 {
+			t.Errorf("cảnh giới %d cần %v, muốn gấp đôi cảnh giới trước (%v → %v)", r, cur, prev, prev*2)
+		}
+		// Từng tầng cũng phải gấp đôi tầng tương ứng của cảnh giới trước.
+		for s := 0; s < p.Tiers(); s++ {
+			a, b := p.ExpNeeded((r-1)*p.Tiers()+s), p.ExpNeeded(r*p.Tiers()+s)
+			if math.Abs(b-a*2) > 1 {
+				t.Errorf("cảnh giới %d tầng %d cần %v, muốn %v", r, s+1, b, a*2)
+			}
+		}
+	}
+}
+
 func TestRealmTotalsMatchSpec(t *testing.T) {
 	p := testProg(t)
-	want := []float64{1360, 1632, 1958, 2350, 2820, 3384, 4061, 4873, 5848}
+	want := []float64{1360, 2720, 5440, 10880, 21760, 43520, 87040, 174080, 348160}
 	for r, w := range want {
 		sum := 0.0
 		for s := 0; s < 10; s++ {
@@ -81,7 +106,8 @@ func TestScaleRange(t *testing.T) {
 
 func TestMaxSwords(t *testing.T) {
 	p := testProg(t)
-	for r, want := range []int{60, 120, 160, 200, 240, 280, 320, 360, 400} {
+	// Spec §3.1: max_swords[r] = 5(r+1)(r+2) — vừa đủ r+1 vòng theo luật §4.1a.
+	for r, want := range []int{10, 30, 60, 100, 150, 210, 280, 360, 450, 550, 660, 780, 910, 1050} {
 		if got := p.MaxSwords(r); got != want {
 			t.Errorf("MaxSwords(%d) = %d, want %d", r, got, want)
 		}

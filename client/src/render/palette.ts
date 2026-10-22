@@ -27,6 +27,17 @@ export const BUFF_COLORS: Record<string, number> = {
 
 export const GATE_COLORS: Record<string, number> = { purple: 0xa55bff, blue: 0x3a86ff, orange: 0xff8c1a };
 
+/** hslToHex: dùng cho viền cầu vồng của hào quang Đạo Tổ (spec §3.4). */
+export function hslToHex(h: number, s: number, l: number): number {
+  const k = (n: number): number => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number): number => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))));
+  return (f(0) << 16) | (f(8) << 8) | f(4);
+}
+
+// Top 1–3 room title colours: vàng kim / bạc / đồng (spec §11.3).
+export const TITLE_COLORS = [0xffd700, 0xd8dde3, 0xcd7f32];
+
 export const MONSTER_VARIANTS: Record<string, string[]> = {
   small: ['banh_bao_cau', 'dep_lao'],
   medium: ['noi_com', 'ga_hoang'],

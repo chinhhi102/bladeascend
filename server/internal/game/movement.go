@@ -7,12 +7,47 @@ import (
 )
 
 // MoveSpeed implements spec §4.1 without the zone factor.
+// Tốc độ KHÔNG phụ thuộc tu vi; chỉ buff Thần Hành (nhặt được) và Thiêu Đốt Tinh Huyết
+// (đốt EXP, §4.1c) mới tăng tốc.
 func (g *Game) MoveSpeed(p *Player) float64 {
-	s := g.Cfg.Player.MoveBase * math.Sqrt(p.Scale)
+	s := g.Cfg.Player.MoveBase
 	if p.HasBuff(BuffHaste, g.Time) {
 		s *= g.Cfg.Buffs["haste"].Mult
 	}
+	if g.Burning(p) {
+		s *= g.Cfg.Burn.Mult
+	}
 	return s
+}
+
+// burnFloor is the lowest total_exp Thiêu Đốt Tinh Huyết may take a player down to: the
+// start of their current realm, so burning can cost tiers but never a whole cảnh giới
+// (rớt cảnh giới vẫn chỉ đến từ việc bị chém, §5.1).
+func (g *Game) burnFloor(p *Player) float64 {
+	if !g.Cfg.Burn.KeepRealm {
+		return 0
+	}
+	return g.Prog.Threshold(g.Prog.Realm(p.Level) * g.Prog.Tiers())
+}
+
+// Burning reports whether the player is actually burning essence right now: they asked for
+// it, they are moving, and they still have EXP left to spend (spec §4.1c).
+func (g *Game) Burning(p *Player) bool {
+	if !p.Burning || !p.Moving || p.Dead || p.InTransit(g.Time) || g.Cfg.Burn.Mult <= 1 {
+		return false
+	}
+	return p.TotalExp > g.burnFloor(p)
+}
+
+// burnExp charges the EXP cost of this tick's sprint (spec §4.1c).
+func (g *Game) burnExp(p *Player, dt float64) {
+	if !g.Burning(p) {
+		return
+	}
+	cost := g.Cfg.Burn.ExpFracPerSec * g.Prog.ExpNeeded(p.Level) * dt
+	after := math.Max(g.burnFloor(p), p.TotalExp-cost)
+	p.BurnedExp += p.TotalExp - after
+	g.setTotalExp(p, after)
 }
 
 // ZoneMult returns the terrain speed factor for moving along dir at pos (spec §8.3).
@@ -66,6 +101,7 @@ func (g *Game) movePlayers(dt float64) {
 		if p.Dead || p.InTransit(g.Time) && !p.Transit.Arrived {
 			continue
 		}
+		g.burnExp(p, dt) // trả giá trước, rồi mới đi với tốc độ đã cộng (§4.1c)
 		g.movePlayer(p, dt)
 		p.Bush = g.BushAt(p.Pos)
 		g.checkGate(p)

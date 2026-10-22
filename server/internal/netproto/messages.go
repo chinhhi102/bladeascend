@@ -26,6 +26,9 @@ type Join struct {
 	Name    string `msgpack:"name"`
 	Char    string `msgpack:"char"`
 	GuestID string `msgpack:"guest_id"`
+	// Debug: client mở bằng ?debug=true nên muốn bật bảng phím test. Server chỉ chấp nhận
+	// khi chính nó cũng chạy với -debug, và chỉ người tự thêm tham số mới thấy bảng này.
+	Debug bool `msgpack:"debug,omitempty"`
 }
 
 // Input carries the movement direction quantised to 256 steps (angle_u8).
@@ -34,6 +37,7 @@ type Input struct {
 	Seq    uint32 `msgpack:"s"`
 	Angle  uint8  `msgpack:"a"`
 	Moving bool   `msgpack:"m"`
+	Burn   bool   `msgpack:"b"` // đang giữ Thiêu Đốt Tinh Huyết (spec §4.1c)
 }
 
 type Ping struct {
@@ -75,6 +79,7 @@ const (
 	FlagDead
 	FlagBot
 	FlagRevealed
+	FlagBurning // Thiêu Đốt Tinh Huyết đang bật (spec §4.1c)
 )
 
 type PlayerState struct {
@@ -94,6 +99,11 @@ type PlayerState struct {
 	Flags  uint8   `msgpack:"fl"`
 	Crack  float32 `msgpack:"ck,omitempty"`
 	Exp    float32 `msgpack:"xp"`
+	Title  int     `msgpack:"ti,omitempty"` // room rank badge 1..3 (spec §11.3), 0 = none
+	// Tiên giới (spec §3.4): sát mạng đã có / cần, để HUD vẽ thanh Tiên khí. Chỉ gửi cho
+	// chính người đó; người khác chỉ cần Level để biết cảnh giới và màu hào quang.
+	TienHave float32 `msgpack:"th,omitempty"`
+	TienNeed float32 `msgpack:"tn,omitempty"`
 	Name   string  `msgpack:"nm,omitempty"` // only the first time a client sees this player
 	Char   string  `msgpack:"ch,omitempty"`
 }
@@ -134,34 +144,57 @@ type LeaderEntry struct {
 	Name  string  `msgpack:"nm"`
 	Exp   float32 `msgpack:"xp"`
 	Level int     `msgpack:"L"`
+	Score float32 `msgpack:"sc"`
+	Title int     `msgpack:"ti,omitempty"`
 }
 
+// Leaderboard goes out once a second. It also carries the minimap's live markers, which are
+// the only positions a client is allowed to know outside its own view (spec §12.1).
 type Leaderboard struct {
-	T     string        `msgpack:"t"`
-	Top   []LeaderEntry `msgpack:"top"`
-	Rank  int           `msgpack:"rank"`
-	Total int           `msgpack:"total"`
+	T       string        `msgpack:"t"`
+	Top     []LeaderEntry `msgpack:"top"`
+	Rank    int           `msgpack:"rank"`
+	Total   int           `msgpack:"total"`
+	MyScore float32       `msgpack:"ms"`
+	// Top1 is the leader's position for the minimap crown; absent while they are hiding.
+	Top1    bool    `msgpack:"t1,omitempty"`
+	Top1X   float32 `msgpack:"t1x,omitempty"`
+	Top1Y   float32 `msgpack:"t1y,omitempty"`
+	HasBau  bool    `msgpack:"ch,omitempty"` // a Rương Báu is on the map (or warned)
+	ChestX  float32 `msgpack:"chx,omitempty"`
+	ChestY  float32 `msgpack:"chy,omitempty"`
+	ChestIn bool    `msgpack:"chw,omitempty"` // still in the 10s warning, not spawned yet
 }
 
 // Feed is a kill-feed line with names resolved on the server (spec §7).
+// Top > 0 means the victim was that high in their room board and the line was announced
+// to every room on the server (spec §11.4).
 type Feed struct {
 	T     string `msgpack:"t"`
 	Kind  string `msgpack:"k"`
 	A     string `msgpack:"a"`
 	B     string `msgpack:"b,omitempty"`
 	Realm int    `msgpack:"r"`
+	Top   int    `msgpack:"tp,omitempty"`
+	Room  string `msgpack:"rm,omitempty"` // phòng xảy ra, chỉ gửi khi loan toàn server
 }
 
-// Dead is the Tổng kết screen payload (spec §7).
+// Dead is the Tổng kết screen payload (spec §7, §11.1).
 type Dead struct {
-	T          string  `msgpack:"t"`
-	KillerName string  `msgpack:"killer"`
-	KillerChar string  `msgpack:"killer_char"`
-	PeakLevel  int     `msgpack:"peak_level"`
-	PeakExp    float64 `msgpack:"peak_exp"`
-	Kills      int     `msgpack:"kills"`
-	SurviveSec float64 `msgpack:"survive"`
-	Rank       int     `msgpack:"rank"`
+	T           string             `msgpack:"t"`
+	KillerName  string             `msgpack:"killer"`
+	KillerChar  string             `msgpack:"killer_char"`
+	PeakLevel   int                `msgpack:"peak_level"`
+	PeakExp     float64            `msgpack:"peak_exp"`
+	Kills       int                `msgpack:"kills"`
+	SurviveSec  float64            `msgpack:"survive"`
+	Rank        int                `msgpack:"rank"`
+	Score       float64            `msgpack:"score"`
+	Hits        int                `msgpack:"hits"`
+	BurnedExp   float64            `msgpack:"burned_exp"` // EXP đã đốt (spec §4.1c)
+	ScoreBy     map[string]float64 `msgpack:"score_by"` // điểm theo từng nguồn (§11.1)
+	DaiThuaSecs float64            `msgpack:"dai_thua_secs"`
+	Top1Secs    float64            `msgpack:"top1_secs"`
 }
 
 type Pong struct {

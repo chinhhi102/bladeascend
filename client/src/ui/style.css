@@ -73,23 +73,80 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .realm { font-size: 18px; }
 .exp-bar { height: 12px; background: rgba(0,0,0,.5); border: 2px solid #000; border-radius: 8px; overflow: hidden; margin: 4px 0; }
 .exp-fill { height: 100%; width: 0; background: linear-gradient(90deg, #5dff7a, #ffd23f); transition: width .2s; }
+/* Tiên giới: thanh Tiên khí vàng kim để phân biệt với Linh khí (spec §3.4). */
+.exp-bar.tien { border-color: #8a6b00; }
+.exp-bar.tien .exp-fill { background: linear-gradient(90deg, #ffd60a, #fff3a0); }
+.exp-label { font-size: 11px; opacity: .85; margin-bottom: 2px; }
 .swords { font-size: 14px; }
 .buffs { position: absolute; left: 12px; top: 84px; display: flex; gap: 6px; }
 .buff { width: 44px; height: 44px; border-radius: 50%; padding: 4px; position: relative; }
 .buff-inner { width: 100%; height: 100%; border-radius: 50%; background: #222 center / 120% no-repeat; display: flex; align-items: center; justify-content: center; font-size: 12px; }
 .buff-left { position: absolute; right: -4px; bottom: -4px; font-size: 12px; }
-.room-board { position: absolute; right: 12px; top: 12px; background: rgba(0,0,0,.35); border-radius: 10px; padding: 8px 10px; font-size: 13px; min-width: 170px; }
-.board-title { color: var(--gold); margin-bottom: 4px; }
-.lb-line { display: flex; justify-content: space-between; gap: 10px; }
+.swords + .score { font-size: 14px; color: var(--gold); }
+
+/* Uy Danh pop-ups (spec §11.1): float up and fade next to the status bar. */
+.score-pops { position: absolute; left: 90px; top: 74px; display: flex; flex-direction: column; gap: 2px; }
+.score-pop { font-size: 20px; color: var(--gold); animation: scoreFloat 1.6s ease-out forwards; }
+.score-pop.kill { color: #ff8585; }
+.score-pop.breakthrough { color: #9ff0c8; }
+@keyframes scoreFloat { 0% { opacity: 0; transform: translateY(10px) scale(.8); } 15% { opacity: 1; transform: translateY(0) scale(1.1); } 100% { opacity: 0; transform: translateY(-34px) scale(1); } }
+
+/* Minimap (spec §12.1): under the realm bar and the buff row. */
+.minimap { position: absolute; left: 12px; top: 136px; border-radius: 12px; border: 3px solid rgba(0,0,0,.7); background: rgba(0,0,0,.6); overflow: hidden; pointer-events: auto; cursor: pointer; }
+.minimap.big { left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; border-width: 5px; }
+
+.room-board { position: absolute; right: 12px; top: 12px; background: rgba(0,0,0,.45); border-radius: 12px; padding: 10px 14px; font-size: 17px; min-width: 290px; }
+.board-title { color: var(--gold); margin-bottom: 6px; font-size: 18px; }
+.lb-line { margin-bottom: 7px; }
 .lb-line.me { color: var(--gold); }
+.lb-main { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.lb-who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-crown { margin-right: 4px; }
+.lb-score { min-width: 56px; text-align: right; color: var(--gold); }
+/* Danh hiệu thay cho cảnh giới trong bảng phòng (spec §11.2, §11.3). */
+.lb-title { font-size: 14px; font-weight: 700; font-style: italic; color: #cfe4ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-title.t1 { color: #ffd700; }
+.lb-title.t2 { color: #e8edf3; }
+.lb-title.t3 { color: #e39a4e; }
+.my-rank { font-size: 15px; }
 .my-rank { margin-top: 4px; color: #cde; }
-.feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 14px; max-width: min(60vw, calc(100vw - 140px)); }
-.feed-line { background: rgba(0,0,0,.4); padding: 4px 8px; border-radius: 8px; }
+/* Kill feed góc dưới trái — to hơn 50% so với bản trước để đọc được khi đang chạy. */
+.feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 15px; max-width: min(60vw, calc(100vw - 140px)); }
+.feed-line { background: rgba(0,0,0,.45); padding: 4px 9px; border-radius: 9px; }
+/* Mỗi vai một màu để đọc lướt: ai làm · làm gì · với ai. */
+.f-actor { color: #ffd700; }
+.f-act { color: #e7eef5; font-weight: 700; }
+.f-target { color: #ff8585; }
+.feed-tag { color: #fff6c9; }
+
+/* Tin loan toàn server: hạ một người trong Top 5 → dải giữa-trên màn hình (spec §11.4). */
+.server-feed { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(70vw, 900px); }
+.server-line { width: 100%; text-align: center; font-size: 20px; padding: 10px 18px; border-radius: 12px; background: linear-gradient(90deg, rgba(192,41,15,.94), rgba(230,80,30,.94), rgba(192,41,15,.94)); border: 3px solid var(--gold); color: #fff6c9; animation: serverFeedIn .35s ease-out, feedPulse 1.2s ease-out 2; }
+@keyframes serverFeedIn { from { opacity: 0; transform: translateY(-18px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes feedPulse { 0%, 100% { box-shadow: 0 0 0 rgba(255,215,0,0); } 50% { box-shadow: 0 0 18px rgba(255,215,0,.85); } }
 .banner { display: none; position: absolute; top: 18%; left: 50%; transform: translateX(-50%); background: rgba(230,57,70,.9); padding: 10px 18px; border-radius: 12px; border: 3px solid #000; font-size: 18px; text-align: center; }
+/* Nút giữ Thiêu Đốt Tinh Huyết trên điện thoại (spec §4.1c). */
+.burn-btn { position: absolute; right: 18px; bottom: 80px; width: 76px; height: 76px; border-radius: 50%; font-size: 32px; display: none; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, #ff8a3c, #c0290f); border: 3px solid #000; color: #fff; pointer-events: auto; touch-action: none; user-select: none; }
+.burn-btn:active { transform: scale(.92); filter: brightness(1.3); }
+
 .corner { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 8px; align-items: center; font-size: 12px; }
 .mute { font-size: 18px; background: rgba(0,0,0,.4); border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; }
 /* top centre: the bottom row belongs to the kill feed (left) and ping/mute (right) */
 .debug-help { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); font-size: 12px; opacity: .8; max-width: calc(100vw - 520px); text-align: center; }
+
+/* Bảng hướng dẫn mờ 2 giây đầu trận (spec §18.1). Không chặn chuột/chạm. */
+.guide { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); opacity: 0; pointer-events: none; background: rgba(8,10,14,.6); border: 3px solid rgba(255,215,0,.6); border-radius: 18px; padding: 20px 28px; }
+.guide.fade { animation: guideFade 2.6s ease-out forwards; }
+@keyframes guideFade { 0% { opacity: 0; transform: translate(-16px, -50%); } 12% { opacity: .92; transform: translate(0, -50%); } 72% { opacity: .92; } 100% { opacity: 0; } }
+.guide-title { color: var(--gold); font-size: 25px; text-align: center; margin-bottom: 12px; }
+.guide-line { display: flex; align-items: center; gap: 14px; font-size: 21px; line-height: 2; color: #eef4fb; white-space: nowrap; }
+.guide-key { min-width: 118px; text-align: center; padding: 4px 12px; border-radius: 9px; background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.4); font-weight: 900; }
+@media (max-width: 720px) {
+  .guide { padding: 12px 16px; left: 10px; }
+  .guide-title { font-size: 17px; margin-bottom: 7px; }
+  .guide-line { font-size: 15px; gap: 10px; line-height: 1.9; }
+  .guide-key { min-width: 76px; padding: 2px 8px; }
+}
 
 .joy-base { display: none; position: fixed; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.18); border: 3px solid rgba(255,255,255,.5); pointer-events: none; z-index: 10; }
 .joy-knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.7); border: 3px solid rgba(0,0,0,.4); }
@@ -98,17 +155,31 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 @media (max-width: 720px) {
   .char-grid { grid-template-columns: repeat(5, 1fr); }
   .portrait { width: 48px; height: 48px; }
-  .room-board { font-size: 11px; min-width: 130px; padding: 6px; }
+  .room-board { font-size: 13px; min-width: 180px; padding: 7px 9px; }
+  .board-title { font-size: 13px; }
+  .lb-title { font-size: 10px; }
+  .lb-score { min-width: 40px; }
+  .my-rank { font-size: 11px; }
   .status-text { min-width: 120px; }
   .realm { font-size: 14px; }
   .badge { width: 42px; height: 42px; }
   .buffs { top: 64px; }
+  .minimap { top: 112px; }
+  .score-pops { left: 70px; top: 56px; }
+  .score-pop { font-size: 16px; }
   .debug-help { display: none !important; }
-  .feed { font-size: 11px; bottom: 60px; }
+  .feed { font-size: 12px; bottom: 60px; }
+  .server-feed { width: 94vw; top: 70px; }
+  .server-line { font-size: 14px; padding: 7px 10px; border-width: 2px; }
 }
 @media (max-width: 720px) and (orientation: portrait) {
   .room-board .lb-line:nth-child(n+7) { display: none; }
 }
+/* Tổng kết: Uy Danh tổng + bảng điểm theo nguồn (spec §11.1). */
+.score-total { display: flex; justify-content: space-between; align-items: baseline; font-size: 22px; color: var(--gold); margin: 6px 0 2px; }
+.score-by { margin-bottom: 8px; opacity: .9; }
+.score-line { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+
 .rotate-hint { display: none; position: absolute; top: 175px; white-space: nowrap; left: 50%; transform: translateX(-50%); font-size: 12px; background: rgba(0,0,0,.4); padding: 4px 10px; border-radius: 8px; animation: fadeHint 6s forwards; }
 @keyframes fadeHint { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 @media (max-width: 720px) and (orientation: portrait) { .rotate-hint { display: block; } }

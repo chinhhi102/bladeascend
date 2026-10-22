@@ -16,13 +16,23 @@ type Cultivation struct {
 	TierStep      float64  `json:"tier_step"`
 	ScaleMin      float64  `json:"scale_min"`
 	ScaleMax      float64  `json:"scale_max"`
+
+	// Tiên giới (spec §3.4): 5 cảnh giới sau Đại Thừa, không chia tầng, chỉ lên được
+	// bằng sát mạng chứ không dùng EXP.
+	TienRealms          []string  `json:"tien_realms"`
+	TienKillsPerStep    []float64 `json:"tien_kills_per_step"`
+	TienBotKillValue    float64   `json:"tien_bot_kill_value"`
+	TienSameVictimSecs  float64   `json:"tien_same_victim_cooldown_secs"`
+	TienScaleStep       float64   `json:"tien_scale_step"`
+	TienAuraColors      []string  `json:"tien_aura_colors"`
 }
 
 type Sword struct {
 	StartCount         int      `json:"start_count"`
 	MinCount           int      `json:"min_count"`
 	MaxSwords          []int    `json:"max_swords"`
-	SwordsPerRing      int      `json:"swords_per_ring"`
+	// RingStep: vòng thứ k chứa RingStep × k kiếm (vòng 1 = 10, vòng 2 = 20… spec §4.1a).
+	RingStep           int      `json:"ring_capacity_step"`
 	Length             float64  `json:"length"`
 	Width              float64  `json:"width"`
 	HiltGap            float64  `json:"hilt_gap"`
@@ -35,6 +45,7 @@ type Sword struct {
 	RevSecs            float64  `json:"rev_secs"`
 	FlipCooldown       float64  `json:"flip_cooldown"`
 	ClashUnit          int      `json:"clash_unit"`
+	FlipOnlySameRealm  bool     `json:"flip_only_same_realm"`
 	ClashKnockback     float64  `json:"clash_knockback"`
 	ClashKnockbackSecs float64  `json:"clash_knockback_secs"`
 	DropBundleMax      int      `json:"drop_bundle_max"`
@@ -65,10 +76,25 @@ type Player struct {
 	NameMax        int     `json:"name_max"`
 }
 
+// Burn is Thiêu Đốt Tinh Huyết (spec §4.1c): hold to run faster, paying EXP every second.
+// ExpFracPerSec is a fraction of the CURRENT tier's requirement, so the cost scales with
+// cultivation instead of being free at high realms and crippling at low ones.
+type Burn struct {
+	Mult          float64 `json:"mult"`
+	ExpFracPerSec float64 `json:"exp_frac_per_sec"`
+	KeepRealm     bool    `json:"keep_realm"` // never burn below the floor of the current realm
+}
+
 type Buff struct {
 	Mult    float64 `json:"mult"`
 	Secs    float64 `json:"secs"`
 	RevealR float64 `json:"reveal_r"`
+	// Ẩn Thân only (spec §6.2): the buff never stacks past MaxSecs, viewers see the player
+	// at VisibleAlpha instead of not at all, and bots only notice them within
+	// BotDetectMult × their normal sight range.
+	MaxSecs       float64 `json:"max_secs"`
+	VisibleAlpha  float64 `json:"visible_alpha"`
+	BotDetectMult float64 `json:"bot_detect_mult"`
 }
 
 type Items struct {
@@ -126,6 +152,10 @@ type Obstacles struct {
 	HP             map[string]int `json:"hp"`
 	StallItemDrop  float64        `json:"stall_item_drop"`
 	HitCooldown    float64        `json:"hit_cooldown"`
+	// Spec §5.3 (v3.6): damage is per player, not per sword — one hit per DmgCooldown
+	// per (player, obstacle), scaled by how many rings they have.
+	DmgCooldown    float64 `json:"dmg_cooldown_secs"`
+	DmgPerExtraRng float64 `json:"dmg_per_extra_ring"`
 }
 
 type Zones struct {
@@ -159,7 +189,10 @@ type Bots struct {
 	SpawnEverySecs float64  `json:"spawn_every_secs"`
 	SpawnBatch     int      `json:"spawn_batch"`
 	RespawnSecs    float64  `json:"respawn_secs"`
-	RealmWeights   []int    `json:"realm_weights"`
+	// SpawnRank: bot sinh ra ngang với người đang đứng hạng này trong phòng (mặc định 11,
+	// tức ngay dưới Top 10). Phòng chưa đủ người để có hạng đó → sinh ở Luyện Khí.
+	// Không có trần cảnh giới: phòng toàn Nguyên Anh thì bot mới cũng Nguyên Anh.
+	SpawnRank      int      `json:"spawn_rank"`
 	DecideMin      float64  `json:"decide_min"`
 	DecideMax      float64  `json:"decide_max"`
 	ReactionMin    float64  `json:"reaction_min"`
@@ -184,6 +217,26 @@ type Mood struct {
 	NearR            float64 `json:"near_r"`
 }
 
+// Minimap is the client-side minimap (spec §12.1); the server only passes it through.
+type Minimap struct {
+	SizePC     int  `json:"size_pc"`
+	SizeMobile int  `json:"size_mobile"`
+	ShowTop1   bool `json:"show_top1"`
+	ShowChest  bool `json:"show_chest"`
+	ShowOthers bool `json:"show_others"`
+}
+
+// Score is the Uy Danh scoring table (spec §11.1).
+type Score struct {
+	HitBase              float64 `json:"hit_base"`
+	KillBonus            float64 `json:"kill_bonus"`
+	UpsetPerRealm        float64 `json:"upset_per_realm"`
+	BreakthroughPerRealm float64 `json:"breakthrough_per_realm"`
+	Top1PerSec           float64 `json:"top1_per_sec"`
+	BotVictimMult        float64 `json:"bot_victim_mult"`
+	SameVictimCooldown   float64 `json:"same_victim_cooldown_secs"`
+}
+
 type Net struct {
 	TickHz             int     `json:"tick_hz"`
 	SnapshotHz         int     `json:"snapshot_hz"`
@@ -201,6 +254,7 @@ type Config struct {
 	Cultivation Cultivation     `json:"cultivation"`
 	Sword       Sword           `json:"sword"`
 	Player      Player          `json:"player"`
+	Burn        Burn            `json:"burn"`
 	Buffs       map[string]Buff `json:"buffs"`
 	Items       Items           `json:"items"`
 	ExpOrbs     ExpOrbs         `json:"exp_orbs"`
@@ -212,6 +266,10 @@ type Config struct {
 	Bots        Bots            `json:"bots"`
 	Characters  []string        `json:"characters"`
 	Mood        Mood            `json:"mood"`
+	Titles      []string        `json:"titles"`
+	TitleHold   float64         `json:"title_hold_secs"`
+	Minimap     Minimap         `json:"minimap"`
+	Score       Score           `json:"score"`
 	Net         Net             `json:"net"`
 }
 

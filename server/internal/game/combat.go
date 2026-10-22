@@ -75,6 +75,11 @@ func (g *Game) applyBodyHit(a, b *Player) {
 	}
 	g.setMood(b, MoodHit, g.Cfg.Mood.HitSecs)
 	oldRealm := g.Prog.Realm(b.Level)
+	g.awardHit(a, b, oldRealm, false) // scored on the realm they had before being knocked down
+	if g.Prog.IsTien(oldRealm) {
+		g.dropTienRealm(b) // Tiên giới không dùng EXP nên rớt cảnh giới tính riêng (§3.4)
+		return
+	}
 	after := g.expAfterHit(b)
 	loss := b.TotalExp - after
 	g.setTotalExp(b, after)
@@ -97,12 +102,16 @@ func (g *Game) expAfterHit(b *Player) float64 {
 // kill handles a Luyện Khí player being cut down (spec §5.1, §7).
 func (g *Game) kill(a, b *Player) {
 	pc := g.Cfg.Player
+	// Scored first: the EXP reward below can push the attacker up a realm, which would
+	// shrink their lật_kèo multiplier for this very kill (spec §11.1).
+	g.awardHit(a, b, g.Prog.Realm(b.Level), true)
 	// Spec §5.1: at Luyện Khí the "loss" is the victim's whole EXP, plus a kill bonus.
 	loss := b.TotalExp
 	g.GainExp(a, loss*pc.AttackerShare+pc.KillBonusExp, true)
 	g.scatterOrbs(b.Pos, loss*pc.DropShare, 0)
 	g.dropDeathSwords(b)
 	a.Kills++
+	victimRank := g.RankOf(b)
 	b.Dead, b.DiedAt, b.KilledBy = true, g.Time, a.ID
 	b.KillerName, b.KillerChar = a.Name, a.Char
 	b.Moving = false
@@ -112,7 +121,9 @@ func (g *Game) kill(a, b *Player) {
 	if b.lastTeleportIn > 0 && g.Time-b.lastTeleportIn < g.Cfg.Gates.FeedSecs {
 		feed = "gate_kill"
 	}
-	g.emit(Event{Kind: "KillFeed", Global: true, S: feed, A: a.ID, B: b.ID})
+	// N = hạng của nạn nhân trong bảng phòng lúc bị giết; hạ một người trong Top 5 thì
+	// dòng này được loan ra toàn server (spec §11.4). victimRank lấy TRƯỚC khi b.Dead = true.
+	g.emit(Event{Kind: "KillFeed", Global: true, S: feed, A: a.ID, B: b.ID, N: victimRank})
 }
 
 // DebugKill kills a player without an attacker (debug key only).
@@ -128,11 +139,12 @@ func (g *Game) DebugKill(b *Player) {
 func (g *Game) resolveSwordSword() {
 	players := g.PlayerList()
 	for i, a := range players {
-		if !g.canFight(a) {
+		// Spec §5.2: someone stripped to 0 swords has nothing left to clash with.
+		if !g.canFight(a) || a.Ring.Count == 0 {
 			continue
 		}
 		for _, b := range players[i+1:] {
-			if !g.canFight(b) {
+			if !g.canFight(b) || b.Ring.Count == 0 {
 				continue
 			}
 			if at, ok := g.ringsTouch(a, b); ok && g.cooldownReady(pairKey(tagClash, a.ID, b.ID, 0), g.Cfg.Sword.FlipCooldown) {
@@ -202,14 +214,24 @@ func sparseRingsTouch(a, b *Player) (Vec, bool) {
 }
 
 func (g *Game) clash(a, b *Player, at Vec) {
-	a.Ring.Dir, b.Ring.Dir = -a.Ring.Dir, -b.Ring.Dir
-	g.pushApart(a, b)
-	for _, p := range []*Player{a, b} {
-		g.emit(Event{Kind: "RingFlip", A: p.ID, N: int(p.Ring.Dir), X: float32(at.X), Y: float32(at.Y)})
+	ra, rb := g.Prog.Realm(a.Level), g.Prog.Realm(b.Level)
+	// Spec §5.2: va kiếm KHÔNG đẩy hai người ra nữa — vòng kiếm chỉ chặn không cho chém
+	// vào thân, hai bên đứng mài nhau cho tới khi một bên hết kiếm trước.
+	// Đặt clash_knockback > 0 trong config là bật lại kiểu đẩy văng cũ.
+	if g.Cfg.Sword.ClashKnockback > 0 {
+		g.pushApart(a, b)
+	}
+	// Spec §5.2 (v3.5): only an even match sends both rings spinning the other way; against a
+	// different realm nobody flips, so the stronger ring keeps grinding in the same direction.
+	if !g.Cfg.Sword.FlipOnlySameRealm || ra == rb {
+		a.Ring.Dir, b.Ring.Dir = -a.Ring.Dir, -b.Ring.Dir
+		for _, p := range []*Player{a, b} {
+			g.emit(Event{Kind: "RingFlip", A: p.ID, N: int(p.Ring.Dir), X: float32(at.X), Y: float32(at.Y)})
+		}
 	}
 	out := ResolveClash(g.Cfg.Sword,
-		ClashSide{Realm: g.Prog.Realm(a.Level), Count: a.Ring.Count, Crack: a.Ring.Crack},
-		ClashSide{Realm: g.Prog.Realm(b.Level), Count: b.Ring.Count, Crack: b.Ring.Crack})
+		ClashSide{Realm: ra, Count: a.Ring.Count, Crack: a.Ring.Crack},
+		ClashSide{Realm: rb, Count: b.Ring.Count, Crack: b.Ring.Crack})
 	a.Ring.Crack, b.Ring.Crack = out.CrackA, out.CrackB
 	g.breakSwords(a, out.LostA)
 	g.breakSwords(b, out.LostB)
@@ -234,7 +256,11 @@ func (g *Game) breakSwords(p *Player, n int) {
 	lost := g.LoseSwords(p, n)
 	if lost > 0 {
 		g.emit(Event{Kind: "SwordBreak", A: p.ID, N: lost, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
-		g.emote(p, "sword_lost")
+		if p.Ring.Count == 0 {
+			g.emote(p, "no_swords") // spec §5.2: bị tước sạch kiếm → hoảng loạn
+		} else {
+			g.emote(p, "sword_lost")
+		}
 	}
 }
 
@@ -291,20 +317,41 @@ func (g *Game) killMonster(m *Monster, killer *Player) {
 	}
 }
 
+// ObstacleDamage is what one player does to an obstacle per hit (spec §5.3, v3.6): it scales
+// with realm and ring count, NOT with the number of swords — otherwise 400 blades would
+// shred a boulder instantly.
+func (g *Game) ObstacleDamage(a *Player) float64 {
+	rings := max(a.Geom.Rings, 1)
+	if a.Ring.Count == 0 {
+		return 0
+	}
+	return float64(g.Prog.Realm(a.Level)+1) * (1 + g.Cfg.Obstacles.DmgPerExtraRng*float64(rings-1))
+}
+
 func (g *Game) hitObstacles(a *Player) {
+	if a.Ring.Count == 0 {
+		return
+	}
 	outer := a.Geom.Outer()
-	dmg := 1 + g.Prog.Realm(a.Level)
 	n := sweepSteps(a.Ring)
+	dmg := g.ObstacleDamage(a)
 	g.QueryObstacles(a.Pos, outer, func(id int) {
 		st := &g.Obstacles[id]
 		o := g.Map.Obstacles[id]
 		if o.MaxHP == 0 || st.Broken || !o.Shape.OverlapsCircle(a.Pos, outer) {
 			return
 		}
-		for i := 0; i < a.Ring.Count && !st.Broken; i++ {
-			if g.sweepHitsShape(a, i, n, o.Shape) &&
-				g.cooldownReady(pairKey(tagObstacle, a.ID, uint32(id), i), g.Cfg.Obstacles.HitCooldown) {
-				g.DamageObstacle(id, dmg)
+		// One damage tick per player per obstacle per dmg_cooldown_secs, however many
+		// swords happen to be sweeping through it this tick.
+		key := pairKey(tagObstacle, a.ID, uint32(id), 0)
+		if g.onCooldown(key) {
+			return
+		}
+		for i := 0; i < a.Ring.Count; i++ {
+			if g.sweepHitsShape(a, i, n, o.Shape) {
+				g.startCooldown(key, g.Cfg.Obstacles.DmgCooldown)
+				g.damageObstacleBy(id, dmg)
+				return
 			}
 		}
 	})
@@ -320,6 +367,22 @@ func (g *Game) sweepHitsShape(a *Player, i, n int, sh world.Shape) bool {
 		}
 	}
 	return false
+}
+
+// damageObstacleBy applies fractional damage (spec §5.3 gives values like 13.5 per hit):
+// the remainder is carried on the obstacle so nothing is silently rounded away.
+func (g *Game) damageObstacleBy(id int, dmg float64) {
+	if dmg <= 0 {
+		return
+	}
+	st := &g.Obstacles[id]
+	st.Partial += dmg
+	whole := int(st.Partial + 1e-9)
+	if whole <= 0 {
+		return
+	}
+	st.Partial -= float64(whole)
+	g.DamageObstacle(id, whole)
 }
 
 // DamageObstacle reduces an obstacle's HP and breaks it at zero (spec §8.2).
@@ -359,7 +422,7 @@ func (g *Game) updateObstacles() {
 		if g.Time < st.BrokenAt+oc.RegrowSecs || g.obstacleOccupied(id) {
 			continue
 		}
-		st.Broken, st.HP = false, g.Map.Obstacles[id].MaxHP
+		st.Broken, st.HP, st.Partial = false, g.Map.Obstacles[id].MaxHP, 0
 		g.gridDirty = true
 		g.emit(Event{Kind: "ObstacleRegrow", A: uint32(id), X: float32(c.X), Y: float32(c.Y)})
 	}
