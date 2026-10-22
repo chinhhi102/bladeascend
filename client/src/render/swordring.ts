@@ -135,13 +135,25 @@ export class SwordRing {
     b.ghosts.forEach((p, j) => set(p, a - dir * GHOST_STEP * (j + 1)));
   }
 
+  /**
+   * drawBlur paints the motion-blur annulus of each ring — but ONLY for rings that really do
+   * sweep their whole annulus every tick, using the same test the server uses to decide a
+   * ring is a solid damage band (spec §4.1b: `số kiếm × góc quét ≥ 360°`).
+   *
+   * Without that test a ring holding 1 sword out of 80 still painted a full faint circle, so
+   * the drawn range looked far wider than what the blades can actually hit.
+   */
   private drawBlur(g: RingGeom, tilt: number, realm: number, spin: number): void {
     const gr = this.blur.clear();
+    const sweepPerTick = (2 * Math.PI * spin) / (this.cfg.sword.rev_secs * this.cfg.net.tick_hz);
     for (let k = g.rings - 1; k >= 0; k--) {
-      const h = hiltR(g, k);
-      const tip = tipDist(g, k, tilt);
       const cap = ringCap(g, k);
       const inRing = Math.min(cap, this.count - ringStart(g, k));
+      if (inRing * sweepPerTick < 2 * Math.PI) {
+        continue; // vòng thưa: từng lưỡi kiếm nhìn rõ, không có vành mờ liền
+      }
+      const h = hiltR(g, k);
+      const tip = tipDist(g, k, tilt);
       const alpha = Math.min(0.4, (0.08 + 0.22 * (inRing / cap)) * spin);
       gr.circle(0, 0, (h + tip) / 2).stroke({ color: this.ringTint(k, realm, true), width: tip - h, alpha });
     }
