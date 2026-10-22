@@ -35,5 +35,6 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
 9. Cuối phiên: cập nhật `docs/PROGRESS.md` (đã làm gì, còn gì, lỗi đã biết).
 10. Khi gặp câu hỏi về thiết kế game hoặc spec chưa rõ: KHÔNG tự đoán. Ghi câu hỏi vào
     docs/QUESTIONS.md (kèm bối cảnh ngắn: đang làm milestone nào, file nào, các phương án),
-    rồi dừng lại báo tôi.
+    rồi dừng lại báo tôi. Câu nào đã trả lời thì chuyển sang docs/QUESTIONS_DONE.md để
+    QUESTIONS.md chỉ còn việc đang chờ.
 11. Không bao giờ chờ art. Gameplay luôn ưu tiên trước; asset thiếu thì dùng placeholder tự động.

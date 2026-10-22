@@ -33,7 +33,7 @@ Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (d
 - **Còn lại / lỗi đã biết**:
   - Hàng rào/tường trong 3 bản đồ cũ được vẽ cao hơn hình trong Tiled (kiểu 3/4), nên vùng kiếm chém (theo hình Tiled) hơi thấp hơn phần nhìn thấy. Cần chỉnh bản đồ (`cmd/mapgen`) cho hình Tiled = hình vẽ.
   - Art cần sinh lại: 9 skin kiếm (lưỡi trắng/xám) và 3 nền đất (nhạt) — đã đánh dấu "Sinh lại" trong `docs/ART_JOBS.md`. Bó Kiếm chưa có tên art trong ART_PROMPTS → đang vẽ placeholder.
-  - Q8 (`docs/QUESTIONS.md`): checklist §17 còn số kiếm mất theo bản cũ.
+  - (Q8 đã xong: spec gốc v3.5 đặt `clash_unit` = 1 và sửa checklist §17 cho khớp.)
 
 ## Đã làm
 | Milestone | Nội dung | Trạng thái |
@@ -59,7 +59,7 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
   - `artgen run` giờ gửi **mỗi prompt đúng 1 lần**, tuần tự (`-c 1`), nghỉ 30s giữa prompt (`-gap`); hết quota thì chờ tới `reset_at` rồi gửi lại (lúc đó Gemini chưa vẽ gì).
   - `artgen prep`: sheet nhiều hàng mà cắt theo hàng ra sai (hàng dính nhau, ma bay tách khỏi xác) → tự cắt theo lưới cột × hàng, mỗi mảnh vào ô chứa tâm của nó.
   - **Lỗi đã biết (minigen):** sau khi sửa lỗi `metadata`, minigen dùng **chung 1 cuộc chat Gemini** cho mọi job (`chat_id` giống nhau) → Gemini lặp lại hình của prompt trước (5/11 ảnh sai: 4 ảnh vẽ rương, 1 ảnh chép sheet chết Ông Ba). Đã xóa ảnh sai. Cần minigen mở chat mới cho mỗi job trước khi sinh tiếp.
-- **2026-10-22: theo ART_PROMPTS mới** — style "bựa", mô tả nhân vật + gag riêng từng anim, **1 animation / ảnh** cho nhân vật (lưới đúng cột × hàng), nền **magenta #FF00FF** (artgen tự nhận nền magenta hay trắng và xóa sạch viền hồng). Nhân vật cũ (style "cute") giữ tạm tới khi ảnh mới về. Tổng 174 ảnh game, đã có 20. Câu hỏi Q6 trong `docs/QUESTIONS.md`.
+- **2026-10-22: theo ART_PROMPTS mới** — style "bựa", mô tả nhân vật + gag riêng từng anim, **1 animation / ảnh** cho nhân vật (lưới đúng cột × hàng), nền **magenta #FF00FF** (artgen tự nhận nền magenta hay trắng và xóa sạch viền hồng). Nhân vật cũ (style "cute") giữ tạm tới khi ảnh mới về. Tổng 174 ảnh game, đã có 20. Câu hỏi Q6 đã trả lời (xem `docs/QUESTIONS_DONE.md`).
 - Q6 (2026-10-22): nhân vật 1 anim/ảnh; quái/cổng/rương gộp các anim của cùng 1 đối tượng, mỗi anim 1 hàng; VFX mỗi hiệu ứng 1 ảnh; vật cản `break`/`regrow` tách riêng; ảnh tĩnh gộp thoải mái. Bộ cắt frame giờ tìm từng hình theo vùng pixel liền nhau (sheet lệch lưới vẫn dùng được). Tổng 186 ảnh game.
 - **Danh sách prompt để sinh bằng công cụ khác: `docs/ART_JOBS.md`** (tạo lại: `go run ./cmd/artgen prompts`). Lưu ảnh thành `assets/_raw/<tên job>.png` rồi chạy `go run ./cmd/artgen prep`.
 - Tự động: `bash tools/art_watch.sh` — chờ tài khoản minigen sẵn sàng, mỗi đợt 30 ảnh, nghỉ 2.5 giờ giữa các đợt.
@@ -81,7 +81,7 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 - Cổng 8080 trên máy dev hiện đang bị chương trình khác chiếm → chạy server với `-addr :8090` (khi dùng `npm run dev` thì chạy `KX_SERVER=http://localhost:8090 npm run dev`).
 - Cân bằng (sim 10 phút, 40 bot): lên Trúc Cơ trung bình ~7 phút, nhiều bot chết sớm ở Luyện Khí 1 — nếu thấy chậm, chỉnh `config/game.json` (ví dụ tăng EXP quái, giảm `exp_base`). Chưa đổi gì vì đây là quyết định cân bằng của bạn.
 - Dự đoán chuyển động phía client không mô phỏng đẩy lùi (knockback) → khi bị chém thấy giật nhẹ 1 nhịp.
-- **⚠ Nhịp farm đang lệch spec (22/10/2026)**: `--farm` đo được Luyện Khí → Trúc Cơ **165s**, §6.1 vẫn ghi 30–60s. Do ba thay đổi cộng lại: tốc độ chạy một nửa + EXP gấp đôi mỗi cảnh giới + mật độ giảm 50%. Đại Thừa giờ cần ≈7.7 giờ farm → bảng Thần Tốc sẽ trống. Phương án: **Q12 và Q13 trong `docs/QUESTIONS.md`** — chờ chốt, chưa đổi gì.
+- **⚠ Nhịp farm đang lệch spec (22/10/2026)**: `--farm` đo được Luyện Khí → Trúc Cơ **165s**, §6.1 vẫn ghi 30–60s. Do ba thay đổi cộng lại: tốc độ chạy một nửa + EXP gấp đôi mỗi cảnh giới + mật độ giảm 50%. Đại Thừa giờ cần ≈7.7 giờ farm → bảng Thần Tốc sẽ trống. Phương án: **Q13 trong `docs/QUESTIONS.md`** — chờ chốt, chưa đổi gì.
 - **EXP mỗi cảnh giới gấp đôi cảnh giới trước (22/10/2026)**: `realm_mult` 1.2 → **2.0**. Tổng tới Đại Thừa 10: 28 288 → **694 960**.
 - **Mật độ giảm 50% (22/10/2026)**: `exp_orbs.cell` 160 → **226** (≈160×√2, số viên giảm một nửa), `items.count_per_room` 400 → **200**.
 - **Bot sinh ra tối đa Trúc Cơ (22/10/2026)**: `bots.realm_weights` [60,30,10] → **[60,40]**. Bot vẫn farm lên cao hơn sau khi sinh — đó là bình thường.
