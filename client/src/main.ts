@@ -20,6 +20,7 @@ const DEBUG_KEYS: Record<string, Record<string, unknown>> = {
   KeyR: { cmd: 'realm', n: 0 },
   KeyK: { cmd: 'sword', n: 10 },
   KeyX: { cmd: 'die', n: 0 },
+  KeyB: { cmd: 'bot', n: 0 }, // thả 1 bot cùng cảnh giới ngay cạnh mình
 };
 
 /** fpsCap: 60 on PC, 45 on phones to save battery; override with ?fps=30 (M7). */
@@ -101,7 +102,9 @@ class App {
         window.setTimeout(send, 300);
         return;
       }
-      this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId() });
+      // Mở game bằng ?debug=true để bật bảng phím test cho riêng mình.
+      const wantDebug = new URLSearchParams(location.search).get('debug') === 'true';
+      this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId(), debug: wantDebug });
     };
     send();
   }
@@ -161,6 +164,7 @@ class App {
     }
     this.early = [];
     this.input.enabled = true;
+    this.hud.showGuide(); // hướng dẫn mờ trong lúc còn bất tử (spec §18.1)
     sound.play('respawn');
   }
 

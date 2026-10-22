@@ -268,7 +268,7 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
   - Bị ai chém (tên + nhân vật), câu tấu hài random ("Bạn đã được tiễn về quê nuôi cá").
   - Cảnh giới cao nhất đạt được, tổng EXP đỉnh, số người đã chém, thời gian sống, hạng trong phòng.
   - Nút: **Chơi tiếp** (matchmaking lại ngay, giữ tên + nhân vật), **Bảng xếp hạng**, **Đổi nhân vật**.
-- Khi vào lại: Luyện Khí tầng 1, 1 kiếm, không buff, bất tử 2s, spawn ở chỗ an toàn (không có ai trong 800 đơn vị).
+- Khi vào lại: Luyện Khí tầng 1, 1 kiếm, không buff, **bất tử 5s** (`invuln_on_spawn`), spawn ở chỗ an toàn (không có ai trong 800 đơn vị). 5s đủ để người mới đọc xong bảng hướng dẫn §18.1 rồi mới phải lo chạy.
 - **Bot**: chết thì xử lý theo mục 9.3 (respawn tại chỗ hoặc bị xóa).
 - Kill feed tấu hài trong trận: `"{A} vừa tiễn {B} về quê nuôi cá"`, `"{B} bị {A} chém rớt xuống {realm}"`, `"{A} đột phá {realm}, cả phòng run rẩy"`, `"{A} chui cổng ra liền bị {B} chém, đen thôi đỏ quên đi"`.
 
@@ -591,7 +591,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   },
   "player": {
     "body_r": 30, "move_base": 260, "pickup_r": 90,
-    "invuln_on_hit": 1.0, "invuln_on_spawn": 2.0,
+    "invuln_on_hit": 1.0, "invuln_on_spawn": 5.0,
     "attacker_share": 0.5, "drop_share": 0.3, "kill_bonus_exp": 30,
     "death_sword_drop": 0.5, "orb_owner_secs": 1.5,
     "camera_view_h": 900, "camera_exp": 0.85, "camera_reach_mult": 2.6,
@@ -677,3 +677,16 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
 - [ ] Minimap thấy mình, khung camera, cổng, Top 1, Rương Báu; không thấy người khác; Top 1 vào bụi thì biến khỏi minimap.
 - [ ] Phòng 5 người → 15 bot; thêm người không xóa bot; người thứ 21 sang phòng mới.
 - [ ] Leaderboard ghi đúng 3 bảng sau khi chết, bot không có trong bảng toàn cục.
+
+## 18. Chế độ test (`?debug=true`)
+
+- Mở game bằng `http://<IP>:8080/?debug=true` → **chỉ người đó** thấy bảng phím test và dùng được lệnh debug. Người chơi bình thường không thấy gì.
+- Server phải chạy với `-debug` (mặc định bật). `-debug=false` thì khoá hẳn, kể cả có tham số URL.
+- Phím: `E` +100 EXP · `R` lên cảnh giới · `K` +10 kiếm · `B` thả 1 bot cùng cảnh giới ngay cạnh mình · `1–7` buff · `X` tự chết · `H` xem hitbox kiếm · `M` phóng to minimap.
+- Cơ chế: client gửi `debug: true` trong gói `join`; server chỉ chấp nhận khi `AllowDebug` bật. Lệnh debug bị chặn ở cả hai lớp (`s.debug && c.Debug`).
+
+### 18.1 Bảng hướng dẫn khi vào trận
+
+- Vừa vào trận: hiện **bảng hướng dẫn mờ giữa màn hình ~2.6s** rồi tự tan (hiện nhanh 0.3s, giữ 1.6s, mờ dần 0.7s). Không chặn chuột/chạm nên người chơi cũ cứ việc đi luôn.
+- Nội dung: cách di chuyển (đổi theo PC/điện thoại), lượm viên xanh để lên cảnh giới, kiếm chạm người thì rớt cảnh giới / Luyện Khí thì chết, kiếm chạm kiếm thì mài nhau, Thiêu Đốt Tinh Huyết, và nhắc đang bất tử 5s.
+- Chữ nằm trong `STR.guideLines`, sửa không cần đụng code.

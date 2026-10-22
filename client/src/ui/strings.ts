@@ -19,7 +19,7 @@ export const STR = {
   burnHint: (mult: number) => `Giữ Shift: chạy nhanh ×${mult}, đốt tu vi mỗi giây`,
   burnSpent: 'Tu vi đã thiêu đốt',
   burnEmpty: 'Cạn tinh huyết rồi!',
-  debugHelp: 'Phím test: E +100 EXP · R lên cảnh giới · K +10 kiếm · 1–7 buff · X tự chết · H xem hitbox kiếm',
+  debugHelp: 'Phím test: E +100 EXP · R lên cảnh giới · K +10 kiếm · B thả 1 bot cạnh mình · 1–7 buff · X tự chết · H xem hitbox kiếm',
 
   // HUD
   realmTier: (realm: string, tier: number) => `${realm} tầng ${tier}`,
@@ -142,7 +142,7 @@ export const STR = {
       `${a} vừa lên ${realm} — tuyệt đối điện ảnh`,
     ]),
     // Tin loan toàn server khi hạ một người trong Top 5 của phòng họ (spec §11.4).
-    serverWide: (rank: number, text: string) => `📢 TOÀN CÕI TU CHÂN · hạ Top ${rank}: ${text}`,
+    serverTag: (rank: number) => `📢 TOÀN CÕI TU CHÂN · hạ Top ${rank}: `,
     title_gain: (a: string) => `${a} đã lên ngôi "Bần tăng chưa ngán ai bao giờ"!`,
     title_lose: (a: string) => `${a} bị hạ bệ, bần tăng giờ đã ngán`,
     gate_kill: (a: string, b: string) => pick([
@@ -202,6 +202,17 @@ export const STR = {
 
   rotateHint: 'Xoay ngang điện thoại để nhìn rộng hơn',
   minimapToggle: 'Phím M: phóng to bản đồ',
+
+  // Bảng hướng dẫn mờ hiện 2 giây đầu khi vào trận (spec §18.1).
+  guideTitle: 'Cách chơi',
+  guideLines: (isTouch: boolean): string[] => [
+    isTouch ? '🕹️ Kéo ngón tay để đi — kiếm tự xoay, không có nút đánh' : '🕹️ WASD / phím mũi tên / giữ chuột để đi — kiếm tự xoay, không có nút đánh',
+    '💚 Lượm viên xanh để lên cảnh giới, người to ra, kiếm dài và nhiều thêm',
+    '⚔️ Kiếm chạm người là họ rớt 1 cảnh giới — Luyện Khí bị chạm là chết',
+    '🛡️ Kiếm chạm kiếm thì không ai chém được ai, mài tới khi một bên hết kiếm',
+    isTouch ? '🔥 Giữ nút lửa để chạy nhanh, đổi bằng tu vi' : '🔥 Giữ Shift để chạy nhanh, đổi bằng tu vi',
+    '🛡️ Bạn đang bất tử 5 giây đầu — tranh thủ lượm',
+  ],
 };
 
 export function pick<T>(list: T[]): T {

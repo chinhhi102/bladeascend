@@ -126,6 +126,8 @@ func (r *Room) applyInputs() {
 
 // addHuman spawns the client's player at Luyện Khí 1 with 1 sword (spec §7).
 func (r *Room) addHuman(c *Client, j netproto.Join) {
+	// Bảng phím test chỉ hiện cho người tự mở bằng ?debug=true (và server phải cho phép).
+	c.Debug = c.Debug || (r.mgr != nil && r.mgr.AllowDebug && j.Debug)
 	p := r.G.AddPlayer(game.SpawnOptions{Name: j.Name, Char: j.Char, GuestID: j.GuestID, Swords: r.cfg.Sword.StartCount})
 	c.PlayerID = p.ID
 	c.knownPlayers, c.knownItems = map[uint32]bool{}, map[uint32]bool{}

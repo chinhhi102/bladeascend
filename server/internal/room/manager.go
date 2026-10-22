@@ -22,6 +22,8 @@ type Manager struct {
 	rng      *rand.Rand
 	// Start launches a room's goroutine; cmd/sim replaces it to step rooms manually.
 	Start func(r *Room)
+	// AllowDebug: server chạy với -debug, nên client xin ?debug=true thì được bật.
+	AllowDebug bool
 }
 
 func NewManager(cfg *config.Config, maps []*world.Map, rec Recorder) *Manager {

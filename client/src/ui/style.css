@@ -91,23 +91,29 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .minimap { position: absolute; left: 12px; top: 136px; border-radius: 12px; border: 3px solid rgba(0,0,0,.7); background: rgba(0,0,0,.6); overflow: hidden; pointer-events: auto; cursor: pointer; }
 .minimap.big { left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; border-width: 5px; }
 
-.room-board { position: absolute; right: 12px; top: 12px; background: rgba(0,0,0,.35); border-radius: 10px; padding: 8px 10px; font-size: 13px; min-width: 210px; }
-.board-title { color: var(--gold); margin-bottom: 4px; }
-.lb-line { margin-bottom: 5px; }
+.room-board { position: absolute; right: 12px; top: 12px; background: rgba(0,0,0,.45); border-radius: 12px; padding: 10px 14px; font-size: 17px; min-width: 290px; }
+.board-title { color: var(--gold); margin-bottom: 6px; font-size: 18px; }
+.lb-line { margin-bottom: 7px; }
 .lb-line.me { color: var(--gold); }
-.lb-main { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.lb-main { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
 .lb-who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb-crown { margin-right: 3px; }
-.lb-score { min-width: 44px; text-align: right; color: var(--gold); }
+.lb-crown { margin-right: 4px; }
+.lb-score { min-width: 56px; text-align: right; color: var(--gold); }
 /* Danh hiệu thay cho cảnh giới trong bảng phòng (spec §11.2, §11.3). */
-.lb-title { font-size: 10px; font-weight: 700; font-style: italic; opacity: .78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb-title.t1 { color: #ffd700; opacity: 1; }
-.lb-title.t2 { color: #d8dde3; }
-.lb-title.t3 { color: #cd7f32; }
+.lb-title { font-size: 14px; font-weight: 700; font-style: italic; color: #cfe4ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-title.t1 { color: #ffd700; }
+.lb-title.t2 { color: #e8edf3; }
+.lb-title.t3 { color: #e39a4e; }
+.my-rank { font-size: 15px; }
 .my-rank { margin-top: 4px; color: #cde; }
 /* Kill feed góc dưới trái — to hơn 50% so với bản trước để đọc được khi đang chạy. */
 .feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-size: 21px; max-width: min(60vw, calc(100vw - 140px)); }
 .feed-line { background: rgba(0,0,0,.45); padding: 6px 12px; border-radius: 12px; }
+/* Mỗi vai một màu để đọc lướt: ai làm · làm gì · với ai. */
+.f-actor { color: #ffd700; }
+.f-act { color: #e7eef5; font-weight: 700; }
+.f-target { color: #ff8585; }
+.feed-tag { color: #fff6c9; }
 
 /* Tin loan toàn server: hạ một người trong Top 5 → dải giữa-trên màn hình (spec §11.4). */
 .server-feed { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(70vw, 900px); }
@@ -124,6 +130,18 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 /* top centre: the bottom row belongs to the kill feed (left) and ping/mute (right) */
 .debug-help { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); font-size: 12px; opacity: .8; max-width: calc(100vw - 520px); text-align: center; }
 
+/* Bảng hướng dẫn mờ 2 giây đầu trận (spec §18.1). Không chặn chuột/chạm. */
+.guide { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; background: rgba(8,10,14,.62); border: 3px solid rgba(255,215,0,.65); border-radius: 16px; padding: 18px 26px; max-width: min(86vw, 640px); }
+.guide.fade { animation: guideFade 2.6s ease-out forwards; }
+@keyframes guideFade { 0% { opacity: 0; transform: translate(-50%, -46%); } 12% { opacity: .92; transform: translate(-50%, -50%); } 72% { opacity: .92; } 100% { opacity: 0; } }
+.guide-title { color: var(--gold); font-size: 24px; text-align: center; margin-bottom: 10px; }
+.guide-line { font-size: 17px; line-height: 1.6; color: #eef4fb; }
+@media (max-width: 720px) {
+  .guide { padding: 12px 16px; top: 42%; }
+  .guide-title { font-size: 18px; }
+  .guide-line { font-size: 13px; line-height: 1.5; }
+}
+
 .joy-base { display: none; position: fixed; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.18); border: 3px solid rgba(255,255,255,.5); pointer-events: none; z-index: 10; }
 .joy-knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.7); border: 3px solid rgba(0,0,0,.4); }
 
@@ -131,7 +149,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 @media (max-width: 720px) {
   .char-grid { grid-template-columns: repeat(5, 1fr); }
   .portrait { width: 48px; height: 48px; }
-  .room-board { font-size: 11px; min-width: 130px; padding: 6px; }
+  .room-board { font-size: 13px; min-width: 180px; padding: 7px 9px; }
+  .board-title { font-size: 13px; }
+  .lb-title { font-size: 10px; }
+  .lb-score { min-width: 40px; }
+  .my-rank { font-size: 11px; }
   .status-text { min-width: 120px; }
   .realm { font-size: 14px; }
   .badge { width: 42px; height: 42px; }

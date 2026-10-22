@@ -110,8 +110,9 @@ func playerFlags(g *game.Game, viewer, p *game.Player) uint8 {
 	}
 	set(p.Invulnerable(g.Time), netproto.FlagInvuln)
 	set(p.Bush >= 0, netproto.FlagBush)
-	// Your own stealth always shows (so you can tell the buff is up); others' only when far.
-	set(p == viewer || g.StealthFaded(viewer, p), netproto.FlagStealth)
+	// Your own stealth shows whenever the buff is up (so you can tell); other people's only
+	// once you are far enough that they fade (spec §6.2).
+	set(p == viewer && p.HasBuff(game.BuffStealth, g.Time) || g.StealthFaded(viewer, p), netproto.FlagStealth)
 	set(p.InTransit(g.Time), netproto.FlagTransit)
 	set(p.Dead, netproto.FlagDead)
 	set(p.IsBot, netproto.FlagBot)

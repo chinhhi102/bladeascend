@@ -15,6 +15,45 @@ const FEED_SECS = 6;
 const SERVER_FEED_KEEP = 3;
 const SERVER_FEED_SECS = 9;
 
+/**
+ * colorizeFeed splits a kill-feed sentence into coloured pieces so it can be read at a glance:
+ * who did it (vàng), what happened (trắng), and to whom (đỏ). The sentences come from the joke
+ * pools in strings.ts, so the split is done by finding the two names inside the finished text
+ * rather than by rebuilding every variant.
+ */
+function colorizeFeed(text: string, actor: string, target: string): Node[] {
+  const marks: { at: number; len: number; cls: string }[] = [];
+  const findAll = (name: string, cls: string): void => {
+    if (!name) {
+      return;
+    }
+    for (let i = text.indexOf(name); i >= 0; i = text.indexOf(name, i + name.length)) {
+      marks.push({ at: i, len: name.length, cls });
+    }
+  };
+  // Tên dài tìm trước: tên này có thể nằm lọt trong tên kia.
+  const [first, second] = actor.length >= target.length ? [actor, target] : [target, actor];
+  findAll(first, first === actor ? 'f-actor' : 'f-target');
+  findAll(second, second === actor ? 'f-actor' : 'f-target');
+  marks.sort((a, b) => a.at - b.at);
+  const out: Node[] = [];
+  let i = 0;
+  for (const m of marks) {
+    if (m.at < i) {
+      continue; // chồng lên đoạn đã tô
+    }
+    if (m.at > i) {
+      out.push(h('span', 'f-act', text.slice(i, m.at)));
+    }
+    out.push(h('span', m.cls, text.slice(m.at, m.at + m.len)));
+    i = m.at + m.len;
+  }
+  if (i < text.length) {
+    out.push(h('span', 'f-act', text.slice(i)));
+  }
+  return out;
+}
+
 /** Hud is the in-match DOM overlay: EXP bar, swords, buffs, room top 10, kill feed (spec §6, §11). */
 export class Hud {
   readonly root = h('div', 'hud');
@@ -39,8 +78,11 @@ export class Hud {
   readonly minimap: Minimap;
   /** burnBtn is the touch-only hold button for Thiêu Đốt Tinh Huyết (spec §4.1c). */
   readonly burnBtn = h('button', 'burn-btn', '🔥');
+  private readonly guide = h('div', 'guide');
+  private readonly isTouch: boolean;
 
   constructor(private readonly cfg: GameConfig, isTouch = false) {
+    this.isTouch = isTouch;
     this.minimap = new Minimap(cfg, isTouch);
     this.burnBtn.title = STR.burnName;
     this.burnBtn.style.display = isTouch ? 'flex' : 'none';
@@ -57,11 +99,27 @@ export class Hud {
       this.serverFeed,
       this.banner,
       this.burnBtn,
+      this.guide,
       h('div', 'corner', this.ping, mute),
       this.debugHelp,
       h('div', 'rotate-hint', STR.rotateHint),
     );
     this.debugHelp.style.display = 'none';
+  }
+
+  /**
+   * showGuide fades a short "how to play" card over the first seconds of a match so a new
+   * player learns the rules while they are still invulnerable (spec §18.1).
+   */
+  showGuide(): void {
+    this.guide.replaceChildren(
+      h('div', 'guide-title', STR.guideTitle),
+      ...STR.guideLines(this.isTouch).map((t) => h('div', 'guide-line', t)),
+    );
+    this.guide.classList.remove('fade');
+    // Khởi động lại animation: trình duyệt bỏ qua nếu chỉ gỡ rồi gắn class ngay.
+    void this.guide.offsetWidth;
+    this.guide.classList.add('fade');
   }
 
   setDebug(on: boolean): void {
@@ -189,7 +247,8 @@ export class Hud {
     }
     // Tin loan toàn server đi lên dải giữa-trên màn hình, không lẫn vào feed góc trái.
     if ((f.tp ?? 0) > 0) {
-      const big = h('div', 'server-line', STR.feed.serverWide(f.tp ?? 0, text));
+      const big = h('div', 'server-line');
+      big.append(h('span', 'feed-tag', STR.feed.serverTag(f.tp ?? 0)), ...colorizeFeed(text, f.a, f.b ?? ''));
       this.serverFeed.prepend(big);
       while (this.serverFeed.children.length > SERVER_FEED_KEEP) {
         this.serverFeed.lastElementChild?.remove();
@@ -197,7 +256,7 @@ export class Hud {
       window.setTimeout(() => big.remove(), SERVER_FEED_SECS * 1000);
       return;
     }
-    const line = h('div', 'feed-line', text);
+    const line = h('div', 'feed-line', ...colorizeFeed(text, f.a, f.b ?? ''));
     this.feed.prepend(line);
     while (this.feed.children.length > FEED_KEEP) {
       this.feed.lastElementChild?.remove();

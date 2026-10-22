@@ -25,7 +25,7 @@ func main() {
 	assetsDir := flag.String("assets", config.FindRepoFile("assets"), "assets directory")
 	clientDir := flag.String("client", config.FindRepoFile("client/dist"), "built client directory")
 	dbPath := flag.String("db", "", "SQLite file (default: server/data/leaderboard.db)")
-	debug := flag.Bool("debug", true, "allow debug commands (EXP keys); turn off in production")
+	debug := flag.Bool("debug", true, "cho phép phím test; người chơi vẫn phải tự mở bằng ?debug=true")
 	flag.Parse()
 
 	cfg, raw, err := config.Load(*cfgPath)
@@ -41,6 +41,7 @@ func main() {
 	defer st.Close()
 
 	mgr := room.NewManager(cfg, maps, st)
+	mgr.AllowDebug = *debug // người chơi vẫn phải tự mở bằng ?debug=true mới thấy bảng
 	srv := &server{cfg: cfg, rawCfg: raw, mgr: mgr, store: st, maps: maps, debug: *debug,
 		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words.txt")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP)}
 	mux := srv.routes(*assetsDir, *clientDir)

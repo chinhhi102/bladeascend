@@ -23,8 +23,12 @@ func (r *Room) updateBots(dt float64) {
 	}
 }
 
-func (r *Room) spawnBot() {
+func (r *Room) spawnBot() *game.Player {
 	level, swords := r.randomBotLevel()
+	return r.spawnBotAt(level, swords)
+}
+
+func (r *Room) spawnBotAt(level, swords int) *game.Player {
 	names := r.cfg.Bots.Names
 	p := r.G.AddPlayer(game.SpawnOptions{
 		Name:  names[r.rng.Intn(len(names))],
@@ -32,6 +36,7 @@ func (r *Room) spawnBot() {
 		IsBot: true, Level: level, Swords: swords,
 	})
 	r.brains[p.ID] = bot.New(p.ID, r.rng.Int63(), r.G)
+	return p
 }
 
 // randomBotLevel decides what a new bot spawns as (spec §9.3).

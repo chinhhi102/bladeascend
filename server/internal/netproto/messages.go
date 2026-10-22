@@ -26,6 +26,9 @@ type Join struct {
 	Name    string `msgpack:"name"`
 	Char    string `msgpack:"char"`
 	GuestID string `msgpack:"guest_id"`
+	// Debug: client mở bằng ?debug=true nên muốn bật bảng phím test. Server chỉ chấp nhận
+	// khi chính nó cũng chạy với -debug, và chỉ người tự thêm tham số mới thấy bảng này.
+	Debug bool `msgpack:"debug,omitempty"`
 }
 
 // Input carries the movement direction quantised to 256 steps (angle_u8).

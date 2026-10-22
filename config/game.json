@@ -20,7 +20,7 @@
   },
   "player": {
     "body_r": 30, "move_base": 130, "pickup_r": 90,
-    "invuln_on_hit": 1.0, "invuln_on_spawn": 2.0,
+    "invuln_on_hit": 1.0, "invuln_on_spawn": 5.0,
     "attacker_share": 0.5, "drop_share": 0.3, "kill_bonus_exp": 30,
     "death_sword_drop": 0.5, "orb_owner_secs": 1.5,
     "camera_view_h": 900, "camera_exp": 0.85, "camera_reach_mult": 2.6,

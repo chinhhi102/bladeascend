@@ -585,6 +585,22 @@ func TestStealthAndBushVisibility(t *testing.T) {
 	}
 }
 
+// Không có buff Ẩn Thân thì không ai bị coi là tàng hình — kể cả chính mình (nếu không
+// game sẽ vẽ mờ nhân vật của người chơi suốt trận).
+func TestStealthFadedFalseWithoutBuff(t *testing.T) {
+	g := quietGame(t, nil)
+	me := g.AddPlayer(SpawnOptions{Name: "Me", Swords: 1})
+	other := g.AddPlayer(SpawnOptions{Name: "Other", Swords: 1})
+	place(g, me, Vec{X: 6000, Y: 6000}, 0)
+	place(g, other, Vec{X: 9000, Y: 6000}, 0)
+	if g.StealthFaded(me, me) {
+		t.Fatal("tự nhìn mình mà bị coi là Ẩn Thân")
+	}
+	if g.StealthFaded(me, other) {
+		t.Fatal("người không có buff mà bị coi là Ẩn Thân")
+	}
+}
+
 // Spec §6.2: Ẩn Thân tối đa max_secs, nhặt lại chỉ làm mới chứ không cộng dồn.
 func TestStealthCappedAtMaxSecs(t *testing.T) {
 	g := quietGame(t, nil)
