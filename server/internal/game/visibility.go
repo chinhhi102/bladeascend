@@ -11,9 +11,15 @@ func (g *Game) ViewHalfExtents(p *Player) (float64, float64) {
 }
 
 // InView reports whether pos is inside viewer's area of interest.
-func (g *Game) InView(viewer *Player, pos Vec) bool {
+func (g *Game) InView(viewer *Player, pos Vec) bool { return g.InViewRadius(viewer, pos, 0) }
+
+// InViewRadius is InView for something of the given radius: it counts as visible as soon as
+// any part of it reaches the screen. Players are tested with their whole sword ring, because
+// a ring is far wider than the body — without this a player just off-screen would hit you
+// with blades you never saw, which reads as lag.
+func (g *Game) InViewRadius(viewer *Player, pos Vec, r float64) bool {
 	hw, hh := g.ViewHalfExtents(viewer)
-	return math.Abs(pos.X-viewer.Pos.X) <= hw && math.Abs(pos.Y-viewer.Pos.Y) <= hh
+	return math.Abs(pos.X-viewer.Pos.X) <= hw+r && math.Abs(pos.Y-viewer.Pos.Y) <= hh+r
 }
 
 // CanSee applies bush hiding and gate transit (spec §8.3). Players hidden this way are never
@@ -28,7 +34,8 @@ func (g *Game) CanSee(viewer, target *Player) bool {
 	if viewer == target {
 		return true
 	}
-	if target.Hidden(g.Time) || !g.InView(viewer, target.Pos) {
+	// Tính cả tầm kiếm: vòng kiếm của họ chạm tới màn hình là phải thấy người đó.
+	if target.Hidden(g.Time) || !g.InViewRadius(viewer, target.Pos, target.Geom.Reach) {
 		return false
 	}
 	d := viewer.Pos.Dist(target.Pos)

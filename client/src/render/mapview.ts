@@ -215,6 +215,9 @@ export class MapView {
         this.under.addChild(this.mudNode(z.s, mudTex));
       } else if (z.k === 'wind') {
         this.under.addChild(this.windNode(z.s, z.wd ?? 0));
+      } else if (z.k === 'road') {
+        // Đường lát đá sáng màu (spec §8.1 bước 2): chỉ là nền, không chặn ai.
+        this.under.addChild(drawShape(new Graphics(), z.s).fill({ color: 0x8c8378, alpha: 0.55 }));
       } else if (z.k === 'bush') {
         const node = this.bushNode(z.s);
         this.bushes.push({ id: z.id, node });
