@@ -63,19 +63,19 @@ func labelBand(img *image.NRGBA, band image.Rectangle) ([]int32, []*blob) {
 	return labels, blobs
 }
 
-// groupBlobs attaches fragments to the nearest big blob and returns big groups sorted left→right.
-func groupBlobs(blobs []*blob, want int) []*blob {
+// splitBlobs sorts blobs into frame-sized ones and fragments (sweat, sparks). maxGap is how
+// far a fragment may sit from a frame before it counts as a stray mark (watermark sparkle).
+func splitBlobs(blobs []*blob, want int) (big, small []*blob, maxGap int) {
 	areas := make([]int, 0, len(blobs))
 	for _, b := range blobs {
 		areas = append(areas, b.area)
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(areas)))
 	if len(areas) == 0 {
-		return nil
+		return nil, nil, 0
 	}
 	top := areas[:min(max(want, 1), len(areas))]
 	ref := top[len(top)/2]
-	var big, small []*blob
 	for _, b := range blobs {
 		switch {
 		case float64(b.area) >= smallBlobFrac*float64(ref):
@@ -85,10 +85,15 @@ func groupBlobs(blobs []*blob, want int) []*blob {
 		default:
 		}
 	}
-	maxGap := 0
 	if len(big) > 0 {
-		maxGap = big[0].rect.Dy() / 6 // fragments farther than this are stray marks (watermark sparkle)
+		maxGap = big[0].rect.Dy() / 6
 	}
+	return big, small, maxGap
+}
+
+// groupBlobs attaches fragments to the nearest big blob and returns big groups sorted left→right.
+func groupBlobs(blobs []*blob, want int) []*blob {
+	big, small, maxGap := splitBlobs(blobs, want)
 	for _, s := range small {
 		if near, gap := nearestBlob(big, s.rect); near != nil && gap <= maxGap*maxGap {
 			near.ids = append(near.ids, s.ids...)
@@ -285,4 +290,81 @@ func isolateAll(img *image.NRGBA, band image.Rectangle, labels []int32, clip ima
 		}
 	}
 	return isolate(img, band, labels, ids, clip)
+}
+
+// gridFrames cuts a sheet whose rows all have the same column count by putting each drawn
+// region into the grid cell holding its centre. It is the fallback for sheets where rows
+// touch or a frame is made of separate parts stacked vertically (a ghost above a body),
+// which row gaps and column groups cannot separate. Fragments are placed by their own
+// centre too, so a wisp just under one row is not glued to the frame above it.
+func gridFrames(img *image.NRGBA, cols, rows int) [][]*image.NRGBA {
+	b := img.Bounds()
+	labels, blobs := labelBand(img, b)
+	big, small, maxGap := splitBlobs(blobs, cols*rows)
+	if len(big) == 0 {
+		return nil
+	}
+	g := newGrid(big, cols, rows)
+	for _, bl := range big {
+		g.add(bl)
+	}
+	for _, s := range small {
+		if c := g.cell(s); c != nil && c.near(s, maxGap) {
+			g.add(s)
+		}
+	}
+	out := make([][]*image.NRGBA, rows)
+	for k, c := range g.cells {
+		if c == nil {
+			continue
+		}
+		if f := isolate(img, b, labels, c.ids, c.rect); f != nil {
+			out[k/cols] = append(out[k/cols], f)
+		}
+	}
+	return out
+}
+
+type gridCell struct {
+	blob
+	parts []*blob
+}
+
+func (c *gridCell) near(s *blob, maxGap int) bool {
+	_, gap := nearestBlob(c.parts, s.rect)
+	return gap <= maxGap*maxGap
+}
+
+type sheetGrid struct {
+	ink        image.Rectangle
+	cols, rows int
+	cells      []*gridCell
+}
+
+func newGrid(big []*blob, cols, rows int) *sheetGrid {
+	ink := big[0].rect
+	for _, b := range big[1:] {
+		ink = ink.Union(b.rect)
+	}
+	return &sheetGrid{ink: ink, cols: cols, rows: rows, cells: make([]*gridCell, cols*rows)}
+}
+
+func (g *sheetGrid) index(r image.Rectangle) int {
+	c := r.Min.Add(r.Max).Div(2).Sub(g.ink.Min)
+	cx := min(max(c.X, 0)*g.cols/max(g.ink.Dx(), 1), g.cols-1)
+	cy := min(max(c.Y, 0)*g.rows/max(g.ink.Dy(), 1), g.rows-1)
+	return cy*g.cols + cx
+}
+
+func (g *sheetGrid) cell(b *blob) *gridCell { return g.cells[g.index(b.rect)] }
+
+func (g *sheetGrid) add(b *blob) {
+	k := g.index(b.rect)
+	if g.cells[k] == nil {
+		g.cells[k] = &gridCell{blob: blob{rect: b.rect}}
+	}
+	c := g.cells[k]
+	c.ids = append(c.ids, b.ids...)
+	c.rect = c.rect.Union(b.rect)
+	c.parts = append(c.parts, b)
 }

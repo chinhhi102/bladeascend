@@ -47,3 +47,32 @@ func TestRowLayoutSplitsSharedRows(t *testing.T) {
 		t.Fatalf("layout %+v", l)
 	}
 }
+
+// A 2x2 sheet where each bottom frame is a ghost floating above a body: the grid cut must keep
+// ghost and body together and put the wisp under the top-right frame in the bottom row.
+func TestGridFramesKeepsStackedParts(t *testing.T) {
+	img := image.NewNRGBA(image.Rect(0, 0, 400, 400))
+	fill := func(x0, y0, x1, y1 int) {
+		for y := y0; y < y1; y++ {
+			for x := x0; x < x1; x++ {
+				img.SetNRGBA(x, y, color.NRGBA{A: 255})
+			}
+		}
+	}
+	fill(40, 20, 160, 180)   // top-left body
+	fill(240, 140, 360, 180) // top-right body lying flat
+	fill(60, 220, 140, 290)  // bottom-left ghost
+	fill(40, 310, 160, 380)  // bottom-left body
+	fill(260, 200, 270, 215) // wisp just below the flat body, belongs to bottom-right
+	fill(240, 310, 360, 380) // bottom-right body
+	rows := gridFrames(img, 2, 2)
+	if len(rows) != 2 || len(rows[0]) != 2 || len(rows[1]) != 2 {
+		t.Fatalf("want 2x2 frames, got %v rows", rows)
+	}
+	if h := rows[1][0].Bounds().Dy(); h < 150 {
+		t.Errorf("ghost and body split: bottom-left frame height %d", h)
+	}
+	if h := rows[0][1].Bounds().Dy(); h > 45 {
+		t.Errorf("wisp glued to the frame above: top-right frame height %d", h)
+	}
+}

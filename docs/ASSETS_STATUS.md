@@ -4,20 +4,15 @@ Tạo lại file này: `cd server && go run ./cmd/artgen status`.
 Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.
 Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.
 
-## Còn thiếu (136 ảnh)
+## Còn thiếu (130 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
-| `chest` | p2 | items/chest (idle ×4), items/chest (open ×6) |
 | `char_a_hon_hit` | p2 | characters/a_hon/frames (hit ×4) |
 | `char_a_hon_death` | p2 | characters/a_hon/frames (death ×8) |
 | `char_ba_tam_loa_hit` | p2 | characters/ba_tam_loa/frames (hit ×4) |
 | `char_ba_tam_loa_death` | p2 | characters/ba_tam_loa/frames (death ×8) |
-| `char_ong_ba_vong_hit` | p2 | characters/ong_ba_vong/frames (hit ×4) |
-| `char_ong_ba_vong_death` | p2 | characters/ong_ba_vong/frames (death ×8) |
 | `char_dai_ca_dep_hit` | p2 | characters/dai_ca_dep/frames (hit ×4) |
-| `char_dai_ca_dep_death` | p2 | characters/dai_ca_dep/frames (death ×8) |
-| `char_map_tra_sua_hit` | p2 | characters/map_tra_sua/frames (hit ×4) |
 | `char_map_tra_sua_death` | p2 | characters/map_tra_sua/frames (death ×8) |
 | `char_co_ba_ganh_hit` | p2 | characters/co_ba_ganh/frames (hit ×4) |
 | `char_co_ba_ganh_death` | p2 | characters/co_ba_ganh/frames (death ×8) |
@@ -33,7 +28,6 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `vfx_sword_shatter` | p2 | vfx/sword_shatter (sword_shatter ×6) |
 | `vfx_death_smoke` | p2 | vfx/death_smoke (death_smoke ×6) |
 | `ui_badges` | p2 | ui (badge ×9), ui (medal ×3) |
-| `ui_speech` | p2 | ui/speech_bubble.png |
 | `ui_home_bg` | p2 | ui/home_bg.png |
 | `char_a_hon_chase` | p3 | characters/a_hon/frames (chase ×8) |
 | `char_a_hon_flee` | p3 | characters/a_hon/frames (flee ×8) |
@@ -145,7 +139,7 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_shipper_ref` | p9 | characters/shipper/ref_sheet.png |
 | `char_cu_rua_ref` | p9 | characters/cu_rua/ref_sheet.png |
 
-## Đã có (60 ảnh)
+## Đã có (66 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
@@ -209,3 +203,9 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `gate_purple` | p1 | gates/purple (idle ×6), gates/purple (warn ×4), gates/purple (burst ×6) |
 | `gate_blue` | p1 | gates/blue (idle ×6), gates/blue (warn ×4), gates/blue (burst ×6) |
 | `gate_orange` | p1 | gates/orange (idle ×6), gates/orange (warn ×4), gates/orange (burst ×6) |
+| `chest` | p2 | items/chest (idle ×4), items/chest (open ×6) |
+| `char_ong_ba_vong_hit` | p2 | characters/ong_ba_vong/frames (hit ×4) |
+| `char_ong_ba_vong_death` | p2 | characters/ong_ba_vong/frames (death ×8) |
+| `char_dai_ca_dep_death` | p2 | characters/dai_ca_dep/frames (death ×8) |
+| `char_map_tra_sua_hit` | p2 | characters/map_tra_sua/frames (hit ×4) |
+| `ui_speech` | p2 | ui/speech_bubble.png |

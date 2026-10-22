@@ -102,6 +102,17 @@
   "gates/purple/warn_01.png",
   "gates/purple/warn_02.png",
   "gates/purple/warn_03.png",
+  "items/chest/idle_00.png",
+  "items/chest/idle_01.png",
+  "items/chest/idle_02.png",
+  "items/chest/idle_03.png",
+  "items/chest/open_00.png",
+  "items/chest/open_01.png",
+  "items/chest/open_02.png",
+  "items/chest/open_03.png",
+  "items/chest/open_04.png",
+  "items/chest/open_05.png",
+  "items/chest/open_06.png",
   "items/orb_large.png",
   "items/orb_medium.png",
   "items/orb_small.png",
@@ -155,6 +166,7 @@
   "tiles/dirt.png",
   "tiles/grass.png",
   "tiles/mud.png",
+  "ui/speech_bubble.png",
   "zones/bush.png"
  ]
 }

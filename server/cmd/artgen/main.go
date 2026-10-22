@@ -262,31 +262,55 @@ func run(mg *minigen, jobs []Job, assets string, o runOpts) {
 	log.Printf("done: %d ok, %d failed", okN, failN)
 }
 
-// generate sends the prompt to minigen exactly once and downloads its image. Only a
-// rejected submit (HTTP 429 / quota, so no job was created) is retried. A job that was
-// created is never resubmitted: if it times out its id is kept and the next run resumes it.
+// generate sends the prompt to minigen once and downloads its image. A prompt is sent
+// again only when minigen refused it for quota (nothing was drawn): we then wait until
+// reset_at. A job that timed out keeps its id so the next run resumes it.
 func generate(mg *minigen, st *state, j Job, dest string) error {
+	for waits := 0; ; waits++ {
+		reset, err := generateOnce(mg, st, j, dest)
+		if reset == "" || waits >= 3 {
+			return err
+		}
+		waitQuota(reset)
+	}
+}
+
+// generateOnce returns the quota reset time when the job was refused for quota.
+func generateOnce(mg *minigen, st *state, j Job, dest string) (string, error) {
 	id := st.get(j.Name)
 	if id == "" {
 		out, err := submitOnce(mg, j.Prompt)
 		if err != nil {
-			return err
+			return "", err
 		}
 		id = out.ID
 		st.set(j.Name, id)
 	}
 	out, err := waitJob(mg, id)
 	if err != nil {
-		if out != nil && out.Status == "failed" {
-			st.set(j.Name, "") // a failed job cannot be resumed; rerun with care, it costs quota
+		if out == nil || out.Status != "failed" {
+			return "", err // id kept: resumed next run
 		}
-		return err
+		st.set(j.Name, "")
+		if strings.Contains(strings.ToLower(out.Error), "quota") {
+			return out.ResetAt, err
+		}
+		return "", err
 	}
 	if err := mg.download(out.imageURL(), dest); err != nil {
-		return err // id kept: the next run downloads it again without a new prompt
+		return "", err // id kept: the next run downloads it again without a new prompt
 	}
 	st.set(j.Name, "")
-	return nil
+	return "", nil
+}
+
+func waitQuota(reset string) {
+	d := 10 * time.Minute
+	if t, err := time.Parse(time.RFC3339, reset); err == nil {
+		d = max(time.Until(t)+30*time.Second, time.Minute)
+	}
+	log.Printf("quota locked until %s, waiting %s", reset, d.Round(time.Second))
+	time.Sleep(d)
 }
 
 // submitOnce retries only while the service refuses to accept the job.

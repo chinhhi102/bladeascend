@@ -104,6 +104,10 @@ func prepSheet(img *image.NRGBA, j Job, assets string) error {
 	removeBackground(img)
 	gridRows, gridCols := eraseGridLines(img)
 	rows := sheetRows(img, j.Rows, gridLines{rows: gridRows, cols: gridCols})
+	if cols, ok := uniformRows(j.Rows); ok && rowsLookWrong(rows, j.Rows) {
+		debugf("  rows look wrong → cutting by %dx%d grid", cols, len(j.Rows))
+		rows = gridFrames(img, cols, len(j.Rows))
+	}
 	var frames [][]*image.NRGBA
 	if len(rows) == len(j.Rows) {
 		frames = assignByRow(j, rows)
@@ -132,6 +136,33 @@ func prepSheet(img *image.NRGBA, j Job, assets string) error {
 		}
 	}
 	return nil
+}
+
+// uniformRows reports the column count when every row of the layout has the same count.
+func uniformRows(rows []int) (int, bool) {
+	if len(rows) < 2 {
+		return 0, false
+	}
+	for _, n := range rows[1:] {
+		if n != rows[0] {
+			return 0, false
+		}
+	}
+	return rows[0], true
+}
+
+// rowsLookWrong is true when the row bands do not match the layout or a row split into
+// clearly more frames than asked (parts of one frame cut apart).
+func rowsLookWrong(rows [][]*image.NRGBA, want []int) bool {
+	if len(rows) != len(want) {
+		return true
+	}
+	for i, r := range rows {
+		if len(r) > want[i]+1 {
+			return true
+		}
+	}
+	return false
 }
 
 // assignByRow gives each row's frames to the animations laid out on it; a row owned by one
