@@ -75,3 +75,24 @@ func TestPlayableAreaIsInsideBorder(t *testing.T) {
 		t.Fatalf("vùng chơi [%g, %g] chạm vào tường biên", lo, hi)
 	}
 }
+
+// Spec §8.5: mỗi bản đồ có đúng 5 Đài Tiên Khí — 1 Thiên Tiên Đài ở giữa và 4 đài nhỏ.
+func TestEveryMapHasFiveAltars(t *testing.T) {
+	const size = 12000
+	for name, gen := range map[string]func(*builder){"lang_tre": langTre, "cho_dem": choDem, "nui_da": nuiDa} {
+		b := newBuilder(size, 7)
+		gen(b)
+		small, center := 0, 0
+		for _, o := range b.layers["altars"] {
+			switch o.Type {
+			case "small":
+				small++
+			case "center":
+				center++
+			}
+		}
+		if center != 1 || small != 4 {
+			t.Errorf("%s: %d đài trung tâm + %d đài nhỏ, muốn 1 + 4", name, center, small)
+		}
+	}
+}

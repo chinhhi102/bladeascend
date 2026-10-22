@@ -16,6 +16,8 @@ const ME = '#ffe14d';
 const VIEW = 'rgba(255,255,255,0.65)';
 const CROWN = '#ffd700';
 const CHEST = '#ff9a3c';
+const ALTAR_SMALL = '#9fe8ff';
+const ALTAR_CENTER = '#ffd60a';
 
 function hex(n: number): string {
   return `#${n.toString(16).padStart(6, '0')}`;
@@ -140,6 +142,14 @@ export class Minimap {
     const lb = this.lb;
     if (lb?.t1) {
       this.marker(g, (lb.t1x ?? 0) * k, (lb.t1y ?? 0) * k, px * 0.022, CROWN, '👑');
+    }
+    // Đài Tiên Khí: 5 cái cố định, nhấp nháy khi sắp phun lớn (spec §8.5).
+    for (const a of lb?.al ?? []) {
+      const center = a.k === 'center';
+      if (a.w && Math.floor(now * 4) % 2 === 0) {
+        continue;
+      }
+      this.marker(g, a.x * k, a.y * k, px * (center ? 0.024 : 0.016), center ? ALTAR_CENTER : ALTAR_SMALL, center ? '☯' : '◈');
     }
     if (lb?.ch) {
       // Nhấp nháy cả khi đang báo trước 10s lẫn khi rương đã hiện.

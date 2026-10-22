@@ -2,8 +2,8 @@
   "cultivation": {
     "realms": ["Luyện Khí","Trúc Cơ","Kim Đan","Nguyên Anh","Hóa Thần","Luyện Hư","Hợp Thể","Độ Kiếp","Đại Thừa"],
     "tien_realms": ["Chân Tiên","Kim Tiên","Thái Ất Ngọc Tiên","Đại La Kim Tiên","Đạo Tổ"],
-    "tien_kills_per_step": [10, 20, 30, 40, 50],
-    "tien_bot_kill_value": 0.5, "tien_same_victim_cooldown_secs": 60,
+    "tien_khi_per_step": [100, 200, 300, 400, 500], "tien_khi_to_exp_base": 50,
+    "tien_rob_share": 0.5, "tien_drop_share": 0.3,
     "tien_scale_step": 0.2,
     "tien_aura_colors": ["#E8F1FF", "#FFD60A", "#4CE0B3", "#B15CFF", "yin_yang"],
     "tiers_per_realm": 10,
@@ -17,7 +17,7 @@
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35, "tilt_tween_secs": 0.1,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
     "rev_secs": 1.0, "flip_cooldown": 0.3,
-    "clash_unit": 1, "flip_only_same_realm": true,
+    "clash_unit": 1, "flip_only_same_realm": true, "shield_ring": "second_outermost",
     "clash_knockback": 0, "clash_knockback_secs": 0.2, "drop_bundle_max": 10,
     "durability_per_realm": 1.2, "durability_mode": "compound",
     "tween_secs": 0.2
@@ -93,6 +93,15 @@
     "hit_base": 100, "kill_bonus": 50, "upset_per_realm": 0.5,
     "breakthrough_per_realm": 20, "top1_per_sec": 1,
     "bot_victim_mult": 0.5, "same_victim_cooldown_secs": 60
+  },
+  "altars": {
+    "small": { "count": 4, "every_secs": 5, "orbs": [2, 3], "orb_value": 2, "burst_every_secs": 30, "burst_small": 15, "burst_medium": 2, "medium_value": 10, "warn_secs": 3 },
+    "center": { "every_secs": 150, "orb_value": 150, "warn_secs": 10 },
+    "spray_r": [300, 700], "orb_lifetime_secs": 60, "clear_r": 300
+  },
+  "mapgen": {
+    "center_plaza_r": 900, "sect_r": 700, "sect_inset": 0.15, "road_w": 500, "ring_road_r": 3500,
+    "symmetry": "rot4", "jitter": 150, "min_open_ratio": 0.65, "max_retries": 10
   },
   "room": {
     "max_humans": 20, "bot_fill_target": 20, "map_size": 12000,

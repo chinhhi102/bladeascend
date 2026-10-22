@@ -196,6 +196,17 @@ func (b *builder) gate(x, y float64, network, color string) bool {
 	return true
 }
 
+// altar places a Đài Tiên Khí and keeps a clear_r radius around it free of obstacles
+// (spec §8.5). Kind is "small" or "center".
+func (b *builder) altar(kind string, cx, cy, r, clear float64) bool {
+	if !b.inBounds(rect{cx - r, cy - r, cx + r, cy + r}) {
+		return false
+	}
+	b.keep = append(b.keep, rect{cx - clear, cy - clear, cx + clear, cy + clear})
+	b.add("altars", object{Type: kind, X: cx - r, Y: cy - r, Width: 2 * r, Height: 2 * r, Ellipse: true})
+	return true
+}
+
 func (b *builder) decor(sprite string, n int) {
 	lo, hi := b.playable()
 	for i := 0; i < n; i++ {
@@ -233,6 +244,17 @@ func (b *builder) alley(x, y, length float64, gap float64, vertical bool) {
 	b.wall(x, y+thick+gap, length, thick)
 }
 
+// altars places the five Đài Tiên Khí (spec §8.5): four by the sect yards near the corners
+// and the Thiên Tiên Đài in the middle. Must run BEFORE obstacles so clear_r stays empty.
+func (b *builder) placeAltars(clear float64) {
+	c := b.size / 2
+	b.altar("center", c, c, 220, clear)
+	d := b.size * 0.25
+	for _, p := range [][2]float64{{d, d}, {b.size - d, d}, {d, b.size - d}, {b.size - d, b.size - d}} {
+		b.altar("small", p[0], p[1], 150, clear)
+	}
+}
+
 // validate is the §8.1 check that must pass before a map is written: nothing may stick out
 // of [mapMargin, size-mapMargin]. It reports every offender so a bad generator is obvious.
 func (b *builder) validate() error {
@@ -264,7 +286,7 @@ func (b *builder) write(path, name, biome string) error {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	n := int(b.size / tile)
-	order := []string{"zones", "obstacles", "gates", "decor"}
+	order := []string{"zones", "obstacles", "gates", "altars", "decor"}
 	var layers []layer
 	for i, ln := range order {
 		layers = append(layers, layer{ID: i + 1, Name: ln, Type: "objectgroup", DrawOrder: "topdown", Opacity: 1, Visible: true,
@@ -272,7 +294,7 @@ func (b *builder) write(path, name, biome string) error {
 	}
 	m := tmj{Type: "map", Version: "1.10", TiledVersion: "1.10.2", Orientation: "orthogonal", RenderOrder: "right-down",
 		Width: n, Height: n, TileWidth: tile, TileHeight: tile, NextLayerID: len(order) + 1, NextObjectID: b.nextID,
-		Properties: []prop{{"name", "string", name}, {"biome", "string", biome}}, Layers: layers, Tilesets: []any{}}
+		Properties: []prop{{"name", "string", name}, {"biome", "string", biome}, {"play_margin", "float", mapMargin + borderThick}}, Layers: layers, Tilesets: []any{}}
 	data, err := json.MarshalIndent(m, "", " ")
 	if err != nil {
 		return err
@@ -311,6 +333,7 @@ func main() {
 func langTre(b *builder) {
 	s := b.size
 	b.border() // tường biên không phá được (§8.1)
+	b.placeAltars(300) // 5 Đài Tiên Khí (§8.5), đặt trước vật cản để giữ trống quanh đài
 	b.gate(1500, 1500, "a", "purple")
 	b.gate(s-1500, s-1500, "a", "purple")
 	b.gate(s-1500, 1500, "b", "blue")
@@ -349,6 +372,7 @@ func langTre(b *builder) {
 func choDem(b *builder) {
 	s := b.size
 	b.border() // tường biên không phá được (§8.1)
+	b.placeAltars(300) // 5 Đài Tiên Khí (§8.5), đặt trước vật cản để giữ trống quanh đài
 	b.gate(1200, s/2, "a", "orange")
 	b.gate(s-1200, s/2, "a", "orange")
 	b.gate(s/2, 1200, "b", "purple")
@@ -392,6 +416,7 @@ func choDem(b *builder) {
 func nuiDa(b *builder) {
 	s := b.size
 	b.border() // tường biên không phá được (§8.1)
+	b.placeAltars(300) // 5 Đài Tiên Khí (§8.5), đặt trước vật cản để giữ trống quanh đài
 	net := [][2]float64{{1800, 1800}, {s - 1800, 1800}, {s - 1800, s - 1800}, {1800, s - 1800}}
 	for _, p := range net {
 		b.gate(p[0], p[1], "ring", "orange")

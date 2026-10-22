@@ -89,8 +89,8 @@ type Player struct {
 	ScoredRealms map[int]bool       // realms already rewarded this life
 	Top1Secs     float64            // seconds held as room top 1
 	DaiThuaSecs  float64            // seconds from spawn to Đại Thừa; 0 = never reached
-	// TienKills: sát mạng cộng dồn, thứ duy nhất đưa người chơi lên Tiên giới (spec §3.4).
-	TienKills float64
+	// TienKhi: Tiên khí cộng dồn — thứ duy nhất đưa người chơi lên Tiên giới (spec §3.4 v4).
+	TienKhi float64
 
 	// Title is the room rank badge: 0 = none, 1..3 = Top 1..3 (spec §11.3).
 	Title        int
@@ -153,6 +153,7 @@ type Item struct {
 	Pool       bool   // part of the room's count_per_room item pool, respawns respawn_secs after pickup
 	Owner      uint32 // only this player may pick it up until OwnerUntil
 	OwnerUntil float64
+	ExpireAt   float64 // > 0: viên tự tan vào lúc này (Tiên khí, spec §8.5)
 }
 
 // ObstacleState is the dynamic state of a destructible obstacle (spec §8.2).

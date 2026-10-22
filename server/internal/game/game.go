@@ -31,6 +31,7 @@ type Game struct {
 	Rng  *rand.Rand
 	Time float64
 
+	altars    []altarState
 	Players   map[uint32]*Player
 	Monsters  map[uint32]*Monster
 	Items     map[uint32]*Item
@@ -72,6 +73,7 @@ func New(cfg *config.Config, m *world.Map, seed int64) *Game {
 	g.chestNextAt = cfg.Items.ChestEverySecs
 	g.itemGrid = newItemGrid(m.Size, 500)
 	g.seedOrbs()
+	g.resetAltars()
 	return g
 }
 
@@ -124,7 +126,7 @@ func (g *Game) resetPlayer(p *Player, level, swords int) {
 	p.PeakExp, p.PeakLevel, p.Kills = p.TotalExp, level, 0
 	// A new life starts from zero Uy Danh (spec §11.1).
 	p.Score, p.Hits, p.Top1Secs, p.DaiThuaSecs = 0, 0, 0, 0
-	p.Burning, p.BurnedExp, p.TienKills = false, 0, 0
+	p.Burning, p.BurnedExp, p.TienKhi = false, 0, 0
 	p.ScoreBy, p.HitCooldown, p.ScoredRealms = map[string]float64{}, map[string]float64{}, map[int]bool{}
 	p.Title, p.pendingTitle, p.titleSince = 0, 0, 0
 	p.Ring = Ring{Count: max(g.Cfg.Sword.StartCount, swords), Dir: 1, Angle: g.Rng.Float64() * 2 * math.Pi}
@@ -200,6 +202,8 @@ func (g *Game) Tick(dt float64) {
 	g.resolveSwordWorld()
 	g.resolvePickups()
 	g.maintainSpawns()
+	g.updateAltars()
+	g.expireItems()
 	g.updateMoods()
 	g.updateTop1(dt)
 	g.updateTitles()
