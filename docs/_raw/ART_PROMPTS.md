@@ -184,7 +184,7 @@ Thêm nhân vật mới: giữ công thức **1 nghề/đặc điểm đời th�
 
 ## 6. Quái (PvE)
 
-Mỗi quái: `idle` 4 frame (lắc lư), `hurt` 2 frame, `death` 6 frame (vỡ tung thành viên EXP). Vẽ chừa vùng giữa bụng tròn trống để game in số HP lên.
+Mỗi quái: `idle` 4 frame (lắc lư), `hurt` 2 frame, `death` 6 frame (vỡ tung thành viên EXP). Không cần chừa vùng trống in số HP (game dùng thanh máu nhỏ trên đầu); nếu prompt bên dưới còn cụm `blank ... area` thì bỏ đi.
 
 | Loại | Prompt |
 |---|---|
@@ -317,6 +317,28 @@ STATE: "intact and solid" | "with visible cracks" | "heavily damaged, crumbling,
 | Bụi rậm | `{STYLE} top-down dense leafy bush cluster, round, lush green, 512x512` | Vẽ 2 lớp: thân bụi + lớp lá trên cùng bán trong suốt để thấy mờ mờ người bên trong (chỉ với chính mình) |
 | Bùn lầy | `seamless tileable top-down muddy brown puddle texture with bubbles` | Tile 512, viền bằng mask mềm trong code |
 | Đường gió | `{STYLE} a white cartoon wind gust arrow with swirl lines` | Anim 4 frame chạy dọc làn gió |
+
+### 9.2b Bố cục tu tiên giới (cho thuật toán sinh bản đồ)
+
+Dùng lại art cũ cho vật cản/decor; chỉ cần sinh thêm:
+
+| Asset | Prompt | Kích thước |
+|---|---|---|
+| Đường đá (tile) | `seamless tileable top-down pale stone path made of large flat worn flagstones, muted warm grey, very low contrast, plain` | 512, tileable |
+| Mép đường | `seamless horizontal top-down edge strip where pale stone path meets muted grass, soft irregular border, tileable left-right` | 512×128 |
+| Nền Thiên Tiên Đài | `seamless tileable top-down polished pale jade stone floor with faint carved cloud patterns, very low contrast` | 512, tileable |
+| Cột/tường quanh Thiên Tiên Đài | `{STYLE} top-down 3/4 view short white marble balustrade segment with cloud carvings, tileable left-right` | 1024×256 |
+| Tường sân môn phái | `{STYLE} top-down 3/4 view ancient sect courtyard wall with grey tiles roof, tileable left-right` | 1024×512 |
+| Cổng sân môn phái | `{STYLE} top-down 3/4 view wooden sect gate archway with a blank signboard, red pillars` | 1024×1024 |
+
+### 9.2c Đài Tiên Khí
+
+| Asset | Prompt | Anim |
+|---|---|---|
+| Đài nhỏ | `{STYLE} top-down 3/4 view small round stone altar platform with a glowing golden spring of light in the center, carved taoist symbols, 1024x1024` | `idle` 6 loop (ánh sáng phun nhẹ), `charge` 6 (sáng dần trước đợt lớn), `burst` 6 (phun mạnh) |
+| Thiên Tiên Đài | `{STYLE} top-down view grand circular celestial altar with three tiers, gold and jade, a beam of light rising from the center, clouds around the rim, 2048x2048` | `idle` 6 loop, `charge` 8, `burst` 8 |
+| Viên Tiên khí nhỏ / vừa | `{STYLE} glowing golden celestial energy orb with a tiny cloud swirl inside, sparkly, {128x128 / 192x192}` | `float` 4 loop |
+| Viên Tiên khí khổng lồ | `{STYLE} huge radiant golden celestial energy orb with swirling clouds and light rays, majestic, 512x512` | `float` 6 loop |
 
 ### 9.3 Cổng dịch chuyển
 

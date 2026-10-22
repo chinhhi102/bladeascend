@@ -277,3 +277,29 @@ func TestRingRadiusIndependentOfSwordCount(t *testing.T) {
 		t.Fatalf("Luyện Khí 10 reach %v, spec reference ≈ 200", full.Reach)
 	}
 }
+
+// Spec v4 §6.2: Tốc Kiếm CHỈ nhân vào ω. Nó không được làm tầm chém dài ra —
+// đó là việc của Trường Kiếm.
+func TestSpinBuffDoesNotChangeReach(t *testing.T) {
+	g := quietGame(t, nil)
+	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 20, Swords: 30})
+	before := g.Geom(p).Reach
+	g.ApplyBuff(p, "spin")
+	if after := g.Geom(p).Reach; after != before {
+		t.Fatalf("Tốc Kiếm làm tầm chém đổi %v → %v, phải giữ nguyên", before, after)
+	}
+	// Và phải quay đúng 360° × mult trong 1 giây.
+	want := 2 * math.Pi / g.Cfg.Sword.RevSecs * g.Cfg.Buffs["spin"].Mult
+	if got := g.Omega(p); math.Abs(got-want) > 1e-9 {
+		t.Fatalf("ω khi có Tốc Kiếm = %v, muốn %v", got, want)
+	}
+	// Trường Kiếm thì ngược lại: dài ra nhưng không đổi tốc.
+	w := g.Omega(p)
+	g.ApplyBuff(p, "long")
+	if after := g.Geom(p).Reach; after <= before {
+		t.Fatalf("Trường Kiếm phải làm tầm chém dài ra: %v → %v", before, after)
+	}
+	if got := g.Omega(p); math.Abs(got-w) > 1e-9 {
+		t.Fatalf("Trường Kiếm làm đổi ω %v → %v", w, got)
+	}
+}

@@ -11,7 +11,9 @@ Câu **đang chờ** nằm ở `docs/QUESTIONS.md`.
 | Q9 | `min_count = 0` có làm chết không | Không. Spec §5.2: "0 kiếm **không chết**, chỉ bị tước vũ khí" |
 | Q10 | Phạm vi nhặt vật phẩm | Giữ `pickup_r` = 90. Luật vốn đã đúng: kiếm không nhặt được đồ |
 | Q11 | "Tính exp dư ra làm…" | Spec §3.2: Đại Thừa tầng 10 thì EXP thừa **bị bỏ**, xếp hạng dùng Uy Danh |
-| Q12 | Tốc độ chạy 130 hay 260×sqrt(scale) | Gộp vào Q14 (nằm trong bảng 6 con số lệch) |
+| Q12 | Tốc độ chạy 130 hay 260×sqrt(scale) | Gộp vào Q14 |
+| Q13 | Nhịp farm quá chậm | Chấp nhận nhịp hiện tại; lên cấp chủ yếu nhờ cướp Linh khí. `move_base` → 195, `cell` → 140 |
+| Q14 | `_raw` thiếu 13 mục so với code | Spec v4.0 đã gộp đủ 13 mục; `realm_mult` giữ **2.0** |
 
 ---
 
@@ -47,3 +49,12 @@ nhặt thêm bị bỏ (xếp hạng dùng Uy Danh §11, không dùng EXP)."* Đ
 Anh nhắn "giảm 1/2, chỉ item mới tăng tốc" → code `move_base` = 130, bỏ `sqrt(scale)`.
 Spec dán vào sau đó nhiều lần vẫn ghi 260 × sqrt(scale).
 → **Gộp vào Q14**: nó là 1 trong 6 con số mà `docs/_raw/` còn ghi giá trị cũ. Code vẫn giữ 130.
+
+### Q13. Nhịp độ quá chậm sau 3 thay đổi *(trả lời 2026-10-22, CHANGES_v4)*
+Anh chốt: **chấp nhận nhịp hiện tại** — lên cấp chủ yếu nhờ cướp Linh khí của người khác chứ
+không cần đạt mốc farm, §6.1 đã sửa theo. Kèm hai điều chỉnh: `move_base` 130 → **195** (+50%)
+và `exp_orbs.cell` 226 → **140**; `items.count_per_room` giữ 200.
+
+### Q14. `docs/_raw/GAME_SPEC.md` thiếu 13 mục *(trả lời 2026-10-22, CHANGES_v4)*
+Anh đã gộp đủ 13 mục vào spec v4.0 và dán lại vào `_raw`. `realm_mult` giữ **2.0**
+(mỗi cảnh giới gấp đôi cảnh giới trước). Danh hiệu Top 4–10 giữ bộ chữ đang có trong code.
