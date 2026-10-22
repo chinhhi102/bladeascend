@@ -17,6 +17,14 @@ func (g *Game) GainExp(p *Player, amount float64, boosted bool) {
 func (g *Game) setTotalExp(p *Player, exp float64) {
 	oldL := p.Level
 	p.TotalExp = math.Max(0, exp)
+	// Tiên giới không dùng EXP (spec §3.4): cấp bậc ở đó do sát mạng quyết định, nên EXP
+	// nhặt thêm chỉ cộng vào con số chứ không được kéo người chơi tụt về Đại Thừa.
+	if g.Prog.IsTien(g.Prog.Realm(p.Level)) {
+		if p.TotalExp > p.PeakExp {
+			p.PeakExp = p.TotalExp
+		}
+		return
+	}
 	p.Level = g.Prog.LevelFromExp(p.TotalExp)
 	if p.TotalExp > p.PeakExp {
 		p.PeakExp = p.TotalExp

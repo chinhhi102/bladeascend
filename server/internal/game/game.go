@@ -124,7 +124,7 @@ func (g *Game) resetPlayer(p *Player, level, swords int) {
 	p.PeakExp, p.PeakLevel, p.Kills = p.TotalExp, level, 0
 	// A new life starts from zero Uy Danh (spec §11.1).
 	p.Score, p.Hits, p.Top1Secs, p.DaiThuaSecs = 0, 0, 0, 0
-	p.Burning, p.BurnedExp = false, 0
+	p.Burning, p.BurnedExp, p.TienKills = false, 0, 0
 	p.ScoreBy, p.HitCooldown, p.ScoredRealms = map[string]float64{}, map[string]float64{}, map[int]bool{}
 	p.Title, p.pendingTitle, p.titleSince = 0, 0, 0
 	p.Ring = Ring{Count: max(g.Cfg.Sword.StartCount, swords), Dir: 1, Angle: g.Rng.Float64() * 2 * math.Pi}

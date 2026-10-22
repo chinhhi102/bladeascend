@@ -55,3 +55,34 @@ Nguyên nhân vật cản yếu: damage tính theo **từng thanh kiếm**, nên
 2. HP mới: rào tre 30, sạp hàng 80, tường gạch 250, đá tảng 800 (spec §8.2, có bảng thời gian phá theo cảnh giới).
 3. Config: `obstacles.hp`, thêm `dmg_cooldown_secs: 0.5`, `dmg_per_extra_ring: 0.5`.
 4. Unit test theo checklist §17 (Luyện Khí phá rào ≈ 7.5s, Đại Thừa phá đá ≈ 4s).
+
+---
+
+## v3.7 — Tiên giới (5 cảnh giới mới sau Đại Thừa)
+Đọc spec §3.4 (mới). Tóm tắt việc cần làm:
+1. Config: thêm `tien_realms`, `tien_kills_per_step`, `tien_bot_kill_value`, `tien_same_victim_cooldown_secs`, `tien_scale_step`, `tien_extra_swords`; mở rộng `max_swords` tới 600.
+2. Server: thêm bộ đếm `tien_kills` (float vì bot = 0.5). Từ Đại Thừa tầng 10 chỉ lên bằng sát mạng (mỗi bước 10/20/30/40/50). 1 sát mạng = chém trúng thân thành công; cùng người trong 60s không tính. Tiên giới không chia tầng.
+3. Bị chém ở Tiên giới: rớt 1 cảnh giới, `tien_kills` về mức khởi điểm của cảnh giới mới; Chân Tiên rớt về Đại Thừa tầng 10 (EXP giữ trần, `tien_kills` = 0).
+4. Scale Tiên giới: 5.2 → 6.0 (+0.2 mỗi cảnh giới). Kiếm tối đa +40 mỗi cảnh giới.
+5. Client: HUD thanh Sát mạng thay thanh EXP; hiệu ứng Thiên Kiếp + kill feed phi thăng; hào quang Đạo Tổ; Đạo Tổ hiện trên minimap cả phòng; bảng phòng xếp Tiên giới trên Đại Thừa.
+6. Uy Danh, bể kiếm, sát thương vật cản dùng nguyên công thức với r tới 13.
+7. Skin kiếm & VFX mới trong ART_PROMPTS §7, §10 (dùng placeholder trước).
+8. Unit test theo checklist §17.
+
+---
+
+## v3.8 — Số kiếm theo vòng + Linh khí / Tiên khí
+Đọc spec §3.1, §3.4, §4.1a, §8.2.
+1. Vòng thứ k (1-index) chứa `10 × k` kiếm. Mỗi cảnh giới mở thêm 1 vòng: cảnh giới r có `r + 1` vòng, `max_swords = 5 × (r+1) × (r+2)` → [10, 30, 60, 100, 150, 210, 280, 360, 450, 550, 660, 780, 910, 1050]. Config: `ring_capacity_step: 10`, bỏ `swords_per_ring` và `tien_extra_swords`.
+2. Lấp vòng trong trước; vòng đầy chia đều `36°/k`, vòng ngoài chưa đầy chia đều `360°/m`. So le: vòng k ≥ 2 lệch nửa khe của chính nó. Bán kính/chiều dài vòng vẫn chỉ phụ thuộc k và scale.
+3. UI: dưới Tiên giới đổi mọi chữ "EXP" thành **Linh khí**; từ Chân Tiên trở lên thanh tiến độ là **Tiên khí** (đầy bằng sát mạng, màu vàng kim). Giữ nguyên thanh, chỉ đổi tên/màu.
+4. Sửa unit test & checklist §17 theo số mới (Luyện Khí 10 kiếm 1 vòng, kiếm thứ 11 mở vòng 2...). Bảng thời gian phá vật cản §8.2 đã tính lại theo số vòng mới.
+
+---
+
+## v3.9 — Hào quang Tiên giới
+Đọc spec §3.4 (mục "Hào quang sau lưng") và ART_PROMPTS §10.
+1. Config: thêm `tien_aura_colors`.
+2. Client: lớp hào quang vẽ sau lưng nhân vật (dưới sprite nhân vật, dưới vòng kiếm, trên mặt đất), tâm ngang ngực, đường kính ≈ 2.2 × chiều cao nhân vật, to theo scale, nhịp thở ±5% chu kỳ 2s. Màu theo cảnh giới Tiên; Đạo Tổ dùng sprite âm dương riêng.
+3. Ẩn Thân/bụi: hào quang ẩn/mờ theo nhân vật. Rớt cảnh giới: đổi màu ngay, về Đại Thừa thì tắt, kèm hiệu ứng vỡ.
+4. Chưa có art: placeholder là hình tròn phát sáng (radial gradient) theo màu config.

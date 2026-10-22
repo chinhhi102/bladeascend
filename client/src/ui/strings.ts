@@ -23,6 +23,10 @@ export const STR = {
 
   // HUD
   realmTier: (realm: string, tier: number) => `${realm} tầng ${tier}`,
+  // Thanh tiến độ đổi tên theo cảnh giới (spec §3.4): phàm = Linh khí, Tiên giới = Tiên khí.
+  linhKhi: 'Linh khí',
+  tienKhi: (have: number, need: number) => `Tiên khí ${Math.floor(have)}/${Math.round(need)}`,
+  tienMax: 'Đỉnh cao Tiên giới',
   swords: (n: number, max: number) => `Kiếm ${n}/${max}`,
   roomTop: 'Top phòng',
   yourRank: (rank: number, total: number) => `Hạng của bạn: ${rank}/${total}`,
@@ -143,6 +147,7 @@ export const STR = {
     ]),
     // Tin loan toàn server khi hạ một người trong Top 5 của phòng họ (spec §11.4).
     serverTag: (rank: number) => `📢 TOÀN CÕI TU CHÂN · hạ Top ${rank}: `,
+    tien_ascend: (a: string, realm: string) => `${a} vượt Thiên Kiếp, phi thăng ${realm}!`,
     title_gain: (a: string) => `${a} đã lên ngôi "Bần tăng chưa ngán ai bao giờ"!`,
     title_lose: (a: string) => `${a} bị hạ bệ, bần tăng giờ đã ngán`,
     gate_kill: (a: string, b: string) => pick([

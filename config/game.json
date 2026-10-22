@@ -1,14 +1,19 @@
 {
   "cultivation": {
     "realms": ["Luyện Khí","Trúc Cơ","Kim Đan","Nguyên Anh","Hóa Thần","Luyện Hư","Hợp Thể","Độ Kiếp","Đại Thừa"],
+    "tien_realms": ["Chân Tiên","Kim Tiên","Thái Ất Ngọc Tiên","Đại La Kim Tiên","Đạo Tổ"],
+    "tien_kills_per_step": [10, 20, 30, 40, 50],
+    "tien_bot_kill_value": 0.5, "tien_same_victim_cooldown_secs": 60,
+    "tien_scale_step": 0.2,
+    "tien_aura_colors": ["#E8F1FF", "#FFD60A", "#4CE0B3", "#B15CFF", "yin_yang"],
     "tiers_per_realm": 10,
     "exp_base": 100, "realm_mult": 2.0, "tier_step": 0.08,
     "scale_min": 1.0, "scale_max": 5.0
   },
   "sword": {
     "start_count": 1, "min_count": 0,
-    "max_swords": [60, 120, 160, 200, 240, 280, 320, 360, 400],
-    "ring_step": 10, "length": 80, "width": 12, "hilt_gap": 6,
+    "max_swords": [10, 30, 60, 100, 150, 210, 280, 360, 450, 550, 660, 780, 910, 1050],
+    "ring_capacity_step": 10, "length": 80, "width": 12, "hilt_gap": 6,
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35, "tilt_tween_secs": 0.1,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
     "rev_secs": 1.0, "flip_cooldown": 0.3,

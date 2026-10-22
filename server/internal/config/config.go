@@ -16,6 +16,15 @@ type Cultivation struct {
 	TierStep      float64  `json:"tier_step"`
 	ScaleMin      float64  `json:"scale_min"`
 	ScaleMax      float64  `json:"scale_max"`
+
+	// Tiên giới (spec §3.4): 5 cảnh giới sau Đại Thừa, không chia tầng, chỉ lên được
+	// bằng sát mạng chứ không dùng EXP.
+	TienRealms          []string  `json:"tien_realms"`
+	TienKillsPerStep    []float64 `json:"tien_kills_per_step"`
+	TienBotKillValue    float64   `json:"tien_bot_kill_value"`
+	TienSameVictimSecs  float64   `json:"tien_same_victim_cooldown_secs"`
+	TienScaleStep       float64   `json:"tien_scale_step"`
+	TienAuraColors      []string  `json:"tien_aura_colors"`
 }
 
 type Sword struct {
@@ -23,7 +32,7 @@ type Sword struct {
 	MinCount           int      `json:"min_count"`
 	MaxSwords          []int    `json:"max_swords"`
 	// RingStep: vòng thứ k chứa RingStep × k kiếm (vòng 1 = 10, vòng 2 = 20… spec §4.1a).
-	RingStep           int      `json:"ring_step"`
+	RingStep           int      `json:"ring_capacity_step"`
 	Length             float64  `json:"length"`
 	Width              float64  `json:"width"`
 	HiltGap            float64  `json:"hilt_gap"`

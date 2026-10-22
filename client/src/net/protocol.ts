@@ -18,6 +18,8 @@ export interface PlayerState {
   ck?: number; // crack
   xp: number;
   ti?: number; // room title badge 1..3 (spec §11.3)
+  th?: number; // Tiên khí đang có (spec §3.4), chỉ gửi cho chính mình
+  tn?: number; // Tiên khí cần cho cảnh giới sau; 0 = đã Đạo Tổ
   nm?: string;
   ch?: string;
 }

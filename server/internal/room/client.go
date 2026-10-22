@@ -90,6 +90,10 @@ func playerState(g *game.Game, viewer, p *game.Player, withName bool) netproto.P
 	if !faded {
 		s.Title = p.Title
 	}
+	if p == viewer {
+		have, need := g.TienProgress(p)
+		s.TienHave, s.TienNeed = float32(have), float32(need)
+	}
 	for b := 0; b < game.BuffCount; b++ {
 		if p.HasBuff(b, g.Time) {
 			s.Buffs |= 1 << b

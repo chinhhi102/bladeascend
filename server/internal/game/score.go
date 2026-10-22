@@ -61,6 +61,8 @@ func (g *Game) awardHit(a, b *Player, victimRealm int, killed bool) {
 	key := victimKey(b)
 	onCooldown := a.HitCooldown[key] > g.Time
 	a.HitCooldown[key] = g.Time + sc.SameVictimCooldown
+	// Sát mạng dùng chung bộ chống cày với Uy Danh (spec §3.4).
+	g.addTienKill(a, b, onCooldown)
 	if onCooldown {
 		return
 	}

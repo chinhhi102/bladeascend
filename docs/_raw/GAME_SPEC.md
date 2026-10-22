@@ -4,11 +4,11 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
-**Thay đổi v3.9:** vòng kiếm chứa theo bậc thang — vòng 1 là 10 kiếm, vòng 2 là 20, vòng k là 10k (§3.1, §4.1a); máu quái vẽ thành thanh nhỏ trên đầu thay vì số to đè lên mặt.
+**Thay đổi v3.9:** hào quang sau lưng cho các cảnh giới Tiên, mỗi cảnh giới một màu (§3.4).
 
-**Thay đổi v3.8:** bảng phòng xếp theo Uy Danh (không theo cảnh giới), cảnh giới chuyển lên đầu nhân vật, danh hiệu mở rộng Top 1–10; hạ người trong Top 5 thì loan toàn server; bot sinh ngang hạng 11 (§9.3, §11.2, §11.3, §11.4).
+**Thay đổi v3.8:** số kiếm theo vòng — vòng k chứa 10k kiếm, mỗi cảnh giới thêm 1 vòng (Luyện Khí 10 → Đạo Tổ 1 050); thanh tiến độ gọi là Linh khí / Tiên khí (§3.1, §3.4, §4.1a, §8.2).
 
-**Thay đổi v3.7:** thêm **Thiêu Đốt Tinh Huyết** — giữ phím để chạy nhanh ×1.8, đổi bằng EXP mỗi giây, không bao giờ làm rớt cảnh giới (§4.1c).
+**Thay đổi v3.7:** thêm 5 cảnh giới Tiên giới (Chân Tiên → Đạo Tổ) lên bằng sát mạng, không dùng EXP (§3.4).
 
 **Thay đổi v3.6:** vật cản cứng hơn — damage tính theo người (0.5s/lần) thay vì theo từng kiếm, HP tăng (§5.3, §8.2).
 
@@ -60,47 +60,92 @@
 scale(L) = 1 + 4 * L / 89          // 1.00 (Luyện Khí 1) → 5.00 (Đại Thừa 10), to ra ở MỖI tầng
 ```
 
-| r | Cảnh giới | Kiếm tối đa | Số vòng kiếm tối đa | Scale tầng 1 → tầng 10 |
+**Mỗi cảnh giới mở thêm 1 vòng kiếm.** Vòng thứ k chứa `10 × k` kiếm (vòng 1: 10, vòng 2: 20, ... vòng 10: 100).
+→ Cảnh giới r (0-index) có `r + 1` vòng, kiếm tối đa `= 5 × (r+1) × (r+2)`.
+
+| r | Cảnh giới | Số vòng | Kiếm tối đa | Scale tầng 1 → tầng 10 |
 |---|---|---|---|---|
-| 0 | Luyện Khí | 60 | 3 | 1.00 → 1.40 |
-| 1 | Trúc Cơ | 120 | 5 | 1.45 → 1.85 |
-| 2 | Kim Đan | 160 | 6 | 1.90 → 2.30 |
-| 3 | Nguyên Anh | 200 | 6 | 2.35 → 2.75 |
-| 4 | Hóa Thần | 240 | 7 | 2.80 → 3.20 |
-| 5 | Luyện Hư | 280 | 7 | 3.25 → 3.65 |
-| 6 | Hợp Thể | 320 | 8 | 3.70 → 4.10 |
-| 7 | Độ Kiếp | 360 | 8 | 4.15 → 4.55 |
-| 8 | Đại Thừa | 400 | 9 | 4.60 → 5.00 |
+| 0 | Luyện Khí | 1 | 10 | 1.00 → 1.40 |
+| 1 | Trúc Cơ | 2 | 30 | 1.45 → 1.85 |
+| 2 | Kim Đan | 3 | 60 | 1.90 → 2.30 |
+| 3 | Nguyên Anh | 4 | 100 | 2.35 → 2.75 |
+| 4 | Hóa Thần | 5 | 150 | 2.80 → 3.20 |
+| 5 | Luyện Hư | 6 | 210 | 3.25 → 3.65 |
+| 6 | Hợp Thể | 7 | 280 | 3.70 → 4.10 |
+| 7 | Độ Kiếp | 8 | 360 | 4.15 → 4.55 |
+| 8 | Đại Thừa | 9 | 450 | 4.60 → 5.00 |
 
-Số vòng suy ra từ sức chứa dồn của §4.1a (10 · 30 · 60 · 100 · 150 · 210 · 280 · 360 · 450), không phải con số tự do.
+Tiên giới tiếp tục quy tắc này (§3.4). Config: `ring_capacity_step = 10`; mảng `max_swords` tính sẵn từ công thức.
 
-Kiếm tối đa lấy từ mảng `max_swords` trong config (từ Nguyên Anh trở đi mặc định +40 mỗi cảnh giới).
-
-### 3.2 EXP
+### 3.2 EXP (hiển thị cho người chơi: **Linh khí**)
 
 ```
-exp_needed(r, s) = round(100 * 2.0^r * (1 + 0.08 * s))
+exp_needed(r, s) = round(100 * 1.2^r * (1 + 0.08 * s))
 ```
-
-**Mỗi cảnh giới tốn gấp đôi cảnh giới trước** (`realm_mult` = 2.0): Luyện Khí 1 360 → Trúc Cơ 2 720 → Kim Đan 5 440…
 
 | Cảnh giới | EXP/tầng (1 → 10) | Tổng cả cảnh giới |
 |---|---|---|
 | Luyện Khí | 100 → 172 | 1 360 |
-| Trúc Cơ | 200 → 344 | 2 720 |
-| Kim Đan | 400 → 688 | 5 440 |
-| Nguyên Anh | 800 → 1 376 | 10 880 |
-| Hóa Thần | 1 600 → 2 752 | 21 760 |
-| Luyện Hư | 3 200 → 5 504 | 43 520 |
-| Hợp Thể | 6 400 → 11 008 | 87 040 |
-| Độ Kiếp | 12 800 → 22 016 | 174 080 |
-| Đại Thừa | 25 600 → 44 032 | 348 160 |
-
-Tổng từ Luyện Khí 1 tới Đại Thừa 10: **694 960 EXP** (trước đây 28 288).
+| Trúc Cơ | 120 → 206 | 1 632 |
+| Kim Đan | 144 → 248 | 1 958 |
+| Nguyên Anh | 173 → 297 | 2 350 |
+| Hóa Thần | 207 → 357 | 2 820 |
+| Luyện Hư | 249 → 428 | 3 384 |
+| Hợp Thể | 299 → 514 | 4 061 |
+| Độ Kiếp | 358 → 616 | 4 873 |
+| Đại Thừa | 430 → 740 | 5 848 |
 
 - Lưu `total_exp` cộng dồn, level suy ra từ bảng ngưỡng tích lũy tính sẵn.
-- Đạt Đại Thừa tầng 10: `total_exp` dừng ở trần, EXP nhặt thêm bị bỏ (xếp hạng dùng Uy Danh §11, không dùng EXP).
+- **Tên hiển thị**: dưới Tiên giới, mọi chữ "EXP" người chơi nhìn thấy đổi thành **Linh khí** (thanh Linh khí, viên Linh khí, "+20 Linh khí"). Trong code vẫn giữ tên `exp`.
+- Đạt Đại Thừa tầng 10: `total_exp` dừng ở trần, EXP nhặt thêm bị bỏ (xếp hạng dùng Uy Danh §11, không dùng EXP). Lên tiếp phải đi **Tiên giới** bằng sát mạng (§3.4).
 - Lên tầng: glow nhỏ. **Đột phá cảnh giới**: anim `breakthrough`, sét, camera rung, đổi skin kiếm theo cảnh giới, nhân vật quanh đó hiện emote kinh ngạc.
+
+### 3.4 Tiên giới — lên cảnh giới bằng sát mạng
+
+Sau Đại Thừa tầng 10 có thêm 5 cảnh giới. **Không dùng EXP**, chỉ lên được bằng **sát mạng**. Tiên giới **không chia tầng**.
+
+| r | Cảnh giới | Sát mạng cần (tính từ cảnh giới trước) | Tổng cộng dồn | Kiếm tối đa | Số vòng | Scale |
+|---|---|---|---|---|---|---|
+| 9 | Chân Tiên | 10 | 10 | 550 | 10 | 5.2 |
+| 10 | Kim Tiên | 20 | 30 | 660 | 11 | 5.4 |
+| 11 | Thái Ất Ngọc Tiên | 30 | 60 | 780 | 12 | 5.6 |
+| 12 | Đại La Kim Tiên | 40 | 100 | 910 | 13 | 5.8 |
+| 13 | Đạo Tổ | 50 | 150 | 1 050 | 14 | 6.0 |
+
+**Sát mạng là gì**
+- 1 sát mạng = 1 lần **chém trúng thân người khác thành công** (làm họ rớt cảnh giới hoặc chết). Vì trong game này chỉ người ở Luyện Khí mới chết được, nếu chỉ đếm "chém chết" thì người ở Tiên giới chỉ có cách đi săn người mới — nên đếm mọi cú chém trúng.
+- Nạn nhân là bot → 0.5 sát mạng.
+- Chém lại cùng 1 người (cùng `guest_id`) trong 60s → không tính (giống chống cày Uy Danh).
+- Chỉ đếm khi mình đang ở Đại Thừa tầng 10 trở lên. Chém người trước đó không được tính trước.
+
+**Bị chém khi đang ở Tiên giới**
+- Rớt 1 cảnh giới như thường (§5.1): Đạo Tổ → Đại La Kim Tiên ... Chân Tiên → Đại Thừa tầng 10.
+- Bộ đếm sát mạng **về mức khởi điểm của cảnh giới mới** (mất phần tiến độ đang tích). Ví dụ đang Kim Tiên với 45 sát mạng (đã có 15/30 tới Thái Ất) bị chém → Chân Tiên, bộ đếm về 10.
+- Kiếm thừa so với max mới rơi ra thành Bó Kiếm như thường.
+
+**Hiển thị & tấu hài**
+- HUD: **giữ nguyên thanh tiến độ**, chỉ đổi tên: dưới Tiên giới gọi là **Linh khí** (đầy bằng EXP), từ Chân Tiên trở lên gọi là **Tiên khí** (đầy bằng sát mạng). Ví dụ: `Kim Tiên — Tiên khí 15/30`. Thanh Tiên khí đổi màu vàng kim để phân biệt.
+- Đột phá Tiên giới: hiệu ứng **Thiên Kiếp** (mây đen, sét đánh 3 lần liên tiếp, màn hình rung), kill feed toàn phòng: `"{A} vượt Thiên Kiếp, phi thăng {realm}!"`.
+- **Hào quang sau lưng** (mọi cảnh giới Tiên, mỗi cảnh giới một màu):
+
+  | Cảnh giới | Màu hào quang | Hiệu ứng thêm |
+  |---|---|---|
+  | Chân Tiên | Trắng bạc `#E8F1FF` | Vài đốm mây nhỏ trôi quanh |
+  | Kim Tiên | Vàng kim `#FFD60A` | Tia sáng tỏa ra |
+  | Thái Ất Ngọc Tiên | Xanh ngọc `#4CE0B3` | Hạt sáng bay lên |
+  | Đại La Kim Tiên | Tím `#B15CFF` | Hai vòng sáng xoay ngược chiều nhau |
+  | Đạo Tổ | Đen trắng âm dương + viền cầu vồng | Vòng âm dương xoay chậm, viền đổi màu liên tục |
+
+  - Vẽ **sau lưng nhân vật** (dưới sprite nhân vật, trên mặt đất), tâm ở ngang ngực, đường kính ≈ 2.2 × chiều cao nhân vật, to theo `scale`. Dưới vòng kiếm.
+  - Nhịp thở: phóng to/thu nhỏ ±5% và sáng/tối nhẹ theo chu kỳ 2s.
+  - Ai cũng thấy. Ẩn Thân → mờ theo nhân vật (20%). Trong bụi → ẩn theo nhân vật.
+  - Rớt cảnh giới → hào quang đổi màu ngay (về Đại Thừa thì tắt), kèm hiệu ứng vỡ vụn.
+  - Màu nằm trong config `tien_aura_colors`.
+- Đạo Tổ hiện trên minimap của cả phòng (giống Top 1) → cả phòng hợp sức săn.
+- Bảng xếp hạng phòng: Tiên giới xếp trên Đại Thừa, cùng cảnh giới thì so sát mạng.
+- Uy Danh (§11.1) dùng nguyên công thức với `r` tới 13 (chém trúng Đạo Tổ = 1 400 × lật kèo). Đột phá Tiên giới vẫn `20 × r`.
+
+**Lưu ý cân bằng**: Đạo Tổ có 14 vòng / 1 050 kiếm, tầm chém ≈ 1 900 đơn vị. Nếu thấy quá lớn, giảm `tien_scale_step` trong config.
 
 ## 4. Kiếm, vòng quay, tầm đánh
 
@@ -110,24 +155,16 @@ Mục tiêu hình ảnh: nhiều vòng kiếm **so le, nghiêng, mỗi vòng m�
 
 **Quy tắc cố định bán kính (BẮT BUỘC)**
 - Bán kính và chiều dài của một vòng **chỉ phụ thuộc vào thứ tự vòng `k` và `scale`**, **KHÔNG phụ thuộc vào số kiếm `n`**. Thêm kiếm vào vòng đang có → chỉ lấp kín khe, vòng **không rộng ra**.
-- Tầm chém chỉ tăng khi (a) mở **vòng mới** (kiếm thứ 21, 41, 61...), (b) nhân vật **lên tầng/cảnh giới** (scale tăng), hoặc (c) có buff Trường Kiếm.
+- Tầm chém chỉ tăng khi (a) mở **vòng mới** (kiếm thứ 11, 31, 61, 101...), (b) nhân vật **lên tầng/cảnh giới** (scale tăng), hoặc (c) có buff Trường Kiếm.
 - Xóa mọi công thức cũ kiểu `ring_radius = max(..., n * spacing / 2π)` (từ spec v1) khỏi code.
 - Chuôi kiếm vòng 1 luôn sát người (`inner_r = (BODY_R + 6) * scale`), không có khoảng trống lớn giữa thân và kiếm.
 
-Ví dụ ở cùng 1 tầng (scale không đổi): 1 kiếm, 5 kiếm, 10 kiếm → cùng 1 vòng, cùng bán kính. Kiếm thứ 11 → xuất hiện vòng 2 xa hơn. 30 kiếm → vẫn 2 vòng, bán kính không đổi. Kiếm thứ 31 mở vòng 3.
+Ví dụ ở cùng 1 tầng (scale không đổi): 1 kiếm, 5 kiếm, 10 kiếm → cùng 1 vòng, cùng bán kính. 11 kiếm → xuất hiện vòng 2 xa hơn. 30 kiếm → vẫn 2 vòng, bán kính không đổi.
 
-**Chia vòng** — vòng càng ra ngoài càng chứa được nhiều kiếm
-
-```
-sức chứa vòng k (đếm từ 1) = ring_step * k        // ring_step = 10
-  → vòng 1: 10 kiếm · vòng 2: 20 · vòng 3: 30 … vòng 10: 100
-cộng dồn để đầy R vòng = ring_step * R(R+1)/2
-  → 10 · 30 · 60 · 100 · 150 · 210 · 280 · 360 · 450 · 550
-```
-
-- Vòng 1 là 10 kiếm đầu, vòng 2 là 20 kiếm tiếp, vòng 3 là 30 kiếm tiếp…
-- Mỗi vòng có đúng `10k` khe chia đều 360° (vòng 1 khe 36°, vòng 2 khe 18°, vòng 3 khe 12°…). Vòng chưa đủ kiếm thì rải đều trên các khe của chính nó (`slot = round(j * cap / m)`).
-- `stagger(k) = k * (khe của vòng k) / R` để các vòng không thẳng hàng.
+**Chia vòng**
+- Vòng thứ `k` (k = 0 là vòng 1) chứa tối đa `10 × (k+1)` kiếm: vòng 1 = 10, vòng 2 = 20, vòng 3 = 30... Kiếm lấp đầy vòng trong trước rồi mới sang vòng ngoài.
+- Số vòng đang hiện = số vòng cần để chứa n kiếm (`R` nhỏ nhất sao cho `5R(R+1) ≥ n`), không vượt quá `r + 1` của cảnh giới.
+- Trong 1 vòng, các kiếm chia đều 360°: vòng đầy có khoảng cách `36° / (k+1)`; vòng ngoài cùng chưa đầy (m kiếm) thì chia đều `360° / m`.
 
 **Hình học từng vòng** (`R` = tổng số vòng hiện có, `base = SWORD_LEN * scale * buff_long`, SWORD_LEN = 80)
 
@@ -135,7 +172,7 @@ cộng dồn để đầy R vòng = ring_step * R(R+1)/2
 inner_r           = (BODY_R + 6) * scale                     // bán kính chuôi vòng 1
 hilt_r(k)         = inner_r + HILT_STEP * k * base           // HILT_STEP = 0.1  → vòng ngoài lùi ra xa hơn
 len(k)            = base * (1 + (RING_GROWTH - HILT_STEP) * k) // RING_GROWTH = 0.2 → mũi vòng sau xa hơn vòng trước 20% chiều dài gốc
-stagger(k)        = k * (18° / R)                            // so le: các vòng chia đều khoảng trống giữa 2 khe
+stagger(k)        = k == 0 ? 0 : 0.5 * 360° / (10 * (k+1))    // so le nửa khe của chính vòng đó → kiếm vòng ngoài không trùng thẳng hàng với vòng 1
 tilt              = TILT_DEG * dir                           // TILT_DEG = 35°, lưỡi ngả về phía sau so với chiều quay
 angle(i, k, t)    = phase + dir * ω * t + slot_angle(i) + stagger(k)
 ω                 = 2π / rev_secs * buff_spin                // rev_secs = 1.0 → 1 vòng/giây; buff_spin = 1.6 khi có Tốc Kiếm
@@ -143,7 +180,7 @@ angle(i, k, t)    = phase + dir * ω * t + slot_angle(i) + stagger(k)
 
 - Mỗi thanh kiếm đặt chuôi tại điểm `(hilt_r(k), angle)` và chĩa ra theo hướng **bán kính xoay thêm `tilt`**, dài `len(k)`.
 - Đổi chiều quay → `tilt` lật theo, tween 0.1s (lưỡi luôn ngả về phía sau, như kéo lê theo vòng xoáy).
-- Tầm chém thực tế: `reach = max_k |tip(k)|` (khoảng cách từ tâm tới mũi kiếm xa nhất, tính hình học vì kiếm nghiêng). Tham khảo tầng 10, full kiếm: Luyện Khí ≈ 200 · Trúc Cơ ≈ 340 · Kim Đan ≈ 500 · Đại Thừa ≈ 2 000 đơn vị.
+- Tầm chém thực tế: `reach = max_k |tip(k)|` (khoảng cách từ tâm tới mũi kiếm xa nhất, tính hình học vì kiếm nghiêng). Tham khảo tầng 10, full kiếm: Luyện Khí ≈ 160 · Trúc Cơ ≈ 245 · Kim Đan ≈ 340 · Nguyên Anh ≈ 450 · Đại Thừa ≈ 1 200 · Đạo Tổ ≈ 1 900 đơn vị.
 - Config `ring_growth_mode: "linear" | "compound"` vẫn giữ để thử.
 
 **Màu từng vòng**
@@ -172,23 +209,6 @@ camera: chiều cao vùng nhìn thấy (đơn vị thế giới) = max(900 * sca
 
 → Camera luôn lùi đủ xa để thấy trọn vòng kiếm của mình. Trên màn hình, nhân vật to lên dần nhưng vẫn nhìn được rộng hơn (bản đồ như "thu nhỏ" lại). Người nhỏ di chuyển trên màn hình nhanh hơn người lớn (≈260 px/s so với ≈150 px/s ở scale 5) → người nhỏ có cơ hội né và lật kèo.
 
-### 4.1c Thiêu Đốt Tinh Huyết (chạy nhanh, đổi bằng tu vi)
-
-Không có vật phẩm nào cho chạy nhanh theo ý muốn, nên người chơi có một cách **chủ động**: đốt chính tu vi của mình.
-
-```
-Giữ Shift (PC) / nút 🔥 (điện thoại) + đang di chuyển
-  → tốc độ × burn.mult (1.8)
-  → mỗi giây mất burn.exp_frac_per_sec (8%) × exp_needed(tầng hiện tại) EXP
-```
-
-- **Chỉ tốn khi thật sự chạy.** Đứng yên giữ phím thì không mất gì.
-- **Cộng dồn với Thần Hành**: 130 × 1.4 × 1.8 ≈ 327 đơn vị/s — đủ để thoát khỏi một vòng kiếm đang đuổi.
-- **Không bao giờ rớt cảnh giới vì đốt** (`burn.keep_realm` = true): đốt chỉ tụt được tới **đáy cảnh giới đang ở**, chạm đáy thì tự tắt và tốc độ về bình thường. Rớt cảnh giới vẫn chỉ đến từ việc bị chém (§5.1). Ở Luyện Khí thì đáy là 0 EXP — đốt cạn cũng **không chết**.
-- Giá tiền tỉ lệ với tầng hiện tại nên công bằng ở mọi cảnh giới: Luyện Khí 1 mất 8 EXP/s, Đại Thừa 10 mất ≈3 500 EXP/s.
-- **Hiển thị**: vòng lửa đỏ + lưỡi lửa liếm quanh chân (cả phòng đều thấy, cờ `FlagBurning`), nên đốt là tự báo cho kẻ săn mình biết. Màn Tổng kết hiện tổng "Tu vi đã thiêu đốt".
-- **Bot** chỉ đốt khi đang ở trạng thái Flee — đúng lúc đáng đánh đổi.
-
 ## 5. Chiến đấu
 
 Thứ tự xử lý mỗi tick server:
@@ -205,9 +225,7 @@ Thứ tự xử lý mỗi tick server:
 
 ### 5.2 Kiếm A chạm kiếm B — bể kiếm
 
-Luôn: VFX tia lửa + SFX "keng". Cooldown mỗi cặp (A, B) 0.3s.
-
-**Không đẩy văng nữa** (`clash_knockback` = 0): hai người **đứng nguyên mà mài nhau**. Vòng kiếm chỉ có tác dụng chặn — còn kiếm thì đối thủ không chém được vào thân — nên trận đánh là cuộc đua xem **ai hết kiếm trước**. Bên hết kiếm trước lãnh trọn §5.1. Đặt `clash_knockback` > 0 để bật lại kiểu đẩy văng cũ.
+Luôn: **hai người bị đẩy văng ra xa nhau** (`clash_knockback` = 150 đơn vị trong 0.2s, để vòng kiếm tách ra, không va liên tục), VFX tia lửa + SFX "keng". Cooldown mỗi cặp (A, B) 0.3s.
 
 **Đổi chiều quay chỉ khi cùng cảnh giới**: `rA == rB` → cả hai vòng đổi chiều (`dir *= -1`). Khác cảnh giới → **không ai đổi chiều**, cả hai giữ nguyên chiều quay.
 
@@ -246,7 +264,7 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 ## 6. EXP rải khắp bản đồ & vật phẩm
 
 ### 6.1 Viên EXP môi trường (nguồn EXP chính)
-- Bản đồ luôn phủ đều viên EXP: mật độ mặc định **1 viên / 226×226 đơn vị** (≈ 2 800 viên trên bản đồ 12 000²). `cell` = 226 ≈ 160 × √2, tức **một nửa mật độ** so với bản trước (số viên tỉ lệ nghịch với `cell²`).
+- Bản đồ luôn phủ đều viên EXP: mật độ mặc định **1 viên / 160×160 đơn vị** (≈ 5 600 viên trên bản đồ 12 000²).
 - Tỉ lệ: nhỏ +5 (80%) · vừa +20 (18%) · lớn +60 (2%).
 - Viên bị nhặt → 5s sau mọc lại ở vị trí ngẫu nhiên **trong cùng ô lưới 1 000×1 000** (khu vực bị vét sạch sẽ tự đầy lại, không dồn về một chỗ).
 - Bán kính hút đồ mặc định: `90 * scale`.
@@ -268,20 +286,19 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 | Ẩn Thân Phù | Tàng hình **80%**: người khác thấy mình và vòng kiếm mờ (độ đậm 20%), không thấy tên, không hiện trên minimap. Ở rất gần (120 × scale của người nhìn) thì hiện rõ 100%. Hết hiệu lực ngay khi kiếm mình chém trúng người | **5s** (tối đa, nhặt lại chỉ làm mới về 5s) | 3 |
 | **Rương Báu** (hiếm) | Người đầu tiên **chạm vào** → nổ ra 8 item ngẫu nhiên văng xung quanh | – | 1 rương mỗi 60s, báo trước toàn phòng 10s |
 
-- Số vật phẩm duy trì: **200/phòng** (giảm 50% so với 400), item bị nhặt → 3s sau mọc lại chỗ khác.
+- Số vật phẩm duy trì: **400/phòng** (gấp hơn 3 lần trước), item bị nhặt → 3s sau mọc lại chỗ khác.
 - Nhặt lại buff đang có → làm mới thời gian (không cộng dồn).
-- **Hiệu ứng nhặt**: vật phẩm và viên EXP **bay hút về phía người nhặt** (0.22s, nhỏ dần và mờ dần) rồi mới biến mất, không biến mất đột ngột. Chỉ là hiệu ứng phía client; server vẫn xoá item ngay khi nhặt.
 - HUD hiển thị icon buff + vòng đếm ngược. Mỗi buff có aura màu riêng (trừ Ẩn Thân).
 - Item spawn cách người chơi ≥ 300 đơn vị.
 
 ## 7. Chết & màn hình chờ
 
-- **Rơi kiếm khi chết** (người và bot): `floor(n * death_sword_drop)` kiếm (mặc định 50%) văng ra quanh xác dưới dạng Bó Kiếm (mỗi bó ≤ 10). Ví dụ chết với 60 kiếm → 3 bó, tổng 30 kiếm.
+- **Rơi kiếm khi chết** (người và bot): `floor(n * death_sword_drop)` kiếm (mặc định 50%) văng ra quanh xác dưới dạng Bó Kiếm (mỗi bó ≤ 10). Ví dụ chết (ở Luyện Khí) với 10 kiếm → 1 bó 5 kiếm.
 - **Người thật**: anim `death` 1s → rời phòng → **Màn hình Tổng kết** hiển thị:
   - Bị ai chém (tên + nhân vật), câu tấu hài random ("Bạn đã được tiễn về quê nuôi cá").
   - Cảnh giới cao nhất đạt được, tổng EXP đỉnh, số người đã chém, thời gian sống, hạng trong phòng.
   - Nút: **Chơi tiếp** (matchmaking lại ngay, giữ tên + nhân vật), **Bảng xếp hạng**, **Đổi nhân vật**.
-- Khi vào lại: Luyện Khí tầng 1, 1 kiếm, không buff, **bất tử 5s** (`invuln_on_spawn`), spawn ở chỗ an toàn (không có ai trong 800 đơn vị). 5s đủ để người mới đọc xong bảng hướng dẫn §18.1 rồi mới phải lo chạy.
+- Khi vào lại: Luyện Khí tầng 1, 1 kiếm, không buff, bất tử 2s, spawn ở chỗ an toàn (không có ai trong 800 đơn vị).
 - **Bot**: chết thì xử lý theo mục 9.3 (respawn tại chỗ hoặc bị xóa).
 - Kill feed tấu hài trong trận: `"{A} vừa tiễn {B} về quê nuôi cá"`, `"{B} bị {A} chém rớt xuống {realm}"`, `"{A} đột phá {realm}, cả phòng run rẩy"`, `"{A} chui cổng ra liền bị {B} chém, đen thôi đỏ quên đi"`.
 
@@ -306,12 +323,13 @@ Thời gian 1 người (đủ kiếm tối đa của cảnh giới) phá vỡ, t
 
 | Cảnh giới (số vòng) | Sức phá/giây | Rào tre | Sạp hàng | Tường gạch | Đá tảng |
 |---|---|---|---|---|---|
-| Luyện Khí (3) | 4 | 7.5s | 20s | 63s | 200s |
-| Trúc Cơ (6) | 14 | 2s | 6s | 18s | 57s |
-| Kim Đan (8) | 27 | 1s | 3s | 9s | 30s |
-| Nguyên Anh (10) | 44 | 0.7s | 1.8s | 5.7s | 18s |
-| Hóa Thần (12) | 65 | 0.5s | 1.2s | 3.8s | 12s |
-| Đại Thừa (20) | 189 | tức thì | 0.4s | 1.3s | 4.2s |
+| Luyện Khí (1) | 2 | 15s | 40s | 125s | 400s |
+| Trúc Cơ (2) | 6 | 5s | 13s | 42s | 133s |
+| Kim Đan (3) | 12 | 2.5s | 6.7s | 21s | 67s |
+| Nguyên Anh (4) | 20 | 1.5s | 4s | 12.5s | 40s |
+| Hóa Thần (5) | 30 | 1s | 2.7s | 8.3s | 27s |
+| Đại Thừa (9) | 90 | 0.3s | 0.9s | 2.8s | 8.9s |
+| Đạo Tổ (14) | 210 | tức thì | 0.4s | 1.2s | 3.8s |
 
 → Người nhỏ gần như không phá nổi tường gạch, đá tảng → dùng làm chỗ nấp thật sự. Người khổng lồ cảnh giới cao thì càn quét được — đúng cảm giác "đại năng".
 
@@ -337,10 +355,10 @@ Thời gian 1 người (đủ kiếm tối đa của cảnh giới) phá vỡ, t
 | Hẻm hẹp | Các lối đi rộng 150 / 250 / 350 giữa vật cản không phá được | Người to (thân rộng) không chui lọt, người nhỏ trốn vào được |
 
 ### 8.4 Cổng dịch chuyển
-- **Cổng luôn đi 2 chiều (A ↔ B)**: mỗi cổng có đúng một cổng đối diện cố định, ra ở cổng nào thì bước vào chính cổng đó là quay về chỗ cũ. Mạng nhiều cổng được ghép cặp theo thứ tự id (0↔1, 2↔3…), **không bắn ngẫu nhiên**.
-- Kích hoạt khi tâm nhân vật đi vào bán kính cổng (150). Anim `teleport_out` 1s → xuất hiện ở cổng đích với anim `teleport_in` 1s.
+- Cổng đi theo cặp (A ↔ B) hoặc mạng 3–4 cổng (vào 1 cổng → ra ngẫu nhiên 1 cổng khác trong mạng).
+- Kích hoạt khi tâm nhân vật đi vào bán kính cổng (150). Anim `teleport_out` 0.4s → xuất hiện ở cổng đích với anim `teleport_in` 0.4s.
 - Cổng đích **lóe sáng 0.5s trước** khi người xuất hiện (cảnh báo nhẹ cho người đứng gần — vẫn dễ bị bất ngờ).
-- **Không bất tử khi vừa ra cổng.** Trong lúc đang dịch chuyển (**2s**, `transit_secs`) không bị chém và không chém được.
+- **Không bất tử khi vừa ra cổng.** Trong lúc đang dịch chuyển (0.8s) không bị chém và không chém được.
 - Cooldown mỗi người: 8s mới dùng cổng tiếp được.
 - Người to cỡ nào cũng dùng được.
 
@@ -368,11 +386,7 @@ on bot death:
   if humans + (bots - 1) >= 20: remove bot
   else: respawn bot sau 3s
 ```
-**Cảnh giới lúc sinh ra** — bot phải lấp chỗ trống *dưới* nhóm dẫn đầu, không được sinh ra đã đủ mạnh để bắt nạt Top 10:
-- Phòng đã có ít nhất `bots.spawn_rank` (mặc định **11**) người → bot sinh **ngang level với người đang đứng hạng 11**.
-- Phòng chưa đủ người để có hạng đó → bot sinh ở **Luyện Khí**, tầng ngẫu nhiên.
-- **Không có trần cảnh giới**: phòng mà hạng 11 đã lên Nguyên Anh thì bot mới cũng sinh ở Nguyên Anh. Hạng 11 tự nó là cái phanh rồi.
-- Số kiếm ngẫu nhiên [1, max của cảnh giới đó]. Bot vẫn tự farm lên cao hơn sau khi sinh — đó là chơi bình thường.
+- Bot spawn với level trọng số: 60% Luyện Khí, 30% Trúc Cơ, 10% Kim Đan; số kiếm ngẫu nhiên [1, max].
 - Bot dùng tên + nhân vật ngẫu nhiên, **không vào leaderboard toàn cục**.
 
 ## 10. Bot AI
@@ -413,9 +427,7 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 
 ### 11.2 Các bảng xếp hạng
 
-- **Trong phòng** (realtime, 1 lần/giây): top 10 theo **điểm Uy Danh**, hòa thì so `total_exp`. **Không xếp theo cảnh giới** — bảng này nói ai đang đánh hay, không phải ai farm lâu.
-  - Mỗi dòng ghi **danh hiệu** của người đó (§11.3) thay cho cảnh giới.
-  - **Cảnh giới + tầng hiện ngay trên đầu nhân vật trong trận** (dưới danh hiệu, trên tên) chứ không nằm trong bảng.
+- **Trong phòng** (realtime, 1 lần/giây): top 10 theo **cảnh giới + tầng hiện tại**, hòa thì so `total_exp` (để biết ai đang mạnh mà né/săn), kèm Uy Danh. Top 1–3 có danh hiệu (§11.3).
 - **Toàn cục**, tab **Hôm nay / Tuần này / Mọi thời đại**, 3 bảng:
   - **Uy Danh** (bảng chính): điểm Uy Danh cao nhất trong 1 mạng.
   - **Sát Thần**: số lần chém trúng người nhiều nhất trong 1 mạng.
@@ -424,32 +436,19 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 - API: `GET /api/leaderboard?period=day|week|all&board=score|hits|speed` → top 50, cache 10s.
 - Điểm do server tính → client không gian lận được. Bot không được ghi.
 
-### 11.3 Danh hiệu Top 10 phòng
+### 11.3 Danh hiệu Top 3 phòng
 
-| Hạng | Danh hiệu | Màu |
-|---|---|---|
-| Top 1 | **Bần tăng chưa ngán ai bao giờ** | Vàng kim + vương miện 👑 |
-| Top 2 | **Ngon thì nhào vô** | Bạc |
-| Top 3 | **Chỗ này nhiều máu nè** | Đồng |
-| Top 4 | Chưa gặp đối thủ xứng tầm | trắng |
-| Top 5 | Đi nhẹ nói khẽ, chém hơi mạnh | trắng |
-| Top 6 | Cũng có số má đấy chứ | trắng |
-| Top 7 | Tạm gọi là biết múa kiếm | trắng |
-| Top 8 | Đang cố gắng từng ngày | trắng |
-| Top 9 | Thấy ai cũng chào trước | trắng |
-| Top 10 | Nấp giỏi nên còn sống | trắng |
+| Hạng | Danh hiệu | Màu | Hiển thị trên đầu |
+|---|---|---|---|
+| Top 1 | **Bần tăng chưa ngán ai bao giờ** | Vàng kim, chữ có viền sáng | Vương miện + danh hiệu |
+| Top 2 | **Ngon thì nhào vô** | Bạc | Danh hiệu |
+| Top 3 | **Chỗ này nhiều máu nè** | Đồng | Danh hiệu |
 
-- Danh hiệu hiện **trên cùng, phía trên cảnh giới và tên** nhân vật trong trận (ai cũng thấy), và dưới tên trong bảng xếp hạng phòng.
+- Danh hiệu hiện **phía trên tên** nhân vật trong trận (ai cũng thấy), và cạnh tên trong bảng xếp hạng phòng.
 - Cập nhật theo bảng phòng (1 lần/giây), có **chống nhấp nháy**: phải giữ hạng mới liên tục 3s mới đổi danh hiệu.
 - Ai vừa giành Top 1 → kill feed: `"{A} đã lên ngôi 'Bần tăng chưa ngán ai bao giờ'!"` + SFX trống. Ai vừa mất Top 1 → `"{B} bị hạ bệ, bần tăng giờ đã ngán"`.
 - Người Ẩn Thân / trong bụi: danh hiệu ẩn theo (không làm lộ vị trí).
 - Danh hiệu nằm trong config (`titles`), sửa chữ không cần đụng code.
-
-### 11.4 Tin loan toàn server
-
-- Chém chết một người đang đứng **Top 5 của phòng họ** → dòng kill feed đó được gửi tới **mọi phòng trên server**, không chỉ phòng xảy ra.
-- Hiển thị khác hẳn feed thường: nền đỏ viền vàng, nhấp nháy 2 nhịp, có tiền tố `📢 TOÀN CÕI TU CHÂN · hạ Top {n}:`.
-- Ngưỡng nằm ở `serverWideTopN` trong `room/broadcast.go` (mặc định 5).
 
 ## 12. Trạng thái nhân vật, animation & tấu hài
 
@@ -587,30 +586,34 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 {
   "cultivation": {
     "realms": ["Luyện Khí","Trúc Cơ","Kim Đan","Nguyên Anh","Hóa Thần","Luyện Hư","Hợp Thể","Độ Kiếp","Đại Thừa"],
+    "tien_realms": ["Chân Tiên","Kim Tiên","Thái Ất Ngọc Tiên","Đại La Kim Tiên","Đạo Tổ"],
+    "tien_kills_per_step": [10, 20, 30, 40, 50],
+    "tien_bot_kill_value": 0.5, "tien_same_victim_cooldown_secs": 60,
+    "tien_scale_step": 0.2,
+    "tien_aura_colors": ["#E8F1FF", "#FFD60A", "#4CE0B3", "#B15CFF", "yin_yang"],
     "tiers_per_realm": 10,
-    "exp_base": 100, "realm_mult": 2.0, "tier_step": 0.08,
+    "exp_base": 100, "realm_mult": 1.2, "tier_step": 0.08,
     "scale_min": 1.0, "scale_max": 5.0
   },
   "sword": {
     "start_count": 1, "min_count": 0,
-    "max_swords": [60, 120, 160, 200, 240, 280, 320, 360, 400],
-    "ring_step": 10, "length": 80, "width": 12, "hilt_gap": 6,
+    "max_swords": [10, 30, 60, 100, 150, 210, 280, 360, 450, 550, 660, 780, 910, 1050],
+    "ring_capacity_step": 10, "length": 80, "width": 12, "hilt_gap": 6,
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
     "rev_secs": 1.0, "flip_cooldown": 0.3,
-    "clash_unit": 1, "flip_only_same_realm": true, "clash_knockback": 0, "drop_bundle_max": 10,
+    "clash_unit": 1, "flip_only_same_realm": true, "clash_knockback": 150, "drop_bundle_max": 10,
     "clash_ratio_base": 1,
     "clash_ratio_per_realm": 1
   },
   "player": {
     "body_r": 30, "move_base": 260, "pickup_r": 90,
-    "invuln_on_hit": 1.0, "invuln_on_spawn": 5.0,
+    "invuln_on_hit": 1.0, "invuln_on_spawn": 2.0,
     "attacker_share": 0.5, "drop_share": 0.3, "kill_bonus_exp": 30,
     "death_sword_drop": 0.5, "orb_owner_secs": 1.5,
     "camera_view_h": 900, "camera_exp": 0.85, "camera_reach_mult": 2.6,
     "hit_drops_realm": true
   },
-  "burn": { "mult": 1.8, "exp_frac_per_sec": 0.08, "keep_realm": true },
   "buffs": {
     "spin":   { "mult": 1.6, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },
@@ -637,7 +640,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "stall_item_drop": 0.3
   },
   "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
-  "gates": { "radius": 150, "transit_secs": 2.0, "exit_warn_secs": 0.5, "cooldown_secs": 8 },
+  "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8 },
   "titles": ["Bần tăng chưa ngán ai bao giờ", "Ngon thì nhào vô", "Chỗ này nhiều máu nè"],
   "title_hold_secs": 3,
   "minimap": { "size_pc": 180, "size_mobile": 120, "show_top1": true, "show_chest": true, "show_others": false },
@@ -660,8 +663,8 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
 
 - [ ] Luyện Khí tầng 1 nhỏ hơn rõ ràng so với Luyện Khí tầng 10; Đại Thừa tầng 10 scale = 5.
 - [ ] Kiếm dài ra và vòng rộng ra theo scale.
-- [ ] Cùng 1 tầng: 1 → 20 kiếm, bán kính vòng không đổi; kiếm thứ 21 mới mở vòng 2 rộng hơn.
-- [ ] Luyện Khí tối đa 60 kiếm = 3 vòng so le, mỗi vòng một màu, cả 3 lớp đều nhìn thấy; lưỡi nghiêng về phía sau và lật khi đổi chiều.
+- [ ] Cùng 1 tầng: 1 → 10 kiếm, bán kính vòng không đổi; kiếm thứ 11 mới mở vòng 2 rộng hơn.
+- [ ] Luyện Khí tối đa 10 kiếm = 1 vòng; Trúc Cơ 30 = 2 vòng (10 + 20); Kim Đan 60 = 3 vòng; các vòng so le, mỗi vòng một màu, đều nhìn thấy; lưỡi nghiêng về phía sau và lật khi đổi chiều.
 - [ ] Mũi kiếm vòng 3 xa tâm hơn vòng 1; hitbox server khớp với hình vẽ (bật chế độ debug vẽ capsule để so).
 - [ ] Kiếm quay đúng 1 vòng / 1 giây (0.625 giây khi có Tốc Kiếm), nhìn rõ từng thanh, không bị hiệu ứng quay ngược.
 - [ ] Nhân vật đi sát mép trên tảng đá được (chỉ bị chặn ở chân đế), đứng sau đá thì bị che.
@@ -671,42 +674,23 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
 - [ ] Luyện Khí (≥4 kiếm) va Nguyên Anh → Luyện Khí mất 4, Nguyên Anh mất 1, không ai đổi chiều.
 - [ ] Luyện Khí còn 3 kiếm va Nguyên Anh → Luyện Khí còn 0, Nguyên Anh chưa mất (nứt 3/4).
 - [ ] Người 0 kiếm vẫn sống; bị chém thân thì rớt cảnh giới (Luyện Khí thì chết).
-- [ ] Bị chém ở Trúc Cơ tầng 2 → Luyện Khí tầng 2; kiếm vượt 60 rơi ra thành bó.
+- [ ] Bị chém ở Trúc Cơ tầng 2 → Luyện Khí tầng 2; kiếm vượt 10 rơi ra thành bó.
 - [ ] Bị chém ở Luyện Khí (tầng bất kỳ) → màn hình Tổng kết, bấm "Chơi tiếp" vào lại được; người chém nhận 50% EXP nạn nhân + 30; xác rơi 50% số kiếm.
 - [ ] Viên EXP từ quái chỉ người chém nhặt được trong 1.5s đầu.
 - [ ] Đi chéo 90° so với gió → tốc độ không đổi.
-- [ ] Giữ Shift khi đang chạy → nhanh ×1.8, EXP tụt dần, có vòng lửa; đứng yên giữ phím thì không mất EXP.
-- [ ] Đốt tới đáy cảnh giới thì tự tắt, không rớt cảnh giới; Luyện Khí đốt cạn về 0 EXP vẫn sống.
 - [ ] Vật cản bị chém vỡ → đi qua được → 30s sau mọc lại, không kẹt người.
 - [ ] Kiếm chém vật cản không bị mất.
-- [ ] Luyện Khí 60 kiếm phá rào tre ≈ 7.5s, không phá nổi đá tảng trong 1 phút; Đại Thừa phá đá tảng ≈ 4s.
+- [ ] Luyện Khí đủ kiếm phá rào tre ≈ 15s; Đại Thừa phá đá tảng ≈ 9s.
 - [ ] Vào cổng → ra ở cổng khác, cổng đích lóe sáng trước, không có bất tử khi ra.
 - [ ] Người scale lớn không chui lọt hẻm 150.
 - [ ] Buff hết hạn đúng giờ, nhặt lại thì làm mới thời gian.
 - [ ] Ẩn Thân: người khác thấy mờ 20%, không tên; tối đa 5s; chém trúng người là hiện ngay.
 - [ ] Trúc Cơ chém trúng Nguyên Anh → +800 Uy Danh; chém lại cùng người trong 60s → +0.
 - [ ] Bảng Thần Tốc chỉ có những mạng đã đạt Đại Thừa.
+- [ ] Đại Thừa tầng 10 nhặt EXP không lên được; chém trúng 10 người (bot tính 0.5, cùng người trong 60s không tính) → Chân Tiên.
+- [ ] Lên Chân Tiên thấy hào quang trắng bạc sau lưng; mỗi cảnh giới Tiên một màu; rớt về Đại Thừa thì tắt hào quang.
+- [ ] Kim Tiên đang 45 sát mạng bị chém → Chân Tiên, bộ đếm về 10; Chân Tiên bị chém → Đại Thừa tầng 10, bộ đếm về 0.
 - [ ] Top 1/2/3 phòng hiện đúng danh hiệu trên đầu và trong bảng; đổi hạng phải giữ 3s mới đổi danh hiệu.
 - [ ] Minimap thấy mình, khung camera, cổng, Top 1, Rương Báu; không thấy người khác; Top 1 vào bụi thì biến khỏi minimap.
 - [ ] Phòng 5 người → 15 bot; thêm người không xóa bot; người thứ 21 sang phòng mới.
 - [ ] Leaderboard ghi đúng 3 bảng sau khi chết, bot không có trong bảng toàn cục.
-
-## 18. Chế độ test (`?debug=true`)
-
-- Mở game bằng `http://<IP>:8080/?debug=true` → **chỉ người đó** thấy bảng phím test và dùng được lệnh debug. Người chơi bình thường không thấy gì.
-- Server phải chạy với `-debug` (mặc định bật). `-debug=false` thì khoá hẳn, kể cả có tham số URL.
-- Phím: `E` +100 EXP · `R` lên cảnh giới · `K` +10 kiếm · `B` thả 1 bot cùng cảnh giới ngay cạnh mình · `1–7` buff · `X` tự chết · `H` xem hitbox kiếm · `M` phóng to minimap.
-- Cơ chế: client gửi `debug: true` trong gói `join`; server chỉ chấp nhận khi `AllowDebug` bật. Lệnh debug bị chặn ở cả hai lớp (`s.debug && c.Debug`).
-
-### 18.1 Bảng điều khiển khi vào trận
-
-- Vừa vào trận: hiện **bảng điều khiển mờ giữa màn hình ~2.6s** rồi tự tan (hiện nhanh 0.3s, giữ 1.6s, mờ dần 0.7s). Không chặn chuột/chạm nên người chơi cũ cứ việc đi luôn.
-- **Chỉ liệt kê nút, không giải thích luật** — luật để người chơi tự khám phá, đọc nhiều lúc vào trận chỉ làm rối.
-  - PC: `W A S D` Di chuyển · `Shift` Chạy nhanh · `M` Bản đồ.
-  - Điện thoại: `Kéo` Di chuyển · `🔥` Chạy nhanh.
-- Chữ nằm trong `STR.guideKeys`, sửa không cần đụng code.
-
-### 12.2 Máu quái
-
-- Quái bị thương mới hiện **thanh máu mảnh phía trên đầu** (rộng 1.5 × bán kính, xanh > 50% → vàng > 25% → đỏ). Đầy máu, chết, hoặc quái chỉ 1 máu thì không vẽ gì.
-- Không viết số máu đè lên thân quái: số to che mất hình, và chỗ nào thiếu art thì chỉ còn trơ một con số giữa màn.

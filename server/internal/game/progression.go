@@ -95,15 +95,66 @@ func (p *Progression) DropRealmExp(exp float64) float64 {
 	return p.Threshold(to) + progress*p.ExpNeeded(to)
 }
 
-// Scale returns scale(L) = min + (max-min) * L / (levels-1).
+// Scale returns scale(L) = min + (max-min) * L / (levels-1); Tiên giới keeps growing by
+// tien_scale_step per realm (spec §3.4: Chân Tiên 5.2 … Đạo Tổ 6.0).
 func (p *Progression) Scale(L int) float64 {
+	if r := p.Realm(L); p.IsTien(r) {
+		return p.cfg.ScaleMax + p.cfg.TienScaleStep*float64(p.TienIndex(r)+1)
+	}
 	last := float64(len(p.needed) - 1)
 	return p.cfg.ScaleMin + (p.cfg.ScaleMax-p.cfg.ScaleMin)*float64(L)/last
 }
 
 func (p *Progression) RealmName(r int) string {
-	if r < 0 || r >= len(p.cfg.Realms) {
+	if r < 0 {
 		return ""
 	}
-	return p.cfg.Realms[r]
+	if r < len(p.cfg.Realms) {
+		return p.cfg.Realms[r]
+	}
+	if i := p.TienIndex(r); i < len(p.cfg.TienRealms) {
+		return p.cfg.TienRealms[i]
+	}
+	return ""
+}
+
+// ---- Tiên giới (spec §3.4) -------------------------------------------------
+//
+// Tiên realms sit above Đại Thừa and have no tiers, so they occupy only the first level of
+// their 10-level block: Chân Tiên = level 90, Kim Tiên = 100 … That keeps Realm(L) = L/10
+// working everywhere; EXP never reaches them because GainExp caps at MaxExp.
+
+// IsTien reports whether realm index r is a Tiên realm.
+func (p *Progression) IsTien(r int) bool { return r >= len(p.cfg.Realms) }
+
+// TienIndex is the 0-based position inside tien_realms.
+func (p *Progression) TienIndex(r int) int { return r - len(p.cfg.Realms) }
+
+// TienCount is how many Tiên realms exist.
+func (p *Progression) TienCount() int { return len(p.cfg.TienRealms) }
+
+// TopMortalLevel is Đại Thừa tầng 10 — where sát mạng starts counting.
+func (p *Progression) TopMortalLevel() int { return len(p.needed) - 1 }
+
+// TienLevel is the level index of Tiên realm idx (0-based).
+func (p *Progression) TienLevel(idx int) int {
+	return (len(p.cfg.Realms) + idx) * p.cfg.TiersPerRealm
+}
+
+// TienEntry is the cumulative sát mạng needed to STAND at Tiên realm idx: 10, 30, 60, 100, 150.
+func (p *Progression) TienEntry(idx int) float64 {
+	sum := 0.0
+	for i := 0; i <= idx && i < len(p.cfg.TienKillsPerStep); i++ {
+		sum += p.cfg.TienKillsPerStep[i]
+	}
+	return sum
+}
+
+// TienNextAt is the cumulative sát mạng that promotes someone standing at Tiên realm idx
+// (idx = -1 means Đại Thừa tầng 10, still mortal). Returns 0 when already at the top.
+func (p *Progression) TienNextAt(idx int) float64 {
+	if idx+1 >= len(p.cfg.TienKillsPerStep) {
+		return 0
+	}
+	return p.TienEntry(idx + 1)
 }

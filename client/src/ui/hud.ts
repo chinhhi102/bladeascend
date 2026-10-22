@@ -1,6 +1,6 @@
 import { sound } from '../audio/sound';
 import type { GameConfig } from '../config';
-import { maxSwords, realmOf, tierOf } from '../config';
+import { maxSwords, realmName, realmOf, tienIndex, tierOf } from '../config';
 import type { FeedMsg, GameEvent, LeaderboardMsg, PlayerState } from '../net/protocol';
 import { BUFFS } from '../net/protocol';
 import { assets } from '../render/assets';
@@ -60,6 +60,8 @@ export class Hud {
   private readonly badge = h('div', 'badge');
   private readonly realm = h('div', 'realm');
   private readonly expFill = h('div', 'exp-fill');
+  private readonly expBar: HTMLElement;
+  private readonly expLabel = h('div', 'exp-label');
   private readonly swords = h('div', 'swords');
   private readonly scoreBox = h('div', 'score');
   private readonly pops = h('div', 'score-pops');
@@ -83,6 +85,7 @@ export class Hud {
 
   constructor(private readonly cfg: GameConfig, isTouch = false) {
     this.isTouch = isTouch;
+    this.expBar = h('div', 'exp-bar', this.expFill);
     this.minimap = new Minimap(cfg, isTouch);
     this.burnBtn.title = STR.burnName;
     this.burnBtn.style.display = isTouch ? 'flex' : 'none';
@@ -91,7 +94,7 @@ export class Hud {
     });
     this.root.append(
       this.minimap.root,
-      h('div', 'status', this.badge, h('div', 'status-text', this.realm, h('div', 'exp-bar', this.expFill), this.swords, this.scoreBox)),
+      h('div', 'status', this.badge, h('div', 'status-text', this.realm, this.expBar, this.expLabel, this.swords, this.scoreBox)),
       this.pops,
       this.buffs,
       this.board,
@@ -141,10 +144,20 @@ export class Hud {
       this.lastLevel = me.L;
       this.setBadge(r);
     }
-    const name = this.cfg.cultivation.realms[r] ?? '';
-    this.realm.textContent = STR.realmTier(name, tierOf(this.cfg, me.L));
-    const { from, to } = prog(me.L);
-    const frac = to > from ? Math.min(1, (me.xp - from) / (to - from)) : 1;
+    // Tiên giới: không chia tầng, thanh tiến độ đầy bằng sát mạng (spec §3.4).
+    const tien = tienIndex(this.cfg, r) >= 0;
+    this.realm.textContent = tien ? realmName(this.cfg, r) : STR.realmTier(realmName(this.cfg, r), tierOf(this.cfg, me.L));
+    this.expBar.classList.toggle('tien', tien);
+    let frac: number;
+    if (tien) {
+      const need = me.tn ?? 0;
+      frac = need > 0 ? Math.min(1, (me.th ?? 0) / need) : 1;
+      this.expLabel.textContent = need > 0 ? STR.tienKhi(me.th ?? 0, need) : STR.tienMax;
+    } else {
+      const { from, to } = prog(me.L);
+      frac = to > from ? Math.min(1, (me.xp - from) / (to - from)) : 1;
+      this.expLabel.textContent = STR.linhKhi;
+    }
     this.expFill.style.width = `${(frac * 100).toFixed(1)}%`;
     this.swords.textContent = STR.swords(me.n, maxSwords(this.cfg, r));
   }
@@ -241,6 +254,7 @@ export class Hud {
       : f.k === 'gate_kill' ? STR.feed.gate_kill(f.a, f.b ?? '')
       : f.k === 'title_gain' ? STR.feed.title_gain(f.a)
       : f.k === 'title_lose' ? STR.feed.title_lose(f.a)
+      : f.k === 'tien_ascend' ? STR.feed.tien_ascend(f.a, realmName(this.cfg, f.r))
       : '';
     if (!text) {
       return;

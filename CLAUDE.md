@@ -4,8 +4,10 @@ Game multiplayer .io 2D trên trình duyệt: kiếm bay vòng quanh nhân vật
 Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích ngắn gọn bằng tiếng Việt, đưa lệnh cụ thể để chạy.
 
 ## Tài liệu (đọc trước khi làm)
-- `docs/GAME_SPEC.md` — luật chơi và kiến trúc. Đây là nguồn sự thật.
-- `docs/ART_PROMPTS.md` — quy chuẩn asset (canvas 512, pivot chân y=460, x=256; tên file).
+- `docs/_raw/GAME_SPEC.md` — luật chơi và kiến trúc. **Nguồn sự thật, CHỈ người sở hữu sửa.**
+  Claude không bao giờ ghi vào `docs/_raw/`. Thấy spec mâu thuẫn với code → ghi vào
+  `docs/QUESTIONS.md` và báo, để chủ dự án tự sửa spec.
+- `docs/_raw/ART_PROMPTS.md` — quy chuẩn asset (canvas 512, pivot chân y=460, x=256; tên file).
 - `docs/PROGRESS.md` — tiến độ. Cập nhật cuối mỗi phiên.
 
 ## Stack

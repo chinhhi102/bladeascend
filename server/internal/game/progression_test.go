@@ -106,7 +106,8 @@ func TestScaleRange(t *testing.T) {
 
 func TestMaxSwords(t *testing.T) {
 	p := testProg(t)
-	for r, want := range []int{60, 120, 160, 200, 240, 280, 320, 360, 400} {
+	// Spec §3.1: max_swords[r] = 5(r+1)(r+2) — vừa đủ r+1 vòng theo luật §4.1a.
+	for r, want := range []int{10, 30, 60, 100, 150, 210, 280, 360, 450, 550, 660, 780, 910, 1050} {
 		if got := p.MaxSwords(r); got != want {
 			t.Errorf("MaxSwords(%d) = %d, want %d", r, got, want)
 		}

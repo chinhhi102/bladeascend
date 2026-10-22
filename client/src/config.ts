@@ -16,11 +16,16 @@ export interface GameConfig {
     tier_step: number;
     scale_min: number;
     scale_max: number;
+    // Tiên giới (spec §3.4): 5 cảnh giới trên Đại Thừa, lên bằng sát mạng.
+    tien_realms: string[];
+    tien_kills_per_step: number[];
+    tien_scale_step: number;
+    tien_aura_colors: string[];
   };
   sword: {
     tween_secs: number;
     max_swords: number[];
-    ring_step: number;
+    ring_capacity_step: number;
     length: number;
     width: number;
     hilt_gap: number;
@@ -67,6 +72,25 @@ export function realmOf(cfg: GameConfig, level: number): number {
 
 export function tierOf(cfg: GameConfig, level: number): number {
   return (level % cfg.cultivation.tiers_per_realm) + 1;
+}
+
+/** isTien: cảnh giới r thuộc Tiên giới (spec §3.4). */
+export function isTien(cfg: GameConfig, realm: number): boolean {
+  return realm >= cfg.cultivation.realms.length;
+}
+
+/** tienIndex: vị trí 0-based trong tien_realms, -1 nếu còn phàm. */
+export function tienIndex(cfg: GameConfig, realm: number): number {
+  return isTien(cfg, realm) ? realm - cfg.cultivation.realms.length : -1;
+}
+
+/** realmName gộp cả 9 cảnh giới phàm và 5 cảnh giới Tiên. */
+export function realmName(cfg: GameConfig, realm: number): string {
+  const c = cfg.cultivation;
+  if (realm < c.realms.length) {
+    return c.realms[realm] ?? '';
+  }
+  return c.tien_realms[realm - c.realms.length] ?? '';
 }
 
 /** maxSwords mirrors game.Progression.MaxSwords: max_swords[r], +40 per realm past the array. */

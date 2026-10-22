@@ -96,17 +96,17 @@ func TestBodyHitDropsOneRealmKeepingTier(t *testing.T) {
 func TestRealmDropSpillsExtraSwordsAsBundles(t *testing.T) {
 	g := quietGame(t, nil)
 	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 0, Swords: 1})
-	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 10, Swords: 95})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 10, Swords: 25}) // Trúc Cơ: tối đa 30
 	place(g, a, Vec{X: 5000, Y: 5000}, 0)
 	place(g, b, bladeMid(a), math.Pi/16)
 	a.InvulnUntil = 1e9 // B's larger ring would otherwise hit A first
 	g.resolveSwordBody()
-	if b.Ring.Count != 60 {
-		t.Fatalf("B swords = %d, want 60 (Luyện Khí max)", b.Ring.Count)
+	if b.Ring.Count != 10 {
+		t.Fatalf("B swords = %d, want 10 (Luyện Khí max)", b.Ring.Count)
 	}
 	n, total := countItems(g, "bundle")
-	if n != 4 || total != 35 {
-		t.Fatalf("bundles = %d holding %v swords, want 4 holding 35", n, total)
+	if n != 2 || total != 15 {
+		t.Fatalf("bundles = %d holding %v swords, want 2 holding 15", n, total)
 	}
 }
 
@@ -226,10 +226,11 @@ func TestClashAcrossRealmsDoesNotFlip(t *testing.T) {
 // Spec §6.2: a sword item gives +3, a bundle +15, capped at the realm max; at max → +20 EXP.
 func TestSwordPickupOvercapGivesExp(t *testing.T) {
 	g := quietGame(t, nil)
-	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 60})
+	// Luyện Khí giờ tối đa 10 kiếm (spec §3.1): đã đầy thì nhặt kiếm đổi thành EXP.
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 10})
 	g.pickup(p, g.addItem("sword", 0, p.Pos))
-	if p.Ring.Count != 60 || p.TotalExp != 20 {
-		t.Fatalf("count %d exp %v, want 60 swords and +20 EXP", p.Ring.Count, p.TotalExp)
+	if p.Ring.Count != 10 || p.TotalExp != 20 {
+		t.Fatalf("count %d exp %v, want 10 swords and +20 EXP", p.Ring.Count, p.TotalExp)
 	}
 	q := g.AddPlayer(SpawnOptions{Name: "Q", Swords: 1})
 	g.pickup(q, g.addItem("sword", 0, q.Pos))
@@ -237,13 +238,13 @@ func TestSwordPickupOvercapGivesExp(t *testing.T) {
 		t.Fatalf("count %d, want 4", q.Ring.Count)
 	}
 	g.pickup(q, g.addItem("bundle", 0, q.Pos))
-	if q.Ring.Count != 19 {
-		t.Fatalf("count %d after a bundle, want 19", q.Ring.Count)
+	if q.Ring.Count != 10 {
+		t.Fatalf("count %d after a bundle, want 10 (chạm trần Luyện Khí)", q.Ring.Count)
 	}
-	q.Ring.Count = 55
-	g.pickup(q, g.addItem("bundle", 0, q.Pos))
-	if q.Ring.Count != 60 {
-		t.Fatalf("bundle must stop at the realm max: %d", q.Ring.Count)
+	big := g.AddPlayer(SpawnOptions{Name: "Big", Level: 20, Swords: 55}) // Kim Đan: trần 60
+	g.pickup(big, g.addItem("bundle", 0, big.Pos))
+	if big.Ring.Count != 60 {
+		t.Fatalf("bundle must stop at the realm max: %d", big.Ring.Count)
 	}
 }
 

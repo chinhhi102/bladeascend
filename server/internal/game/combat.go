@@ -76,6 +76,10 @@ func (g *Game) applyBodyHit(a, b *Player) {
 	g.setMood(b, MoodHit, g.Cfg.Mood.HitSecs)
 	oldRealm := g.Prog.Realm(b.Level)
 	g.awardHit(a, b, oldRealm, false) // scored on the realm they had before being knocked down
+	if g.Prog.IsTien(oldRealm) {
+		g.dropTienRealm(b) // Tiên giới không dùng EXP nên rớt cảnh giới tính riêng (§3.4)
+		return
+	}
 	after := g.expAfterHit(b)
 	loss := b.TotalExp - after
 	g.setTotalExp(b, after)

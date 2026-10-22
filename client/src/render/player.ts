@@ -1,11 +1,11 @@
 import { AnimatedSprite, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 
-import { type GameConfig, realmOf, tierOf } from '../config';
+import { type GameConfig, realmName, realmOf, tienIndex, tierOf } from '../config';
 import type { PlayerFrame } from '../net/state';
 import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { animShort, initials } from './catalog';
-import { BUFF_COLORS, charColor, REALM_COLORS, TITLE_COLORS } from './palette';
+import { BUFF_COLORS, charColor, hslToHex, REALM_COLORS, TITLE_COLORS } from './palette';
 import { STR } from '../ui/strings';
 import { SwordRing } from './swordring';
 
@@ -36,6 +36,8 @@ export class PlayerSprite {
   readonly root = new Container();
   private readonly swordRing: SwordRing;
   private readonly shadow = new Graphics();
+  /** tienAura is the halo behind Tiên realm characters (spec §3.4). */
+  private readonly tienAura = new Graphics();
   private readonly aura = new Graphics();
   private readonly bodyBox = new Container();
   private body: AnimatedSprite | Container | null = null;
@@ -75,7 +77,8 @@ export class PlayerSprite {
       style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '700', fill: 0xbfe9ff, stroke: { color: 0x000000, width: 4 } },
     });
     this.realmTag.anchor.set(0.5, 1);
-    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.label, this.realmTag, this.title);
+    // Hào quang nằm sau lưng: dưới sprite nhân vật, trên mặt đất (spec §3.4).
+    this.root.addChild(this.shadow, this.tienAura, this.aura, this.bodyBox, this.label, this.realmTag, this.title);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -111,6 +114,7 @@ export class PlayerSprite {
     this.root.zIndex = f.y + r * FEET_BELOW_CENTER; // y-sort by the feet (spec §8.2)
     this.drawShadow(r);
     this.updateBody(s.md, r, Math.cos(s.f) < 0);
+    this.drawTienAura(s.L, r, now);
     this.drawAura(s.bf, r, now);
     if (s.fl & FLAG.burning) {
       this.drawBurn(r, now); // vẽ đè lên aura buff
@@ -131,8 +135,9 @@ export class PlayerSprite {
     if (level !== this.realmLevel) {
       this.realmLevel = level;
       const r = realmOf(this.cfg, level);
-      this.realmTag.text = STR.realmTier(this.cfg.cultivation.realms[r] ?? '', tierOf(this.cfg, level));
-      this.realmTag.style.fill = REALM_COLORS[r] ?? 0xffffff;
+      // Tiên giới không chia tầng nên chỉ ghi tên cảnh giới (spec §3.4).
+      this.realmTag.text = tienIndex(this.cfg, r) >= 0 ? realmName(this.cfg, r) : STR.realmTier(realmName(this.cfg, r), tierOf(this.cfg, level));
+      this.realmTag.style.fill = REALM_COLORS[r] ?? 0xffd700;
     }
     const y = headY - this.label.height - 1 / zoom;
     this.realmTag.position.set(0, y);
@@ -216,6 +221,68 @@ export class PlayerSprite {
       }
     }
     return set.values().next().value ?? null;
+  }
+
+  /**
+   * drawTienAura is the halo behind a Tiên realm character (spec §3.4): one colour per realm,
+   * centred at chest height, ~2.2 × character height across, breathing ±5% over 2s. Đạo Tổ
+   * gets a slowly turning yin-yang with a rainbow rim instead of a flat colour.
+   */
+  private drawTienAura(level: number, r: number, now: number): void {
+    const g = this.tienAura.clear();
+    const idx = tienIndex(this.cfg, realmOf(this.cfg, level));
+    if (idx < 0) {
+      return;
+    }
+    const colors = this.cfg.cultivation.tien_aura_colors;
+    const spec = colors[idx] ?? '#ffffff';
+    const breathe = 1 + 0.05 * Math.sin(now * Math.PI); // chu kỳ 2s
+    const rad = r * CHAR_HEIGHT_PER_R * 1.1 * breathe;
+    const cy = -r * 0.9; // ngang ngực
+    if (spec === 'yin_yang') {
+      // Đạo Tổ: vòng âm dương xoay chậm, viền đổi màu liên tục.
+      const a = now * 0.6;
+      g.circle(0, cy, rad).fill({ color: 0x101010, alpha: 0.5 });
+      g.arc(0, cy, rad, a, a + Math.PI).fill({ color: 0xf2f2f2, alpha: 0.5 });
+      g.circle(Math.cos(a) * rad * 0.5, cy + Math.sin(a) * rad * 0.5, rad * 0.5).fill({ color: 0xf2f2f2, alpha: 0.5 });
+      g.circle(-Math.cos(a) * rad * 0.5, cy - Math.sin(a) * rad * 0.5, rad * 0.5).fill({ color: 0x101010, alpha: 0.5 });
+      const hue = (now * 60) % 360;
+      g.circle(0, cy, rad).stroke({ color: hslToHex(hue, 0.9, 0.6), width: r * 0.14, alpha: 0.95 });
+      return;
+    }
+    const color = Number(`0x${spec.replace('#', '')}`);
+    const glow = 0.18 + 0.05 * Math.sin(now * Math.PI);
+    g.circle(0, cy, rad).fill({ color, alpha: glow });
+    g.circle(0, cy, rad).stroke({ color, width: r * 0.1, alpha: 0.75 });
+    switch (idx) {
+      case 0: // Chân Tiên: vài đốm mây nhỏ trôi quanh
+        for (let i = 0; i < 4; i++) {
+          const a = now * 0.5 + (i / 4) * Math.PI * 2;
+          g.ellipse(Math.cos(a) * rad * 0.8, cy + Math.sin(a) * rad * 0.8, rad * 0.22, rad * 0.11).fill({ color, alpha: 0.5 });
+        }
+        break;
+      case 1: // Kim Tiên: tia sáng tỏa ra
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2 + now * 0.3;
+          g.moveTo(Math.cos(a) * rad * 0.75, cy + Math.sin(a) * rad * 0.75).lineTo(Math.cos(a) * rad * 1.15, cy + Math.sin(a) * rad * 1.15);
+        }
+        g.stroke({ color, width: r * 0.07, alpha: 0.8 });
+        break;
+      case 2: // Thái Ất Ngọc Tiên: hạt sáng bay lên
+        for (let i = 0; i < 7; i++) {
+          const t = (now * 0.35 + i / 7) % 1;
+          const a = i * 2.4;
+          g.circle(Math.cos(a) * rad * 0.7, cy + rad * (0.9 - 1.8 * t), rad * 0.07 * (1 - t)).fill({ color, alpha: 0.85 * (1 - t) });
+        }
+        break;
+      case 3: // Đại La Kim Tiên: hai vòng sáng xoay ngược chiều
+        for (const dir of [1, -1]) {
+          const a = now * 0.8 * dir;
+          g.arc(0, cy, rad * (dir > 0 ? 0.82 : 0.64), a, a + Math.PI * 1.3).stroke({ color, width: r * 0.09, alpha: 0.85 });
+        }
+        break;
+      default:
+    }
   }
 
   /** drawBurn is the blood-red flame ring of Thiêu Đốt Tinh Huyết (spec §4.1c). */

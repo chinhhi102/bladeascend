@@ -47,7 +47,7 @@ function ringsFor(step: number, n: number): number {
 
 export function ringGeom(cfg: GameConfig, scale: number, n: number, longMult: number): RingGeom {
   const c = cfg.sword;
-  const step = Math.max(1, c.ring_step);
+  const step = Math.max(1, c.ring_capacity_step);
   const g: RingGeom = {
     base: c.length * scale * longMult,
     inner: (cfg.player.body_r + c.hilt_gap) * scale,
