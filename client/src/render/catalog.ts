@@ -116,6 +116,8 @@ function mapEntries(): CatalogEntry[] {
   out.push({ group: 'Bản đồ', label: 'wind', files: frames('zones', { name: 'wind', frames: 4, loop: true, short: '' }), job: 'zone_wind' });
   for (const o of OBSTACLE_IDS) {
     out.push({ group: 'Vật cản', label: `${o} states`, files: OBSTACLE_STATES.map((s) => `obstacles/${o}/${s}.png`), job: `obs_${o}_states` });
+    // Đoạn tường/rào dựng dọc cần ảnh riêng — xoay ảnh ngang 90° trông sai bóng đổ (§8.2).
+    out.push({ group: 'Vật cản', label: `${o} states (đoạn dọc)`, files: OBSTACLE_STATES.map((s) => `obstacles/${o}/${s}_vertical.png`), job: `obs_${o}_states_vertical` });
     if (o !== 'stone_wall') {
       for (const a of ['break', 'regrow']) {
         out.push({ group: 'Vật cản', label: `${o} ${a}`, files: frames(`obstacles/${o}/${a}`, { name: a, frames: 6, loop: false, short: '' }), job: `obs_${o}_${a}` });

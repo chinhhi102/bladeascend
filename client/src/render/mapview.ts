@@ -36,29 +36,33 @@ function fitSprite(tex: Texture, s: Shape): Sprite {
 
 const TILE_MIN = 120; // smallest drawn obstacle piece, world units
 const TILE_PER_THICKNESS = 2.4; // a 3/4-view piece is drawn taller than its footprint
-const TILE_OVERLAP = 0.85; // neighbouring pieces overlap a little so long walls look continuous
+// Khoảng cách giữa hai mảnh = ĐÚNG chiều dài mảnh, không nhân hệ số: nhân vào là dãy tường
+// bị hở. Vẽ thừa nửa mảnh ở hai đầu nên hai đoạn kề nhau luôn chạm nhau.
+const VOID_MARGIN = 300; // phải khớp mapMargin của cmd/mapgen
 
 /**
  * tiledObstacle keeps the art's aspect ratio and repeats it along long fences/walls,
  * standing each piece on the hitbox like a 3/4 view, instead of stretching one image.
  */
-function tiledObstacle(tex: Texture, s: Shape): Container {
+function tiledObstacle(tex: Texture, s: Shape, vertical: boolean): Container {
   const b = bounds(s);
-  const horizontal = b.w >= b.h;
-  const long = horizontal ? b.w : b.h;
-  const thick = horizontal ? b.h : b.w;
+  const long = vertical ? b.h : b.w;
+  const thick = vertical ? b.w : b.h;
   const size = Math.min(Math.max(thick * TILE_PER_THICKNESS, TILE_MIN), long / ART_FILL);
-  const n = Math.max(1, Math.round(long / (size * TILE_OVERLAP)));
+  // Số mảnh đủ phủ kín: bước = đúng chiều dài hiển thị của mảnh, làm tròn LÊN.
+  const step = size * ART_FILL;
+  const n = Math.max(1, Math.ceil(long / step));
   const c = new Container();
   for (let i = 0; i < n; i++) {
     const sp = new Sprite(tex);
-    sp.anchor.set(0.5, 0.95);
+    // Mảnh dọc: neo giữa để xếp chồng theo trục Y; mảnh ngang: neo chân như cũ.
+    sp.anchor.set(0.5, vertical ? 0.5 : 0.95);
     sp.width = sp.height = size;
-    const t = (i + 0.5) / n;
-    if (horizontal) {
-      sp.position.set(b.x + b.w * t, b.y + b.h);
+    const t = Math.min(long, (i + 0.5) * step);
+    if (vertical) {
+      sp.position.set(b.x + b.w / 2, b.y + t);
     } else {
-      sp.position.set(b.x + b.w / 2, b.y + b.h * ((i + 1) / n));
+      sp.position.set(b.x + t, b.y + b.h);
     }
     c.addChild(sp);
   }
@@ -157,7 +161,49 @@ export class MapView {
       g.stroke({ color: 0x000000, alpha: 0.06, width: 4 });
       this.ground.addChild(g);
     }
-    this.ground.addChild(new Graphics().rect(0, 0, size, size).stroke({ color: 0x3b2f2f, width: 60, alpha: 0.9 }));
+    this.drawVoid(size);
+  }
+
+  /**
+   * drawVoid fills everything outside the playable area with a dark abyss instead of flat
+   * grey: layered bands that fade to black, plus drifting mist blobs and a few cloud wisps
+   * so the edge reads as "vực sâu" rather than an unfinished tile (spec §8.1).
+   */
+  private drawVoid(size: number): void {
+    const m = VOID_MARGIN;
+    const far = size * 1.5; // vẽ rộng ra ngoài để camera lùi hết cỡ vẫn không thấy mép
+    const g = new Graphics();
+    // Nền vực: phủ kín phần ngoài khung chơi.
+    g.rect(-far, -far, size + 2 * far, far + m)
+      .rect(-far, size - m, size + 2 * far, far + m)
+      .rect(-far, m, far + m, size - 2 * m)
+      .rect(size - m, m, far + m, size - 2 * m)
+      .fill(0x0b0d12);
+    // Dải mờ dần vào trong cho đỡ gắt.
+    for (let i = 0; i < 4; i++) {
+      const t = i / 4;
+      const w = m * (1 - t);
+      g.rect(m - w, m - w, size - 2 * (m - w), size - 2 * (m - w))
+        .stroke({ color: 0x1b2230, width: Math.max(6, m * 0.22), alpha: 0.5 - 0.1 * i });
+    }
+    // Mây / sương lững lờ: đốm elip mờ rải quanh mép, vị trí tất định theo kích thước bản đồ.
+    let seed = 1337;
+    const rnd = (): number => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+    for (let i = 0; i < 90; i++) {
+      const side = i % 4;
+      const along = rnd() * size;
+      const depth = m * (0.1 + rnd() * 1.4);
+      const pos: [number, number] =
+        side === 0 ? [along, -depth + m] :
+        side === 1 ? [along, size - m + depth] :
+        side === 2 ? [-depth + m, along] : [size - m + depth, along];
+      g.ellipse(pos[0], pos[1], 120 + rnd() * 260, 50 + rnd() * 110)
+        .fill({ color: rnd() > 0.5 ? 0x38425c : 0x222a3a, alpha: 0.18 + rnd() * 0.16 });
+    }
+    this.ground.addChild(g);
+    // Viền trong cùng cho rõ ranh giới đi được.
+    this.ground.addChild(new Graphics().rect(m, m, size - 2 * m, size - 2 * m)
+      .stroke({ color: 0x3b2f2f, width: 50, alpha: 0.85 }));
   }
 
   private buildZones(): void {
@@ -326,9 +372,14 @@ export class MapView {
   }
 
   private obstacleArt(o: MapObstacle, look: ObstacleLook, frac: number): Container {
-    const tex = assets.texture(`obstacles/${o.k}/${look}.png`);
+    const b = bounds(o.s);
+    // Đoạn dọc cần art riêng: xoay sprite ngang 90° trông sai hẳn (bóng đổ, mặt đứng).
+    // Chưa có ảnh thì dùng placeholder dọc, và `assets:report` liệt kê để sinh sau.
+    const vertical = !o.s.c && b.h > b.w;
+    const tex = assets.texture(`obstacles/${o.k}/${look}${vertical ? '_vertical' : ''}.png`)
+      ?? (vertical ? null : assets.texture(`obstacles/${o.k}/${look}.png`));
     if (tex) {
-      return o.s.c ? fitSprite(tex, o.s) : tiledObstacle(tex, o.s);
+      return o.s.c ? fitSprite(tex, o.s) : tiledObstacle(tex, o.s, vertical);
     }
     // Placeholder: indestructible walls keep their colour; breakable ones show HP as colour.
     const color = o.hp > 0 ? hpColor(frac) : OBSTACLE_COLOR[o.k] ?? 0x5b6b5b;

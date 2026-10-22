@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"kiemxoay/server/internal/config"
 )
@@ -69,6 +70,13 @@ type tmj struct {
 	Tilesets     []any   `json:"tilesets"`
 }
 
+// Spec §8.1: KHÔNG object nào được nằm ngoài bản đồ. Mọi vật cản / vùng / decor phải nằm
+// trọn trong [mapMargin, size-mapMargin] — tính cả kích thước của chính nó.
+const (
+	mapMargin   float64 = 300 // lề bắt buộc quanh bản đồ
+	borderThick float64 = 120 // bề dày tường biên không phá được
+)
+
 // rect is a placed footprint used to keep obstacles apart.
 type rect struct{ x0, y0, x1, y1 float64 }
 
@@ -99,8 +107,18 @@ func (b *builder) add(layerName string, o object) {
 	b.layers[layerName] = append(b.layers[layerName], o)
 }
 
+// inBounds is the §8.1 rule on its own so every placement path can share it.
+func (b *builder) inBounds(r rect) bool {
+	return r.x0 >= mapMargin && r.y0 >= mapMargin && r.x1 <= b.size-mapMargin && r.y1 <= b.size-mapMargin
+}
+
+// playable is the area left for random placement: inside the border wall.
+func (b *builder) playable() (lo, hi float64) {
+	return mapMargin + borderThick, b.size - mapMargin - borderThick
+}
+
 func (b *builder) free(r rect, margin float64) bool {
-	if r.x0 < 150 || r.y0 < 150 || r.x1 > b.size-150 || r.y1 > b.size-150 {
+	if !b.inBounds(r) {
 		return false
 	}
 	for _, k := range b.keep {
@@ -137,25 +155,51 @@ func (b *builder) boulder(cx, cy, r, margin float64) bool {
 	return true
 }
 
-// wall forces an indestructible wall segment (used for alleys; ignores spacing).
-func (b *builder) wall(x, y, w, h float64) {
-	b.solid = append(b.solid, rect{x, y, x + w, y + h})
+// wall forces an indestructible wall segment (used for alleys and the map border; it ignores
+// spacing but still may not leave the map).
+func (b *builder) wall(x, y, w, h float64) bool {
+	r := rect{x, y, x + w, y + h}
+	if !b.inBounds(r) {
+		return false
+	}
+	b.solid = append(b.solid, r)
 	b.add("obstacles", object{Type: "stone_wall", X: x, Y: y, Width: w, Height: h})
+	return true
 }
 
-func (b *builder) zone(kind string, x, y, w, h float64, ellipse bool, props ...prop) {
+// border draws the unbreakable wall ring around the map (spec §8.1). The four runs overlap at
+// the corners so the ring never has a gap to slip through.
+func (b *builder) border() {
+	lo, hi := mapMargin, b.size-mapMargin
+	span := hi - lo
+	b.wall(lo, lo, span, borderThick)                            // trên
+	b.wall(lo, hi-borderThick, span, borderThick)                // dưới
+	b.wall(lo, lo, borderThick, span)                            // trái
+	b.wall(hi-borderThick, lo, borderThick, span)                // phải
+}
+
+func (b *builder) zone(kind string, x, y, w, h float64, ellipse bool, props ...prop) bool {
+	if !b.inBounds(rect{x, y, x + w, y + h}) {
+		return false
+	}
 	b.add("zones", object{Type: kind, X: x, Y: y, Width: w, Height: h, Ellipse: ellipse, Properties: props})
+	return true
 }
 
-func (b *builder) gate(x, y float64, network, color string) {
+func (b *builder) gate(x, y float64, network, color string) bool {
+	if !b.inBounds(rect{x - 150, y - 150, x + 150, y + 150}) {
+		return false
+	}
 	b.keep = append(b.keep, rect{x - 300, y - 300, x + 300, y + 300})
 	b.add("gates", object{Type: "gate", X: x - 150, Y: y - 150, Width: 300, Height: 300, Ellipse: true,
 		Properties: []prop{{"network", "string", network}, {"color", "string", color}}})
+	return true
 }
 
 func (b *builder) decor(sprite string, n int) {
+	lo, hi := b.playable()
 	for i := 0; i < n; i++ {
-		x, y := b.rnd(300, b.size-300), b.rnd(300, b.size-300)
+		x, y := b.rnd(lo+60, hi-60), b.rnd(lo+60, hi-60)
 		if b.free(rect{x - 60, y - 60, x + 60, y + 60}, 0) {
 			b.add("decor", object{Type: sprite, X: x, Y: y, Point: true})
 		}
@@ -169,7 +213,8 @@ func (b *builder) scatter(n int, fn func(x, y float64) bool) {
 	placed, tries := 0, 0
 	for placed < n && tries < n*30 {
 		tries++
-		if fn(b.rnd(200, b.size-200), b.rnd(200, b.size-200)) {
+		lo, hi := b.playable()
+		if fn(b.rnd(lo, hi), b.rnd(lo, hi)) {
 			placed++
 		}
 	}
@@ -188,12 +233,36 @@ func (b *builder) alley(x, y, length float64, gap float64, vertical bool) {
 	b.wall(x, y+thick+gap, length, thick)
 }
 
+// validate is the §8.1 check that must pass before a map is written: nothing may stick out
+// of [mapMargin, size-mapMargin]. It reports every offender so a bad generator is obvious.
+func (b *builder) validate() error {
+	var bad []string
+	for _, ln := range []string{"zones", "obstacles", "gates", "decor"} {
+		for _, o := range b.layers[ln] {
+			r := rect{o.X, o.Y, o.X + o.Width, o.Y + o.Height}
+			if o.Point {
+				r = rect{o.X, o.Y, o.X, o.Y}
+			}
+			if !b.inBounds(r) {
+						bad = append(bad, fmt.Sprintf("%s/%s tại (%.0f,%.0f)-(%.0f,%.0f)", ln, o.Type, r.x0, r.y0, r.x1, r.y1))
+			}
+		}
+	}
+	if len(bad) > 0 {
+		return fmt.Errorf("%d object nằm ngoài [%g, %g]: %s", len(bad), mapMargin, b.size-mapMargin, strings.Join(bad, "; "))
+	}
+	return nil
+}
+
 // windLane is a long strip; dir in degrees (0 = east, 90 = south).
-func (b *builder) windLane(x, y, w, h, dirDeg float64) {
-	b.zone("wind", x, y, w, h, false, prop{"dir", "float", dirDeg})
+func (b *builder) windLane(x, y, w, h, dirDeg float64) bool {
+	return b.zone("wind", x, y, w, h, false, prop{"dir", "float", dirDeg})
 }
 
 func (b *builder) write(path, name, biome string) error {
+	if err := b.validate(); err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
 	n := int(b.size / tile)
 	order := []string{"zones", "obstacles", "gates", "decor"}
 	var layers []layer
@@ -241,6 +310,7 @@ func main() {
 // langTre: balanced village — fences, houses, ponds of mud, bushes, two gate pairs.
 func langTre(b *builder) {
 	s := b.size
+	b.border() // tường biên không phá được (§8.1)
 	b.gate(1500, 1500, "a", "purple")
 	b.gate(s-1500, s-1500, "a", "purple")
 	b.gate(s-1500, 1500, "b", "blue")
@@ -278,6 +348,7 @@ func langTre(b *builder) {
 // choDem: night market — rows of stalls and carts, many alleys of all widths.
 func choDem(b *builder) {
 	s := b.size
+	b.border() // tường biên không phá được (§8.1)
 	b.gate(1200, s/2, "a", "orange")
 	b.gate(s-1200, s/2, "a", "orange")
 	b.gate(s/2, 1200, "b", "purple")
@@ -320,6 +391,7 @@ func choDem(b *builder) {
 // nuiDa: wide rocky land with huge boulders, ridges and a 4-gate network.
 func nuiDa(b *builder) {
 	s := b.size
+	b.border() // tường biên không phá được (§8.1)
 	net := [][2]float64{{1800, 1800}, {s - 1800, 1800}, {s - 1800, s - 1800}, {1800, s - 1800}}
 	for _, p := range net {
 		b.gate(p[0], p[1], "ring", "orange")
