@@ -93,8 +93,14 @@ func (b *Brain) decide(g *game.Game, me *game.Player) {
 		b.flee(g, me, threat)
 	case prey != nil && b.rng.Float64() < 0.5+b.aggression/2:
 		b.State = StateHunt
-		// Aim so the target body sits on our sword ring.
-		b.setGoal(prey.Pos, me.Geom.Reach*0.6)
+		// Lá chắn vòng kế ngoài cùng (spec §5.2): không thể lao thẳng vào thân, phải đứng
+		// sát mép lá chắn mà mài cho hết vòng ngoài của đối thủ trước. Nhắm đúng mép đó
+		// thay vì cố chen vào trong (chen cũng bị chặn, chỉ tổ kẹt vào tường).
+		stop := me.Geom.Reach * 0.6
+		if s := g.ShieldR(prey); s > 0 {
+			stop = me.Geom.Reach + s + 10
+		}
+		b.setGoal(prey.Pos, stop)
 	case b.State == StateAmbush && g.Time < b.ambushUntil:
 		// keep waiting in the bush
 	case b.shouldAmbush(g, me):

@@ -117,6 +117,12 @@ func (g *Game) movePlayer(p *Player, dt float64) {
 	if p.KnockUntil > g.Time {
 		p.Pos = p.Pos.Add(p.KnockVel.Mul(dt))
 	}
+	// Lá chắn vòng kế ngoài cùng chặn như tường (spec §5.2): CHỈ người đang tự đi mới bị
+	// chặn. Người đứng yên không bị đẩy ra — nếu không, lá chắn của kẻ mạnh sẽ hất nạn
+	// nhân ra xa hơn tầm kiếm của chính hắn và không ai chém chết được ai.
+	if p.Moving {
+		p.Pos = g.blockedByShields(p, p.Pos)
+	}
 	p.Pos = g.resolveBlocking(p.Pos, g.BodyR(p))
 }
 
