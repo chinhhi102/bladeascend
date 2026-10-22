@@ -69,7 +69,7 @@
     "hit_cooldown": 0.25
   },
   "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
-  "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8, "feed_secs": 2 },
+  "gates": { "radius": 150, "transit_secs": 2.0, "exit_warn_secs": 0.5, "cooldown_secs": 8, "feed_secs": 2 },
   "titles": ["Bần tăng chưa ngán ai bao giờ", "Ngon thì nhào vô", "Chỗ này nhiều máu nè"],
   "title_hold_secs": 3,
   "minimap": { "size_pc": 180, "size_mobile": 120, "show_top1": true, "show_chest": true, "show_others": false },

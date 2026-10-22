@@ -16,11 +16,12 @@ func (g *Game) checkGate(p *Player) {
 		if p.Pos.Dist(Vec{X: gate.X, Y: gate.Y}) > gc.Radius {
 			continue
 		}
-		dests := g.Map.GatesInNetwork(gate)
-		if len(dests) == 0 {
+		// Cổng 2 chiều: mỗi cổng có đúng một cổng đối diện, ra cổng nào thì quay lại
+		// chính cổng đó được (spec §8.4).
+		d, ok := g.Map.GateExit(gate)
+		if !ok {
 			return
 		}
-		d := dests[g.Rng.Intn(len(dests))]
 		half := gc.TransitSecs / 2
 		p.Transit = &Transit{Dest: Vec{X: d.X, Y: d.Y}, DestGate: d.ID, OutAt: g.Time + half, DoneAt: g.Time + gc.TransitSecs}
 		g.setMood(p, MoodTeleportOut, half)

@@ -375,7 +375,7 @@ func TestGateTeleportsWithoutInvulnerability(t *testing.T) {
 	if !p.InTransit(g.Time) {
 		t.Fatal("expected transit")
 	}
-	for g.Time < 1.0 {
+	for g.Time < g.Cfg.Gates.TransitSecs+2*dt {
 		g.Tick(dt)
 	}
 	if p.Pos.Dist(Vec{X: 9000, Y: 9000}) > 400 {
@@ -383,6 +383,36 @@ func TestGateTeleportsWithoutInvulnerability(t *testing.T) {
 	}
 	if p.Invulnerable(g.Time) || p.InTransit(g.Time) {
 		t.Fatal("no invulnerability after leaving a gate")
+	}
+}
+
+// Spec §8.4: cổng đi 2 chiều — bước vào cổng vừa ra là quay đúng về chỗ cũ, kể cả khi
+// mạng có 4 cổng (ghép cặp cố định chứ không bắn ngẫu nhiên).
+func TestGatesAreTwoWayPairs(t *testing.T) {
+	m := world.EmptyMap(12000)
+	m.Gates = []world.Gate{
+		{ID: 0, X: 2000, Y: 2000, Network: "ring"}, {ID: 1, X: 9000, Y: 9000, Network: "ring"},
+		{ID: 2, X: 2000, Y: 9000, Network: "ring"}, {ID: 3, X: 9000, Y: 2000, Network: "ring"},
+	}
+	for _, gate := range m.Gates {
+		exit, ok := m.GateExit(gate)
+		if !ok {
+			t.Fatalf("cổng %d không có cổng đích", gate.ID)
+		}
+		back, ok := m.GateExit(exit)
+		if !ok || back.ID != gate.ID {
+			t.Fatalf("cổng %d → %d nhưng %d → %d: không phải 2 chiều", gate.ID, exit.ID, exit.ID, back.ID)
+		}
+	}
+	// Và luật thực tế cũng đưa người chơi đúng tới cổng đã ghép cặp.
+	g := quietGame(t, m)
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
+	place(g, p, Vec{X: 2000, Y: 2000}, 0)
+	for g.Time < g.Cfg.Gates.TransitSecs+2*dt {
+		g.Tick(dt)
+	}
+	if p.Pos.Dist(Vec{X: 9000, Y: 9000}) > 400 {
+		t.Fatalf("ra ở %+v, muốn gần cổng ghép cặp (9000, 9000)", p.Pos)
 	}
 }
 

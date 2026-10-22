@@ -48,3 +48,24 @@ Anh chốt: **30–60s là được** (spec §6.1 đang ghi 60–90s, nhờ sử
 3. EXP dư khi lên tầng được giữ lại (thật ra đã đúng sẵn: level suy ra từ `total_exp` nên không mất gì).
 
 **Tạm dùng:** chưa làm gì, chờ anh nói rõ.
+
+## Q12. Tốc độ chạy: spec dán vào cứ lùi về 260 × sqrt(scale) (22/10/2026) — **CẦN ANH CHỐT**
+
+**Bối cảnh:** sáng nay anh nhắn trực tiếp: *"tốc độ chạy hơi nhanh → chỉnh lại 1/2, và chỉ lượm được item mới tăng tốc chứ không tăng theo tu vi"*. Em đã làm: `move_base` 260 → 130 và bỏ hệ số `sqrt(scale)`.
+
+Sau đó anh dán spec mới **hai lần** (v3.4 rồi v3.5/v3.6), lần nào §4.1 cũng quay về `260 * sqrt(scale)` kèm nguyên câu cũ "≈260 px/s so với ≈150 px/s ở scale 5". Em đoán đây là do file spec được sinh lại từ bản gốc chứ không phải anh đổi ý (vì những chỗ anh sửa tay như min_count = 0, clash_unit = 1, cell = 160 thì đều được giữ nguyên qua các lần dán). **Tạm dùng:** giữ 130, không có `sqrt(scale)`, và sửa lại §4.1 cho khớp.
+
+**Hệ quả đo được (`cmd/sim --farm --bots 20 --seed 7`):** tốc độ chậm đi một nửa nên nhặt EXP cũng chậm theo → Luyện Khí lên Trúc Cơ mất **78.5s**, trong khi §6.1 yêu cầu **30–60s**. Hiện game đang KHÔNG đạt mốc này.
+
+| `move_base` | `exp_orbs.cell` | Luyện Khí → Trúc Cơ |
+|---|---|---|
+| 130 (đang dùng) | 160 (đang dùng) | 78.5s ❌ |
+| 130 | 120 | 53.3s ✅ |
+| 260 × sqrt(scale) | 160 | ~40–46s ✅ (số cũ trong spec) |
+
+**Ba phương án, cái nào cũng sửa 1 dòng:**
+1. Giữ tốc độ 130, **giảm `exp_orbs.cell` 160 → 120** để nhịp về lại 53s. (Em nghiêng về cách này vì bám đúng yêu cầu anh nhắn.)
+2. Giữ tốc độ 130, chấp nhận nhịp 78s và sửa §6.1 thành 60–90s.
+3. Trả tốc độ về `260 * sqrt(scale)` đúng như spec đang ghi, giữ cell 160.
+
+Em chưa đổi gì thêm, chờ anh chọn.

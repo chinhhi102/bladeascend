@@ -230,6 +230,7 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 
 - Số vật phẩm duy trì: **400/phòng** (gấp hơn 3 lần trước), item bị nhặt → 3s sau mọc lại chỗ khác.
 - Nhặt lại buff đang có → làm mới thời gian (không cộng dồn).
+- **Hiệu ứng nhặt**: vật phẩm và viên EXP **bay hút về phía người nhặt** (0.22s, nhỏ dần và mờ dần) rồi mới biến mất, không biến mất đột ngột. Chỉ là hiệu ứng phía client; server vẫn xoá item ngay khi nhặt.
 - HUD hiển thị icon buff + vòng đếm ngược. Mỗi buff có aura màu riêng (trừ Ẩn Thân).
 - Item spawn cách người chơi ≥ 300 đơn vị.
 
@@ -296,10 +297,10 @@ Thời gian 1 người (đủ kiếm tối đa của cảnh giới) phá vỡ, t
 | Hẻm hẹp | Các lối đi rộng 150 / 250 / 350 giữa vật cản không phá được | Người to (thân rộng) không chui lọt, người nhỏ trốn vào được |
 
 ### 8.4 Cổng dịch chuyển
-- Cổng đi theo cặp (A ↔ B) hoặc mạng 3–4 cổng (vào 1 cổng → ra ngẫu nhiên 1 cổng khác trong mạng).
-- Kích hoạt khi tâm nhân vật đi vào bán kính cổng (150). Anim `teleport_out` 0.4s → xuất hiện ở cổng đích với anim `teleport_in` 0.4s.
+- **Cổng luôn đi 2 chiều (A ↔ B)**: mỗi cổng có đúng một cổng đối diện cố định, ra ở cổng nào thì bước vào chính cổng đó là quay về chỗ cũ. Mạng nhiều cổng được ghép cặp theo thứ tự id (0↔1, 2↔3…), **không bắn ngẫu nhiên**.
+- Kích hoạt khi tâm nhân vật đi vào bán kính cổng (150). Anim `teleport_out` 1s → xuất hiện ở cổng đích với anim `teleport_in` 1s.
 - Cổng đích **lóe sáng 0.5s trước** khi người xuất hiện (cảnh báo nhẹ cho người đứng gần — vẫn dễ bị bất ngờ).
-- **Không bất tử khi vừa ra cổng.** Trong lúc đang dịch chuyển (0.8s) không bị chém và không chém được.
+- **Không bất tử khi vừa ra cổng.** Trong lúc đang dịch chuyển (**2s**, `transit_secs`) không bị chém và không chém được.
 - Cooldown mỗi người: 8s mới dùng cổng tiếp được.
 - Người to cỡ nào cũng dùng được.
 
@@ -576,7 +577,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "stall_item_drop": 0.3
   },
   "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
-  "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8 },
+  "gates": { "radius": 150, "transit_secs": 2.0, "exit_warn_secs": 0.5, "cooldown_secs": 8 },
   "titles": ["Bần tăng chưa ngán ai bao giờ", "Ngon thì nhào vô", "Chỗ này nhiều máu nè"],
   "title_hold_secs": 3,
   "minimap": { "size_pc": 180, "size_mobile": 120, "show_top1": true, "show_chest": true, "show_others": false },
