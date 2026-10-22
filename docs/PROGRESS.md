@@ -523,6 +523,6 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 3. Deploy theo `docs/DEPLOY.md`.
 
 ## Staging (2026-10-22)
-- Chạy tại https://kientiem.staging.maveragroups.com (container `kientiem-web` trên máy staging, Caddy chung chuyển tiếp vào).
+- Chạy tại https://kiemtien.staging.maveragroups.com (container `kiemtien-web` trên máy staging, Caddy chung chuyển tiếp vào).
 - Deploy lại: `set -a; . docs/private/deploy; set +a; deploy/staging.sh` (build Go arm64 + client ở máy mình, rsync lên `~/kiemxoaytutien`, `docker compose up -d --build`, cài khối Caddy có kiểm tra trước khi reload).
-- Bảng xếp hạng lưu ở volume `kientiem_kientiem-data`, không mất khi deploy lại. Server đang để `-debug=true` (người chơi vẫn phải mở `?debug=true`).
+- Bảng xếp hạng lưu ở volume `kiemtien_kiemtien-data`, không mất khi deploy lại. Server đang để `-debug=true` (người chơi vẫn phải mở `?debug=true`).
