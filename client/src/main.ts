@@ -18,7 +18,7 @@ import { summaryScreen } from './ui/summary';
 const DEBUG_KEYS: Record<string, Record<string, unknown>> = {
   KeyE: { cmd: 'exp', n: 100 },
   KeyR: { cmd: 'realm', n: 0 },
-  KeyK: { cmd: 'sword', n: 1 },
+  KeyK: { cmd: 'sword', n: 10 },
   KeyX: { cmd: 'die', n: 0 },
 };
 
@@ -180,6 +180,10 @@ class App {
 
   private debugKey(e: KeyboardEvent): void {
     if (!this.playing || !this.debug || e.repeat) {
+      return;
+    }
+    if (e.code === 'KeyH') {
+      this.scene.toggleHitbox();
       return;
     }
     const cmd = DEBUG_KEYS[e.code];

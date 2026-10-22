@@ -1,11 +1,12 @@
 import { AnimatedSprite, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 
-import { type GameConfig, realmOf } from '../config';
+import type { GameConfig } from '../config';
 import type { PlayerFrame } from '../net/state';
 import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { animShort, initials } from './catalog';
-import { BUFF_COLORS, charColor, REALM_COLORS } from './palette';
+import { BUFF_COLORS, charColor } from './palette';
+import { SwordRing } from './swordring';
 
 // Visual proportions relative to the body hitbox radius (not balance numbers).
 const CHAR_HEIGHT_PER_R = 2.6; // drawn character height = 2.6 × body radius
@@ -29,8 +30,7 @@ const FALLBACK: Record<string, string[]> = {
 /** PlayerSprite draws one character: body, sword ring, aura, name tag, emote bubble. */
 export class PlayerSprite {
   readonly root = new Container();
-  readonly ring = new Container();
-  private readonly cracks = new Graphics();
+  private readonly swordRing: SwordRing;
   private readonly shadow = new Graphics();
   private readonly aura = new Graphics();
   private readonly bodyBox = new Container();
@@ -38,11 +38,6 @@ export class PlayerSprite {
   private readonly label: Text;
   private readonly atlas: AnimSet | null;
   private mood = '';
-  private swords: (Sprite | Graphics)[] = [];
-  private swordRealm = -1;
-  private tweenFrom = 0;
-  private tweenTo = 0;
-  private tweenStart = 0;
   private bubble: Container | null = null;
   private readonly animLabel = new Text({ text: '', style: { fontSize: 40, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x000000, width: 6 } } });
   private bubbleUntil = 0;
@@ -55,6 +50,7 @@ export class PlayerSprite {
     isMe: boolean,
   ) {
     this.atlas = assets.atlas(`characters/${char}`);
+    this.swordRing = new SwordRing(cfg);
     this.label = new Text({
       text: name,
       style: { fontFamily: 'system-ui, sans-serif', fontSize: 15, fontWeight: '700', fill: isMe ? 0xfff3a0 : 0xffffff, stroke: { color: 0x000000, width: 4 } },
@@ -84,19 +80,23 @@ export class PlayerSprite {
     return c;
   }
 
-  update(f: PlayerFrame, zoom: number, now: number): void {
+  /** ring is the sword ring layer; the scene draws all rings above characters and obstacles. */
+  get ring(): Container {
+    return this.swordRing.root;
+  }
+
+  update(f: PlayerFrame, zoom: number, now: number, showHitbox: boolean): void {
     const s = f.s;
     const r = this.cfg.player.body_r * s.sc;
     this.root.position.set(f.x, f.y);
-    this.ring.position.set(f.x, f.y);
-    this.root.zIndex = f.y;
+    this.root.zIndex = f.y + r * FEET_BELOW_CENTER; // y-sort by the feet (spec §8.2)
     this.drawShadow(r);
     this.updateBody(s.md, r, Math.cos(s.f) < 0);
     this.drawAura(s.bf, r, now);
     this.applyAlpha(s.fl, now);
     this.label.position.set(0, -r * (CHAR_HEIGHT_PER_R - FEET_BELOW_CENTER) - 4 / zoom);
     this.label.scale.set(1 / zoom);
-    this.updateRing(f, now);
+    this.swordRing.update(f, now, showHitbox);
     this.updateBubble(r, zoom, now);
   }
 
@@ -191,92 +191,7 @@ export class PlayerSprite {
     }
     this.root.alpha = a;
     this.ring.alpha = flags & FLAG.stealth ? 0.45 : 1;
-    this.ring.visible = !(flags & FLAG.dead);
-  }
-
-  // ---- sword ring ----------------------------------------------------------
-
-  private updateRing(f: PlayerFrame, now: number): void {
-    const s = f.s;
-    const realm = realmOf(this.cfg, s.L);
-    if (s.n !== this.swords.length || realm !== this.swordRealm) {
-      this.rebuildSwords(s.n, realm, now);
-    }
-    const t = Math.min(1, (now - this.tweenStart) / this.cfg.sword.tween_secs);
-    const fromStep = this.tweenFrom > 0 ? (2 * Math.PI) / this.tweenFrom : 0;
-    const toStep = (2 * Math.PI) / Math.max(1, this.tweenTo);
-    this.swords.forEach((sw, i) => {
-      // Tween the spacing between swords when the count changes (spec §4).
-      const step = fromStep > 0 ? fromStep + (toStep - fromStep) * t : toStep;
-      const a = f.ringAngle + step * i;
-      sw.position.set(Math.cos(a) * s.rr, Math.sin(a) * s.rr);
-      sw.rotation = a + Math.PI / 2;
-      this.sizeSword(sw, s.sl, s.sw);
-    });
-    this.drawCracks(f);
-    this.ring.zIndex = f.y + 1;
-  }
-
-  // Light crack lines across every sword while the ring carries crack damage (spec §5.2).
-  private drawCracks(f: PlayerFrame): void {
-    const g = this.cracks;
-    g.clear();
-    const ck = f.s.ck ?? 0;
-    if (ck <= 0 || !this.swords.length) {
-      return;
-    }
-    if (g.parent !== this.ring) {
-      this.ring.addChild(g);
-    }
-    this.ring.setChildIndex(g, this.ring.children.length - 1);
-    const len = f.s.sl;
-    for (const sw of this.swords) {
-      const a = sw.rotation - Math.PI / 2;
-      const dx = Math.cos(a);
-      const dy = Math.sin(a);
-      const px = -dy;
-      const py = dx;
-      const z = f.s.sw * 0.6;
-      const pts = [-0.35, -0.12, 0.05, 0.25].map((t, i) => ({ x: sw.x + dx * len * t + px * z * (i % 2 ? 1 : -1), y: sw.y + dy * len * t + py * z * (i % 2 ? 1 : -1) }));
-      g.moveTo(pts[0].x, pts[0].y);
-      for (const p of pts.slice(1)) {
-        g.lineTo(p.x, p.y);
-      }
-    }
-    g.stroke({ color: 0xffffff, width: Math.max(1.5, f.s.sw * 0.18), alpha: 0.35 + 0.5 * Math.min(1, ck) });
-  }
-
-  private rebuildSwords(n: number, realm: number, now: number): void {
-    this.tweenFrom = this.swords.length;
-    this.tweenTo = n;
-    this.tweenStart = now;
-    if (realm !== this.swordRealm) {
-      this.ring.removeChildren().forEach((c) => c !== this.cracks && c.destroy());
-      this.swords = [];
-      this.swordRealm = realm;
-    }
-    while (this.swords.length > n) {
-      this.swords.pop()?.destroy();
-    }
-    const tex = assets.texture(`swords/realm_${realm}.png`);
-    while (this.swords.length < n) {
-      const sw = tex ? new Sprite(tex) : new Graphics().roundRect(-0.5, -0.5, 1, 1, 0.2).fill(REALM_COLORS[realm] ?? 0xffffff).stroke({ color: 0, width: 0.08 });
-      if (sw instanceof Sprite) {
-        sw.anchor.set(0.5);
-      }
-      this.ring.addChild(sw);
-      this.swords.push(sw);
-    }
-  }
-
-  private sizeSword(sw: Sprite | Graphics, length: number, width: number): void {
-    if (sw instanceof Sprite) {
-      // Sword art fills ~90% of its square canvas vertically.
-      const k = length / (sw.texture.height * 0.9);
-      sw.scale.set(k);
-      return;
-    }
-    sw.scale.set(width, length);
+    this.swordRing.visible = !(flags & FLAG.dead);
   }
 
   // ---- emote bubble --------------------------------------------------------
@@ -318,6 +233,6 @@ export class PlayerSprite {
 
   destroy(): void {
     this.root.destroy({ children: true });
-    this.ring.destroy({ children: true });
+    this.swordRing.destroy();
   }
 }

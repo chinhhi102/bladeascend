@@ -108,6 +108,19 @@ func writeStatus(jobs []Job, assets, out string) {
 
 // writePrompts exports every missing job's prompt so images can be made with any tool and
 // dropped into assets/_raw/<job>.png before running `artgen prep`.
+// redoReasons lists art that exists but must be regenerated because the rules changed.
+var redoReasons = map[string]string{
+	"tile_grass":    "spec v3: nền nhạt, ít chi tiết (ART_PROMPTS §9.0)",
+	"tile_concrete": "spec v3: nền nhạt, ít chi tiết (ART_PROMPTS §9.0)",
+	"tile_dirt":     "spec v3: nền nhạt, ít chi tiết (ART_PROMPTS §9.0)",
+}
+
+func init() {
+	for i := range swords {
+		redoReasons[fmt.Sprintf("sword_realm_%d", i)] = "spec v3.1: lưỡi kiếm trắng/xám để game nhuộm màu theo vòng (ART_PROMPTS §7)"
+	}
+}
+
 func writePrompts(jobs []Job, assets, out string) {
 	var b strings.Builder
 	b.WriteString("# Danh sách prompt cần sinh ảnh\n\n")
@@ -120,11 +133,15 @@ func writePrompts(jobs []Job, assets, out string) {
 	b.WriteString("5. Sheet lệch nhẹ vẫn dùng được (tool cắt theo vùng pixel liền nhau). Nhân vật sai số frame vẫn chạy; chỉ sinh lại khi hình dính chồng lên nhau.\n\n")
 	n := 0
 	for _, j := range jobs {
-		if _, err := os.Stat(rawPath(assets, j)); err == nil {
+		why, redo := redoReasons[j.Name]
+		if _, err := os.Stat(rawPath(assets, j)); err == nil && !redo {
 			continue
 		}
 		n++
 		fmt.Fprintf(&b, "## %d. `%s` · ưu tiên %d\n\n", n, j.Name, j.Priority)
+		if redo {
+			fmt.Fprintf(&b, "- **Sinh lại**: %s\n", why)
+		}
 		fmt.Fprintf(&b, "- **Lưu thành**: `assets/_raw/%s.png`\n", j.Name)
 		fmt.Fprintf(&b, "- **Bố cục**: %s\n", jobLayout(j))
 		fmt.Fprintf(&b, "- **Ra file game**: %s\n\n", jobOutputs(j))

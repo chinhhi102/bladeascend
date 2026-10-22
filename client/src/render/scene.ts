@@ -3,11 +3,12 @@ import { Application, Container } from 'pixi.js';
 import { sound } from '../audio/sound';
 import { cameraViewHeight, type GameConfig, realmOf } from '../config';
 import type { ClientWorld } from '../net/state';
-import type { GameEvent } from '../net/protocol';
+import { BUFFS, type GameEvent } from '../net/protocol';
 import { pick, STR } from '../ui/strings';
 import { ItemSprite, MonsterSprite } from './entities';
-import { MapView } from './mapview';
+import { MapView, type Viewer } from './mapview';
 import { PlayerSprite } from './player';
+import { ringGeom } from './ringgeom';
 import { Vfx } from './vfx';
 
 const MOOD_EMOTE_CHANCE = 0.12; // chance per mood change that a character shouts (run/chase/flee)
@@ -28,6 +29,7 @@ export class GameScene {
   private viewH = 900;
   private world: ClientWorld | null = null;
   private lastSpark = { t: 0, x: 0, y: 0 };
+  private showHitbox = false;
 
   constructor(private readonly cfg: GameConfig) {}
 
@@ -53,7 +55,10 @@ export class GameScene {
       return;
     }
     this.mapView = new MapView(w.map, this.cfg.gates.radius);
-    this.camera.addChild(this.mapView.ground, this.mapView.under, this.mapView.obstacles, this.entities, this.rings, this.mapView.over, this.vfx.layer);
+    for (const node of this.mapView.obstacleLayer()) {
+      this.entities.addChild(node);
+    }
+    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.entities, this.rings, this.mapView.over, this.vfx.layer);
   }
 
   clear(): void {
@@ -84,14 +89,25 @@ export class GameScene {
     const frames = w.playerFrames(dt);
     const me = frames.find((f) => f.view.id === w.myId);
     if (me) {
-      this.updateCamera(me.x, me.y, me.s.sc, now);
+      const long = me.s.bf & (1 << BUFFS.indexOf('long')) ? (this.cfg.buffs.long?.mult ?? 1) : 1;
+      this.updateCamera(me.x, me.y, me.s.sc, ringGeom(this.cfg, me.s.sc, me.s.n, long).reach, now);
     }
     this.syncPlayers(frames, now);
     this.syncMonsters(now);
     this.syncItems(now);
     const myBush = me && me.s.fl & 2 ? this.bushAt(me.x, me.y) : -1;
-    this.mapView.update(w, now, myBush);
+    this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha);
     this.vfx.update(now);
+  }
+
+  /** toggleHitbox shows the server's sword capsules over the drawn swords (debug key H). */
+  toggleHitbox(): void {
+    this.showHitbox = !this.showHitbox;
+  }
+
+  private viewer(x: number, y: number, scale: number): Viewer {
+    const r = this.cfg.player.body_r * scale;
+    return { x, top: y - r * 1.9, feet: y + r * 0.75, halfW: r * 0.8 };
   }
 
   private bushAt(x: number, y: number): number {
@@ -108,9 +124,9 @@ export class GameScene {
     return -1;
   }
 
-  private updateCamera(x: number, y: number, scale: number, now: number): void {
+  private updateCamera(x: number, y: number, scale: number, reach: number, now: number): void {
     // Smoothly follow the camera height so growing does not pop.
-    const targetH = cameraViewHeight(this.cfg, scale);
+    const targetH = cameraViewHeight(this.cfg, scale, reach);
     this.viewH += (targetH - this.viewH) * 0.08;
     this.zoom = this.app.screen.height / this.viewH;
     const shake = this.vfx.shakeOffset(now);
@@ -130,7 +146,7 @@ export class GameScene {
         this.entities.addChild(sp.root);
         this.rings.addChild(sp.ring);
       }
-      sp.update(f, this.zoom, now);
+      sp.update(f, this.zoom, now, this.showHitbox);
       this.moodChatter(f.view.id, f.s.md, now);
     }
     for (const [id, sp] of this.players) {

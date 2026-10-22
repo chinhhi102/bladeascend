@@ -13,7 +13,7 @@ export const STR = {
   badName: 'Tên phải dài 2–16 ký tự.',
   controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Không có nút đánh — kiếm tự xoay!',
   controlsMobile: 'Kéo ngón tay để di chuyển. Kiếm tự xoay!',
-  debugHelp: 'Phím test: E +100 EXP · R lên cảnh giới · K +1 kiếm · 1–7 buff · X tự chết',
+  debugHelp: 'Phím test: E +100 EXP · R lên cảnh giới · K +10 kiếm · 1–7 buff · X tự chết · H xem hitbox kiếm',
 
   // HUD
   realmTier: (realm: string, tier: number) => `${realm} tầng ${tier}`,

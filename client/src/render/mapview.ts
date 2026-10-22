@@ -1,4 +1,4 @@
-import { AnimatedSprite, Container, Graphics, Sprite, TilingSprite, type Texture } from 'pixi.js';
+import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Sprite, TilingSprite, type Texture } from 'pixi.js';
 
 import type { ClientWorld } from '../net/state';
 import type { GameMap, MapObstacle, Shape } from '../net/protocol';
@@ -73,6 +73,24 @@ interface ObstacleNode {
   look: ObstacleLook | '';
   hpDrawn: number;
   warnUntil: number;
+  box: { x: number; y: number; w: number; h: number }; // drawn bounds, for see-through
+}
+
+/** Viewer is the local character's drawn box, used to fade obstacles standing in front of it. */
+export interface Viewer {
+  x: number;
+  top: number;
+  feet: number;
+  halfW: number;
+}
+
+// ART_PROMPTS §9.0: calm, low-contrast ground so gameplay objects stand out.
+function backgroundFilter(): ColorMatrixFilter {
+  const f = new ColorMatrixFilter();
+  f.saturate(-0.5);
+  f.brightness(0.9, true);
+  f.contrast(-0.2, true);
+  return f;
 }
 
 const HP_FULL = 0x4caf50;
@@ -89,11 +107,14 @@ function hpColor(frac: number): number {
   return frac > 0.5 ? mixColor(HP_MID, HP_FULL, (frac - 0.5) * 2) : mixColor(HP_LOW, HP_MID, frac * 2);
 }
 
-/** MapView draws the static map; obstacles change look with their HP (spec §8.2). */
+/**
+ * MapView draws the static map. Obstacle nodes are handed to the scene's entity layer so they
+ * y-sort with characters; they change look with their HP (spec §8.2).
+ */
 export class MapView {
   readonly ground = new Container();
+  readonly decor = new Container();
   readonly under = new Container(); // zones under entities (mud, wind) + gates
-  readonly obstacles = new Container();
   readonly over = new Container(); // bush canopy above entities
   private readonly obstacleNodes = new Map<number, ObstacleNode>();
   private readonly bushes: { id: number; node: Container }[] = [];
@@ -108,11 +129,17 @@ export class MapView {
     this.buildGates();
     this.buildDecor();
     for (const o of map.obstacles) {
-      const n: ObstacleNode = { o, node: new Container(), look: '', hpDrawn: -1, warnUntil: 0 };
-      this.obstacles.addChild(n.node);
+      const n: ObstacleNode = { o, node: new Container(), look: '', hpDrawn: -1, warnUntil: 0, box: bounds(o.s) };
       this.obstacleNodes.set(o.id, n);
     }
-    this.obstacles.sortableChildren = true;
+    const filter = backgroundFilter();
+    this.ground.filters = [filter];
+    this.decor.filters = [filter];
+  }
+
+  /** obstacleLayer returns every obstacle node, to be added to the y-sorted entity layer. */
+  obstacleLayer(): Container[] {
+    return [...this.obstacleNodes.values()].map((n) => n.node);
   }
 
   private buildGround(): void {
@@ -231,7 +258,7 @@ export class MapView {
       sp.anchor.set(0.5);
       sp.scale.set(160 / tex.width);
       sp.position.set(d.x, d.y);
-      this.under.addChild(sp);
+      this.decor.addChild(sp);
     }
   }
 
@@ -249,9 +276,12 @@ export class MapView {
     }
   }
 
-  update(w: ClientWorld, now: number, myBush: number): void {
+  update(w: ClientWorld, now: number, myBush: number, me: Viewer | null, occlusionAlpha: number): void {
     for (const n of this.obstacleNodes.values()) {
       this.updateObstacle(n, w, now);
+      if (me && n.look !== 'rubble' && this.covers(n, me)) {
+        n.node.alpha *= occlusionAlpha;
+      }
     }
     for (const b of this.bushes) {
       // See-through canopy only for the bush I'm hiding in (ART_PROMPTS §9.2).
@@ -261,6 +291,12 @@ export class MapView {
       const warn = now < g.warnUntil;
       g.node.alpha = warn ? 0.6 + 0.4 * Math.sin(now * 40) : 1;
     }
+  }
+
+  // covers: the obstacle stands in front of me (its base is lower on screen) and overlaps my sprite.
+  private covers(n: ObstacleNode, me: Viewer): boolean {
+    const b = n.box;
+    return b.y + b.h > me.feet && b.x < me.x + me.halfW && b.x + b.w > me.x - me.halfW && b.y < me.feet && b.y + b.h > me.top;
   }
 
   private updateObstacle(n: ObstacleNode, w: ClientWorld, now: number): void {
@@ -281,7 +317,9 @@ export class MapView {
       n.hpDrawn = hp;
       n.node.removeChildren().forEach((c) => c.destroy());
       n.node.addChild(this.obstacleArt(n.o, look, frac));
-      n.node.zIndex = broken ? -1 : bounds(n.o.s).y + bounds(n.o.s).h;
+      const lb = n.node.getLocalBounds();
+      n.box = { x: lb.x, y: lb.y, w: lb.width, h: lb.height };
+      n.node.zIndex = broken ? -1e6 : bounds(n.o.s).y + bounds(n.o.s).h;
     }
     // Blink 3s before regrowing (spec §8.2).
     n.node.alpha = broken && now < n.warnUntil ? 0.5 + 0.5 * Math.sin(now * 20) : 1;

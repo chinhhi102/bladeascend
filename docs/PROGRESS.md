@@ -1,6 +1,6 @@
 # Tiến độ — Kiếm Xoay Tu Tiên
 
-_Cập nhật: 2026-10-21_
+_Cập nhật: 2026-10-22_
 
 ## Cách chạy (máy dev)
 ```bash
@@ -13,13 +13,27 @@ cd server && go run ./cmd/mapgen                         # tạo lại 3 bản �
 cd client && npm run assets:report                       # asset nào còn thiếu (thêm --all để xem cả cái đã có)
 cd server && go run ./cmd/artgen status                  # tình trạng theo từng ảnh cần sinh
 ```
-Phím test khi chơi (server chạy mặc định `-debug=true`): **E** +100 EXP · **R** lên cảnh giới · **K** +1 kiếm · **1–7** buff · **X** tự chết.
+Phím test khi chơi (server chạy mặc định `-debug=true`): **E** +100 EXP · **R** lên cảnh giới · **K** +10 kiếm · **1–7** buff · **X** tự chết · **H** bật/tắt hitbox kiếm của server.
+Đo nhịp farm: `cd server && go run ./cmd/sim --bots 20 --minutes 3 --farm` (không ai bị chém; thêm `--orb-cell N`, `--monsters N` để thử).
 Giả lập ping: thêm `?lag=150` vào địa chỉ (ví dụ `http://localhost:5173/?lag=150`). Giới hạn FPS: `?fps=30`.
 
 ## Ưu tiên hiện tại (2026-10-22)
 **Gameplay trước, art sau.** Game chơi đầy đủ khi `assets/` trống (đã test: chạy server với thư mục asset rỗng → vào chơi, lên cảnh giới, buff, chết → Tổng kết → Chơi tiếp, không lỗi JS).
 Placeholder khi thiếu ảnh: nhân vật = hình tròn màu + chữ viết tắt (A Hớn → `AH`) + tên anim; vật cản phá được = hình chữ nhật đổi màu theo HP (xanh → vàng → đỏ, đống đổ nát màu xám); tường không phá = xám; kiếm = thanh dài màu theo cảnh giới; quái = hình tròn + số HP; vật phẩm = bong bóng màu.
 Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (dùng chung cho loader và `assets:report`).
+
+## Spec v3 / v3.1 / v3.2 (2026-10-22) — ✅ xong
+- **Vòng kiếm**: 20 kiếm/vòng, vòng lồng nhau so le `k·18°/R`, lưỡi nghiêng 35° ngả về sau và lật trong 0.1s khi đổi chiều, bán kính chỉ theo vòng + scale (không theo số kiếm), vòng sau lùi xa hơn; kiếm tối đa 60→400 theo `max_swords`; quay 1 vòng/300ms; va chạm theo **góc quét** giữa 2 tick (vòng dày coi cả vành khăn là vùng chém). Camera lùi theo `2.6 × reach`.
+- **Vẽ (client)**: `ParticleContainer`, mỗi vòng một màu `ring_tints` (vòng 1 giữ màu skin cảnh giới), vòng ngoài vẽ dưới, vệt mờ (vành khăn mờ + 2 bóng kiếm kéo sau). Thân kiếm vòng 2+ là placeholder trắng/xám cho tới khi sinh lại skin. Phím **H** vẽ capsule hitbox server chồng lên để so.
+- **Chiến đấu**: bị chém rớt nguyên 1 cảnh giới, giữ tầng và % tiến độ; Luyện Khí bị chém là chết; kiếm thừa / kiếm rơi khi chết thành **Bó Kiếm** (≤10/bó); bể kiếm ×5 (`clash_unit`) + hai người bị đẩy văng 150 trong 0.2s.
+- **EXP & vật phẩm**: viên EXP rải khắp bản đồ (`exp_orbs`), nhặt xong 5s mọc lại trong cùng ô 1000×1000; 400 vật phẩm/phòng mọc lại sau 3s; item Kiếm +3, Bó Kiếm +15; Rương mỗi 60s nổ 8 món; hút đồ 90×scale. Lưới không gian cho item (nhặt + AOI nhanh).
+- **Nhịp**: anh chốt Luyện Khí → Trúc Cơ 30–60s → `exp_orbs.cell = 160` (sim đo 40–56s).
+- **Vật cản**: chặn thân bằng **chân đế** (90% rộng × 30% cao ở đáy, Tiled đặt tay được bằng thuộc tính `footprint = "w,h"`), kiếm chém theo thân hình; y-sort với nhân vật; vật cản che mình thì mờ 50%. Nền + decor qua `ColorMatrixFilter` (giảm bão hòa/sáng/tương phản); viên EXP/item/quái có bóng đổ + quầng sáng.
+- Test mới: rớt cảnh giới giữ tầng, Luyện Khí tầng bất kỳ chết, bó kiếm, bảng bể kiếm ×5, đẩy văng, góc so le R=1/2/3, vòng thiếu kiếm rải đều khe, reach tăng theo vòng, bán kính không đổi theo số kiếm (v3.2), tilt đổi dấu, va chạm góc quét, 1 vòng/300ms, chân đế, viên EXP mọc lại đúng vùng, vật phẩm mọc lại sau 3s. Tổng 64 test Go.
+- **Còn lại / lỗi đã biết**:
+  - Hàng rào/tường trong 3 bản đồ cũ được vẽ cao hơn hình trong Tiled (kiểu 3/4), nên vùng kiếm chém (theo hình Tiled) hơi thấp hơn phần nhìn thấy. Cần chỉnh bản đồ (`cmd/mapgen`) cho hình Tiled = hình vẽ.
+  - Art cần sinh lại: 9 skin kiếm (lưỡi trắng/xám) và 3 nền đất (nhạt) — đã đánh dấu "Sinh lại" trong `docs/ART_JOBS.md`. Bó Kiếm chưa có tên art trong ART_PROMPTS → đang vẽ placeholder.
+  - Q8 (`docs/QUESTIONS.md`): checklist §17 còn số kiếm mất theo bản cũ.
 
 ## Đã làm
 | Milestone | Nội dung | Trạng thái |

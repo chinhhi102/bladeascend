@@ -221,7 +221,9 @@ func swordJobs() []Job {
 		jobs = append(jobs, Job{
 			Name: fmt.Sprintf("sword_realm_%d", i), Priority: 0, Mode: modeSprite, Out: fmt.Sprintf("swords/realm_%d.png", i),
 			W: 256, H: 256, Pivot: "center",
-			Prompt: styleObject + " Single game weapon icon, " + s + ", perfectly vertical, tip pointing straight up, handle at the bottom, centered." + negative,
+			Prompt: styleObject + " Single game weapon icon, " + s + ", perfectly vertical, tip pointing straight up, handle at the bottom, centered. " +
+				// ART_PROMPTS §7: the game tints each ring, so the blade must be near-white.
+				"Blade painted in very light grey and white tones so it can be color-tinted in game, colored details only on the handle." + negative,
 		})
 	}
 	return jobs
@@ -266,12 +268,14 @@ func mapJobs() []Job {
 	tile := func(id, biome string) Job {
 		return Job{Name: "tile_" + id, Priority: 1, Mode: modeTile, Out: "tiles/" + id + ".png", W: 512, H: 512,
 			Prompt: styleOpaque + " Seamless tileable top-down ground texture, " + biome + ", square image filling the whole frame, cartoon game style, " +
-				"no objects, no characters, even lighting, edges must tile perfectly."}
+				"no objects, no characters, even lighting, edges must tile perfectly. " +
+				// ART_PROMPTS §9.0: calm background that never competes with EXP orbs and items.
+				"Desaturated, low detail, designed as a background that does not distract from gameplay objects."}
 	}
 	jobs := []Job{
-		tile("grass", "soft green grass with small clover patches and tiny flowers"),
-		tile("concrete", "cracked old concrete street with faded painted lines"),
-		tile("dirt", "dry dusty brown dirt with pebbles"),
+		tile("grass", "soft muted sage green grass, very low contrast, subtle large brush strokes, no flowers, no small colorful dots, calm and plain"),
+		tile("concrete", "pale warm grey concrete, very low contrast, few faint cracks, plain and calm"),
+		tile("dirt", "light muted sandy brown dirt, very low contrast, only a few faint large pebbles, plain and calm"),
 		tile("mud", "muddy brown puddle texture with bubbles"),
 		{Name: "zone_bush", Priority: 1, Mode: modeSprite, Out: "zones/bush.png", W: 512, H: 512, Pivot: "center",
 			Prompt: styleObject + " Top-down view of a dense leafy bush cluster, round, lush green, centered." + negative},

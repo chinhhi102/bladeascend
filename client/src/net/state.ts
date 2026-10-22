@@ -254,7 +254,7 @@ export class ClientWorld {
         if (this.brokenObstacles.get(o.id)) {
           continue;
         }
-        const np = pushOut(o.s, p, r);
+        const np = pushOut(o.f && (o.f.w ?? 0) > 0 ? o.f : o.s, p, r);
         if (np) {
           p = np;
           moved = true;

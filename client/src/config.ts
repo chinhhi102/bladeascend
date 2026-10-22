@@ -10,19 +10,32 @@ export interface GameConfig {
   cultivation: {
     realms: string[];
     tiers_per_realm: number;
-    swords_per_realm: number;
     exp_base: number;
     realm_mult: number;
     tier_step: number;
     scale_min: number;
     scale_max: number;
   };
-  sword: { tween_secs: number };
+  sword: {
+    tween_secs: number;
+    max_swords: number[];
+    swords_per_ring: number;
+    length: number;
+    width: number;
+    hilt_gap: number;
+    ring_growth: number;
+    ring_growth_mode: string;
+    hilt_step: number;
+    tilt_deg: number;
+    ring_tints: string[];
+    rev_secs: number;
+  };
   player: {
     body_r: number;
     move_base: number;
     camera_view_h: number;
     camera_exp: number;
+    camera_reach_mult: number;
     name_min: number;
     name_max: number;
   };
@@ -30,6 +43,7 @@ export interface GameConfig {
   zones: { mud_mult: number; wind_with: number; wind_against: number; wind_with_max_deg: number; wind_against_min_deg: number };
   gates: { radius: number };
   items: { item_r: number; chest_warn_secs: number };
+  obstacles: { occlusion_alpha: number };
   net: { tick_hz: number; snapshot_hz: number; interp_ms: number };
   characters: string[];
 }
@@ -50,12 +64,19 @@ export function tierOf(cfg: GameConfig, level: number): number {
   return (level % cfg.cultivation.tiers_per_realm) + 1;
 }
 
+/** maxSwords mirrors game.Progression.MaxSwords: max_swords[r], +40 per realm past the array. */
 export function maxSwords(cfg: GameConfig, realm: number): number {
-  return cfg.cultivation.swords_per_realm * (realm + 1);
+  const a = cfg.sword.max_swords;
+  if (!a.length) {
+    return 1;
+  }
+  return realm < a.length ? a[Math.max(realm, 0)] : a[a.length - 1] + 40 * (realm - a.length + 1);
 }
 
-export function cameraViewHeight(cfg: GameConfig, scale: number): number {
-  return cfg.player.camera_view_h * Math.pow(scale, cfg.player.camera_exp);
+/** cameraViewHeight backs off far enough to show the whole ring (spec §4.1). */
+export function cameraViewHeight(cfg: GameConfig, scale: number, reach: number): number {
+  const p = cfg.player;
+  return Math.max(p.camera_view_h * Math.pow(scale, p.camera_exp), p.camera_reach_mult * reach);
 }
 
 /** levelThresholds[L] = total EXP needed to reach level L (mirrors game.Progression). */

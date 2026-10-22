@@ -1,4 +1,4 @@
-import { AnimatedSprite, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
+import { AnimatedSprite, Container, Graphics, GraphicsContext, Sprite, Text, type Texture } from 'pixi.js';
 
 import type { ItemState, MonsterState } from '../net/protocol';
 import { assets } from './assets';
@@ -6,7 +6,33 @@ import { BUFF_COLORS, MONSTER_COLORS, MONSTER_VARIANTS } from './palette';
 
 const MONSTER_HEIGHT_PER_R = 2.4;
 const ITEM_SIZE_PER_R = 2.6;
-const ORB_COLORS = { small: 0x5dff7a, medium: 0x3a86ff, large: 0xffd23f };
+// ART_PROMPTS §9.0: EXP uses colours the calm ground never has — glowing cyan, then gold.
+const ORB_COLORS = { small: 0x3ee6ff, medium: 0x00b4ff, large: 0xffd23f };
+const GLOW_SCALE = 1.9; // halo radius relative to the item
+const BUNDLE_COLOR = 0xe0e6ee;
+
+// Shared drawing contexts: thousands of orbs reuse a handful of geometries.
+const contexts = new Map<string, GraphicsContext>();
+function shared(key: string, draw: (g: GraphicsContext) => void): GraphicsContext {
+  let c = contexts.get(key);
+  if (!c) {
+    c = new GraphicsContext();
+    draw(c);
+    contexts.set(key, c);
+  }
+  return c;
+}
+
+/** under draws the drop shadow and soft halo that lift gameplay objects off the ground. */
+function under(r: number, glow: number): Graphics {
+  return new Graphics(
+    shared(`under:${r}:${glow}`, (g) => {
+      g.ellipse(0, r * 0.9, r * 0.9, r * 0.32).fill({ color: 0x000000, alpha: 0.28 });
+      g.circle(0, 0, r * GLOW_SCALE).fill({ color: glow, alpha: 0.18 });
+      g.circle(0, 0, r * 1.35).fill({ color: glow, alpha: 0.18 });
+    }),
+  );
+}
 
 function variantOf(kind: string, id: number): string {
   const list = MONSTER_VARIANTS[kind] ?? ['banh_bao_cau'];
@@ -39,7 +65,8 @@ export class MonsterSprite {
     this.hpText = new Text({ text: '', style: { fontFamily: 'system-ui', fontSize: 40, fontWeight: '900', fill: 0x222222, stroke: { color: 0xffffff, width: 6 } } });
     this.hpText.anchor.set(0.5);
     this.hpText.scale.set((s.r * 0.9) / 40);
-    this.root.addChild(new Graphics().ellipse(0, s.r * 0.8, s.r, s.r * 0.35).fill({ color: 0, alpha: 0.2 }), this.body, this.hpText);
+    const halo = new Graphics(shared(`mon:${s.r}`, (g) => g.circle(0, 0, s.r * 1.3).fill({ color: 0xffffff, alpha: 0.14 })));
+    this.root.addChild(new Graphics().ellipse(0, s.r * 0.8, s.r, s.r * 0.35).fill({ color: 0, alpha: 0.3 }), halo, this.body, this.hpText);
   }
 
   update(x: number, y: number, s: MonsterState, now: number): void {
@@ -67,8 +94,8 @@ function itemTexture(it: ItemState): Texture | null {
     const size = (it.v ?? 0) >= 60 ? 'large' : (it.v ?? 0) >= 20 ? 'medium' : 'small';
     return assets.texture(`items/orb_${size}.png`);
   }
-  if (it.k === 'sword') {
-    return assets.texture('items/sword.png');
+  if (it.k === 'sword' || it.k === 'bundle') {
+    return null; // bundle has no art in ART_PROMPTS yet; sword art is drawn inside the placeholder below
   }
   if (it.k === 'chest') {
     return assets.frames('items/chest', 'idle')[0] ?? null;
@@ -80,7 +107,11 @@ function orbRadius(v: number): number {
   return v >= 60 ? 22 : v >= 20 ? 17 : 12;
 }
 
-/** ItemSprite: bobbing bubble/orb/chest. */
+function orbSize(v: number): 'small' | 'medium' | 'large' {
+  return v >= 60 ? 'large' : v >= 20 ? 'medium' : 'small';
+}
+
+/** ItemSprite: bobbing bubble/orb/chest with a shadow and halo. */
 export class ItemSprite {
   readonly root = new Container();
   private readonly phase = Math.random() * Math.PI * 2;
@@ -102,19 +133,36 @@ export class ItemSprite {
       sp.anchor.set(0.5);
       sp.width = sp.height = r * ITEM_SIZE_PER_R;
       node = sp;
+    } else if (it.k === 'sword' && assets.texture('items/sword.png')) {
+      const sp = new Sprite(assets.texture('items/sword.png') as Texture);
+      sp.anchor.set(0.5);
+      sp.width = sp.height = r * ITEM_SIZE_PER_R;
+      node = sp;
     } else {
       node = this.placeholder(it, r);
     }
-    this.root.addChild(node);
+    const glow = it.k === 'orb' ? ORB_COLORS[orbSize(it.v ?? 0)] : it.k === 'chest' ? 0xffd23f : 0xffffff;
+    this.root.addChild(under(r, glow), node);
     this.root.position.set(it.x, it.y);
     this.root.zIndex = it.y - 1000;
   }
 
   private placeholder(it: ItemState, r: number): Graphics {
-    const g = new Graphics();
     if (it.k === 'orb') {
-      const size = (it.v ?? 0) >= 60 ? 'large' : (it.v ?? 0) >= 20 ? 'medium' : 'small';
-      return g.circle(0, 0, r).fill(ORB_COLORS[size]).stroke({ color: 0xffffff, width: 3 });
+      const size = orbSize(it.v ?? 0);
+      return new Graphics(shared(`orb:${size}`, (g) => g.circle(0, 0, r).fill(ORB_COLORS[size]).stroke({ color: 0xffffff, width: 3 })));
+    }
+    const g = new Graphics();
+    if (it.k === 'bundle') {
+      // Bó Kiếm: a few crossed blades tied with a red band.
+      for (const a of [-0.35, 0, 0.35]) {
+        const c = Math.cos(a);
+        const sn = Math.sin(a);
+        const pt = (x: number, y: number): number[] => [x * c - y * sn, x * sn + y * c];
+        g.poly([...pt(-3, -r), ...pt(3, -r), ...pt(3, r), ...pt(-3, r)]).fill(BUNDLE_COLOR).stroke({ color: 0x333333, width: 1.5 });
+      }
+      g.rect(-r * 0.6, -3, r * 1.2, 6).fill(0xe63946);
+      return g;
     }
     if (it.k === 'chest') {
       return g.roundRect(-r, -r * 0.7, r * 2, r * 1.4, 8).fill(0x9c6644).stroke({ color: 0xffd23f, width: 6 });

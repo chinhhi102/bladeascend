@@ -10,9 +10,7 @@ export interface PlayerState {
   ph: number; // ring phase at snapshot time
   d: number; // ring direction ±1
   w: number; // ω rad/s
-  rr: number; // ring radius
-  sl: number; // sword length
-  sw: number; // sword width
+  tl: number; // blade tilt (rad); ring sizes are derived from sc, n and the Trường Kiếm buff
   sc: number; // scale
   md: string; // mood = animation name
   bf: number; // buff bits
@@ -140,7 +138,8 @@ export interface Shape {
 export interface MapObstacle {
   id: number;
   k: string;
-  s: Shape;
+  s: Shape; // what you see; swords hit it
+  f: Shape; // footprint at the bottom; blocks bodies (spec §8.2)
   hp: number;
 }
 
