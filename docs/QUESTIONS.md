@@ -13,3 +13,38 @@ Anh chốt: **30–60s là được** (spec §6.1 đang ghi 60–90s, nhờ sử
 **Bối cảnh:** §5.2 mới ghi mỗi lần va mất `clash_unit` = 5 kiếm (bảng: Trúc Cơ −5 / Luyện Khí −10…), nhưng checklist §17 vẫn ghi "mỗi bên mất 1 kiếm", "Luyện Khí mất 2, Trúc Cơ mất 1", "Luyện Khí mất 4, Nguyên Anh mất 1".
 
 **Tạm dùng:** theo §5.2 (nhân 5), unit test đã viết theo §5.2. Anh sửa giúp checklist §17 nếu đúng vậy.
+
+## Q9. `min_count = 0` không làm người chơi chết (22/10/2026)
+
+**Bối cảnh:** anh bảo "dù chỉ còn 1 kiếm người chơi cũng không thể chết → chỉnh min kiếm = 0". Em đã chỉnh `min_count` 1 → 0 (`config/game.json`, spec §5.2, test `TestRingCanBeStrippedToZero`). Nhưng đọc lại code thì **số kiếm chưa bao giờ quyết định sống chết**: `applyBodyHit` trong `server/internal/game/combat.go:70` tính `dies = Prog.Realm(b.Level) == 0` — tức **chỉ người đang ở Luyện Khí bị chém vào thân mới chết**, từ Trúc Cơ trở lên chỉ rớt 1 cảnh giới. Vậy 0 kiếm = bị tước vũ khí, không phải chết.
+
+**Các phương án nếu anh muốn người chơi chết được:**
+1. Giữ nguyên: chỉ Luyện Khí chết (luật spec §5.1 hiện tại).
+2. Thêm luật "hết kiếm = chết": ai bị đánh rớt về 0 kiếm thì chết luôn, bất kể cảnh giới.
+3. "Hết kiếm thì mới chém chết được": còn kiếm → rớt cảnh giới; 0 kiếm mà bị chạm thân → chết.
+
+**Tạm dùng:** phương án 1 (chưa đổi luật chết), chỉ áp dụng đúng yêu cầu `min_count = 0`.
+
+## Q10. Phạm vi nhặt vật phẩm (22/10/2026)
+
+**Bối cảnh:** anh bảo "phạm vi của kiếm không thu thập được vật phẩm, chỉ phạm vi nhân vật mới lượm". Kiểm tra code thì **luật này đã đúng sẵn**: `resolvePickups` (`server/internal/game/items.go:83`) chỉ dùng `PickupRadius = pickup_r × scale`, còn kiếm (`resolveSwordWorld`) chỉ đánh quái và vật cản, không chạm vào item. Client không hề tự nhặt.
+
+**Lý do nhìn như kiếm đang hút đồ:** `pickup_r` = 90 trong khi tầm với của vòng kiếm trong cùng ≈ 117 (cùng nhân `scale`) → vòng nhặt rộng bằng ~77% vòng kiếm, nên item biến mất gần như đúng lúc lưỡi kiếm lướt qua.
+
+**Các phương án:**
+1. Giữ 90 (không đổi gì, luật vốn đã đúng ý).
+2. Giảm còn ~45 (1.5 × `body_r`) → vòng nhặt nằm hẳn trong vòng kiếm, phải đi đè lên item mới lượm.
+3. Giảm còn ~60 (2 × `body_r`) — mức trung gian.
+
+**Tạm dùng:** phương án 1, chờ anh chốt con số.
+
+## Q11. "Tính exp dư ra làm ..." — câu bị cắt (22/10/2026)
+
+**Bối cảnh:** anh nhắn "hãy tính exp dư ra làm" nhưng câu chưa hết nên em chưa dám đoán. Chỗ EXP hiện đang bị bỏ phí trong code: `GainExp` (`server/internal/game/exp.go:13`) kẹp `total_exp` tại `Prog.MaxExp()` → khi đã Đại Thừa tầng 10 thì **mọi EXP nhặt thêm đều bị vứt bỏ** (không vào bảng xếp hạng, không đổi được gì).
+
+**Các phương án em đoán:**
+1. EXP dư vẫn cộng vào điểm bảng xếp hạng dù đã kịch cảnh giới.
+2. EXP dư tự đổi thành kiếm (giống `overcap_exp` nhưng ngược chiều).
+3. EXP dư khi lên tầng được giữ lại (thật ra đã đúng sẵn: level suy ra từ `total_exp` nên không mất gì).
+
+**Tạm dùng:** chưa làm gì, chờ anh nói rõ.

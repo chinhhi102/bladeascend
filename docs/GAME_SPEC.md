@@ -8,7 +8,7 @@
 
 **Thay đổi v3.1:** vòng kiếm vẽ kiểu cánh quạt như quảng cáo — so le góc, lưỡi nghiêng 35°, mỗi vòng một màu, vòng ngoài lùi ra xa hơn (§4.1a).
 
-**Thay đổi v3:** kiếm dài gấp đôi, quay 300ms/vòng, kiếm tối đa 60→400 xếp vòng lồng nhau (20 kiếm/vòng), bị chém rớt 1 đại cảnh giới, EXP rải khắp bản đồ, vật phẩm ×3, vật cản chỉ chặn ở chân đế + y-sort.
+**Thay đổi v3:** kiếm dài gấp đôi, quay 300ms/vòng (nay đã giảm còn 600ms/vòng — xem §4.1b), kiếm tối đa 60→400 xếp vòng lồng nhau (20 kiếm/vòng), bị chém rớt 1 đại cảnh giới, EXP rải khắp bản đồ, vật phẩm ×3, vật cản chỉ chặn ở chân đế + y-sort.
 
 **Thay đổi v2 so với v1:** đổi stack (Go server + TypeScript/PixiJS client trên web) · kiếm có thể bị bể khi va nhau (tỉ lệ theo chênh lệch cảnh giới) · scale 1 → 5 và tầm kiếm dài theo · chết ra màn hình chờ rồi match lại · bản đồ có địa hình, vật cản phá được (mọc lại sau 30s), cổng dịch chuyển · không login, nhập tên là chơi, có leaderboard · bộ vật phẩm buff có thời hạn.
 
@@ -127,8 +127,11 @@ angle(i, k, t)    = phase + dir * ω * t + slot_angle(i) + stagger(k)
 - Số kiếm tối thiểu 1. Bắt đầu: 1 kiếm. Thêm/bớt kiếm hoặc đổi số vòng (stagger thay đổi): tween vị trí 0.2s.
 
 ### 4.1b Kiếm quay nhanh — va chạm và hiển thị
-- **Va chạm theo góc quét**: ở 30 tick/s, mỗi tick kiếm quay ~40°. Không kiểm tra vị trí tức thời mà kiểm tra **cung đã quét** từ tick trước tới tick này (sweep). Mục tiêu nằm trong vành khăn `[inner_r, reach]` và trong cung quét của bất kỳ kiếm nào → trúng. Khi số kiếm × góc quét ≥ 360°, coi cả vành khăn là vùng sát thương.
-- **Hiển thị**: ở 60 fps mỗi frame quay ~20°, gần bằng khoảng cách 18° giữa 2 kiếm → mắt sẽ thấy vòng kiếm như đứng yên hoặc quay ngược (hiệu ứng bánh xe). Bắt buộc vẽ **vệt mờ chuyển động**: mỗi vòng có 1 lớp vành khăn mờ (spin blur) theo màu skin kiếm, kiếm vẽ đè lên với độ trong suốt giảm dần theo vệt quét. Tốc độ càng nhanh thì vệt càng đậm.
+
+Tốc độ quay: **1 vòng / 600ms** (`rev_secs` = 0.6). Trước đây là 300ms; đã giảm một nửa để nhìn rõ từng lưỡi kiếm và dễ né hơn.
+
+- **Va chạm theo góc quét**: ở 30 tick/s, mỗi tick kiếm quay ~20°. Không kiểm tra vị trí tức thời mà kiểm tra **cung đã quét** từ tick trước tới tick này (sweep). Mục tiêu nằm trong vành khăn `[inner_r, reach]` và trong cung quét của bất kỳ kiếm nào → trúng. Khi số kiếm × góc quét ≥ 360°, coi cả vành khăn là vùng sát thương. Lưu ý: ở tốc độ này một vòng 20 kiếm quét 20° × 20 = 400° ≥ 360° nên vành khăn vẫn kín; vòng chưa đủ 18 kiếm thì bắt đầu có kẽ hở để lách qua.
+- **Hiển thị**: ở 60 fps mỗi frame quay ~10°, vẫn hơn nửa khoảng cách 18° giữa 2 kiếm → mắt vẫn có thể thấy vòng kiếm đứng yên hoặc quay ngược (hiệu ứng bánh xe). Bắt buộc vẽ **vệt mờ chuyển động**: mỗi vòng có 1 lớp vành khăn mờ (spin blur) theo màu skin kiếm, kiếm vẽ đè lên với độ trong suốt giảm dần theo vệt quét. Tốc độ càng nhanh thì vệt càng đậm.
 - Dùng `ParticleContainer` của PixiJS cho kiếm (có thể tới hàng nghìn sprite trên màn hình).
 
 ### 4.1 Tốc độ di chuyển & camera
@@ -167,7 +170,7 @@ Sau đó tính bể kiếm, với `d = |rA - rB|`, `k = d + 1` và đơn vị m�
 | Cùng cảnh giới (d = 0) | Mỗi bên mất `u` kiếm |
 | Khác cảnh giới | Bên thấp mất `u * k` kiếm; bên cao nhận `crack += lost / k` (lost = số kiếm bên thấp thực sự mất). Khi `crack ≥ 1` → bên cao mất `floor(crack)` kiếm, `crack -= floor(crack)` |
 
-Mọi trường hợp: số kiếm không bao giờ xuống dưới 1.
+Mọi trường hợp: số kiếm không bao giờ xuống dưới `min_count` = **0** — nghĩa là người chơi **có thể bị tước sạch kiếm**. Khi còn 0 kiếm thì không gây sát thương cho ai, không bể kiếm nữa, phải đi nhặt kiếm rơi để đánh tiếp (trước đây luật giữ lại tối thiểu 1 kiếm nên không ai bị tước hết).
 
 Bảng tỉ lệ đổi kiếm (bên cao : bên thấp):
 
@@ -461,7 +464,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "swords_per_ring": 20, "length": 80, "width": 12, "hilt_gap": 6,
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
-    "rev_secs": 0.3, "flip_cooldown": 0.3,
+    "rev_secs": 0.6, "flip_cooldown": 0.3,
     "clash_unit": 5, "clash_knockback": 150, "drop_bundle_max": 10,
     "clash_ratio_base": 1,
     "clash_ratio_per_realm": 1
@@ -517,7 +520,7 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
 - [ ] Cùng 1 tầng: 1 → 20 kiếm, bán kính vòng không đổi; kiếm thứ 21 mới mở vòng 2 rộng hơn.
 - [ ] Luyện Khí tối đa 60 kiếm = 3 vòng so le, mỗi vòng một màu, cả 3 lớp đều nhìn thấy; lưỡi nghiêng về phía sau và lật khi đổi chiều.
 - [ ] Mũi kiếm vòng 3 xa tâm hơn vòng 1; hitbox server khớp với hình vẽ (bật chế độ debug vẽ capsule để so).
-- [ ] Kiếm quay đúng 1 vòng / 300ms, nhìn thấy vệt mờ, không bị hiệu ứng quay ngược.
+- [ ] Kiếm quay đúng 1 vòng / 600ms, nhìn thấy vệt mờ, không bị hiệu ứng quay ngược.
 - [ ] Nhân vật đi sát mép trên tảng đá được (chỉ bị chặn ở chân đế), đứng sau đá thì bị che.
 - [ ] Farm không đánh nhau: Luyện Khí → Trúc Cơ trong 60–90s (đo bằng cmd/sim).
 - [ ] 2 người cùng cảnh giới va kiếm → mỗi bên mất 1 kiếm, cả hai đổi chiều quay.

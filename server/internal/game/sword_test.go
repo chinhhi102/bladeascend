@@ -17,15 +17,15 @@ func TestResolveClashTable(t *testing.T) {
 		crackA, crackB float64
 	}{
 		{"same realm each lose u=5", ClashSide{2, 30, 0}, ClashSide{2, 27, 0}, 5, 5, 0, 0},
-		{"same realm, one at 3 swords keeps 1", ClashSide{0, 3, 0}, ClashSide{0, 40, 0}, 2, 5, 0, 0},
+		{"same realm, one at 3 swords loses all 3", ClashSide{0, 3, 0}, ClashSide{0, 40, 0}, 3, 5, 0, 0},
 		{"Trúc Cơ vs Luyện Khí: -5 / -10", ClashSide{1, 60, 0}, ClashSide{0, 50, 0}, 5, 10, 0, 0},
 		{"Kim Đan vs Luyện Khí: -5 / -15", ClashSide{2, 60, 0}, ClashSide{0, 50, 0}, 5, 15, 0, 0},
 		{"Luyện Khí vs Nguyên Anh: -20 / -5", ClashSide{0, 50, 0}, ClashSide{3, 100, 0}, 20, 5, 0, 0},
-		{"Luyện Khí(3) vs Nguyên Anh: crack 2/4", ClashSide{0, 3, 0}, ClashSide{3, 100, 0}, 2, 0, 0, 0.5},
+		{"Luyện Khí(3) vs Nguyên Anh: crack 3/4", ClashSide{0, 3, 0}, ClashSide{3, 100, 0}, 3, 0, 0, 0.75},
 		{"Đại Thừa vs Luyện Khí: -5 / -45", ClashSide{8, 400, 0}, ClashSide{0, 60, 0}, 5, 45, 0, 0},
-		{"low side already at 1", ClashSide{0, 1, 0}, ClashSide{3, 100, 0.5}, 0, 0, 0, 0.5},
-		{"crack accumulates to a break", ClashSide{3, 100, 0.5}, ClashSide{0, 3, 0}, 1, 2, 0, 0},
-		{"high side at 1 sword keeps 1", ClashSide{3, 1, 0}, ClashSide{0, 50, 0}, 0, 20, 0, 0},
+		{"low side at 1 sword loses its last one", ClashSide{0, 1, 0}, ClashSide{3, 100, 0.5}, 1, 0, 0, 0.75},
+		{"crack accumulates to a break", ClashSide{3, 100, 0.5}, ClashSide{0, 3, 0}, 1, 3, 0.25, 0},
+		{"high side at 1 sword loses it too", ClashSide{3, 1, 0}, ClashSide{0, 50, 0}, 1, 20, 0, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -36,10 +36,37 @@ func TestResolveClashTable(t *testing.T) {
 			if math.Abs(out.CrackA-tc.crackA) > 1e-9 || math.Abs(out.CrackB-tc.crackB) > 1e-9 {
 				t.Fatalf("crack = %v,%v want %v,%v", out.CrackA, out.CrackB, tc.crackA, tc.crackB)
 			}
-			if tc.a.Count-out.LostA < 1 || tc.b.Count-out.LostB < 1 {
-				t.Fatal("a ring dropped below 1 sword")
+			if tc.a.Count-out.LostA < c.MinCount || tc.b.Count-out.LostB < c.MinCount {
+				t.Fatalf("a ring dropped below min_count = %d", c.MinCount)
 			}
 		})
+	}
+}
+
+// Spec §5.2: min_count = 0 nên người chơi có thể bị tước sạch kiếm, và khi đó
+// vòng kiếm không chạm được ai nữa.
+func TestRingCanBeStrippedToZero(t *testing.T) {
+	g := quietGame(t, nil)
+	if g.Cfg.Sword.MinCount != 0 {
+		t.Fatalf("min_count = %d, luật hiện tại phải là 0", g.Cfg.Sword.MinCount)
+	}
+	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 20, Swords: 20})
+	victim := g.AddPlayer(SpawnOptions{Name: "V", Level: 20, Swords: 1})
+	// Nạn nhân đứng sát thân A, nằm gọn trong tầm vòng kiếm.
+	place(g, a, Vec{X: 6000, Y: 6000}, 0)
+	place(g, victim, Vec{X: 6000 + g.Geom(a).Inner, Y: 6000}, 0)
+	a.Ring.SweepLo, a.Ring.Sweep = 0, 2*math.Pi // quét trọn vòng như một tick bình thường
+
+	// Đối chứng: còn kiếm thì chạm được.
+	if _, hit := g.swordTouchesCircle(a, victim.Pos, g.BodyR(victim)); !hit {
+		t.Fatal("thiết lập sai: A còn 20 kiếm mà không chạm được nạn nhân")
+	}
+	// Tước sạch kiếm — min_count = 0 nên xuống tới 0.
+	if lost := g.LoseSwords(a, 99); lost != 20 || a.Ring.Count != 0 {
+		t.Fatalf("mất %d kiếm, còn lại %d; muốn mất 20 còn 0", lost, a.Ring.Count)
+	}
+	if _, hit := g.swordTouchesCircle(a, victim.Pos, g.BodyR(victim)); hit {
+		t.Fatal("người 0 kiếm vẫn chạm được nạn nhân")
 	}
 }
 

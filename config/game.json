@@ -6,12 +6,12 @@
     "scale_min": 1.0, "scale_max": 5.0
   },
   "sword": {
-    "start_count": 1, "min_count": 1,
+    "start_count": 1, "min_count": 0,
     "max_swords": [60, 120, 160, 200, 240, 280, 320, 360, 400],
     "swords_per_ring": 20, "length": 80, "width": 12, "hilt_gap": 6,
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35, "tilt_tween_secs": 0.1,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
-    "rev_secs": 0.3, "flip_cooldown": 0.3,
+    "rev_secs": 0.6, "flip_cooldown": 0.3,
     "clash_unit": 5, "clash_knockback": 150, "clash_knockback_secs": 0.2, "drop_bundle_max": 10,
     "clash_ratio_base": 1,
     "clash_ratio_per_realm": 1,
