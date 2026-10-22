@@ -25,13 +25,13 @@ func NewGrid(m *Map, cell float64) *Grid {
 }
 
 func (g *Grid) indexObstacle(o Obstacle) {
-	lo, hi := o.Shape.Bounds()
+	lo, hi := o.Block().Bounds()
 	x0, y0 := g.cellOf(lo)
 	x1, y1 := g.cellOf(hi)
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			c := geom.Vec{X: (float64(x) + 0.5) * g.Cell, Y: (float64(y) + 0.5) * g.Cell}
-			if o.Shape.OverlapsCircle(c, g.Cell*0.5) {
+			if o.Block().OverlapsCircle(c, g.Cell*0.5) {
 				g.owners[y*g.N+x] = append(g.owners[y*g.N+x], o.ID)
 			}
 		}

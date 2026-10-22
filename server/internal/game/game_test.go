@@ -17,16 +17,41 @@ func quietGame(t *testing.T, m *world.Map) *Game {
 	cfg.Room.MonsterCount = 0
 	cfg.Items.CountPerRoom = 0
 	cfg.Items.ChestEverySecs = 1e9
+	cfg.ExpOrbs.Cell = 0 // no ambient orbs: tests count the orbs they drop
 	if m == nil {
 		m = world.EmptyMap(cfg.Room.MapSize)
 	}
 	return New(cfg, m, 1)
 }
 
-// place puts a player at pos with sword 0 pointing at angle, clearing spawn invulnerability.
+// place puts a player at pos with ring phase angle (sword 0's hilt points there), not
+// sweeping, and clears spawn invulnerability.
 func place(g *Game, p *Player, pos Vec, angle float64) {
 	p.Pos, p.Ring.Angle, p.InvulnUntil = pos, angle, 0
+	p.Ring.SweepLo, p.Ring.Sweep = angle, 0
 	g.refreshDerived(p)
+}
+
+// bladeMid is the middle of p's sword 0.
+func bladeMid(p *Player) Vec {
+	h, t := SwordSegment(p.Pos, p.Ring, p.Geom, 0)
+	return h.Add(t).Mul(0.5)
+}
+
+// touchSwords moves b so the middle of its sword 0 (phase angle) lies on a's sword 0.
+func touchSwords(g *Game, a, b *Player, angle float64) {
+	place(g, b, Vec{}, angle)
+	place(g, b, bladeMid(a).Sub(bladeMid(b)), angle)
+}
+
+func countItems(g *Game, kind string) (n int, value float64) {
+	for _, it := range g.Items {
+		if it.Kind == kind {
+			n++
+			value += it.Value
+		}
+	}
+	return n, value
 }
 
 func hasEvent(evs []Event, kind string) bool {
@@ -38,66 +63,60 @@ func hasEvent(evs []Event, kind string) bool {
 	return false
 }
 
-func TestBodyHitDropsOneTierAndRewards(t *testing.T) {
+// Spec §5.1: a hit drops one whole realm and keeps the tier and progress (Trúc Cơ 2 → Luyện Khí 2).
+func TestBodyHitDropsOneRealmKeepingTier(t *testing.T) {
 	g := quietGame(t, nil)
 	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 0, Swords: 1})
-	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 10, Swords: 1})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 11, Swords: 1})
 	place(g, a, Vec{X: 5000, Y: 5000}, 0)
-	place(g, b, Vec{X: 5000 + a.Geom.Radius, Y: 5000}, math.Pi/2)
+	b.TotalExp += 0.4 * g.Prog.ExpNeeded(11)
+	place(g, b, bladeMid(a), math.Pi/2)
 	before := b.TotalExp
 	g.resolveSwordBody()
-	loss := g.Prog.ExpNeeded(9)
-	if b.Level != 9 || b.TotalExp != before-loss {
-		t.Fatalf("B level %d exp %v, want level 9 exp %v", b.Level, b.TotalExp, before-loss)
+	want := g.Prog.Threshold(1) + 0.4*g.Prog.ExpNeeded(1)
+	if b.Level != 1 || math.Abs(b.TotalExp-want) > 1e-9 {
+		t.Fatalf("B level %d exp %v, want Luyện Khí 2 (level 1) exp %v", b.Level, b.TotalExp, want)
 	}
-	if a.TotalExp != loss*0.5 {
+	loss := before - want
+	if math.Abs(a.TotalExp-loss*0.5) > 1e-9 {
 		t.Fatalf("A exp = %v, want %v", a.TotalExp, loss*0.5)
 	}
 	if !b.Invulnerable(g.Time) {
 		t.Fatal("B should be invulnerable after a hit")
 	}
 	if !hasEvent(g.DrainEvents(), "RealmDrop") {
-		t.Fatal("Trúc Cơ 1 → Luyện Khí 10 must emit RealmDrop")
+		t.Fatal("Trúc Cơ → Luyện Khí must emit RealmDrop")
 	}
-	orbs := 0.0
-	for _, it := range g.Items {
-		if it.Kind == "orb" {
-			orbs += it.Value
-		}
-	}
-	if math.Abs(orbs-math.Round(loss*0.3)) > 1e-9 {
+	if _, orbs := countItems(g, "orb"); math.Abs(orbs-math.Round(loss*0.3)) > 1e-9 {
 		t.Fatalf("dropped orb EXP = %v, want %v", orbs, math.Round(loss*0.3))
 	}
 }
 
-func TestRealmDropSpillsExtraSwords(t *testing.T) {
+// Spec §5.1: swords over the new realm's max (60 at Luyện Khí) fall as bundles of ≤ 10.
+func TestRealmDropSpillsExtraSwordsAsBundles(t *testing.T) {
 	g := quietGame(t, nil)
 	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 0, Swords: 1})
-	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 10, Swords: 8})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 10, Swords: 95})
 	place(g, a, Vec{X: 5000, Y: 5000}, 0)
-	place(g, b, Vec{X: 5000 + a.Geom.Radius, Y: 5000}, math.Pi/16)
+	place(g, b, bladeMid(a), math.Pi/16)
 	a.InvulnUntil = 1e9 // B's larger ring would otherwise hit A first
 	g.resolveSwordBody()
-	if b.Ring.Count != 5 {
-		t.Fatalf("B swords = %d, want 5 (Luyện Khí max)", b.Ring.Count)
+	if b.Ring.Count != 60 {
+		t.Fatalf("B swords = %d, want 60 (Luyện Khí max)", b.Ring.Count)
 	}
-	swords := 0
-	for _, it := range g.Items {
-		if it.Kind == "sword" {
-			swords++
-		}
-	}
-	if swords != 3 {
-		t.Fatalf("sword items on ground = %d, want 3", swords)
+	n, total := countItems(g, "bundle")
+	if n != 4 || total != 35 {
+		t.Fatalf("bundles = %d holding %v swords, want 4 holding 35", n, total)
 	}
 }
 
-func TestLuyenKhi1Dies(t *testing.T) {
+// Spec §5.1: Luyện Khí at any tier dies when hit.
+func TestLuyenKhiDiesAtAnyTier(t *testing.T) {
 	g := quietGame(t, nil)
 	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 5, Swords: 1})
-	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 0, Swords: 1})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 7, Swords: 1})
 	place(g, a, Vec{X: 5000, Y: 5000}, 0)
-	place(g, b, Vec{X: 5000 + a.Geom.Radius, Y: 5000}, math.Pi/2)
+	place(g, b, bladeMid(a), math.Pi/2)
 	g.resolveSwordBody()
 	if !b.Dead || b.KilledBy != a.ID || a.Kills != 1 {
 		t.Fatalf("B dead=%v killedBy=%d A kills=%d", b.Dead, b.KilledBy, a.Kills)
@@ -112,7 +131,7 @@ func TestShieldBlocksOneHit(t *testing.T) {
 	a := g.AddPlayer(SpawnOptions{Name: "A", Swords: 1})
 	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 15, Swords: 1})
 	place(g, a, Vec{X: 5000, Y: 5000}, 0)
-	place(g, b, Vec{X: 5000 + a.Geom.Radius, Y: 5000}, math.Pi/2)
+	place(g, b, bladeMid(a), math.Pi/2)
 	g.ApplyBuff(b, "shield")
 	g.resolveSwordBody()
 	if b.Level != 15 || b.HasBuff(BuffShield, g.Time) || !b.Invulnerable(g.Time) {
@@ -130,27 +149,32 @@ func TestOneHitPerVictimPerTick(t *testing.T) {
 		if x > 0 {
 			ang = 0
 		}
-		place(g, a, Vec{X: 5000 - x*a.Geom.Radius, Y: 5000}, ang)
+		place(g, a, Vec{}, ang)
+		place(g, a, b.Pos.Sub(bladeMid(a)), ang)
 	}
 	g.resolveSwordBody()
-	if b.Level != 19 {
-		t.Fatalf("B level = %d, want 19 (only one hit per tick)", b.Level)
+	if b.Level != 10 {
+		t.Fatalf("B level = %d, want 10 (only one hit per tick)", b.Level)
 	}
 }
 
+// Spec §5.2: same realm → each loses clash_unit swords, both flip and are knocked apart.
 func TestClashFlipsBothRings(t *testing.T) {
 	g := quietGame(t, nil)
-	a := g.AddPlayer(SpawnOptions{Name: "A", Swords: 3})
-	b := g.AddPlayer(SpawnOptions{Name: "B", Swords: 3})
+	a := g.AddPlayer(SpawnOptions{Name: "A", Swords: 8})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Swords: 8})
 	place(g, a, Vec{X: 5000, Y: 5000}, 0)
-	// Ring B centred so its sword 0 (pointing left) overlaps A's sword 0 (pointing right).
-	place(g, b, Vec{X: 5000 + 2*a.Geom.Radius, Y: 5000}, math.Pi)
+	touchSwords(g, a, b, math.Pi)
 	g.resolveSwordSword()
 	if a.Ring.Dir != -1 || b.Ring.Dir != -1 {
 		t.Fatalf("dirs = %v, %v; want both flipped", a.Ring.Dir, b.Ring.Dir)
 	}
-	if a.Ring.Count != 2 || b.Ring.Count != 2 {
-		t.Fatalf("same realm should lose 1 each: %d, %d", a.Ring.Count, b.Ring.Count)
+	if a.Ring.Count != 3 || b.Ring.Count != 3 {
+		t.Fatalf("same realm should lose 5 each: %d, %d", a.Ring.Count, b.Ring.Count)
+	}
+	away := b.Pos.Sub(a.Pos)
+	if a.KnockVel.Dot(away) >= 0 || b.KnockVel.Dot(away) <= 0 {
+		t.Fatalf("clash must push the two apart: %+v %+v", a.KnockVel, b.KnockVel)
 	}
 	g.resolveSwordSword() // cooldown 0.3s prevents an immediate second clash
 	if a.Ring.Dir != -1 {
@@ -158,17 +182,27 @@ func TestClashFlipsBothRings(t *testing.T) {
 	}
 }
 
+// Spec §6.2: a sword item gives +3, a bundle +15, capped at the realm max; at max → +20 EXP.
 func TestSwordPickupOvercapGivesExp(t *testing.T) {
 	g := quietGame(t, nil)
-	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 5})
-	g.AddSword(p)
-	if p.Ring.Count != 5 || p.TotalExp != 20 {
-		t.Fatalf("count %d exp %v, want 5 swords and +20 EXP", p.Ring.Count, p.TotalExp)
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 60})
+	g.pickup(p, g.addItem("sword", 0, p.Pos))
+	if p.Ring.Count != 60 || p.TotalExp != 20 {
+		t.Fatalf("count %d exp %v, want 60 swords and +20 EXP", p.Ring.Count, p.TotalExp)
 	}
 	q := g.AddPlayer(SpawnOptions{Name: "Q", Swords: 1})
-	g.AddSword(q)
-	if q.Ring.Count != 2 {
-		t.Fatalf("count %d, want 2", q.Ring.Count)
+	g.pickup(q, g.addItem("sword", 0, q.Pos))
+	if q.Ring.Count != 4 {
+		t.Fatalf("count %d, want 4", q.Ring.Count)
+	}
+	g.pickup(q, g.addItem("bundle", 0, q.Pos))
+	if q.Ring.Count != 19 {
+		t.Fatalf("count %d after a bundle, want 19", q.Ring.Count)
+	}
+	q.Ring.Count = 55
+	g.pickup(q, g.addItem("bundle", 0, q.Pos))
+	if q.Ring.Count != 60 {
+		t.Fatalf("bundle must stop at the realm max: %d", q.Ring.Count)
 	}
 }
 
@@ -210,10 +244,10 @@ func TestExp2DoublesGains(t *testing.T) {
 func TestLongBuffExtendsRing(t *testing.T) {
 	g := quietGame(t, nil)
 	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
-	r0 := p.Geom.Radius
+	l0 := p.Geom.Len(0)
 	g.ApplyBuff(p, "long")
-	if math.Abs(p.Geom.Radius-r0*1.3) > 1e-9 {
-		t.Fatalf("radius %v, want %v", p.Geom.Radius, r0*1.3)
+	if math.Abs(p.Geom.Len(0)-l0*1.3) > 1e-9 {
+		t.Fatalf("length %v, want %v", p.Geom.Len(0), l0*1.3)
 	}
 }
 
@@ -248,7 +282,8 @@ func TestObstacleBreaksAndRegrowsWhenClear(t *testing.T) {
 func TestSwordDamagesObstacleAndSurvives(t *testing.T) {
 	g := quietGame(t, obstacleMap("brick", 150))
 	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 20, Swords: 1})
-	place(g, p, Vec{X: 6100, Y: 6020 + 45 + 80}, -math.Pi/2)
+	place(g, p, Vec{}, -math.Pi/2)
+	place(g, p, Vec{X: 6100, Y: 6020}.Sub(bladeMid(p).Sub(p.Pos)), -math.Pi/2)
 	g.hitObstacles(p)
 	if g.Obstacles[0].HP != 150-3 {
 		t.Fatalf("brick HP = %d, want 147 (1 + realm 2)", g.Obstacles[0].HP)
@@ -303,30 +338,23 @@ func TestMoveSpeedFormula(t *testing.T) {
 func TestKillRewardAndDeathSwordDrop(t *testing.T) {
 	g := quietGame(t, nil)
 	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 5, Swords: 1})
-	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 0, Swords: 5})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 0, Swords: 50})
 	place(g, a, Vec{X: 5000, Y: 5000}, 0)
-	place(g, b, Vec{X: 5000 + a.Geom.Radius, Y: 5000}, math.Pi/2+math.Pi/5)
+	place(g, b, bladeMid(a), math.Pi/2+math.Pi/5)
 	a.InvulnUntil = 1e9
 	b.TotalExp = 80
 	aBefore := a.TotalExp
 	g.resolveSwordBody()
 	if !b.Dead {
-		t.Fatal("B should die at Luyện Khí 1")
+		t.Fatal("B should die at Luyện Khí")
 	}
 	if got, want := a.TotalExp-aBefore, 80*0.5+30; math.Abs(got-want) > 1e-9 {
 		t.Fatalf("killer gained %v, want %v (50%% + kill bonus)", got, want)
 	}
-	swords, orbs := 0, 0.0
-	for _, it := range g.Items {
-		switch it.Kind {
-		case "sword":
-			swords++
-		case "orb":
-			orbs += it.Value
-		}
-	}
-	if swords != 2 {
-		t.Fatalf("corpse dropped %d swords, want floor(5*0.5)=2", swords)
+	bundles, swords := countItems(g, "bundle")
+	_, orbs := countItems(g, "orb")
+	if bundles != 3 || swords != 25 {
+		t.Fatalf("corpse dropped %d bundles / %v swords, want 3 bundles holding floor(50*0.5)=25", bundles, swords)
 	}
 	if orbs != 24 {
 		t.Fatalf("dropped orb EXP %v, want 24 (30%% of 80)", orbs)
@@ -380,6 +408,7 @@ func TestNarrowAlleyBlocksBigPlayers(t *testing.T) {
 	place(g, big, Vec{X: 5195, Y: 3500}, 0)
 	for _, p := range []*Player{small, big} {
 		p.Moving, p.InputAngle = true, math.Pi/2
+		p.InvulnUntil = 1e9 // only movement is under test
 	}
 	for i := 0; i < 30*12; i++ {
 		g.Tick(dt)
@@ -434,7 +463,7 @@ func TestStealthEndsWhenOwnerHitsSomeone(t *testing.T) {
 	a := g.AddPlayer(SpawnOptions{Name: "A", Swords: 1})
 	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 15, Swords: 1})
 	place(g, a, Vec{X: 5000, Y: 5000}, 0)
-	place(g, b, Vec{X: 5000 + a.Geom.Radius, Y: 5000}, math.Pi/2)
+	place(g, b, bladeMid(a), math.Pi/2)
 	g.ApplyBuff(a, "stealth")
 	g.resolveSwordBody()
 	if a.HasBuff(BuffStealth, g.Time) {
@@ -507,7 +536,7 @@ func TestBreakthroughShocksNearbyAndBushRevealEmotes(t *testing.T) {
 	hider := g.AddPlayer(SpawnOptions{Name: "H", Level: 15, Swords: 1})
 	att := g.AddPlayer(SpawnOptions{Name: "A", Swords: 1})
 	place(g, hider, Vec{X: 6000, Y: 6000}, math.Pi/2)
-	place(g, att, Vec{X: 6000 - att.Geom.Radius, Y: 6000}, 0)
+	place(g, att, Vec{X: 6000 - 100, Y: 6000}, 0)
 	hider.Bush = 0
 	g.DrainEvents()
 	g.applyBodyHit(att, hider)
@@ -519,5 +548,94 @@ func TestBreakthroughShocksNearbyAndBushRevealEmotes(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("missing revealed emote")
+	}
+}
+
+// Spec §8.2: bodies are blocked only by the footprint (bottom 30%); a player can walk across
+// the top part of a boulder's sprite.
+func TestFootprintBlocksOnlyTheBase(t *testing.T) {
+	m := world.EmptyMap(12000)
+	sh := world.Shape{X: 6000, Y: 6000, W: 400, H: 400}
+	m.Obstacles = []world.Obstacle{{ID: 0, Kind: "boulder", Shape: sh, Foot: world.Footprint(sh, 0.9, 0.3)}}
+	g := quietGame(t, m)
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
+	place(g, p, Vec{X: 6200, Y: 6100}, 0) // inside the top of the sprite
+	if np := g.resolveBlocking(p.Pos, g.BodyR(p)); np != p.Pos {
+		t.Fatalf("upper part of the sprite must not block: pushed to %+v", np)
+	}
+	if np := g.resolveBlocking(Vec{X: 6200, Y: 6350}, g.BodyR(p)); np.Dist(Vec{X: 6200, Y: 6350}) < 1 {
+		t.Fatal("footprint must block")
+	}
+}
+
+// Spec §6.1: ambient orbs cover the map and regrow in the same 1000×1000 region after 5s.
+func TestAmbientOrbsRegrowInSameRegion(t *testing.T) {
+	cfg := config.MustLoadDefault()
+	cfg.Room.MonsterCount, cfg.Items.CountPerRoom = 0, 0
+	g := New(cfg, world.EmptyMap(cfg.Room.MapSize), 1)
+	n, _ := countItems(g, "orb")
+	cells := int(cfg.Room.MapSize / cfg.ExpOrbs.Cell)
+	if n < cells*cells*9/10 {
+		t.Fatalf("ambient orbs = %d, want about %d", n, cells*cells)
+	}
+	var orb *Item
+	for _, it := range g.Items {
+		if it.Region >= 0 {
+			orb = it
+			break
+		}
+	}
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
+	place(g, p, orb.Pos, 0)
+	g.pickup(p, orb)
+	g.RemovePlayer(p.ID)
+	for g.Time < cfg.ExpOrbs.RespawnSecs-0.1 {
+		g.Tick(dt)
+	}
+	if m, _ := countItems(g, "orb"); m != n-1 {
+		t.Fatalf("orb regrew early: %d vs %d", m, n-1)
+	}
+	for g.Time < cfg.ExpOrbs.RespawnSecs+0.1 {
+		g.Tick(dt)
+	}
+	if m, _ := countItems(g, "orb"); m != n {
+		t.Fatalf("orb did not regrow: %d vs %d", m, n)
+	}
+	size := cfg.ExpOrbs.RespawnRegion
+	for _, it := range g.Items {
+		if it.Region == orb.Region && (int(it.Pos.X/size) != int(orb.Pos.X/size) || int(it.Pos.Y/size) != int(orb.Pos.Y/size)) {
+			t.Fatalf("orb regrew outside its region: %+v", it.Pos)
+		}
+	}
+}
+
+// Spec §6.2: the room keeps count_per_room items; a picked one returns respawn_secs later.
+func TestItemPoolRespawnsAfterDelay(t *testing.T) {
+	cfg := config.MustLoadDefault()
+	cfg.Room.MonsterCount, cfg.ExpOrbs.Cell, cfg.Items.ChestEverySecs = 0, 0, 1e9
+	cfg.Items.CountPerRoom = 10
+	g := New(cfg, world.EmptyMap(cfg.Room.MapSize), 1)
+	g.Tick(dt)
+	if g.poolCount != 10 {
+		t.Fatalf("pool = %d, want 10", g.poolCount)
+	}
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
+	for _, it := range g.Items {
+		g.pickup(p, it)
+		break
+	}
+	g.RemovePlayer(p.ID)
+	t0 := g.Time
+	for g.Time < t0+cfg.Items.RespawnSecs-0.2 {
+		g.Tick(dt)
+	}
+	if g.poolCount != 9 {
+		t.Fatalf("item came back early: pool %d", g.poolCount)
+	}
+	for g.Time < t0+cfg.Items.RespawnSecs+0.2 {
+		g.Tick(dt)
+	}
+	if g.poolCount != 10 {
+		t.Fatalf("item did not come back: pool %d", g.poolCount)
 	}
 }

@@ -92,7 +92,7 @@ func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
 			if !g.ObstacleSolid(id) {
 				return
 			}
-			if np, hit := g.Map.Obstacles[id].Shape.PushOut(pos, r); hit {
+			if np, hit := g.Map.Obstacles[id].Block().PushOut(pos, r); hit {
 				pos, moved = np, true
 			}
 		})
@@ -108,7 +108,7 @@ func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
 func (g *Game) circleFree(pos Vec, r float64) bool {
 	free := true
 	g.QueryObstacles(pos, r, func(id int) {
-		if g.ObstacleSolid(id) && g.Map.Obstacles[id].Shape.OverlapsCircle(pos, r) {
+		if g.ObstacleSolid(id) && g.Map.Obstacles[id].Block().OverlapsCircle(pos, r) {
 			free = false
 		}
 	})

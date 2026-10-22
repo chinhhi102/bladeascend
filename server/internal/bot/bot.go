@@ -87,7 +87,7 @@ func (b *Brain) decide(g *game.Game, me *game.Player) {
 	case prey != nil && b.rng.Float64() < 0.5+b.aggression/2:
 		b.State = StateHunt
 		// Aim so the target body sits on our sword ring.
-		b.setGoal(prey.Pos, me.Geom.Radius*0.6)
+		b.setGoal(prey.Pos, me.Geom.Reach*0.6)
 	case b.State == StateAmbush && g.Time < b.ambushUntil:
 		// keep waiting in the bush
 	case b.shouldAmbush(g, me):
@@ -186,7 +186,7 @@ func (b *Brain) nearestFarmTarget(g *game.Game, me *game.Player) (Vec, float64, 
 	}
 	for _, m := range g.Monsters {
 		if d := m.Pos.Dist(me.Pos); d < bestD && g.InView(me, m.Pos) {
-			best, stop, bestD, found = m.Pos, me.Geom.Radius*0.8, d, true
+			best, stop, bestD, found = m.Pos, me.Geom.Reach*0.8, d, true
 		}
 	}
 	for id, o := range g.Map.Obstacles {
@@ -196,7 +196,7 @@ func (b *Brain) nearestFarmTarget(g *game.Game, me *game.Player) (Vec, float64, 
 		}
 		c := o.Shape.Center()
 		if d := c.Dist(me.Pos); d < bestD*1.2 {
-			best, stop, bestD, found = c, me.Geom.Radius*0.9, d/1.2, true
+			best, stop, bestD, found = c, me.Geom.Reach*0.9, d/1.2, true
 		}
 	}
 	return best, stop, found

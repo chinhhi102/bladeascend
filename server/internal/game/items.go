@@ -44,30 +44,34 @@ func (g *Game) spawnItemNear(kind string, value float64, pos Vec, spread float64
 }
 
 func (g *Game) addItem(kind string, value float64, at Vec) *Item {
-	it := &Item{ID: g.newID(), Kind: kind, Pos: at, Value: value}
+	if kind == "bundle" && value <= 0 {
+		value = float64(g.Cfg.Items.BundleAmount)
+	}
+	it := &Item{ID: g.newID(), Kind: kind, Pos: at, Value: value, Region: -1}
 	g.Items[it.ID] = it
-	switch kind {
-	case "orb":
+	g.itemGrid.add(it)
+	if kind == "orb" {
 		g.orbCount++
-	case "chest":
-	default:
-		g.itemCount++
 	}
 	return it
 }
 
 func (g *Game) removeItem(it *Item) {
 	delete(g.Items, it.ID)
-	switch it.Kind {
-	case "orb":
+	g.itemGrid.remove(it)
+	switch {
+	case it.Region >= 0:
+		g.orbRespawns = append(g.orbRespawns, pendingOrb{at: g.Time + g.Cfg.ExpOrbs.RespawnSecs, region: it.Region})
+	case it.Kind == "orb":
 		g.orbCount--
-	case "chest":
+	case it.Pool:
+		g.poolCount--
+		g.itemRespawns = append(g.itemRespawns, g.Time+g.Cfg.Items.RespawnSecs)
 	default:
-		g.itemCount--
 	}
 }
 
-// PickupRadius is 60 * scale, × Nam Châm when active (spec §6).
+// PickupRadius is pickup_r * scale, × Nam Châm when active (spec §6).
 func (g *Game) PickupRadius(p *Player) float64 {
 	r := g.Cfg.Player.PickupR * p.Scale
 	if p.HasBuff(BuffMagnet, g.Time) {
@@ -83,10 +87,14 @@ func (g *Game) resolvePickups() {
 		}
 		r := g.PickupRadius(p) + g.Cfg.Items.ItemR
 		r2 := r * r
-		for _, it := range g.Items {
+		var got []*Item
+		g.ItemsNear(p.Pos, r, r, func(it *Item) {
 			if it.Pos.Dist2(p.Pos) <= r2 && (it.Owner == 0 || it.Owner == p.ID || g.Time >= it.OwnerUntil) {
-				g.pickup(p, it)
+				got = append(got, it)
 			}
+		})
+		for _, it := range got {
+			g.pickup(p, it)
 		}
 	}
 }
@@ -98,7 +106,9 @@ func (g *Game) pickup(p *Player, it *Item) {
 	case "orb":
 		g.GainExp(p, it.Value, true)
 	case "sword":
-		g.AddSword(p)
+		g.AddSwords(p, g.Cfg.Items.SwordAmount)
+	case "bundle":
+		g.AddSwords(p, int(it.Value))
 	case "chest":
 		for i := 0; i < g.Cfg.Items.ChestItems; i++ {
 			g.spawnItemNear(g.randomItemKind(), 0, it.Pos, g.Cfg.Items.ScatterR*2)
@@ -135,11 +145,22 @@ func (g *Game) updateBuffs(p *Player) {
 	}
 }
 
+// maintainSpawns keeps count_per_room pool items: the first fill is immediate, a picked item
+// comes back respawn_secs later somewhere else (spec §6.2).
 func (g *Game) maintainSpawns() {
 	ic := g.Cfg.Items
-	for i := 0; i < spawnsPerTick && g.itemCount < ic.CountPerRoom; i++ {
-		g.addItem(g.randomItemKind(), 0, g.randomFreePoint(ic.ItemR, ic.SpawnMinDist, 10))
+	due := 0
+	for len(g.itemRespawns) > due && g.itemRespawns[due] <= g.Time {
+		due++
 	}
+	g.itemRespawns = g.itemRespawns[due:]
+	missing := ic.CountPerRoom - g.poolCount - len(g.itemRespawns)
+	for i := 0; i < min(spawnsPerTick, missing); i++ {
+		it := g.addItem(g.randomItemKind(), 0, g.randomFreePoint(ic.ItemR, ic.SpawnMinDist, 10))
+		it.Pool = true
+		g.poolCount++
+	}
+	g.respawnOrbs()
 	for i := 0; i < spawnsPerTick && len(g.Monsters) < g.Cfg.Room.MonsterCount; i++ {
 		g.spawnMonster()
 	}

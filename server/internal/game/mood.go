@@ -25,7 +25,7 @@ func (g *Game) emote(p *Player, kind string) {
 
 // Power is the strength estimate shared by moods and bot AI (spec §10).
 func (g *Game) Power(p *Player) float64 {
-	return float64(p.Ring.Count) * float64(g.Prog.Realm(p.Level)+1) * p.Geom.Radius
+	return float64(p.Ring.Count) * float64(g.Prog.Realm(p.Level)+1) * p.Geom.Reach
 }
 
 // updateMoods derives locomotion moods once forced moods expire.

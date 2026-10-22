@@ -45,7 +45,7 @@ func (g *Game) setTotalExp(p *Player, exp float64) {
 	}
 }
 
-// dropExcessSwords turns swords above the new realm's maximum into ground items (spec §5.1).
+// dropExcessSwords turns swords above the new realm's maximum into bundles (spec §5.1).
 func (g *Game) dropExcessSwords(p *Player) {
 	excess := p.Ring.Count - g.Prog.MaxSwords(g.Prog.Realm(p.Level))
 	if excess <= 0 {
@@ -53,21 +53,21 @@ func (g *Game) dropExcessSwords(p *Player) {
 	}
 	p.Ring.Count -= excess
 	g.refreshDerived(p)
-	for i := 0; i < excess; i++ {
-		g.spawnItemNear("sword", 0, p.Pos, g.Geom(p).Radius)
-	}
+	g.dropBundles(p.Pos, excess, p.Geom.Reach)
 }
 
 // Geom returns the player's current ring geometry.
 func (g *Game) Geom(p *Player) RingGeom { return p.Geom }
 
-// AddSword handles picking up a sword item: +1 sword or overcap EXP (spec §6).
-func (g *Game) AddSword(p *Player) {
-	if p.Ring.Count >= g.Prog.MaxSwords(g.Prog.Realm(p.Level)) {
+// AddSwords handles picking up a sword item or bundle: +n swords up to the realm maximum;
+// already at the maximum → overcap EXP instead (spec §6.2).
+func (g *Game) AddSwords(p *Player, n int) {
+	limit := g.Prog.MaxSwords(g.Prog.Realm(p.Level))
+	if p.Ring.Count >= limit {
 		g.GainExp(p, g.Cfg.Items.OvercapExp, true)
 		return
 	}
-	p.Ring.Count++
+	p.Ring.Count = min(limit, p.Ring.Count+max(n, 1))
 	g.refreshDerived(p)
 }
 

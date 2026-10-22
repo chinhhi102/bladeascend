@@ -4,7 +4,13 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
-**Thay đổi so với v1:** đổi stack (Go server + TypeScript/PixiJS client trên web) · kiếm có thể bị bể khi va nhau (tỉ lệ theo chênh lệch cảnh giới) · scale 1 → 5 và tầm kiếm dài theo · chết ra màn hình chờ rồi match lại · bản đồ có địa hình, vật cản phá được (mọc lại sau 30s), cổng dịch chuyển · không login, nhập tên là chơi, có leaderboard · bộ vật phẩm buff có thời hạn.
+**Thay đổi v3.2:** bán kính vòng kiếm cố định, không phụ thuộc số kiếm; chỉ vòng mới mới rộng hơn (§4.1a).
+
+**Thay đổi v3.1:** vòng kiếm vẽ kiểu cánh quạt như quảng cáo — so le góc, lưỡi nghiêng 35°, mỗi vòng một màu, vòng ngoài lùi ra xa hơn (§4.1a).
+
+**Thay đổi v3:** kiếm dài gấp đôi, quay 300ms/vòng, kiếm tối đa 60→400 xếp vòng lồng nhau (20 kiếm/vòng), bị chém rớt 1 đại cảnh giới, EXP rải khắp bản đồ, vật phẩm ×3, vật cản chỉ chặn ở chân đế + y-sort.
+
+**Thay đổi v2 so với v1:** đổi stack (Go server + TypeScript/PixiJS client trên web) · kiếm có thể bị bể khi va nhau (tỉ lệ theo chênh lệch cảnh giới) · scale 1 → 5 và tầm kiếm dài theo · chết ra màn hình chờ rồi match lại · bản đồ có địa hình, vật cản phá được (mọc lại sau 30s), cổng dịch chuyển · không login, nhập tên là chơi, có leaderboard · bộ vật phẩm buff có thời hạn.
 
 ---
 
@@ -37,21 +43,22 @@
 `level_index L = r*10 + s` (r = cảnh giới 0..8, s = tầng 0..9) → 90 level.
 
 ```
-max_swords(r) = 5 * (r + 1)
-scale(L)      = 1 + 4 * L / 89          // 1.00 (Luyện Khí 1) → 5.00 (Đại Thừa 10), to ra ở MỖI tầng
+scale(L) = 1 + 4 * L / 89          // 1.00 (Luyện Khí 1) → 5.00 (Đại Thừa 10), to ra ở MỖI tầng
 ```
 
-| r | Cảnh giới | Kiếm tối đa | Scale tầng 1 → tầng 10 |
-|---|---|---|---|
-| 0 | Luyện Khí | 5 | 1.00 → 1.40 |
-| 1 | Trúc Cơ | 10 | 1.45 → 1.85 |
-| 2 | Kim Đan | 15 | 1.90 → 2.30 |
-| 3 | Nguyên Anh | 20 | 2.35 → 2.75 |
-| 4 | Hóa Thần | 25 | 2.80 → 3.20 |
-| 5 | Luyện Hư | 30 | 3.25 → 3.65 |
-| 6 | Hợp Thể | 35 | 3.70 → 4.10 |
-| 7 | Độ Kiếp | 40 | 4.15 → 4.55 |
-| 8 | Đại Thừa | 45 | 4.60 → 5.00 |
+| r | Cảnh giới | Kiếm tối đa | Số vòng kiếm tối đa | Scale tầng 1 → tầng 10 |
+|---|---|---|---|---|
+| 0 | Luyện Khí | 60 | 3 | 1.00 → 1.40 |
+| 1 | Trúc Cơ | 120 | 6 | 1.45 → 1.85 |
+| 2 | Kim Đan | 160 | 8 | 1.90 → 2.30 |
+| 3 | Nguyên Anh | 200 | 10 | 2.35 → 2.75 |
+| 4 | Hóa Thần | 240 | 12 | 2.80 → 3.20 |
+| 5 | Luyện Hư | 280 | 14 | 3.25 → 3.65 |
+| 6 | Hợp Thể | 320 | 16 | 3.70 → 4.10 |
+| 7 | Độ Kiếp | 360 | 18 | 4.15 → 4.55 |
+| 8 | Đại Thừa | 400 | 20 | 4.60 → 5.00 |
+
+Kiếm tối đa lấy từ mảng `max_swords` trong config (từ Nguyên Anh trở đi mặc định +40 mỗi cảnh giới).
 
 ### 3.2 EXP
 
@@ -76,70 +83,100 @@ exp_needed(r, s) = round(100 * 1.2^r * (1 + 0.08 * s))
 
 ## 4. Kiếm, vòng quay, tầm đánh
 
-Mọi kích thước của kiếm nhân với `scale` → nhân vật to thì vòng kiếm rộng hơn **và** từng thanh kiếm dài hơn.
+### 4.1a Vòng kiếm nhiều lớp (kiểu cánh quạt như quảng cáo)
+
+Mục tiêu hình ảnh: nhiều vòng kiếm **so le, nghiêng, mỗi vòng một màu**, nhìn thành một dải dày xoáy như chong chóng. Tất cả các lớp đều lộ ra, không nấp sau nhau.
+
+**Quy tắc cố định bán kính (BẮT BUỘC)**
+- Bán kính và chiều dài của một vòng **chỉ phụ thuộc vào thứ tự vòng `k` và `scale`**, **KHÔNG phụ thuộc vào số kiếm `n`**. Thêm kiếm vào vòng đang có → chỉ lấp kín khe, vòng **không rộng ra**.
+- Tầm chém chỉ tăng khi (a) mở **vòng mới** (kiếm thứ 21, 41, 61...), (b) nhân vật **lên tầng/cảnh giới** (scale tăng), hoặc (c) có buff Trường Kiếm.
+- Xóa mọi công thức cũ kiểu `ring_radius = max(..., n * spacing / 2π)` (từ spec v1) khỏi code.
+- Chuôi kiếm vòng 1 luôn sát người (`inner_r = (BODY_R + 6) * scale`), không có khoảng trống lớn giữa thân và kiếm.
+
+Ví dụ ở cùng 1 tầng (scale không đổi): 1 kiếm, 10 kiếm, 20 kiếm → cùng 1 vòng, cùng bán kính. 21 kiếm → xuất hiện vòng 2 xa hơn. 40 kiếm → vẫn 2 vòng, bán kính không đổi.
+
+**Chia vòng**
+- Cứ **20 kiếm thành 1 vòng**. Vòng 1 (k = 0) là 20 kiếm đầu, vòng 2 là 20 kiếm tiếp...
+- Khi n ≤ 20: n kiếm chia đều 360°. Khi n > 20: mỗi vòng có 20 "khe" cách nhau 18°; vòng chưa đủ 20 kiếm thì chiếm các khe rải đều (`slot = round(j * 20 / m)`).
+
+**Hình học từng vòng** (`R` = tổng số vòng hiện có, `base = SWORD_LEN * scale * buff_long`, SWORD_LEN = 80)
 
 ```
-ring_radius   = scale * max(70, n * 22 / (2π)) * buff_long_sword(1.3 | 1.0)
-sword_length  = 40 * scale * buff_long_sword
-sword_width   = 10 * scale
-angle_i(t)    = phase + dir * ω * t + 2π * i / n        // dir = +1 | -1
-ω             = 1.8 rad/s * buff_spin(1.6 | 1.0)
+inner_r           = (BODY_R + 6) * scale                     // bán kính chuôi vòng 1
+hilt_r(k)         = inner_r + HILT_STEP * k * base           // HILT_STEP = 0.1  → vòng ngoài lùi ra xa hơn
+len(k)            = base * (1 + (RING_GROWTH - HILT_STEP) * k) // RING_GROWTH = 0.2 → mũi vòng sau xa hơn vòng trước 20% chiều dài gốc
+stagger(k)        = k * (18° / R)                            // so le: các vòng chia đều khoảng trống giữa 2 khe
+tilt              = TILT_DEG * dir                           // TILT_DEG = 35°, lưỡi ngả về phía sau so với chiều quay
+angle(i, k, t)    = phase + dir * ω * t + slot_angle(i) + stagger(k)
 ```
 
-- Hitbox kiếm: **capsule** nằm theo hướng bán kính, từ `ring_radius - sword_length/2` đến `ring_radius + sword_length/2`, độ dày `sword_width`.
-- Hitbox thân: hình tròn `BODY_R = 30 * scale`.
-- Số kiếm tối thiểu luôn là **1**. Bắt đầu: 1 kiếm.
-- Thêm/bớt kiếm: phân bổ lại góc bằng tween 0.2s.
+- Mỗi thanh kiếm đặt chuôi tại điểm `(hilt_r(k), angle)` và chĩa ra theo hướng **bán kính xoay thêm `tilt`**, dài `len(k)`.
+- Đổi chiều quay → `tilt` lật theo, tween 0.1s (lưỡi luôn ngả về phía sau, như kéo lê theo vòng xoáy).
+- Tầm chém thực tế: `reach = max_k |tip(k)|` (khoảng cách từ tâm tới mũi kiếm xa nhất, tính hình học vì kiếm nghiêng). Tham khảo tầng 10, full kiếm: Luyện Khí ≈ 200 · Trúc Cơ ≈ 340 · Kim Đan ≈ 500 · Đại Thừa ≈ 2 000 đơn vị.
+- Config `ring_growth_mode: "linear" | "compound"` vẫn giữ để thử.
+
+**Màu từng vòng**
+- Vòng k tô màu `ring_tints[k % số_màu]` (mặc định cam → tím → xanh lá → đỏ → xanh lơ → vàng). Skin kiếm theo cảnh giới vẫn giữ hình dáng, chỉ nhuộm màu theo vòng.
+- Vòng 1 dùng màu gốc của skin (tint trắng) để người chơi nhận ra cảnh giới.
+
+**Thứ tự vẽ**: vòng ngoài cùng vẽ trước (dưới), vòng 1 vẽ sau cùng (trên). Mỗi vòng có lớp spin blur cùng màu (mục 4.1b).
+
+**Hitbox (server dùng đúng hình học trên)**
+- Mỗi kiếm: capsule từ chuôi tới mũi theo hướng đã nghiêng, độ dày `sword_width = 12 * scale`.
+- Thân: hình tròn `BODY_R * scale` (BODY_R = 30).
+- Số kiếm tối thiểu 1. Bắt đầu: 1 kiếm. Thêm/bớt kiếm hoặc đổi số vòng (stagger thay đổi): tween vị trí 0.2s.
+
+### 4.1b Kiếm quay nhanh — va chạm và hiển thị
+- **Va chạm theo góc quét**: ở 30 tick/s, mỗi tick kiếm quay ~40°. Không kiểm tra vị trí tức thời mà kiểm tra **cung đã quét** từ tick trước tới tick này (sweep). Mục tiêu nằm trong vành khăn `[inner_r, reach]` và trong cung quét của bất kỳ kiếm nào → trúng. Khi số kiếm × góc quét ≥ 360°, coi cả vành khăn là vùng sát thương.
+- **Hiển thị**: ở 60 fps mỗi frame quay ~20°, gần bằng khoảng cách 18° giữa 2 kiếm → mắt sẽ thấy vòng kiếm như đứng yên hoặc quay ngược (hiệu ứng bánh xe). Bắt buộc vẽ **vệt mờ chuyển động**: mỗi vòng có 1 lớp vành khăn mờ (spin blur) theo màu skin kiếm, kiếm vẽ đè lên với độ trong suốt giảm dần theo vệt quét. Tốc độ càng nhanh thì vệt càng đậm.
+- Dùng `ParticleContainer` của PixiJS cho kiếm (có thể tới hàng nghìn sprite trên màn hình).
 
 ### 4.1 Tốc độ di chuyển & camera
 
 ```
 move_speed (đơn vị thế giới/s) = 260 * sqrt(scale) * buff_haste(1.4 | 1.0) * zone_mult
-camera: chiều cao vùng nhìn thấy (đơn vị thế giới) = 900 * scale^0.85
+camera: chiều cao vùng nhìn thấy (đơn vị thế giới) = max(900 * scale^0.85, 2.6 * reach)
 ```
 
-→ Trên màn hình, nhân vật to lên dần nhưng vẫn nhìn được rộng hơn (bản đồ như "thu nhỏ" lại). Người nhỏ di chuyển trên màn hình nhanh hơn người lớn (≈260 px/s so với ≈150 px/s ở scale 5) → người nhỏ có cơ hội né và lật kèo.
+→ Camera luôn lùi đủ xa để thấy trọn vòng kiếm của mình. Trên màn hình, nhân vật to lên dần nhưng vẫn nhìn được rộng hơn (bản đồ như "thu nhỏ" lại). Người nhỏ di chuyển trên màn hình nhanh hơn người lớn (≈260 px/s so với ≈150 px/s ở scale 5) → người nhỏ có cơ hội né và lật kèo.
 
 ## 5. Chiến đấu
 
 Thứ tự xử lý mỗi tick server:
 
-### 5.1 Kiếm A chạm thân B
+### 5.1 Kiếm A chạm thân B — rớt 1 đại cảnh giới
 (A ≠ B, B không bất tử, không có khiên, không đang dịch chuyển)
-- Nếu B ở Luyện Khí tầng 1 (`L == 0`) → B **chết** (mục 7). Khi đó `loss = B.total_exp` hiện tại; A nhận 50% loss + **thưởng hạ sát `kill_bonus_exp` (30)**, rơi 30% loss thành viên EXP, cộng 1 kill cho A.
-- Ngược lại: `loss = exp_needed(level ngay dưới level hiện tại của B)`; `B.total_exp = max(0, B.total_exp - loss)` → B rớt 1 tầng (có thể rớt cảnh giới).
+- Nếu B đang ở **Luyện Khí** (bất kỳ tầng nào) → B **chết** (mục 7). `loss = B.total_exp`; A nhận 50% loss + `kill_bonus_exp` (30), rơi 30% loss thành viên EXP, +1 kill.
+- Ngược lại B **rớt nguyên 1 cảnh giới, giữ nguyên tầng**: `L' = L - 10` (ví dụ Trúc Cơ tầng 2 → Luyện Khí tầng 2). Phần trăm tiến độ trong tầng được giữ: `total_exp' = cum(L') + progress% * exp_needed(L')`. `loss = total_exp - total_exp'`.
 - A nhận `50% * loss` EXP; rơi `30% * loss` dạng viên EXP quanh B.
 - B bất tử **1s** (nhấp nháy), bị đẩy lùi khỏi A.
 - Mỗi tick, mỗi nạn nhân tối đa 1 hit.
-- **Rớt cảnh giới**: số kiếm > max mới → kiếm thừa rơi xuống đất thành item kiếm (ai lượm cũng được).
-- Nếu B có buff Khiên: khiên vỡ, không mất EXP, vẫn có 1s bất tử.
+- Số kiếm > max của cảnh giới mới → kiếm thừa rơi xuống đất dưới dạng **bó kiếm** (mỗi bó tối đa 10 kiếm) để không tạo hàng trăm vật phẩm.
+- Nếu B có buff Khiên: khiên vỡ, không mất gì, vẫn có 1s bất tử.
 
 ### 5.2 Kiếm A chạm kiếm B — bể kiếm
 
-Luôn: **cả hai vòng đổi chiều quay** (`dir *= -1`), VFX tia lửa + SFX "keng". Cooldown mỗi cặp (A, B) 0.3s.
+Luôn: **cả hai vòng đổi chiều quay** (`dir *= -1`), **hai người bị đẩy văng ra xa nhau** (`clash_knockback` = 150 đơn vị trong 0.2s, để vòng kiếm tách ra, không va liên tục), VFX tia lửa + SFX "keng". Cooldown mỗi cặp (A, B) 0.3s.
 
-Sau đó tính bể kiếm, với `d = |rA - rB|` (chênh lệch cảnh giới) và `k = d + 1` (tỉ lệ đổi kiếm):
+Sau đó tính bể kiếm, với `d = |rA - rB|`, `k = d + 1` và đơn vị mất kiếm `u = clash_unit` (mặc định 5, vì giờ mỗi người có tới hàng trăm kiếm):
 
 | Trường hợp | Kết quả |
 |---|---|
-| Cùng cảnh giới (d = 0) | Mỗi bên mất 1 kiếm |
-| Khác cảnh giới | Bên thấp mất `k` kiếm; bên cao nhận `crack += lost / k` (lost = số kiếm bên thấp thực sự mất). Khi `crack ≥ 1` → bên cao mất `floor(crack)` kiếm, `crack -= floor(crack)` |
+| Cùng cảnh giới (d = 0) | Mỗi bên mất `u` kiếm |
+| Khác cảnh giới | Bên thấp mất `u * k` kiếm; bên cao nhận `crack += lost / k` (lost = số kiếm bên thấp thực sự mất). Khi `crack ≥ 1` → bên cao mất `floor(crack)` kiếm, `crack -= floor(crack)` |
 
-Mọi trường hợp: số kiếm không bao giờ xuống dưới 1 (nếu đã còn 1 thì không mất thêm, chỉ đổi chiều).
+Mọi trường hợp: số kiếm không bao giờ xuống dưới 1.
 
 Bảng tỉ lệ đổi kiếm (bên cao : bên thấp):
 
-| Chênh lệch | Ví dụ | Tỉ lệ |
-|---|---|---|
-| 0 | Kim Đan vs Kim Đan | 1 : 1 |
-| 1 | Trúc Cơ vs Luyện Khí | 1 : 2 |
-| 2 | Kim Đan vs Luyện Khí | 1 : 3 |
-| 3 | Nguyên Anh vs Luyện Khí | 1 : 4 |
-| 8 | Đại Thừa vs Luyện Khí | 1 : 9 |
+| Chênh lệch | Ví dụ | Tỉ lệ | Mỗi lần va (u = 5) |
+|---|---|---|---|
+| 0 | Kim Đan vs Kim Đan | 1 : 1 | mỗi bên −5 |
+| 1 | Trúc Cơ vs Luyện Khí | 1 : 2 | Trúc Cơ −5, Luyện Khí −10 |
+| 3 | Nguyên Anh vs Luyện Khí | 1 : 4 | Nguyên Anh −5, Luyện Khí −20 |
+| 8 | Đại Thừa vs Luyện Khí | 1 : 9 | Đại Thừa −5, Luyện Khí −45 |
 
-Ví dụ Luyện Khí (r=0) vs Nguyên Anh (r=3) → k = 4: mỗi lần va, Luyện Khí mất 4 kiếm, Nguyên Anh nhận 1 vết nứt → mất 1 kiếm. Nếu Luyện Khí chỉ còn 3 kiếm (mất được 2 vì tối thiểu giữ 1) → Nguyên Anh chỉ nhận 2/4 vết nứt, chưa mất kiếm.
-
-`crack` lưu trên vòng kiếm, reset về 0 khi chết. Hiển thị vết nứt nhẹ trên vòng kiếm khi `crack > 0`.
+`crack` lưu trên người, reset về 0 khi chết. Hiển thị vết nứt nhẹ trên vòng kiếm khi `crack > 0`.
 
 Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Chủ nhân hiện emote "Kiếm của taaa!".
 
@@ -148,29 +185,40 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 - Vật cản: `1 + r` damage (cảnh giới càng cao chém càng nhanh), cooldown mỗi cặp 0.25s. **Kiếm xuyên qua vật cản và không bị mất/bể** khi chém vật cản.
 - Kiếm không tương tác với chính chủ.
 
-## 6. Vật phẩm
+## 6. EXP rải khắp bản đồ & vật phẩm
+
+### 6.1 Viên EXP môi trường (nguồn EXP chính)
+- Bản đồ luôn phủ đều viên EXP: mật độ mặc định **1 viên / 140×140 đơn vị** (≈ 7 300 viên trên bản đồ 12 000²).
+- Tỉ lệ: nhỏ +5 (80%) · vừa +20 (18%) · lớn +60 (2%).
+- Viên bị nhặt → 5s sau mọc lại ở vị trí ngẫu nhiên **trong cùng ô lưới 1 000×1 000** (khu vực bị vét sạch sẽ tự đầy lại, không dồn về một chỗ).
+- Bán kính hút đồ mặc định: `90 * scale`.
+- Nhịp độ mục tiêu (người chơi chỉ farm, không đánh nhau): **Luyện Khí → Trúc Cơ ≈ 60–90s**, tới Kim Đan ≈ 3 phút, tới Nguyên Anh ≈ 6 phút. Dùng `cmd/sim` đo và chỉnh mật độ cho tới khi đạt.
+- Mạng: viên EXP đứng yên → chỉ gửi theo AOI khi vào tầm nhìn, sau đó chỉ gửi sự kiện nhặt/mọc.
+
+### 6.2 Vật phẩm
 
 | Item | Hiệu ứng | Thời hạn | Weight spawn |
 |---|---|---|---|
-| Kiếm | +1 kiếm (vĩnh viễn). Nếu đã max → +20 EXP | – | 40 |
-| Tốc Kiếm | ω × 1.6 | 12s | 15 |
-| Thần Hành | Tốc chạy × 1.4 | 10s | 15 |
+| Kiếm | +3 kiếm. Nếu đã max → +20 EXP | – | 40 |
+| Bó Kiếm | +15 kiếm (cũng là dạng rơi ra khi rớt cảnh giới/chết, khi đó chứa đúng số kiếm rơi) | – | 6 |
+| Tốc Kiếm | ω × 1.3 | 12s | 12 |
+| Thần Hành | Tốc chạy × 1.4 | 10s | 12 |
 | Nam Châm | Bán kính hút đồ × 3 | 15s | 8 |
-| Trường Kiếm | Vòng kiếm & chiều dài kiếm × 1.3 | 12s | 7 |
+| Trường Kiếm | Chiều dài mọi vòng kiếm × 1.3 | 12s | 7 |
 | Kim Cang (khiên) | Chặn 1 lần bị chém vào thân | 8s hoặc tới khi vỡ | 7 |
 | Song Bội Đan | EXP nhận × 2 | 20s | 5 |
 | Ẩn Thân Phù | Người khác không thấy mình (trừ khi ở rất gần: 120 × scale của họ); hết hiệu lực ngay khi kiếm mình chém trúng người | 6s | 3 |
-| Viên EXP nhỏ/vừa/lớn | +5 / +20 / +60 EXP | – | rơi từ quái |
-| **Rương Báu** (hiếm) | Người đầu tiên **chạm vào** → rương nổ ra 5 item ngẫu nhiên văng xung quanh (ai lượm cũng được) | – | 1 rương mỗi 2 phút, báo trước toàn phòng 10s |
+| **Rương Báu** (hiếm) | Người đầu tiên **chạm vào** → nổ ra 8 item ngẫu nhiên văng xung quanh | – | 1 rương mỗi 60s, báo trước toàn phòng 10s |
 
+- Số vật phẩm duy trì: **400/phòng** (gấp hơn 3 lần trước), item bị nhặt → 3s sau mọc lại chỗ khác.
+- Tốc Kiếm giảm từ ×1.6 xuống ×1.3 vì tốc quay gốc đã rất nhanh.
 - Nhặt lại buff đang có → làm mới thời gian (không cộng dồn).
-- HUD hiển thị icon buff + vòng đếm ngược. Mỗi buff có aura màu riêng trên nhân vật để người khác "đọc" được (trừ Ẩn Thân).
-- Bán kính hút đồ mặc định: `60 * scale`.
-- Item spawn cách người chơi ≥ 300 đơn vị, mật độ theo config.
+- HUD hiển thị icon buff + vòng đếm ngược. Mỗi buff có aura màu riêng (trừ Ẩn Thân).
+- Item spawn cách người chơi ≥ 300 đơn vị.
 
 ## 7. Chết & màn hình chờ
 
-- **Rơi kiếm khi chết** (người và bot): `floor(n * death_sword_drop)` kiếm (mặc định 50%) văng ra thành item kiếm quanh xác. Ví dụ chết với 5 kiếm → rơi 2.
+- **Rơi kiếm khi chết** (người và bot): `floor(n * death_sword_drop)` kiếm (mặc định 50%) văng ra quanh xác dưới dạng Bó Kiếm (mỗi bó ≤ 10). Ví dụ chết với 60 kiếm → 3 bó, tổng 30 kiếm.
 - **Người thật**: anim `death` 1s → rời phòng → **Màn hình Tổng kết** hiển thị:
   - Bị ai chém (tên + nhân vật), câu tấu hài random ("Bạn đã được tiễn về quê nuôi cá").
   - Cảnh giới cao nhất đạt được, tổng EXP đỉnh, số người đã chém, thời gian sống, hạng trong phòng.
@@ -196,7 +244,11 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 | Đá tảng | 400 | Rất lớn |
 | Tường đá cổ / biên map | ∞ | Không phá được |
 
-- Hình dạng: hình chữ nhật hoặc hình tròn (lấy từ Tiled). Thân nhân vật bị đẩy ra khi chạm. Quái cũng bị chặn.
+- **Hai vùng va chạm khác nhau cho mỗi vật cản:**
+  - **Chân đế (footprint)** — chặn thân nhân vật và quái. Chỉ là phần sát mặt đất: mặc định hình elip/chữ nhật rộng 90% sprite, cao **30% sprite, nằm ở đáy**. Trong Tiled đặt được thủ công bằng thuộc tính `footprint` (nếu không có thì tính tự động như trên).
+  - **Thân hình (visual bounds)** — vùng kiếm chém trúng để gây damage (đúng với cái người chơi nhìn thấy).
+- **Sắp xếp lớp vẽ theo chân (y-sort)**: nhân vật đứng phía sau (y chân nhỏ hơn đáy vật cản) được vẽ khuất sau vật cản; phần vật cản che lên nhân vật mình thì mờ đi 50% để vẫn thấy mình.
+- **Vật cản dạng dãy** (hàng rào, tường): art phải liền mạch, nối tiếp nhau không hở (tile ngang). Chỗ nào art có khe hở thì footprint cũng phải hở theo — người chơi thấy đi qua được thì phải đi qua được.
 - Kiếm đi xuyên vật cản và gây damage (mục 5.3).
 - Hiển thị 3 trạng thái theo HP: nguyên vẹn (>66%), nứt (33–66%), sắp vỡ (<33%).
 - **Vỡ** → thành đống đổ nát, đi qua được. Sau **30s** mọc lại:
@@ -260,7 +312,7 @@ Quyết định lại mỗi 0.3–0.6s (random), tìm đường bằng A* trên 
 | Ambush | Mình nhỏ, gần bụi rậm/cổng | Nấp chờ kẻ yếu đi ngang |
 | Wander | Không có gì | Đi ngẫu nhiên |
 
-- `power = sword_count * (r + 1) * ring_radius`.
+- `power = sword_count * (r + 1) * reach`.
 - Tham số tính cách random mỗi bot: `reaction_delay` 0.2–0.6s, `aim_noise`, `aggression`.
 - Bot chỉ "thấy" những gì người chơi cùng vị trí thấy được (tôn trọng bụi rậm, ẩn thân).
 
@@ -345,7 +397,7 @@ kiem-xoay/
 - Tick server 30 Hz, mỗi phòng 1 goroutine. Snapshot gửi client 20 Hz.
 - Client → Server: `Join{name, character, guest_id}`, `Input{seq, angle_u8, moving}` (30 Hz), `Ping`.
 - Server → Client: `Welcome`, `Snapshot`, `Event`, `Leaderboard` (1 Hz).
-- **Không gửi vị trí từng thanh kiếm**: gửi `phase, dir, n, ω, ring_radius, sword_length, phase_tick`; client tự tính góc. Đổi chiều → event `RingFlip`.
+- **Không gửi vị trí từng thanh kiếm**: gửi `phase, dir, n, ω, scale, buff_long, phase_tick` (client tự tính số vòng, chiều dài từng vòng); client tự tính góc. Đổi chiều → event `RingFlip`.
 - Event: `Hit, SwordBreak, Death, LevelUp, Breakthrough, RealmDrop, RingFlip, ObstacleDamaged, ObstacleBroken, ObstacleRegrow, TeleportOut, TeleportIn, ItemPicked, BuffStart, BuffEnd, ChestIncoming, KillFeed`.
 - AOI: chỉ gửi những gì nằm trong vùng nhìn của người đó (+ lề). Người đang ẩn thân / trong bụi **không được gửi** cho người không được thấy (chống hack nhìn xuyên).
 - Client: nội suy người khác (trễ 100ms); tự dự đoán chuyển động của mình + hiệu chỉnh theo server.
@@ -397,26 +449,31 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 {
   "cultivation": {
     "realms": ["Luyện Khí","Trúc Cơ","Kim Đan","Nguyên Anh","Hóa Thần","Luyện Hư","Hợp Thể","Độ Kiếp","Đại Thừa"],
-    "tiers_per_realm": 10, "swords_per_realm": 5,
+    "tiers_per_realm": 10,
     "exp_base": 100, "realm_mult": 1.2, "tier_step": 0.08,
     "scale_min": 1.0, "scale_max": 5.0
   },
   "sword": {
     "start_count": 1, "min_count": 1,
-    "ring_min_r": 70, "spacing": 22, "length": 40, "width": 10,
-    "omega": 1.8, "flip_cooldown": 0.3,
+    "max_swords": [60, 120, 160, 200, 240, 280, 320, 360, 400],
+    "swords_per_ring": 20, "length": 80, "width": 12, "hilt_gap": 6,
+    "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35,
+    "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
+    "rev_secs": 0.3, "flip_cooldown": 0.3,
+    "clash_unit": 5, "clash_knockback": 150, "drop_bundle_max": 10,
     "clash_ratio_base": 1,
     "clash_ratio_per_realm": 1
   },
   "player": {
-    "body_r": 30, "move_base": 260, "pickup_r": 60,
+    "body_r": 30, "move_base": 260, "pickup_r": 90,
     "invuln_on_hit": 1.0, "invuln_on_spawn": 2.0,
     "attacker_share": 0.5, "drop_share": 0.3, "kill_bonus_exp": 30,
     "death_sword_drop": 0.5, "orb_owner_secs": 1.5,
-    "camera_view_h": 900, "camera_exp": 0.85
+    "camera_view_h": 900, "camera_exp": 0.85, "camera_reach_mult": 2.6,
+    "hit_drops_realm": true
   },
   "buffs": {
-    "spin":   { "mult": 1.6, "secs": 12 },
+    "spin":   { "mult": 1.3, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },
     "magnet": { "mult": 3.0, "secs": 15 },
     "long":   { "mult": 1.3, "secs": 12 },
@@ -425,10 +482,16 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "stealth":{ "secs": 6, "reveal_r": 120 }
   },
   "items": {
-    "weights": { "sword": 40, "spin": 15, "haste": 15, "magnet": 8, "long": 7, "shield": 7, "exp2": 5, "stealth": 3 },
-    "count_per_room": 120, "overcap_exp": 20, "chest_every_secs": 120, "chest_items": 5
+    "weights": { "sword": 40, "bundle": 6, "spin": 12, "haste": 12, "magnet": 8, "long": 7, "shield": 7, "exp2": 5, "stealth": 3 },
+    "sword_item_amount": 3, "bundle_amount": 15,
+    "count_per_room": 400, "respawn_secs": 3, "overcap_exp": 20, "chest_every_secs": 60, "chest_items": 8
+  },
+  "exp_orbs": {
+    "cell": 140, "values": [5, 20, 60], "weights": [80, 18, 2],
+    "respawn_secs": 5, "respawn_region": 1000
   },
   "obstacles": {
+    "footprint_w": 0.9, "footprint_h": 0.3, "occlusion_alpha": 0.5,
     "regrow_secs": 30, "regrow_warn_secs": 3,
     "hp": { "fence": 30, "stall": 60, "brick": 150, "boulder": 400 },
     "stall_item_drop": 0.3
@@ -449,14 +512,19 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
 
 - [ ] Luyện Khí tầng 1 nhỏ hơn rõ ràng so với Luyện Khí tầng 10; Đại Thừa tầng 10 scale = 5.
 - [ ] Kiếm dài ra và vòng rộng ra theo scale.
-- [ ] Luyện Khí không có quá 5 kiếm; lượm thêm → +20 EXP.
+- [ ] Cùng 1 tầng: 1 → 20 kiếm, bán kính vòng không đổi; kiếm thứ 21 mới mở vòng 2 rộng hơn.
+- [ ] Luyện Khí tối đa 60 kiếm = 3 vòng so le, mỗi vòng một màu, cả 3 lớp đều nhìn thấy; lưỡi nghiêng về phía sau và lật khi đổi chiều.
+- [ ] Mũi kiếm vòng 3 xa tâm hơn vòng 1; hitbox server khớp với hình vẽ (bật chế độ debug vẽ capsule để so).
+- [ ] Kiếm quay đúng 1 vòng / 300ms, nhìn thấy vệt mờ, không bị hiệu ứng quay ngược.
+- [ ] Nhân vật đi sát mép trên tảng đá được (chỉ bị chặn ở chân đế), đứng sau đá thì bị che.
+- [ ] Farm không đánh nhau: Luyện Khí → Trúc Cơ trong 60–90s (đo bằng cmd/sim).
 - [ ] 2 người cùng cảnh giới va kiếm → mỗi bên mất 1 kiếm, cả hai đổi chiều quay.
 - [ ] Trúc Cơ va Luyện Khí → Luyện Khí mất 2, Trúc Cơ mất 1.
 - [ ] Luyện Khí (≥5 kiếm) va Nguyên Anh → Luyện Khí mất 4, Nguyên Anh mất 1.
 - [ ] Luyện Khí còn 3 kiếm va Nguyên Anh → Luyện Khí còn 1, Nguyên Anh chưa mất (nứt 2/4).
 - [ ] Không ai bao giờ có dưới 1 kiếm.
-- [ ] Bị chém ở Trúc Cơ tầng 1 → Luyện Khí tầng 10, kiếm thừa rơi ra đất.
-- [ ] Bị chém ở Luyện Khí tầng 1 → màn hình Tổng kết, bấm "Chơi tiếp" vào lại được; người chém nhận 50% EXP nạn nhân + 30; xác rơi 50% số kiếm.
+- [ ] Bị chém ở Trúc Cơ tầng 2 → Luyện Khí tầng 2; kiếm vượt 60 rơi ra thành bó.
+- [ ] Bị chém ở Luyện Khí (tầng bất kỳ) → màn hình Tổng kết, bấm "Chơi tiếp" vào lại được; người chém nhận 50% EXP nạn nhân + 30; xác rơi 50% số kiếm.
 - [ ] Viên EXP từ quái chỉ người chém nhặt được trong 1.5s đầu.
 - [ ] Đi chéo 90° so với gió → tốc độ không đổi.
 - [ ] Vật cản bị chém vỡ → đi qua được → 30s sau mọc lại, không kẹt người.

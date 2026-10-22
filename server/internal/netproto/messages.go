@@ -87,9 +87,7 @@ type PlayerState struct {
 	Phase  float32 `msgpack:"ph"`
 	Dir    int8    `msgpack:"d"`
 	Omega  float32 `msgpack:"w"`
-	RingR  float32 `msgpack:"rr"`
-	SwordL float32 `msgpack:"sl"`
-	SwordW float32 `msgpack:"sw"`
+	Tilt   float32 `msgpack:"tl"` // blade lean (rad); ring geometry is derived from scale, count and buffs (spec §13.3)
 	Scale  float32 `msgpack:"sc"`
 	Mood   string  `msgpack:"md"`
 	Buffs  uint8   `msgpack:"bf"`

@@ -199,6 +199,10 @@ Mỗi quái: `idle` 4 frame (lắc lư), `hurt` 2 frame, `death` 6 frame (vỡ t
 
 Canvas 256×256, kiếm **thẳng đứng, mũi hướng LÊN**, cán ở dưới. Thêm bản `glow` 4 frame loop nếu muốn.
 
+**Để nhuộm màu theo vòng được** (game tô mỗi vòng một màu): thân lưỡi kiếm vẽ bằng **màu sáng, gần trắng/xám nhạt** với bóng đổ xám, chỉ chuôi kiếm và chi tiết nhỏ mới có màu riêng. Thêm vào prompt: `blade painted in very light grey and white tones so it can be color-tinted in game, colored details only on the handle`.
+
+Tùy chọn giống quảng cáo — **lưỡi liềm cong**: `{STYLE} a single curved crescent-shaped flying blade, like a sharp crescent moon, thick at the middle and pointed at both ends, light grey and white tones for tinting, vertical, transparent background`. Có thể dùng thay skin kiếm cho 1–2 cảnh giới để đổi gió.
+
 ```
 {STYLE} single game weapon icon, {SWORD}, vertical, tip pointing up, centered, transparent background
 ```
@@ -245,6 +249,21 @@ Bong bóng: thêm anim `float` 4 frame (nhấp nhô) và `pop` 4 frame.
 
 ## 9. Bản đồ
 
+### 9.0 Quy tắc dễ nhìn (QUAN TRỌNG — đọc trước khi sinh bất kỳ asset bản đồ nào)
+Người chơi phải nhìn ra **quái, viên EXP, vật phẩm, kiếm** trong nửa giây. Vì vậy chia 2 tầng màu:
+
+| Tầng | Quy tắc |
+|---|---|
+| **Nền & trang trí** (đất, cỏ, decor) | Màu **nhạt, ít bão hòa, độ tương phản thấp**, ít chi tiết nhỏ. **Không hoa, không chấm màu sặc sỡ** (dễ lẫn với viên EXP/item). Viền mảnh, màu tối của chính nó (không viền đen dày). |
+| **Thứ chơi được** (nhân vật, quái, EXP, item, kiếm, cổng) | Màu **bão hòa, sáng**, viền đen dày, có bóng đổ dưới chân + quầng sáng nhẹ. |
+
+- Mỗi biome tối đa 3 màu nền gần nhau. Ví dụ Sân làng: xanh rêu nhạt #8DA77A, #9DB58A, #7E9A6C.
+- Viên EXP/item dùng màu **không có trong nền**: EXP = xanh lơ phát sáng, vàng kim; item = bong bóng trắng bóng.
+- Decor: thưa (không quá 1 món / 600×600 đơn vị), nhỏ, không to hơn nhân vật quá 2 lần trừ khi là vật cản.
+
+**Sửa nhanh không cần sinh lại art**: client áp `ColorMatrixFilter` lên lớp nền — giảm bão hòa ~50%, giảm sáng ~10%, giảm tương phản ~20%. Áp riêng cho lớp nền + decor, không áp cho lớp gameplay.
+
+
 Nền: tile vuông **seamless/tileable** 512×512, nhìn top-down.
 
 ```
@@ -254,9 +273,11 @@ no objects, no characters, even lighting, edges must tile perfectly
 
 | Biome | {BIOME} |
 |---|---|
-| Sân làng | `soft green grass with small clover patches and tiny flowers` |
-| Khu chợ | `cracked old concrete street with faded painted lines` |
-| Bãi đất | `dry dusty brown dirt with pebbles` |
+| Sân làng | `soft muted sage green grass, very low contrast, subtle large brush strokes, no flowers, no small colorful dots, calm and plain` |
+| Khu chợ | `pale warm grey concrete, very low contrast, few faint cracks, plain and calm` |
+| Bãi đất | `light muted sandy brown dirt, very low contrast, only a few faint large pebbles, plain and calm` |
+
+Thêm vào cuối prompt nền: `desaturated, low detail, designed as a background that does not distract from gameplay objects`.
 
 Decor (nền trong suốt, 256×256 hoặc 512×512, chỉ để trang trí, không chặn đường):
 `a red plastic stool`, `an old bicycle leaning`, `a pile of watermelons`, `a street food cart`, `a banana tree`,
@@ -265,6 +286,8 @@ Decor (nền trong suốt, 256×256 hoặc 512×512, chỉ để trang trí, kh�
 Tường biên: `{STYLE} a seamless horizontal stone and bamboo fence segment, top-down 3/4 view, tileable left-right`.
 
 ### 9.1 Vật cản phá được (mỗi loại 4 trạng thái)
+
+Quy tắc vẽ vật cản: **đáy phẳng, đặt chắc trên mặt đất** (game chỉ tính va chạm ở 30% phía dưới). Hàng rào/tường phải **liền mạch nối tiếp được** (tileable trái-phải), không có khe hở giả. Màu vật cản trung tính hơn nhân vật nhưng đậm hơn nền.
 
 Mỗi vật cản cần 4 ảnh cùng góc nhìn, cùng kích thước canvas: `intact` · `cracked` · `nearly_broken` · `rubble` (đống đổ nát, nhìn là biết đi qua được). Thêm 1 anim `break` 6 frame (nổ vụn) và `regrow` 6 frame (mọc lại từ đất, kèm ánh sáng).
 

@@ -124,12 +124,14 @@ type Monster struct {
 	FleeFrom  Vec
 }
 
-// Item kinds: "sword", buff names, "orb" (EXP orb, Value = EXP), "chest".
+// Item kinds: "sword", "bundle" (Value = swords), buff names, "orb" (EXP orb, Value = EXP), "chest".
 type Item struct {
 	ID         uint32
 	Kind       string
 	Pos        Vec
 	Value      float64
+	Region     int    // ambient EXP orb: respawn region index (spec §6.1); -1 otherwise
+	Pool       bool   // part of the room's count_per_room item pool, respawns respawn_secs after pickup
 	Owner      uint32 // only this player may pick it up until OwnerUntil
 	OwnerUntil float64
 }

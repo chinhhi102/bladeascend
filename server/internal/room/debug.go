@@ -20,9 +20,7 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			next := (r.G.Prog.Realm(p.Level) + 1) * r.G.Prog.Tiers()
 			r.G.GainExp(p, r.G.Prog.Threshold(next)-p.TotalExp, false)
 		case "sword":
-			for i := 0; i < max(1, d.N); i++ {
-				r.G.AddSword(p)
-			}
+			r.G.AddSwords(p, max(1, d.N))
 		case "die":
 			r.G.DebugKill(p)
 		case "buff":

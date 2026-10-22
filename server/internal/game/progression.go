@@ -10,14 +10,14 @@ import (
 // Progression holds the precomputed cultivation tables (spec §3).
 type Progression struct {
 	cfg        config.Cultivation
-	swordsPer  int
+	maxSwords  []int
 	needed     []float64 // needed[L] = EXP to go from level L to L+1
 	cumulative []float64 // cumulative[L] = total EXP required to reach level L
 }
 
-func NewProgression(c config.Cultivation) *Progression {
+func NewProgression(c config.Cultivation, maxSwords []int) *Progression {
 	levels := len(c.Realms) * c.TiersPerRealm
-	p := &Progression{cfg: c, swordsPer: c.SwordsPerRealm}
+	p := &Progression{cfg: c, maxSwords: maxSwords}
 	p.needed = make([]float64, levels)
 	p.cumulative = make([]float64, levels)
 	sum := 0.0
@@ -69,8 +69,31 @@ func (p *Progression) Realm(L int) int { return L / p.cfg.TiersPerRealm }
 
 func (p *Progression) Tier(L int) int { return L % p.cfg.TiersPerRealm }
 
-// MaxSwords returns max_swords(r) = swords_per_realm * (r + 1).
-func (p *Progression) MaxSwords(r int) int { return p.swordsPer * (r + 1) }
+// MaxSwords returns max_swords[r]; realms past the end of the array add 40 each (spec §3.1).
+func (p *Progression) MaxSwords(r int) int {
+	if len(p.maxSwords) == 0 {
+		return 1
+	}
+	if r < len(p.maxSwords) {
+		return p.maxSwords[max(r, 0)]
+	}
+	return p.maxSwords[len(p.maxSwords)-1] + 40*(r-len(p.maxSwords)+1)
+}
+
+// DropRealmExp is total_exp after falling one whole realm while keeping the tier and the
+// progress through it (spec §5.1): Trúc Cơ 2 at 40% → Luyện Khí 2 at 40%.
+func (p *Progression) DropRealmExp(exp float64) float64 {
+	L := p.LevelFromExp(exp)
+	to := L - p.cfg.TiersPerRealm
+	if to < 0 {
+		return 0
+	}
+	progress := 0.0
+	if n := p.ExpNeeded(L); n > 0 {
+		progress = math.Min(1, (exp-p.Threshold(L))/n)
+	}
+	return p.Threshold(to) + progress*p.ExpNeeded(to)
+}
 
 // Scale returns scale(L) = min + (max-min) * L / (levels-1).
 func (p *Progression) Scale(L int) float64 {

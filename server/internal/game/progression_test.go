@@ -9,7 +9,8 @@ import (
 
 func testProg(t *testing.T) *Progression {
 	t.Helper()
-	return NewProgression(config.MustLoadDefault().Cultivation)
+	c := config.MustLoadDefault()
+	return NewProgression(c.Cultivation, c.Sword.MaxSwords)
 }
 
 func TestExpNeededMatchesSpecTable(t *testing.T) {
@@ -80,29 +81,19 @@ func TestScaleRange(t *testing.T) {
 
 func TestMaxSwords(t *testing.T) {
 	p := testProg(t)
-	for r, want := range []int{5, 10, 15, 20, 25, 30, 35, 40, 45} {
+	for r, want := range []int{60, 120, 160, 200, 240, 280, 320, 360, 400} {
 		if got := p.MaxSwords(r); got != want {
 			t.Errorf("MaxSwords(%d) = %d, want %d", r, got, want)
 		}
 	}
 }
 
-func TestRingGeomGrowsWithScale(t *testing.T) {
-	c := config.MustLoadDefault().Sword
-	small := ComputeRingGeom(c, 1, 5, 1)
-	big := ComputeRingGeom(c, 5, 5, 1)
-	if big.Radius <= small.Radius || big.Length <= small.Length {
-		t.Fatalf("ring must grow with scale: %+v vs %+v", small, big)
-	}
-	if small.Radius != 70 || small.Length != 40 || small.Width != 10 {
-		t.Fatalf("scale 1, 5 swords: %+v", small)
-	}
-	long := ComputeRingGeom(c, 1, 5, 1.3)
-	if math.Abs(long.Radius-91) > 1e-9 || math.Abs(long.Length-52) > 1e-9 {
-		t.Fatalf("Trường Kiếm geometry: %+v", long)
-	}
-	many := ComputeRingGeom(c, 1, 45, 1)
-	if math.Abs(many.Radius-45*22/(2*math.Pi)) > 1e-9 {
-		t.Fatalf("45 swords radius = %v", many.Radius)
+func TestDropRealmKeepsTierAndProgress(t *testing.T) {
+	p := testProg(t)
+	exp := p.Threshold(11) + 0.25*p.ExpNeeded(11) // Trúc Cơ 2, 25% through
+	got := p.DropRealmExp(exp)
+	want := p.Threshold(1) + 0.25*p.ExpNeeded(1) // Luyện Khí 2, 25% through
+	if math.Abs(got-want) > 1e-9 || p.LevelFromExp(got) != 1 {
+		t.Fatalf("drop → %v (level %d), want %v (level 1)", got, p.LevelFromExp(got), want)
 	}
 }

@@ -38,21 +38,24 @@ type Game struct {
 	Grid      *world.Grid
 	Events    []Event
 
-	nextID      uint32
-	order       []uint32 // player ids in join order, for deterministic iteration
-	cooldowns   map[uint64]float64
-	obsIndex    *staticIndex
-	gridDirty   bool
-	chestNextAt float64
-	chestAt     *Vec
-	itemCount   int
-	orbCount    int
-	bossCount   int
+	nextID       uint32
+	order        []uint32 // player ids in join order, for deterministic iteration
+	cooldowns    map[uint64]float64
+	obsIndex     *staticIndex
+	gridDirty    bool
+	chestNextAt  float64
+	chestAt      *Vec
+	poolCount    int
+	itemRespawns []float64
+	orbRespawns  []pendingOrb
+	itemGrid     *itemGrid
+	orbCount     int
+	bossCount    int
 }
 
 func New(cfg *config.Config, m *world.Map, seed int64) *Game {
 	g := &Game{
-		Cfg: cfg, Prog: NewProgression(cfg.Cultivation), Map: m,
+		Cfg: cfg, Prog: NewProgression(cfg.Cultivation, cfg.Sword.MaxSwords), Map: m,
 		Rng:       rand.New(rand.NewSource(seed)),
 		Players:   map[uint32]*Player{},
 		Monsters:  map[uint32]*Monster{},
@@ -67,6 +70,8 @@ func New(cfg *config.Config, m *world.Map, seed int64) *Game {
 	g.Grid = world.NewGrid(m, cfg.Bots.PathGrid)
 	g.Grid.Rebuild(g.ObstacleSolid)
 	g.chestNextAt = cfg.Items.ChestEverySecs
+	g.itemGrid = newItemGrid(m.Size, 500)
+	g.seedOrbs()
 	return g
 }
 
@@ -118,6 +123,7 @@ func (g *Game) resetPlayer(p *Player, level, swords int) {
 	p.Level = level
 	p.PeakExp, p.PeakLevel, p.Kills = p.TotalExp, level, 0
 	p.Ring = Ring{Count: max(g.Cfg.Sword.StartCount, swords), Dir: 1, Angle: g.Rng.Float64() * 2 * math.Pi}
+	p.Ring.Tilt = RestTilt(g.Cfg.Sword, p.Ring.Dir)
 	p.Buffs = [BuffCount]float64{}
 	p.Dead, p.KilledBy, p.Transit = false, 0, nil
 	p.Pos = g.safeSpawn()
@@ -159,13 +165,14 @@ func (g *Game) refreshDerived(p *Player) {
 	if p.HasBuff(BuffLong, g.Time) {
 		long = g.Cfg.Buffs["long"].Mult
 	}
-	p.Geom = ComputeRingGeom(g.Cfg.Sword, p.Scale, p.Ring.Count, long)
+	p.Geom = ComputeRingGeom(g.Cfg.Sword, g.Cfg.Player.BodyR, p.Scale, p.Ring.Count, long)
 }
 
 func (g *Game) BodyR(p *Player) float64 { return g.Cfg.Player.BodyR * p.Scale }
 
+// Omega is the spin rate: one revolution per rev_secs, × Tốc Kiếm.
 func (g *Game) Omega(p *Player) float64 {
-	w := g.Cfg.Sword.Omega
+	w := 2 * math.Pi / math.Max(g.Cfg.Sword.RevSecs, 1e-3)
 	if p.HasBuff(BuffSpin, g.Time) {
 		w *= g.Cfg.Buffs["spin"].Mult
 	}
@@ -180,7 +187,7 @@ func (g *Game) Tick(dt float64) {
 	g.moveMonsters(dt)
 	for _, p := range g.PlayerList() {
 		if !p.Dead {
-			p.Ring.Angle = math.Mod(p.Ring.Angle+p.Ring.Dir*g.Omega(p)*dt, 2*math.Pi)
+			g.spinRing(p, dt)
 		}
 	}
 	g.resolveSwordBody()
@@ -194,6 +201,18 @@ func (g *Game) Tick(dt float64) {
 		g.gridDirty = false
 	}
 	g.pruneCooldowns()
+}
+
+// spinRing advances the ring and records the arc it swept this tick (spec §4.1b).
+func (g *Game) spinRing(p *Player, dt float64) {
+	r := &p.Ring
+	step := r.Dir * g.Omega(p) * dt
+	r.SweepLo, r.Sweep = r.Angle, math.Abs(step)
+	if step < 0 {
+		r.SweepLo = r.Angle + step
+	}
+	r.Angle = math.Mod(r.Angle+step, 2*math.Pi)
+	stepTilt(g.Cfg.Sword, r, dt)
 }
 
 // pairKey packs two ids and a tag into one cooldown key.

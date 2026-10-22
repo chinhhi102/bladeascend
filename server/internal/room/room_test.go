@@ -58,6 +58,10 @@ func TestBotFillToTwenty(t *testing.T) {
 		t.Fatalf("humans %d bots %d, want 5 and 15", r.Humans(), r.Bots())
 	}
 	joinN(m, 3)
+	r.Step(1.0 / 30)
+	for _, p := range r.G.Players {
+		p.InvulnUntil = 1e9 // v3 swords are lethal to Luyện Khí: keep everyone alive for this check
+	}
 	stepSecs(r, 5)
 	if r.Bots() != 15 {
 		t.Fatalf("joining humans must not remove bots: bots = %d", r.Bots())

@@ -9,28 +9,38 @@ import (
 )
 
 type Cultivation struct {
-	Realms         []string `json:"realms"`
-	TiersPerRealm  int      `json:"tiers_per_realm"`
-	SwordsPerRealm int      `json:"swords_per_realm"`
-	ExpBase        float64  `json:"exp_base"`
-	RealmMult      float64  `json:"realm_mult"`
-	TierStep       float64  `json:"tier_step"`
-	ScaleMin       float64  `json:"scale_min"`
-	ScaleMax       float64  `json:"scale_max"`
+	Realms        []string `json:"realms"`
+	TiersPerRealm int      `json:"tiers_per_realm"`
+	ExpBase       float64  `json:"exp_base"`
+	RealmMult     float64  `json:"realm_mult"`
+	TierStep      float64  `json:"tier_step"`
+	ScaleMin      float64  `json:"scale_min"`
+	ScaleMax      float64  `json:"scale_max"`
 }
 
 type Sword struct {
-	StartCount         int     `json:"start_count"`
-	MinCount           int     `json:"min_count"`
-	RingMinR           float64 `json:"ring_min_r"`
-	Spacing            float64 `json:"spacing"`
-	Length             float64 `json:"length"`
-	Width              float64 `json:"width"`
-	Omega              float64 `json:"omega"`
-	FlipCooldown       float64 `json:"flip_cooldown"`
-	ClashRatioBase     int     `json:"clash_ratio_base"`
-	ClashRatioPerRealm int     `json:"clash_ratio_per_realm"`
-	TweenSecs          float64 `json:"tween_secs"`
+	StartCount         int      `json:"start_count"`
+	MinCount           int      `json:"min_count"`
+	MaxSwords          []int    `json:"max_swords"`
+	SwordsPerRing      int      `json:"swords_per_ring"`
+	Length             float64  `json:"length"`
+	Width              float64  `json:"width"`
+	HiltGap            float64  `json:"hilt_gap"`
+	RingGrowth         float64  `json:"ring_growth"`
+	RingGrowthMode     string   `json:"ring_growth_mode"`
+	HiltStep           float64  `json:"hilt_step"`
+	TiltDeg            float64  `json:"tilt_deg"`
+	TiltTweenSecs      float64  `json:"tilt_tween_secs"`
+	RingTints          []string `json:"ring_tints"`
+	RevSecs            float64  `json:"rev_secs"`
+	FlipCooldown       float64  `json:"flip_cooldown"`
+	ClashUnit          int      `json:"clash_unit"`
+	ClashKnockback     float64  `json:"clash_knockback"`
+	ClashKnockbackSecs float64  `json:"clash_knockback_secs"`
+	DropBundleMax      int      `json:"drop_bundle_max"`
+	ClashRatioBase     int      `json:"clash_ratio_base"`
+	ClashRatioPerRealm int      `json:"clash_ratio_per_realm"`
+	TweenSecs          float64  `json:"tween_secs"`
 }
 
 type Player struct {
@@ -46,6 +56,8 @@ type Player struct {
 	OrbOwnerSecs   float64 `json:"orb_owner_secs"`
 	CameraViewH    float64 `json:"camera_view_h"`
 	CameraExp      float64 `json:"camera_exp"`
+	CameraReachMul float64 `json:"camera_reach_mult"`
+	HitDropsRealm  bool    `json:"hit_drops_realm"`
 	Knockback      float64 `json:"knockback"`
 	KnockbackSecs  float64 `json:"knockback_secs"`
 	DeathAnimSecs  float64 `json:"death_anim_secs"`
@@ -62,6 +74,9 @@ type Buff struct {
 type Items struct {
 	Weights        map[string]int     `json:"weights"`
 	CountPerRoom   int                `json:"count_per_room"`
+	RespawnSecs    float64            `json:"respawn_secs"`
+	SwordAmount    int                `json:"sword_item_amount"`
+	BundleAmount   int                `json:"bundle_amount"`
 	OvercapExp     float64            `json:"overcap_exp"`
 	ChestEverySecs float64            `json:"chest_every_secs"`
 	ChestItems     int                `json:"chest_items"`
@@ -73,6 +88,15 @@ type Items struct {
 	OrbR           float64            `json:"orb_r"`
 	ScatterR       float64            `json:"scatter_r"`
 	MaxOrbs        int                `json:"max_orbs"`
+}
+
+// ExpOrbs is the ambient EXP spread over the whole map (spec §6.1).
+type ExpOrbs struct {
+	Cell          float64   `json:"cell"`
+	Values        []float64 `json:"values"`
+	Weights       []int     `json:"weights"`
+	RespawnSecs   float64   `json:"respawn_secs"`
+	RespawnRegion float64   `json:"respawn_region"`
 }
 
 type MonsterKind struct {
@@ -94,6 +118,9 @@ type Monsters struct {
 }
 
 type Obstacles struct {
+	FootprintW     float64        `json:"footprint_w"`
+	FootprintH     float64        `json:"footprint_h"`
+	OcclusionAlpha float64        `json:"occlusion_alpha"`
 	RegrowSecs     float64        `json:"regrow_secs"`
 	RegrowWarnSecs float64        `json:"regrow_warn_secs"`
 	HP             map[string]int `json:"hp"`
@@ -176,6 +203,7 @@ type Config struct {
 	Player      Player          `json:"player"`
 	Buffs       map[string]Buff `json:"buffs"`
 	Items       Items           `json:"items"`
+	ExpOrbs     ExpOrbs         `json:"exp_orbs"`
 	Monsters    Monsters        `json:"monsters"`
 	Obstacles   Obstacles       `json:"obstacles"`
 	Zones       Zones           `json:"zones"`

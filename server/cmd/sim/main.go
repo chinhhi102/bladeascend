@@ -31,9 +31,21 @@ func main() {
 	minutes := flag.Float64("minutes", 10, "simulated minutes")
 	mapID := flag.String("map", "", "map id from maps/ (default: random)")
 	seed := flag.Int64("seed", time.Now().UnixNano(), "random seed")
+	monsters := flag.Int("monsters", -1, "override room.monster_count (-1 = config)")
+	cell := flag.Float64("orb-cell", 0, "override exp_orbs.cell (0 = config)")
+	farm := flag.Bool("farm", false, "nobody can be hit: measures pure farming pace (spec §6.1 target 60–90s to Trúc Cơ)")
 	flag.Parse()
 
 	cfg := config.MustLoadDefault()
+	if *farm {
+		cfg.Player.InvulnOnSpawn = 1e9
+	}
+	if *monsters >= 0 {
+		cfg.Room.MonsterCount = *monsters
+	}
+	if *cell > 0 {
+		cfg.ExpOrbs.Cell = *cell
+	}
 	m := pickMap(cfg, *mapID, *seed)
 	g := game.New(cfg, m, *seed)
 	rng := rand.New(rand.NewSource(*seed))
@@ -57,7 +69,7 @@ func main() {
 }
 
 func pickMap(cfg *config.Config, id string, seed int64) *world.Map {
-	maps, err := world.LoadDir(config.FindRepoFile("maps"), cfg.Obstacles.HP)
+	maps, err := world.LoadDir(config.FindRepoFile("maps"), world.LoadOptions{HP: cfg.Obstacles.HP, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH})
 	if err != nil || len(maps) == 0 {
 		log.Printf("no maps loaded (%v); using empty map", err)
 		return world.EmptyMap(cfg.Room.MapSize)

@@ -1,30 +1,35 @@
 {
   "cultivation": {
     "realms": ["Luyện Khí","Trúc Cơ","Kim Đan","Nguyên Anh","Hóa Thần","Luyện Hư","Hợp Thể","Độ Kiếp","Đại Thừa"],
-    "tiers_per_realm": 10, "swords_per_realm": 5,
+    "tiers_per_realm": 10,
     "exp_base": 100, "realm_mult": 1.2, "tier_step": 0.08,
     "scale_min": 1.0, "scale_max": 5.0
   },
   "sword": {
     "start_count": 1, "min_count": 1,
-    "ring_min_r": 70, "spacing": 22, "length": 40, "width": 10,
-    "omega": 1.8, "flip_cooldown": 0.3,
+    "max_swords": [60, 120, 160, 200, 240, 280, 320, 360, 400],
+    "swords_per_ring": 20, "length": 80, "width": 12, "hilt_gap": 6,
+    "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35, "tilt_tween_secs": 0.1,
+    "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
+    "rev_secs": 0.3, "flip_cooldown": 0.3,
+    "clash_unit": 5, "clash_knockback": 150, "clash_knockback_secs": 0.2, "drop_bundle_max": 10,
     "clash_ratio_base": 1,
     "clash_ratio_per_realm": 1,
     "tween_secs": 0.2
   },
   "player": {
-    "body_r": 30, "move_base": 260, "pickup_r": 60,
+    "body_r": 30, "move_base": 260, "pickup_r": 90,
     "invuln_on_hit": 1.0, "invuln_on_spawn": 2.0,
     "attacker_share": 0.5, "drop_share": 0.3, "kill_bonus_exp": 30,
     "death_sword_drop": 0.5, "orb_owner_secs": 1.5,
-    "camera_view_h": 900, "camera_exp": 0.85,
+    "camera_view_h": 900, "camera_exp": 0.85, "camera_reach_mult": 2.6,
+    "hit_drops_realm": true,
     "knockback": 140, "knockback_secs": 0.25,
     "death_anim_secs": 1.0,
     "name_min": 2, "name_max": 16
   },
   "buffs": {
-    "spin":   { "mult": 1.6, "secs": 12 },
+    "spin":   { "mult": 1.3, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },
     "magnet": { "mult": 3.0, "secs": 15 },
     "long":   { "mult": 1.3, "secs": 12 },
@@ -33,11 +38,16 @@
     "stealth":{ "secs": 6, "reveal_r": 120 }
   },
   "items": {
-    "weights": { "sword": 40, "spin": 15, "haste": 15, "magnet": 8, "long": 7, "shield": 7, "exp2": 5, "stealth": 3 },
-    "count_per_room": 120, "overcap_exp": 20, "chest_every_secs": 120, "chest_items": 5,
+    "weights": { "sword": 40, "bundle": 6, "spin": 12, "haste": 12, "magnet": 8, "long": 7, "shield": 7, "exp2": 5, "stealth": 3 },
+    "sword_item_amount": 3, "bundle_amount": 15,
+    "count_per_room": 400, "respawn_secs": 3, "overcap_exp": 20, "chest_every_secs": 60, "chest_items": 8,
     "spawn_min_dist": 300, "chest_warn_secs": 10, "chest_hp": 1, "item_r": 26,
     "orb_values": { "small": 5, "medium": 20, "large": 60 },
     "orb_r": 14, "scatter_r": 90, "max_orbs": 600
+  },
+  "exp_orbs": {
+    "cell": 300, "values": [5, 20, 60], "weights": [80, 18, 2],
+    "respawn_secs": 5, "respawn_region": 1000
   },
   "monsters": {
     "hit_cooldown": 0.25,
@@ -50,6 +60,7 @@
     }
   },
   "obstacles": {
+    "footprint_w": 0.9, "footprint_h": 0.3, "occlusion_alpha": 0.5,
     "regrow_secs": 30, "regrow_warn_secs": 3,
     "hp": { "fence": 30, "stall": 60, "cart": 60, "brick": 150, "boulder": 400 },
     "stall_item_drop": 0.3,

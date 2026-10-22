@@ -8,7 +8,7 @@ import (
 
 func TestLoadStarterMaps(t *testing.T) {
 	cfg := config.MustLoadDefault()
-	maps, err := LoadDir(config.FindRepoFile("maps"), cfg.Obstacles.HP)
+	maps, err := LoadDir(config.FindRepoFile("maps"), LoadOptions{HP: cfg.Obstacles.HP, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH})
 	if err != nil {
 		t.Fatal(err)
 	}

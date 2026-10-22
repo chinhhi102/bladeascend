@@ -10,12 +10,51 @@ import (
 	"strings"
 )
 
-// Obstacle blocks bodies. MaxHP == 0 means indestructible.
+// Obstacle: Shape is what the player sees (swords hit it); Foot is the footprint at the
+// bottom that blocks bodies (spec §8.2). MaxHP == 0 means indestructible.
 type Obstacle struct {
 	ID    int    `json:"id"`
 	Kind  string `json:"k"`
 	Shape Shape  `json:"s"`
+	Foot  Shape  `json:"f"`
 	MaxHP int    `json:"hp"`
+}
+
+// Block is the shape that stops bodies: the footprint, or the whole shape when none is set.
+func (o Obstacle) Block() Shape {
+	if o.Foot.W > 0 {
+		return o.Foot
+	}
+	return o.Shape
+}
+
+// LoadOptions are the config values the loader needs.
+type LoadOptions struct {
+	HP         map[string]int // obstacle type → HP (missing = indestructible)
+	FootprintW float64        // default footprint width, fraction of the sprite
+	FootprintH float64        // default footprint height, fraction of the sprite (at the bottom)
+}
+
+// Footprint is a rectangle w×h (fractions of the shape's bounds) sitting on the shape's bottom edge.
+func Footprint(s Shape, w, h float64) Shape {
+	lo, hi := s.Bounds()
+	bw, bh := hi.X-lo.X, hi.Y-lo.Y
+	fw, fh := bw*w, bh*h
+	return Shape{X: lo.X + (bw-fw)/2, Y: hi.Y - fh, W: fw, H: fh}
+}
+
+// footprintOf reads the Tiled property footprint = "w,h" (fractions), else the defaults.
+func footprintOf(o tmjObject, s Shape, opt LoadOptions) Shape {
+	w, h := opt.FootprintW, opt.FootprintH
+	if v := propString(o.Properties, "footprint", ""); v != "" {
+		if _, err := fmt.Sscanf(strings.ReplaceAll(v, " ", ""), "%g,%g", &w, &h); err != nil {
+			w, h = opt.FootprintW, opt.FootprintH
+		}
+	}
+	if w <= 0 || h <= 0 {
+		return Shape{}
+	}
+	return Footprint(s, w, h)
 }
 
 // Zone is a non-blocking terrain area: "bush", "mud" or "wind".
@@ -88,14 +127,14 @@ func (m *Map) GatesInNetwork(g Gate) []Gate {
 }
 
 // LoadDir loads every .tmj file in dir.
-func LoadDir(dir string, hp map[string]int) ([]*Map, error) {
+func LoadDir(dir string, opt LoadOptions) ([]*Map, error) {
 	files, err := filepath.Glob(filepath.Join(dir, "*.tmj"))
 	if err != nil {
 		return nil, err
 	}
 	var maps []*Map
 	for _, f := range files {
-		m, err := LoadTMJ(f, hp)
+		m, err := LoadTMJ(f, opt)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", f, err)
 		}
@@ -104,8 +143,8 @@ func LoadDir(dir string, hp map[string]int) ([]*Map, error) {
 	return maps, nil
 }
 
-// LoadTMJ parses a Tiled JSON map. hp maps obstacle type → HP (missing = indestructible).
-func LoadTMJ(path string, hp map[string]int) (*Map, error) {
+// LoadTMJ parses a Tiled JSON map.
+func LoadTMJ(path string, opt LoadOptions) (*Map, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -119,18 +158,20 @@ func LoadTMJ(path string, hp map[string]int) (*Map, error) {
 	m.Name = propString(t.Properties, "name", id)
 	m.Biome = propString(t.Properties, "biome", "grass")
 	for _, l := range t.Layers {
-		m.addLayer(l, hp)
+		m.addLayer(l, opt)
 	}
 	m.normalize()
 	return m, nil
 }
 
-func (m *Map) addLayer(l tmjLayer, hp map[string]int) {
+func (m *Map) addLayer(l tmjLayer, opt LoadOptions) {
 	for _, o := range l.Objects {
 		kind := o.kind()
 		switch strings.ToLower(l.Name) {
 		case "obstacles":
-			m.Obstacles = append(m.Obstacles, Obstacle{ID: len(m.Obstacles), Kind: kind, Shape: o.shape(), MaxHP: hp[kind]})
+			sh := o.shape()
+			m.Obstacles = append(m.Obstacles, Obstacle{ID: len(m.Obstacles), Kind: kind, Shape: sh,
+				Foot: footprintOf(o, sh, opt), MaxHP: opt.HP[kind]})
 		case "zones":
 			m.Zones = append(m.Zones, Zone{ID: len(m.Zones), Kind: kind, Shape: o.shape(),
 				WindDir: propFloat(o.Properties, "dir", 0) * math.Pi / 180})

@@ -2,9 +2,11 @@ package game
 
 import "math"
 
-// ViewHalfExtents returns the half width/height of what a player can see (spec §4.1 + AOI margin).
+// ViewHalfExtents returns the half width/height of what a player can see (spec §4.1: the camera backs off to show the whole ring, + AOI margin).
 func (g *Game) ViewHalfExtents(p *Player) (float64, float64) {
-	h := g.Cfg.Player.CameraViewH*math.Pow(p.Scale, g.Cfg.Player.CameraExp)/2 + g.Cfg.Net.AOIMargin
+	pc := g.Cfg.Player
+	view := math.Max(pc.CameraViewH*math.Pow(p.Scale, pc.CameraExp), pc.CameraReachMul*p.Geom.Reach)
+	h := view/2 + g.Cfg.Net.AOIMargin
 	return h * g.Cfg.Net.AOIAspect, h
 }
 

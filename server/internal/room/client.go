@@ -79,9 +79,9 @@ func playerState(g *game.Game, p *game.Player, withName bool) netproto.PlayerSta
 	s := netproto.PlayerState{
 		ID: p.ID, X: float32(p.Pos.X), Y: float32(p.Pos.Y), Facing: float32(p.Facing),
 		Level: p.Level, Count: p.Ring.Count, Phase: float32(p.Ring.Angle), Dir: int8(p.Ring.Dir),
-		Omega: float32(g.Omega(p)), RingR: float32(p.Geom.Radius), SwordL: float32(p.Geom.Length),
-		SwordW: float32(p.Geom.Width), Scale: float32(p.Scale), Mood: p.Mood, Crack: float32(p.Ring.Crack),
-		Exp: float32(p.TotalExp), Flags: playerFlags(g, p),
+		Omega: float32(g.Omega(p)), Tilt: float32(p.Ring.Tilt), Scale: float32(p.Scale), Mood: p.Mood,
+		Crack: float32(p.Ring.Crack),
+		Exp:   float32(p.TotalExp), Flags: playerFlags(g, p),
 	}
 	for b := 0; b < game.BuffCount; b++ {
 		if p.HasBuff(b, g.Time) {

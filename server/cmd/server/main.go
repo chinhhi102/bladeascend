@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	maps, err := world.LoadDir(*mapsDir, cfg.Obstacles.HP)
+	maps, err := world.LoadDir(*mapsDir, world.LoadOptions{HP: cfg.Obstacles.HP, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH})
 	if err != nil {
 		log.Fatal(err)
 	}
