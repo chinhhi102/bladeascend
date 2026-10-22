@@ -17,14 +17,13 @@ func TestResolveClashTable(t *testing.T) {
 		crackA, crackB float64
 	}{
 		{"same realm each lose u=1", ClashSide{2, 30, 0}, ClashSide{2, 27, 0}, 1, 1, 0, 0},
-		{"Trúc Cơ vs Luyện Khí: -1 / -2", ClashSide{1, 60, 0}, ClashSide{0, 50, 0}, 1, 2, 0, 0},
-		{"Kim Đan vs Luyện Khí: -1 / -3", ClashSide{2, 60, 0}, ClashSide{0, 50, 0}, 1, 3, 0, 0},
-		{"Luyện Khí vs Nguyên Anh: -4 / -1", ClashSide{0, 50, 0}, ClashSide{3, 100, 0}, 4, 1, 0, 0},
-		{"Luyện Khí(3) vs Nguyên Anh: còn 0, nứt 3/4", ClashSide{0, 3, 0}, ClashSide{3, 100, 0}, 3, 0, 0, 0.75},
-		{"Đại Thừa vs Luyện Khí: -1 / -9", ClashSide{8, 400, 0}, ClashSide{0, 60, 0}, 1, 9, 0, 0},
-		{"low side at 1 sword loses its last one", ClashSide{0, 1, 0}, ClashSide{3, 100, 0.5}, 1, 0, 0, 0.75},
-		{"crack accumulates to a break", ClashSide{3, 100, 0.5}, ClashSide{0, 3, 0}, 1, 3, 0.25, 0},
-		{"high side at 1 sword loses it too", ClashSide{3, 1, 0}, ClashSide{0, 50, 0}, 1, 4, 0, 0},
+		// Khác cảnh giới: bên thấp luôn mất đúng u = 1, bên cao chỉ nứt lost/k (v4.1).
+		{"Trúc Cơ vs Luyện Khí: thấp -1, cao nứt 1/1.2", ClashSide{1, 60, 0}, ClashSide{0, 50, 0}, 0, 1, 0.8333, 0},
+		{"Kim Đan vs Luyện Khí: cao nứt 1/1.44", ClashSide{2, 60, 0}, ClashSide{0, 50, 0}, 0, 1, 0.6944, 0},
+		{"Luyện Khí vs Nguyên Anh: thấp -1, cao nứt 1/1.728", ClashSide{0, 50, 0}, ClashSide{3, 100, 0}, 1, 0, 0, 0.5787},
+		{"Luyện Khí(1 kiếm) vs Nguyên Anh: mất nốt cây cuối", ClashSide{0, 1, 0}, ClashSide{3, 100, 0.5}, 1, 1, 0, 0.0787},
+		{"nứt đủ 1 thì bên cao mới mất kiếm", ClashSide{3, 100, 0.9}, ClashSide{0, 3, 0}, 1, 1, 0.4787, 0},
+		{"Đại Thừa vs Luyện Khí: cao nứt 1/4.3", ClashSide{8, 400, 0}, ClashSide{0, 60, 0}, 0, 1, 0.2326, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -32,7 +31,8 @@ func TestResolveClashTable(t *testing.T) {
 			if out.LostA != tc.lostA || out.LostB != tc.lostB {
 				t.Fatalf("lost = %d,%d want %d,%d", out.LostA, out.LostB, tc.lostA, tc.lostB)
 			}
-			if math.Abs(out.CrackA-tc.crackA) > 1e-9 || math.Abs(out.CrackB-tc.crackB) > 1e-9 {
+			// crack giờ là 1/1.2^d nên là số lẻ vô hạn: so tới 4 chữ số thập phân.
+			if math.Abs(out.CrackA-tc.crackA) > 1e-4 || math.Abs(out.CrackB-tc.crackB) > 1e-4 {
 				t.Fatalf("crack = %v,%v want %v,%v", out.CrackA, out.CrackB, tc.crackA, tc.crackB)
 			}
 			if tc.a.Count-out.LostA < c.MinCount || tc.b.Count-out.LostB < c.MinCount {
@@ -69,14 +69,42 @@ func TestRingCanBeStrippedToZero(t *testing.T) {
 	}
 }
 
-func TestClashRatioConfigurable(t *testing.T) {
+// Spec v4.1 §5.2: k = 1.2^d ("compound") hoặc 1 + 0.2×d ("linear").
+func TestDurabilityRatio(t *testing.T) {
 	c := config.MustLoadDefault().Sword
-	if k := ClashRatio(c, 3, 0); k != 4 {
-		t.Fatalf("k = %d, want 4", k)
+	for d, want := range map[int]float64{0: 1, 1: 1.2, 2: 1.44, 3: 1.728, 8: 4.2998} {
+		if got := Durability(c, d, 0); math.Abs(got-want) > 1e-3 {
+			t.Errorf("compound d=%d: k = %v, muốn ≈%v", d, got, want)
+		}
 	}
-	c.ClashRatioPerRealm = 2
-	if k := ClashRatio(c, 0, 3); k != 7 {
-		t.Fatalf("k with per_realm=2 = %d, want 7", k)
+	if got := Durability(c, 0, 3); math.Abs(got-1.728) > 1e-3 {
+		t.Errorf("k phải đối xứng theo |d|: %v", got)
+	}
+	c.DurabilityMode = "linear"
+	if got := Durability(c, 3, 0); math.Abs(got-1.6) > 1e-9 {
+		t.Errorf("linear d=3: k = %v, muốn 1.6", got)
+	}
+}
+
+// Spec v4.1 ví dụ: Trúc Cơ va Luyện Khí 12 lần → Luyện Khí mất 12, Trúc Cơ mất 10.
+func TestDurabilityTwelveClashesTradeTwelveForTen(t *testing.T) {
+	c := config.MustLoadDefault().Sword
+	low := ClashSide{Realm: 0, Count: 100}
+	high := ClashSide{Realm: 1, Count: 100}
+	lostLow, lostHigh := 0, 0
+	for i := 0; i < 12; i++ {
+		out := ResolveClash(c, low, high)
+		lostLow += out.LostA
+		lostHigh += out.LostB
+		low.Count -= out.LostA
+		high.Count -= out.LostB
+		low.Crack, high.Crack = out.CrackA, out.CrackB
+	}
+	if lostLow != 12 {
+		t.Errorf("Luyện Khí mất %d kiếm sau 12 lần va, muốn 12", lostLow)
+	}
+	if lostHigh != 10 {
+		t.Errorf("Trúc Cơ mất %d kiếm sau 12 lần va, muốn 10", lostHigh)
 	}
 }
 

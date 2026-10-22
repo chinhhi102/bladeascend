@@ -217,9 +217,9 @@ func TestClashAcrossRealmsDoesNotFlip(t *testing.T) {
 	if low.Ring.Dir != 1 || high.Ring.Dir != 1 {
 		t.Fatalf("khác cảnh giới mà vẫn đổi chiều: %v, %v", low.Ring.Dir, high.Ring.Dir)
 	}
-	// Luyện Khí vs Nguyên Anh: bên thấp mất u×k = 1×4 = 4, bên cao mất 1 (crack 4/4).
-	if low.Ring.Count != 4 || high.Ring.Count != 7 {
-		t.Fatalf("số kiếm sau va = %d, %d; muốn 4, 7", low.Ring.Count, high.Ring.Count)
+	// v4.1: bên thấp mất đúng clash_unit = 1; bên cao mới chỉ nứt 1/1.728 nên chưa mất kiếm.
+	if low.Ring.Count != 7 || high.Ring.Count != 8 {
+		t.Fatalf("số kiếm sau va = %d, %d; muốn 7, 8", low.Ring.Count, high.Ring.Count)
 	}
 }
 

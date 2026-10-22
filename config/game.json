@@ -19,8 +19,7 @@
     "rev_secs": 1.0, "flip_cooldown": 0.3,
     "clash_unit": 1, "flip_only_same_realm": true,
     "clash_knockback": 0, "clash_knockback_secs": 0.2, "drop_bundle_max": 10,
-    "clash_ratio_base": 1,
-    "clash_ratio_per_realm": 1,
+    "durability_per_realm": 1.2, "durability_mode": "compound",
     "tween_secs": 0.2
   },
   "player": {
