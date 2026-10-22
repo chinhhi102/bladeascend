@@ -150,13 +150,16 @@ func (l *ipLimiter) release(ip string) {
 	}
 }
 
-// clientIP honours X-Forwarded-For only from a local reverse proxy (Caddy).
+// clientIP honours X-Forwarded-For only from a reverse proxy on this host or its docker
+// network (Caddy); the game port is never published publicly.
 func clientIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr
 	}
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" && (host == "127.0.0.1" || host == "::1") {
+	ip := net.ParseIP(host)
+	isProxy := ip != nil && (ip.IsLoopback() || ip.IsPrivate())
+	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" && isProxy {
 		return strings.TrimSpace(strings.Split(fwd, ",")[0])
 	}
 	return host

@@ -1,0 +1,18 @@
+# Staging: the shared edge Caddy (docker_default network) proxies
+# kientiem.staging.maveragroups.com to this container; no host port is published.
+name: kientiem
+services:
+  web:
+    build: .
+    container_name: kientiem-web
+    restart: unless-stopped
+    volumes:
+      - kientiem-data:/data
+    networks:
+      - caddy
+networks:
+  caddy:
+    name: docker_default
+    external: true
+volumes:
+  kientiem-data:

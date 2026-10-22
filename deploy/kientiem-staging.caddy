@@ -1,0 +1,19 @@
+# Kiếm Xoay Tu Tiên staging: site block for the shared edge Caddy on the staging host
+# (/opt/astery/caddy/conf.d/). The edge is shared with other tenants, so deploy/staging.sh
+# validates the whole config before reloading.
+#
+# DNS: covered by the *.staging.maveragroups.com wildcard.
+
+kientiem.staging.maveragroups.com {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Staging is for review, not search results.
+		X-Robots-Tag "noindex, nofollow"
+		-Server
+	}
+	# Caddy proxies the /ws websocket upgrade as-is.
+	reverse_proxy kientiem-web:8080
+}
