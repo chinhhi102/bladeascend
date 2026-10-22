@@ -99,6 +99,10 @@ func noListing(h http.Handler) http.Handler {
 }
 
 // spa serves the built client and falls back to index.html.
+//
+// index.html is never cached: its <script> points at a content-hashed bundle, so a plain F5
+// after a new build always picks the new game up. The hashed files under /static/ carry a
+// new name whenever they change, so they are safe to cache for a long time.
 func spa(dir string) http.Handler {
 	fs := http.FileServer(http.Dir(dir))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -108,8 +112,12 @@ func spa(dir string) http.Handler {
 				http.Error(w, "Client chưa được build. Chạy: cd client && npm run build (hoặc dùng npm run dev)", http.StatusNotFound)
 				return
 			}
+			w.Header().Set("Cache-Control", "no-store, must-revalidate")
 			http.ServeFile(w, r, filepath.Join(dir, "index.html"))
 			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/static/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		}
 		fs.ServeHTTP(w, r)
 	})
