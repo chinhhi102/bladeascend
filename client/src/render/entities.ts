@@ -107,6 +107,11 @@ export class MonsterSprite {
   }
 }
 
+/** tienKhiRadius: viên Tiên khí to theo số điểm (2 → nhỏ, 10 → vừa, 150 → khổng lồ). */
+export function tienKhiRadius(v: number): number {
+  return v >= 100 ? 46 : v >= 10 ? 26 : 17;
+}
+
 function itemTexture(it: ItemState): Texture | null {
   if (it.k === 'orb') {
     const size = (it.v ?? 0) >= 60 ? 'large' : (it.v ?? 0) >= 20 ? 'medium' : 'small';
@@ -135,7 +140,9 @@ export class ItemSprite {
   private readonly phase = Math.random() * Math.PI * 2;
 
   constructor(readonly it: ItemState, itemR: number) {
-    const r = it.k === 'orb' ? orbRadius(it.v ?? 0) : it.k === 'chest' ? itemR * 2.2 : itemR;
+    const r = it.k === 'orb' ? orbRadius(it.v ?? 0)
+      : it.k === 'tien_khi' ? tienKhiRadius(it.v ?? 0)
+      : it.k === 'chest' ? itemR * 2.2 : itemR;
     const chestFrames = it.k === 'chest' ? assets.frames('items/chest', 'idle') : [];
     const tex = itemTexture(it);
     let node: Container;
@@ -159,13 +166,26 @@ export class ItemSprite {
     } else {
       node = this.placeholder(it, r);
     }
-    const glow = it.k === 'orb' ? ORB_COLORS[orbSize(it.v ?? 0)] : it.k === 'chest' ? 0xffd23f : 0xffffff;
+    const glow = it.k === 'orb' ? ORB_COLORS[orbSize(it.v ?? 0)]
+      : it.k === 'tien_khi' ? 0xffd60a
+      : it.k === 'chest' ? 0xffd23f : 0xffffff;
     this.root.addChild(under(r, glow), node);
     this.root.position.set(it.x, it.y);
     this.root.zIndex = it.y - 1000;
   }
 
   private placeholder(it: ItemState, r: number): Graphics {
+    if (it.k === 'tien_khi') {
+      // Viên Tiên khí: vàng kim, nhiều lớp sáng, viên khổng lồ có vành ngoài.
+      const g = new Graphics();
+      g.circle(0, 0, r * 1.5).fill({ color: 0xffd60a, alpha: 0.18 });
+      g.circle(0, 0, r).fill(0xfff3a0).stroke({ color: 0xffb020, width: r * 0.3 });
+      g.circle(0, -r * 0.3, r * 0.4).fill({ color: 0xffffff, alpha: 0.85 });
+      if ((it.v ?? 0) >= 100) {
+        g.circle(0, 0, r * 1.9).stroke({ color: 0xffd60a, width: r * 0.14, alpha: 0.9 });
+      }
+      return g;
+    }
     if (it.k === 'orb') {
       const size = orbSize(it.v ?? 0);
       return new Graphics(shared(`orb:${size}`, (g) => g.circle(0, 0, r).fill(ORB_COLORS[size]).stroke({ color: 0xffffff, width: 3 })));

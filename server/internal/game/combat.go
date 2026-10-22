@@ -77,14 +77,14 @@ func (g *Game) applyBodyHit(a, b *Player) {
 	oldRealm := g.Prog.Realm(b.Level)
 	g.awardHit(a, b, oldRealm, false) // scored on the realm they had before being knocked down
 	if g.Prog.IsTien(oldRealm) {
-		g.dropTienRealm(b) // Tiên giới không dùng EXP nên rớt cảnh giới tính riêng (§3.4)
+		g.robTienKhi(a, b) // Tiên giới: rớt cảnh giới + bị cướp Tiên khí (§3.4)
 		return
 	}
 	after := g.expAfterHit(b)
 	loss := b.TotalExp - after
 	g.setTotalExp(b, after)
 	g.GainExp(a, loss*pc.AttackerShare, true)
-	g.scatterOrbs(b.Pos, loss*pc.DropShare, 0)
+	g.scatterOrbs(b.Pos, loss*pc.DropShare, a.ID) // viên thuộc người chém 1.5s, không thì nạn nhân hút lại ngay
 	if g.Prog.Realm(b.Level) < oldRealm {
 		g.emit(Event{Kind: "KillFeed", Global: true, S: "realm_drop", A: a.ID, B: b.ID, N: g.Prog.Realm(b.Level)})
 	}
@@ -108,7 +108,7 @@ func (g *Game) kill(a, b *Player) {
 	// Spec §5.1: at Luyện Khí the "loss" is the victim's whole EXP, plus a kill bonus.
 	loss := b.TotalExp
 	g.GainExp(a, loss*pc.AttackerShare+pc.KillBonusExp, true)
-	g.scatterOrbs(b.Pos, loss*pc.DropShare, 0)
+	g.scatterOrbs(b.Pos, loss*pc.DropShare, a.ID) // viên thuộc người chém 1.5s, không thì nạn nhân hút lại ngay
 	g.dropDeathSwords(b)
 	a.Kills++
 	victimRank := g.RankOf(b)

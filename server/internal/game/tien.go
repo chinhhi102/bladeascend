@@ -2,10 +2,9 @@ package game
 
 import "math"
 
-// Tiên giới (spec §3.4): the five realms above Đại Thừa. They ignore EXP entirely — the only
-// way up is sát mạng, one per successful body hit on another player. Because only Luyện Khí
-// players actually die, counting kills alone would leave Tiên players with nothing to farm,
-// so every landed hit counts.
+// Tiên giới (spec §3.4 v4): the five realms above Đại Thừa. They ignore Linh khí (EXP)
+// entirely — the only way up is **Tiên khí**, a special orb that only the Đài Tiên Khí on
+// the map spray out (§8.5). The "sát mạng" rule of the previous draft is gone.
 
 // TienRealmOf is the player's Tiên realm index (0-based), or -1 while still mortal.
 func (g *Game) TienRealmOf(p *Player) int {
@@ -16,29 +15,35 @@ func (g *Game) TienRealmOf(p *Player) int {
 	return g.Prog.TienIndex(r)
 }
 
-// CanEarnTienKills is true from Đại Thừa tầng 10 upwards; hits landed before that are not
-// banked towards Chân Tiên.
-func (g *Game) CanEarnTienKills(p *Player) bool { return p.Level >= g.Prog.TopMortalLevel() }
+// BanksTienKhi is true from Đại Thừa tầng 10 upwards: those players put Tiên khí straight
+// into the bar. Everyone below converts it to Linh khí instead.
+func (g *Game) BanksTienKhi(p *Player) bool { return p.Level >= g.Prog.TopMortalLevel() }
 
-// addTienKill banks one landed hit towards the next Tiên realm and promotes when the
-// threshold is crossed. onCooldown is the same anti-farm check Uy Danh uses: hitting the
-// same victim again inside the cooldown banks nothing.
-func (g *Game) addTienKill(a, b *Player, onCooldown bool) {
-	if !g.CanEarnTienKills(a) || onCooldown || g.Prog.TienCount() == 0 {
-		return
+// TienKhiAsExp is what one Tiên khí point is worth as Linh khí for a player who cannot bank
+// it yet: base × 2^r (spec §3.4). That keeps the altars worth fighting over at every realm.
+func (g *Game) TienKhiAsExp(p *Player, points float64) float64 {
+	c := g.Cfg.Cultivation
+	return points * c.TienKhiToExpBase * math.Pow(2, float64(g.Prog.Realm(p.Level)))
+}
+
+// GainTienKhi banks Tiên khí (or converts it to Linh khí) and promotes when a threshold is
+// crossed. Returns how much actually went into the Tiên khí bar.
+func (g *Game) GainTienKhi(p *Player, points float64) float64 {
+	if points <= 0 || p.Dead {
+		return 0
 	}
-	v := 1.0
-	if b.IsBot {
-		v = g.Cfg.Cultivation.TienBotKillValue
+	if !g.BanksTienKhi(p) {
+		g.GainExp(p, g.TienKhiAsExp(p, points), false)
+		return 0
 	}
-	a.TienKills += v
+	p.TienKhi += points
 	for {
-		idx := g.TienRealmOf(a)
+		idx := g.TienRealmOf(p)
 		next := g.Prog.TienNextAt(idx)
-		if next <= 0 || a.TienKills < next {
-			return
+		if next <= 0 || p.TienKhi < next {
+			return points
 		}
-		g.promoteTien(a, idx+1)
+		g.promoteTien(p, idx+1)
 	}
 }
 
@@ -56,41 +61,55 @@ func (g *Game) promoteTien(p *Player, idx int) {
 	g.shockNearby(p)
 }
 
-// dropTienRealm applies spec §5.1 to someone standing in Tiên giới: one realm down, and the
-// sát mạng counter falls back to the entry threshold of the realm they land on, so the
-// progress they had banked towards the next one is lost.
-func (g *Game) dropTienRealm(p *Player) {
-	idx := g.TienRealmOf(p)
+// robTienKhi applies spec §3.4 when a Tiên giới player is cut: they drop one realm, their
+// Tiên khí falls back to the new realm's entry threshold, the attacker robs tien_rob_share
+// of the loss and tien_drop_share scatters as orbs around the victim.
+func (g *Game) robTienKhi(attacker, victim *Player) {
+	idx := g.TienRealmOf(victim)
 	if idx < 0 {
 		return
 	}
+	c := g.Cfg.Cultivation
+	var entry float64
 	if idx == 0 {
-		// Chân Tiên → back to Đại Thừa tầng 10, mortal again.
-		p.Level = g.Prog.TopMortalLevel()
-		p.TotalExp = g.Prog.MaxExp()
-		p.TienKills = 0
+		// Chân Tiên → về Đại Thừa tầng 10, hết Tiên giới.
+		victim.Level = g.Prog.TopMortalLevel()
+		victim.TotalExp = g.Prog.MaxExp()
 	} else {
-		p.Level = g.Prog.TienLevel(idx - 1)
-		p.TienKills = g.Prog.TienEntry(idx - 1)
+		victim.Level = g.Prog.TienLevel(idx - 1)
+		entry = g.Prog.TienEntry(idx - 1)
 	}
-	g.refreshDerived(p)
-	g.setMood(p, MoodRealmDrop, g.Cfg.Mood.RealmDropSecs)
-	g.emit(Event{Kind: "RealmDrop", A: p.ID, N: p.Level, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
-	g.dropExcessSwords(p)
-	g.emit(Event{Kind: "KillFeed", Global: true, S: "realm_drop", B: p.ID, N: g.Prog.Realm(p.Level)})
+	loss := math.Max(0, victim.TienKhi-entry)
+	victim.TienKhi = entry
+	g.refreshDerived(victim)
+	g.setMood(victim, MoodRealmDrop, g.Cfg.Mood.RealmDropSecs)
+	g.emit(Event{Kind: "RealmDrop", A: victim.ID, N: victim.Level,
+		X: float32(victim.Pos.X), Y: float32(victim.Pos.Y)})
+	g.dropExcessSwords(victim)
+	g.emit(Event{Kind: "KillFeed", Global: true, S: "realm_drop", A: attacker.ID, B: victim.ID,
+		N: g.Prog.Realm(victim.Level)})
+	if loss <= 0 {
+		return
+	}
+	g.GainTienKhi(attacker, loss*c.TienRobShare)
+	g.scatterTienKhi(victim.Pos, loss*c.TienDropShare)
 }
 
-// TienProgress is what the HUD bar shows for a Tiên player: kills banked and the threshold
-// for the next realm (spec §3.4 "Tiên khí 15/30"). at == 0 means already at Đạo Tổ.
+// TienProgress is what the HUD bar shows: Tiên khí banked towards the next realm and the
+// amount that realm costs (spec §3.4 "Tiên khí 150/300"). at == 0 means already at Đạo Tổ.
 func (g *Game) TienProgress(p *Player) (have, at float64) {
 	idx := g.TienRealmOf(p)
 	if idx < 0 {
-		return 0, 0
+		// Đại Thừa tầng 10 đã bắt đầu tích Tiên khí cho chặng Chân Tiên.
+		if !g.BanksTienKhi(p) {
+			return 0, 0
+		}
+		return p.TienKhi, g.Prog.TienNextAt(-1)
 	}
 	from := g.Prog.TienEntry(idx)
 	next := g.Prog.TienNextAt(idx)
 	if next <= 0 {
 		return 0, 0
 	}
-	return math.Max(0, p.TienKills-from), next - from
+	return math.Max(0, p.TienKhi-from), next - from
 }

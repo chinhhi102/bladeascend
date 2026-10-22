@@ -38,6 +38,7 @@ const TILE_MIN = 120; // smallest drawn obstacle piece, world units
 const TILE_PER_THICKNESS = 2.4; // a 3/4-view piece is drawn taller than its footprint
 // Khoảng cách giữa hai mảnh = ĐÚNG chiều dài mảnh, không nhân hệ số: nhân vào là dãy tường
 // bị hở. Vẽ thừa nửa mảnh ở hai đầu nên hai đoạn kề nhau luôn chạm nhau.
+const TILE_STEP = 0.55; // bước lát theo chiều dài mảnh; < phần vẽ thật nên luôn chồng mép
 const VOID_MARGIN = 300; // phải khớp mapMargin của cmd/mapgen
 
 /**
@@ -49,8 +50,9 @@ function tiledObstacle(tex: Texture, s: Shape, vertical: boolean): Container {
   const long = vertical ? b.h : b.w;
   const thick = vertical ? b.w : b.h;
   const size = Math.min(Math.max(thick * TILE_PER_THICKNESS, TILE_MIN), long / ART_FILL);
-  // Số mảnh đủ phủ kín: bước = đúng chiều dài hiển thị của mảnh, làm tròn LÊN.
-  const step = size * ART_FILL;
+  // Bước lát: phần vẽ thật trong mỗi ảnh hẹp hơn canvas (khối đá chỉ lấp ~60% bề ngang),
+  // nên lấy bước nhỏ hơn để hai mảnh kề nhau chồng mép — dãy tường liền, không hở.
+  const step = size * TILE_STEP;
   const n = Math.max(1, Math.ceil(long / step));
   const c = new Container();
   for (let i = 0; i < n; i++) {

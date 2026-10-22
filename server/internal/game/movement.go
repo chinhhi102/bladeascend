@@ -151,12 +151,19 @@ func (g *Game) circleFree(pos Vec, r float64) bool {
 	return free
 }
 
+// PlayBounds is the area anything may spawn in: inside the border wall, never in the void
+// outside it (spec §8.1).
+func (g *Game) PlayBounds(pad float64) (lo, hi float64) {
+	m := g.Map.PlayMargin + pad
+	return m, g.Map.Size - m
+}
+
 // randomFreePoint returns a random point not inside obstacles, preferring far from players.
 func (g *Game) randomFreePoint(r, minPlayerDist float64, tries int) Vec {
 	best, bestD := Vec{X: g.Map.Size / 2, Y: g.Map.Size / 2}, -1.0
-	margin := r + 50
+	lo, hi := g.PlayBounds(r + 50)
 	for i := 0; i < tries; i++ {
-		p := Vec{X: margin + g.Rng.Float64()*(g.Map.Size-2*margin), Y: margin + g.Rng.Float64()*(g.Map.Size-2*margin)}
+		p := Vec{X: lo + g.Rng.Float64()*(hi-lo), Y: lo + g.Rng.Float64()*(hi-lo)}
 		if !g.circleFree(p, r) {
 			continue
 		}

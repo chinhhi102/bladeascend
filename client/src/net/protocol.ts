@@ -89,6 +89,7 @@ export interface LeaderboardMsg {
   chx?: number;
   chy?: number;
   chw?: boolean; // still in the 10s warning
+  al?: { x: number; y: number; k: string; w?: boolean }[]; // Đài Tiên Khí (spec §8.5)
 }
 
 export interface FeedMsg {

@@ -141,19 +141,19 @@ func (p *Progression) TienLevel(idx int) int {
 	return (len(p.cfg.Realms) + idx) * p.cfg.TiersPerRealm
 }
 
-// TienEntry is the cumulative sát mạng needed to STAND at Tiên realm idx: 10, 30, 60, 100, 150.
+// TienEntry is the cumulative Tiên khí needed to STAND at Tiên realm idx: 100, 300, 600, 1000, 1500.
 func (p *Progression) TienEntry(idx int) float64 {
 	sum := 0.0
-	for i := 0; i <= idx && i < len(p.cfg.TienKillsPerStep); i++ {
-		sum += p.cfg.TienKillsPerStep[i]
+	for i := 0; i <= idx && i < len(p.cfg.TienKhiPerStep); i++ {
+		sum += p.cfg.TienKhiPerStep[i]
 	}
 	return sum
 }
 
-// TienNextAt is the cumulative sát mạng that promotes someone standing at Tiên realm idx
+// TienNextAt is the cumulative Tiên khí that promotes someone standing at Tiên realm idx
 // (idx = -1 means Đại Thừa tầng 10, still mortal). Returns 0 when already at the top.
 func (p *Progression) TienNextAt(idx int) float64 {
-	if idx+1 >= len(p.cfg.TienKillsPerStep) {
+	if idx+1 >= len(p.cfg.TienKhiPerStep) {
 		return 0
 	}
 	return p.TienEntry(idx + 1)

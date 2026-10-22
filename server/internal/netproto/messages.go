@@ -164,6 +164,16 @@ type Leaderboard struct {
 	ChestX  float32 `msgpack:"chx,omitempty"`
 	ChestY  float32 `msgpack:"chy,omitempty"`
 	ChestIn bool    `msgpack:"chw,omitempty"` // still in the 10s warning, not spawned yet
+	// Đài Tiên Khí cho minimap (spec §8.5, §12.1): x, y, kind, đang sắp phun lớn.
+	Altars []AltarMark `msgpack:"al,omitempty"`
+}
+
+// AltarMark is one Đài Tiên Khí on the minimap.
+type AltarMark struct {
+	X    float32 `msgpack:"x"`
+	Y    float32 `msgpack:"y"`
+	Kind string  `msgpack:"k"`
+	Warn bool    `msgpack:"w,omitempty"`
 }
 
 // Feed is a kill-feed line with names resolved on the server (spec §7).

@@ -109,6 +109,12 @@ func (g *Game) pickup(p *Player, it *Item) {
 		g.AddSwords(p, g.Cfg.Items.SwordAmount)
 	case "bundle":
 		g.AddSwords(p, int(it.Value))
+	case ItemTienKhi:
+		// Đại Thừa 10 trở lên thì vào thanh Tiên khí; dưới đó đổi sang Linh khí (§3.4).
+		banked := g.GainTienKhi(p, it.Value)
+		g.emit(Event{Kind: "TienKhiPicked", A: p.ID, To: p.ID, N: int(it.Value),
+			S: map[bool]string{true: "khi", false: "exp"}[banked > 0],
+			X: float32(it.Pos.X), Y: float32(it.Pos.Y)})
 	case "chest":
 		for i := 0; i < g.Cfg.Items.ChestItems; i++ {
 			g.spawnItemNear(g.randomItemKind(), 0, it.Pos, g.Cfg.Items.ScatterR*2)

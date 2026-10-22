@@ -19,12 +19,15 @@ type Cultivation struct {
 
 	// Tiên giới (spec §3.4): 5 cảnh giới sau Đại Thừa, không chia tầng, chỉ lên được
 	// bằng sát mạng chứ không dùng EXP.
-	TienRealms          []string  `json:"tien_realms"`
-	TienKillsPerStep    []float64 `json:"tien_kills_per_step"`
-	TienBotKillValue    float64   `json:"tien_bot_kill_value"`
-	TienSameVictimSecs  float64   `json:"tien_same_victim_cooldown_secs"`
-	TienScaleStep       float64   `json:"tien_scale_step"`
-	TienAuraColors      []string  `json:"tien_aura_colors"`
+	TienRealms []string `json:"tien_realms"`
+	// TienKhiPerStep: Tiên khí cần cho từng chặng. TienKhiToExpBase: người chưa tới
+	// Đại Thừa 10 nhặt 1 điểm Tiên khí thì đổi thành base × 2^r Linh khí (spec §3.4).
+	TienKhiPerStep   []float64 `json:"tien_khi_per_step"`
+	TienKhiToExpBase float64   `json:"tien_khi_to_exp_base"`
+	TienRobShare     float64   `json:"tien_rob_share"`
+	TienDropShare    float64   `json:"tien_drop_share"`
+	TienScaleStep    float64   `json:"tien_scale_step"`
+	TienAuraColors   []string  `json:"tien_aura_colors"`
 }
 
 type Sword struct {
@@ -53,6 +56,8 @@ type Sword struct {
 	// "compound" → k = 1.2^d; "linear" → k = 1 + 0.2 × d.
 	DurabilityPerRealm float64 `json:"durability_per_realm"`
 	DurabilityMode     string  `json:"durability_mode"`
+	// ShieldRing: vòng nào làm lá chắn — "second_outermost" theo spec §5.2 v4.
+	ShieldRing string `json:"shield_ring"`
 	TweenSecs          float64  `json:"tween_secs"`
 }
 
@@ -220,6 +225,41 @@ type Mood struct {
 }
 
 // Minimap is the client-side minimap (spec §12.1); the server only passes it through.
+// AltarKind is one Đài Tiên Khí type (spec §8.5).
+type AltarKind struct {
+	Count          int     `json:"count"`
+	EverySecs      float64 `json:"every_secs"`
+	Orbs           []int   `json:"orbs"` // [min, max] viên mỗi đợt thường
+	OrbValue       float64 `json:"orb_value"`
+	BurstEverySecs float64 `json:"burst_every_secs"`
+	BurstSmall     int     `json:"burst_small"`
+	BurstMedium    int     `json:"burst_medium"`
+	MediumValue    float64 `json:"medium_value"`
+	WarnSecs       float64 `json:"warn_secs"`
+}
+
+// Altars is the Đài Tiên Khí section (spec §8.5).
+type Altars struct {
+	Small      AltarKind `json:"small"`
+	Center     AltarKind `json:"center"`
+	SprayR     []float64 `json:"spray_r"`
+	OrbLifeSec float64   `json:"orb_lifetime_secs"`
+	ClearR     float64   `json:"clear_r"`
+}
+
+// Mapgen is the §8.1 generator settings.
+type Mapgen struct {
+	CenterPlazaR float64 `json:"center_plaza_r"`
+	SectR        float64 `json:"sect_r"`
+	SectInset    float64 `json:"sect_inset"`
+	RoadW        float64 `json:"road_w"`
+	RingRoadR    float64 `json:"ring_road_r"`
+	Symmetry     string  `json:"symmetry"`
+	Jitter       float64 `json:"jitter"`
+	MinOpenRatio float64 `json:"min_open_ratio"`
+	MaxRetries   int     `json:"max_retries"`
+}
+
 type Minimap struct {
 	SizePC     int  `json:"size_pc"`
 	SizeMobile int  `json:"size_mobile"`
@@ -271,6 +311,8 @@ type Config struct {
 	Titles      []string        `json:"titles"`
 	TitleHold   float64         `json:"title_hold_secs"`
 	Minimap     Minimap         `json:"minimap"`
+	Altars      Altars          `json:"altars"`
+	Mapgen      Mapgen          `json:"mapgen"`
 	Score       Score           `json:"score"`
 	Net         Net             `json:"net"`
 }

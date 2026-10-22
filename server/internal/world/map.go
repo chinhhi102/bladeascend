@@ -75,6 +75,16 @@ type Gate struct {
 	Color   string  `json:"c"`
 }
 
+// Altar is a Đài Tiên Khí (spec §8.5): "small" quanh 4 sân môn phái, "center" ở giữa.
+// Đài không phá được, kiếm đi xuyên; nó chỉ là điểm phun viên Tiên khí.
+type Altar struct {
+	ID   int     `json:"id"`
+	Kind string  `json:"k"` // "small" | "center"
+	X    float64 `json:"x"`
+	Y    float64 `json:"y"`
+	R    float64 `json:"r"`
+}
+
 // Decor is purely visual; the server only forwards it.
 type Decor struct {
 	Sprite string  `json:"sp"`
@@ -90,6 +100,10 @@ type Map struct {
 	Obstacles []Obstacle `json:"obstacles"`
 	Zones     []Zone     `json:"zones"`
 	Gates     []Gate     `json:"gates"`
+	Altars    []Altar    `json:"altars"`
+	// PlayMargin: khoảng cách từ mép bản đồ tới vùng chơi được (ngoài đó là tường biên và
+	// vực tối). Mọi thứ sinh ra phải nằm trong [PlayMargin, Size-PlayMargin] (spec §8.1).
+	PlayMargin float64 `json:"play_margin"`
 	Decor     []Decor    `json:"decor"`
 }
 
@@ -110,6 +124,9 @@ func (m *Map) normalize() {
 	}
 	if m.Gates == nil {
 		m.Gates = []Gate{}
+	}
+	if m.Altars == nil {
+		m.Altars = []Altar{}
 	}
 	if m.Decor == nil {
 		m.Decor = []Decor{}
@@ -183,6 +200,7 @@ func LoadTMJ(path string, opt LoadOptions) (*Map, error) {
 	id := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 	m := &Map{ID: id, Size: float64(t.Width * t.TileWidth)}
 	m.Name = propString(t.Properties, "name", id)
+	m.PlayMargin = propFloat(t.Properties, "play_margin", 0)
 	m.Biome = propString(t.Properties, "biome", "grass")
 	for _, l := range t.Layers {
 		m.addLayer(l, opt)
@@ -206,6 +224,11 @@ func (m *Map) addLayer(l tmjLayer, opt LoadOptions) {
 			c := o.shape().Center()
 			m.Gates = append(m.Gates, Gate{ID: len(m.Gates), X: c.X, Y: c.Y,
 				Network: propString(o.Properties, "network", "a"), Color: propString(o.Properties, "color", "purple")})
+		case "altars":
+			sh := o.shape()
+			c := sh.Center()
+			m.Altars = append(m.Altars, Altar{ID: len(m.Altars), Kind: kind, X: c.X, Y: c.Y,
+				R: math.Max(sh.W, sh.H) / 2})
 		case "decor":
 			c := o.shape().Center()
 			m.Decor = append(m.Decor, Decor{Sprite: kind, X: c.X, Y: c.Y})

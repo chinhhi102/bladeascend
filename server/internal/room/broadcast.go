@@ -169,6 +169,9 @@ func (r *Room) sendLeaderboards() {
 			base.Top1, base.Top1X, base.Top1Y = true, float32(lead.Pos.X), float32(lead.Pos.Y)
 		}
 	}
+	for _, a := range r.G.AltarMarkers() {
+		base.Altars = append(base.Altars, netproto.AltarMark{X: float32(a.X), Y: float32(a.Y), Kind: a.Kind, Warn: a.Warning})
+	}
 	if r.cfg.Minimap.ShowChest {
 		if pos, warning, ok := r.G.ChestMarker(); ok {
 			base.HasBau, base.ChestX, base.ChestY, base.ChestIn = true, float32(pos.X), float32(pos.Y), warning

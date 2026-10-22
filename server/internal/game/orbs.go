@@ -21,10 +21,12 @@ func (g *Game) seedOrbs() {
 	if oc.Cell <= 0 || len(oc.Values) == 0 {
 		return
 	}
-	n := int(g.Map.Size / oc.Cell)
+	// Chỉ rải trong vùng chơi: ngoài tường biên là vực, không ai tới được (§8.1).
+	bLo, bHi := g.PlayBounds(0)
+	n := int((bHi - bLo) / oc.Cell)
 	for y := 0; y < n; y++ {
 		for x := 0; x < n; x++ {
-			lo := Vec{X: float64(x) * oc.Cell, Y: float64(y) * oc.Cell}
+			lo := Vec{X: bLo + float64(x)*oc.Cell, Y: bLo + float64(y)*oc.Cell}
 			if at, ok := g.freePointIn(lo, oc.Cell); ok {
 				g.addAmbientOrb(at)
 			}
@@ -86,7 +88,7 @@ func (g *Game) freePointIn(lo Vec, size float64) (Vec, bool) {
 	r := g.Cfg.Items.OrbR
 	for try := 0; try < 4; try++ {
 		p := Vec{X: lo.X + g.Rng.Float64()*size, Y: lo.Y + g.Rng.Float64()*size}
-		if p.X < r || p.Y < r || p.X > g.Map.Size-r || p.Y > g.Map.Size-r {
+		if bLo, bHi := g.PlayBounds(r); p.X < bLo || p.Y < bLo || p.X > bHi || p.Y > bHi {
 			continue
 		}
 		if g.circleFree(p, r) {

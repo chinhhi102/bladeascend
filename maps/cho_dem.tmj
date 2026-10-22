@@ -9,8 +9,8 @@
  "tilewidth": 100,
  "tileheight": 100,
  "infinite": false,
- "nextlayerid": 5,
- "nextobjectid": 263,
+ "nextlayerid": 6,
+ "nextobjectid": 265,
  "properties": [
   {
    "name": "name",
@@ -21,6 +21,11 @@
    "name": "biome",
    "type": "string",
    "value": "concrete"
+  },
+  {
+   "name": "play_margin",
+   "type": "float",
+   "value": 420
   }
  ],
  "layers": [
@@ -35,31 +40,7 @@
    "y": 0,
    "objects": [
     {
-     "id": 180,
-     "name": "",
-     "type": "bush",
-     "x": 4104.483730146496,
-     "y": 2418.6950276158695,
-     "width": 481.86139635139256,
-     "height": 481.86139635139256,
-     "rotation": 0,
-     "visible": true,
-     "ellipse": true
-    },
-    {
-     "id": 181,
-     "name": "",
-     "type": "bush",
-     "x": 2953.048004723295,
-     "y": 6102.686956679392,
-     "width": 552.6334479394384,
-     "height": 552.6334479394384,
-     "rotation": 0,
-     "visible": true,
-     "ellipse": true
-    },
-    {
-     "id": 182,
+     "id": 183,
      "name": "",
      "type": "bush",
      "x": 10229.674269964382,
@@ -71,7 +52,7 @@
      "ellipse": true
     },
     {
-     "id": 183,
+     "id": 184,
      "name": "",
      "type": "bush",
      "x": 1082.6731363525043,
@@ -83,7 +64,7 @@
      "ellipse": true
     },
     {
-     "id": 184,
+     "id": 185,
      "name": "",
      "type": "bush",
      "x": 9098.989120408285,
@@ -95,7 +76,7 @@
      "ellipse": true
     },
     {
-     "id": 185,
+     "id": 186,
      "name": "",
      "type": "bush",
      "x": 2541.2964242394387,
@@ -107,7 +88,7 @@
      "ellipse": true
     },
     {
-     "id": 186,
+     "id": 187,
      "name": "",
      "type": "bush",
      "x": 5906.637282974118,
@@ -119,7 +100,7 @@
      "ellipse": true
     },
     {
-     "id": 187,
+     "id": 188,
      "name": "",
      "type": "bush",
      "x": 6645.188778823037,
@@ -131,7 +112,7 @@
      "ellipse": true
     },
     {
-     "id": 188,
+     "id": 189,
      "name": "",
      "type": "bush",
      "x": 4945.8943360658395,
@@ -143,7 +124,7 @@
      "ellipse": true
     },
     {
-     "id": 189,
+     "id": 190,
      "name": "",
      "type": "bush",
      "x": 3967.7463755736057,
@@ -155,7 +136,7 @@
      "ellipse": true
     },
     {
-     "id": 190,
+     "id": 191,
      "name": "",
      "type": "bush",
      "x": 7596.7980551142455,
@@ -167,7 +148,7 @@
      "ellipse": true
     },
     {
-     "id": 191,
+     "id": 192,
      "name": "",
      "type": "bush",
      "x": 1494.7439037187373,
@@ -179,25 +160,13 @@
      "ellipse": true
     },
     {
-     "id": 192,
-     "name": "",
-     "type": "mud",
-     "x": 1403.0638471214615,
-     "y": 1728.9606097910644,
-     "width": 466.4608049019195,
-     "height": 420.5523623357892,
-     "rotation": 0,
-     "visible": true,
-     "ellipse": true
-    },
-    {
      "id": 193,
      "name": "",
-     "type": "mud",
-     "x": 5686.670385337651,
-     "y": 4061.000266015658,
-     "width": 457.96165393811987,
-     "height": 347.77475299943217,
+     "type": "bush",
+     "x": 1147.6180845071044,
+     "y": 1473.5148471767072,
+     "width": 510.89152522871416,
+     "height": 510.89152522871416,
      "rotation": 0,
      "visible": true,
      "ellipse": true
@@ -205,11 +174,11 @@
     {
      "id": 194,
      "name": "",
-     "type": "mud",
-     "x": 7042.896353406741,
-     "y": 4269.522431838474,
-     "width": 509.3005368529632,
-     "height": 596.3650807669605,
+     "type": "bush",
+     "x": 4632.347158231635,
+     "y": 5414.469664677928,
+     "width": 544.4014413194454,
+     "height": 544.4014413194454,
      "rotation": 0,
      "visible": true,
      "ellipse": true
@@ -218,10 +187,10 @@
      "id": 195,
      "name": "",
      "type": "mud",
-     "x": 7933.751574387574,
-     "y": 8363.509774306453,
-     "width": 519.2079500545703,
-     "height": 414.71523694528423,
+     "x": 2576.1735264980584,
+     "y": 2197.2208115788776,
+     "width": 578.0348482098586,
+     "height": 403.4817858021095,
      "rotation": 0,
      "visible": true,
      "ellipse": true
@@ -230,16 +199,52 @@
      "id": 196,
      "name": "",
      "type": "mud",
-     "x": 7293.700785006958,
-     "y": 4985.626356861094,
-     "width": 518.0339320855136,
-     "height": 324.2143662936545,
+     "x": 4854.535742030018,
+     "y": 4687.406814364573,
+     "width": 584.7769028227676,
+     "height": 422.73189131347027,
      "rotation": 0,
      "visible": true,
      "ellipse": true
     },
     {
      "id": 197,
+     "name": "",
+     "type": "mud",
+     "x": 4810.862273581105,
+     "y": 1320.7744261239475,
+     "width": 699.1814494407772,
+     "height": 396.31688462106064,
+     "rotation": 0,
+     "visible": true,
+     "ellipse": true
+    },
+    {
+     "id": 198,
+     "name": "",
+     "type": "mud",
+     "x": 4204.7938896991,
+     "y": 8703.60256623086,
+     "width": 418.9108234802359,
+     "height": 441.646885367461,
+     "rotation": 0,
+     "visible": true,
+     "ellipse": true
+    },
+    {
+     "id": 199,
+     "name": "",
+     "type": "mud",
+     "x": 10615.930594468493,
+     "y": 7600.533845920347,
+     "width": 543.1251531739842,
+     "height": 305.63968568487695,
+     "rotation": 0,
+     "visible": true,
+     "ellipse": true
+    },
+    {
+     "id": 200,
      "name": "",
      "type": "wind",
      "x": 5800,
@@ -257,7 +262,7 @@
      ]
     },
     {
-     "id": 198,
+     "id": 201,
      "name": "",
      "type": "wind",
      "x": 600,
@@ -331,7 +336,7 @@
      "visible": true
     },
     {
-     "id": 9,
+     "id": 14,
      "name": "",
      "type": "stone_wall",
      "x": 3074.6528414809454,
@@ -342,7 +347,7 @@
      "visible": true
     },
     {
-     "id": 10,
+     "id": 15,
      "name": "",
      "type": "stone_wall",
      "x": 3344.6528414809454,
@@ -353,7 +358,7 @@
      "visible": true
     },
     {
-     "id": 11,
+     "id": 16,
      "name": "",
      "type": "stone_wall",
      "x": 7113.204397501307,
@@ -364,7 +369,7 @@
      "visible": true
     },
     {
-     "id": 12,
+     "id": 17,
      "name": "",
      "type": "stone_wall",
      "x": 7113.204397501307,
@@ -375,7 +380,7 @@
      "visible": true
     },
     {
-     "id": 13,
+     "id": 18,
      "name": "",
      "type": "stone_wall",
      "x": 5486.600584714997,
@@ -386,7 +391,7 @@
      "visible": true
     },
     {
-     "id": 14,
+     "id": 19,
      "name": "",
      "type": "stone_wall",
      "x": 5956.600584714997,
@@ -397,7 +402,7 @@
      "visible": true
     },
     {
-     "id": 15,
+     "id": 20,
      "name": "",
      "type": "stone_wall",
      "x": 8061.739158910437,
@@ -408,7 +413,7 @@
      "visible": true
     },
     {
-     "id": 16,
+     "id": 21,
      "name": "",
      "type": "stone_wall",
      "x": 8061.739158910437,
@@ -419,7 +424,7 @@
      "visible": true
     },
     {
-     "id": 17,
+     "id": 22,
      "name": "",
      "type": "stone_wall",
      "x": 4770.8293001000675,
@@ -430,7 +435,7 @@
      "visible": true
     },
     {
-     "id": 18,
+     "id": 23,
      "name": "",
      "type": "stone_wall",
      "x": 5140.8293001000675,
@@ -441,7 +446,7 @@
      "visible": true
     },
     {
-     "id": 19,
+     "id": 24,
      "name": "",
      "type": "stone_wall",
      "x": 4224.625050768166,
@@ -452,7 +457,7 @@
      "visible": true
     },
     {
-     "id": 20,
+     "id": 25,
      "name": "",
      "type": "stone_wall",
      "x": 4224.625050768166,
@@ -463,7 +468,7 @@
      "visible": true
     },
     {
-     "id": 21,
+     "id": 26,
      "name": "",
      "type": "stone_wall",
      "x": 3238.1506588672564,
@@ -474,7 +479,7 @@
      "visible": true
     },
     {
-     "id": 22,
+     "id": 27,
      "name": "",
      "type": "stone_wall",
      "x": 3508.1506588672564,
@@ -485,7 +490,7 @@
      "visible": true
     },
     {
-     "id": 23,
+     "id": 28,
      "name": "",
      "type": "stone_wall",
      "x": 8114.620090824365,
@@ -496,7 +501,7 @@
      "visible": true
     },
     {
-     "id": 24,
+     "id": 29,
      "name": "",
      "type": "stone_wall",
      "x": 8114.620090824365,
@@ -507,7 +512,7 @@
      "visible": true
     },
     {
-     "id": 25,
+     "id": 30,
      "name": "",
      "type": "stone_wall",
      "x": 7541.517233598103,
@@ -518,7 +523,7 @@
      "visible": true
     },
     {
-     "id": 26,
+     "id": 31,
      "name": "",
      "type": "stone_wall",
      "x": 8011.517233598103,
@@ -529,7 +534,7 @@
      "visible": true
     },
     {
-     "id": 27,
+     "id": 32,
      "name": "",
      "type": "cart",
      "x": 1442.1209269773644,
@@ -540,7 +545,7 @@
      "visible": true
     },
     {
-     "id": 28,
+     "id": 33,
      "name": "",
      "type": "stall",
      "x": 1926.399868475795,
@@ -551,7 +556,7 @@
      "visible": true
     },
     {
-     "id": 29,
+     "id": 34,
      "name": "",
      "type": "stall",
      "x": 2493.484925065011,
@@ -562,7 +567,7 @@
      "visible": true
     },
     {
-     "id": 30,
+     "id": 35,
      "name": "",
      "type": "cart",
      "x": 4078.2121892409727,
@@ -573,7 +578,7 @@
      "visible": true
     },
     {
-     "id": 31,
+     "id": 36,
      "name": "",
      "type": "stall",
      "x": 8648.81166578538,
@@ -584,7 +589,7 @@
      "visible": true
     },
     {
-     "id": 32,
+     "id": 37,
      "name": "",
      "type": "cart",
      "x": 10825.716427791318,
@@ -595,7 +600,7 @@
      "visible": true
     },
     {
-     "id": 33,
+     "id": 38,
      "name": "",
      "type": "stall",
      "x": 1366.78282006638,
@@ -606,7 +611,7 @@
      "visible": true
     },
     {
-     "id": 34,
+     "id": 39,
      "name": "",
      "type": "stall",
      "x": 2947.1187292166433,
@@ -617,7 +622,7 @@
      "visible": true
     },
     {
-     "id": 35,
+     "id": 40,
      "name": "",
      "type": "stall",
      "x": 3979.108904667918,
@@ -628,7 +633,7 @@
      "visible": true
     },
     {
-     "id": 36,
+     "id": 41,
      "name": "",
      "type": "stall",
      "x": 4587.013563671134,
@@ -639,7 +644,7 @@
      "visible": true
     },
     {
-     "id": 37,
+     "id": 42,
      "name": "",
      "type": "stall",
      "x": 6155.352540382466,
@@ -650,7 +655,7 @@
      "visible": true
     },
     {
-     "id": 38,
+     "id": 43,
      "name": "",
      "type": "stall",
      "x": 6647.73518956959,
@@ -661,7 +666,7 @@
      "visible": true
     },
     {
-     "id": 39,
+     "id": 44,
      "name": "",
      "type": "stall",
      "x": 8722.259416008821,
@@ -672,7 +677,7 @@
      "visible": true
     },
     {
-     "id": 40,
+     "id": 45,
      "name": "",
      "type": "stall",
      "x": 9256.84131750553,
@@ -683,7 +688,7 @@
      "visible": true
     },
     {
-     "id": 41,
+     "id": 46,
      "name": "",
      "type": "cart",
      "x": 9685.695403349695,
@@ -694,7 +699,7 @@
      "visible": true
     },
     {
-     "id": 42,
+     "id": 47,
      "name": "",
      "type": "cart",
      "x": 919.3763495466028,
@@ -705,7 +710,7 @@
      "visible": true
     },
     {
-     "id": 43,
+     "id": 48,
      "name": "",
      "type": "cart",
      "x": 1970.806293214326,
@@ -716,7 +721,7 @@
      "visible": true
     },
     {
-     "id": 44,
+     "id": 49,
      "name": "",
      "type": "stall",
      "x": 2509.1093020858857,
@@ -727,7 +732,7 @@
      "visible": true
     },
     {
-     "id": 45,
+     "id": 50,
      "name": "",
      "type": "stall",
      "x": 3472.998049788593,
@@ -738,7 +743,7 @@
      "visible": true
     },
     {
-     "id": 46,
+     "id": 51,
      "name": "",
      "type": "stall",
      "x": 4559.869137893119,
@@ -749,7 +754,7 @@
      "visible": true
     },
     {
-     "id": 47,
+     "id": 52,
      "name": "",
      "type": "stall",
      "x": 5552.796170199189,
@@ -760,7 +765,7 @@
      "visible": true
     },
     {
-     "id": 48,
+     "id": 53,
      "name": "",
      "type": "stall",
      "x": 6615.954867221576,
@@ -771,7 +776,7 @@
      "visible": true
     },
     {
-     "id": 49,
+     "id": 54,
      "name": "",
      "type": "cart",
      "x": 7134.788046732636,
@@ -782,7 +787,7 @@
      "visible": true
     },
     {
-     "id": 50,
+     "id": 55,
      "name": "",
      "type": "stall",
      "x": 9199.152901677597,
@@ -793,7 +798,7 @@
      "visible": true
     },
     {
-     "id": 51,
+     "id": 56,
      "name": "",
      "type": "stall",
      "x": 10215.254403402645,
@@ -804,7 +809,7 @@
      "visible": true
     },
     {
-     "id": 52,
+     "id": 57,
      "name": "",
      "type": "stall",
      "x": 906.7869499232637,
@@ -815,7 +820,7 @@
      "visible": true
     },
     {
-     "id": 53,
+     "id": 58,
      "name": "",
      "type": "stall",
      "x": 1432.624595232049,
@@ -826,18 +831,7 @@
      "visible": true
     },
     {
-     "id": 54,
-     "name": "",
-     "type": "stall",
-     "x": 3027.959775886055,
-     "y": 3054.960311998825,
-     "width": 240,
-     "height": 180,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 55,
+     "id": 59,
      "name": "",
      "type": "stall",
      "x": 3514.8707899700266,
@@ -848,7 +842,7 @@
      "visible": true
     },
     {
-     "id": 56,
+     "id": 60,
      "name": "",
      "type": "cart",
      "x": 4598.827820949092,
@@ -859,7 +853,7 @@
      "visible": true
     },
     {
-     "id": 57,
+     "id": 61,
      "name": "",
      "type": "cart",
      "x": 5070.605138359898,
@@ -870,7 +864,7 @@
      "visible": true
     },
     {
-     "id": 58,
+     "id": 62,
      "name": "",
      "type": "stall",
      "x": 6642.854022538926,
@@ -881,7 +875,7 @@
      "visible": true
     },
     {
-     "id": 59,
+     "id": 63,
      "name": "",
      "type": "stall",
      "x": 7082.8981624156195,
@@ -892,7 +886,7 @@
      "visible": true
     },
     {
-     "id": 60,
+     "id": 64,
      "name": "",
      "type": "stall",
      "x": 7620.85862551014,
@@ -903,18 +897,7 @@
      "visible": true
     },
     {
-     "id": 61,
-     "name": "",
-     "type": "cart",
-     "x": 8741.283845020953,
-     "y": 2953.13642007847,
-     "width": 240,
-     "height": 180,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 62,
+     "id": 65,
      "name": "",
      "type": "stall",
      "x": 10252.944699904509,
@@ -925,7 +908,7 @@
      "visible": true
     },
     {
-     "id": 63,
+     "id": 66,
      "name": "",
      "type": "stall",
      "x": 10809.726809071497,
@@ -936,7 +919,7 @@
      "visible": true
     },
     {
-     "id": 64,
+     "id": 67,
      "name": "",
      "type": "stall",
      "x": 1456.50920372638,
@@ -947,7 +930,7 @@
      "visible": true
     },
     {
-     "id": 65,
+     "id": 68,
      "name": "",
      "type": "stall",
      "x": 1993.4647329930422,
@@ -958,7 +941,7 @@
      "visible": true
     },
     {
-     "id": 66,
+     "id": 69,
      "name": "",
      "type": "cart",
      "x": 3450.545446750147,
@@ -969,7 +952,7 @@
      "visible": true
     },
     {
-     "id": 67,
+     "id": 70,
      "name": "",
      "type": "cart",
      "x": 4065.0518766169394,
@@ -980,7 +963,7 @@
      "visible": true
     },
     {
-     "id": 68,
+     "id": 71,
      "name": "",
      "type": "cart",
      "x": 5079.899536029339,
@@ -991,7 +974,7 @@
      "visible": true
     },
     {
-     "id": 69,
+     "id": 72,
      "name": "",
      "type": "stall",
      "x": 5593.727548532826,
@@ -1002,7 +985,7 @@
      "visible": true
     },
     {
-     "id": 70,
+     "id": 73,
      "name": "",
      "type": "cart",
      "x": 6652.748332447397,
@@ -1013,7 +996,7 @@
      "visible": true
     },
     {
-     "id": 71,
+     "id": 74,
      "name": "",
      "type": "stall",
      "x": 9253.35687131947,
@@ -1024,7 +1007,7 @@
      "visible": true
     },
     {
-     "id": 72,
+     "id": 75,
      "name": "",
      "type": "stall",
      "x": 9768.299508214976,
@@ -1035,7 +1018,7 @@
      "visible": true
     },
     {
-     "id": 73,
+     "id": 76,
      "name": "",
      "type": "cart",
      "x": 10253.706901774443,
@@ -1046,7 +1029,7 @@
      "visible": true
     },
     {
-     "id": 74,
+     "id": 77,
      "name": "",
      "type": "cart",
      "x": 10761.895442476318,
@@ -1057,7 +1040,7 @@
      "visible": true
     },
     {
-     "id": 75,
+     "id": 78,
      "name": "",
      "type": "cart",
      "x": 936.9931685351359,
@@ -1068,7 +1051,7 @@
      "visible": true
     },
     {
-     "id": 76,
+     "id": 79,
      "name": "",
      "type": "cart",
      "x": 1918.5449952160734,
@@ -1079,7 +1062,7 @@
      "visible": true
     },
     {
-     "id": 77,
+     "id": 80,
      "name": "",
      "type": "cart",
      "x": 2944.278273861854,
@@ -1090,7 +1073,7 @@
      "visible": true
     },
     {
-     "id": 78,
+     "id": 81,
      "name": "",
      "type": "cart",
      "x": 4511.905743840801,
@@ -1101,7 +1084,7 @@
      "visible": true
     },
     {
-     "id": 79,
+     "id": 82,
      "name": "",
      "type": "stall",
      "x": 6150.376004078339,
@@ -1112,7 +1095,7 @@
      "visible": true
     },
     {
-     "id": 80,
+     "id": 83,
      "name": "",
      "type": "stall",
      "x": 6582.569469674744,
@@ -1123,7 +1106,7 @@
      "visible": true
     },
     {
-     "id": 81,
+     "id": 84,
      "name": "",
      "type": "cart",
      "x": 8728.054817369448,
@@ -1134,7 +1117,7 @@
      "visible": true
     },
     {
-     "id": 82,
+     "id": 85,
      "name": "",
      "type": "stall",
      "x": 9717.225627945645,
@@ -1145,7 +1128,7 @@
      "visible": true
     },
     {
-     "id": 83,
+     "id": 86,
      "name": "",
      "type": "stall",
      "x": 1918.4397516487684,
@@ -1156,7 +1139,7 @@
      "visible": true
     },
     {
-     "id": 84,
+     "id": 87,
      "name": "",
      "type": "stall",
      "x": 2418.839093694982,
@@ -1167,7 +1150,7 @@
      "visible": true
     },
     {
-     "id": 85,
+     "id": 88,
      "name": "",
      "type": "stall",
      "x": 4568.751595469194,
@@ -1178,7 +1161,7 @@
      "visible": true
     },
     {
-     "id": 86,
+     "id": 89,
      "name": "",
      "type": "stall",
      "x": 6637.0419311642945,
@@ -1189,7 +1172,7 @@
      "visible": true
     },
     {
-     "id": 87,
+     "id": 90,
      "name": "",
      "type": "stall",
      "x": 4041.2516087166414,
@@ -1200,7 +1183,7 @@
      "visible": true
     },
     {
-     "id": 88,
+     "id": 91,
      "name": "",
      "type": "cart",
      "x": 4548.204241971923,
@@ -1211,7 +1194,7 @@
      "visible": true
     },
     {
-     "id": 89,
+     "id": 92,
      "name": "",
      "type": "stall",
      "x": 7094.086526823828,
@@ -1222,7 +1205,7 @@
      "visible": true
     },
     {
-     "id": 90,
+     "id": 93,
      "name": "",
      "type": "stall",
      "x": 7702.408791922766,
@@ -1233,7 +1216,7 @@
      "visible": true
     },
     {
-     "id": 91,
+     "id": 94,
      "name": "",
      "type": "stall",
      "x": 9680.20587328114,
@@ -1244,7 +1227,7 @@
      "visible": true
     },
     {
-     "id": 92,
+     "id": 95,
      "name": "",
      "type": "stall",
      "x": 10208.243640573179,
@@ -1255,7 +1238,7 @@
      "visible": true
     },
     {
-     "id": 93,
+     "id": 96,
      "name": "",
      "type": "stall",
      "x": 1386.8160042295708,
@@ -1266,7 +1249,7 @@
      "visible": true
     },
     {
-     "id": 94,
+     "id": 97,
      "name": "",
      "type": "cart",
      "x": 1914.505064642391,
@@ -1277,7 +1260,7 @@
      "visible": true
     },
     {
-     "id": 95,
+     "id": 98,
      "name": "",
      "type": "stall",
      "x": 2461.7180787160114,
@@ -1288,7 +1271,7 @@
      "visible": true
     },
     {
-     "id": 96,
+     "id": 99,
      "name": "",
      "type": "stall",
      "x": 4483.397958231966,
@@ -1299,7 +1282,7 @@
      "visible": true
     },
     {
-     "id": 97,
+     "id": 100,
      "name": "",
      "type": "stall",
      "x": 7196.098237972204,
@@ -1310,7 +1293,7 @@
      "visible": true
     },
     {
-     "id": 98,
+     "id": 101,
      "name": "",
      "type": "cart",
      "x": 7657.177183541778,
@@ -1321,7 +1304,7 @@
      "visible": true
     },
     {
-     "id": 99,
+     "id": 102,
      "name": "",
      "type": "stall",
      "x": 9699.770983707389,
@@ -1332,7 +1315,7 @@
      "visible": true
     },
     {
-     "id": 100,
+     "id": 103,
      "name": "",
      "type": "cart",
      "x": 10286.786209662796,
@@ -1343,7 +1326,7 @@
      "visible": true
     },
     {
-     "id": 101,
+     "id": 104,
      "name": "",
      "type": "stall",
      "x": 2490.0409918523965,
@@ -1354,7 +1337,7 @@
      "visible": true
     },
     {
-     "id": 102,
+     "id": 105,
      "name": "",
      "type": "stall",
      "x": 4576.438703316741,
@@ -1365,7 +1348,7 @@
      "visible": true
     },
     {
-     "id": 103,
+     "id": 106,
      "name": "",
      "type": "stall",
      "x": 6574.3083675799135,
@@ -1376,7 +1359,7 @@
      "visible": true
     },
     {
-     "id": 104,
+     "id": 107,
      "name": "",
      "type": "cart",
      "x": 7181.402375686252,
@@ -1387,7 +1370,7 @@
      "visible": true
     },
     {
-     "id": 105,
+     "id": 108,
      "name": "",
      "type": "stall",
      "x": 7687.644201615052,
@@ -1398,7 +1381,7 @@
      "visible": true
     },
     {
-     "id": 106,
+     "id": 109,
      "name": "",
      "type": "stall",
      "x": 8685.48894704881,
@@ -1409,7 +1392,7 @@
      "visible": true
     },
     {
-     "id": 107,
+     "id": 110,
      "name": "",
      "type": "cart",
      "x": 9187.686944168783,
@@ -1420,7 +1403,7 @@
      "visible": true
     },
     {
-     "id": 108,
+     "id": 111,
      "name": "",
      "type": "stall",
      "x": 10279.22129872215,
@@ -1431,7 +1414,7 @@
      "visible": true
     },
     {
-     "id": 109,
+     "id": 112,
      "name": "",
      "type": "cart",
      "x": 1454.7040352075487,
@@ -1442,7 +1425,7 @@
      "visible": true
     },
     {
-     "id": 110,
+     "id": 113,
      "name": "",
      "type": "cart",
      "x": 1993.4832448993898,
@@ -1453,7 +1436,7 @@
      "visible": true
     },
     {
-     "id": 111,
+     "id": 114,
      "name": "",
      "type": "cart",
      "x": 4058.4849585603383,
@@ -1464,7 +1447,7 @@
      "visible": true
     },
     {
-     "id": 112,
+     "id": 115,
      "name": "",
      "type": "cart",
      "x": 5060.277063990631,
@@ -1475,7 +1458,7 @@
      "visible": true
     },
     {
-     "id": 113,
+     "id": 116,
      "name": "",
      "type": "stall",
      "x": 6126.833801026906,
@@ -1486,7 +1469,7 @@
      "visible": true
     },
     {
-     "id": 114,
+     "id": 117,
      "name": "",
      "type": "stall",
      "x": 7120.755855771554,
@@ -1497,7 +1480,7 @@
      "visible": true
     },
     {
-     "id": 115,
+     "id": 118,
      "name": "",
      "type": "cart",
      "x": 7658.385580782045,
@@ -1508,7 +1491,7 @@
      "visible": true
     },
     {
-     "id": 116,
+     "id": 119,
      "name": "",
      "type": "stall",
      "x": 8652.736382928462,
@@ -1519,7 +1502,7 @@
      "visible": true
     },
     {
-     "id": 117,
+     "id": 120,
      "name": "",
      "type": "stall",
      "x": 10310.133038469785,
@@ -1530,7 +1513,7 @@
      "visible": true
     },
     {
-     "id": 118,
+     "id": 121,
      "name": "",
      "type": "stall",
      "x": 10744.633335172202,
@@ -1541,7 +1524,7 @@
      "visible": true
     },
     {
-     "id": 119,
+     "id": 122,
      "name": "",
      "type": "stall",
      "x": 1394.6947816466793,
@@ -1552,7 +1535,7 @@
      "visible": true
     },
     {
-     "id": 120,
+     "id": 123,
      "name": "",
      "type": "stall",
      "x": 1924.0194961610248,
@@ -1563,7 +1546,7 @@
      "visible": true
     },
     {
-     "id": 121,
+     "id": 124,
      "name": "",
      "type": "stall",
      "x": 2408.764262920941,
@@ -1574,7 +1557,7 @@
      "visible": true
     },
     {
-     "id": 122,
+     "id": 125,
      "name": "",
      "type": "stall",
      "x": 7150.4832446464825,
@@ -1585,7 +1568,7 @@
      "visible": true
     },
     {
-     "id": 123,
+     "id": 126,
      "name": "",
      "type": "stall",
      "x": 9680.170589148816,
@@ -1596,7 +1579,7 @@
      "visible": true
     },
     {
-     "id": 124,
+     "id": 127,
      "name": "",
      "type": "stall",
      "x": 10226.37790015035,
@@ -1607,7 +1590,7 @@
      "visible": true
     },
     {
-     "id": 125,
+     "id": 128,
      "name": "",
      "type": "stall",
      "x": 10759.162858141659,
@@ -1618,7 +1601,7 @@
      "visible": true
     },
     {
-     "id": 126,
+     "id": 129,
      "name": "",
      "type": "cart",
      "x": 935.3205639669555,
@@ -1629,7 +1612,7 @@
      "visible": true
     },
     {
-     "id": 127,
+     "id": 130,
      "name": "",
      "type": "stall",
      "x": 1919.104193718437,
@@ -1640,7 +1623,7 @@
      "visible": true
     },
     {
-     "id": 128,
+     "id": 131,
      "name": "",
      "type": "cart",
      "x": 3517.6915306866376,
@@ -1651,7 +1634,7 @@
      "visible": true
     },
     {
-     "id": 129,
+     "id": 132,
      "name": "",
      "type": "stall",
      "x": 3977.492556533445,
@@ -1662,7 +1645,7 @@
      "visible": true
     },
     {
-     "id": 130,
+     "id": 133,
      "name": "",
      "type": "stall",
      "x": 7716.061553969194,
@@ -1673,7 +1656,7 @@
      "visible": true
     },
     {
-     "id": 131,
+     "id": 134,
      "name": "",
      "type": "stall",
      "x": 8165.43295424939,
@@ -1684,7 +1667,7 @@
      "visible": true
     },
     {
-     "id": 132,
+     "id": 135,
      "name": "",
      "type": "cart",
      "x": 9732.363915126041,
@@ -1695,7 +1678,7 @@
      "visible": true
     },
     {
-     "id": 133,
+     "id": 136,
      "name": "",
      "type": "cart",
      "x": 10823.380160496956,
@@ -1706,7 +1689,7 @@
      "visible": true
     },
     {
-     "id": 134,
+     "id": 137,
      "name": "",
      "type": "stall",
      "x": 1454.6451757660043,
@@ -1717,7 +1700,7 @@
      "visible": true
     },
     {
-     "id": 135,
+     "id": 138,
      "name": "",
      "type": "stall",
      "x": 1964.6932776512472,
@@ -1728,7 +1711,7 @@
      "visible": true
     },
     {
-     "id": 136,
+     "id": 139,
      "name": "",
      "type": "cart",
      "x": 3469.0218739277816,
@@ -1739,7 +1722,7 @@
      "visible": true
     },
     {
-     "id": 137,
+     "id": 140,
      "name": "",
      "type": "stall",
      "x": 3986.9739727720066,
@@ -1750,7 +1733,7 @@
      "visible": true
     },
     {
-     "id": 138,
+     "id": 141,
      "name": "",
      "type": "cart",
      "x": 5556.493986456831,
@@ -1761,7 +1744,7 @@
      "visible": true
     },
     {
-     "id": 139,
+     "id": 142,
      "name": "",
      "type": "cart",
      "x": 6631.468171112247,
@@ -1772,7 +1755,7 @@
      "visible": true
     },
     {
-     "id": 140,
+     "id": 143,
      "name": "",
      "type": "stall",
      "x": 7648.363972380183,
@@ -1783,7 +1766,7 @@
      "visible": true
     },
     {
-     "id": 141,
+     "id": 144,
      "name": "",
      "type": "cart",
      "x": 8127.066903904249,
@@ -1794,7 +1777,7 @@
      "visible": true
     },
     {
-     "id": 142,
+     "id": 145,
      "name": "",
      "type": "cart",
      "x": 8695.954443530552,
@@ -1805,7 +1788,7 @@
      "visible": true
     },
     {
-     "id": 143,
+     "id": 146,
      "name": "",
      "type": "stall",
      "x": 10797.811663511813,
@@ -1816,7 +1799,7 @@
      "visible": true
     },
     {
-     "id": 144,
+     "id": 147,
      "name": "",
      "type": "stall",
      "x": 2489.9399830398106,
@@ -1827,7 +1810,7 @@
      "visible": true
     },
     {
-     "id": 145,
+     "id": 148,
      "name": "",
      "type": "stall",
      "x": 3448.4498946604385,
@@ -1838,7 +1821,7 @@
      "visible": true
     },
     {
-     "id": 146,
+     "id": 149,
      "name": "",
      "type": "stall",
      "x": 4064.899732723344,
@@ -1849,7 +1832,7 @@
      "visible": true
     },
     {
-     "id": 147,
+     "id": 150,
      "name": "",
      "type": "stall",
      "x": 6626.304223460745,
@@ -1860,7 +1843,7 @@
      "visible": true
     },
     {
-     "id": 148,
+     "id": 151,
      "name": "",
      "type": "stall",
      "x": 7154.33298025767,
@@ -1871,7 +1854,7 @@
      "visible": true
     },
     {
-     "id": 149,
+     "id": 152,
      "name": "",
      "type": "stall",
      "x": 8216.994276955815,
@@ -1882,7 +1865,7 @@
      "visible": true
     },
     {
-     "id": 150,
+     "id": 153,
      "name": "",
      "type": "stall",
      "x": 8691.858574345015,
@@ -1893,7 +1876,7 @@
      "visible": true
     },
     {
-     "id": 151,
+     "id": 154,
      "name": "",
      "type": "stall",
      "x": 9183.8315386464,
@@ -1904,7 +1887,7 @@
      "visible": true
     },
     {
-     "id": 152,
+     "id": 155,
      "name": "",
      "type": "stall",
      "x": 9712.833841785854,
@@ -1915,7 +1898,7 @@
      "visible": true
     },
     {
-     "id": 153,
+     "id": 156,
      "name": "",
      "type": "cart",
      "x": 10248.932887630799,
@@ -1926,7 +1909,7 @@
      "visible": true
     },
     {
-     "id": 154,
+     "id": 157,
      "name": "",
      "type": "cart",
      "x": 10810.340763704253,
@@ -1937,7 +1920,7 @@
      "visible": true
     },
     {
-     "id": 155,
+     "id": 158,
      "name": "",
      "type": "brick",
      "x": 1032.5355368901132,
@@ -1948,7 +1931,7 @@
      "visible": true
     },
     {
-     "id": 156,
+     "id": 159,
      "name": "",
      "type": "brick",
      "x": 3829.9480042613973,
@@ -1959,7 +1942,7 @@
      "visible": true
     },
     {
-     "id": 157,
+     "id": 160,
      "name": "",
      "type": "brick",
      "x": 3124.7329884176197,
@@ -1970,7 +1953,7 @@
      "visible": true
     },
     {
-     "id": 158,
+     "id": 161,
      "name": "",
      "type": "brick",
      "x": 3595.8660959041867,
@@ -1981,7 +1964,7 @@
      "visible": true
     },
     {
-     "id": 159,
+     "id": 162,
      "name": "",
      "type": "brick",
      "x": 2050.697553504422,
@@ -1992,7 +1975,7 @@
      "visible": true
     },
     {
-     "id": 160,
+     "id": 163,
      "name": "",
      "type": "brick",
      "x": 10732.29001224554,
@@ -2003,7 +1986,7 @@
      "visible": true
     },
     {
-     "id": 161,
+     "id": 164,
      "name": "",
      "type": "brick",
      "x": 5539.629420155257,
@@ -2014,7 +1997,7 @@
      "visible": true
     },
     {
-     "id": 162,
+     "id": 165,
      "name": "",
      "type": "brick",
      "x": 5575.142962818827,
@@ -2025,7 +2008,7 @@
      "visible": true
     },
     {
-     "id": 163,
+     "id": 166,
      "name": "",
      "type": "brick",
      "x": 10394.864444345065,
@@ -2036,7 +2019,7 @@
      "visible": true
     },
     {
-     "id": 164,
+     "id": 167,
      "name": "",
      "type": "brick",
      "x": 7379.014290049895,
@@ -2047,7 +2030,7 @@
      "visible": true
     },
     {
-     "id": 165,
+     "id": 168,
      "name": "",
      "type": "brick",
      "x": 10423.614787707851,
@@ -2058,7 +2041,7 @@
      "visible": true
     },
     {
-     "id": 166,
+     "id": 169,
      "name": "",
      "type": "brick",
      "x": 8676.16696087782,
@@ -2069,18 +2052,7 @@
      "visible": true
     },
     {
-     "id": 167,
-     "name": "",
-     "type": "brick",
-     "x": 2533.6629409788316,
-     "y": 8965.69177564121,
-     "width": 465.7627085267536,
-     "height": 120,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 168,
+     "id": 170,
      "name": "",
      "type": "brick",
      "x": 690.943740463991,
@@ -2091,7 +2063,7 @@
      "visible": true
     },
     {
-     "id": 169,
+     "id": 171,
      "name": "",
      "type": "brick",
      "x": 6770.222159105618,
@@ -2102,18 +2074,7 @@
      "visible": true
     },
     {
-     "id": 170,
-     "name": "",
-     "type": "brick",
-     "x": 9020.334927501655,
-     "y": 8672.81062453824,
-     "width": 406.12654061823866,
-     "height": 120,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 171,
+     "id": 172,
      "name": "",
      "type": "brick",
      "x": 10763.852287943197,
@@ -2124,23 +2085,12 @@
      "visible": true
     },
     {
-     "id": 172,
+     "id": 173,
      "name": "",
      "type": "brick",
      "x": 8695.926871978307,
      "y": 8317.845829598591,
      "width": 563.0684318507286,
-     "height": 120,
-     "rotation": 0,
-     "visible": true
-    },
-    {
-     "id": 173,
-     "name": "",
-     "type": "brick",
-     "x": 9194.783201715998,
-     "y": 2805.2605722986837,
-     "width": 489.61957248147155,
      "height": 120,
      "rotation": 0,
      "visible": true
@@ -2204,9 +2154,42 @@
      "id": 179,
      "name": "",
      "type": "brick",
+     "x": 9493.773303154918,
+     "y": 2735.1252079301726,
+     "width": 407.90031068411184,
+     "height": 120,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 180,
+     "name": "",
+     "type": "brick",
      "x": 6945.441606437379,
      "y": 8980.80677384918,
      "width": 469.7120392811341,
+     "height": 120,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 181,
+     "name": "",
+     "type": "brick",
+     "x": 4345.414428322192,
+     "y": 2659.625725791566,
+     "width": 452.3267454392407,
+     "height": 120,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 182,
+     "name": "",
+     "type": "brick",
+     "x": 3229.364728693014,
+     "y": 6379.003680649112,
+     "width": 540.791809924298,
      "height": 120,
      "rotation": 0,
      "visible": true
@@ -2224,7 +2207,7 @@
    "y": 0,
    "objects": [
     {
-     "id": 5,
+     "id": 10,
      "name": "",
      "type": "gate",
      "x": 1050,
@@ -2248,7 +2231,7 @@
      ]
     },
     {
-     "id": 6,
+     "id": 11,
      "name": "",
      "type": "gate",
      "x": 10650,
@@ -2272,7 +2255,7 @@
      ]
     },
     {
-     "id": 7,
+     "id": 12,
      "name": "",
      "type": "gate",
      "x": 5850,
@@ -2296,7 +2279,7 @@
      ]
     },
     {
-     "id": 8,
+     "id": 13,
      "name": "",
      "type": "gate",
      "x": 5850,
@@ -2323,6 +2306,78 @@
   },
   {
    "id": 4,
+   "name": "altars",
+   "type": "objectgroup",
+   "draworder": "topdown",
+   "opacity": 1,
+   "visible": true,
+   "x": 0,
+   "y": 0,
+   "objects": [
+    {
+     "id": 5,
+     "name": "",
+     "type": "center",
+     "x": 5780,
+     "y": 5780,
+     "width": 440,
+     "height": 440,
+     "rotation": 0,
+     "visible": true,
+     "ellipse": true
+    },
+    {
+     "id": 6,
+     "name": "",
+     "type": "small",
+     "x": 2850,
+     "y": 2850,
+     "width": 300,
+     "height": 300,
+     "rotation": 0,
+     "visible": true,
+     "ellipse": true
+    },
+    {
+     "id": 7,
+     "name": "",
+     "type": "small",
+     "x": 8850,
+     "y": 2850,
+     "width": 300,
+     "height": 300,
+     "rotation": 0,
+     "visible": true,
+     "ellipse": true
+    },
+    {
+     "id": 8,
+     "name": "",
+     "type": "small",
+     "x": 2850,
+     "y": 8850,
+     "width": 300,
+     "height": 300,
+     "rotation": 0,
+     "visible": true,
+     "ellipse": true
+    },
+    {
+     "id": 9,
+     "name": "",
+     "type": "small",
+     "x": 8850,
+     "y": 8850,
+     "width": 300,
+     "height": 300,
+     "rotation": 0,
+     "visible": true,
+     "ellipse": true
+    }
+   ]
+  },
+  {
+   "id": 5,
    "name": "decor",
    "type": "objectgroup",
    "draworder": "topdown",
@@ -2332,31 +2387,7 @@
    "y": 0,
    "objects": [
     {
-     "id": 199,
-     "name": "",
-     "type": "red_plastic_stool",
-     "x": 10566.29693216238,
-     "y": 7583.323804566365,
-     "width": 0,
-     "height": 0,
-     "rotation": 0,
-     "visible": true,
-     "point": true
-    },
-    {
-     "id": 200,
-     "name": "",
-     "type": "red_plastic_stool",
-     "x": 5747.005636802619,
-     "y": 687.5404332034719,
-     "width": 0,
-     "height": 0,
-     "rotation": 0,
-     "visible": true,
-     "point": true
-    },
-    {
-     "id": 201,
+     "id": 202,
      "name": "",
      "type": "red_plastic_stool",
      "x": 7914.397502398888,
@@ -2368,7 +2399,7 @@
      "point": true
     },
     {
-     "id": 202,
+     "id": 203,
      "name": "",
      "type": "red_plastic_stool",
      "x": 10829.418182386038,
@@ -2380,7 +2411,7 @@
      "point": true
     },
     {
-     "id": 203,
+     "id": 204,
      "name": "",
      "type": "red_plastic_stool",
      "x": 623.7799944807633,
@@ -2392,7 +2423,7 @@
      "point": true
     },
     {
-     "id": 204,
+     "id": 205,
      "name": "",
      "type": "red_plastic_stool",
      "x": 4009.0316288003983,
@@ -2404,7 +2435,7 @@
      "point": true
     },
     {
-     "id": 205,
+     "id": 206,
      "name": "",
      "type": "red_plastic_stool",
      "x": 6905.952066422439,
@@ -2416,7 +2447,7 @@
      "point": true
     },
     {
-     "id": 206,
+     "id": 207,
      "name": "",
      "type": "red_plastic_stool",
      "x": 7573.638036135382,
@@ -2428,7 +2459,7 @@
      "point": true
     },
     {
-     "id": 207,
+     "id": 208,
      "name": "",
      "type": "red_plastic_stool",
      "x": 10138.086942260394,
@@ -2440,7 +2471,7 @@
      "point": true
     },
     {
-     "id": 208,
+     "id": 209,
      "name": "",
      "type": "red_plastic_stool",
      "x": 9379.623492640387,
@@ -2452,7 +2483,7 @@
      "point": true
     },
     {
-     "id": 209,
+     "id": 210,
      "name": "",
      "type": "red_plastic_stool",
      "x": 4096.773809604527,
@@ -2464,7 +2495,7 @@
      "point": true
     },
     {
-     "id": 210,
+     "id": 211,
      "name": "",
      "type": "red_plastic_stool",
      "x": 5146.683192250066,
@@ -2476,7 +2507,7 @@
      "point": true
     },
     {
-     "id": 211,
+     "id": 212,
      "name": "",
      "type": "red_plastic_stool",
      "x": 9674.101751345468,
@@ -2488,7 +2519,7 @@
      "point": true
     },
     {
-     "id": 212,
+     "id": 213,
      "name": "",
      "type": "red_plastic_stool",
      "x": 1636.5470167785704,
@@ -2500,7 +2531,7 @@
      "point": true
     },
     {
-     "id": 213,
+     "id": 214,
      "name": "",
      "type": "street_food_cart",
      "x": 7691.619938829044,
@@ -2512,7 +2543,7 @@
      "point": true
     },
     {
-     "id": 214,
+     "id": 215,
      "name": "",
      "type": "street_food_cart",
      "x": 10354.35819169748,
@@ -2524,7 +2555,7 @@
      "point": true
     },
     {
-     "id": 215,
+     "id": 216,
      "name": "",
      "type": "street_food_cart",
      "x": 1598.3099645725333,
@@ -2536,7 +2567,7 @@
      "point": true
     },
     {
-     "id": 216,
+     "id": 217,
      "name": "",
      "type": "street_food_cart",
      "x": 5812.422137364203,
@@ -2548,7 +2579,7 @@
      "point": true
     },
     {
-     "id": 217,
+     "id": 218,
      "name": "",
      "type": "street_food_cart",
      "x": 10979.667670077033,
@@ -2560,7 +2591,7 @@
      "point": true
     },
     {
-     "id": 218,
+     "id": 219,
      "name": "",
      "type": "street_food_cart",
      "x": 6859.570913753791,
@@ -2572,7 +2603,7 @@
      "point": true
     },
     {
-     "id": 219,
+     "id": 220,
      "name": "",
      "type": "street_food_cart",
      "x": 7357.6532017454665,
@@ -2584,7 +2615,7 @@
      "point": true
     },
     {
-     "id": 220,
+     "id": 221,
      "name": "",
      "type": "street_food_cart",
      "x": 8118.592380113128,
@@ -2596,7 +2627,7 @@
      "point": true
     },
     {
-     "id": 221,
+     "id": 222,
      "name": "",
      "type": "street_food_cart",
      "x": 7369.368315698307,
@@ -2608,7 +2639,7 @@
      "point": true
     },
     {
-     "id": 222,
+     "id": 223,
      "name": "",
      "type": "street_food_cart",
      "x": 593.4763304229676,
@@ -2620,9 +2651,9 @@
      "point": true
     },
     {
-     "id": 223,
+     "id": 224,
      "name": "",
-     "type": "old_bicycle_leaning",
+     "type": "street_food_cart",
      "x": 3906.3390218996665,
      "y": 6405.900454605559,
      "width": 0,
@@ -2632,9 +2663,9 @@
      "point": true
     },
     {
-     "id": 224,
+     "id": 225,
      "name": "",
-     "type": "old_bicycle_leaning",
+     "type": "street_food_cart",
      "x": 1458.8463925064768,
      "y": 4947.335565032554,
      "width": 0,
@@ -2644,7 +2675,7 @@
      "point": true
     },
     {
-     "id": 225,
+     "id": 226,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 10025.549055690168,
@@ -2656,7 +2687,7 @@
      "point": true
     },
     {
-     "id": 226,
+     "id": 227,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 10654.128383690573,
@@ -2668,7 +2699,7 @@
      "point": true
     },
     {
-     "id": 227,
+     "id": 228,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 5756.638493430754,
@@ -2680,7 +2711,7 @@
      "point": true
     },
     {
-     "id": 228,
+     "id": 229,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 5588.661410231453,
@@ -2692,7 +2723,7 @@
      "point": true
     },
     {
-     "id": 229,
+     "id": 230,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 1784.2783545877855,
@@ -2704,7 +2735,7 @@
      "point": true
     },
     {
-     "id": 230,
+     "id": 231,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 9055.216198484066,
@@ -2716,7 +2747,7 @@
      "point": true
     },
     {
-     "id": 231,
+     "id": 232,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 3305.5243329919153,
@@ -2728,7 +2759,7 @@
      "point": true
     },
     {
-     "id": 232,
+     "id": 233,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 10620.825062658565,
@@ -2740,7 +2771,7 @@
      "point": true
     },
     {
-     "id": 233,
+     "id": 234,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 11076.063173567129,
@@ -2752,7 +2783,7 @@
      "point": true
     },
     {
-     "id": 234,
+     "id": 235,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 9800.363172281122,
@@ -2764,7 +2795,7 @@
      "point": true
     },
     {
-     "id": 235,
+     "id": 236,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 6414.833843875686,
@@ -2776,7 +2807,7 @@
      "point": true
     },
     {
-     "id": 236,
+     "id": 237,
      "name": "",
      "type": "old_bicycle_leaning",
      "x": 11377.652921540921,
@@ -2788,9 +2819,9 @@
      "point": true
     },
     {
-     "id": 237,
+     "id": 238,
      "name": "",
-     "type": "broken_tv",
+     "type": "old_bicycle_leaning",
      "x": 4398.844484579033,
      "y": 3596.335405561952,
      "width": 0,
@@ -2800,9 +2831,9 @@
      "point": true
     },
     {
-     "id": 238,
+     "id": 239,
      "name": "",
-     "type": "broken_tv",
+     "type": "old_bicycle_leaning",
      "x": 11464.444000590005,
      "y": 7937.729209526625,
      "width": 0,
@@ -2812,9 +2843,9 @@
      "point": true
     },
     {
-     "id": 239,
+     "id": 240,
      "name": "",
-     "type": "broken_tv",
+     "type": "old_bicycle_leaning",
      "x": 1478.3865565565707,
      "y": 6736.214290944729,
      "width": 0,
@@ -2824,7 +2855,7 @@
      "point": true
     },
     {
-     "id": 240,
+     "id": 241,
      "name": "",
      "type": "broken_tv",
      "x": 3255.9123831523107,
@@ -2836,7 +2867,7 @@
      "point": true
     },
     {
-     "id": 241,
+     "id": 242,
      "name": "",
      "type": "broken_tv",
      "x": 6888.8040615516,
@@ -2848,7 +2879,7 @@
      "point": true
     },
     {
-     "id": 242,
+     "id": 243,
      "name": "",
      "type": "broken_tv",
      "x": 6747.29095596993,
@@ -2860,7 +2891,7 @@
      "point": true
     },
     {
-     "id": 243,
+     "id": 244,
      "name": "",
      "type": "broken_tv",
      "x": 1601.8308694265293,
@@ -2872,7 +2903,7 @@
      "point": true
     },
     {
-     "id": 244,
+     "id": 245,
      "name": "",
      "type": "broken_tv",
      "x": 6167.510661311907,
@@ -2884,7 +2915,7 @@
      "point": true
     },
     {
-     "id": 245,
+     "id": 246,
      "name": "",
      "type": "broken_tv",
      "x": 8883.534856857845,
@@ -2896,7 +2927,7 @@
      "point": true
     },
     {
-     "id": 246,
+     "id": 247,
      "name": "",
      "type": "broken_tv",
      "x": 3879.341558872595,
@@ -2908,7 +2939,7 @@
      "point": true
     },
     {
-     "id": 247,
+     "id": 248,
      "name": "",
      "type": "broken_tv",
      "x": 3347.467982370316,
@@ -2920,7 +2951,7 @@
      "point": true
     },
     {
-     "id": 248,
+     "id": 249,
      "name": "",
      "type": "broken_tv",
      "x": 9832.910769918026,
@@ -2932,7 +2963,7 @@
      "point": true
     },
     {
-     "id": 249,
+     "id": 250,
      "name": "",
      "type": "broken_tv",
      "x": 10004.47676051494,
@@ -2944,9 +2975,9 @@
      "point": true
     },
     {
-     "id": 250,
+     "id": 251,
      "name": "",
-     "type": "stone_lantern",
+     "type": "broken_tv",
      "x": 6259.224464460002,
      "y": 5018.443262522555,
      "width": 0,
@@ -2956,9 +2987,9 @@
      "point": true
     },
     {
-     "id": 251,
+     "id": 252,
      "name": "",
-     "type": "stone_lantern",
+     "type": "broken_tv",
      "x": 952.7323811502297,
      "y": 1535.9859056572795,
      "width": 0,
@@ -2968,9 +2999,9 @@
      "point": true
     },
     {
-     "id": 252,
+     "id": 253,
      "name": "",
-     "type": "stone_lantern",
+     "type": "broken_tv",
      "x": 6155.553833948246,
      "y": 7688.279761265502,
      "width": 0,
@@ -2980,7 +3011,7 @@
      "point": true
     },
     {
-     "id": 253,
+     "id": 254,
      "name": "",
      "type": "stone_lantern",
      "x": 2234.2875733176234,
@@ -2992,23 +3023,11 @@
      "point": true
     },
     {
-     "id": 254,
+     "id": 255,
      "name": "",
      "type": "stone_lantern",
      "x": 7383.81838468047,
      "y": 4861.166770963746,
-     "width": 0,
-     "height": 0,
-     "rotation": 0,
-     "visible": true,
-     "point": true
-    },
-    {
-     "id": 255,
-     "name": "",
-     "type": "stone_lantern",
-     "x": 9151.851191644833,
-     "y": 9136.639653732445,
      "width": 0,
      "height": 0,
      "rotation": 0,
@@ -3093,6 +3112,30 @@
      "type": "stone_lantern",
      "x": 8059.539428183633,
      "y": 3829.984671557754,
+     "width": 0,
+     "height": 0,
+     "rotation": 0,
+     "visible": true,
+     "point": true
+    },
+    {
+     "id": 263,
+     "name": "",
+     "type": "stone_lantern",
+     "x": 903.0622960967521,
+     "y": 9687.185369132058,
+     "width": 0,
+     "height": 0,
+     "rotation": 0,
+     "visible": true,
+     "point": true
+    },
+    {
+     "id": 264,
+     "name": "",
+     "type": "stone_lantern",
+     "x": 1242.4304251302765,
+     "y": 2744.37626057409,
      "width": 0,
      "height": 0,
      "rotation": 0,
