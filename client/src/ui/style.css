@@ -131,15 +131,17 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .debug-help { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); font-size: 12px; opacity: .8; max-width: calc(100vw - 520px); text-align: center; }
 
 /* Bảng hướng dẫn mờ 2 giây đầu trận (spec §18.1). Không chặn chuột/chạm. */
-.guide { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; background: rgba(8,10,14,.62); border: 3px solid rgba(255,215,0,.65); border-radius: 16px; padding: 18px 26px; max-width: min(86vw, 640px); }
+.guide { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; background: rgba(8,10,14,.6); border: 3px solid rgba(255,215,0,.6); border-radius: 16px; padding: 14px 22px; }
 .guide.fade { animation: guideFade 2.6s ease-out forwards; }
 @keyframes guideFade { 0% { opacity: 0; transform: translate(-50%, -46%); } 12% { opacity: .92; transform: translate(-50%, -50%); } 72% { opacity: .92; } 100% { opacity: 0; } }
-.guide-title { color: var(--gold); font-size: 24px; text-align: center; margin-bottom: 10px; }
-.guide-line { font-size: 17px; line-height: 1.6; color: #eef4fb; }
+.guide-title { color: var(--gold); font-size: 20px; text-align: center; margin-bottom: 10px; }
+.guide-line { display: flex; align-items: center; gap: 12px; font-size: 17px; line-height: 2; color: #eef4fb; white-space: nowrap; }
+.guide-key { min-width: 96px; text-align: center; padding: 3px 10px; border-radius: 8px; background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.4); font-weight: 900; }
 @media (max-width: 720px) {
-  .guide { padding: 12px 16px; top: 42%; }
-  .guide-title { font-size: 18px; }
-  .guide-line { font-size: 13px; line-height: 1.5; }
+  .guide { padding: 10px 14px; top: 42%; }
+  .guide-title { font-size: 16px; }
+  .guide-line { font-size: 14px; gap: 9px; line-height: 1.8; }
+  .guide-key { min-width: 66px; padding: 2px 7px; }
 }
 
 .joy-base { display: none; position: fixed; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.18); border: 3px solid rgba(255,255,255,.5); pointer-events: none; z-index: 10; }

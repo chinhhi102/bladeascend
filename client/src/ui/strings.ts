@@ -203,16 +203,20 @@ export const STR = {
   rotateHint: 'Xoay ngang điện thoại để nhìn rộng hơn',
   minimapToggle: 'Phím M: phóng to bản đồ',
 
-  // Bảng hướng dẫn mờ hiện 2 giây đầu khi vào trận (spec §18.1).
-  guideTitle: 'Cách chơi',
-  guideLines: (isTouch: boolean): string[] => [
-    isTouch ? '🕹️ Kéo ngón tay để đi — kiếm tự xoay, không có nút đánh' : '🕹️ WASD / phím mũi tên / giữ chuột để đi — kiếm tự xoay, không có nút đánh',
-    '💚 Lượm viên xanh để lên cảnh giới, người to ra, kiếm dài và nhiều thêm',
-    '⚔️ Kiếm chạm người là họ rớt 1 cảnh giới — Luyện Khí bị chạm là chết',
-    '🛡️ Kiếm chạm kiếm thì không ai chém được ai, mài tới khi một bên hết kiếm',
-    isTouch ? '🔥 Giữ nút lửa để chạy nhanh, đổi bằng tu vi' : '🔥 Giữ Shift để chạy nhanh, đổi bằng tu vi',
-    '🛡️ Bạn đang bất tử 5 giây đầu — tranh thủ lượm',
-  ],
+  // Bảng điều khiển mờ hiện vài giây đầu khi vào trận (spec §18.1). Chỉ các nút, không
+  // giải thích luật — người chơi tự khám phá nhanh hơn đọc.
+  guideTitle: 'Điều khiển',
+  guideKeys: (isTouch: boolean): { key: string; what: string }[] =>
+    isTouch
+      ? [
+          { key: 'Kéo', what: 'Di chuyển' },
+          { key: '🔥', what: 'Chạy nhanh' },
+        ]
+      : [
+          { key: 'W A S D', what: 'Di chuyển' },
+          { key: 'Shift', what: 'Chạy nhanh' },
+          { key: 'M', what: 'Bản đồ' },
+        ],
 };
 
 export function pick<T>(list: T[]): T {

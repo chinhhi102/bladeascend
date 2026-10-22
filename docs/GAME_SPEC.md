@@ -685,8 +685,10 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
 - Phím: `E` +100 EXP · `R` lên cảnh giới · `K` +10 kiếm · `B` thả 1 bot cùng cảnh giới ngay cạnh mình · `1–7` buff · `X` tự chết · `H` xem hitbox kiếm · `M` phóng to minimap.
 - Cơ chế: client gửi `debug: true` trong gói `join`; server chỉ chấp nhận khi `AllowDebug` bật. Lệnh debug bị chặn ở cả hai lớp (`s.debug && c.Debug`).
 
-### 18.1 Bảng hướng dẫn khi vào trận
+### 18.1 Bảng điều khiển khi vào trận
 
-- Vừa vào trận: hiện **bảng hướng dẫn mờ giữa màn hình ~2.6s** rồi tự tan (hiện nhanh 0.3s, giữ 1.6s, mờ dần 0.7s). Không chặn chuột/chạm nên người chơi cũ cứ việc đi luôn.
-- Nội dung: cách di chuyển (đổi theo PC/điện thoại), lượm viên xanh để lên cảnh giới, kiếm chạm người thì rớt cảnh giới / Luyện Khí thì chết, kiếm chạm kiếm thì mài nhau, Thiêu Đốt Tinh Huyết, và nhắc đang bất tử 5s.
-- Chữ nằm trong `STR.guideLines`, sửa không cần đụng code.
+- Vừa vào trận: hiện **bảng điều khiển mờ giữa màn hình ~2.6s** rồi tự tan (hiện nhanh 0.3s, giữ 1.6s, mờ dần 0.7s). Không chặn chuột/chạm nên người chơi cũ cứ việc đi luôn.
+- **Chỉ liệt kê nút, không giải thích luật** — luật để người chơi tự khám phá, đọc nhiều lúc vào trận chỉ làm rối.
+  - PC: `W A S D` Di chuyển · `Shift` Chạy nhanh · `M` Bản đồ.
+  - Điện thoại: `Kéo` Di chuyển · `🔥` Chạy nhanh.
+- Chữ nằm trong `STR.guideKeys`, sửa không cần đụng code.

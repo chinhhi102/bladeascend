@@ -114,7 +114,7 @@ export class Hud {
   showGuide(): void {
     this.guide.replaceChildren(
       h('div', 'guide-title', STR.guideTitle),
-      ...STR.guideLines(this.isTouch).map((t) => h('div', 'guide-line', t)),
+      ...STR.guideKeys(this.isTouch).map((k) => h('div', 'guide-line', h('span', 'guide-key', k.key), h('span', '', k.what))),
     );
     this.guide.classList.remove('fade');
     // Khởi động lại animation: trình duyệt bỏ qua nếu chỉ gỡ rồi gắn class ngay.
