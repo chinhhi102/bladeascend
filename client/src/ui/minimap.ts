@@ -49,6 +49,8 @@ export class Minimap {
     this.ctx = this.canvas.getContext('2d');
     this.root.append(this.canvas);
     this.root.addEventListener('click', () => this.toggle());
+    // Cửa sổ đổi kích thước → tính lại, nếu không bản phóng to sẽ tràn ra ngoài.
+    window.addEventListener('resize', () => this.resize());
     this.resize();
   }
 
@@ -60,7 +62,12 @@ export class Minimap {
   }
 
   private resize(): void {
-    const px = this.big ? Math.min(window.innerWidth, window.innerHeight) * 0.7 : this.size;
+    // Không bao giờ rộng hơn chỗ trống thực tế: chừa 12px mép và phần trên đã có HUD.
+    const roomW = window.innerWidth - 24;
+    const roomH = window.innerHeight - 148;
+    const px = this.big
+      ? Math.min(window.innerWidth, window.innerHeight) * 0.7
+      : Math.max(90, Math.min(this.size, roomW, roomH));
     const dpr = window.devicePixelRatio || 1;
     this.root.style.width = this.root.style.height = `${Math.round(px)}px`;
     this.canvas.width = this.canvas.height = Math.round(px * dpr);
