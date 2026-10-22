@@ -10,13 +10,19 @@ const KEYS: Record<string, [number, number]> = {
 const JOY_RADIUS = 60; // px
 const JOY_DEADZONE = 8; // px
 
+// Thiêu Đốt Tinh Huyết (spec §4.1c): giữ Shift trên PC, hoặc giữ nút lửa trên điện thoại.
+const BURN_KEYS = ['ShiftLeft', 'ShiftRight'];
+
 export interface MoveInput {
   angle: number;
   moving: boolean;
+  burn: boolean;
 }
 
 export class Input {
   private readonly held = new Set<string>();
+  /** burnButton is the on-screen hold button; the keyboard path uses `held`. */
+  burnButton = false;
   private mouseDown = false;
   private mouse = { x: 0, y: 0 };
   private touchId: number | null = null;
@@ -45,7 +51,7 @@ export class Input {
 
   private bindKeyboard(): void {
     window.addEventListener('keydown', (e) => {
-      if (KEYS[e.code] && this.enabled) {
+      if ((KEYS[e.code] || BURN_KEYS.includes(e.code)) && this.enabled) {
         this.held.add(e.code);
         e.preventDefault();
       }
@@ -53,6 +59,7 @@ export class Input {
     window.addEventListener('keyup', (e) => this.held.delete(e.code));
     window.addEventListener('blur', () => {
       this.held.clear();
+      this.burnButton = false;
       this.mouseDown = false;
     });
   }
@@ -110,14 +117,18 @@ export class Input {
   /** read returns the current movement direction (angle in radians, y down). */
   read(): MoveInput {
     if (!this.enabled) {
-      return { angle: this.lastAngle, moving: false };
+      return { angle: this.lastAngle, moving: false, burn: false };
     }
+    const burn = this.burnButton || BURN_KEYS.some((k) => this.held.has(k));
     if (this.touchId !== null) {
-      return this.readTouch();
+      return { ...this.readTouch(), burn };
     }
     let dx = 0;
     let dy = 0;
     for (const k of this.held) {
+      if (!KEYS[k]) {
+        continue; // phím Thiêu Đốt không phải phím di chuyển
+      }
       dx += KEYS[k][0];
       dy += KEYS[k][1];
     }
@@ -126,10 +137,10 @@ export class Input {
       dy = this.mouse.y - window.innerHeight / 2;
     }
     if (dx === 0 && dy === 0) {
-      return { angle: this.lastAngle, moving: false };
+      return { angle: this.lastAngle, moving: false, burn };
     }
     this.lastAngle = Math.atan2(dy, dx);
-    return { angle: this.lastAngle, moving: true };
+    return { angle: this.lastAngle, moving: true, burn };
   }
 
   private readTouch(): MoveInput {
@@ -139,9 +150,9 @@ export class Input {
     const k = d > JOY_RADIUS ? JOY_RADIUS / d : 1;
     this.joyKnob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
     if (d < JOY_DEADZONE) {
-      return { angle: this.lastAngle, moving: false };
+      return { angle: this.lastAngle, moving: false, burn: false };
     }
     this.lastAngle = Math.atan2(dy, dx);
-    return { angle: this.lastAngle, moving: true };
+    return { angle: this.lastAngle, moving: true, burn: false };
   }
 }

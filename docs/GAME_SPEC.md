@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v3.7:** thêm **Thiêu Đốt Tinh Huyết** — giữ phím để chạy nhanh ×1.8, đổi bằng EXP mỗi giây, không bao giờ làm rớt cảnh giới (§4.1c).
+
 **Thay đổi v3.6:** vật cản cứng hơn — damage tính theo người (0.5s/lần) thay vì theo từng kiếm, HP tăng (§5.3, §8.2).
 
 **Thay đổi v3.5:** clash_unit = 1; chỉ đổi chiều quay khi cùng cảnh giới; số kiếm có thể về 0 (không chết); nhịp Luyện Khí → Trúc Cơ 30–60s (§5.2, §6.1).
@@ -154,6 +156,23 @@ camera: chiều cao vùng nhìn thấy (đơn vị thế giới) = max(900 * sca
 ```
 
 → Camera luôn lùi đủ xa để thấy trọn vòng kiếm của mình. Trên màn hình, nhân vật to lên dần nhưng vẫn nhìn được rộng hơn (bản đồ như "thu nhỏ" lại). Người nhỏ di chuyển trên màn hình nhanh hơn người lớn (≈260 px/s so với ≈150 px/s ở scale 5) → người nhỏ có cơ hội né và lật kèo.
+
+### 4.1c Thiêu Đốt Tinh Huyết (chạy nhanh, đổi bằng tu vi)
+
+Không có vật phẩm nào cho chạy nhanh theo ý muốn, nên người chơi có một cách **chủ động**: đốt chính tu vi của mình.
+
+```
+Giữ Shift (PC) / nút 🔥 (điện thoại) + đang di chuyển
+  → tốc độ × burn.mult (1.8)
+  → mỗi giây mất burn.exp_frac_per_sec (8%) × exp_needed(tầng hiện tại) EXP
+```
+
+- **Chỉ tốn khi thật sự chạy.** Đứng yên giữ phím thì không mất gì.
+- **Cộng dồn với Thần Hành**: 130 × 1.4 × 1.8 ≈ 327 đơn vị/s — đủ để thoát khỏi một vòng kiếm đang đuổi.
+- **Không bao giờ rớt cảnh giới vì đốt** (`burn.keep_realm` = true): đốt chỉ tụt được tới **đáy cảnh giới đang ở**, chạm đáy thì tự tắt và tốc độ về bình thường. Rớt cảnh giới vẫn chỉ đến từ việc bị chém (§5.1). Ở Luyện Khí thì đáy là 0 EXP — đốt cạn cũng **không chết**.
+- Giá tiền tỉ lệ với tầng hiện tại nên công bằng ở mọi cảnh giới: Luyện Khí 1 mất 8 EXP/s, Đại Thừa 10 mất ≈3 500 EXP/s.
+- **Hiển thị**: vòng lửa đỏ + lưỡi lửa liếm quanh chân (cả phòng đều thấy, cờ `FlagBurning`), nên đốt là tự báo cho kẻ săn mình biết. Màn Tổng kết hiện tổng "Tu vi đã thiêu đốt".
+- **Bot** chỉ đốt khi đang ở trạng thái Flee — đúng lúc đáng đánh đổi.
 
 ## 5. Chiến đấu
 
@@ -557,6 +576,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "camera_view_h": 900, "camera_exp": 0.85, "camera_reach_mult": 2.6,
     "hit_drops_realm": true
   },
+  "burn": { "mult": 1.8, "exp_frac_per_sec": 0.08, "keep_realm": true },
   "buffs": {
     "spin":   { "mult": 1.6, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },
@@ -621,6 +641,8 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
 - [ ] Bị chém ở Luyện Khí (tầng bất kỳ) → màn hình Tổng kết, bấm "Chơi tiếp" vào lại được; người chém nhận 50% EXP nạn nhân + 30; xác rơi 50% số kiếm.
 - [ ] Viên EXP từ quái chỉ người chém nhặt được trong 1.5s đầu.
 - [ ] Đi chéo 90° so với gió → tốc độ không đổi.
+- [ ] Giữ Shift khi đang chạy → nhanh ×1.8, EXP tụt dần, có vòng lửa; đứng yên giữ phím thì không mất EXP.
+- [ ] Đốt tới đáy cảnh giới thì tự tắt, không rớt cảnh giới; Luyện Khí đốt cạn về 0 EXP vẫn sống.
 - [ ] Vật cản bị chém vỡ → đi qua được → 30s sau mọc lại, không kẹt người.
 - [ ] Kiếm chém vật cản không bị mất.
 - [ ] Luyện Khí 60 kiếm phá rào tre ≈ 7.5s, không phá nổi đá tảng trong 1 phút; Đại Thừa phá đá tảng ≈ 4s.

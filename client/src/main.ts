@@ -53,6 +53,7 @@ class App {
     this.world = new ClientWorld(cfg);
     this.hud = new Hud(cfg, Input.isTouchDevice());
     this.input = new Input(stage);
+    this.bindBurnButton();
     this.conn = new Conn((m) => this.onMessage(m));
     this.thresholds = levelThresholds(cfg);
   }
@@ -177,12 +178,26 @@ class App {
     );
   }
 
+  /** bindBurnButton makes the on-screen 🔥 a hold button (spec §4.1c). */
+  private bindBurnButton(): void {
+    const b = this.hud.burnBtn;
+    const set = (on: boolean) => (e: Event): void => {
+      this.input.burnButton = on;
+      e.preventDefault();
+    };
+    b.addEventListener('touchstart', set(true), { passive: false });
+    b.addEventListener('touchend', set(false));
+    b.addEventListener('touchcancel', set(false));
+    b.addEventListener('mousedown', set(true));
+    window.addEventListener('mouseup', () => (this.input.burnButton = false));
+  }
+
   private sendInput(): void {
     if (!this.playing) {
       return;
     }
-    const { angle, moving } = this.input.read();
-    this.conn.send(this.world.makeInput(angle, moving));
+    const { angle, moving, burn } = this.input.read();
+    this.conn.send(this.world.makeInput(angle, moving, burn));
   }
 
   private debugKey(e: KeyboardEvent): void {

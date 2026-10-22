@@ -32,9 +32,13 @@ export class Hud {
   private lastLevel = -1;
 
   readonly minimap: Minimap;
+  /** burnBtn is the touch-only hold button for Thiêu Đốt Tinh Huyết (spec §4.1c). */
+  readonly burnBtn = h('button', 'burn-btn', '🔥');
 
   constructor(private readonly cfg: GameConfig, isTouch = false) {
     this.minimap = new Minimap(cfg, isTouch);
+    this.burnBtn.title = STR.burnName;
+    this.burnBtn.style.display = isTouch ? 'flex' : 'none';
     const mute = button('🔊', 'mute', () => {
       mute.textContent = sound.toggleMute() ? '🔇' : '🔊';
     });
@@ -46,6 +50,7 @@ export class Hud {
       this.board,
       this.feed,
       this.banner,
+      this.burnBtn,
       h('div', 'corner', this.ping, mute),
       this.debugHelp,
       h('div', 'rotate-hint', STR.rotateHint),

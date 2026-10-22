@@ -11,8 +11,14 @@ export const STR = {
   connecting: 'Đang kết nối máy chủ...',
   disconnected: 'Mất kết nối với máy chủ. Đang thử lại...',
   badName: 'Tên phải dài 2–16 ký tự.',
-  controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Không có nút đánh — kiếm tự xoay!',
-  controlsMobile: 'Kéo ngón tay để di chuyển. Kiếm tự xoay!',
+  controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Giữ Shift để Thiêu Đốt Tinh Huyết (chạy nhanh, hao tu vi). Không có nút đánh — kiếm tự xoay!',
+  controlsMobile: 'Kéo ngón tay để di chuyển. Giữ nút 🔥 để Thiêu Đốt Tinh Huyết. Kiếm tự xoay!',
+
+  // Thiêu Đốt Tinh Huyết (spec §4.1c)
+  burnName: 'Thiêu Đốt Tinh Huyết',
+  burnHint: (mult: number) => `Giữ Shift: chạy nhanh ×${mult}, đốt tu vi mỗi giây`,
+  burnSpent: 'Tu vi đã thiêu đốt',
+  burnEmpty: 'Cạn tinh huyết rồi!',
   debugHelp: 'Phím test: E +100 EXP · R lên cảnh giới · K +10 kiếm · 1–7 buff · X tự chết · H xem hitbox kiếm',
 
   // HUD

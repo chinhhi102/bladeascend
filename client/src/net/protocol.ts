@@ -108,6 +108,7 @@ export interface DeadMsg {
   rank: number;
   score: number;
   hits: number;
+  burned_exp: number;
   score_by: Record<string, number> | null;
   dai_thua_secs: number;
   top1_secs: number;
@@ -135,6 +136,7 @@ export const FLAG = {
   dead: 16,
   bot: 32,
   revealed: 64,
+  burning: 128, // Thiêu Đốt Tinh Huyết (spec §4.1c)
 } as const;
 
 // Buff bit order = server game.BuffNames.

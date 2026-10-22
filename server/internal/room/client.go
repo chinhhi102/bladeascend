@@ -29,6 +29,7 @@ type Client struct {
 	seq    uint32
 	angle  float64
 	moving bool
+	burn   bool
 	dirty  bool
 }
 
@@ -42,16 +43,16 @@ func (c *Client) SetInput(in netproto.Input) {
 	defer c.inMu.Unlock()
 	c.seq = in.Seq
 	c.angle = float64(in.Angle) / 256 * 2 * math.Pi
-	c.moving = in.Moving
+	c.moving, c.burn = in.Moving, in.Burn
 	c.dirty = true
 }
 
-func (c *Client) takeInput() (uint32, float64, bool, bool) {
+func (c *Client) takeInput() (seq uint32, angle float64, moving, burn, ok bool) {
 	c.inMu.Lock()
 	defer c.inMu.Unlock()
 	d := c.dirty
 	c.dirty = false
-	return c.seq, c.angle, c.moving, d
+	return c.seq, c.angle, c.moving, c.burn, d
 }
 
 // Room returns the room the client is currently in (nil between matches).
@@ -115,5 +116,6 @@ func playerFlags(g *game.Game, viewer, p *game.Player) uint8 {
 	set(p.Dead, netproto.FlagDead)
 	set(p.IsBot, netproto.FlagBot)
 	set(p.RevealedUntil > g.Time, netproto.FlagRevealed)
+	set(g.Burning(p), netproto.FlagBurning)
 	return f
 }

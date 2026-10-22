@@ -105,6 +105,9 @@ export class PlayerSprite {
     this.drawShadow(r);
     this.updateBody(s.md, r, Math.cos(s.f) < 0);
     this.drawAura(s.bf, r, now);
+    if (s.fl & FLAG.burning) {
+      this.drawBurn(r, now); // vẽ đè lên aura buff
+    }
     this.applyAlpha(s.fl, now);
     const headY = -r * (CHAR_HEIGHT_PER_R - FEET_BELOW_CENTER) - 4 / zoom;
     this.label.position.set(0, headY);
@@ -190,6 +193,23 @@ export class PlayerSprite {
       }
     }
     return set.values().next().value ?? null;
+  }
+
+  /** drawBurn is the blood-red flame ring of Thiêu Đốt Tinh Huyết (spec §4.1c). */
+  private drawBurn(r: number, now: number): void {
+    const flicker = 1 + 0.12 * Math.sin(now * 22);
+    this.aura
+      .circle(0, r * 0.2, r * 1.3 * flicker)
+      .fill({ color: 0xff3b1f, alpha: 0.16 })
+      .stroke({ color: 0xff6b2c, width: r * 0.14, alpha: 0.9 });
+    // Lưỡi lửa liếm lên quanh chân, lệch pha nhau cho đỡ đều đặn.
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + now * 3;
+      const h = r * (0.45 + 0.3 * Math.sin(now * 14 + i * 1.7));
+      this.aura
+        .circle(Math.cos(a) * r * 1.1, r * 0.2 + Math.sin(a) * r * 0.45 - h * 0.4, h * 0.35)
+        .fill({ color: i % 2 ? 0xffb020 : 0xff4a1a, alpha: 0.5 });
+    }
   }
 
   private drawAura(bits: number, r: number, now: number): void {

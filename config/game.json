@@ -29,6 +29,7 @@
     "death_anim_secs": 1.0,
     "name_min": 2, "name_max": 16
   },
+  "burn": { "mult": 1.8, "exp_frac_per_sec": 0.08, "keep_realm": true },
   "buffs": {
     "spin":   { "mult": 1.6, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },

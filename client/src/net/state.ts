@@ -27,6 +27,7 @@ interface PendingInput {
   seq: number;
   angle: number;
   moving: boolean;
+  burn: boolean;
 }
 
 /** What the renderer needs for one player this frame. */
@@ -56,7 +57,7 @@ export class ClientWorld {
   private predicted: Vec = { x: 0, y: 0 };
   private correction: Vec = { x: 0, y: 0 };
   private lastSendAt = 0;
-  private lastInput: PendingInput = { seq: 0, angle: 0, moving: false };
+  private lastInput: PendingInput = { seq: 0, angle: 0, moving: false, burn: false };
   lastSnapAt = 0;
 
   constructor(private readonly cfg: GameConfig) {}
@@ -170,8 +171,8 @@ export class ClientWorld {
   // ---- input & prediction ------------------------------------------------
 
   /** Records and returns the input message to send this network tick. */
-  makeInput(angle: number, moving: boolean): Record<string, unknown> {
-    const inp = { seq: ++this.seq, angle: quantize(angle), moving };
+  makeInput(angle: number, moving: boolean, burn = false): Record<string, unknown> {
+    const inp = { seq: ++this.seq, angle: quantize(angle), moving, burn };
     this.pending.push(inp);
     const me = this.me();
     if (me && !(me.fl & 16)) {
@@ -179,7 +180,7 @@ export class ClientWorld {
     }
     this.lastInput = inp;
     this.lastSendAt = performance.now();
-    return { t: 'in', s: inp.seq, a: Math.round((inp.angle / (2 * Math.PI)) * 256) & 255, m: moving };
+    return { t: 'in', s: inp.seq, a: Math.round((inp.angle / (2 * Math.PI)) * 256) & 255, m: moving, b: burn };
   }
 
   private reconcile(ack: number): void {
@@ -210,6 +211,11 @@ export class ClientWorld {
     let speed = this.cfg.player.move_base;
     if (me.bf & (1 << BUFFS.indexOf('haste'))) {
       speed *= this.cfg.buffs.haste.mult;
+    }
+    // Thiêu Đốt Tinh Huyết (spec §4.1c). Server dừng cộng tốc khi EXP chạm đáy cảnh giới
+    // và sẽ sửa lại vị trí; ở đây chỉ cần dự đoán đúng trường hợp thường gặp.
+    if (inp.burn) {
+      speed *= this.cfg.burn.mult;
     }
     speed *= this.zoneMult(from, dir);
     return this.resolveBlocking({ x: from.x + dir.x * speed * dt, y: from.y + dir.y * speed * dt }, this.cfg.player.body_r * me.sc);

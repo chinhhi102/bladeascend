@@ -34,6 +34,7 @@ type Input struct {
 	Seq    uint32 `msgpack:"s"`
 	Angle  uint8  `msgpack:"a"`
 	Moving bool   `msgpack:"m"`
+	Burn   bool   `msgpack:"b"` // đang giữ Thiêu Đốt Tinh Huyết (spec §4.1c)
 }
 
 type Ping struct {
@@ -75,6 +76,7 @@ const (
 	FlagDead
 	FlagBot
 	FlagRevealed
+	FlagBurning // Thiêu Đốt Tinh Huyết đang bật (spec §4.1c)
 )
 
 type PlayerState struct {
@@ -178,6 +180,7 @@ type Dead struct {
 	Rank        int                `msgpack:"rank"`
 	Score       float64            `msgpack:"score"`
 	Hits        int                `msgpack:"hits"`
+	BurnedExp   float64            `msgpack:"burned_exp"` // EXP đã đốt (spec §4.1c)
 	ScoreBy     map[string]float64 `msgpack:"score_by"` // điểm theo từng nguồn (§11.1)
 	DaiThuaSecs float64            `msgpack:"dai_thua_secs"`
 	Top1Secs    float64            `msgpack:"top1_secs"`

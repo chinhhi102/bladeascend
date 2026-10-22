@@ -37,6 +37,7 @@ export function summaryScreen(cfg: GameConfig, d: DeadMsg, myChar: string, act: 
     stat(STR.peakRealm, STR.realmTier(realm, tierOf(cfg, d.peak_level))),
     stat(STR.peakExp, num(d.peak_exp)),
     stat(STR.hits, String(d.hits ?? 0)),
+    ...(d.burned_exp > 0 ? [stat(STR.burnSpent, num(d.burned_exp))] : []),
     stat(STR.kills, String(d.kills)),
     stat(STR.toDaiThua, d.dai_thua_secs > 0 ? STR.secs(d.dai_thua_secs) : STR.notReached),
     stat(STR.top1Held, STR.secs(d.top1_secs ?? 0)),

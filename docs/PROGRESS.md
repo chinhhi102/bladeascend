@@ -85,6 +85,7 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 - **EXP mỗi cảnh giới gấp đôi cảnh giới trước (22/10/2026)**: `realm_mult` 1.2 → **2.0**. Tổng tới Đại Thừa 10: 28 288 → **694 960**.
 - **Mật độ giảm 50% (22/10/2026)**: `exp_orbs.cell` 160 → **226** (≈160×√2, số viên giảm một nửa), `items.count_per_room` 400 → **200**.
 - **Bot sinh ra tối đa Trúc Cơ (22/10/2026)**: `bots.realm_weights` [60,30,10] → **[60,40]**. Bot vẫn farm lên cao hơn sau khi sinh — đó là bình thường.
+- **Thiêu Đốt Tinh Huyết (22/10/2026, spec v3.7 §4.1c)**: giữ Shift (PC) hoặc nút 🔥 (điện thoại) khi đang chạy → tốc độ ×1.8, mỗi giây mất 8% EXP của tầng hiện tại. Không rớt cảnh giới (dừng ở đáy cảnh giới), Luyện Khí đốt cạn về 0 vẫn sống. Có vòng lửa cho cả phòng thấy. Số để chỉnh: `burn.mult`, `burn.exp_frac_per_sec`, `burn.keep_realm`.
 - **Va kiếm không đẩy văng nữa (22/10/2026)**: `clash_knockback` 150 → **0**. Hai người đứng mài nhau tới khi một bên hết kiếm. Đặt lại > 0 là bật lại kiểu cũ.
 - **Tốc độ chạy (22/10/2026)**: `move_base` 260 → **130** và bỏ hệ số `sqrt(scale)`. Spec dán vào sau đó cứ lùi lại về `260 * sqrt(scale)`; đang giữ theo yêu cầu nhắn trực tiếp — xem Q12.
 - **Tốc độ xoay kiếm (22/10/2026)**: `rev_secs` → **1.0** (1 vòng/giây theo spec v3.4), Tốc Kiếm trả về ×1.6.

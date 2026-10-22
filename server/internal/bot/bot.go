@@ -69,7 +69,8 @@ func (b *Brain) Update(g *game.Game) {
 		b.nextDecide = g.Time + bc.DecideMin + b.rng.Float64()*(bc.DecideMax-bc.DecideMin) + b.reaction*0.3
 	}
 	angle, moving := b.steer(g, me)
-	g.SetInput(b.ID, 0, angle, moving)
+	// Bot chỉ Thiêu Đốt Tinh Huyết khi đang chạy trốn — đúng lúc đáng đánh đổi EXP (§4.1c).
+	g.SetInput(b.ID, 0, angle, moving, b.State == StateFlee)
 }
 
 func (b *Brain) setGoal(p Vec, stopNear float64) {

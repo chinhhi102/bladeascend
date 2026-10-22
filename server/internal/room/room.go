@@ -118,8 +118,8 @@ func (r *Room) drainInbox() {
 
 func (r *Room) applyInputs() {
 	for id, c := range r.clients {
-		if seq, ang, mov, ok := c.takeInput(); ok {
-			r.G.SetInput(id, seq, ang, mov)
+		if seq, ang, mov, burn, ok := c.takeInput(); ok {
+			r.G.SetInput(id, seq, ang, mov, burn)
 		}
 	}
 }
@@ -172,7 +172,7 @@ func (r *Room) handleDeaths() {
 			r.record(p)
 			c.send(netproto.Dead{T: "dead", KillerName: p.KillerName, KillerChar: p.KillerChar, PeakLevel: p.PeakLevel,
 				PeakExp: p.PeakExp, Kills: p.Kills, SurviveSec: p.DiedAt - p.SpawnedAt, Rank: rank,
-				Score: p.Score, Hits: p.Hits, ScoreBy: p.ScoreBy,
+				Score: p.Score, Hits: p.Hits, ScoreBy: p.ScoreBy, BurnedExp: p.BurnedExp,
 				DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs})
 			r.detach(c)
 			continue

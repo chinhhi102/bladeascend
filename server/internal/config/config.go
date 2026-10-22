@@ -66,6 +66,15 @@ type Player struct {
 	NameMax        int     `json:"name_max"`
 }
 
+// Burn is Thiêu Đốt Tinh Huyết (spec §4.1c): hold to run faster, paying EXP every second.
+// ExpFracPerSec is a fraction of the CURRENT tier's requirement, so the cost scales with
+// cultivation instead of being free at high realms and crippling at low ones.
+type Burn struct {
+	Mult          float64 `json:"mult"`
+	ExpFracPerSec float64 `json:"exp_frac_per_sec"`
+	KeepRealm     bool    `json:"keep_realm"` // never burn below the floor of the current realm
+}
+
 type Buff struct {
 	Mult    float64 `json:"mult"`
 	Secs    float64 `json:"secs"`
@@ -232,6 +241,7 @@ type Config struct {
 	Cultivation Cultivation     `json:"cultivation"`
 	Sword       Sword           `json:"sword"`
 	Player      Player          `json:"player"`
+	Burn        Burn            `json:"burn"`
 	Buffs       map[string]Buff `json:"buffs"`
 	Items       Items           `json:"items"`
 	ExpOrbs     ExpOrbs         `json:"exp_orbs"`

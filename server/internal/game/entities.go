@@ -65,7 +65,10 @@ type Player struct {
 	Facing     float64
 	InputAngle float64
 	Moving     bool
-	LastSeq    uint32
+	// Burning: người chơi đang giữ phím Thiêu Đốt Tinh Huyết (spec §4.1c).
+	Burning   bool
+	BurnedExp float64 // tổng EXP đã đốt trong mạng này, hiện ở màn Tổng kết
+	LastSeq   uint32
 
 	TotalExp float64
 	Level    int
