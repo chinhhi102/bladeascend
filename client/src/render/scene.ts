@@ -58,7 +58,8 @@ export class GameScene {
     for (const node of this.mapView.obstacleLayer()) {
       this.entities.addChild(node);
     }
-    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.entities, this.rings, this.mapView.over, this.vfx.layer);
+    // Rings sit under every character so a blade never covers a body.
+    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.rings, this.entities, this.mapView.over, this.vfx.layer);
   }
 
   clear(): void {

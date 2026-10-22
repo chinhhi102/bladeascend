@@ -12,6 +12,9 @@ import { SwordRing } from './swordring';
 const CHAR_HEIGHT_PER_R = 2.6; // drawn character height = 2.6 × body radius
 const FEET_BELOW_CENTER = 0.75; // feet sit 0.75 × radius below the hitbox centre
 const ART_FILL = 0.72; // characters fill 72% of their 512 canvas (ART_PROMPTS §1)
+// Largest text box inside the oval of ui/speech_bubble.png, as fractions of the canvas.
+const BUBBLE_INNER = { x0: 0.21, y0: 0.15, x1: 0.65, y1: 0.59 };
+const BUBBLE_MAX_TEXT_W = 220;
 
 // Animations missing from an atlas fall back along this chain.
 const FALLBACK: Record<string, string[]> = {
@@ -199,15 +202,17 @@ export class PlayerSprite {
   showBubble(text: string, now: number): void {
     this.bubble?.destroy({ children: true });
     const c = new Container();
-    const t = new Text({ text, style: { fontFamily: 'system-ui, sans-serif', fontSize: 16, fontWeight: '800', fill: 0x111111 } });
+    const t = new Text({ text, style: { fontFamily: 'system-ui, sans-serif', fontSize: 16, fontWeight: '800', fill: 0x111111, wordWrap: true, wordWrapWidth: BUBBLE_MAX_TEXT_W, align: 'center' } });
     t.anchor.set(0.5);
     const tex = assets.texture('ui/speech_bubble.png');
-    const pad = 14;
+    const pad = 10;
     if (tex) {
+      // Size the art so its white inner box (not the whole canvas) wraps the text.
       const bg = new Sprite(tex);
-      bg.anchor.set(0.5);
-      bg.width = t.width + pad * 3;
-      bg.height = t.height + pad * 2.4;
+      const box = BUBBLE_INNER;
+      bg.anchor.set((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2);
+      bg.width = (t.width + pad * 2) / (box.x1 - box.x0);
+      bg.height = (t.height + pad * 2) / (box.y1 - box.y0);
       c.addChild(bg);
     } else {
       c.addChild(new Graphics().roundRect(-t.width / 2 - pad, -t.height / 2 - pad / 2, t.width + pad * 2, t.height + pad, 12).fill(0xffffff).stroke({ color: 0, width: 3 }));

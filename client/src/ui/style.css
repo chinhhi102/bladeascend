@@ -45,11 +45,24 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .medal { width: 30px; height: 30px; }
 
 .summary .panel { position: relative; }
-.scroll-panel.has-scroll { background: url(/assets/ui/scroll.png) center / 100% 100% no-repeat; border: none; box-shadow: none; padding: 40px 60px; }
-.ghost { width: 120px; height: 120px; object-fit: contain; }
+/* 9-slice: the rollers and torn edges keep their size, only the paper stretches, and the
+   border widths equal the slice sizes so text always sits on the paper (ui/scroll.png 1024×768,
+   paper ≈ x 160–825, y 205–555). */
+.scroll-panel.has-scroll {
+  background: none; box-shadow: none;
+  border-style: solid; border-width: 78px 76px 81px 61px;
+  border-image: url(/assets/ui/scroll.png) 205 199 213 160 fill stretch;
+  padding: 4px 18px;
+  width: min(680px, 100%);
+}
+.scroll-panel.has-scroll h2 { margin: 0 0 4px; }
+.scroll-panel.has-scroll .joke { color: #5a4a36; }
+.scroll-panel.has-scroll .stat { padding: 3px 8px; border-bottom-color: rgba(60,40,20,.25); }
+.scroll-panel.has-scroll .row { margin-top: 10px; }
+.ghost { width: 90px; height: 90px; object-fit: contain; }
 .killer { font-size: 20px; font-weight: 900; margin: 6px 0; }
 .joke { font-style: italic; color: var(--muted); margin-bottom: 10px; }
-.stat { display: flex; justify-content: space-between; padding: 5px 8px; border-bottom: 1px dashed rgba(0,0,0,.15); }
+.stat { display: flex; justify-content: space-between; gap: 12px; text-align: left; padding: 5px 8px; border-bottom: 1px dashed rgba(0,0,0,.15); }
 
 /* ---- HUD ---- */
 .hud { position: absolute; inset: 0; pointer-events: none !important; color: #fff; text-shadow: 0 2px 0 #000; font-weight: 800; }
@@ -70,12 +83,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .lb-line { display: flex; justify-content: space-between; gap: 10px; }
 .lb-line.me { color: var(--gold); }
 .my-rank { margin-top: 4px; color: #cde; }
-.feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; max-width: 60vw; }
+.feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 14px; max-width: min(60vw, calc(100vw - 140px)); }
 .feed-line { background: rgba(0,0,0,.4); padding: 4px 8px; border-radius: 8px; }
 .banner { display: none; position: absolute; top: 18%; left: 50%; transform: translateX(-50%); background: rgba(230,57,70,.9); padding: 10px 18px; border-radius: 12px; border: 3px solid #000; font-size: 18px; text-align: center; }
 .corner { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 8px; align-items: center; font-size: 12px; }
 .mute { font-size: 18px; background: rgba(0,0,0,.4); border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; }
-.debug-help { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); font-size: 12px; opacity: .8; }
+/* top centre: the bottom row belongs to the kill feed (left) and ping/mute (right) */
+.debug-help { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); font-size: 12px; opacity: .8; max-width: calc(100vw - 520px); text-align: center; }
 
 .joy-base { display: none; position: fixed; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.18); border: 3px solid rgba(255,255,255,.5); pointer-events: none; z-index: 10; }
 .joy-knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.7); border: 3px solid rgba(0,0,0,.4); }
@@ -95,6 +109,16 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 @media (max-width: 720px) and (orientation: portrait) {
   .room-board .lb-line:nth-child(n+7) { display: none; }
 }
-.rotate-hint { display: none; position: absolute; top: 120px; left: 50%; transform: translateX(-50%); font-size: 12px; background: rgba(0,0,0,.4); padding: 4px 10px; border-radius: 8px; animation: fadeHint 6s forwards; }
+.rotate-hint { display: none; position: absolute; top: 175px; white-space: nowrap; left: 50%; transform: translateX(-50%); font-size: 12px; background: rgba(0,0,0,.4); padding: 4px 10px; border-radius: 8px; animation: fadeHint 6s forwards; }
 @keyframes fadeHint { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 @media (max-width: 720px) and (orientation: portrait) { .rotate-hint { display: block; } }
+
+/* Small screens: thinner scroll rollers so the paper keeps room for text and all buttons. */
+@media (max-width: 600px) {
+  .scroll-panel.has-scroll { border-width: 52px 44px 54px 36px; padding: 2px 6px; }
+  .scroll-panel.has-scroll .killer { font-size: 17px; }
+  .scroll-panel.has-scroll .stat { font-size: 14px; }
+  .scroll-panel.has-scroll .row { gap: 6px; }
+  .scroll-panel.has-scroll .btn { padding: 8px 12px; font-size: 14px; }
+  .scroll-panel.has-scroll .ghost { width: 60px; height: 60px; }
+}
