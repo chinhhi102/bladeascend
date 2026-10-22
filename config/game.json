@@ -46,7 +46,7 @@
     "orb_r": 14, "scatter_r": 90, "max_orbs": 600
   },
   "exp_orbs": {
-    "cell": 300, "values": [5, 20, 60], "weights": [80, 18, 2],
+    "cell": 160, "values": [5, 20, 60], "weights": [80, 18, 2],
     "respawn_secs": 5, "respawn_region": 1000
   },
   "monsters": {
