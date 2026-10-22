@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 func loadImage(path string) (*image.NRGBA, error) {
@@ -52,11 +53,88 @@ func whiteness(c color.NRGBA) float64 {
 // removeBackground picks the keying method from the corner colour: flat magenta (current
 // prompts, ART_PROMPTS §5.1) or white (images generated before the switch).
 func removeBackground(img *image.NRGBA) {
-	if magentaShare(img) > 0.15 {
+	// Generators sometimes paint a duller pink/purple instead of #FF00FF: key out whatever
+	// flat colour fills the border when it is neither white nor true magenta.
+	key, flat := borderKey(img)
+	switch {
+	case flat && whiteness(key) == 0 && colorDist(key, color.NRGBA{255, 0, 255, 255}) > keyBG:
+		removeKeyed(img, key)
+	case magentaShare(img) > 0.15:
 		removeMagenta(img)
-		return
+	default:
+		removeWhite(img)
 	}
-	removeWhite(img)
+}
+
+const (
+	keyBG   = 60 // colour distance below this is background
+	keyEdge = 130
+	keySeed = 18 // pixels this close to the key are background even when walled off
+)
+
+// borderKey returns the median border colour when the border is one flat colour.
+func borderKey(img *image.NRGBA) (color.NRGBA, bool) {
+	b := img.Bounds()
+	var px []color.NRGBA
+	for x := b.Min.X; x < b.Max.X; x += 5 {
+		px = append(px, img.NRGBAAt(x, b.Min.Y+2), img.NRGBAAt(x, b.Max.Y-3))
+	}
+	for y := b.Min.Y; y < b.Max.Y; y += 5 {
+		px = append(px, img.NRGBAAt(b.Min.X+2, y), img.NRGBAAt(b.Max.X-3, y))
+	}
+	ch := func(f func(color.NRGBA) uint8) uint8 {
+		v := make([]int, len(px))
+		for i, c := range px {
+			v[i] = int(f(c))
+		}
+		sort.Ints(v)
+		return uint8(v[len(v)/2])
+	}
+	key := color.NRGBA{ch(func(c color.NRGBA) uint8 { return c.R }), ch(func(c color.NRGBA) uint8 { return c.G }), ch(func(c color.NRGBA) uint8 { return c.B }), 255}
+	near := 0
+	for _, c := range px {
+		if colorDist(c, key) < keyBG {
+			near++
+		}
+	}
+	return key, float64(near) > 0.7*float64(len(px))
+}
+
+func colorDist(a, b color.NRGBA) float64 {
+	dr, dg, db := float64(a.R)-float64(b.R), float64(a.G)-float64(b.G), float64(a.B)-float64(b.B)
+	return math.Sqrt(dr*dr + dg*dg + db*db)
+}
+
+// removeKeyed is removeMagenta for an arbitrary flat background colour.
+func removeKeyed(img *image.NRGBA, key color.NRGBA) {
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	isBG := func(c color.NRGBA) bool { return colorDist(c, key) < keyBG }
+	bg := floodFromSeeds(img, w, h, isBG, func(c color.NRGBA) bool { return colorDist(c, key) < keySeed })
+	applyMask(img, bg, w, h)
+	for pass := 0; pass < 2; pass++ {
+		next := append([]bool(nil), bg...)
+		for i := range bg {
+			x, y := i%w, i/w
+			c := img.NRGBAAt(x, y)
+			if bg[i] || !touchesBG(bg, x, y, w, h) {
+				continue
+			}
+			if a := geomClamp((colorDist(c, key)-keyBG/2)/(keyEdge-keyBG/2), 0, 1); a < 1 {
+				img.SetNRGBA(x, y, unmixKey(c, key, a))
+				next[i] = true
+			}
+		}
+		bg = next
+	}
+}
+
+func unmixKey(c, key color.NRGBA, a float64) color.NRGBA {
+	if a <= 0 {
+		return color.NRGBA{}
+	}
+	f := func(v, k uint8) uint8 { return uint8(geomClamp((float64(v)-(1-a)*float64(k))/a, 0, 255)) }
+	return color.NRGBA{f(c.R, key.R), f(c.G, key.G), f(c.B, key.B), uint8(a * float64(c.A))}
 }
 
 // magentaShare samples the image and returns the fraction of clearly magenta pixels; corners

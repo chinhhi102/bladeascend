@@ -4,64 +4,11 @@ Tạo lại file này: `cd server && go run ./cmd/artgen status`.
 Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.
 Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.
 
-## Còn thiếu (130 ảnh)
+## Còn thiếu (77 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
-| `char_a_hon_hit` | p2 | characters/a_hon/frames (hit ×4) |
-| `char_a_hon_death` | p2 | characters/a_hon/frames (death ×8) |
-| `char_ba_tam_loa_hit` | p2 | characters/ba_tam_loa/frames (hit ×4) |
-| `char_ba_tam_loa_death` | p2 | characters/ba_tam_loa/frames (death ×8) |
-| `char_dai_ca_dep_hit` | p2 | characters/dai_ca_dep/frames (hit ×4) |
-| `char_map_tra_sua_death` | p2 | characters/map_tra_sua/frames (death ×8) |
-| `char_co_ba_ganh_hit` | p2 | characters/co_ba_ganh/frames (hit ×4) |
-| `char_co_ba_ganh_death` | p2 | characters/co_ba_ganh/frames (death ×8) |
-| `char_su_phu_mi_hit` | p2 | characters/su_phu_mi/frames (hit ×4) |
-| `char_su_phu_mi_death` | p2 | characters/su_phu_mi/frames (death ×8) |
-| `char_be_ti_hit` | p2 | characters/be_ti/frames (hit ×4) |
-| `char_be_ti_death` | p2 | characters/be_ti/frames (death ×8) |
-| `char_shipper_hit` | p2 | characters/shipper/frames (hit ×4) |
-| `char_shipper_death` | p2 | characters/shipper/frames (death ×8) |
-| `char_cu_rua_hit` | p2 | characters/cu_rua/frames (hit ×4) |
 | `char_cu_rua_death` | p2 | characters/cu_rua/frames (death ×8) |
-| `vfx_clash_spark` | p2 | vfx/clash_spark (clash_spark ×6) |
-| `vfx_sword_shatter` | p2 | vfx/sword_shatter (sword_shatter ×6) |
-| `vfx_death_smoke` | p2 | vfx/death_smoke (death_smoke ×6) |
-| `ui_badges` | p2 | ui (badge ×9), ui (medal ×3) |
-| `ui_home_bg` | p2 | ui/home_bg.png |
-| `char_a_hon_chase` | p3 | characters/a_hon/frames (chase ×8) |
-| `char_a_hon_flee` | p3 | characters/a_hon/frames (flee ×8) |
-| `char_ba_tam_loa_chase` | p3 | characters/ba_tam_loa/frames (chase ×8) |
-| `char_ba_tam_loa_flee` | p3 | characters/ba_tam_loa/frames (flee ×8) |
-| `char_ong_ba_vong_chase` | p3 | characters/ong_ba_vong/frames (chase ×8) |
-| `char_ong_ba_vong_flee` | p3 | characters/ong_ba_vong/frames (flee ×8) |
-| `char_dai_ca_dep_chase` | p3 | characters/dai_ca_dep/frames (chase ×8) |
-| `char_dai_ca_dep_flee` | p3 | characters/dai_ca_dep/frames (flee ×8) |
-| `char_map_tra_sua_chase` | p3 | characters/map_tra_sua/frames (chase ×8) |
-| `char_map_tra_sua_flee` | p3 | characters/map_tra_sua/frames (flee ×8) |
-| `char_co_ba_ganh_chase` | p3 | characters/co_ba_ganh/frames (chase ×8) |
-| `char_co_ba_ganh_flee` | p3 | characters/co_ba_ganh/frames (flee ×8) |
-| `char_su_phu_mi_chase` | p3 | characters/su_phu_mi/frames (chase ×8) |
-| `char_su_phu_mi_flee` | p3 | characters/su_phu_mi/frames (flee ×8) |
-| `char_be_ti_chase` | p3 | characters/be_ti/frames (chase ×8) |
-| `char_be_ti_flee` | p3 | characters/be_ti/frames (flee ×8) |
-| `char_shipper_chase` | p3 | characters/shipper/frames (chase ×8) |
-| `char_shipper_flee` | p3 | characters/shipper/frames (flee ×8) |
-| `char_cu_rua_chase` | p3 | characters/cu_rua/frames (chase ×8) |
-| `char_cu_rua_flee` | p3 | characters/cu_rua/frames (flee ×8) |
-| `decor_sheet` | p3 | decor (decor ×10), decor (wall ×1) |
-| `zone_wind` | p3 | zones (wind ×4) |
-| `vfx_levelup_aura` | p3 | vfx/levelup_aura (levelup_aura ×6) |
-| `vfx_lightning` | p3 | vfx/lightning (lightning ×6) |
-| `vfx_shield_break` | p3 | vfx/shield_break (shield_break ×6) |
-| `vfx_stun_stars` | p3 | vfx/stun_stars (stun_stars ×4) |
-| `vfx_crack` | p3 | vfx/crack.png |
-| `ui_scroll` | p3 | ui/scroll.png |
-| `char_a_hon_levelup` | p4 | characters/a_hon/frames (levelup ×6) |
-| `char_a_hon_realm_drop` | p4 | characters/a_hon/frames (realm_drop ×6) |
-| `char_a_hon_breakthrough` | p4 | characters/a_hon/frames (breakthrough ×10) |
-| `char_a_hon_respawn` | p4 | characters/a_hon/frames (respawn ×6) |
-| `char_a_hon_teleport_out` | p4 | characters/a_hon/frames (teleport_out ×4) |
 | `char_a_hon_teleport_in` | p4 | characters/a_hon/frames (teleport_in ×4) |
 | `char_ba_tam_loa_levelup` | p4 | characters/ba_tam_loa/frames (levelup ×6) |
 | `char_ba_tam_loa_realm_drop` | p4 | characters/ba_tam_loa/frames (realm_drop ×6) |
@@ -139,7 +86,7 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_shipper_ref` | p9 | characters/shipper/ref_sheet.png |
 | `char_cu_rua_ref` | p9 | characters/cu_rua/ref_sheet.png |
 
-## Đã có (66 ảnh)
+## Đã có (119 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
@@ -204,8 +151,61 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `gate_blue` | p1 | gates/blue (idle ×6), gates/blue (warn ×4), gates/blue (burst ×6) |
 | `gate_orange` | p1 | gates/orange (idle ×6), gates/orange (warn ×4), gates/orange (burst ×6) |
 | `chest` | p2 | items/chest (idle ×4), items/chest (open ×6) |
+| `char_a_hon_hit` | p2 | characters/a_hon/frames (hit ×4) |
+| `char_a_hon_death` | p2 | characters/a_hon/frames (death ×8) |
+| `char_ba_tam_loa_hit` | p2 | characters/ba_tam_loa/frames (hit ×4) |
+| `char_ba_tam_loa_death` | p2 | characters/ba_tam_loa/frames (death ×8) |
 | `char_ong_ba_vong_hit` | p2 | characters/ong_ba_vong/frames (hit ×4) |
 | `char_ong_ba_vong_death` | p2 | characters/ong_ba_vong/frames (death ×8) |
+| `char_dai_ca_dep_hit` | p2 | characters/dai_ca_dep/frames (hit ×4) |
 | `char_dai_ca_dep_death` | p2 | characters/dai_ca_dep/frames (death ×8) |
 | `char_map_tra_sua_hit` | p2 | characters/map_tra_sua/frames (hit ×4) |
+| `char_map_tra_sua_death` | p2 | characters/map_tra_sua/frames (death ×8) |
+| `char_co_ba_ganh_hit` | p2 | characters/co_ba_ganh/frames (hit ×4) |
+| `char_co_ba_ganh_death` | p2 | characters/co_ba_ganh/frames (death ×8) |
+| `char_su_phu_mi_hit` | p2 | characters/su_phu_mi/frames (hit ×4) |
+| `char_su_phu_mi_death` | p2 | characters/su_phu_mi/frames (death ×8) |
+| `char_be_ti_hit` | p2 | characters/be_ti/frames (hit ×4) |
+| `char_be_ti_death` | p2 | characters/be_ti/frames (death ×8) |
+| `char_shipper_hit` | p2 | characters/shipper/frames (hit ×4) |
+| `char_shipper_death` | p2 | characters/shipper/frames (death ×8) |
+| `char_cu_rua_hit` | p2 | characters/cu_rua/frames (hit ×4) |
+| `vfx_clash_spark` | p2 | vfx/clash_spark (clash_spark ×6) |
+| `vfx_sword_shatter` | p2 | vfx/sword_shatter (sword_shatter ×6) |
+| `vfx_death_smoke` | p2 | vfx/death_smoke (death_smoke ×6) |
+| `ui_badges` | p2 | ui (badge ×9), ui (medal ×3) |
 | `ui_speech` | p2 | ui/speech_bubble.png |
+| `ui_home_bg` | p2 | ui/home_bg.png |
+| `char_a_hon_chase` | p3 | characters/a_hon/frames (chase ×8) |
+| `char_a_hon_flee` | p3 | characters/a_hon/frames (flee ×8) |
+| `char_ba_tam_loa_chase` | p3 | characters/ba_tam_loa/frames (chase ×8) |
+| `char_ba_tam_loa_flee` | p3 | characters/ba_tam_loa/frames (flee ×8) |
+| `char_ong_ba_vong_chase` | p3 | characters/ong_ba_vong/frames (chase ×8) |
+| `char_ong_ba_vong_flee` | p3 | characters/ong_ba_vong/frames (flee ×8) |
+| `char_dai_ca_dep_chase` | p3 | characters/dai_ca_dep/frames (chase ×8) |
+| `char_dai_ca_dep_flee` | p3 | characters/dai_ca_dep/frames (flee ×8) |
+| `char_map_tra_sua_chase` | p3 | characters/map_tra_sua/frames (chase ×8) |
+| `char_map_tra_sua_flee` | p3 | characters/map_tra_sua/frames (flee ×8) |
+| `char_co_ba_ganh_chase` | p3 | characters/co_ba_ganh/frames (chase ×8) |
+| `char_co_ba_ganh_flee` | p3 | characters/co_ba_ganh/frames (flee ×8) |
+| `char_su_phu_mi_chase` | p3 | characters/su_phu_mi/frames (chase ×8) |
+| `char_su_phu_mi_flee` | p3 | characters/su_phu_mi/frames (flee ×8) |
+| `char_be_ti_chase` | p3 | characters/be_ti/frames (chase ×8) |
+| `char_be_ti_flee` | p3 | characters/be_ti/frames (flee ×8) |
+| `char_shipper_chase` | p3 | characters/shipper/frames (chase ×8) |
+| `char_shipper_flee` | p3 | characters/shipper/frames (flee ×8) |
+| `char_cu_rua_chase` | p3 | characters/cu_rua/frames (chase ×8) |
+| `char_cu_rua_flee` | p3 | characters/cu_rua/frames (flee ×8) |
+| `decor_sheet` | p3 | decor (decor ×10), decor (wall ×1) |
+| `zone_wind` | p3 | zones (wind ×4) |
+| `vfx_levelup_aura` | p3 | vfx/levelup_aura (levelup_aura ×6) |
+| `vfx_lightning` | p3 | vfx/lightning (lightning ×6) |
+| `vfx_shield_break` | p3 | vfx/shield_break (shield_break ×6) |
+| `vfx_stun_stars` | p3 | vfx/stun_stars (stun_stars ×4) |
+| `vfx_crack` | p3 | vfx/crack.png |
+| `ui_scroll` | p3 | ui/scroll.png |
+| `char_a_hon_levelup` | p4 | characters/a_hon/frames (levelup ×6) |
+| `char_a_hon_realm_drop` | p4 | characters/a_hon/frames (realm_drop ×6) |
+| `char_a_hon_breakthrough` | p4 | characters/a_hon/frames (breakthrough ×10) |
+| `char_a_hon_respawn` | p4 | characters/a_hon/frames (respawn ×6) |
+| `char_a_hon_teleport_out` | p4 | characters/a_hon/frames (teleport_out ×4) |
