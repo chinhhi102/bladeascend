@@ -4,7 +4,7 @@
 #
 # DNS: covered by the *.staging.maveragroups.com wildcard.
 
-kientiem.staging.maveragroups.com {
+kiemtien.staging.maveragroups.com {
 	encode zstd gzip
 	header {
 		Strict-Transport-Security "max-age=31536000"
@@ -15,5 +15,5 @@ kientiem.staging.maveragroups.com {
 		-Server
 	}
 	# Caddy proxies the /ws websocket upgrade as-is.
-	reverse_proxy kientiem-web:8080
+	reverse_proxy kiemtien-web:8080
 }
