@@ -11,6 +11,9 @@ import { STR } from './strings';
 
 const FEED_KEEP = 5;
 const FEED_SECS = 6;
+// Tin loan toàn server: ít dòng hơn nhưng ở lại lâu hơn vì nó là chuyện lớn (spec §11.4).
+const SERVER_FEED_KEEP = 3;
+const SERVER_FEED_SECS = 9;
 
 /** Hud is the in-match DOM overlay: EXP bar, swords, buffs, room top 10, kill feed (spec §6, §11). */
 export class Hud {
@@ -24,6 +27,8 @@ export class Hud {
   private readonly buffs = h('div', 'buffs');
   private readonly board = h('div', 'room-board');
   private readonly feed = h('div', 'feed');
+  /** serverFeed is the top-centre strip for server-wide announcements (spec §11.4). */
+  private readonly serverFeed = h('div', 'server-feed');
   private readonly banner = h('div', 'banner');
   private readonly ping = h('div', 'ping');
   private readonly debugHelp = h('div', 'debug-help', STR.debugHelp);
@@ -49,6 +54,7 @@ export class Hud {
       this.buffs,
       this.board,
       this.feed,
+      this.serverFeed,
       this.banner,
       this.burnBtn,
       h('div', 'corner', this.ping, mute),
@@ -181,11 +187,17 @@ export class Hud {
     if (!text) {
       return;
     }
-    const serverWide = (f.tp ?? 0) > 0;
-    if (serverWide) {
-      text = STR.feed.serverWide(f.tp ?? 0, text);
+    // Tin loan toàn server đi lên dải giữa-trên màn hình, không lẫn vào feed góc trái.
+    if ((f.tp ?? 0) > 0) {
+      const big = h('div', 'server-line', STR.feed.serverWide(f.tp ?? 0, text));
+      this.serverFeed.prepend(big);
+      while (this.serverFeed.children.length > SERVER_FEED_KEEP) {
+        this.serverFeed.lastElementChild?.remove();
+      }
+      window.setTimeout(() => big.remove(), SERVER_FEED_SECS * 1000);
+      return;
     }
-    const line = h('div', `feed-line${serverWide ? ' server-wide' : ''}`, text);
+    const line = h('div', 'feed-line', text);
     this.feed.prepend(line);
     while (this.feed.children.length > FEED_KEEP) {
       this.feed.lastElementChild?.remove();

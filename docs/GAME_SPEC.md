@@ -358,7 +358,7 @@ on bot death:
 **Cảnh giới lúc sinh ra** — bot phải lấp chỗ trống *dưới* nhóm dẫn đầu, không được sinh ra đã đủ mạnh để bắt nạt Top 10:
 - Phòng đã có ít nhất `bots.spawn_rank` (mặc định **11**) người → bot sinh **ngang level với người đang đứng hạng 11**.
 - Phòng chưa đủ người để có hạng đó → bot sinh ở **Luyện Khí**, tầng ngẫu nhiên.
-- `bots.realm_weights` giờ chỉ còn làm **trần cảnh giới**: bot không bao giờ sinh cao hơn cảnh giới `len(realm_weights) - 1` (hiện là **Trúc Cơ**). Muốn bỏ trần thì thêm phần tử vào mảng.
+- **Không có trần cảnh giới**: phòng mà hạng 11 đã lên Nguyên Anh thì bot mới cũng sinh ở Nguyên Anh. Hạng 11 tự nó là cái phanh rồi.
 - Số kiếm ngẫu nhiên [1, max của cảnh giới đó]. Bot vẫn tự farm lên cao hơn sau khi sinh — đó là chơi bình thường.
 - Bot dùng tên + nhân vật ngẫu nhiên, **không vào leaderboard toàn cục**.
 

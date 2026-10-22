@@ -179,10 +179,9 @@ type Bots struct {
 	SpawnEverySecs float64  `json:"spawn_every_secs"`
 	SpawnBatch     int      `json:"spawn_batch"`
 	RespawnSecs    float64  `json:"respawn_secs"`
-	RealmWeights []int `json:"realm_weights"`
 	// SpawnRank: bot sinh ra ngang với người đang đứng hạng này trong phòng (mặc định 11,
 	// tức ngay dưới Top 10). Phòng chưa đủ người để có hạng đó → sinh ở Luyện Khí.
-	// RealmWeights giờ chỉ còn làm TRẦN cảnh giới: len(RealmWeights)-1.
+	// Không có trần cảnh giới: phòng toàn Nguyên Anh thì bot mới cũng Nguyên Anh.
 	SpawnRank      int      `json:"spawn_rank"`
 	DecideMin      float64  `json:"decide_min"`
 	DecideMax      float64  `json:"decide_max"`

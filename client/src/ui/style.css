@@ -105,11 +105,15 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .lb-title.t2 { color: #d8dde3; }
 .lb-title.t3 { color: #cd7f32; }
 .my-rank { margin-top: 4px; color: #cde; }
-.feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 14px; max-width: min(60vw, calc(100vw - 140px)); }
-.feed-line { background: rgba(0,0,0,.4); padding: 4px 8px; border-radius: 8px; }
-/* Tin loan toàn server: hạ một người trong Top 5 (spec §11.4). */
-.feed-line.server-wide { background: linear-gradient(90deg, rgba(192,41,15,.92), rgba(120,20,8,.82)); border: 2px solid var(--gold); color: #fff6c9; animation: feedPulse 1.2s ease-out 2; }
-@keyframes feedPulse { 0%, 100% { box-shadow: 0 0 0 rgba(255,215,0,0); } 50% { box-shadow: 0 0 14px rgba(255,215,0,.8); } }
+/* Kill feed góc dưới trái — to hơn 50% so với bản trước để đọc được khi đang chạy. */
+.feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-size: 21px; max-width: min(60vw, calc(100vw - 140px)); }
+.feed-line { background: rgba(0,0,0,.45); padding: 6px 12px; border-radius: 12px; }
+
+/* Tin loan toàn server: hạ một người trong Top 5 → dải giữa-trên màn hình (spec §11.4). */
+.server-feed { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(70vw, 900px); }
+.server-line { width: 100%; text-align: center; font-size: 20px; padding: 10px 18px; border-radius: 12px; background: linear-gradient(90deg, rgba(192,41,15,.94), rgba(230,80,30,.94), rgba(192,41,15,.94)); border: 3px solid var(--gold); color: #fff6c9; animation: serverFeedIn .35s ease-out, feedPulse 1.2s ease-out 2; }
+@keyframes serverFeedIn { from { opacity: 0; transform: translateY(-18px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes feedPulse { 0%, 100% { box-shadow: 0 0 0 rgba(255,215,0,0); } 50% { box-shadow: 0 0 18px rgba(255,215,0,.85); } }
 .banner { display: none; position: absolute; top: 18%; left: 50%; transform: translateX(-50%); background: rgba(230,57,70,.9); padding: 10px 18px; border-radius: 12px; border: 3px solid #000; font-size: 18px; text-align: center; }
 /* Nút giữ Thiêu Đốt Tinh Huyết trên điện thoại (spec §4.1c). */
 .burn-btn { position: absolute; right: 18px; bottom: 80px; width: 76px; height: 76px; border-radius: 50%; font-size: 32px; display: none; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, #ff8a3c, #c0290f); border: 3px solid #000; color: #fff; pointer-events: auto; touch-action: none; user-select: none; }
@@ -136,7 +140,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
   .score-pops { left: 70px; top: 56px; }
   .score-pop { font-size: 16px; }
   .debug-help { display: none !important; }
-  .feed { font-size: 11px; bottom: 60px; }
+  .feed { font-size: 16px; bottom: 60px; }
+  .server-feed { width: 94vw; top: 8px; }
+  .server-line { font-size: 14px; padding: 7px 10px; border-width: 2px; }
 }
 @media (max-width: 720px) and (orientation: portrait) {
   .room-board .lb-line:nth-child(n+7) { display: none; }

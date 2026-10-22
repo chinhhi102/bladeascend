@@ -96,7 +96,7 @@
   },
   "bots": {
     "spawn_every_secs": 2, "spawn_batch": 2, "respawn_secs": 3,
-    "realm_weights": [60, 40], "spawn_rank": 11,
+    "spawn_rank": 11,
     "decide_min": 0.3, "decide_max": 0.6,
     "reaction_min": 0.2, "reaction_max": 0.6,
     "hunt_r": 600, "hunt_ratio": 0.8, "flee_r": 500, "flee_ratio": 1.25,

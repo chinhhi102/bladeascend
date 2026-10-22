@@ -85,38 +85,35 @@ func TestBotsSpawnAtLuyenKhiWhenRoomIsSmall(t *testing.T) {
 	}
 }
 
-// Spec §9.3: đủ người thì bot sinh ngang với người đang đứng hạng spawn_rank (11),
-// và không bao giờ vượt trần cảnh giới của realm_weights.
-func TestBotsSpawnAtRank11AndRespectCap(t *testing.T) {
+// Spec §9.3: đủ người thì bot sinh đúng ngang với người đang đứng hạng spawn_rank (11),
+// không còn trần cảnh giới nào cả.
+func TestBotsSpawnAtRank11NoRealmCap(t *testing.T) {
 	m, _, cfg := testManager(t)
 	joinN(m, 1)
 	r := m.AllRooms()[0]
-	tiers := r.G.Prog.Tiers()
-	capLevel := (len(cfg.Bots.RealmWeights)-1)*tiers + tiers - 1
 
-	// Dựng đủ người: hạng 11 cố tình để ở Trúc Cơ tầng 4 (level 13).
+	// Dựng đủ người, hạng cao dần theo Uy Danh; hạng 11 rơi vào Nguyên Anh tầng 5 (level 34).
 	for i := 0; i < cfg.Bots.SpawnRank+3; i++ {
-		p := r.G.AddPlayer(game.SpawnOptions{Name: "P", Level: 13, Swords: 1, IsBot: true})
-		p.Score = float64(100 * (cfg.Bots.SpawnRank + 3 - i)) // hạng theo Uy Danh giảm dần
+		level := 34
+		if i < cfg.Bots.SpawnRank-1 {
+			level = 60 // Top 10 toàn người cảnh giới rất cao
+		}
+		p := r.G.AddPlayer(game.SpawnOptions{Name: "P", Level: level, Swords: 1, IsBot: true})
+		p.Score = float64(100 * (cfg.Bots.SpawnRank + 3 - i))
 	}
 	want := r.G.Ranking()[cfg.Bots.SpawnRank-1].Level
+	if r.G.Prog.Realm(want) <= 1 {
+		t.Fatalf("thiết lập sai: hạng 11 phải ở cảnh giới cao hơn Trúc Cơ, đang là level %d", want)
+	}
 	for i := 0; i < 50; i++ {
-		level, _ := r.randomBotLevel()
-		if level != min(want, capLevel) {
-			t.Fatalf("bot sinh ở level %d, muốn %d (ngang hạng %d, trần %d)",
-				level, min(want, capLevel), cfg.Bots.SpawnRank, capLevel)
+		level, swords := r.randomBotLevel()
+		if level != want {
+			t.Fatalf("bot sinh ở level %d, muốn %d (ngang hạng %d, không bị chặn trần)",
+				level, want, cfg.Bots.SpawnRank)
 		}
-	}
-
-	// Đẩy hạng 11 lên rất cao → trần realm_weights phải chặn lại.
-	for _, p := range r.G.PlayerList() {
-		if p.IsBot {
-			r.G.Respawn(p, 70, 1) // Độ Kiếp
-			p.Score = 500
+		if maxS := r.G.Prog.MaxSwords(r.G.Prog.Realm(level)); swords < 1 || swords > maxS {
+			t.Fatalf("bot sinh với %d kiếm, ngoài [1, %d]", swords, maxS)
 		}
-	}
-	if level, _ := r.randomBotLevel(); level > capLevel {
-		t.Fatalf("bot sinh ở level %d, vượt trần %d", level, capLevel)
 	}
 }
 
@@ -157,18 +154,34 @@ func TestTopFiveKillAnnouncedServerWide(t *testing.T) {
 	}
 	other.drainInbox() // tin lan sang chạy trên goroutine phòng kia
 
-	if len(collected[r.ID]) == 0 {
-		t.Fatal("phòng gốc không nhận được dòng kill feed")
+	// Bot trong phòng cũng sinh feed (đột phá, rớt cảnh giới…) nên phải lọc đúng dòng.
+	findKill := func(room string) (netproto.Feed, bool) {
+		for _, f := range collected[room] {
+			if f.B == "ĐạiCa" && (f.Kind == "kill" || f.Kind == "gate_kill") {
+				return f, true
+			}
+		}
+		return netproto.Feed{}, false
 	}
-	f := collected[r.ID][0]
+	f, ok := findKill(r.ID)
+	if !ok {
+		t.Fatalf("phòng gốc không nhận được dòng kill feed: %+v", collected[r.ID])
+	}
 	if f.Top != 1 || f.Room != r.ID {
 		t.Fatalf("dòng feed: Top = %d, Room = %q; muốn 1 và %q", f.Top, f.Room, r.ID)
 	}
-	if len(collected[other.ID]) == 0 {
-		t.Fatal("phòng khác không nhận được tin loan toàn server")
+	got, ok := findKill(other.ID)
+	if !ok {
+		t.Fatalf("phòng khác không nhận được tin loan toàn server: %+v", collected[other.ID])
 	}
-	if got := collected[other.ID][0]; got.Top != 1 || got.B != "ĐạiCa" {
+	if got.Top != 1 {
 		t.Fatalf("tin loan sang phòng khác sai: %+v", got)
+	}
+	// Phòng khác KHÔNG được nhận feed thường của phòng này.
+	for _, f := range collected[other.ID] {
+		if f.Top == 0 {
+			t.Fatalf("feed thường bị lọt sang phòng khác: %+v", f)
+		}
 	}
 }
 
