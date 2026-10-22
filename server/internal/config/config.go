@@ -49,8 +49,10 @@ type Sword struct {
 	ClashKnockback     float64  `json:"clash_knockback"`
 	ClashKnockbackSecs float64  `json:"clash_knockback_secs"`
 	DropBundleMax      int      `json:"drop_bundle_max"`
-	ClashRatioBase     int      `json:"clash_ratio_base"`
-	ClashRatioPerRealm int      `json:"clash_ratio_per_realm"`
+	// Độ bền kiếm (spec v4.1 §5.2): mỗi cảnh giới bền hơn cảnh giới dưới 20%.
+	// "compound" → k = 1.2^d; "linear" → k = 1 + 0.2 × d.
+	DurabilityPerRealm float64 `json:"durability_per_realm"`
+	DurabilityMode     string  `json:"durability_mode"`
 	TweenSecs          float64  `json:"tween_secs"`
 }
 

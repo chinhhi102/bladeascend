@@ -214,15 +214,6 @@ func sweepPhase(ring Ring, s, n int) float64 {
 	return ring.SweepLo + ring.Sweep*float64(s)/float64(n)
 }
 
-// ClashRatio returns k = base + perRealm * |rA - rB| (spec §16).
-func ClashRatio(c config.Sword, rA, rB int) int {
-	d := rA - rB
-	if d < 0 {
-		d = -d
-	}
-	return c.ClashRatioBase + c.ClashRatioPerRealm*d
-}
-
 // ClashSide is one participant's state going into a clash.
 type ClashSide struct {
 	Realm int
@@ -245,15 +236,34 @@ func ResolveClash(c config.Sword, a, b ClashSide) ClashOutcome {
 		out.LostB = loseUpTo(b.Count, u, c.MinCount)
 		return out
 	}
-	k := ClashRatio(c, a.Realm, b.Realm)
+	// Spec v4.1 §5.2: bên thấp luôn mất đúng u kiếm; bên cao chỉ nứt `lost / k` với
+	// k = durability(r_cao) / durability(r_thấp). Kiếm cảnh giới trên bền hơn 20%.
+	k := Durability(c, a.Realm, b.Realm)
 	if a.Realm < b.Realm {
-		out.LostA = loseUpTo(a.Count, u*k, c.MinCount)
+		out.LostA = loseUpTo(a.Count, u, c.MinCount)
 		out.LostB, out.CrackB = applyCrack(b, out.LostA, k, c.MinCount)
 		return out
 	}
-	out.LostB = loseUpTo(b.Count, u*k, c.MinCount)
+	out.LostB = loseUpTo(b.Count, u, c.MinCount)
 	out.LostA, out.CrackA = applyCrack(a, out.LostB, k, c.MinCount)
 	return out
+}
+
+// Durability is k = độ bền kiếm bên cao chia cho bên thấp (spec v4.1 §5.2).
+// "compound": 1.2^d. "linear": 1 + 0.2 × d.
+func Durability(c config.Sword, rA, rB int) float64 {
+	d := rA - rB
+	if d < 0 {
+		d = -d
+	}
+	step := c.DurabilityPerRealm
+	if step <= 0 {
+		step = 1
+	}
+	if c.DurabilityMode == "linear" {
+		return 1 + (step-1)*float64(d)
+	}
+	return math.Pow(step, float64(d))
 }
 
 func loseUpTo(count, want, minCount int) int {
@@ -261,8 +271,8 @@ func loseUpTo(count, want, minCount int) int {
 }
 
 // applyCrack adds lost/k crack to the higher side and converts whole cracks into lost swords.
-func applyCrack(high ClashSide, lowLost, k, minCount int) (int, float64) {
-	crack := high.Crack + float64(lowLost)/float64(k)
+func applyCrack(high ClashSide, lowLost int, k float64, minCount int) (int, float64) {
+	crack := high.Crack + float64(lowLost)/k
 	// Guard against float error such as 0.25*4 = 0.9999999.
 	whole := int(math.Floor(crack + 1e-9))
 	if whole <= 0 {
