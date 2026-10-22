@@ -20,7 +20,7 @@ export interface GameConfig {
   sword: {
     tween_secs: number;
     max_swords: number[];
-    swords_per_ring: number;
+    ring_step: number;
     length: number;
     width: number;
     hilt_gap: number;

@@ -1,4 +1,4 @@
-import { AnimatedSprite, Container, Graphics, GraphicsContext, Sprite, Text, type Texture } from 'pixi.js';
+import { AnimatedSprite, Container, Graphics, GraphicsContext, Sprite, type Texture } from 'pixi.js';
 
 import type { ItemState, MonsterState } from '../net/protocol';
 import { assets } from './assets';
@@ -43,7 +43,8 @@ function variantOf(kind: string, id: number): string {
 export class MonsterSprite {
   readonly root = new Container();
   private readonly body: Container;
-  private readonly hpText: Text;
+  private readonly hpBar = new Graphics();
+  private readonly r: number;
   private hurtUntil = 0;
   private lastHp = -1;
 
@@ -62,11 +63,28 @@ export class MonsterSprite {
     } else {
       this.body = new Graphics().circle(0, 0, s.r).fill(MONSTER_COLORS[s.k] ?? 0xffffff).stroke({ color: 0, width: s.r * 0.12 });
     }
-    this.hpText = new Text({ text: '', style: { fontFamily: 'system-ui', fontSize: 40, fontWeight: '900', fill: 0x222222, stroke: { color: 0xffffff, width: 6 } } });
-    this.hpText.anchor.set(0.5);
-    this.hpText.scale.set((s.r * 0.9) / 40);
+    this.r = s.r;
     const halo = new Graphics(shared(`mon:${s.r}`, (g) => g.circle(0, 0, s.r * 1.3).fill({ color: 0xffffff, alpha: 0.14 })));
-    this.root.addChild(new Graphics().ellipse(0, s.r * 0.8, s.r, s.r * 0.35).fill({ color: 0, alpha: 0.3 }), halo, this.body, this.hpText);
+    this.root.addChild(new Graphics().ellipse(0, s.r * 0.8, s.r, s.r * 0.35).fill({ color: 0, alpha: 0.3 }), halo, this.body, this.hpBar);
+  }
+
+  /**
+   * drawHp draws a thin bar above the monster — and only once it has been hurt. The old
+   * version stamped a big number across the monster's face, which covered the art and left a
+   * bare giant digit floating where art was missing.
+   */
+  private drawHp(hp: number, maxHp: number): void {
+    const g = this.hpBar.clear();
+    if (hp >= maxHp || hp <= 0 || maxHp <= 1) {
+      return; // chưa bị thương (hoặc quái 1 máu) thì không cần thanh máu
+    }
+    const w = this.r * 1.5;
+    const th = Math.max(2, this.r * 0.14);
+    const y = -this.r * 1.25;
+    const frac = Math.max(0, Math.min(1, hp / maxHp));
+    const color = frac > 0.5 ? 0x5dff7a : frac > 0.25 ? 0xffd23f : 0xff5252;
+    g.roundRect(-w / 2, y, w, th, th / 2).fill({ color: 0x000000, alpha: 0.55 });
+    g.roundRect(-w / 2, y, w * frac, th, th / 2).fill(color);
   }
 
   update(x: number, y: number, s: MonsterState, now: number): void {
@@ -77,7 +95,7 @@ export class MonsterSprite {
         this.hurtUntil = now + 0.2;
       }
       this.lastHp = s.hp;
-      this.hpText.text = String(s.hp);
+      this.drawHp(s.hp, s.mx);
     }
     const hurt = now < this.hurtUntil;
     this.body.tint = hurt ? 0xff8080 : 0xffffff;

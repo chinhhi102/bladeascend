@@ -22,7 +22,8 @@ type Sword struct {
 	StartCount         int      `json:"start_count"`
 	MinCount           int      `json:"min_count"`
 	MaxSwords          []int    `json:"max_swords"`
-	SwordsPerRing      int      `json:"swords_per_ring"`
+	// RingStep: vòng thứ k chứa RingStep × k kiếm (vòng 1 = 10, vòng 2 = 20… spec §4.1a).
+	RingStep           int      `json:"ring_step"`
 	Length             float64  `json:"length"`
 	Width              float64  `json:"width"`
 	HiltGap            float64  `json:"hilt_gap"`

@@ -85,48 +85,99 @@ func swordCfg(t *testing.T) config.Sword {
 	return config.MustLoadDefault().Sword
 }
 
-// Spec §4.1a v3.1: ring k is staggered by k * 18° / R.
-func TestSlotAngleStagger(t *testing.T) {
-	deg := math.Pi / 180
-	for _, rings := range []int{1, 2, 3} {
-		n := 20 * rings
-		for k := 0; k < rings; k++ {
-			got := SlotAngle(20, n, k*20)
-			want := float64(k) * 18 * deg / float64(rings)
-			if math.Abs(got-want) > 1e-9 {
-				t.Errorf("R=%d ring %d first sword at %v°, want %v°", rings, k, got/deg, want/deg)
-			}
-			if d := SlotAngle(20, n, k*20+1) - got; math.Abs(d-18*deg) > 1e-9 {
-				t.Errorf("R=%d ring %d slot step %v°, want 18°", rings, k, d/deg)
-			}
+// geomFor builds the ring geometry for n swords at scale 1 with the real config.
+func geomFor(t *testing.T, n int) RingGeom {
+	t.Helper()
+	c := config.MustLoadDefault()
+	return ComputeRingGeom(c.Sword, c.Player.BodyR, 1, n, 1)
+}
+
+// Spec §4.1a: vòng thứ k chứa step × k kiếm — vòng 1 là 10, vòng 2 là 20, vòng 10 là 100.
+func TestRingCapacityGrowsByTen(t *testing.T) {
+	g := geomFor(t, 1)
+	if g.Step != 10 {
+		t.Fatalf("ring_step = %d, muốn 10", g.Step)
+	}
+	for k := 0; k < 10; k++ {
+		if got, want := g.RingCap(k), 10*(k+1); got != want {
+			t.Errorf("vòng %d chứa %d kiếm, muốn %d", k+1, got, want)
 		}
 	}
-	// n ≤ 20: evenly spread over 360°.
-	if d := SlotAngle(20, 5, 1); math.Abs(d-72*deg) > 1e-9 {
-		t.Errorf("5 swords: step %v°, want 72°", d/deg)
+	// Cộng dồn: 10, 30, 60, 100, 150, 210, 280, 360, 450, 550.
+	for k, want := range []int{0, 10, 30, 60, 100, 150, 210, 280, 360, 450, 550} {
+		if got := g.RingStart(k); got != want {
+			t.Errorf("kiếm đầu của vòng %d là #%d, muốn #%d", k+1, got, want)
+		}
+	}
+	// Mỗi kiếm phải rơi đúng vòng của nó.
+	for i := 0; i < 550; i++ {
+		k := g.RingOf(i)
+		if i < g.RingStart(k) || i >= g.RingStart(k+1) {
+			t.Fatalf("kiếm #%d bị xếp vào vòng %d (khoảng %d..%d)", i, k+1, g.RingStart(k), g.RingStart(k+1))
+		}
 	}
 }
 
-// A ring with fewer than 20 swords still spreads them evenly over the 20 slots.
+// Số vòng vừa đủ chứa hết số kiếm, không thừa vòng rỗng.
+func TestRingsForSwordCount(t *testing.T) {
+	cases := map[int]int{1: 1, 10: 1, 11: 2, 30: 2, 31: 3, 60: 3, 120: 5, 160: 6, 280: 7, 400: 9}
+	for n, want := range cases {
+		if got := geomFor(t, n).Rings; got != want {
+			t.Errorf("%d kiếm → %d vòng, muốn %d", n, got, want)
+		}
+	}
+}
+
+// Spec §4.1a: vòng đầy thì chia đều 360°, và vòng k lệch đi k × (khe/R).
+func TestSlotAngleStagger(t *testing.T) {
+	deg := math.Pi / 180
+	g := geomFor(t, 30) // 2 vòng: 10 + 20 kiếm
+	if g.Rings != 2 {
+		t.Fatalf("30 kiếm phải thành 2 vòng, đang %d", g.Rings)
+	}
+	// Vòng 1: 10 khe, mỗi khe 36°, không lệch.
+	if a := g.SlotAngle(30, 0); math.Abs(a) > 1e-9 {
+		t.Errorf("kiếm đầu vòng 1 ở %v°, muốn 0°", a/deg)
+	}
+	if d := g.SlotAngle(30, 1) - g.SlotAngle(30, 0); math.Abs(d-36*deg) > 1e-9 {
+		t.Errorf("khe vòng 1 = %v°, muốn 36°", d/deg)
+	}
+	// Vòng 2: 20 khe, mỗi khe 18°, lệch 18°/2 = 9°.
+	stagger := 18 * deg / 2
+	if a := g.SlotAngle(30, 10); math.Abs(a-stagger) > 1e-9 {
+		t.Errorf("kiếm đầu vòng 2 ở %v°, muốn %v°", a/deg, stagger/deg)
+	}
+	if d := g.SlotAngle(30, 11) - g.SlotAngle(30, 10); math.Abs(d-18*deg) > 1e-9 {
+		t.Errorf("khe vòng 2 = %v°, muốn 18°", d/deg)
+	}
+	// Vòng 1 chưa đầy thì chia đều số kiếm đang có trên 10 khe.
+	g5 := geomFor(t, 5)
+	if d := g5.SlotAngle(5, 1); math.Abs(d-72*deg) > 1e-9 {
+		t.Errorf("5 kiếm: khe %v°, muốn 72°", d/deg)
+	}
+}
+
+// Vòng chưa đủ kiếm thì rải đều trên các khe của chính vòng đó.
 func TestPartialRingSpreadsOverSlots(t *testing.T) {
 	deg := math.Pi / 180
-	n := 25 // ring 1 holds 5 swords → every 4th slot
+	g := geomFor(t, 15) // vòng 1 đủ 10, vòng 2 mới có 5/20 kiếm
 	stagger := 18 * deg / 2
 	for j := 0; j < 5; j++ {
-		got := SlotAngle(20, n, 20+j)
-		want := float64(j*4)*18*deg + stagger
+		got := g.SlotAngle(15, 10+j)
+		want := float64(j*4)*18*deg + stagger // 5 kiếm trên 20 khe → cách 4 khe
 		if math.Abs(got-want) > 1e-9 {
-			t.Errorf("sword %d at %v°, want %v°", j, got/deg, want/deg)
+			t.Errorf("kiếm %d ở %v°, muốn %v°", j, got/deg, want/deg)
 		}
 	}
 }
 
 func TestReachGrowsWithRingsAndOuterTipsAreFarther(t *testing.T) {
 	c := swordCfg(t)
-	g20 := ComputeRingGeom(c, 30, 1, 20, 1)
+	// 10 kiếm = vừa đủ vòng 1; 60 kiếm = đủ 3 vòng (10 + 20 + 30).
+	g10 := ComputeRingGeom(c, 30, 1, 10, 1)
 	g60 := ComputeRingGeom(c, 30, 1, 60, 1)
-	if g20.Rings != 1 || g60.Rings != 3 || g60.Reach <= g20.Reach {
-		t.Fatalf("rings %d/%d reach %v/%v", g20.Rings, g60.Rings, g20.Reach, g60.Reach)
+	if g10.Rings != 1 || g60.Rings != 3 || g60.Reach <= g10.Reach {
+		t.Fatalf("rings %d/%d reach %v/%v", g10.Rings, g60.Rings, g10.Reach, g60.Reach)
 	}
 	tilt := c.TiltDeg * math.Pi / 180
 	if g60.TipDist(2, tilt) <= g60.TipDist(0, tilt) {
@@ -143,7 +194,7 @@ func TestReachGrowsWithRingsAndOuterTipsAreFarther(t *testing.T) {
 	if big.Reach <= g60.Reach*4.9 {
 		t.Fatalf("reach must scale with the character: %v vs %v", big.Reach, g60.Reach)
 	}
-	long := ComputeRingGeom(c, 30, 1, 20, 1.3)
+	long := ComputeRingGeom(c, 30, 1, 10, 1.3)
 	if math.Abs(long.Len(0)-c.Length*1.3) > 1e-9 {
 		t.Fatalf("Trường Kiếm length %v", long.Len(0))
 	}
@@ -205,7 +256,7 @@ func TestOneRevolutionPerRevSecs(t *testing.T) {
 func TestRingRadiusIndependentOfSwordCount(t *testing.T) {
 	c := swordCfg(t)
 	one := ComputeRingGeom(c, 30, 1.4, 1, 1)
-	for _, n := range []int{10, 20} {
+	for _, n := range []int{5, 10} { // vòng 1 chứa 10 kiếm
 		g := ComputeRingGeom(c, 30, 1.4, n, 1)
 		if g.HiltR(0) != one.HiltR(0) || g.Len(0) != one.Len(0) || g.Reach != one.Reach {
 			t.Fatalf("n=%d changed ring 1: %+v vs %+v", n, g, one)
@@ -214,12 +265,12 @@ func TestRingRadiusIndependentOfSwordCount(t *testing.T) {
 	if one.HiltR(0) != (30+c.HiltGap)*1.4 {
 		t.Fatalf("ring 1 hilt %v must sit next to the body", one.HiltR(0))
 	}
-	g21, g40 := ComputeRingGeom(c, 30, 1.4, 21, 1), ComputeRingGeom(c, 30, 1.4, 40, 1)
-	if g21.Rings != 2 || g21.HiltR(1) <= g21.HiltR(0) || g21.Reach <= one.Reach {
-		t.Fatalf("21 swords must open a wider ring 2: %+v", g21)
+	g11, g30 := ComputeRingGeom(c, 30, 1.4, 11, 1), ComputeRingGeom(c, 30, 1.4, 30, 1)
+	if g11.Rings != 2 || g11.HiltR(1) <= g11.HiltR(0) || g11.Reach <= one.Reach {
+		t.Fatalf("kiếm thứ 11 phải mở vòng 2 rộng hơn: %+v", g11)
 	}
-	if g40.Rings != 2 || g40.Reach != g21.Reach || g40.HiltR(1) != g21.HiltR(1) {
-		t.Fatalf("40 swords must keep the 2-ring radii of 21: %+v vs %+v", g40, g21)
+	if g30.Rings != 2 || g30.Reach != g11.Reach || g30.HiltR(1) != g11.HiltR(1) {
+		t.Fatalf("30 kiếm vẫn 2 vòng, bán kính phải y như 11 kiếm: %+v vs %+v", g30, g11)
 	}
 	full := ComputeRingGeom(c, 30, 1.4, 60, 1) // Luyện Khí 10, full swords: spec says ≈ 200
 	if full.Reach < 180 || full.Reach > 230 {

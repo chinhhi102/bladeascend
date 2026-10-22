@@ -346,13 +346,14 @@ func TestObstacleDamagePerPlayerNotPerSword(t *testing.T) {
 		g.hitObstacles(p)
 		return float64(800-g.Obstacles[0].HP) + g.Obstacles[0].Partial
 	}
-	one, twenty := hitOnceAt(1), hitOnceAt(20)
-	if one != twenty {
-		t.Fatalf("1 kiếm gây %v, 20 kiếm (vẫn 1 vòng) gây %v — phải bằng nhau", one, twenty)
+	// Vòng 1 chứa 10 kiếm: 1 kiếm và 10 kiếm đều là 1 vòng nên sức phá phải bằng nhau.
+	one, ten := hitOnceAt(1), hitOnceAt(10)
+	if one != ten {
+		t.Fatalf("1 kiếm gây %v, 10 kiếm (vẫn 1 vòng) gây %v — phải bằng nhau", one, ten)
 	}
-	forty := hitOnceAt(40) // 2 vòng → ×1.5
-	if math.Abs(forty-one*1.5) > 1e-9 {
-		t.Fatalf("2 vòng gây %v, muốn %v (gấp 1.5 lần 1 vòng)", forty, one*1.5)
+	thirty := hitOnceAt(30) // đủ 2 vòng → ×1.5
+	if math.Abs(thirty-one*1.5) > 1e-9 {
+		t.Fatalf("2 vòng gây %v, muốn %v (gấp 1.5 lần 1 vòng)", thirty, one*1.5)
 	}
 }
 

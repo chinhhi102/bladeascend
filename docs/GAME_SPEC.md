@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v3.9:** vòng kiếm chứa theo bậc thang — vòng 1 là 10 kiếm, vòng 2 là 20, vòng k là 10k (§3.1, §4.1a); máu quái vẽ thành thanh nhỏ trên đầu thay vì số to đè lên mặt.
+
 **Thay đổi v3.8:** bảng phòng xếp theo Uy Danh (không theo cảnh giới), cảnh giới chuyển lên đầu nhân vật, danh hiệu mở rộng Top 1–10; hạ người trong Top 5 thì loan toàn server; bot sinh ngang hạng 11 (§9.3, §11.2, §11.3, §11.4).
 
 **Thay đổi v3.7:** thêm **Thiêu Đốt Tinh Huyết** — giữ phím để chạy nhanh ×1.8, đổi bằng EXP mỗi giây, không bao giờ làm rớt cảnh giới (§4.1c).
@@ -61,14 +63,16 @@ scale(L) = 1 + 4 * L / 89          // 1.00 (Luyện Khí 1) → 5.00 (Đại Th�
 | r | Cảnh giới | Kiếm tối đa | Số vòng kiếm tối đa | Scale tầng 1 → tầng 10 |
 |---|---|---|---|---|
 | 0 | Luyện Khí | 60 | 3 | 1.00 → 1.40 |
-| 1 | Trúc Cơ | 120 | 6 | 1.45 → 1.85 |
-| 2 | Kim Đan | 160 | 8 | 1.90 → 2.30 |
-| 3 | Nguyên Anh | 200 | 10 | 2.35 → 2.75 |
-| 4 | Hóa Thần | 240 | 12 | 2.80 → 3.20 |
-| 5 | Luyện Hư | 280 | 14 | 3.25 → 3.65 |
-| 6 | Hợp Thể | 320 | 16 | 3.70 → 4.10 |
-| 7 | Độ Kiếp | 360 | 18 | 4.15 → 4.55 |
-| 8 | Đại Thừa | 400 | 20 | 4.60 → 5.00 |
+| 1 | Trúc Cơ | 120 | 5 | 1.45 → 1.85 |
+| 2 | Kim Đan | 160 | 6 | 1.90 → 2.30 |
+| 3 | Nguyên Anh | 200 | 6 | 2.35 → 2.75 |
+| 4 | Hóa Thần | 240 | 7 | 2.80 → 3.20 |
+| 5 | Luyện Hư | 280 | 7 | 3.25 → 3.65 |
+| 6 | Hợp Thể | 320 | 8 | 3.70 → 4.10 |
+| 7 | Độ Kiếp | 360 | 8 | 4.15 → 4.55 |
+| 8 | Đại Thừa | 400 | 9 | 4.60 → 5.00 |
+
+Số vòng suy ra từ sức chứa dồn của §4.1a (10 · 30 · 60 · 100 · 150 · 210 · 280 · 360 · 450), không phải con số tự do.
 
 Kiếm tối đa lấy từ mảng `max_swords` trong config (từ Nguyên Anh trở đi mặc định +40 mỗi cảnh giới).
 
@@ -110,11 +114,20 @@ Mục tiêu hình ảnh: nhiều vòng kiếm **so le, nghiêng, mỗi vòng m�
 - Xóa mọi công thức cũ kiểu `ring_radius = max(..., n * spacing / 2π)` (từ spec v1) khỏi code.
 - Chuôi kiếm vòng 1 luôn sát người (`inner_r = (BODY_R + 6) * scale`), không có khoảng trống lớn giữa thân và kiếm.
 
-Ví dụ ở cùng 1 tầng (scale không đổi): 1 kiếm, 10 kiếm, 20 kiếm → cùng 1 vòng, cùng bán kính. 21 kiếm → xuất hiện vòng 2 xa hơn. 40 kiếm → vẫn 2 vòng, bán kính không đổi.
+Ví dụ ở cùng 1 tầng (scale không đổi): 1 kiếm, 5 kiếm, 10 kiếm → cùng 1 vòng, cùng bán kính. Kiếm thứ 11 → xuất hiện vòng 2 xa hơn. 30 kiếm → vẫn 2 vòng, bán kính không đổi. Kiếm thứ 31 mở vòng 3.
 
-**Chia vòng**
-- Cứ **20 kiếm thành 1 vòng**. Vòng 1 (k = 0) là 20 kiếm đầu, vòng 2 là 20 kiếm tiếp...
-- Khi n ≤ 20: n kiếm chia đều 360°. Khi n > 20: mỗi vòng có 20 "khe" cách nhau 18°; vòng chưa đủ 20 kiếm thì chiếm các khe rải đều (`slot = round(j * 20 / m)`).
+**Chia vòng** — vòng càng ra ngoài càng chứa được nhiều kiếm
+
+```
+sức chứa vòng k (đếm từ 1) = ring_step * k        // ring_step = 10
+  → vòng 1: 10 kiếm · vòng 2: 20 · vòng 3: 30 … vòng 10: 100
+cộng dồn để đầy R vòng = ring_step * R(R+1)/2
+  → 10 · 30 · 60 · 100 · 150 · 210 · 280 · 360 · 450 · 550
+```
+
+- Vòng 1 là 10 kiếm đầu, vòng 2 là 20 kiếm tiếp, vòng 3 là 30 kiếm tiếp…
+- Mỗi vòng có đúng `10k` khe chia đều 360° (vòng 1 khe 36°, vòng 2 khe 18°, vòng 3 khe 12°…). Vòng chưa đủ kiếm thì rải đều trên các khe của chính nó (`slot = round(j * cap / m)`).
+- `stagger(k) = k * (khe của vòng k) / R` để các vòng không thẳng hàng.
 
 **Hình học từng vòng** (`R` = tổng số vòng hiện có, `base = SWORD_LEN * scale * buff_long`, SWORD_LEN = 80)
 
@@ -581,7 +594,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "sword": {
     "start_count": 1, "min_count": 0,
     "max_swords": [60, 120, 160, 200, 240, 280, 320, 360, 400],
-    "swords_per_ring": 20, "length": 80, "width": 12, "hilt_gap": 6,
+    "ring_step": 10, "length": 80, "width": 12, "hilt_gap": 6,
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
     "rev_secs": 1.0, "flip_cooldown": 0.3,
@@ -692,3 +705,8 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
   - PC: `W A S D` Di chuyển · `Shift` Chạy nhanh · `M` Bản đồ.
   - Điện thoại: `Kéo` Di chuyển · `🔥` Chạy nhanh.
 - Chữ nằm trong `STR.guideKeys`, sửa không cần đụng code.
+
+### 12.2 Máu quái
+
+- Quái bị thương mới hiện **thanh máu mảnh phía trên đầu** (rộng 1.5 × bán kính, xanh > 50% → vàng > 25% → đỏ). Đầy máu, chết, hoặc quái chỉ 1 máu thì không vẽ gì.
+- Không viết số máu đè lên thân quái: số to che mất hình, và chỗ nào thiếu art thì chỉ còn trơ một con số giữa màn.

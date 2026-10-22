@@ -107,8 +107,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .my-rank { font-size: 15px; }
 .my-rank { margin-top: 4px; color: #cde; }
 /* Kill feed góc dưới trái — to hơn 50% so với bản trước để đọc được khi đang chạy. */
-.feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-size: 21px; max-width: min(60vw, calc(100vw - 140px)); }
-.feed-line { background: rgba(0,0,0,.45); padding: 6px 12px; border-radius: 12px; }
+.feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 15px; max-width: min(60vw, calc(100vw - 140px)); }
+.feed-line { background: rgba(0,0,0,.45); padding: 4px 9px; border-radius: 9px; }
 /* Mỗi vai một màu để đọc lướt: ai làm · làm gì · với ai. */
 .f-actor { color: #ffd700; }
 .f-act { color: #e7eef5; font-weight: 700; }
@@ -131,17 +131,17 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .debug-help { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); font-size: 12px; opacity: .8; max-width: calc(100vw - 520px); text-align: center; }
 
 /* Bảng hướng dẫn mờ 2 giây đầu trận (spec §18.1). Không chặn chuột/chạm. */
-.guide { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; background: rgba(8,10,14,.6); border: 3px solid rgba(255,215,0,.6); border-radius: 16px; padding: 14px 22px; }
+.guide { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); opacity: 0; pointer-events: none; background: rgba(8,10,14,.6); border: 3px solid rgba(255,215,0,.6); border-radius: 18px; padding: 20px 28px; }
 .guide.fade { animation: guideFade 2.6s ease-out forwards; }
-@keyframes guideFade { 0% { opacity: 0; transform: translate(-50%, -46%); } 12% { opacity: .92; transform: translate(-50%, -50%); } 72% { opacity: .92; } 100% { opacity: 0; } }
-.guide-title { color: var(--gold); font-size: 20px; text-align: center; margin-bottom: 10px; }
-.guide-line { display: flex; align-items: center; gap: 12px; font-size: 17px; line-height: 2; color: #eef4fb; white-space: nowrap; }
-.guide-key { min-width: 96px; text-align: center; padding: 3px 10px; border-radius: 8px; background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.4); font-weight: 900; }
+@keyframes guideFade { 0% { opacity: 0; transform: translate(-16px, -50%); } 12% { opacity: .92; transform: translate(0, -50%); } 72% { opacity: .92; } 100% { opacity: 0; } }
+.guide-title { color: var(--gold); font-size: 25px; text-align: center; margin-bottom: 12px; }
+.guide-line { display: flex; align-items: center; gap: 14px; font-size: 21px; line-height: 2; color: #eef4fb; white-space: nowrap; }
+.guide-key { min-width: 118px; text-align: center; padding: 4px 12px; border-radius: 9px; background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.4); font-weight: 900; }
 @media (max-width: 720px) {
-  .guide { padding: 10px 14px; top: 42%; }
-  .guide-title { font-size: 16px; }
-  .guide-line { font-size: 14px; gap: 9px; line-height: 1.8; }
-  .guide-key { min-width: 66px; padding: 2px 7px; }
+  .guide { padding: 12px 16px; left: 10px; }
+  .guide-title { font-size: 17px; margin-bottom: 7px; }
+  .guide-line { font-size: 15px; gap: 10px; line-height: 1.9; }
+  .guide-key { min-width: 76px; padding: 2px 8px; }
 }
 
 .joy-base { display: none; position: fixed; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.18); border: 3px solid rgba(255,255,255,.5); pointer-events: none; z-index: 10; }
@@ -164,7 +164,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
   .score-pops { left: 70px; top: 56px; }
   .score-pop { font-size: 16px; }
   .debug-help { display: none !important; }
-  .feed { font-size: 16px; bottom: 60px; }
+  .feed { font-size: 12px; bottom: 60px; }
   .server-feed { width: 94vw; top: 70px; }
   .server-line { font-size: 14px; padding: 7px 10px; border-width: 2px; }
 }

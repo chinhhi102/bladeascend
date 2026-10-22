@@ -8,7 +8,7 @@
   "sword": {
     "start_count": 1, "min_count": 0,
     "max_swords": [60, 120, 160, 200, 240, 280, 320, 360, 400],
-    "swords_per_ring": 20, "length": 80, "width": 12, "hilt_gap": 6,
+    "ring_step": 10, "length": 80, "width": 12, "hilt_gap": 6,
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35, "tilt_tween_secs": 0.1,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
     "rev_secs": 1.0, "flip_cooldown": 0.3,
