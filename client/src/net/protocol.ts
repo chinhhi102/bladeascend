@@ -17,6 +17,7 @@ export interface PlayerState {
   fl: number; // flags
   ck?: number; // crack
   xp: number;
+  ti?: number; // room title badge 1..3 (spec §11.3)
   nm?: string;
   ch?: string;
 }
@@ -74,9 +75,18 @@ export interface Welcome {
 
 export interface LeaderboardMsg {
   t: 'lb';
-  top: { id: number; nm: string; xp: number; L: number }[];
+  top: { id: number; nm: string; xp: number; L: number; sc: number; ti?: number }[];
   rank: number;
   total: number;
+  ms: number; // my Uy Danh (spec §11.1)
+  // Minimap markers, the only off-screen positions the client may know (spec §12.1).
+  t1?: boolean;
+  t1x?: number;
+  t1y?: number;
+  ch?: boolean;
+  chx?: number;
+  chy?: number;
+  chw?: boolean; // still in the 10s warning
 }
 
 export interface FeedMsg {
@@ -96,6 +106,11 @@ export interface DeadMsg {
   kills: number;
   survive: number;
   rank: number;
+  score: number;
+  hits: number;
+  score_by: Record<string, number> | null;
+  dai_thua_secs: number;
+  top1_secs: number;
 }
 
 export interface PongMsg {

@@ -7,19 +7,22 @@ import { STR } from './strings';
 interface Row {
   name: string;
   character: string;
+  score: number;
+  hits: number;
   peak_exp: number;
   peak_level: number;
   kills: number;
+  dai_thua_secs: number;
 }
 
 const MEDALS = ['gold', 'silver', 'bronze'];
 
-/** leaderboardScreen: tabs Hôm nay / Tuần này / Mọi thời đại × Tu Vi Đỉnh Cao / Sát Thần (spec §11). */
+/** leaderboardScreen: Hôm nay / Tuần này / Mọi thời đại × Uy Danh / Sát Thần / Thần Tốc (§11.2). */
 export function leaderboardScreen(cfg: GameConfig, onBack: () => void): HTMLElement {
   const root = h('div', 'screen board');
   const panel = h('div', 'panel wide');
   let period = 'day';
-  let metric = 'exp';
+  let metric = 'score';
   const table = h('div', 'lb-table');
   const periods = h('div', 'tabs');
   const metrics = h('div', 'tabs');
@@ -35,7 +38,7 @@ export function leaderboardScreen(cfg: GameConfig, onBack: () => void): HTMLElem
   const load = async (): Promise<void> => {
     table.replaceChildren(h('div', 'muted', STR.lbLoading));
     try {
-      const res = await fetch(`/api/leaderboard?period=${period}&metric=${metric}`);
+      const res = await fetch(`/api/leaderboard?period=${period}&board=${metric}`);
       const data = (await res.json()) as { rows: Row[] };
       renderRows(cfg, table, data.rows, metric);
     } catch {
@@ -45,8 +48,9 @@ export function leaderboardScreen(cfg: GameConfig, onBack: () => void): HTMLElem
   tab(periods, STR.lbToday, 'day', (v) => (period = v), true);
   tab(periods, STR.lbWeek, 'week', (v) => (period = v), false);
   tab(periods, STR.lbAll, 'all', (v) => (period = v), false);
-  tab(metrics, STR.lbExp, 'exp', (v) => (metric = v), true);
-  tab(metrics, STR.lbKills, 'kills', (v) => (metric = v), false);
+  tab(metrics, STR.lbScore, 'score', (v) => (metric = v), true);
+  tab(metrics, STR.lbKills, 'hits', (v) => (metric = v), false);
+  tab(metrics, STR.lbSpeed, 'speed', (v) => (metric = v), false);
   panel.append(h('h2', '', STR.lbTitle), periods, metrics, table, button(STR.back, 'btn', onBack));
   root.append(panel);
   void load();
@@ -55,7 +59,7 @@ export function leaderboardScreen(cfg: GameConfig, onBack: () => void): HTMLElem
 
 function renderRows(cfg: GameConfig, table: HTMLElement, rows: Row[], metric: string): void {
   if (!rows.length) {
-    table.replaceChildren(h('div', 'muted', STR.lbEmpty));
+    table.replaceChildren(h('div', 'muted', metric === 'speed' ? STR.lbEmptySpeed : STR.lbEmpty));
     return;
   }
   const list = rows.map((r, i) => {
@@ -66,7 +70,10 @@ function renderRows(cfg: GameConfig, table: HTMLElement, rows: Row[], metric: st
       rank.replaceChildren(img);
     }
     const realm = cfg.cultivation.realms[realmOf(cfg, r.peak_level)] ?? '';
-    const value = metric === 'kills' ? String(r.kills) : Math.round(r.peak_exp).toLocaleString('vi-VN');
+    const value =
+      metric === 'hits' ? String(r.hits)
+      : metric === 'speed' ? STR.secs(r.dai_thua_secs)
+      : Math.round(r.score).toLocaleString('vi-VN');
     return h('div', 'lb-row', rank, h('span', 'nm', r.name), h('span', 'realm', STR.realmTier(realm, tierOf(cfg, r.peak_level))), h('span', 'val', value));
   });
   table.replaceChildren(...list);

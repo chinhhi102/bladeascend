@@ -66,18 +66,39 @@ export const STR = {
     return m > 0 ? `${m} phút ${r} giây` : `${r} giây`;
   },
 
-  // Global leaderboard (spec §11)
+  // Global leaderboard (spec §11.2)
   lbTitle: 'Bảng xếp hạng',
   lbToday: 'Hôm nay',
   lbWeek: 'Tuần này',
   lbAll: 'Mọi thời đại',
-  lbExp: 'Tu Vi Đỉnh Cao',
+  lbScore: 'Uy Danh',
   lbKills: 'Sát Thần',
+  lbSpeed: 'Thần Tốc',
   lbEmpty: 'Chưa có ai ghi danh. Vào chém đi!',
+  lbEmptySpeed: 'Chưa ai lên tới Đại Thừa. Cơ hội của bạn đây!',
   lbName: 'Tên',
   lbRealm: 'Cảnh giới',
   lbLoading: 'Đang tải...',
   lbError: 'Không tải được bảng xếp hạng.',
+
+  // Uy Danh (spec §11.1)
+  score: 'Uy Danh',
+  scoreHud: (n: number) => `Uy Danh ${Math.round(n).toLocaleString('vi-VN')}`,
+  scorePop: (n: number) => `+${Math.round(n).toLocaleString('vi-VN')}`,
+  scoreUpset: 'LẬT KÈO!',
+  scoreSources: {
+    hit: 'Chém trúng người',
+    kill: 'Chém chết',
+    breakthrough: 'Đột phá cảnh giới',
+    top1: 'Giữ ngôi Top 1',
+  } as Record<string, string>,
+  hits: 'Số lần chém trúng',
+  toDaiThua: 'Thời gian lên Đại Thừa',
+  top1Held: 'Thời gian giữ Top 1',
+  notReached: 'Chưa đạt',
+
+  // Danh hiệu Top 1–3 trong phòng (spec §11.3). Thứ tự khớp config `titles`.
+  titles: ['Bần tăng chưa ngán ai bao giờ', 'Ngon thì nhào vô', 'Chỗ này nhiều máu nè'],
 
   // Kill feed (spec §7) — mỗi dòng bốc ngẫu nhiên một cách nói cho đỡ nhàm
   feed: {
@@ -103,6 +124,8 @@ export const STR = {
       `${a} bước vào ${realm}, trời đất đổi màu`,
       `${a} vừa lên ${realm} — tuyệt đối điện ảnh`,
     ]),
+    title_gain: (a: string) => `${a} đã lên ngôi "Bần tăng chưa ngán ai bao giờ"!`,
+    title_lose: (a: string) => `${a} bị hạ bệ, bần tăng giờ đã ngán`,
     gate_kill: (a: string, b: string) => pick([
       `${b} chui cổng ra liền bị ${a} chém, đen thôi đỏ quên đi`,
       `${b} vừa ló đầu khỏi cổng đã ăn kiếm của ${a}`,
@@ -130,6 +153,7 @@ export const STR = {
     teleport_out: ['Tui biến đây!', 'Bái bai nha!', 'Hẹn gặp bên kia!', 'Chui cổng cái đã!'],
     death: ['Thôi xong...', 'Tui đi trước nha!', 'Hẹn kiếp sau!', 'Tin được không trời!'],
     respawn: ['Tui lại về rồi!', 'Chưa hết đâu nha!', 'Hồi sinh, chém tiếp!', 'Nghỉ tí rồi tu lại!'],
+    no_swords: ['Hết kiếm rồi!', 'Tui tay không nè!', 'Ai cho mượn cây kiếm...', 'Thôi chạy đã!'],
     bush: ['Suỵt...', 'Không có ai ở đây đâu.', 'Tui là cái bụi cỏ.', 'Đừng nhìn, đừng nhìn...'],
     shocked: ['Hả???', 'Trời đất ơi!', 'Ghê vậy!', 'Gì cơ?!', 'Ông này ghê quá!', 'Tuyệt đối điện ảnh!'],
   } as Record<string, string[]>,
@@ -158,6 +182,7 @@ export const STR = {
   } as Record<string, string>,
 
   rotateHint: 'Xoay ngang điện thoại để nhìn rộng hơn',
+  minimapToggle: 'Phím M: phóng to bản đồ',
 };
 
 export function pick<T>(list: T[]): T {

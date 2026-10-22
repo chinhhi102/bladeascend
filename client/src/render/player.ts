@@ -5,7 +5,8 @@ import type { PlayerFrame } from '../net/state';
 import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { animShort, initials } from './catalog';
-import { BUFF_COLORS, charColor } from './palette';
+import { BUFF_COLORS, charColor, TITLE_COLORS } from './palette';
+import { STR } from '../ui/strings';
 import { SwordRing } from './swordring';
 
 // Visual proportions relative to the body hitbox radius (not balance numbers).
@@ -39,6 +40,8 @@ export class PlayerSprite {
   private readonly bodyBox = new Container();
   private body: AnimatedSprite | Container | null = null;
   private readonly label: Text;
+  private readonly title: Text; // danh hiệu Top 1–3 phòng (spec §11.3)
+  private titleRank = 0;
   private readonly atlas: AnimSet | null;
   private mood = '';
   private bubble: Container | null = null;
@@ -50,7 +53,7 @@ export class PlayerSprite {
     readonly id: number,
     name: string,
     readonly char: string,
-    isMe: boolean,
+    private readonly isMe: boolean,
   ) {
     this.atlas = assets.atlas(`characters/${char}`);
     this.swordRing = new SwordRing(cfg);
@@ -59,7 +62,13 @@ export class PlayerSprite {
       style: { fontFamily: 'system-ui, sans-serif', fontSize: 15, fontWeight: '700', fill: isMe ? 0xfff3a0 : 0xffffff, stroke: { color: 0x000000, width: 4 } },
     });
     this.label.anchor.set(0.5, 1);
-    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.label);
+    this.title = new Text({
+      text: '',
+      style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '800', fill: 0xffd700, stroke: { color: 0x000000, width: 4 } },
+    });
+    this.title.anchor.set(0.5, 1);
+    this.title.visible = false;
+    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.label, this.title);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -97,10 +106,29 @@ export class PlayerSprite {
     this.updateBody(s.md, r, Math.cos(s.f) < 0);
     this.drawAura(s.bf, r, now);
     this.applyAlpha(s.fl, now);
-    this.label.position.set(0, -r * (CHAR_HEIGHT_PER_R - FEET_BELOW_CENTER) - 4 / zoom);
+    const headY = -r * (CHAR_HEIGHT_PER_R - FEET_BELOW_CENTER) - 4 / zoom;
+    this.label.position.set(0, headY);
     this.label.scale.set(1 / zoom);
+    this.updateTitle(s.ti ?? 0, headY, zoom);
     this.swordRing.update(f, now, showHitbox);
     this.updateBubble(r, zoom, now);
+  }
+
+  // Danh hiệu nằm ngay trên tên. Server đã bỏ `ti` với người đang Ẩn Thân nên danh hiệu tự
+  // ẩn theo, không làm lộ vị trí (spec §11.3).
+  private updateTitle(rank: number, headY: number, zoom: number): void {
+    if (rank !== this.titleRank) {
+      this.titleRank = rank;
+      const name = STR.titles[rank - 1] ?? '';
+      this.title.text = rank === 1 ? `👑 ${name}` : name;
+      this.title.style.fill = TITLE_COLORS[rank - 1] ?? 0xffffff;
+      this.title.visible = rank > 0;
+    }
+    if (!this.title.visible) {
+      return;
+    }
+    this.title.position.set(0, headY - this.label.height - 2 / zoom);
+    this.title.scale.set(1 / zoom);
   }
 
   private drawShadow(r: number): void {
@@ -183,8 +211,17 @@ export class PlayerSprite {
 
   private applyAlpha(flags: number, now: number): void {
     let a = 1;
-    if (flags & FLAG.stealth || flags & FLAG.bush) {
-      a = 0.45; // only visible because we're allowed to see it (self or close by)
+    const stealth = (flags & FLAG.stealth) !== 0;
+    if (stealth && !this.isMe) {
+      // Spec §6.2: Ẩn Thân = tàng hình 80%, nhìn thấy lờ mờ chứ không biến mất hẳn.
+      a = this.cfg.buffs.stealth?.visible_alpha ?? 0.2;
+    } else if (flags & FLAG.bush || stealth) {
+      a = 0.45; // in a bush, or my own stealth so I can tell the buff is up
+    }
+    // Ẩn Thân giấu luôn tên và danh hiệu của người khác.
+    this.label.visible = !stealth || this.isMe;
+    if (stealth && !this.isMe) {
+      this.title.visible = false;
     }
     if (flags & FLAG.invuln && Math.floor(now * 10) % 2 === 0) {
       a *= 0.4; // blink while invulnerable (spec §5.1)

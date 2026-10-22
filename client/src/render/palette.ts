@@ -27,6 +27,9 @@ export const BUFF_COLORS: Record<string, number> = {
 
 export const GATE_COLORS: Record<string, number> = { purple: 0xa55bff, blue: 0x3a86ff, orange: 0xff8c1a };
 
+// Top 1–3 room title colours: vàng kim / bạc / đồng (spec §11.3).
+export const TITLE_COLORS = [0xffd700, 0xd8dde3, 0xcd7f32];
+
 export const MONSTER_VARIANTS: Record<string, string[]> = {
   small: ['banh_bao_cau', 'dep_lao'],
   medium: ['noi_com', 'ga_hoang'],

@@ -51,7 +51,7 @@ class App {
     this.screens = new Screens(overlay);
     this.scene = new GameScene(cfg);
     this.world = new ClientWorld(cfg);
-    this.hud = new Hud(cfg);
+    this.hud = new Hud(cfg, Input.isTouchDevice());
     this.input = new Input(stage);
     this.conn = new Conn((m) => this.onMessage(m));
     this.thresholds = levelThresholds(cfg);
@@ -61,7 +61,13 @@ class App {
     await this.scene.init(stage, fpsCap());
     this.scene.app.ticker.add((t) => this.frame(t.deltaMS / 1000));
     window.setInterval(() => this.sendInput(), 1000 / this.cfg.net.tick_hz);
-    window.addEventListener('keydown', (e) => this.debugKey(e));
+    window.addEventListener('keydown', (e) => {
+      if (this.playing && e.code === 'KeyM' && !e.repeat) {
+        this.hud.minimap.toggle(); // spec §12.1
+        return;
+      }
+      this.debugKey(e);
+    });
     this.conn.connect(
       () => undefined,
       () => {
@@ -142,6 +148,7 @@ class App {
     const map = (await res.json()) as GameMap;
     this.world.reset(w, map);
     this.scene.setWorld(this.world);
+    this.hud.minimap.setMap(map);
     this.debug = w.debug;
     this.hud.setDebug(w.debug);
     this.screens.show(null);
@@ -202,7 +209,12 @@ class App {
       return;
     }
     this.scene.render(dt);
-    this.hud.update(this.world.me(), this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
+    const me = this.world.me();
+    this.hud.update(me, this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
+    if (me) {
+      const view = this.scene.viewSize();
+      this.hud.minimap.render(me.x, me.y, me.f, view.w, view.h, performance.now() / 1000);
+    }
   }
 }
 

@@ -6,6 +6,7 @@ import { BUFFS } from '../net/protocol';
 import { assets } from '../render/assets';
 import { BUFF_COLORS } from '../render/palette';
 import { button, h } from './dom';
+import { Minimap } from './minimap';
 import { STR } from './strings';
 
 const FEED_KEEP = 5;
@@ -18,6 +19,8 @@ export class Hud {
   private readonly realm = h('div', 'realm');
   private readonly expFill = h('div', 'exp-fill');
   private readonly swords = h('div', 'swords');
+  private readonly scoreBox = h('div', 'score');
+  private readonly pops = h('div', 'score-pops');
   private readonly buffs = h('div', 'buffs');
   private readonly board = h('div', 'room-board');
   private readonly feed = h('div', 'feed');
@@ -28,12 +31,17 @@ export class Hud {
   private bannerUntil = 0;
   private lastLevel = -1;
 
-  constructor(private readonly cfg: GameConfig) {
+  readonly minimap: Minimap;
+
+  constructor(private readonly cfg: GameConfig, isTouch = false) {
+    this.minimap = new Minimap(cfg, isTouch);
     const mute = button('🔊', 'mute', () => {
       mute.textContent = sound.toggleMute() ? '🔇' : '🔊';
     });
     this.root.append(
-      h('div', 'status', this.badge, h('div', 'status-text', this.realm, h('div', 'exp-bar', this.expFill), this.swords)),
+      this.minimap.root,
+      h('div', 'status', this.badge, h('div', 'status-text', this.realm, h('div', 'exp-bar', this.expFill), this.swords, this.scoreBox)),
+      this.pops,
       this.buffs,
       this.board,
       this.feed,
@@ -104,7 +112,11 @@ export class Hud {
   onEvents(events: GameEvent[], myId: number): void {
     const now = performance.now() / 1000;
     for (const e of events) {
-      if (e.k === 'BuffStart' && e.a === myId && e.s) {
+      if (e.k === 'Score' && e.a === myId) {
+        // Điểm vượt mức cơ bản của một lần chém = có nhân lật kèo (spec §11.1).
+        const base = this.cfg.score?.hit_base ?? 100;
+        this.popScore(e.n ?? 0, e.s ?? '', e.s === 'hit' && (e.n ?? 0) > base);
+      } else if (e.k === 'BuffStart' && e.a === myId && e.s) {
         const total = (e.n ?? 0) / 1000;
         this.buffEnds.set(e.s, { end: now + total, total });
       } else if (e.k === 'ChestIncoming') {
@@ -119,11 +131,33 @@ export class Hud {
     this.bannerUntil = performance.now() / 1000 + secs;
   }
 
+  /** setLeaderboard draws the room top 10: realm+tier order, Uy Danh, Top 1–3 badges (§11.2). */
   setLeaderboard(lb: LeaderboardMsg, myId: number): void {
-    const rows = lb.top.map((e, i) =>
-      h('div', `lb-line${e.id === myId ? ' me' : ''}`, h('span', '', `${i + 1}. ${e.nm}`), h('span', '', Math.round(e.xp).toLocaleString('vi-VN'))),
-    );
+    this.minimap.setLeaderboard(lb);
+    this.scoreBox.textContent = STR.scoreHud(lb.ms ?? 0);
+    const rows = lb.top.map((e, i) => {
+      const line = h('div', `lb-line${e.id === myId ? ' me' : ''}`);
+      const realm = this.cfg.cultivation.realms[realmOf(this.cfg, e.L)] ?? '';
+      const who = h('span', 'lb-who', `${i + 1}. ${e.nm}`);
+      if (e.ti) {
+        const badge = h('span', `lb-title t${e.ti}`, e.ti === 1 ? '👑' : '');
+        badge.title = STR.titles[e.ti - 1] ?? '';
+        who.prepend(badge);
+      }
+      line.append(who, h('span', 'lb-realm', STR.realmTier(realm, tierOf(this.cfg, e.L))), h('span', 'lb-score', Math.round(e.sc ?? 0).toLocaleString('vi-VN')));
+      return line;
+    });
     this.board.replaceChildren(h('div', 'board-title', STR.roomTop), ...rows, h('div', 'my-rank', STR.yourRank(lb.rank, lb.total)));
+  }
+
+  /** popScore floats a "+800 LẬT KÈO!" number up when Uy Danh is earned (spec §11.1). */
+  private popScore(points: number, source: string, upset: boolean): void {
+    const el = h('div', `score-pop ${source}`, upset ? `${STR.scorePop(points)} ${STR.scoreUpset}` : STR.scorePop(points));
+    this.pops.prepend(el);
+    while (this.pops.children.length > 4) {
+      this.pops.lastElementChild?.remove();
+    }
+    window.setTimeout(() => el.remove(), 1600);
   }
 
   addFeed(f: FeedMsg): void {
@@ -133,6 +167,8 @@ export class Hud {
       : f.k === 'realm_drop' ? STR.feed.realm_drop(f.a, f.b ?? '', realm)
       : f.k === 'breakthrough' ? STR.feed.breakthrough(f.a, realm)
       : f.k === 'gate_kill' ? STR.feed.gate_kill(f.a, f.b ?? '')
+      : f.k === 'title_gain' ? STR.feed.title_gain(f.a)
+      : f.k === 'title_lose' ? STR.feed.title_lose(f.a)
       : '';
     if (!text) {
       return;

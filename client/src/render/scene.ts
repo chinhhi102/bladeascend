@@ -33,6 +33,11 @@ export class GameScene {
 
   constructor(private readonly cfg: GameConfig) {}
 
+  /** viewSize is the world-space rectangle currently on screen (used by the minimap, §12.1). */
+  viewSize(): { w: number; h: number } {
+    return { w: this.viewH * (this.app.screen.width / Math.max(this.app.screen.height, 1)), h: this.viewH };
+  }
+
   async init(parent: HTMLElement, maxFps: number): Promise<void> {
     await this.app.init({
       resizeTo: window,
