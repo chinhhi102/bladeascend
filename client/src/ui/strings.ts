@@ -43,6 +43,22 @@ export const STR = {
     'Ăn một nhát kiếm, ngộ ra chân lý: chạy nhanh hơn.',
     'Đạo tâm vỡ vụn như bánh tráng.',
     'Thôi thì kiếp sau làm quái cho đỡ khổ.',
+    'Tu được ba hôm, nằm viện ba tháng.',
+    'Cảnh giới cao nhất bạn đạt được: cảnh giới nằm.',
+    'Người ta phi thăng, bạn phi ra khỏi bản đồ.',
+    'Sư phụ dặn né, bạn đứng lại ngắm.',
+    'Độ kiếp thất bại ngay tại tầng gửi xe.',
+    'Tu vi của bạn: đang trong quá trình tích lũy lại từ đầu.',
+    'Kiếm người ta xoay, kiếm bạn xoay xuống đất.',
+    'Linh khí trời đất không cứu nổi tốc độ phản xạ của bạn.',
+    'Chốt đơn: một vé về quê, không hoàn không huỷ.',
+    'Bạn đi rồi, bản đồ thoáng hẳn ra.',
+    'Thọ nguyên còn dài, nhưng kiếm người ta dài hơn.',
+    'Có cái nịt, không có cái mạng.',
+    'Đạo hữu nằm xuống, nhạc nền nổi lên.',
+    'Hẹn gặp lại ở quán trà đá cuối thôn.',
+    'Thiên đạo nhắn: "Thử lại sau nhé."',
+    'Bế quan mãi mãi, không ai làm phiền nữa.',
   ],
   secs: (s: number) => {
     const m = Math.floor(s / 60);
@@ -63,28 +79,59 @@ export const STR = {
   lbLoading: 'Đang tải...',
   lbError: 'Không tải được bảng xếp hạng.',
 
-  // Kill feed (spec §7)
+  // Kill feed (spec §7) — mỗi dòng bốc ngẫu nhiên một cách nói cho đỡ nhàm
   feed: {
-    kill: (a: string, b: string) => `${a} vừa tiễn ${b} về quê nuôi cá`,
-    realm_drop: (a: string, b: string, realm: string) => `${b} bị ${a} chém rớt xuống ${realm}`,
-    breakthrough: (a: string, realm: string) => `${a} đột phá ${realm}, cả phòng run rẩy`,
-    gate_kill: (a: string, b: string) => `${b} chui cổng ra liền bị ${a} chém, đen thôi đỏ quên đi`,
+    kill: (a: string, b: string) => pick([
+      `${a} vừa tiễn ${b} về quê nuôi cá`,
+      `${a} tặng ${b} một vé về quê, không hoàn không huỷ`,
+      `${b} bị ${a} chém bay cả giấc mộng tu tiên`,
+      `${a} dọn dẹp ${b} gọn gàng sạch sẽ`,
+      `${b} nằm xuống, ${a} phủi tay đi tiếp`,
+      `${a} vừa cho ${b} bế quan vĩnh viễn`,
+    ]),
+    realm_drop: (a: string, b: string, realm: string) => pick([
+      `${b} bị ${a} chém rớt xuống ${realm}`,
+      `${a} đạp ${b} về lại ${realm}`,
+      `${b} tu bao ngày, về ${realm} trong một nhát của ${a}`,
+      `${a} dạy ${b} một bài: ${realm} thôi nhé`,
+      `${b} rớt xuống ${realm}, công sức bay theo gió`,
+    ]),
+    breakthrough: (a: string, realm: string) => pick([
+      `${a} đột phá ${realm}, cả phòng run rẩy`,
+      `${a} lên ${realm} rồi, ai nhanh chân thì chạy`,
+      `Linh khí dồn về một chỗ: ${a} chạm ${realm}`,
+      `${a} bước vào ${realm}, trời đất đổi màu`,
+      `${a} vừa lên ${realm} — tuyệt đối điện ảnh`,
+    ]),
+    gate_kill: (a: string, b: string) => pick([
+      `${b} chui cổng ra liền bị ${a} chém, đen thôi đỏ quên đi`,
+      `${b} vừa ló đầu khỏi cổng đã ăn kiếm của ${a}`,
+      `${a} ngồi canh cổng, ${b} xui xẻo bước ra`,
+      `${b} dịch chuyển hết một vòng để tới chỗ ${a} chết`,
+    ]),
   },
 
-  // Emote bubbles (ART_PROMPTS §10)
+  // Emote bubbles (ART_PROMPTS §10). Khoá = tên sự kiện emote của server hoặc tên mood (§12).
+  // Giữ câu ngắn: bong bóng chỉ hiện 1.8s và xuống dòng ở 220px.
+  // Cố tình KHÔNG có khoá 'idle': người chơi dừng/đi liên tục nên sẽ lải nhải quá nhiều.
   emotes: {
-    sword_lost: ['Kiếm của taaa!'],
-    shield_break: ['Khiên ơi!', 'Vỡ rồi!'],
-    chest: ['Trúng mánh!', 'Giàu rồi!'],
-    revealed: ['Lộ rồi!', 'Ối!'],
-    run: ['AAAAA!', 'Tránh ra!'],
-    chase: ['Hehehe...', 'Đứng lại đó!'],
-    flee: ['Cứu tôi với!', 'Mẹ ơi!'],
-    hit: ['Ối giời!', 'Đau quá!'],
-    breakthrough: ['Ta đã ngộ rồi!!!'],
-    teleport_in: ['Đây là đâu???'],
-    bush: ['Suỵt...'],
-    shocked: ['Hả???', 'Trời đất ơi!', 'Ghê vậy!'],
+    sword_lost: ['Kiếm của taaa!', 'Trả kiếm đây!', 'Kiếm mới mua mà!', 'Rụng mất một cây rồi!', 'Ai nhặt là mất dạy đó!'],
+    shield_break: ['Khiên ơi!', 'Vỡ rồi!', 'Khiên giấy à trời!', 'Mới đeo được 3 giây!', 'Bảo hành đâu?!'],
+    chest: ['Trúng mánh!', 'Giàu rồi!', 'Đổi đời rồi bà con!', 'Hôm nay số đỏ!', 'Toàn đồ xịn!', 'Ét ô ét, giàu quá!'],
+    revealed: ['Lộ rồi!', 'Ối!', 'Sao thấy tui hay vậy?', 'Chưa núp xong mà!', 'Thôi xong, lộ hàng!'],
+    run: ['AAAAA!', 'Tránh ra!', 'Xe tui không phanh!', 'Dô dô dô!', 'Chân ơi cố lên!', 'Nhanh nhanh nhanh!'],
+    chase: ['Hehehe...', 'Đứng lại đó!', 'Chạy đâu cho thoát!', 'Lại đây cưng!', 'Đứng im một nhát thôi!', 'Ngon, con mồi kìa!', 'Đạo hữu, dừng bước!'],
+    flee: ['Cứu tôi với!', 'Mẹ ơi!', 'Tui còn nhỏ lắm!', 'Nhầm người rồi!', 'Tha cho đệ!', 'Đệ xin hàng!', 'Không đánh nhau, hoà bình!'],
+    hit: ['Ối giời!', 'Đau quá!', 'Á đù!', 'Chơi bẩn!', 'Hự!', 'Ai đánh lén đó?!', 'Nhẹ tay coi!'],
+    breakthrough: ['Ta đã ngộ rồi!!!', 'Thiên địa chứng giám!', 'Lên cảnh giới rồi nha!', 'Nhìn ta đây này!', 'Cảm tạ trời đất!'],
+    levelup: ['Lên tầng!', 'Thơm quá!', 'Tiến bộ rồi nha!', 'Thêm tí tu vi!', 'Mượt!'],
+    realm_drop: ['Mất cảnh giới rồi!', 'Công sức bao ngày...', 'Tụt hạng đau quá!', 'Làm lại từ đầu vậy!', 'Trời không thương tui!'],
+    teleport_in: ['Đây là đâu???', 'Ủa? Lạc rồi!', 'Cổng gì chóng mặt vậy!', 'Ai đưa tui tới đây?', 'Về nhầm nhà rồi!'],
+    teleport_out: ['Tui biến đây!', 'Bái bai nha!', 'Hẹn gặp bên kia!', 'Chui cổng cái đã!'],
+    death: ['Thôi xong...', 'Tui đi trước nha!', 'Hẹn kiếp sau!', 'Tin được không trời!'],
+    respawn: ['Tui lại về rồi!', 'Chưa hết đâu nha!', 'Hồi sinh, chém tiếp!', 'Nghỉ tí rồi tu lại!'],
+    bush: ['Suỵt...', 'Không có ai ở đây đâu.', 'Tui là cái bụi cỏ.', 'Đừng nhìn, đừng nhìn...'],
+    shocked: ['Hả???', 'Trời đất ơi!', 'Ghê vậy!', 'Gì cơ?!', 'Ông này ghê quá!', 'Tuyệt đối điện ảnh!'],
   } as Record<string, string[]>,
 
   characters: {

@@ -344,6 +344,10 @@ Mỗi cặp/mạng cổng một màu (tím, xanh lam, cam) để người chơi 
 | Khiên vỡ | 6 | `{STYLE} golden bubble shield cracking and bursting into glass shards, frame {i} of 6` |
 
 Bong bóng thoại (UI): sinh khung trống `{STYLE} empty white comic speech bubble with black outline`; chữ do game render (dùng font hỗ trợ tiếng Việt).
+Toàn bộ câu thoại nằm trong `client/src/ui/strings.ts` → `STR.emotes`, mỗi khoá là một mảng và game bốc ngẫu nhiên (`pick`). Khoá = tên sự kiện `Emote` của server (`sword_lost`, `shield_break`, `chest`, `revealed`, `shocked`) hoặc tên mood §12 (`run`, `chase`, `flee`, `hit`, `levelup`, `breakthrough`, `realm_drop`, `teleport_in`, `teleport_out`, `death`, `respawn`). Thêm câu mới = thêm chuỗi vào mảng, không cần sửa code.
+
+Hai ràng buộc khi viết thoại: bong bóng chỉ hiện **1.8s** và tự xuống dòng ở **220px** (cỡ chữ 16) → câu nên dưới ~30 ký tự. Cố tình **không** có khoá `idle`: người chơi dừng/đi liên tục nên nhân vật sẽ lải nhải không ngớt.
+
 Gợi ý câu thoại: `run`: "AAAAA!", "Tránh ra!"; `chase`: "Hehehe...", "Đứng lại đó!"; `flee`: "Cứu tôi với!", "Mẹ ơi!"; `hit`: "Ối giời!", "Đau quá!"; `breakthrough`: "Ta đã ngộ rồi!!!"; mất kiếm: "Kiếm của taaa!"; ra cổng: "Đây là đâu???"; nấp bụi: "Suỵt...".
 
 ## 11. UI
