@@ -2,7 +2,7 @@
 // into assets/ following docs/ART_PROMPTS.md.
 //
 //	go run ./cmd/artgen plan                 # list jobs
-//	go run ./cmd/artgen run -c 2 -p 2        # generate missing images up to priority 2
+//	go run ./cmd/artgen run -p 2             # send each missing prompt once, one at a time (-gap 30s)
 //	go run ./cmd/artgen prep                 # remove backgrounds, slice sheets, build atlases + manifest
 package main
 
@@ -29,7 +29,8 @@ func main() {
 		os.Exit(2)
 	}
 	fs := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
-	conc := fs.Int("c", 2, "concurrent minigen jobs")
+	conc := fs.Int("c", 1, "concurrent minigen jobs (keep 1: minigen answers \"too many requests\")")
+	gap := fs.Duration("gap", 30*time.Second, "pause between prompts")
 	maxPri := fs.Int("p", 9, "only jobs with priority <= p")
 	only := fs.String("only", "", "only jobs whose name contains this text (comma separated)")
 	redo := fs.Bool("redo", false, "regenerate even if the raw image exists")
@@ -47,7 +48,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		run(mg, jobs, assets, runOpts{conc: *conc, redo: *redo, limit: *limit})
+		run(mg, jobs, assets, runOpts{conc: *conc, gap: *gap, redo: *redo, limit: *limit})
 	case "prep":
 		prepAll(jobs, assets)
 	case "prompts":
@@ -211,6 +212,7 @@ func (s *state) get(name string) string {
 type runOpts struct {
 	conc, limit int
 	redo        bool
+	gap         time.Duration
 }
 
 func run(mg *minigen, jobs []Job, assets string, o runOpts) {
@@ -249,6 +251,9 @@ func run(mg *minigen, jobs []Job, assets string, o runOpts) {
 			log.Printf("reached -n %d; run again later for the rest", o.limit)
 			break
 		}
+		if sent > 0 {
+			time.Sleep(o.gap)
+		}
 		queue <- j
 		sent++
 	}
@@ -257,38 +262,55 @@ func run(mg *minigen, jobs []Job, assets string, o runOpts) {
 	log.Printf("done: %d ok, %d failed", okN, failN)
 }
 
-// generate submits (or resumes) one job and downloads its image, retrying on quota/account errors.
+// generate sends the prompt to minigen exactly once and downloads its image. Only a
+// rejected submit (HTTP 429 / quota, so no job was created) is retried. A job that was
+// created is never resubmitted: if it times out its id is kept and the next run resumes it.
 func generate(mg *minigen, st *state, j Job, dest string) error {
+	id := st.get(j.Name)
+	if id == "" {
+		out, err := submitOnce(mg, j.Prompt)
+		if err != nil {
+			return err
+		}
+		id = out.ID
+		st.set(j.Name, id)
+	}
+	out, err := waitJob(mg, id)
+	if err != nil {
+		if out != nil && out.Status == "failed" {
+			st.set(j.Name, "") // a failed job cannot be resumed; rerun with care, it costs quota
+		}
+		return err
+	}
+	if err := mg.download(out.imageURL(), dest); err != nil {
+		return err // id kept: the next run downloads it again without a new prompt
+	}
+	st.set(j.Name, "")
+	return nil
+}
+
+// submitOnce retries only while the service refuses to accept the job.
+func submitOnce(mg *minigen, prompt string) (*jobOut, error) {
 	var lastErr error
-	for attempt := 0; attempt < 6; attempt++ {
-		id := st.get(j.Name)
-		if id == "" {
-			out, err := mg.submit(j.Prompt)
-			if err != nil {
-				lastErr = err
-				time.Sleep(backoff(attempt))
-				continue
-			}
-			id = out.ID
-			st.set(j.Name, id)
-		}
-		out, err := waitJob(mg, id)
+	for attempt := 0; attempt < 4; attempt++ {
+		out, err := mg.submit(prompt)
 		if err == nil {
-			err = mg.download(out.imageURL(), dest)
-		}
-		if err == nil {
-			st.set(j.Name, "")
-			return nil
+			return out, nil
 		}
 		lastErr = err
-		st.set(j.Name, "") // resubmit next attempt
-		d, quota := retryDelay(out, attempt)
-		if quota {
-			attempt-- // waiting for quota is not a failed attempt
+		if !rejected(err) {
+			return nil, err
 		}
+		d := backoff(attempt) * 4
+		log.Printf("minigen busy (%v), waiting %s before sending again", truncate(err.Error(), 80), d)
 		time.Sleep(d)
 	}
-	return lastErr
+	return nil, lastErr
+}
+
+func rejected(err error) bool {
+	m := strings.ToLower(err.Error())
+	return strings.Contains(m, "http 429") || strings.Contains(m, "too many") || strings.Contains(m, "quota")
 }
 
 func waitJob(mg *minigen, id string) (*jobOut, error) {
@@ -314,16 +336,3 @@ func waitJob(mg *minigen, id string) (*jobOut, error) {
 }
 
 func backoff(attempt int) time.Duration { return time.Duration(15*(attempt+1)) * time.Second }
-
-// retryDelay waits until the account quota unlocks when the service tells us when.
-func retryDelay(out *jobOut, attempt int) (time.Duration, bool) {
-	if out != nil && out.ResetAt != "" {
-		if t, err := time.Parse(time.RFC3339, out.ResetAt); err == nil {
-			if d := time.Until(t) + 30*time.Second; d > 0 && d < 6*time.Hour {
-				log.Printf("quota locked until %s, waiting %s", out.ResetAt, d.Round(time.Second))
-				return d, true
-			}
-		}
-	}
-	return backoff(attempt), false
-}
