@@ -16,16 +16,15 @@ func TestResolveClashTable(t *testing.T) {
 		lostA, lostB   int
 		crackA, crackB float64
 	}{
-		{"same realm each lose u=5", ClashSide{2, 30, 0}, ClashSide{2, 27, 0}, 5, 5, 0, 0},
-		{"same realm, one at 3 swords loses all 3", ClashSide{0, 3, 0}, ClashSide{0, 40, 0}, 3, 5, 0, 0},
-		{"Trúc Cơ vs Luyện Khí: -5 / -10", ClashSide{1, 60, 0}, ClashSide{0, 50, 0}, 5, 10, 0, 0},
-		{"Kim Đan vs Luyện Khí: -5 / -15", ClashSide{2, 60, 0}, ClashSide{0, 50, 0}, 5, 15, 0, 0},
-		{"Luyện Khí vs Nguyên Anh: -20 / -5", ClashSide{0, 50, 0}, ClashSide{3, 100, 0}, 20, 5, 0, 0},
-		{"Luyện Khí(3) vs Nguyên Anh: crack 3/4", ClashSide{0, 3, 0}, ClashSide{3, 100, 0}, 3, 0, 0, 0.75},
-		{"Đại Thừa vs Luyện Khí: -5 / -45", ClashSide{8, 400, 0}, ClashSide{0, 60, 0}, 5, 45, 0, 0},
+		{"same realm each lose u=1", ClashSide{2, 30, 0}, ClashSide{2, 27, 0}, 1, 1, 0, 0},
+		{"Trúc Cơ vs Luyện Khí: -1 / -2", ClashSide{1, 60, 0}, ClashSide{0, 50, 0}, 1, 2, 0, 0},
+		{"Kim Đan vs Luyện Khí: -1 / -3", ClashSide{2, 60, 0}, ClashSide{0, 50, 0}, 1, 3, 0, 0},
+		{"Luyện Khí vs Nguyên Anh: -4 / -1", ClashSide{0, 50, 0}, ClashSide{3, 100, 0}, 4, 1, 0, 0},
+		{"Luyện Khí(3) vs Nguyên Anh: còn 0, nứt 3/4", ClashSide{0, 3, 0}, ClashSide{3, 100, 0}, 3, 0, 0, 0.75},
+		{"Đại Thừa vs Luyện Khí: -1 / -9", ClashSide{8, 400, 0}, ClashSide{0, 60, 0}, 1, 9, 0, 0},
 		{"low side at 1 sword loses its last one", ClashSide{0, 1, 0}, ClashSide{3, 100, 0.5}, 1, 0, 0, 0.75},
 		{"crack accumulates to a break", ClashSide{3, 100, 0.5}, ClashSide{0, 3, 0}, 1, 3, 0.25, 0},
-		{"high side at 1 sword loses it too", ClashSide{3, 1, 0}, ClashSide{0, 50, 0}, 1, 20, 0, 0},
+		{"high side at 1 sword loses it too", ClashSide{3, 1, 0}, ClashSide{0, 50, 0}, 1, 4, 0, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

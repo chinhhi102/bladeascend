@@ -153,6 +153,7 @@ type Item struct {
 // ObstacleState is the dynamic state of a destructible obstacle (spec §8.2).
 type ObstacleState struct {
 	HP       int
+	Partial  float64 // leftover fractional damage (spec §5.3 damage is not a whole number)
 	Broken   bool
 	BrokenAt float64
 	Warned   bool

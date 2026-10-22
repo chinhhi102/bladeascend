@@ -101,6 +101,21 @@ func (g *Game) updateTop1(dt float64) {
 	g.creditScore(lead, ScoreTop1, g.Cfg.Score.Top1PerSec*dt)
 }
 
+// ChestMarker returns where the minimap should draw the Rương Báu: either the live chest
+// item, or the spot announced during the 10s warning (spec §12.1). warning is true while it
+// has not spawned yet.
+func (g *Game) ChestMarker() (pos Vec, warning, ok bool) {
+	for _, it := range g.Items {
+		if it.Kind == "chest" {
+			return it.Pos, false, true
+		}
+	}
+	if g.chestAt != nil {
+		return *g.chestAt, true, true
+	}
+	return Vec{}, false, false
+}
+
 // updateTitles hands out the Top 1–3 room titles with an anti-flicker hold: a player must
 // keep the new rank for title_hold_secs before the title actually changes (spec §11.3).
 func (g *Game) updateTitles() {

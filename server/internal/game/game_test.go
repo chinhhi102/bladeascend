@@ -169,8 +169,8 @@ func TestClashFlipsBothRings(t *testing.T) {
 	if a.Ring.Dir != -1 || b.Ring.Dir != -1 {
 		t.Fatalf("dirs = %v, %v; want both flipped", a.Ring.Dir, b.Ring.Dir)
 	}
-	if a.Ring.Count != 3 || b.Ring.Count != 3 {
-		t.Fatalf("same realm should lose 5 each: %d, %d", a.Ring.Count, b.Ring.Count)
+	if a.Ring.Count != 7 || b.Ring.Count != 7 {
+		t.Fatalf("cùng cảnh giới phải mất đúng clash_unit = 1 mỗi bên: %d, %d", a.Ring.Count, b.Ring.Count)
 	}
 	away := b.Pos.Sub(a.Pos)
 	if a.KnockVel.Dot(away) >= 0 || b.KnockVel.Dot(away) <= 0 {
@@ -179,6 +179,23 @@ func TestClashFlipsBothRings(t *testing.T) {
 	g.resolveSwordSword() // cooldown 0.3s prevents an immediate second clash
 	if a.Ring.Dir != -1 {
 		t.Fatal("clash cooldown not respected")
+	}
+}
+
+// Spec §5.2 (v3.5): khác cảnh giới thì không ai đổi chiều quay, chỉ bể kiếm.
+func TestClashAcrossRealmsDoesNotFlip(t *testing.T) {
+	g := quietGame(t, nil)
+	low := g.AddPlayer(SpawnOptions{Name: "Low", Level: 0, Swords: 8})
+	high := g.AddPlayer(SpawnOptions{Name: "High", Level: 30, Swords: 8})
+	place(g, low, Vec{X: 5000, Y: 5000}, 0)
+	touchSwords(g, low, high, math.Pi)
+	g.resolveSwordSword()
+	if low.Ring.Dir != 1 || high.Ring.Dir != 1 {
+		t.Fatalf("khác cảnh giới mà vẫn đổi chiều: %v, %v", low.Ring.Dir, high.Ring.Dir)
+	}
+	// Luyện Khí vs Nguyên Anh: bên thấp mất u×k = 1×4 = 4, bên cao mất 1 (crack 4/4).
+	if low.Ring.Count != 4 || high.Ring.Count != 7 {
+		t.Fatalf("số kiếm sau va = %d, %d; muốn 4, 7", low.Ring.Count, high.Ring.Count)
 	}
 }
 
@@ -280,16 +297,58 @@ func TestObstacleBreaksAndRegrowsWhenClear(t *testing.T) {
 }
 
 func TestSwordDamagesObstacleAndSurvives(t *testing.T) {
-	g := quietGame(t, obstacleMap("brick", 150))
+	g := quietGame(t, obstacleMap("brick", 250))
 	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 20, Swords: 1})
 	place(g, p, Vec{}, -math.Pi/2)
 	place(g, p, Vec{X: 6100, Y: 6020}.Sub(bladeMid(p).Sub(p.Pos)), -math.Pi/2)
 	g.hitObstacles(p)
-	if g.Obstacles[0].HP != 150-3 {
-		t.Fatalf("brick HP = %d, want 147 (1 + realm 2)", g.Obstacles[0].HP)
+	// Kim Đan (r=2), 1 kiếm → 1 vòng: damage = (2+1) × 1 = 3 (spec §5.3).
+	if g.Obstacles[0].HP != 250-3 {
+		t.Fatalf("brick HP = %d, want 247", g.Obstacles[0].HP)
 	}
 	if p.Ring.Count != 1 {
 		t.Fatal("sword lost on obstacle")
+	}
+}
+
+// Spec §5.3 (v3.6): damage tính theo người, không theo từng kiếm. Thêm kiếm trong cùng một
+// vòng không làm phá nhanh hơn; chỉ thêm VÒNG mới tăng sức phá (+50%/vòng).
+func TestObstacleDamagePerPlayerNotPerSword(t *testing.T) {
+	hitOnceAt := func(swords int) float64 {
+		g := quietGame(t, obstacleMap("boulder", 800))
+		p := g.AddPlayer(SpawnOptions{Name: "P", Level: 0, Swords: swords})
+		place(g, p, Vec{}, -math.Pi/2)
+		place(g, p, Vec{X: 6100, Y: 6020}.Sub(bladeMid(p).Sub(p.Pos)), -math.Pi/2)
+		g.hitObstacles(p)
+		return float64(800-g.Obstacles[0].HP) + g.Obstacles[0].Partial
+	}
+	one, twenty := hitOnceAt(1), hitOnceAt(20)
+	if one != twenty {
+		t.Fatalf("1 kiếm gây %v, 20 kiếm (vẫn 1 vòng) gây %v — phải bằng nhau", one, twenty)
+	}
+	forty := hitOnceAt(40) // 2 vòng → ×1.5
+	if math.Abs(forty-one*1.5) > 1e-9 {
+		t.Fatalf("2 vòng gây %v, muốn %v (gấp 1.5 lần 1 vòng)", forty, one*1.5)
+	}
+}
+
+// Spec §8.2: một người Luyện Khí đủ 60 kiếm (3 vòng) phá rào tre ≈ 7.5s.
+func TestObstacleBreakTimeMatchesSpec(t *testing.T) {
+	g := quietGame(t, obstacleMap("fence", 30))
+	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 0, Swords: 60})
+	place(g, p, Vec{}, -math.Pi/2)
+	place(g, p, Vec{X: 6100, Y: 6020}.Sub(bladeMid(p).Sub(p.Pos)), -math.Pi/2)
+	start := g.Time
+	for i := 0; i < 30*20 && !g.Obstacles[0].Broken; i++ {
+		g.hitObstacles(p)
+		g.Time += dt
+	}
+	took := g.Time - start
+	if !g.Obstacles[0].Broken {
+		t.Fatal("Luyện Khí 60 kiếm phải phá được rào tre")
+	}
+	if took < 6.5 || took > 8.5 {
+		t.Fatalf("phá rào tre mất %.1fs, spec ghi ≈7.5s", took)
 	}
 }
 

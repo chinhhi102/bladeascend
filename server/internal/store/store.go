@@ -4,20 +4,26 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	_ "modernc.org/sqlite" // pure-Go driver, no CGO
 )
 
-// Life is one player's run from spawn to death.
+// Life is one player's run from spawn to death (spec §11.2).
 type Life struct {
-	GuestID     string  `json:"-"`
-	Name        string  `json:"name"`
-	Character   string  `json:"character"`
-	PeakExp     float64 `json:"peak_exp"`
-	PeakLevel   int     `json:"peak_level"`
-	Kills       int     `json:"kills"`
+	GuestID   string  `json:"-"`
+	Name      string  `json:"name"`
+	Character string  `json:"character"`
+	Score     float64 `json:"score"` // Uy Danh, bảng chính
+	Hits      int     `json:"hits"`  // số lần chém trúng người, bảng Sát Thần
+	PeakExp   float64 `json:"peak_exp"`
+	PeakLevel int     `json:"peak_level"`
+	Kills     int     `json:"kills"`
+	// DaiThuaSecs là số giây từ lúc vào trận tới Đại Thừa, 0 nếu chưa đạt (bảng Thần Tốc).
+	DaiThuaSecs float64 `json:"dai_thua_secs"`
+	Top1Secs    float64 `json:"top1_secs"`
 	SurviveSecs float64 `json:"survive_secs"`
 	Map         string  `json:"map"`
 	EndedAt     int64   `json:"ended_at"`
@@ -52,6 +58,18 @@ CREATE INDEX IF NOT EXISTS lives_ended ON lives(ended_at);
 CREATE INDEX IF NOT EXISTS lives_exp ON lives(peak_exp);
 CREATE INDEX IF NOT EXISTS lives_kills ON lives(kills);`
 
+// migrations add the v3.3 leaderboard columns to databases created before them (spec §11.2).
+// Re-running them on an up-to-date database is a no-op.
+var migrations = []string{
+	`ALTER TABLE lives ADD COLUMN score REAL NOT NULL DEFAULT 0`,
+	`ALTER TABLE lives ADD COLUMN hits INTEGER NOT NULL DEFAULT 0`,
+	`ALTER TABLE lives ADD COLUMN dai_thua_secs REAL NOT NULL DEFAULT 0`,
+	`ALTER TABLE lives ADD COLUMN top1_secs REAL NOT NULL DEFAULT 0`,
+	`CREATE INDEX IF NOT EXISTS lives_score ON lives(score)`,
+	`CREATE INDEX IF NOT EXISTS lives_hits ON lives(hits)`,
+	`CREATE INDEX IF NOT EXISTS lives_speed ON lives(dai_thua_secs)`,
+}
+
 // Open opens (or creates) the database at path. Use ":memory:" for tests.
 func Open(path string, cacheTTL time.Duration) (*Store, error) {
 	db, err := sql.Open("sqlite", path)
@@ -62,6 +80,11 @@ func Open(path string, cacheTTL time.Duration) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		return nil, fmt.Errorf("schema: %w", err)
 	}
+	for _, m := range migrations {
+		if _, err := db.Exec(m); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+			return nil, fmt.Errorf("migrate %q: %w", m, err)
+		}
+	}
 	return &Store{db: db, cacheTTL: cacheTTL, cache: map[string]cached{}}, nil
 }
 
@@ -69,8 +92,11 @@ func (s *Store) Close() error { return s.db.Close() }
 
 // Record saves a finished life. Callers must never pass bots (spec §9.3).
 func (s *Store) Record(l Life) error {
-	_, err := s.db.Exec(`INSERT INTO lives (guest_id,name,character,peak_exp,peak_level,kills,survive_secs,map,ended_at)
-		VALUES (?,?,?,?,?,?,?,?,?)`, l.GuestID, l.Name, l.Character, l.PeakExp, l.PeakLevel, l.Kills, l.SurviveSecs, l.Map, l.EndedAt)
+	_, err := s.db.Exec(`INSERT INTO lives
+		(guest_id,name,character,score,hits,peak_exp,peak_level,kills,dai_thua_secs,top1_secs,survive_secs,map,ended_at)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		l.GuestID, l.Name, l.Character, l.Score, l.Hits, l.PeakExp, l.PeakLevel, l.Kills,
+		l.DaiThuaSecs, l.Top1Secs, l.SurviveSecs, l.Map, l.EndedAt)
 	return err
 }
 
@@ -91,24 +117,42 @@ func periodStart(period string, now time.Time) (int64, error) {
 	}
 }
 
-// Top returns the top 50 lives for a period and metric ("exp" | "kills"), cached for cacheTTL.
-func (s *Store) Top(period, metric string, now time.Time) ([]Life, error) {
-	col := map[string]string{"exp": "peak_exp", "kills": "kills"}[metric]
-	if col == "" {
-		return nil, fmt.Errorf("bad metric %q", metric)
+// board describes one global leaderboard (spec §11.2). Thần Tốc sorts ascending and only
+// counts lives that actually reached Đại Thừa.
+type board struct {
+	col   string
+	order string
+	where string
+}
+
+var boards = map[string]board{
+	"score": {col: "score", order: "DESC"},
+	"hits":  {col: "hits", order: "DESC"},
+	"speed": {col: "dai_thua_secs", order: "ASC", where: "AND dai_thua_secs > 0"},
+}
+
+// Boards lists the valid board names, for error messages and tests.
+func Boards() []string { return []string{"score", "hits", "speed"} }
+
+// Top returns the top 50 lives for a period and board ("score" | "hits" | "speed"),
+// cached for cacheTTL.
+func (s *Store) Top(period, name string, now time.Time) ([]Life, error) {
+	b, ok := boards[name]
+	if !ok {
+		return nil, fmt.Errorf("bad board %q", name)
 	}
 	since, err := periodStart(period, now)
 	if err != nil {
 		return nil, err
 	}
-	key := period + "/" + metric
+	key := period + "/" + name
 	s.mu.Lock()
 	if c, ok := s.cache[key]; ok && now.Sub(c.at) < s.cacheTTL {
 		s.mu.Unlock()
 		return c.rows, nil
 	}
 	s.mu.Unlock()
-	rows, err := s.query(col, since)
+	rows, err := s.query(b, since)
 	if err != nil {
 		return nil, err
 	}
@@ -118,10 +162,11 @@ func (s *Store) Top(period, metric string, now time.Time) ([]Life, error) {
 	return rows, nil
 }
 
-func (s *Store) query(col string, since int64) ([]Life, error) {
-	// col comes from a fixed whitelist above, never from user input.
-	rs, err := s.db.Query(`SELECT name,character,peak_exp,peak_level,kills,survive_secs,map,ended_at FROM lives
-		WHERE ended_at >= ? ORDER BY `+col+` DESC, ended_at ASC LIMIT 50`, since)
+func (s *Store) query(b board, since int64) ([]Life, error) {
+	// Every piece of SQL below comes from the fixed `boards` table, never from user input.
+	rs, err := s.db.Query(`SELECT name,character,score,hits,peak_exp,peak_level,kills,dai_thua_secs,top1_secs,survive_secs,map,ended_at
+		FROM lives WHERE ended_at >= ? `+b.where+`
+		ORDER BY `+b.col+` `+b.order+`, ended_at ASC LIMIT 50`, since)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +174,8 @@ func (s *Store) query(col string, since int64) ([]Life, error) {
 	out := []Life{}
 	for rs.Next() {
 		var l Life
-		if err := rs.Scan(&l.Name, &l.Character, &l.PeakExp, &l.PeakLevel, &l.Kills, &l.SurviveSecs, &l.Map, &l.EndedAt); err != nil {
+		if err := rs.Scan(&l.Name, &l.Character, &l.Score, &l.Hits, &l.PeakExp, &l.PeakLevel, &l.Kills,
+			&l.DaiThuaSecs, &l.Top1Secs, &l.SurviveSecs, &l.Map, &l.EndedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, l)

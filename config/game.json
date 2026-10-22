@@ -12,7 +12,8 @@
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35, "tilt_tween_secs": 0.1,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
     "rev_secs": 1.0, "flip_cooldown": 0.3,
-    "clash_unit": 5, "clash_knockback": 150, "clash_knockback_secs": 0.2, "drop_bundle_max": 10,
+    "clash_unit": 1, "flip_only_same_realm": true,
+    "clash_knockback": 150, "clash_knockback_secs": 0.2, "drop_bundle_max": 10,
     "clash_ratio_base": 1,
     "clash_ratio_per_realm": 1,
     "tween_secs": 0.2
@@ -62,7 +63,8 @@
   "obstacles": {
     "footprint_w": 0.9, "footprint_h": 0.3, "occlusion_alpha": 0.5,
     "regrow_secs": 30, "regrow_warn_secs": 3,
-    "hp": { "fence": 30, "stall": 60, "cart": 60, "brick": 150, "boulder": 400 },
+    "hp": { "fence": 30, "stall": 80, "cart": 80, "brick": 250, "boulder": 800 },
+    "dmg_cooldown_secs": 0.5, "dmg_per_extra_ring": 0.5,
     "stall_item_drop": 0.3,
     "hit_cooldown": 0.25
   },

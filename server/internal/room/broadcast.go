@@ -133,7 +133,8 @@ func (r *Room) nameOf(id uint32) string {
 	return ""
 }
 
-// sendLeaderboards sends the in-room top 10 plus each client's own rank (spec §11).
+// sendLeaderboards sends the in-room top 10, each client's own rank and Uy Danh, and the
+// minimap markers (spec §11.2, §12.1).
 func (r *Room) sendLeaderboards() {
 	ranking := r.G.Ranking()
 	top := make([]netproto.LeaderEntry, 0, leaderboardTop)
@@ -141,10 +142,29 @@ func (r *Room) sendLeaderboards() {
 	for i, p := range ranking {
 		rankOf[p.ID] = i + 1
 		if i < leaderboardTop {
-			top = append(top, netproto.LeaderEntry{ID: p.ID, Name: p.Name, Exp: float32(p.TotalExp), Level: p.Level})
+			top = append(top, netproto.LeaderEntry{ID: p.ID, Name: p.Name, Exp: float32(p.TotalExp),
+				Level: p.Level, Score: float32(p.Score), Title: p.Title})
+		}
+	}
+	base := netproto.Leaderboard{T: "lb", Top: top, Total: len(ranking)}
+	// Spec §12.1: the crown shows for the whole room, but a leader in a bush or under
+	// Ẩn Thân drops off the minimap so it never gives their position away.
+	if len(ranking) > 0 && r.cfg.Minimap.ShowTop1 {
+		if lead := ranking[0]; !r.G.HiddenInBush(lead) && !lead.HasBuff(game.BuffStealth, r.G.Time) {
+			base.Top1, base.Top1X, base.Top1Y = true, float32(lead.Pos.X), float32(lead.Pos.Y)
+		}
+	}
+	if r.cfg.Minimap.ShowChest {
+		if pos, warning, ok := r.G.ChestMarker(); ok {
+			base.HasBau, base.ChestX, base.ChestY, base.ChestIn = true, float32(pos.X), float32(pos.Y), warning
 		}
 	}
 	for id, c := range r.clients {
-		c.send(netproto.Leaderboard{T: "lb", Top: top, Rank: rankOf[id], Total: len(ranking)})
+		msg := base
+		msg.Rank = rankOf[id]
+		if p, ok := r.G.Players[id]; ok {
+			msg.MyScore = float32(p.Score)
+		}
+		c.send(msg)
 	}
 }

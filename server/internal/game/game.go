@@ -226,6 +226,15 @@ func pairKey(tag uint8, a, b uint32, sub int) uint64 {
 	return uint64(tag)<<60 | uint64(sub&0xff)<<52 | uint64(a&0x3ffffff)<<26 | uint64(b&0x3ffffff)
 }
 
+// onCooldown checks a cooldown without claiming it; pair it with startCooldown when the
+// action actually happens (cooldownReady does both at once).
+func (g *Game) onCooldown(key uint64) bool {
+	until, ok := g.cooldowns[key]
+	return ok && until > g.Time
+}
+
+func (g *Game) startCooldown(key uint64, secs float64) { g.cooldowns[key] = g.Time + secs }
+
 func (g *Game) cooldownReady(key uint64, secs float64) bool {
 	if until, ok := g.cooldowns[key]; ok && until > g.Time {
 		return false

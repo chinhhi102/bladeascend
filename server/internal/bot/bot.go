@@ -81,6 +81,12 @@ func (b *Brain) decide(g *game.Game, me *game.Player) {
 	myPow := g.Power(me)
 	threat, prey := b.scanPlayers(g, me, myPow)
 	switch {
+	case me.Ring.Count == 0 && threat != nil:
+		// Spec §5.2 (v3.5): bị tước sạch kiếm thì chỉ còn nước chạy.
+		b.State = StateFlee
+		b.flee(g, me, threat)
+	case me.Ring.Count == 0:
+		b.farm(g, me) // không có kiếm thì đi nhặt đồ thay vì săn người
 	case threat != nil:
 		b.State = StateFlee
 		b.flee(g, me, threat)

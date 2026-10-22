@@ -171,7 +171,9 @@ func (r *Room) handleDeaths() {
 			rank := r.rankOf(p)
 			r.record(p)
 			c.send(netproto.Dead{T: "dead", KillerName: p.KillerName, KillerChar: p.KillerChar, PeakLevel: p.PeakLevel,
-				PeakExp: p.PeakExp, Kills: p.Kills, SurviveSec: p.DiedAt - p.SpawnedAt, Rank: rank})
+				PeakExp: p.PeakExp, Kills: p.Kills, SurviveSec: p.DiedAt - p.SpawnedAt, Rank: rank,
+				Score: p.Score, Hits: p.Hits, ScoreBy: p.ScoreBy,
+				DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs})
 			r.detach(c)
 			continue
 		}
@@ -189,18 +191,23 @@ func (r *Room) record(p *game.Player) {
 	if !p.Dead {
 		end = r.G.Time
 	}
-	err := r.recorder.Record(store.Life{GuestID: p.GuestID, Name: p.Name, Character: p.Char, PeakExp: p.PeakExp,
-		PeakLevel: p.PeakLevel, Kills: p.Kills, SurviveSecs: end - p.SpawnedAt, Map: r.G.Map.ID, EndedAt: time.Now().Unix()})
+	err := r.recorder.Record(store.Life{GuestID: p.GuestID, Name: p.Name, Character: p.Char,
+		Score: p.Score, Hits: p.Hits, PeakExp: p.PeakExp, PeakLevel: p.PeakLevel, Kills: p.Kills,
+		DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs,
+		SurviveSecs: end - p.SpawnedAt, Map: r.G.Map.ID, EndedAt: time.Now().Unix()})
 	if err != nil {
 		log.Printf("record life: %v", err)
 	}
 }
 
-// rankOf is the player's 1-based rank by total_exp among everyone in the room.
+// rankOf is the player's 1-based rank in the room board (spec §11.2: realm+tier, then exp).
 func (r *Room) rankOf(p *game.Player) int {
 	rank := 1
 	for _, o := range r.G.PlayerList() {
-		if o != p && !o.Dead && o.TotalExp > p.TotalExp {
+		if o == p || o.Dead {
+			continue
+		}
+		if o.Level > p.Level || (o.Level == p.Level && o.TotalExp > p.TotalExp) {
 			rank++
 		}
 	}

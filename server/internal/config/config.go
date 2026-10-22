@@ -35,6 +35,7 @@ type Sword struct {
 	RevSecs            float64  `json:"rev_secs"`
 	FlipCooldown       float64  `json:"flip_cooldown"`
 	ClashUnit          int      `json:"clash_unit"`
+	FlipOnlySameRealm  bool     `json:"flip_only_same_realm"`
 	ClashKnockback     float64  `json:"clash_knockback"`
 	ClashKnockbackSecs float64  `json:"clash_knockback_secs"`
 	DropBundleMax      int      `json:"drop_bundle_max"`
@@ -132,6 +133,10 @@ type Obstacles struct {
 	HP             map[string]int `json:"hp"`
 	StallItemDrop  float64        `json:"stall_item_drop"`
 	HitCooldown    float64        `json:"hit_cooldown"`
+	// Spec §5.3 (v3.6): damage is per player, not per sword — one hit per DmgCooldown
+	// per (player, obstacle), scaled by how many rings they have.
+	DmgCooldown    float64 `json:"dmg_cooldown_secs"`
+	DmgPerExtraRng float64 `json:"dmg_per_extra_ring"`
 }
 
 type Zones struct {

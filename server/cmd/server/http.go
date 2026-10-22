@@ -52,21 +52,21 @@ func (s *server) handleConfig(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write(s.rawCfg)
 }
 
-// handleLeaderboard: GET /api/leaderboard?period=day|week|all&metric=exp|kills (spec §11).
+// handleLeaderboard: GET /api/leaderboard?period=day|week|all&board=score|hits|speed (spec §11.2).
 func (s *server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
-	period, metric := r.URL.Query().Get("period"), r.URL.Query().Get("metric")
+	period, board := r.URL.Query().Get("period"), r.URL.Query().Get("board")
 	if period == "" {
 		period = "all"
 	}
-	if metric == "" {
-		metric = "exp"
+	if board == "" {
+		board = "score" // Uy Danh là bảng chính
 	}
-	rows, err := s.store.Top(period, metric, time.Now())
+	rows, err := s.store.Top(period, board, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeJSON(w, map[string]any{"period": period, "metric": metric, "rows": rows})
+	writeJSON(w, map[string]any{"period": period, "board": board, "rows": rows})
 }
 
 func (s *server) handleRooms(w http.ResponseWriter, _ *http.Request) { writeJSON(w, s.mgr.Rooms()) }
