@@ -82,9 +82,7 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 - Cân bằng (sim 10 phút, 40 bot): lên Trúc Cơ trung bình ~7 phút, nhiều bot chết sớm ở Luyện Khí 1 — nếu thấy chậm, chỉnh `config/game.json` (ví dụ tăng EXP quái, giảm `exp_base`). Chưa đổi gì vì đây là quyết định cân bằng của bạn.
 - Dự đoán chuyển động phía client không mô phỏng đẩy lùi (knockback) → khi bị chém thấy giật nhẹ 1 nhịp.
 - **Spec v4.0/v4.1 — ĐÃ LÀM (22/10/2026)**: số cân bằng mới (`move_base` 195, `cell` 140), độ bền kiếm `durability_per_realm` 1.2 thay `clash_ratio_*`, UI không tràn màn hình, 3 lỗi bản đồ (lề 300 + tường biên + dãy tường nối liền). Test Tốc Kiếm không đụng `reach` — PASS ngay, logic vốn đã đúng.
-- **Spec v4.0 — CÒN LẠI (22/10/2026)**: 3 việc lớn chưa làm, xem `docs/TODO_v4.md`:
-  (a) lá chắn vòng kế ngoài cùng §5.2, (b) thay sát mạng bằng Tiên khí + 5 Đài §3.4/§8.5,
-  (c) viết lại mapgen theo 9 bước §8.1 (mới chỉ sửa 3 lỗi, chưa đổi thuật toán sinh).
+- **Spec v4.0 — ĐÃ XONG CẢ 3 VIỆC LỚN (22/10/2026)**: lá chắn vòng kế ngoài cùng §5.2 (xem Q15 về mâu thuẫn công thức), Tiên khí + 5 Đài §3.4/§8.5, mapgen viết lại theo 9 bước §8.1 (`cmd/mapgen/gen.go`, có `--seed N --png out.png` xem trước).
 - **⚠ Nhịp farm đang lệch spec (22/10/2026)**: `--farm` đo được Luyện Khí → Trúc Cơ **165s**, §6.1 vẫn ghi 30–60s. Do ba thay đổi cộng lại: tốc độ chạy một nửa + EXP gấp đôi mỗi cảnh giới + mật độ giảm 50%. Đại Thừa giờ cần ≈7.7 giờ farm → bảng Thần Tốc sẽ trống. Phương án: **Q13 trong `docs/QUESTIONS.md`** — chờ chốt, chưa đổi gì.
 - **EXP mỗi cảnh giới gấp đôi cảnh giới trước (22/10/2026)**: `realm_mult` 1.2 → **2.0**. Tổng tới Đại Thừa 10: 28 288 → **694 960**.
 - **Mật độ giảm 50% (22/10/2026)**: `exp_orbs.cell` 160 → **226** (≈160×√2, số viên giảm một nửa), `items.count_per_room` 400 → **200**.

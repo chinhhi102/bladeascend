@@ -162,6 +162,13 @@ func (b *builder) wall(x, y, w, h float64) bool {
 	if !b.inBounds(r) {
 		return false
 	}
+	// Tường cũng phải tránh vùng giữ trống (quanh cổng, đài): hẻm sinh sau cổng, không
+	// kiểm thì sẽ mọc đè lên cổng và phá luật "trống 300 quanh cổng" của §8.1 bước 8.
+	for _, k := range b.keep {
+		if r.overlaps(k, 0) {
+			return false
+		}
+	}
 	b.solid = append(b.solid, r)
 	b.add("obstacles", object{Type: "stone_wall", X: x, Y: y, Width: w, Height: h})
 	return true
@@ -304,29 +311,65 @@ func (b *builder) write(path, name, biome string) error {
 
 func main() {
 	out := flag.String("out", config.FindRepoFile("maps"), "output directory")
+	seed := flag.Int64("seed", 0, "chỉ sinh 1 bản đồ với seed này (0 = sinh cả 3 bản mặc định)")
+	png := flag.String("png", "", "xuất ảnh xem trước ra file này (dùng với --seed)")
 	flag.Parse()
 	cfg := config.MustLoadDefault()
 	size := cfg.Room.MapSize
 	if err := os.MkdirAll(*out, 0o755); err != nil {
 		log.Fatal(err)
 	}
-	gens := []struct {
-		id, name, biome string
-		fn              func(*builder)
-	}{
-		{"lang_tre", "Làng Tre", "grass", langTre},
-		{"cho_dem", "Chợ Đêm", "concrete", choDem},
-		{"nui_da", "Núi Đá", "dirt", nuiDa},
+	gens := []struct{ id, name, biome string }{
+		{"lang_tre", "Làng Tre", "grass"},
+		{"cho_dem", "Chợ Đêm", "concrete"},
+		{"nui_da", "Núi Đá", "dirt"},
+	}
+	if *seed != 0 {
+		gens = gens[:1]
+		gens[0] = struct{ id, name, biome string }{"preview", "Xem trước", "grass"}
 	}
 	for i, gdef := range gens {
-		b := newBuilder(size, int64(1000+i))
-		gdef.fn(b)
+		base := int64(1000 + i)
+		if *seed != 0 {
+			base = *seed
+		}
+		b, used, err := buildWithRetries(size, base, cfg.Mapgen)
+		if err != nil {
+			log.Fatal(err)
+		}
 		path := filepath.Join(*out, gdef.id+".tmj")
 		if err := b.write(path, gdef.name, gdef.biome); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("%s: %d obstacles, %d zones, %d gates → %s\n", gdef.name, len(b.layers["obstacles"]), len(b.layers["zones"]), len(b.layers["gates"]), path)
+		fmt.Printf("%s (seed %d): %d obstacles, %d zones, %d gates, %d đài → %s\n",
+			gdef.name, used, len(b.layers["obstacles"]), len(b.layers["zones"]),
+			len(b.layers["gates"]), len(b.layers["altars"]), path)
+		if *png != "" {
+			if err := writePreview(b, *png); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("ảnh xem trước → %s\n", *png)
+		}
 	}
+}
+
+// buildWithRetries runs the §8.1 generator, retrying with seed+1 when validation fails
+// (bước 8: "sai thì sinh lại với seed+1, tối đa 10 lần").
+func buildWithRetries(size float64, seed int64, mg config.Mapgen) (*builder, int64, error) {
+	tries := mg.MaxRetries
+	if tries <= 0 {
+		tries = 10
+	}
+	var last error
+	for i := 0; i < tries; i++ {
+		b := newBuilder(size, seed+int64(i))
+		if err := generate(b, mg); err != nil {
+			last = err
+			continue
+		}
+		return b, seed + int64(i), nil
+	}
+	return nil, 0, fmt.Errorf("sinh bản đồ thất bại sau %d lần (lỗi cuối: %w)", tries, last)
 }
 
 // langTre: balanced village — fences, houses, ponds of mud, bushes, two gate pairs.
