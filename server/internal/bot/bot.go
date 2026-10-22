@@ -109,10 +109,11 @@ func (b *Brain) scanPlayers(g *game.Game, me *game.Player, myPow float64) (*game
 		}
 		d := o.Pos.Dist(me.Pos)
 		pow := g.Power(o)
-		if pow > myPow*bc.FleeRatio && d < bc.FleeR*me.Scale && d < bestT {
+		sight := g.BotSightMult(o) // Ẩn Thân: bot chỉ phát hiện trong 50% tầm (spec §10)
+		if pow > myPow*bc.FleeRatio && d < bc.FleeR*me.Scale*sight && d < bestT {
 			threat, bestT = o, d
 		}
-		if pow < myPow*bc.HuntRatio && d < bc.HuntR*me.Scale && d < bestP && !o.Invulnerable(g.Time) {
+		if pow < myPow*bc.HuntRatio && d < bc.HuntR*me.Scale*sight && d < bestP && !o.Invulnerable(g.Time) {
 			prey, bestP = o, d
 		}
 	}

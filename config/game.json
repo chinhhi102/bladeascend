@@ -11,7 +11,7 @@
     "swords_per_ring": 20, "length": 80, "width": 12, "hilt_gap": 6,
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35, "tilt_tween_secs": 0.1,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
-    "rev_secs": 0.6, "flip_cooldown": 0.3,
+    "rev_secs": 1.0, "flip_cooldown": 0.3,
     "clash_unit": 5, "clash_knockback": 150, "clash_knockback_secs": 0.2, "drop_bundle_max": 10,
     "clash_ratio_base": 1,
     "clash_ratio_per_realm": 1,
@@ -29,13 +29,13 @@
     "name_min": 2, "name_max": 16
   },
   "buffs": {
-    "spin":   { "mult": 1.3, "secs": 12 },
+    "spin":   { "mult": 1.6, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },
     "magnet": { "mult": 3.0, "secs": 15 },
     "long":   { "mult": 1.3, "secs": 12 },
     "shield": { "secs": 8 },
     "exp2":   { "mult": 2.0, "secs": 20 },
-    "stealth":{ "secs": 6, "reveal_r": 120 }
+    "stealth":{ "secs": 5, "max_secs": 5, "visible_alpha": 0.2, "reveal_r": 120, "bot_detect_mult": 0.5 }
   },
   "items": {
     "weights": { "sword": 40, "bundle": 6, "spin": 12, "haste": 12, "magnet": 8, "long": 7, "shield": 7, "exp2": 5, "stealth": 3 },
@@ -68,6 +68,14 @@
   },
   "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
   "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8, "feed_secs": 2 },
+  "titles": ["Bần tăng chưa ngán ai bao giờ", "Ngon thì nhào vô", "Chỗ này nhiều máu nè"],
+  "title_hold_secs": 3,
+  "minimap": { "size_pc": 180, "size_mobile": 120, "show_top1": true, "show_chest": true, "show_others": false },
+  "score": {
+    "hit_base": 100, "kill_bonus": 50, "upset_per_realm": 0.5,
+    "breakthrough_per_realm": 20, "top1_per_sec": 1,
+    "bot_victim_mult": 0.5, "same_victim_cooldown_secs": 60
+  },
   "room": {
     "max_humans": 20, "bot_fill_target": 20, "map_size": 12000,
     "monster_count": 150, "empty_close_secs": 60, "safe_spawn_r": 800

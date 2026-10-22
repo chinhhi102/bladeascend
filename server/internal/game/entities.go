@@ -78,6 +78,20 @@ type Player struct {
 	Kills     int
 	SpawnedAt float64
 
+	// Uy Danh scoring for this life (spec §11.1).
+	Score        float64
+	ScoreBy      map[string]float64 // points per source, for the Tổng kết breakdown
+	Hits         int                // body hits landed on other players (bảng Sát Thần)
+	HitCooldown  map[string]float64 // victim key → time the same victim scores again
+	ScoredRealms map[int]bool       // realms already rewarded this life
+	Top1Secs     float64            // seconds held as room top 1
+	DaiThuaSecs  float64            // seconds from spawn to Đại Thừa; 0 = never reached
+
+	// Title is the room rank badge: 0 = none, 1..3 = Top 1..3 (spec §11.3).
+	Title        int
+	pendingTitle int
+	titleSince   float64
+
 	InvulnUntil float64
 	Buffs       [BuffCount]float64 // expiry time; 0 = inactive
 	KnockVel    Vec

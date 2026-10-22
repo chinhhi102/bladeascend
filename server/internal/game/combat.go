@@ -75,6 +75,7 @@ func (g *Game) applyBodyHit(a, b *Player) {
 	}
 	g.setMood(b, MoodHit, g.Cfg.Mood.HitSecs)
 	oldRealm := g.Prog.Realm(b.Level)
+	g.awardHit(a, b, oldRealm, false) // scored on the realm they had before being knocked down
 	after := g.expAfterHit(b)
 	loss := b.TotalExp - after
 	g.setTotalExp(b, after)
@@ -97,6 +98,9 @@ func (g *Game) expAfterHit(b *Player) float64 {
 // kill handles a Luyện Khí player being cut down (spec §5.1, §7).
 func (g *Game) kill(a, b *Player) {
 	pc := g.Cfg.Player
+	// Scored first: the EXP reward below can push the attacker up a realm, which would
+	// shrink their lật_kèo multiplier for this very kill (spec §11.1).
+	g.awardHit(a, b, g.Prog.Realm(b.Level), true)
 	// Spec §5.1: at Luyện Khí the "loss" is the victim's whole EXP, plus a kill bonus.
 	loss := b.TotalExp
 	g.GainExp(a, loss*pc.AttackerShare+pc.KillBonusExp, true)

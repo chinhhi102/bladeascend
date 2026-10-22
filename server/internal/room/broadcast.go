@@ -40,7 +40,7 @@ func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) 
 			continue
 		}
 		seen[p.ID] = true
-		s.Players = append(s.Players, playerState(g, p, resendNames || !c.knownPlayers[p.ID]))
+		s.Players = append(s.Players, playerState(g, viewer, p, resendNames || !c.knownPlayers[p.ID]))
 		c.knownPlayers[p.ID] = true
 	}
 	for id := range c.knownPlayers {

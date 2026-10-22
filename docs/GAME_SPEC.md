@@ -4,11 +4,15 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v3.4:** thêm minimap (§12.1) và danh hiệu Top 1–3 phòng (§11.3); kiếm quay chậm lại còn 1 vòng/giây, Tốc Kiếm trả về ×1.6 (§4.1b).
+
+**Thay đổi v3.3:** bảng xếp hạng dùng điểm Uy Danh thay EXP, thêm bảng Sát Thần (lần chém trúng) và Thần Tốc (lên Đại Thừa nhanh nhất); Ẩn Thân giảm còn 5s, tàng hình 80% (§6.2, §11).
+
 **Thay đổi v3.2:** bán kính vòng kiếm cố định, không phụ thuộc số kiếm; chỉ vòng mới mới rộng hơn (§4.1a).
 
 **Thay đổi v3.1:** vòng kiếm vẽ kiểu cánh quạt như quảng cáo — so le góc, lưỡi nghiêng 35°, mỗi vòng một màu, vòng ngoài lùi ra xa hơn (§4.1a).
 
-**Thay đổi v3:** kiếm dài gấp đôi, quay 300ms/vòng (nay đã giảm còn 600ms/vòng — xem §4.1b), kiếm tối đa 60→400 xếp vòng lồng nhau (20 kiếm/vòng), bị chém rớt 1 đại cảnh giới, EXP rải khắp bản đồ, vật phẩm ×3, vật cản chỉ chặn ở chân đế + y-sort.
+**Thay đổi v3:** kiếm dài gấp đôi, quay 300ms/vòng, kiếm tối đa 60→400 xếp vòng lồng nhau (20 kiếm/vòng), bị chém rớt 1 đại cảnh giới, EXP rải khắp bản đồ, vật phẩm ×3, vật cản chỉ chặn ở chân đế + y-sort.
 
 **Thay đổi v2 so với v1:** đổi stack (Go server + TypeScript/PixiJS client trên web) · kiếm có thể bị bể khi va nhau (tỉ lệ theo chênh lệch cảnh giới) · scale 1 → 5 và tầm kiếm dài theo · chết ra màn hình chờ rồi match lại · bản đồ có địa hình, vật cản phá được (mọc lại sau 30s), cổng dịch chuyển · không login, nhập tên là chơi, có leaderboard · bộ vật phẩm buff có thời hạn.
 
@@ -108,6 +112,7 @@ len(k)            = base * (1 + (RING_GROWTH - HILT_STEP) * k) // RING_GROWTH = 
 stagger(k)        = k * (18° / R)                            // so le: các vòng chia đều khoảng trống giữa 2 khe
 tilt              = TILT_DEG * dir                           // TILT_DEG = 35°, lưỡi ngả về phía sau so với chiều quay
 angle(i, k, t)    = phase + dir * ω * t + slot_angle(i) + stagger(k)
+ω                 = 2π / rev_secs * buff_spin                // rev_secs = 1.0 → 1 vòng/giây; buff_spin = 1.6 khi có Tốc Kiếm
 ```
 
 - Mỗi thanh kiếm đặt chuôi tại điểm `(hilt_r(k), angle)` và chĩa ra theo hướng **bán kính xoay thêm `tilt`**, dài `len(k)`.
@@ -126,12 +131,10 @@ angle(i, k, t)    = phase + dir * ω * t + slot_angle(i) + stagger(k)
 - Thân: hình tròn `BODY_R * scale` (BODY_R = 30).
 - Số kiếm tối thiểu 1. Bắt đầu: 1 kiếm. Thêm/bớt kiếm hoặc đổi số vòng (stagger thay đổi): tween vị trí 0.2s.
 
-### 4.1b Kiếm quay nhanh — va chạm và hiển thị
-
-Tốc độ quay: **1 vòng / 600ms** (`rev_secs` = 0.6). Trước đây là 300ms; đã giảm một nửa để nhìn rõ từng lưỡi kiếm và dễ né hơn.
-
-- **Va chạm theo góc quét**: ở 30 tick/s, mỗi tick kiếm quay ~20°. Không kiểm tra vị trí tức thời mà kiểm tra **cung đã quét** từ tick trước tới tick này (sweep). Mục tiêu nằm trong vành khăn `[inner_r, reach]` và trong cung quét của bất kỳ kiếm nào → trúng. Khi số kiếm × góc quét ≥ 360°, coi cả vành khăn là vùng sát thương. Lưu ý: ở tốc độ này một vòng 20 kiếm quét 20° × 20 = 400° ≥ 360° nên vành khăn vẫn kín; vòng chưa đủ 18 kiếm thì bắt đầu có kẽ hở để lách qua.
-- **Hiển thị**: ở 60 fps mỗi frame quay ~10°, vẫn hơn nửa khoảng cách 18° giữa 2 kiếm → mắt vẫn có thể thấy vòng kiếm đứng yên hoặc quay ngược (hiệu ứng bánh xe). Bắt buộc vẽ **vệt mờ chuyển động**: mỗi vòng có 1 lớp vành khăn mờ (spin blur) theo màu skin kiếm, kiếm vẽ đè lên với độ trong suốt giảm dần theo vệt quét. Tốc độ càng nhanh thì vệt càng đậm.
+### 4.1b Va chạm và hiển thị khi kiếm quay
+- **Tốc độ gốc: 1 vòng / 1 giây** (`rev_secs: 1.0`). Có buff Tốc Kiếm: 1 vòng / 0.625 giây.
+- **Va chạm theo góc quét**: ở 30 tick/s, mỗi tick kiếm quay ~12° (~19° khi có buff). Vẫn kiểm tra **cung đã quét** từ tick trước tới tick này (sweep), không chỉ vị trí tức thời, để kiếm không "xuyên" qua người. Mục tiêu nằm trong vành khăn `[inner_r, reach]` và trong cung quét của bất kỳ kiếm nào → trúng.
+- **Hiển thị**: ở 60 fps mỗi frame quay ~6°, nhỏ hơn nhiều so với khoảng cách 18° giữa 2 kiếm → nhìn rõ từng thanh kiếm quay, không còn hiệu ứng quay ngược. Vệt mờ (spin blur) chỉ cần nhẹ, mảnh, cùng màu vòng; đậm hơn khi có buff Tốc Kiếm.
 - Dùng `ParticleContainer` của PixiJS cho kiếm (có thể tới hàng nghìn sprite trên màn hình).
 
 ### 4.1 Tốc độ di chuyển & camera
@@ -170,7 +173,7 @@ Sau đó tính bể kiếm, với `d = |rA - rB|`, `k = d + 1` và đơn vị m�
 | Cùng cảnh giới (d = 0) | Mỗi bên mất `u` kiếm |
 | Khác cảnh giới | Bên thấp mất `u * k` kiếm; bên cao nhận `crack += lost / k` (lost = số kiếm bên thấp thực sự mất). Khi `crack ≥ 1` → bên cao mất `floor(crack)` kiếm, `crack -= floor(crack)` |
 
-Mọi trường hợp: số kiếm không bao giờ xuống dưới `min_count` = **0** — nghĩa là người chơi **có thể bị tước sạch kiếm**. Khi còn 0 kiếm thì không gây sát thương cho ai, không bể kiếm nữa, phải đi nhặt kiếm rơi để đánh tiếp (trước đây luật giữ lại tối thiểu 1 kiếm nên không ai bị tước hết).
+Mọi trường hợp: số kiếm không bao giờ xuống dưới `min_count` = **0** — nghĩa là người chơi **có thể bị tước sạch kiếm**. Khi còn 0 kiếm thì không gây sát thương cho ai, không bể kiếm nữa, phải đi nhặt kiếm rơi để đánh tiếp.
 
 Bảng tỉ lệ đổi kiếm (bên cao : bên thấp):
 
@@ -206,17 +209,16 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 |---|---|---|---|
 | Kiếm | +3 kiếm. Nếu đã max → +20 EXP | – | 40 |
 | Bó Kiếm | +15 kiếm (cũng là dạng rơi ra khi rớt cảnh giới/chết, khi đó chứa đúng số kiếm rơi) | – | 6 |
-| Tốc Kiếm | ω × 1.3 | 12s | 12 |
+| Tốc Kiếm | ω × 1.6 | 12s | 12 |
 | Thần Hành | Tốc chạy × 1.4 | 10s | 12 |
 | Nam Châm | Bán kính hút đồ × 3 | 15s | 8 |
 | Trường Kiếm | Chiều dài mọi vòng kiếm × 1.3 | 12s | 7 |
 | Kim Cang (khiên) | Chặn 1 lần bị chém vào thân | 8s hoặc tới khi vỡ | 7 |
 | Song Bội Đan | EXP nhận × 2 | 20s | 5 |
-| Ẩn Thân Phù | Người khác không thấy mình (trừ khi ở rất gần: 120 × scale của họ); hết hiệu lực ngay khi kiếm mình chém trúng người | 6s | 3 |
+| Ẩn Thân Phù | Tàng hình **80%**: người khác thấy mình và vòng kiếm mờ (độ đậm 20%), không thấy tên, không hiện trên minimap. Ở rất gần (120 × scale của người nhìn) thì hiện rõ 100%. Hết hiệu lực ngay khi kiếm mình chém trúng người | **5s** (tối đa, nhặt lại chỉ làm mới về 5s) | 3 |
 | **Rương Báu** (hiếm) | Người đầu tiên **chạm vào** → nổ ra 8 item ngẫu nhiên văng xung quanh | – | 1 rương mỗi 60s, báo trước toàn phòng 10s |
 
 - Số vật phẩm duy trì: **400/phòng** (gấp hơn 3 lần trước), item bị nhặt → 3s sau mọc lại chỗ khác.
-- Tốc Kiếm giảm từ ×1.6 xuống ×1.3 vì tốc quay gốc đã rất nhanh.
 - Nhặt lại buff đang có → làm mới thời gian (không cộng dồn).
 - HUD hiển thị icon buff + vòng đếm ngược. Mỗi buff có aura màu riêng (trừ Ẩn Thân).
 - Item spawn cách người chơi ≥ 300 đơn vị.
@@ -319,18 +321,52 @@ Quyết định lại mỗi 0.3–0.6s (random), tìm đường bằng A* trên 
 
 - `power = sword_count * (r + 1) * reach`.
 - Tham số tính cách random mỗi bot: `reaction_delay` 0.2–0.6s, `aim_noise`, `aggression`.
-- Bot chỉ "thấy" những gì người chơi cùng vị trí thấy được (tôn trọng bụi rậm, ẩn thân).
+- Bot chỉ "thấy" những gì người chơi cùng vị trí thấy được (tôn trọng bụi rậm). Người đang Ẩn Thân: bot chỉ phát hiện trong 50% tầm nhìn bình thường.
 
 ## 11. Leaderboard (không cần login)
 
-- Client tạo `guest_id` (UUID ngẫu nhiên) lưu ở localStorage, gửi kèm khi vào trận.
-- **Trong phòng** (realtime, 1 lần/giây): top 10 theo `total_exp` hiện tại + hạng của mình.
-- **Toàn cục**: tab **Hôm nay / Tuần này / Mọi thời đại**, 2 bảng:
-  - **Tu Vi Đỉnh Cao**: EXP cao nhất đạt được trong 1 mạng.
-  - **Sát Thần**: số người chém chết nhiều nhất trong 1 mạng.
-- Lưu mỗi "mạng" vào SQLite: `guest_id, name, character, peak_exp, peak_level, kills, survive_secs, map, ended_at`.
-- API: `GET /api/leaderboard?period=day|week|all&metric=exp|kills` → top 50, cache 10s.
-- Điểm số do server tính → không gian lận được từ client. Bot không được ghi.
+EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừa tầng 10) → ai chơi lâu cũng bằng nhau. Thay bằng điểm **Uy Danh** thưởng cho việc đánh nhau, lật kèo và giữ ngôi.
+
+### 11.1 Điểm Uy Danh (tính trong 1 mạng, server tính)
+
+| Hành động | Điểm |
+|---|---|
+| **Chém trúng người** (làm họ rớt cảnh giới hoặc chết) | `100 × (cảnh giới nạn nhân + 1) × lật_kèo` |
+| Thưởng thêm khi chém chết | +50 |
+| **Lật kèo**: nạn nhân cao cảnh giới hơn mình | `lật_kèo = 1 + 0.5 × (r_nạn_nhân − r_mình)`, tối thiểu 1 |
+| **Đột phá** cảnh giới mới (lần đầu trong mạng đó) | `20 × r_mới` |
+| **Giữ Top 1 phòng** | +1 điểm mỗi giây |
+
+- Ví dụ: Trúc Cơ (r=1) chém trúng Nguyên Anh (r=3) → `100 × 4 × (1 + 0.5×2) = 800`. Đại Thừa chém Luyện Khí → `100 × 1 × 1 + 50 = 150`.
+- Nạn nhân là **bot** → nhận 50% điểm.
+- **Chống cày điểm**: chém trúng cùng 1 người (cùng `guest_id`) lần nữa trong vòng 60s → 0 điểm.
+- HUD hiển thị Uy Danh hiện tại; mỗi lần cộng điểm hiện số bay lên (+800 LẬT KÈO!).
+- Màn hình Tổng kết hiển thị bảng chi tiết điểm theo từng nguồn.
+
+### 11.2 Các bảng xếp hạng
+
+- **Trong phòng** (realtime, 1 lần/giây): top 10 theo **cảnh giới + tầng hiện tại**, hòa thì so `total_exp` (để biết ai đang mạnh mà né/săn), kèm Uy Danh. Top 1–3 có danh hiệu (§11.3).
+- **Toàn cục**, tab **Hôm nay / Tuần này / Mọi thời đại**, 3 bảng:
+  - **Uy Danh** (bảng chính): điểm Uy Danh cao nhất trong 1 mạng.
+  - **Sát Thần**: số lần chém trúng người nhiều nhất trong 1 mạng.
+  - **Thần Tốc**: thời gian ngắn nhất từ lúc vào trận tới Đại Thừa (chỉ ghi những mạng đã đạt Đại Thừa; xếp tăng dần).
+- Lưu mỗi "mạng" vào SQLite: `guest_id, name, character, score, hits, kills, peak_level, secs_to_dai_thua (null nếu chưa đạt), top1_secs, survive_secs, map, ended_at`.
+- API: `GET /api/leaderboard?period=day|week|all&board=score|hits|speed` → top 50, cache 10s.
+- Điểm do server tính → client không gian lận được. Bot không được ghi.
+
+### 11.3 Danh hiệu Top 3 phòng
+
+| Hạng | Danh hiệu | Màu | Hiển thị trên đầu |
+|---|---|---|---|
+| Top 1 | **Bần tăng chưa ngán ai bao giờ** | Vàng kim, chữ có viền sáng | Vương miện + danh hiệu |
+| Top 2 | **Ngon thì nhào vô** | Bạc | Danh hiệu |
+| Top 3 | **Chỗ này nhiều máu nè** | Đồng | Danh hiệu |
+
+- Danh hiệu hiện **phía trên tên** nhân vật trong trận (ai cũng thấy), và cạnh tên trong bảng xếp hạng phòng.
+- Cập nhật theo bảng phòng (1 lần/giây), có **chống nhấp nháy**: phải giữ hạng mới liên tục 3s mới đổi danh hiệu.
+- Ai vừa giành Top 1 → kill feed: `"{A} đã lên ngôi 'Bần tăng chưa ngán ai bao giờ'!"` + SFX trống. Ai vừa mất Top 1 → `"{B} bị hạ bệ, bần tăng giờ đã ngán"`.
+- Người Ẩn Thân / trong bụi: danh hiệu ẩn theo (không làm lộ vị trí).
+- Danh hiệu nằm trong config (`titles`), sửa chữ không cần đụng code.
 
 ## 12. Trạng thái nhân vật, animation & tấu hài
 
@@ -352,6 +388,20 @@ Server tính `mood` và gửi xuống (mọi người thấy giống nhau). Gi�
 
 - Emote bubble khi: mất kiếm, khiên vỡ, nhặt Rương Báu, bị lộ khỏi bụi. Mỗi loại có cooldown.
 - Client tự lật sprite trái/phải theo hướng chạy.
+
+### 12.1 Minimap
+
+- Góc **trên bên trái** (dưới thanh cảnh giới), hình vuông bo góc, nền mờ 60%. Kích thước: 180px trên PC, 120px trên điện thoại. Chạm/nhấn phím `M` → phóng to giữa màn hình (bấm lại để thu nhỏ).
+- **Hiển thị:**
+  - Địa hình tĩnh vẽ sẵn 1 lần từ bản đồ Tiled: tường không phá được, đá tảng, bụi rậm, bùn, đường gió (màu nhạt, đơn giản).
+  - Cổng dịch chuyển: chấm tròn theo màu cặp/mạng cổng.
+  - **Mình**: mũi tên chỉ hướng di chuyển, màu nổi bật.
+  - Khung chữ nhật mảnh thể hiện vùng camera đang nhìn.
+  - **Top 1 phòng**: icon vương miện (cả phòng đều thấy → khuyến khích đi săn).
+  - **Rương Báu**: icon rương nhấp nháy khi đang có, kể cả lúc báo trước 10s.
+- **Không hiển thị** người chơi/bot khác (trừ Top 1), quái, item, viên EXP → giữ yếu tố bất ngờ và phục kích. Top 1 đang Ẩn Thân hoặc trong bụi thì ẩn khỏi minimap.
+- Vật cản phá được không cần vẽ (đổi trạng thái liên tục).
+- Dữ liệu: vị trí mình lấy ở client; vị trí Top 1 và Rương Báu gửi kèm gói `Leaderboard` (1 lần/giây).
 
 ## 13. Kiến trúc kỹ thuật
 
@@ -404,7 +454,7 @@ kiem-xoay/
 - Server → Client: `Welcome`, `Snapshot`, `Event`, `Leaderboard` (1 Hz).
 - **Không gửi vị trí từng thanh kiếm**: gửi `phase, dir, n, ω, scale, buff_long, phase_tick` (client tự tính số vòng, chiều dài từng vòng); client tự tính góc. Đổi chiều → event `RingFlip`.
 - Event: `Hit, SwordBreak, Death, LevelUp, Breakthrough, RealmDrop, RingFlip, ObstacleDamaged, ObstacleBroken, ObstacleRegrow, TeleportOut, TeleportIn, ItemPicked, BuffStart, BuffEnd, ChestIncoming, KillFeed`.
-- AOI: chỉ gửi những gì nằm trong vùng nhìn của người đó (+ lề). Người đang ẩn thân / trong bụi **không được gửi** cho người không được thấy (chống hack nhìn xuyên).
+- AOI: chỉ gửi những gì nằm trong vùng nhìn của người đó (+ lề). Người **trong bụi** không được gửi cho người không được thấy (chống hack nhìn xuyên). Người **Ẩn Thân** vẫn được gửi (vì vẫn hiện mờ 20%), kèm cờ `stealth`.
 - Client: nội suy người khác (trễ 100ms); tự dự đoán chuyển động của mình + hiệu chỉnh theo server.
 
 ### 13.4 Va chạm & hiệu năng
@@ -459,12 +509,12 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "scale_min": 1.0, "scale_max": 5.0
   },
   "sword": {
-    "start_count": 1, "min_count": 1,
+    "start_count": 1, "min_count": 0,
     "max_swords": [60, 120, 160, 200, 240, 280, 320, 360, 400],
     "swords_per_ring": 20, "length": 80, "width": 12, "hilt_gap": 6,
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
-    "rev_secs": 0.6, "flip_cooldown": 0.3,
+    "rev_secs": 1.0, "flip_cooldown": 0.3,
     "clash_unit": 5, "clash_knockback": 150, "drop_bundle_max": 10,
     "clash_ratio_base": 1,
     "clash_ratio_per_realm": 1
@@ -478,13 +528,13 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "hit_drops_realm": true
   },
   "buffs": {
-    "spin":   { "mult": 1.3, "secs": 12 },
+    "spin":   { "mult": 1.6, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },
     "magnet": { "mult": 3.0, "secs": 15 },
     "long":   { "mult": 1.3, "secs": 12 },
     "shield": { "secs": 8 },
     "exp2":   { "mult": 2.0, "secs": 20 },
-    "stealth":{ "secs": 6, "reveal_r": 120 }
+    "stealth":{ "secs": 5, "max_secs": 5, "visible_alpha": 0.2, "reveal_r": 120, "bot_detect_mult": 0.5 }
   },
   "items": {
     "weights": { "sword": 40, "bundle": 6, "spin": 12, "haste": 12, "magnet": 8, "long": 7, "shield": 7, "exp2": 5, "stealth": 3 },
@@ -503,6 +553,14 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   },
   "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
   "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8 },
+  "titles": ["Bần tăng chưa ngán ai bao giờ", "Ngon thì nhào vô", "Chỗ này nhiều máu nè"],
+  "title_hold_secs": 3,
+  "minimap": { "size_pc": 180, "size_mobile": 120, "show_top1": true, "show_chest": true, "show_others": false },
+  "score": {
+    "hit_base": 100, "kill_bonus": 50, "upset_per_realm": 0.5,
+    "breakthrough_per_realm": 20, "top1_per_sec": 1,
+    "bot_victim_mult": 0.5, "same_victim_cooldown_secs": 60
+  },
   "room": {
     "max_humans": 20, "bot_fill_target": 20, "map_size": 12000,
     "monster_count": 150, "empty_close_secs": 60, "safe_spawn_r": 800
@@ -520,7 +578,7 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
 - [ ] Cùng 1 tầng: 1 → 20 kiếm, bán kính vòng không đổi; kiếm thứ 21 mới mở vòng 2 rộng hơn.
 - [ ] Luyện Khí tối đa 60 kiếm = 3 vòng so le, mỗi vòng một màu, cả 3 lớp đều nhìn thấy; lưỡi nghiêng về phía sau và lật khi đổi chiều.
 - [ ] Mũi kiếm vòng 3 xa tâm hơn vòng 1; hitbox server khớp với hình vẽ (bật chế độ debug vẽ capsule để so).
-- [ ] Kiếm quay đúng 1 vòng / 600ms, nhìn thấy vệt mờ, không bị hiệu ứng quay ngược.
+- [ ] Kiếm quay đúng 1 vòng / 1 giây (0.625 giây khi có Tốc Kiếm), nhìn rõ từng thanh, không bị hiệu ứng quay ngược.
 - [ ] Nhân vật đi sát mép trên tảng đá được (chỉ bị chặn ở chân đế), đứng sau đá thì bị che.
 - [ ] Farm không đánh nhau: Luyện Khí → Trúc Cơ trong 60–90s (đo bằng cmd/sim).
 - [ ] 2 người cùng cảnh giới va kiếm → mỗi bên mất 1 kiếm, cả hai đổi chiều quay.
@@ -537,6 +595,10 @@ Tỉ lệ đổi kiếm `k = clash_ratio_base + clash_ratio_per_realm * chênh_l
 - [ ] Vào cổng → ra ở cổng khác, cổng đích lóe sáng trước, không có bất tử khi ra.
 - [ ] Người scale lớn không chui lọt hẻm 150.
 - [ ] Buff hết hạn đúng giờ, nhặt lại thì làm mới thời gian.
-- [ ] Người ẩn thân không xuất hiện trong gói tin gửi cho người ở xa.
+- [ ] Ẩn Thân: người khác thấy mờ 20%, không tên; tối đa 5s; chém trúng người là hiện ngay.
+- [ ] Trúc Cơ chém trúng Nguyên Anh → +800 Uy Danh; chém lại cùng người trong 60s → +0.
+- [ ] Bảng Thần Tốc chỉ có những mạng đã đạt Đại Thừa.
+- [ ] Top 1/2/3 phòng hiện đúng danh hiệu trên đầu và trong bảng; đổi hạng phải giữ 3s mới đổi danh hiệu.
+- [ ] Minimap thấy mình, khung camera, cổng, Top 1, Rương Báu; không thấy người khác; Top 1 vào bụi thì biến khỏi minimap.
 - [ ] Phòng 5 người → 15 bot; thêm người không xóa bot; người thứ 21 sang phòng mới.
-- [ ] Leaderboard ghi đúng sau khi chết, bot không có trong bảng toàn cục.
+- [ ] Leaderboard ghi đúng 3 bảng sau khi chết, bot không có trong bảng toàn cục.

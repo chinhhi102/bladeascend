@@ -69,6 +69,12 @@ type Buff struct {
 	Mult    float64 `json:"mult"`
 	Secs    float64 `json:"secs"`
 	RevealR float64 `json:"reveal_r"`
+	// Ẩn Thân only (spec §6.2): the buff never stacks past MaxSecs, viewers see the player
+	// at VisibleAlpha instead of not at all, and bots only notice them within
+	// BotDetectMult × their normal sight range.
+	MaxSecs       float64 `json:"max_secs"`
+	VisibleAlpha  float64 `json:"visible_alpha"`
+	BotDetectMult float64 `json:"bot_detect_mult"`
 }
 
 type Items struct {
@@ -184,6 +190,26 @@ type Mood struct {
 	NearR            float64 `json:"near_r"`
 }
 
+// Minimap is the client-side minimap (spec §12.1); the server only passes it through.
+type Minimap struct {
+	SizePC     int  `json:"size_pc"`
+	SizeMobile int  `json:"size_mobile"`
+	ShowTop1   bool `json:"show_top1"`
+	ShowChest  bool `json:"show_chest"`
+	ShowOthers bool `json:"show_others"`
+}
+
+// Score is the Uy Danh scoring table (spec §11.1).
+type Score struct {
+	HitBase              float64 `json:"hit_base"`
+	KillBonus            float64 `json:"kill_bonus"`
+	UpsetPerRealm        float64 `json:"upset_per_realm"`
+	BreakthroughPerRealm float64 `json:"breakthrough_per_realm"`
+	Top1PerSec           float64 `json:"top1_per_sec"`
+	BotVictimMult        float64 `json:"bot_victim_mult"`
+	SameVictimCooldown   float64 `json:"same_victim_cooldown_secs"`
+}
+
 type Net struct {
 	TickHz             int     `json:"tick_hz"`
 	SnapshotHz         int     `json:"snapshot_hz"`
@@ -212,6 +238,10 @@ type Config struct {
 	Bots        Bots            `json:"bots"`
 	Characters  []string        `json:"characters"`
 	Mood        Mood            `json:"mood"`
+	Titles      []string        `json:"titles"`
+	TitleHold   float64         `json:"title_hold_secs"`
+	Minimap     Minimap         `json:"minimap"`
+	Score       Score           `json:"score"`
 	Net         Net             `json:"net"`
 }
 

@@ -94,6 +94,7 @@ type PlayerState struct {
 	Flags  uint8   `msgpack:"fl"`
 	Crack  float32 `msgpack:"ck,omitempty"`
 	Exp    float32 `msgpack:"xp"`
+	Title  int     `msgpack:"ti,omitempty"` // room rank badge 1..3 (spec §11.3), 0 = none
 	Name   string  `msgpack:"nm,omitempty"` // only the first time a client sees this player
 	Char   string  `msgpack:"ch,omitempty"`
 }

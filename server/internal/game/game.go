@@ -122,6 +122,10 @@ func (g *Game) resetPlayer(p *Player, level, swords int) {
 	p.TotalExp = g.Prog.Threshold(level)
 	p.Level = level
 	p.PeakExp, p.PeakLevel, p.Kills = p.TotalExp, level, 0
+	// A new life starts from zero Uy Danh (spec §11.1).
+	p.Score, p.Hits, p.Top1Secs, p.DaiThuaSecs = 0, 0, 0, 0
+	p.ScoreBy, p.HitCooldown, p.ScoredRealms = map[string]float64{}, map[string]float64{}, map[int]bool{}
+	p.Title, p.pendingTitle, p.titleSince = 0, 0, 0
 	p.Ring = Ring{Count: max(g.Cfg.Sword.StartCount, swords), Dir: 1, Angle: g.Rng.Float64() * 2 * math.Pi}
 	p.Ring.Tilt = RestTilt(g.Cfg.Sword, p.Ring.Dir)
 	p.Buffs = [BuffCount]float64{}
@@ -196,6 +200,8 @@ func (g *Game) Tick(dt float64) {
 	g.resolvePickups()
 	g.maintainSpawns()
 	g.updateMoods()
+	g.updateTop1(dt)
+	g.updateTitles()
 	if g.gridDirty {
 		g.Grid.Rebuild(g.ObstacleSolid)
 		g.gridDirty = false
@@ -247,7 +253,14 @@ func (g *Game) Ranking() []*Player {
 			out = append(out, p)
 		}
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].TotalExp > out[j].TotalExp })
+	// Spec §11.2: the room board ranks by current realm+tier so players can tell at a glance
+	// who is dangerous; total_exp only breaks ties within a tier.
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Level != out[j].Level {
+			return out[i].Level > out[j].Level
+		}
+		return out[i].TotalExp > out[j].TotalExp
+	})
 	return out
 }
 

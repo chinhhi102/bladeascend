@@ -195,9 +195,10 @@ func TestOneRevolutionPerRevSecs(t *testing.T) {
 	if w := g.Omega(p); math.Abs(w*g.Cfg.Sword.RevSecs-2*math.Pi) > 1e-9 {
 		t.Fatalf("omega %v does not make one turn per %vs", w, g.Cfg.Sword.RevSecs)
 	}
+	spin := g.Cfg.Buffs["spin"].Mult
 	g.ApplyBuff(p, "spin")
-	if w := g.Omega(p); math.Abs(w-2*math.Pi/g.Cfg.Sword.RevSecs*1.3) > 1e-9 {
-		t.Fatalf("Tốc Kiếm omega %v, want ×1.3", w)
+	if w := g.Omega(p); math.Abs(w-2*math.Pi/g.Cfg.Sword.RevSecs*spin) > 1e-9 {
+		t.Fatalf("Tốc Kiếm omega %v, want ×%v", w, spin)
 	}
 }
 

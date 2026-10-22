@@ -142,23 +142,31 @@ func TestNameFilter(t *testing.T) {
 }
 
 // Spec §17: a stealthed player never appears in packets for far-away viewers.
-func TestSnapshotOmitsHiddenPlayers(t *testing.T) {
+// Spec §6.2 / §13.3 (v3.3): người Ẩn Thân VẪN được gửi xuống kèm cờ stealth để client vẽ mờ,
+// nhưng không kèm tên và danh hiệu nên vẫn không lộ là ai.
+func TestSnapshotSendsStealthFlaggedWithoutName(t *testing.T) {
 	m, _, _ := testManager(t)
 	cs := joinN(m, 2)
 	r := m.AllRooms()[0]
 	r.Step(1.0 / 30)
 	viewer, hider := r.G.Players[cs[0].PlayerID], r.G.Players[cs[1].PlayerID]
 	viewer.Pos, hider.Pos = r.G.Vec(3000, 3000), r.G.Vec(3400, 3000)
+	hider.Title = 1
 	r.G.ApplyBuff(hider, "stealth")
 	snap := r.snapshotFor(cs[0], viewer, r.G.DrainEvents())
-	for _, p := range snap.Players {
+	var got *netproto.PlayerState
+	for i, p := range snap.Players {
 		if p.ID == hider.ID {
-			t.Fatal("stealthed player leaked into the snapshot")
+			got = &snap.Players[i]
 		}
 	}
-	for _, e := range snap.Events {
-		if e.A == hider.ID {
-			t.Fatalf("event %s about the hidden player leaked", e.Kind)
-		}
+	if got == nil {
+		t.Fatal("người Ẩn Thân phải vẫn có trong snapshot (vẽ mờ 20%)")
+	}
+	if got.Flags&netproto.FlagStealth == 0 {
+		t.Fatal("thiếu cờ stealth nên client không biết phải vẽ mờ")
+	}
+	if got.Name != "" || got.Title != 0 {
+		t.Fatalf("Ẩn Thân mà vẫn lộ tên/danh hiệu: %q, title %d", got.Name, got.Title)
 	}
 }

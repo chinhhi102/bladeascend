@@ -454,18 +454,46 @@ func TestStealthAndBushVisibility(t *testing.T) {
 	if !g.CanSee(viewer, hider) {
 		t.Fatal("being hit reveals the player for 2s")
 	}
-	// Stealth: far viewers cannot see, near ones (≤120 × scale) can.
+	// Ẩn Thân (spec §6.2 từ v3.3): vẫn gửi xuống client, chỉ bị vẽ mờ khi ở xa.
 	hider.RevealedUntil = 0
 	hider.Pos = Vec{X: 8000, Y: 6000}
 	g.Tick(dt)
 	g.ApplyBuff(hider, "stealth")
 	viewer.Pos = Vec{X: 7500, Y: 6000}
-	if g.CanSee(viewer, hider) {
-		t.Fatal("stealthed player visible from 500 away")
+	if !g.CanSee(viewer, hider) {
+		t.Fatal("người Ẩn Thân vẫn phải được gửi xuống (vẽ mờ), không biến mất")
+	}
+	if !g.StealthFaded(viewer, hider) {
+		t.Fatal("cách 500 đơn vị thì người Ẩn Thân phải bị vẽ mờ")
 	}
 	viewer.Pos = Vec{X: 7900, Y: 6000}
-	if !g.CanSee(viewer, hider) {
-		t.Fatal("stealthed player should be visible from 100 away")
+	if g.StealthFaded(viewer, hider) {
+		t.Fatal("cách 100 đơn vị (< reveal_r) thì phải hiện rõ 100%")
+	}
+}
+
+// Spec §6.2: Ẩn Thân tối đa max_secs, nhặt lại chỉ làm mới chứ không cộng dồn.
+func TestStealthCappedAtMaxSecs(t *testing.T) {
+	g := quietGame(t, nil)
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
+	cfg := g.Cfg.Buffs["stealth"]
+	g.ApplyBuff(p, "stealth")
+	g.ApplyBuff(p, "stealth")
+	if want := g.Time + cfg.MaxSecs; math.Abs(p.Buffs[BuffStealth]-want) > 1e-9 {
+		t.Fatalf("hạn Ẩn Thân = %v, muốn %v", p.Buffs[BuffStealth], want)
+	}
+}
+
+// Spec §10: bot chỉ phát hiện người Ẩn Thân trong 50% tầm nhìn bình thường.
+func TestBotSightHalvedAgainstStealth(t *testing.T) {
+	g := quietGame(t, nil)
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
+	if m := g.BotSightMult(p); m != 1 {
+		t.Fatalf("không Ẩn Thân thì hệ số tầm nhìn = %v, muốn 1", m)
+	}
+	g.ApplyBuff(p, "stealth")
+	if m := g.BotSightMult(p); m != g.Cfg.Buffs["stealth"].BotDetectMult {
+		t.Fatalf("hệ số tầm nhìn khi Ẩn Thân = %v, muốn %v", m, g.Cfg.Buffs["stealth"].BotDetectMult)
 	}
 }
 

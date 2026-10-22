@@ -30,6 +30,10 @@ func (g *Game) setTotalExp(p *Player, exp float64) {
 	pos := p.Pos
 	switch {
 	case newR > oldR:
+		g.awardBreakthrough(p, newR)
+		if newR == len(g.Cfg.Cultivation.Realms)-1 && p.DaiThuaSecs == 0 {
+			p.DaiThuaSecs = g.Time - p.SpawnedAt // bảng Thần Tốc (spec §11.2)
+		}
 		g.setMood(p, MoodBreakthrough, g.Cfg.Mood.BreakthroughSecs)
 		g.emit(Event{Kind: "Breakthrough", A: p.ID, N: p.Level, X: float32(pos.X), Y: float32(pos.Y)})
 		g.emit(Event{Kind: "KillFeed", Global: true, S: "breakthrough", A: p.ID, N: newR})
