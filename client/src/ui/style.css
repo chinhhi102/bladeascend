@@ -110,7 +110,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .feed-line { background: rgba(0,0,0,.45); padding: 6px 12px; border-radius: 12px; }
 
 /* Tin loan toàn server: hạ một người trong Top 5 → dải giữa-trên màn hình (spec §11.4). */
-.server-feed { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(70vw, 900px); }
+.server-feed { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(70vw, 900px); }
 .server-line { width: 100%; text-align: center; font-size: 20px; padding: 10px 18px; border-radius: 12px; background: linear-gradient(90deg, rgba(192,41,15,.94), rgba(230,80,30,.94), rgba(192,41,15,.94)); border: 3px solid var(--gold); color: #fff6c9; animation: serverFeedIn .35s ease-out, feedPulse 1.2s ease-out 2; }
 @keyframes serverFeedIn { from { opacity: 0; transform: translateY(-18px) scale(.94); } to { opacity: 1; transform: none; } }
 @keyframes feedPulse { 0%, 100% { box-shadow: 0 0 0 rgba(255,215,0,0); } 50% { box-shadow: 0 0 18px rgba(255,215,0,.85); } }
@@ -141,7 +141,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
   .score-pop { font-size: 16px; }
   .debug-help { display: none !important; }
   .feed { font-size: 16px; bottom: 60px; }
-  .server-feed { width: 94vw; top: 8px; }
+  .server-feed { width: 94vw; top: 70px; }
   .server-line { font-size: 14px; padding: 7px 10px; border-width: 2px; }
 }
 @media (max-width: 720px) and (orientation: portrait) {
