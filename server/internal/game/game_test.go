@@ -329,9 +329,20 @@ func TestGateTeleportsWithoutInvulnerability(t *testing.T) {
 
 func TestMoveSpeedFormula(t *testing.T) {
 	g := quietGame(t, nil)
-	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 89, Swords: 1})
-	if s := g.MoveSpeed(p); math.Abs(s-260*math.Sqrt(5)) > 1e-9 {
-		t.Fatalf("speed = %v", s)
+	base := g.Cfg.Player.MoveBase
+	low := g.AddPlayer(SpawnOptions{Name: "Low", Level: 0, Swords: 1})
+	high := g.AddPlayer(SpawnOptions{Name: "High", Level: 89, Swords: 1})
+	// Tu vi không làm tăng tốc độ: cảnh giới thấp nhất và cao nhất chạy bằng nhau.
+	if s := g.MoveSpeed(low); math.Abs(s-base) > 1e-9 {
+		t.Fatalf("speed cảnh giới thấp = %v, muốn %v", s, base)
+	}
+	if s := g.MoveSpeed(high); math.Abs(s-base) > 1e-9 {
+		t.Fatalf("speed cảnh giới cao = %v, muốn %v (không tăng theo tu vi)", s, base)
+	}
+	// Chỉ vật phẩm (buff Thần Hành) mới tăng tốc.
+	low.Buffs[BuffHaste] = g.Time + 10
+	if s := g.MoveSpeed(low); math.Abs(s-base*g.Cfg.Buffs["haste"].Mult) > 1e-9 {
+		t.Fatalf("speed khi có buff = %v", s)
 	}
 }
 
@@ -410,7 +421,7 @@ func TestNarrowAlleyBlocksBigPlayers(t *testing.T) {
 		p.Moving, p.InputAngle = true, math.Pi/2
 		p.InvulnUntil = 1e9 // only movement is under test
 	}
-	for i := 0; i < 30*12; i++ {
+	for i := 0; i < 30*25; i++ { // 25s: đủ để người nhỏ đi hết hẻm ở tốc độ 130/s
 		g.Tick(dt)
 		small.Pos.X, big.Pos.X = 5195, 5195 // walk straight down the alley axis
 	}

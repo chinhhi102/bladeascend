@@ -134,11 +134,13 @@ angle(i, k, t)    = phase + dir * ω * t + slot_angle(i) + stagger(k)
 ### 4.1 Tốc độ di chuyển & camera
 
 ```
-move_speed (đơn vị thế giới/s) = 260 * sqrt(scale) * buff_haste(1.4 | 1.0) * zone_mult
+move_speed (đơn vị thế giới/s) = 130 * buff_haste(1.4 | 1.0) * zone_mult
 camera: chiều cao vùng nhìn thấy (đơn vị thế giới) = max(900 * scale^0.85, 2.6 * reach)
 ```
 
-→ Camera luôn lùi đủ xa để thấy trọn vòng kiếm của mình. Trên màn hình, nhân vật to lên dần nhưng vẫn nhìn được rộng hơn (bản đồ như "thu nhỏ" lại). Người nhỏ di chuyển trên màn hình nhanh hơn người lớn (≈260 px/s so với ≈150 px/s ở scale 5) → người nhỏ có cơ hội né và lật kèo.
+→ Tốc độ **không phụ thuộc tu vi** (không còn hệ số `sqrt(scale)`). Cách duy nhất chạy nhanh hơn là **nhặt vật phẩm Thần Hành** (buff haste ×1.4); địa hình (bùn/gió) vẫn tác động qua `zone_mult`.
+
+→ Camera luôn lùi đủ xa để thấy trọn vòng kiếm của mình. Trên màn hình, nhân vật to lên dần nhưng vẫn nhìn được rộng hơn (bản đồ như "thu nhỏ" lại). Vì camera lùi ra khi lên cảnh giới, người tu vi cao trông di chuyển chậm hơn trên màn hình (≈130 px/s ở scale 1 so với ≈33 px/s ở scale 5) → người nhỏ cơ động hơn hẳn, có cơ hội né và lật kèo.
 
 ## 5. Chiến đấu
 
@@ -465,7 +467,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "clash_ratio_per_realm": 1
   },
   "player": {
-    "body_r": 30, "move_base": 260, "pickup_r": 90,
+    "body_r": 30, "move_base": 130, "pickup_r": 90,
     "invuln_on_hit": 1.0, "invuln_on_spawn": 2.0,
     "attacker_share": 0.5, "drop_share": 0.3, "kill_bonus_exp": 30,
     "death_sword_drop": 0.5, "orb_owner_secs": 1.5,

@@ -81,6 +81,8 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 - Cổng 8080 trên máy dev hiện đang bị chương trình khác chiếm → chạy server với `-addr :8090` (khi dùng `npm run dev` thì chạy `KX_SERVER=http://localhost:8090 npm run dev`).
 - Cân bằng (sim 10 phút, 40 bot): lên Trúc Cơ trung bình ~7 phút, nhiều bot chết sớm ở Luyện Khí 1 — nếu thấy chậm, chỉnh `config/game.json` (ví dụ tăng EXP quái, giảm `exp_base`). Chưa đổi gì vì đây là quyết định cân bằng của bạn.
 - Dự đoán chuyển động phía client không mô phỏng đẩy lùi (knockback) → khi bị chém thấy giật nhẹ 1 nhịp.
+- **Tốc độ chạy (22/10/2026)**: `move_base` 260 → **130** và bỏ hệ số `sqrt(scale)` → tốc độ không còn tăng theo tu vi; chỉ buff Thần Hành (nhặt vật phẩm) ×1.4 và địa hình mới đổi tốc độ. Hệ quả cần chơi thử: camera vẫn lùi ra khi lên cảnh giới, nên người tu vi cao nhìn trên màn hình đi chậm hơn nhiều (≈130 px/s ở scale 1 so với ≈33 px/s ở scale 5). Nếu thấy người cấp cao "ì" quá thì giảm độ lùi camera (`camera_exp`) hoặc tăng `move_base`.
+- Môi trường dev: `~/go/pkg/mod` có một số thư mục thuộc quyền `root` (dấu vết của lần chạy `sudo go` trước) → `go build/test` báo "permission denied". Đang né bằng `GOMODCACHE=~/.cache/kx-gomod`. Sửa tận gốc: `sudo chown -R chinhdc:chinhdc ~/go/pkg/mod`. Ngoài ra `go` không còn trong PATH, đang dùng bản trong cache: `~/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.11.linux-amd64/bin/go`.
 
 ## Việc tiếp theo gợi ý
 1. Đăng nhập lại minigen → chạy các đợt art ở trên.

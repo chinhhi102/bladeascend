@@ -207,7 +207,7 @@ export class ClientWorld {
       return from;
     }
     const dir = { x: Math.cos(inp.angle), y: Math.sin(inp.angle) };
-    let speed = this.cfg.player.move_base * Math.sqrt(me.sc);
+    let speed = this.cfg.player.move_base;
     if (me.bf & (1 << BUFFS.indexOf('haste'))) {
       speed *= this.cfg.buffs.haste.mult;
     }

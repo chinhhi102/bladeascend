@@ -7,8 +7,9 @@ import (
 )
 
 // MoveSpeed implements spec §4.1 without the zone factor.
+// Tốc độ KHÔNG phụ thuộc tu vi; chỉ buff Thần Hành (nhặt được) mới tăng tốc.
 func (g *Game) MoveSpeed(p *Player) float64 {
-	s := g.Cfg.Player.MoveBase * math.Sqrt(p.Scale)
+	s := g.Cfg.Player.MoveBase
 	if p.HasBuff(BuffHaste, g.Time) {
 		s *= g.Cfg.Buffs["haste"].Mult
 	}
