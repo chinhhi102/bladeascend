@@ -2,6 +2,7 @@ import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 
 import { assets } from './assets';
 import { hslToHex } from './palette';
+import { BEAST_SEGMENTS, quality, TRAIL_RATE } from './quality';
 
 /**
  * Thần thú Tiên giới (spec §3.5): mỗi cảnh giới Tiên một con, dựng bằng **chuỗi đốt** chứ
@@ -13,7 +14,7 @@ import { hslToHex } from './palette';
  * lớp trước) và chỉ bật/tắt `visible`, rẻ hơn là chuyển cha mỗi khung hình.
  */
 
-export type BeastMode = 'breakthrough' | 'ambient' | 'shatter';
+export type BeastMode = 'breakthrough' | 'companion' | 'shatter';
 
 export interface BeastSpec {
   /** thư mục art trong assets/beasts (ART_PROMPTS §10.1) */
@@ -40,15 +41,23 @@ export const TIEN_BEASTS: BeastSpec[] = [
   { art: 'dragon', chain: 'serpent', color: 0xffffff, trail: 'cloud', twin: true }, // Đạo Tổ — Song long âm dương
 ];
 
-// Thời lượng từng kiểu xuất hiện (spec §3.5).
-export const BEAST_SECS: Record<BeastMode, number> = { breakthrough: 2.5, ambient: 1.5, shatter: 0.8 };
+// Thời lượng từng kiểu (spec §3.5). `companion` không hết hạn — spec v4.7 bỏ kiểu "mỗi 20s
+// bay một vòng": sau màn đột phá thần thú ở lại bay quanh chủ suốt thời gian còn ở Tiên giới.
+export const BEAST_SECS: Record<BeastMode, number> = { breakthrough: 2.5, companion: Infinity, shatter: 0.8 };
 
-const SEGMENTS = 16; // 1 đầu + 14 đốt thân + 1 đuôi, nằm trong khoảng 12–20 của spec
-const SEG_GAP = 0.035; // đốt sau trễ hơn đốt trước bao nhiêu trên quỹ đạo
+const SEG_FRAMES = 3; // đốt sau trễ bao nhiêu KHUNG HÌNH so với đốt trước
 const FADE_SECS = 0.4; // spec: mờ dần ở 0.4s cuối
 const TRAIL_SECS = 0.5;
-const MAX_TRAIL = 36;
+const MAX_TRAIL = 24;
 const DEPTH_SQUASH = 0.35; // ép dẹt quỹ đạo theo góc nhìn 3/4 (spec §3.5)
+const ORBIT_SECS = 4; // quỹ đạo nền: 1 vòng / 4s
+const BOB_SECS = 3; // độ cao nhấp nhô chu kỳ 3s
+const CENTER_LERP = 0.1; // tâm quỹ đạo bám chủ có độ trễ → chạy thì thần thú bị kéo dài ra sau
+const FAR_SEGMENTS = 5; // chủ nhỏ hơn 40 px trên màn hình: chỉ vẽ đầu + 4 đốt
+
+/** Động tác ngẫu nhiên, mỗi 8–15s chọn một (spec §3.5 v4.7). */
+const MOVES = ['spiral', 'figure8', 'flip', 'dash', 'coil'] as const;
+type Move = (typeof MOVES)[number];
 
 let placeholders: { head: Texture; body: Texture; tail: Texture } | null = null;
 
@@ -90,14 +99,14 @@ function placeholderParts(): { head: Texture; body: Texture; tail: Texture } {
 }
 
 /** partAt: đốt thứ i dùng bộ phận nào — rồng nhiều đốt thân, chim chỉ một thân rồi tới đuôi. */
-function partAt(spec: BeastSpec, i: number): 'head' | 'body' | 'tail' {
+function partAt(spec: BeastSpec, i: number, n: number): 'head' | 'body' | 'tail' {
   if (i === 0) {
     return 'head';
   }
   if (spec.chain === 'bird') {
     return i === 1 ? 'body' : 'tail';
   }
-  return i === SEGMENTS - 1 ? 'tail' : 'body';
+  return i === n - 1 ? 'tail' : 'body';
 }
 
 /** partTexture: dùng art thật nếu đã có, không thì placeholder. */
@@ -128,82 +137,221 @@ export class Beast {
   private readonly motes: Mote[] = [];
   private readonly born: number;
   private readonly dur: number;
-  private readonly bodyR: number;
-  private readonly charH: number;
-  private readonly size: number;
+  private bodyR: number;
+  private charH: number;
+  private size: number;
+  /** Lệch pha quỹ đạo — Đạo Tổ có 2 con lệch nhau 180° (spec §3.5 v4.7). */
+  readonly phase: number;
+  /** Vòng đệm vị trí đầu các khung trước; đốt sau đọc lại. Cấp phát một lần, không mỗi frame. */
+  private readonly histX: Float64Array;
+  private readonly histY: Float64Array;
+  private histAt = 0;
+  private histFilled = false;
+  /** Tâm quỹ đạo, bám chủ có độ trễ. */
+  private cx = 0;
+  private cy = 0;
+  private centred = false;
+  private move: Move | null = null;
+  private moveFrom = 0;
+  private moveSecs = 0;
+  private nextMoveAt = 0;
+  private dir = 1;
+  /** Vệt hạt chỉ bật cho vài con gần nhất; mờ theo chủ khi Ẩn Thân / trong bụi. */
+  trailOn = true;
+  ownerAlpha = 1;
   /** điểm vỡ cố định cho kiểu shatter */
   private readonly shards: { a: number; vy: number }[] = [];
 
-  constructor(spec: BeastSpec, mode: BeastMode, bodyR: number, charH: number, now: number) {
+  constructor(spec: BeastSpec, mode: BeastMode, bodyR: number, charH: number, now: number, phase = 0) {
     this.spec = spec;
     this.mode = mode;
+    this.phase = phase;
     this.born = now;
     this.dur = BEAST_SECS[mode];
     this.bodyR = bodyR;
     this.charH = charH;
-    this.size = (mode === 'ambient' ? 0.6 : 1) * bodyR * 0.85; // spec: bản thường trực 60% cỡ
-    for (let i = 0; i < SEGMENTS; i++) {
-      const tex = partTexture(spec, partAt(spec, i));
+    this.size = (mode === 'companion' ? 0.6 : 1) * bodyR * 0.85; // spec: bản thường trực 60% cỡ
+    this.nextMoveAt = now + 8 + Math.random() * 7;
+    const n = Math.max(3, BEAST_SEGMENTS[quality()]);
+    this.histX = new Float64Array(n * SEG_FRAMES + 2);
+    this.histY = new Float64Array(n * SEG_FRAMES + 2);
+    for (let i = 0; i < n; i++) {
+      const tex = partTexture(spec, partAt(spec, i, n));
       const mk = (): Sprite => {
         const sp = new Sprite(tex);
         sp.anchor.set(0.5);
         return sp;
       };
-      const seg: Seg = { back: mk(), front: mk(), k: i / (SEGMENTS - 1) };
+      const seg: Seg = { back: mk(), front: mk(), k: i / (n - 1) };
       this.back.addChild(seg.back);
       this.front.addChild(seg.front);
       this.segs.push(seg);
-      this.shards.push({ a: (i / SEGMENTS) * Math.PI * 2, vy: 60 + (i % 5) * 40 });
+      this.shards.push({ a: (i / n) * Math.PI * 2, vy: 60 + (i % 5) * 40 });
     }
   }
 
-  /** done: hiệu ứng đã hết hạn, gọi destroy được. */
+  /** done: hết hạn. Bản `companion` không bao giờ hết — scene gỡ khi chủ rời Tiên giới. */
   done(now: number): boolean {
     return now - this.born >= this.dur;
   }
 
+  /** resize cập nhật cỡ khi chủ lên tầng (scale đổi). */
+  resize(bodyR: number, charH: number): void {
+    this.bodyR = bodyR;
+    this.charH = charH;
+    this.size = (this.mode === 'companion' ? 0.6 : 1) * bodyR * 0.85;
+  }
+
   /**
-   * update đặt lại toàn bộ đốt quanh nhân vật ở (cx, cy).
-   * `feetY` là chân nhân vật trong toạ độ thế giới.
+   * update đặt lại toàn bộ đốt. `cx`/`feetY` là chân nhân vật trong toạ độ thế giới;
+   * `near` = chủ có đủ to trên màn hình không (spec §3.5: nhỏ hơn 40 px thì rút gọn đốt).
    */
-  update(cx: number, feetY: number, now: number): void {
-    const t = Math.min(1, (now - this.born) / this.dur);
-    const fade = Math.min(1, (this.dur - (now - this.born)) / FADE_SECS);
-    const alpha = Math.max(0, Math.min(1, fade));
-    this.back.position.set(cx, 0);
-    this.front.position.set(cx, 0);
+  update(cx: number, feetY: number, now: number, near = true): void {
+    const alpha = this.ownerAlpha * this.fadeAt(now);
     if (this.mode === 'shatter') {
-      this.updateShatter(feetY, t, alpha);
+      this.updateShatter(cx, feetY, Math.min(1, (now - this.born) / this.dur), alpha);
       return;
     }
+    const head = this.mode === 'breakthrough' ? this.spiralHead(cx, feetY, now) : this.companionHead(cx, feetY, now);
+    this.pushHistory(head.x, head.y);
+    const shown = near ? this.segs.length : Math.min(FAR_SEGMENTS, this.segs.length);
+    const waist = feetY - this.charH * 0.5;
     for (let i = 0; i < this.segs.length; i++) {
       const seg = this.segs[i];
-      const u = Math.max(0, t - i * SEG_GAP); // đốt sau đi theo vị trí đầu lúc trước
-      const p = this.pathAt(u, feetY);
-      const prev = this.pathAt(Math.max(0, u - 0.02), feetY);
-      // Đốt nhỏ dần về đuôi (spec §3.5). `s` là bề ngang mong muốn tính bằng đơn vị thế
-      // giới; place() mới chia cho bề ngang thật của texture — placeholder 64px và art thật
-      // 512px phải ra cùng một cỡ trên màn hình.
-      const s = this.size * (1 - 0.45 * seg.k) * 2;
-      const rot = Math.atan2(p.y - prev.y, p.x - prev.x);
-      const front = p.depth >= 0;
-      this.place(seg.back, p.x, p.y, s, rot, alpha, !front);
-      this.place(seg.front, p.x, p.y, s, rot, alpha, front);
-      if (i === 0 && this.motes.length < MAX_TRAIL && now - this.born > 0.05) {
-        this.emitMote(p.x, p.y, now);
+      if (i >= shown) {
+        seg.back.visible = false;
+        seg.front.visible = false;
+        continue;
       }
+      const px = this.histAtX(i * SEG_FRAMES);
+      const py = this.histAtY(i * SEG_FRAMES);
+      const qx = this.histAtX(i * SEG_FRAMES + 1);
+      const qy = this.histAtY(i * SEG_FRAMES + 1);
+      // Đốt nhỏ dần về đuôi; `w` là bề ngang mong muốn tính bằng đơn vị thế giới, place()
+      // mới chia cho bề ngang thật của texture (placeholder 64px vs art thật 512px).
+      const w = this.size * (1 - 0.45 * seg.k) * 2;
+      const rot = Math.atan2(py - qy, px - qx);
+      // Đốt nằm thấp hơn ngang hông thì đang ở nửa TRƯỚC quỹ đạo → vẽ trên nhân vật.
+      const front = i === 0 ? head.depth >= 0 : py >= waist;
+      this.place(seg.back, px, py, w, rot, alpha, !front);
+      this.place(seg.front, px, py, w, rot, alpha, front);
+    }
+    const rate = TRAIL_RATE[quality()];
+    if (this.trailOn && rate > 0 && this.motes.length < MAX_TRAIL * rate) {
+      this.emitMote(head.x, head.y, now);
     }
     this.updateMotes(now);
   }
 
+  private fadeAt(now: number): number {
+    if (this.dur === Infinity) {
+      return Math.min(1, (now - this.born) / 0.3); // hiện ra mượt rồi ở lại
+    }
+    return Math.max(0, Math.min(1, (this.dur - (now - this.born)) / FADE_SECS));
+  }
+
+  /**
+   * companionHead là quỹ đạo nền của bản thường trực (spec §3.5 v4.7): vòng elip quanh thân
+   * bán kính 1.3–1.8 × chiều cao nhân vật, ép dẹt theo góc nhìn, 1 vòng / 4s, độ cao nhấp
+   * nhô chu kỳ 3s, tâm bám chủ có độ trễ nên lúc chạy thần thú bị kéo dài ra sau như dải lụa.
+   */
+  private companionHead(cx: number, feetY: number, now: number): { x: number; y: number; depth: number } {
+    if (!this.centred) {
+      this.cx = cx;
+      this.cy = feetY;
+      this.centred = true;
+    }
+    this.cx += (cx - this.cx) * CENTER_LERP;
+    this.cy += (feetY - this.cy) * CENTER_LERP;
+    this.pickMove(now);
+
+    // Bao hình sin để động tác vào và ra đều mượt, không giật về quỹ đạo nền.
+    const env = this.move ? Math.sin(Math.min(1, (now - this.moveFrom) / this.moveSecs) * Math.PI) : 0;
+    let theta = this.dir * now * ((2 * Math.PI) / ORBIT_SECS) + this.phase;
+    let r = this.charH * (1.3 + 0.25 * Math.sin(now * 0.37));
+    let h = this.charH * (0.9 + 0.12 * Math.sin((now * 2 * Math.PI) / BOB_SECS));
+    switch (this.move) {
+      case 'spiral': // xoắn ốc vút lên rồi bổ nhào xuống
+        h += this.charH * 1.8 * env;
+        r *= 1 - 0.4 * env;
+        theta += env * 4;
+        break;
+      case 'figure8': // lượn hình số 8 quanh người
+        theta += Math.sin(theta * 2) * 0.9 * env;
+        break;
+      case 'dash': // lao ra xa một nhịp rồi vòng về
+        r *= 1 + 1.6 * env;
+        break;
+      case 'coil': // cuộn tròn quanh đầu chủ
+        h += this.charH * 0.8 * env;
+        r *= 1 - 0.65 * env;
+        theta += env * 6;
+        break;
+      default: // 'flip' chỉ đổi this.dir, quỹ đạo giữ nguyên
+    }
+    return { x: this.cx + Math.cos(theta) * r, y: this.cy - h + Math.sin(theta) * r * DEPTH_SQUASH, depth: Math.sin(theta) };
+  }
+
+  /** pickMove chọn động tác mới mỗi 8–15s, mỗi động tác 1.5–3s (spec §3.5 v4.7). */
+  private pickMove(now: number): void {
+    if (this.move && now - this.moveFrom >= this.moveSecs) {
+      this.move = null;
+      this.nextMoveAt = now + 8 + Math.random() * 7;
+      return;
+    }
+    if (this.move || now < this.nextMoveAt) {
+      return;
+    }
+    this.move = MOVES[Math.floor(Math.random() * MOVES.length)];
+    this.moveFrom = now;
+    this.moveSecs = 1.5 + Math.random() * 1.5;
+    if (this.move === 'flip') {
+      this.dir = -this.dir;
+    }
+  }
+
+  /** spiralHead là màn đột phá: chui lên từ chân, quấn 1.5 vòng rồi bay vút lên (spec §3.5). */
+  private spiralHead(cx: number, feetY: number, now: number): { x: number; y: number; depth: number } {
+    const u = Math.min(1, (now - this.born) / this.dur);
+    const theta = u * 1.5 * Math.PI * 2 - Math.PI / 2;
+    const flare = Math.max(0, (u - 0.8) / 0.2);
+    const h = 3 * this.charH * u * u;
+    const r = this.bodyR * (0.6 + 0.4 * u + 2.5 * flare * flare);
+    return { x: cx + Math.cos(theta) * r, y: feetY - h + Math.sin(theta) * r * DEPTH_SQUASH, depth: Math.sin(theta) };
+  }
+
+  private pushHistory(x: number, y: number): void {
+    if (!this.histFilled) {
+      this.histX.fill(x);
+      this.histY.fill(y);
+      this.histFilled = true;
+    }
+    this.histAt = (this.histAt + 1) % this.histX.length;
+    this.histX[this.histAt] = x;
+    this.histY[this.histAt] = y;
+  }
+
+  private histIndex(back: number): number {
+    const n = this.histX.length;
+    return (this.histAt - Math.min(back, n - 1) + n) % n;
+  }
+
+  private histAtX(back: number): number {
+    return this.histX[this.histIndex(back)];
+  }
+
+  private histAtY(back: number): number {
+    return this.histY[this.histIndex(back)];
+  }
+
   /** updateShatter: thần thú hiện ra rồi gãy vụn thành mảnh sáng rơi xuống (spec §3.5). */
-  private updateShatter(feetY: number, t: number, alpha: number): void {
+  private updateShatter(cx: number, feetY: number, t: number, alpha: number): void {
     const cy = feetY - this.charH * 0.7;
     for (let i = 0; i < this.segs.length; i++) {
       const seg = this.segs[i];
       const sh = this.shards[i];
       const r = this.bodyR * 1.1;
-      const x = Math.cos(sh.a) * r * (1 + t * 0.8);
+      const x = cx + Math.cos(sh.a) * r * (1 + t * 0.8);
       const y = cy + Math.sin(sh.a) * r * DEPTH_SQUASH + sh.vy * t * t * 3;
       const s = this.size * (1 - 0.45 * seg.k) * (1 - 0.4 * t) * 2;
       const front = Math.sin(sh.a) >= 0;
@@ -222,43 +370,16 @@ export class Beast {
     sp.scale.set(width / Math.max(sp.texture.width, 1));
     sp.rotation = rot;
     sp.alpha = alpha;
-    sp.tint = this.tintOf(x);
+    sp.tint = this.tintOf();
   }
 
   /** Đạo Tổ: song long một trắng một đen + viền cầu vồng → đổi tint theo vị trí. */
-  private tintOf(x: number): number {
+  private tintOf(): number {
     if (!this.spec.twin) {
       return this.spec.color;
     }
-    return x >= 0 ? 0xffffff : 0x262626;
-  }
-
-  /**
-   * pathAt là quỹ đạo xoắn ốc của spec §3.5:
-   * `x = R(u)·cos θ(u)`, `y = feet − H(u) + R(u)·sin θ(u) × 0.35`.
-   * Trả thêm `depth = sin θ` để biết đốt đang ở nửa trước hay nửa sau.
-   */
-  private pathAt(u: number, feetY: number): { x: number; y: number; depth: number } {
-    const turns = this.mode === 'breakthrough' ? 1.5 : 1; // đột phá 1.5 vòng, thường trực 1 vòng
-    const theta = u * turns * Math.PI * 2 - Math.PI / 2; // bắt đầu từ phía sau lưng
-    let h: number;
-    let r: number;
-    if (this.mode === 'breakthrough') {
-      // Chui lên từ chân, quấn quanh người rồi bay vút lên: H tăng gia tốc, R bung ra ở cuối.
-      const flare = Math.max(0, (u - 0.8) / 0.2);
-      h = 3 * this.charH * u * u;
-      r = this.bodyR * (0.6 + 0.4 * u + 2.5 * flare * flare);
-    } else {
-      // Thường trực: bay 1 vòng ngang ngực rồi chui vào hào quang.
-      const tuck = Math.max(0, (u - 0.75) / 0.25);
-      h = this.charH * (0.55 + 0.25 * Math.sin(u * Math.PI));
-      r = this.bodyR * 1.25 * (1 - 0.8 * tuck);
-    }
-    return {
-      x: Math.cos(theta) * r,
-      y: feetY - h + Math.sin(theta) * r * DEPTH_SQUASH,
-      depth: Math.sin(theta),
-    };
+    // Đạo Tổ: hai con lệch pha 180°, con pha 0 màu trắng, con kia màu đen.
+    return this.phase === 0 ? 0xffffff : 0x303030;
   }
 
   private emitMote(x: number, y: number, now: number): void {

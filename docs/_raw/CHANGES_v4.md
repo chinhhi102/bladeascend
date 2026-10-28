@@ -68,3 +68,18 @@
 34. Bỏ chế độ "mỗi 20s bay 1 vòng" và tùy chọn tắt. Sau màn đột phá, thần thú (60% cỡ) ở lại bay quanh chủ liên tục khi còn ở Tiên giới: quỹ đạo elip ~4s/vòng + nhấp nhô, tâm bám chủ có độ trễ (lerp 0.1), động tác ngẫu nhiên mỗi 8–15s (xoắn ốc vút lên, số 8, đổi chiều, lao ra rồi về, cuộn quanh đầu), chuyển mượt về quỹ đạo nền.
 35. Phản ứng: lóe sáng khi chủ nhặt Tiên khí / khiên đỡ đòn; bay sát + vệt đỏ khi Thiêu Đốt. Đạo Tổ: 2 con lệch pha 180°.
 36. Số đốt theo chất lượng (16 / 10 / 6), chủ ở xa chỉ vẽ đầu + 4 đốt, vệt hạt tối đa 6 con gần nhất. Đo lại FPS bằng F3 với 5 người Tiên giới.
+
+## v4.8 — Bảng tên mới (spec §12.3)
+37. Làm lại nameplate: nền chung đen 45% bo góc; ruy băng danh hiệu theo hạng (Top 1 đỏ-vàng + vương miện + vệt sáng mỗi 3s + đốm lấp lánh; Top 2 bạc; Top 3 đồng; 4–10 dải mảnh); huy hiệu cảnh giới dạng viên thuốc màu theo bảng §12.3, Tiên giới viền chảy; chỉ báo ▲●▼ so với mình; tên to trắng viền đen 3px, tên mình màu vàng + ▼.
+38. Kích thước cố định trên màn hình (PC 18/13/13, mobile 15/11/11), font Be Vietnam Pro + 1 font trang trí hỗ trợ tiếng Việt cho danh hiệu (thử đủ dấu).
+39. Declutter (nhân vật < 40 px chỉ hiện tên; > 12 bảng thì ẩn ruy băng Top 4–10 ở xa; chồng nhau thì mờ bảng ở xa).
+40. Cache mỗi bảng tên thành 1 texture, BitmapFont có đủ ký tự tiếng Việt, hiệu ứng động là sprite chồng; chất lượng Thấp tắt hiệu ứng động. Art theo ART_PROMPTS §11.1 (placeholder: vẽ bằng Graphics trước).
+41. Hoạt ảnh: lên hạng ruy băng bật ra, mất hạng ruy băng rách rơi; lên tầng số lăn; đột phá huy hiệu chớp + phình.
+
+## v4.9 — Ảnh đại diện HUD + Bản đồ sinh động
+42. HUD (spec §12.4): thay vòng số cấp bằng chân dung nhân vật trong khung tròn, viền màu cảnh giới (Tiên giới viền hào quang động), huy hiệu cảnh giới + tầng ở góc, vương miện/ruy băng nếu Top; 4 biểu cảm theo trạng thái. Placeholder: cắt phần đầu từ `idle_00`.
+43. Bản đồ (spec §8.6): bỏ mọi hình chữ nhật/hình tròn lộ ra. Mặt đất trộn 2–3 texture/biome theo nhiễu, ranh giới biome loang; bake thành chunk 2048, chỉ vẽ chunk trong khung nhìn.
+44. mapgen xuất vùng (bùn, ao, bụi, sân, gió) dạng đa giác méo theo nhiễu đã làm mượt; **server dùng chính đa giác này** cho logic. Mép vùng có feather + dải viền texture.
+45. Decal 30–60/chunk (xoay/lật/co giãn/đổi sắc), bóng + vụn quanh vật cản, biến thể & xoay nhẹ cho vật cản; 2–4 ao/suối có shader gợn sóng; biên Linh Sơn là vách đá, Trúc Lâm là rặng tre.
+46. Ambient theo biome (bóng mây, lá rơi, đom đóm, sương, gà, bướm, đèn lồng, chim) giới hạn 150/60/0 theo chất lượng.
+47. Chưa có art: dùng màu đơn + nhiễu thủ tục cho texture, decal vẽ bằng Graphics có cạnh méo; danh sách asset cần sinh thêm vào assets:report (ART_PROMPTS §9.0b, §11.2). Đo FPS lại sau khi bake chunk.
