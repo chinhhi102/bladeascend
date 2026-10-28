@@ -35,6 +35,9 @@ type Game struct {
 	Players   map[uint32]*Player
 	Monsters  map[uint32]*Monster
 	Items     map[uint32]*Item
+	// itemSlots: vật phẩm theo chỉ số dày đặc; freeSlots là các ô trống để cấp lại.
+	itemSlots []*Item
+	freeSlots []int
 	Obstacles []ObstacleState
 	Grid      *world.Grid
 	Events    []Event
@@ -181,6 +184,18 @@ func (g *Game) refreshDerived(p *Player) {
 	p.Scale = g.Prog.Scale(p.Level)
 	// Spec v4.3 bỏ Trường Kiếm: tầm chém chỉ tăng theo số vòng và cảnh giới (§4.1a).
 	p.Geom = ComputeRingGeom(g.Cfg.Sword, g.Cfg.Player.BodyR, p.Scale, p.Ring.Count)
+	g.refreshView(p)
+}
+
+// refreshView tính sẵn nửa khung nhìn. Nó chỉ phụ thuộc Scale và tầm kiếm — hai thứ vừa
+// tính ở trên — nên tính một lần ở đây thay vì tính lại cho TỪNG vật phẩm, TỪNG client,
+// TỪNG tick như trước. pprof đo được: `math.Pow` trong hàm này một mình ăn 35% CPU server,
+// vì nó là `exp(log())` và bị gọi hàng triệu lần mỗi giây trong vòng lọc tầm nhìn.
+func (g *Game) refreshView(p *Player) {
+	pc := g.Cfg.Player
+	view := math.Max(pc.CameraViewH*math.Pow(p.Scale, pc.CameraExp), pc.CameraReachMul*p.Geom.Reach)
+	p.ViewHH = view/2 + g.Cfg.Net.AOIMargin
+	p.ViewHW = p.ViewHH * g.Cfg.Net.AOIAspect
 }
 
 func (g *Game) BodyR(p *Player) float64 { return g.Cfg.Player.BodyR * p.Scale }

@@ -49,6 +49,7 @@ func (g *Game) addItem(kind string, value float64, at Vec) *Item {
 	}
 	it := &Item{ID: g.newID(), Kind: kind, Pos: at, Value: value, Region: -1}
 	g.Items[it.ID] = it
+	g.takeSlot(it)
 	g.itemGrid.add(it)
 	if kind == "orb" {
 		g.orbCount++
@@ -58,6 +59,7 @@ func (g *Game) addItem(kind string, value float64, at Vec) *Item {
 
 func (g *Game) removeItem(it *Item) {
 	delete(g.Items, it.ID)
+	g.freeSlot(it)
 	g.itemGrid.remove(it)
 	switch {
 	case it.Region >= 0:

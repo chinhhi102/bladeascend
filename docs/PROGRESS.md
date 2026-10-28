@@ -103,6 +103,47 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
   chứng minh đường trả Pong **không phải chờ vòng lặp game**, không nói gì về mạng thật.
   Snapshot 38,3 KB là đỉnh lúc một loạt vật phẩm cùng lọt vào tầm nhìn khổng lồ của người
   Đạo Tổ (`ItemsAdded` dồn vào một gói) — đúng chỗ mục 27 (delta + chỉ gửi sự kiện) nhắm tới.
+- **Mục 27 — gói snapshot gọn lại (28/10/2026)**: cùng lệnh `go run ./cmd/loadtest`, cùng kịch bản:
+
+  | Chỉ số | TRƯỚC | SAU | Ngân sách §13.6 | |
+  |---|---|---|---|---|
+  | Tick server (trung bình) | 11,45 ms | **14,04 ms** | < 4 ms | VƯỢT ~3,5× |
+  | Tick server (p95) | 19,89 ms | **25,09 ms** | < 4 ms | VƯỢT ~6× |
+  | Snapshot lớn nhất / client | 38,3 KB | **8,3 KB** (−78%) | < 8 KB | sát mép |
+  | Băng thông xuống / client | 43,1 KB/s | **21,4 KB/s** (−50%) | < 40 KB/s | ĐẠT |
+  | Ping p95 | 0,00 ms | 0,00 ms | < 20 ms | ĐẠT |
+
+  Làm những gì: `ItemsAdded` cắt theo ngân sách 2 KB/gói ưu tiên vật phẩm gần người chơi ·
+  bỏ viên EXP nhỏ ngoài 1 500 khi camera đã lùi xa · người/quái ngoài nửa tầm nhìn chỉ gửi
+  10 Hz thay vì 20 Hz · trần 150 entity mỗi gói · client nghẽn thì **bỏ gói cũ** chứ không
+  xếp hàng (`SendLossy`) · quái chỉ gửi loại / máu tối đa / bán kính **lần đầu** client thấy
+  nó (46 → 27 byte/con) · người chơi bỏ `omega` (client tự tính từ config), `mood` thành chỉ
+  số thay cho chuỗi, `exp` chỉ gửi cho chính chủ (102 → 88 byte/người).
+
+  Tick server **xấu đi** chứ không tốt lên — việc xếp vật phẩm theo khoảng cách tốn thêm CPU.
+  Đó là mục 26, xem pprof bên dưới.
+- **pprof: 88% CPU server nằm trong `diffItems` (28/10/2026, mục 26)** — `go run ./cmd/loadtest -secs 30 -cpuprofile cpu.prof`, 10 hàm tốn nhất:
+
+  | | Hàm | flat | cum |
+  |---|---|---|---|
+  | 1 | `math.archExp` | 19,2% | 19,2% |
+  | 2 | `math.archHypot` | 8,1% | 8,1% |
+  | 3 | `maps.(*Iter).Next` (duyệt map) | 7,0% | 8,6% |
+  | 4 | `room.(*Room).diffItems` | 6,0% | **87,9%** |
+  | 5 | `game.(*Game).ViewHalfExtents` | 6,0% | **44,0%** |
+  | 6 | `math.archLog` | 4,9% | 4,9% |
+  | 7 | `maps.ctrlGroup.matchH2` | 3,9% | 3,9% |
+  | 8 | `runtime.mapaccess1_fast32` | 3,9% | 15,5% |
+  | 9 | `math.pow` | 3,5% | 35,1% |
+  | 10 | `math.ldexp` | 3,3% | 3,7% |
+  |  | `game.(*Game).InViewRadius` | 3,0% | 48,1% |
+  |  | `room.(*Room).wantItem` | 1,4% | 47,9% |
+
+  Đọc bảng: gần như toàn bộ CPU đi vào vòng lặp lọc vật phẩm theo tầm nhìn, và bên trong nó
+  `ViewHalfExtents` gọi `math.Pow(Scale, CameraExp)` — tức `exp(log())` — **cho từng vật phẩm,
+  từng client, từng tick**, trong khi giá trị đó chỉ phụ thuộc người xem. `archHypot` là do
+  xếp vật phẩm theo khoảng cách dùng `math.Hypot` thay vì so bình phương. Nhóm `maps.*`
+  (≈15%) là tra `knownItems` và duyệt toàn bộ vật phẩm của bản đồ cho mỗi client.
 - **`cmd/loadtest` và `cmd/stress` (28/10/2026)**: `loadtest` đo đúng một kịch bản §13.6 và in bảng đối chiếu ngân sách; `stress` quét 10 → 320 người tìm trần của máy (đo được: **160 người vẫn mượt**, 200 người lag). Cả hai chạy nguyên đường thật (ghép phòng, bot, snapshot theo tầm nhìn, mã hoá msgpack), khác `cmd/sim` vốn chỉ chạy `game.Tick` thuần.
 - **Overlay F3 (28/10/2026, §13.6)**: `?debug=true` → phím **F3** bật/tắt bảng đo: fps · ms/khung · thời gian vẽ · tick server (server gửi kèm trong snapshot) · ping · KB/s · cỡ snapshot · số sprite · số draw call (bọc hàm vẽ WebGL) · số entity trong AOI · số kiếm · mức giãn kiếm.
 - **Spec v4.3–v4.5 (28/10/2026)**: bỏ hẳn **Trường Kiếm** — tầm chém chỉ tăng theo số vòng và cảnh giới, `ComputeRingGeom`/`ringGeom` bỏ tham số `longMult`. Thêm **Cương Kiếm** (`hard`): độ bền va kiếm × 1.5, sát thương quái/vật cản × 2, 10s, weight 7. Bể kiếm giờ so theo **độ bền D = 1.2^r × hệ số buff** chứ không so cảnh giới, nên Luyện Khí có Cương Kiếm cứng hơn Trúc Cơ tay không; đổi chiều quay vẫn chỉ xét cảnh giới. `shield_ring` → `body_hit_max_rings: 1`; bỏ `tien_khi_to_exp_base`.

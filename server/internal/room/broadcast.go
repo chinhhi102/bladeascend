@@ -105,14 +105,17 @@ func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) 
 // Viên EXP NHỎ ngoài 1 500 đơn vị thì bỏ khi camera đã lùi xa (spec mục 27): người Đại
 // Thừa/Tiên giới nhìn thấy cả vùng 4 000 đơn vị, trong đó có hàng nghìn viên nhỏ mà trên màn
 // hình chúng chỉ là mấy chấm — gửi hết thì tốn băng thông cho thứ không ai nhặt tới.
-func (r *Room) wantItem(viewer *game.Player, it *game.Item, d float64) bool {
-	if !r.G.InView(viewer, it.Pos) {
+// `d2` là BÌNH PHƯƠNG khoảng cách, không phải khoảng cách: so sánh cho ra cùng kết quả mà
+// khỏi phải khai căn. pprof đo được `math.Hypot` ăn 8% CPU server chỉ vì chỗ này chạy cho
+// từng vật phẩm, từng client, từng tick.
+func (r *Room) wantItem(viewer *game.Player, hw, hh float64, it *game.Item, d2 float64) bool {
+	if !game.InViewAt(viewer.Pos, hw, hh, it.Pos, 0) {
 		return false
 	}
 	if it.Kind != "orb" || float64(it.Value) >= smallOrbValue {
 		return true
 	}
-	return d <= smallOrbRadius
+	return d2 <= smallOrbRadius*smallOrbRadius
 }
 
 // diffItems gửi vật phẩm mới lọt vào tầm nhìn và id của những cái vừa rời đi.
@@ -121,38 +124,63 @@ func (r *Room) wantItem(viewer *game.Player, it *game.Item, d float64) bool {
 // mới vào vùng đông đồ, cả trăm vật phẩm cùng lọt vào tầm nhìn trong một tick. Gửi hết là
 // một gói 38 KB (đo thật) — trên mạng 4G yếu thì gói đó một mình chiếm gần nửa giây. Phần
 // còn lại tự sang các gói sau, không mất gì vì `knownItems` chỉ đánh dấu cái đã gửi.
+// itemCand: một vật phẩm ứng viên kèm BÌNH PHƯƠNG khoảng cách tới người xem.
+type itemCand struct {
+	it *game.Item
+	d2 float64
+}
+
 func (r *Room) diffItems(c *Client, viewer *game.Player, s *netproto.Snapshot) {
 	g := r.G
-	type cand struct {
-		it *game.Item
-		d  float64
+	// Lấy nửa khung nhìn MỘT LẦN cho cả vòng lặp: nó chỉ phụ thuộc người xem. Trước đây mỗi
+	// vật phẩm gọi lại `ViewHalfExtents`, và hàm đó có `math.Pow` — 44% CPU server đi vào
+	// đúng chỗ này (pprof, CHANGES_v4 mục 26).
+	hw, hh := g.ViewHalfExtents(viewer)
+	vp := viewer.Pos
+	// Chỉ duyệt các ô lưới chạm khung nhìn, không duyệt toàn bộ vật phẩm của bản đồ. Bản
+	// đồ có hàng nghìn viên EXP; duyệt hết cho TỪNG người, 20 lần/giây, là vài triệu lượt
+	// tra bảng băm mỗi giây — pprof đo được 35% CPU server nằm ở đó.
+	if n := g.SlotCount(); len(c.knownItems) < n {
+		c.knownItems = append(c.knownItems, make([]uint32, n-len(c.knownItems))...)
 	}
+	known := c.knownItems
 	cands := r.itemBuf[:0]
-	for _, it := range g.Items {
-		if c.knownItems[it.ID] {
-			continue
+	g.ItemsNear(vp, hw, hh, func(it *game.Item) {
+		if known[it.Slot()] == it.ID {
+			return
 		}
-		d := it.Pos.Dist(viewer.Pos)
-		if r.wantItem(viewer, it, d) {
-			cands = append(cands, cand{it, d})
+		dx, dy := it.Pos.X-vp.X, it.Pos.Y-vp.Y
+		d2 := dx*dx + dy*dy
+		if r.wantItem(viewer, hw, hh, it, d2) {
+			cands = append(cands, itemCand{it, d2})
 		}
-	}
+	})
 	r.itemBuf = cands
-	sort.Slice(cands, func(a, b int) bool { return cands[a].d < cands[b].d })
+	sort.Slice(cands, func(a, b int) bool { return cands[a].d2 < cands[b].d2 })
 	budget := itemBudgetBytes
 	for _, cd := range cands {
 		if budget < itemWireBytes {
 			break // hết ngân sách gói này; cái còn lại đi gói sau
 		}
 		budget -= itemWireBytes
-		c.knownItems[cd.it.ID] = true
+		known[cd.it.Slot()] = cd.it.ID
 		s.ItemsAdded = append(s.ItemsAdded, netproto.ItemState{ID: cd.it.ID, X: float32(cd.it.Pos.X), Y: float32(cd.it.Pos.Y),
 			Kind: cd.it.Kind, Value: float32(cd.it.Value)})
 	}
-	for id := range c.knownItems {
-		it, ok := g.Items[id]
-		if !ok || !r.wantItem(viewer, it, it.Pos.Dist(viewer.Pos)) {
-			delete(c.knownItems, id)
+	// Quét slice theo chỉ số: không băm, không duyệt map. Viên đã nhặt mất thì slot của nó
+	// trống hoặc đã thuộc về viên khác — cả hai trường hợp đều là "client phải xoá".
+	for slot, id := range known {
+		if id == 0 {
+			continue
+		}
+		it := g.ItemBySlot(slot)
+		ok := it != nil && it.ID == id
+		if ok {
+			dx, dy := it.Pos.X-vp.X, it.Pos.Y-vp.Y
+			ok = r.wantItem(viewer, hw, hh, it, dx*dx+dy*dy)
+		}
+		if !ok {
+			known[slot] = 0
 			s.ItemsRemoved = append(s.ItemsRemoved, id)
 		}
 	}

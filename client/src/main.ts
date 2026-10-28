@@ -175,7 +175,10 @@ class App {
     if (w.debug) {
       // ?debug=true: mở cửa sau cho console của trình duyệt (xem VFX, đếm thần thú...).
       const g = window as unknown as { kx?: unknown; __stats?: unknown };
-      g.kx = { scene: this.scene, world: this.world, conn: this.conn };
+      // `playing` phải hỏi qua hàm: `world.me()` vẫn trả về dữ liệu CŨ sau khi chết và rời
+      // phòng, nên công cụ đo tưởng nhân vật còn sống và không bấm "Chơi tiếp" (mất mấy
+      // lượt đo vì chuyện này).
+      g.kx = { scene: this.scene, world: this.world, conn: this.conn, playing: () => this.playing };
       // __stats là cùng bộ số của overlay F3 nhưng ở dạng object, cho tools/browsertest
       // đọc mỗi giây. Giữ tên cố định để script không phải bám vào nội bộ renderer.
       g.__stats = (): Record<string, number> => ({

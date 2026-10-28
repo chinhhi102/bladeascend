@@ -92,6 +92,10 @@ type Player struct {
 	Ring     Ring
 	Geom     RingGeom
 	Scale    float64
+	// ViewHW/ViewHH: nửa khung nhìn, tính sẵn trong refreshDerived (xem refreshView).
+	// Đừng đọc thẳng — gọi g.ViewHalfExtents(p) để nó tự tính nếu chưa có.
+	ViewHW float64
+	ViewHH float64
 
 	PeakExp   float64
 	PeakLevel int
@@ -177,6 +181,12 @@ type Item struct {
 	Owner      uint32 // only this player may pick it up until OwnerUntil
 	OwnerUntil float64
 	ExpireAt   float64 // > 0: viên tự tan vào lúc này (Tiên khí, spec §8.5)
+
+	// cell/slot: vị trí của viên này trong itemGrid, để xoá O(1) mà không phải dò.
+	cell int
+	slot int
+	// slotIdx: chỉ số dày đặc toàn cục (xem Game.itemSlots), để client nhớ bằng slice.
+	slotIdx int
 }
 
 // ObstacleState is the dynamic state of a destructible obstacle (spec §8.2).
