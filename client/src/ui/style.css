@@ -68,7 +68,19 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .hud { position: absolute; inset: 0; pointer-events: none !important; color: #fff; text-shadow: 0 2px 0 #000; font-weight: 800; }
 .hud button { pointer-events: auto; }
 .status { position: absolute; left: 12px; top: 12px; display: flex; gap: 10px; align-items: center; }
-.badge { width: 56px; height: 56px; border-radius: 50%; background: #333 center / contain no-repeat; border: 3px solid #000; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+/* Ô đại diện góc trên trái (spec §12.4): chân dung trong khung tròn, viền màu cảnh giới,
+   huy hiệu tầng ở góc dưới phải, vương miện nếu Top 1. */
+.badge { width: 64px; height: 64px; border-radius: 50%; border: 3px solid #8d99ae; position: relative; background: #2a2622; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.portrait { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: center top / 180% no-repeat; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #e8e2d6; }
+.badge-tag { position: absolute; right: -3px; bottom: -3px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; border: 2px solid rgba(0,0,0,.6); font-size: 12px; font-weight: 800; line-height: 16px; text-align: center; }
+.badge-crown { position: absolute; left: 50%; top: -15px; transform: translateX(-50%); font-size: 17px; color: #ffd60a; text-shadow: 0 1px 2px #000; display: none; }
+/* Tiên giới: viền là hào quang động (spec §12.4). */
+.badge.tien { animation: tien-rim 2.4s linear infinite; }
+@keyframes tien-rim {
+  0%   { box-shadow: 0 0 6px 1px rgba(255,255,255,.55), 0 2px 6px rgba(0,0,0,.5); }
+  50%  { box-shadow: 0 0 14px 3px rgba(255,255,255,.9), 0 2px 6px rgba(0,0,0,.5); }
+  100% { box-shadow: 0 0 6px 1px rgba(255,255,255,.55), 0 2px 6px rgba(0,0,0,.5); }
+}
 .status-text { min-width: 180px; }
 .realm { font-size: 18px; }
 .exp-bar { height: 12px; background: rgba(0,0,0,.5); border: 2px solid #000; border-radius: 8px; overflow: hidden; margin: 4px 0; }
@@ -177,7 +189,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
   .my-rank { font-size: .88em; }
   .status-text { min-width: 120px; }
   .realm { font-size: 14px; }
-  .badge { width: 42px; height: 42px; }
+  .badge { width: 52px; height: 52px; }
+  .badge-tag { min-width: 17px; height: 17px; font-size: 10px; line-height: 13px; }
   .buffs { top: 64px; }
   .minimap { top: 112px; }
   .score-pops { left: 70px; top: 56px; }

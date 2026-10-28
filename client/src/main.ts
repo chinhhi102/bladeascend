@@ -171,6 +171,7 @@ class App {
     this.hud.minimap.setMap(map);
     this.debug = w.debug;
     this.hud.setDebug(w.debug);
+    this.hud.setChar(this.profile?.char ?? '');
     if (w.debug) {
       // ?debug=true: mở cửa sau cho console của trình duyệt (xem VFX, đếm thần thú...).
       const g = window as unknown as { kx?: unknown; __stats?: unknown };
