@@ -45,6 +45,25 @@ export const BEAST_PARTS: { id: string; parts: string[] }[] = [
   { id: 'phoenix', parts: ['head', 'body', 'tail', 'feather'] },
 ];
 export const BEAST_MOTES = ['cloud', 'spark', 'glow', 'feather'];
+
+// ART_PROMPTS §9.0b — texture nền và decal cho bản đồ sinh động (GAME_SPEC §8.6).
+export const BIOME_TILES: Record<string, string[]> = {
+  'Linh Sơn': ['rocky_ground', 'fine_gravel', 'mossy_stone'],
+  'Trúc Lâm': ['soft_grass', 'bamboo_litter', 'damp_earth'],
+  'Phàm Trấn': ['dirt_path', 'village_grass'],
+  'Hắc Thị': ['worn_cobble', 'dusty_earth'],
+};
+export const DECAL_IDS = [
+  'ground_cracks', 'grass_tuft', 'fallen_leaves', 'pebbles', 'puddle', 'tree_roots',
+  'wildflowers', 'cart_tracks', 'roof_tiles', 'brick_rubble', 'bamboo_leaves', 'moss_patch',
+  'footprints',
+];
+export const ZONE_EDGES = ['mud_edge', 'pond_shore', 'stone_path_edge', 'bush_edge'];
+export const AMBIENT_IDS = ['falling_leaf', 'firefly', 'butterfly', 'chicken', 'lantern', 'bird', 'cloud_shadow'];
+
+// ART_PROMPTS §11.1 / §11.2 — bảng tên và chân dung HUD (GAME_SPEC §12.3, §12.4).
+export const PLATE_IDS = ['ribbon_top1', 'ribbon_top2', 'ribbon_top3', 'crown_small', 'realm_pill', 'shine_streak'];
+export const PORTRAIT_MOODS = ['neutral', 'evil', 'panic', 'cry'];
 export const OBSTACLE_IDS = ['fence', 'stall', 'cart', 'brick', 'boulder', 'stone_wall'];
 export const OBSTACLE_STATES = ['intact', 'cracked', 'nearly_broken', 'rubble'];
 export const GATE_COLORS = ['purple', 'blue', 'orange'];
@@ -115,6 +134,28 @@ function itemEntries(): CatalogEntry[] {
   for (const b of BEAST_PARTS) {
     for (const part of b.parts) {
       out.push({ group: 'Thần thú Tiên giới', label: `${b.id} ${part}`, files: [`beasts/${b.id}_${part}.png`], job: `beast_${b.id}_${part}` });
+    }
+  }
+  for (const [biome, tiles] of Object.entries(BIOME_TILES)) {
+    for (const t of tiles) {
+      out.push({ group: 'Nền bản đồ', label: `${biome} · ${t}`, files: [`tiles/${t}.png`], job: `tile_${t}` });
+    }
+  }
+  for (const d of DECAL_IDS) {
+    out.push({ group: 'Decal mặt đất', label: d, files: [`decals/${d}.png`], job: `decal_${d}` });
+  }
+  for (const e of ZONE_EDGES) {
+    out.push({ group: 'Decal mặt đất', label: `viền ${e}`, files: [`decals/${e}.png`], job: `decal_${e}` });
+  }
+  for (const a of AMBIENT_IDS) {
+    out.push({ group: 'Sự sống bản đồ', label: a, files: [`ambient/${a}.png`], job: `ambient_${a}` });
+  }
+  for (const p of PLATE_IDS) {
+    out.push({ group: 'Bảng tên', label: p, files: [`ui/${p}.png`], job: `plate_${p}` });
+  }
+  for (const c of CHARACTER_IDS) {
+    for (const m of PORTRAIT_MOODS) {
+      out.push({ group: 'Chân dung HUD', label: `${c} · ${m}`, files: [`characters/${c}/portrait_${m}.png`], job: `portrait_${c}_${m}` });
     }
   }
   for (const m of BEAST_MOTES) {

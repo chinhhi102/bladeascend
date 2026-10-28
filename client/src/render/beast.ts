@@ -159,7 +159,12 @@ export class Beast {
   /** Vệt hạt chỉ bật cho vài con gần nhất; mờ theo chủ khi Ẩn Thân / trong bụi. */
   trailOn = true;
   ownerAlpha = 1;
+  /** Chủ đang Thiêu Đốt Tinh Huyết: bay sát người, vệt đỏ (spec §3.5 v4.7 mục phản ứng). */
+  burning = false;
+  /** Lóe sáng tới thời điểm này (nhặt Tiên khí, khiên đỡ đòn). */
+  private flashUntil = 0;
   /** điểm vỡ cố định cho kiểu shatter */
+  private flashing = false;
   private readonly shards: { a: number; vy: number }[] = [];
 
   constructor(spec: BeastSpec, mode: BeastMode, bodyR: number, charH: number, now: number, phase = 0) {
@@ -196,6 +201,20 @@ export class Beast {
     return now - this.born >= this.dur;
   }
 
+  /**
+   * flash cho thần thú lóe sáng và lượn nhanh một vòng — gọi khi chủ nhặt Tiên khí hoặc
+   * khiên đỡ được một đòn (spec §3.5 v4.7).
+   */
+  flash(now: number): void {
+    this.flashUntil = now + 0.9;
+    // Chen luôn một động tác để nó "mừng" thấy rõ chứ không chỉ sáng lên.
+    if (!this.move) {
+      this.move = 'spiral';
+      this.moveFrom = now;
+      this.moveSecs = 0.9;
+    }
+  }
+
   /** resize cập nhật cỡ khi chủ lên tầng (scale đổi). */
   resize(bodyR: number, charH: number): void {
     this.bodyR = bodyR;
@@ -209,6 +228,7 @@ export class Beast {
    */
   update(cx: number, feetY: number, now: number, near = true): void {
     const alpha = this.ownerAlpha * this.fadeAt(now);
+    this.flashing = now < this.flashUntil;
     if (this.mode === 'shatter') {
       this.updateShatter(cx, feetY, Math.min(1, (now - this.born) / this.dur), alpha);
       return;
@@ -269,7 +289,8 @@ export class Beast {
     // Bao hình sin để động tác vào và ra đều mượt, không giật về quỹ đạo nền.
     const env = this.move ? Math.sin(Math.min(1, (now - this.moveFrom) / this.moveSecs) * Math.PI) : 0;
     let theta = this.dir * now * ((2 * Math.PI) / ORBIT_SECS) + this.phase;
-    let r = this.charH * (1.3 + 0.25 * Math.sin(now * 0.37));
+    // Chủ đang Thiêu Đốt thì bay sát người hẳn, như bị kéo theo luồng khí.
+    let r = this.charH * (this.burning ? 0.75 : 1.3 + 0.25 * Math.sin(now * 0.37));
     let h = this.charH * (0.9 + 0.12 * Math.sin((now * 2 * Math.PI) / BOB_SECS));
     switch (this.move) {
       case 'spiral': // xoắn ốc vút lên rồi bổ nhào xuống
@@ -376,6 +397,12 @@ export class Beast {
 
   /** Đạo Tổ: song long một trắng một đen + viền cầu vồng → đổi tint theo vị trí. */
   private tintOf(): number {
+    if (this.burning) {
+      return 0xff5a3c; // Thiêu Đốt Tinh Huyết: vệt đỏ
+    }
+    if (this.flashing) {
+      return 0xffffff; // lóe trắng khi chủ nhặt Tiên khí / khiên đỡ đòn
+    }
     if (!this.spec.twin) {
       return this.spec.color;
     }
