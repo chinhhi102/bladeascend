@@ -200,6 +200,22 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
   - Dựng sẵn bảng hướng kiếm trong `ComputeRingGeom` → **9,53 ms**; chuyển sang dựng lười
     trên Player → **9,61 ms**. Lý do: bể kiếm xảy ra mỗi tick nên bảng 1 050 phần tử phải
     dựng lại liên tục, tốn hơn phần tiết kiệm được.
+- **Bài test 10 tab, TRƯỚC/SAU mục 26 (28/10/2026)** — cùng kịch bản, 5 tab Đạo Tổ 1 050
+  kiếm chụm giữa bản đồ, ~5 300 kiếm trên màn hình, ~1 400 entity trong AOI:
+
+  | Chỉ số (nhóm Đạo Tổ, TB) | TRƯỚC | SAU |
+  |---|---|---|
+  | Tick server | 269 ms | **8,2 ms** |
+  | Ping | 101 ms | 339 ms* |
+  | Kích thước snapshot | 1,2 KB | 1,7 KB |
+  | FPS (tab 1) | 16,2 | 4,2 |
+  | Thời gian vẽ (tab 1) | 2,2 ms | 16,1 ms |
+
+  *Ping và FPS xấu đi vì nay **nút thắt chuyển sang client**: trước đây server nghẽn nên
+  client nhận ít gói và vẽ ít; giờ server trả đủ 20 Hz, mười tab cùng vẽ 5 000 sprite trên
+  một card RX 570 và chính việc vẽ trở thành chỗ tắc (draw call 431). Đây chính là điều
+  kiện mà kế hoạch đặt ra cho **mục 25.1 (gộp vòng kiếm thành một RenderTexture)** và
+  **mục 25.6 (giải mã msgpack trong Web Worker)** — hai mục này nay có bằng chứng để làm.
 - **Bài test 10 tab dùng GPU thật (28/10/2026)**: máy có AMD RX 570; đo được
   `--use-gl=angle --use-angle=vulkan` → RADV, `--use-angle=gl` → radeonsi, còn
   `--use-gl=swiftshader` và `--use-gl=egl` đều rơi về SwiftShader (CPU). Đổi sang Vulkan
