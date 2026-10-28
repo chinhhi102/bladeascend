@@ -254,7 +254,14 @@ type tmjObject struct {
 	Height     float64   `json:"height"`
 	Ellipse    bool      `json:"ellipse"`
 	Point      bool      `json:"point"`
-	Properties []tmjProp `json:"properties"`
+	// Polygon: đỉnh tương đối so với (X, Y) — vùng địa hình hữu cơ của spec §8.6.
+	Polygon    []tmjPoint `json:"polygon"`
+	Properties []tmjProp  `json:"properties"`
+}
+
+type tmjPoint struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 type tmjLayer struct {
@@ -283,6 +290,17 @@ func (o tmjObject) kind() string {
 }
 
 func (o tmjObject) shape() Shape {
+	if len(o.Polygon) >= 3 {
+		// Đa giác hữu cơ (spec §8.6). Đỉnh trong Tiled là toạ độ TƯƠNG ĐỐI so với gốc của
+		// object, đổi sang tuyệt đối để server và client cùng một hệ.
+		pts := make([]float64, 0, len(o.Polygon)*2)
+		for _, pt := range o.Polygon {
+			pts = append(pts, o.X+pt.X, o.Y+pt.Y)
+		}
+		var sh Shape
+		sh.SetPoly(pts)
+		return sh
+	}
 	if o.Point {
 		return Shape{Circle: true, X: o.X, Y: o.Y, R: 1}
 	}

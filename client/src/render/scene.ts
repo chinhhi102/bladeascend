@@ -10,6 +10,7 @@ import { Beast, type BeastMode, TIEN_BEASTS } from './beast';
 import { ItemSprite, MonsterSprite } from './entities';
 import { MapView, type Viewer } from './mapview';
 import { OrbLayer } from './orblayer';
+import { Ambient } from './ambient';
 import { Breakthrough, HITSTOP_SECS } from './breakthrough';
 import { AURA_FAR_PX, TienAura } from './tienaura';
 import { VfxLayer } from './vfxlayer';
@@ -66,6 +67,8 @@ export class GameScene {
   private readonly orbs = new OrbLayer();
   /** Lớp phát sáng dùng chung, ăn một lượt bloom cho cả màn hình (spec §3.6). */
   private readonly glow = new VfxLayer();
+  /** Sự sống của bản đồ: mây trôi, lá rơi, đom đóm… chỉ ở client (spec §8.6 mục 5). */
+  private readonly ambient = new Ambient();
   /** Màn đột phá Tiên giới: sóng xung kích + khựng hình + chớp trắng + chữ (spec §3.6). */
   private readonly breakthrough = new Breakthrough();
   private hitstopUntil = 0;
@@ -138,7 +141,8 @@ export class GameScene {
     // Viên EXP luôn nằm dưới mọi thứ khác nên xếp ngay trên mặt đất, không cần y-sort.
     // Lớp phát sáng nằm dưới nhân vật (hào quang ở sau lưng) nhưng trên vòng kiếm, để
     // hàng trăm thanh kiếm không che mất hào quang.
-    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.glow.root, this.entities, this.mapView.over, this.vfx.layer);
+    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.glow.root, this.entities, this.mapView.over, this.ambient.root, this.vfx.layer);
+    this.ambient.setBiome(w.map.id);
   }
 
   clear(): void {
@@ -164,6 +168,7 @@ export class GameScene {
     this.pickedBy.clear();
     this.orbs.clear();
     this.lastOrb.clear();
+    this.ambient.clear();
     for (const a of this.auras.values()) {
       a.destroy();
     }
@@ -200,7 +205,13 @@ export class GameScene {
     this.updateFlyingItems(now);
     this.updateBeasts(frames, now);
     const myBush = me && me.s.fl & 2 ? this.bushAt(me.x, me.y) : -1;
-    this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha);
+    if (me) {
+      const v = this.viewSize();
+      this.ambient.update(me.x, me.y, v.w / 2, v.h / 2, now);
+    }
+    const vs = this.viewSize();
+    this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha,
+      me ? { x: me.x, y: me.y, w: vs.w, h: vs.h } : undefined);
     this.vfx.update(now);
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
     this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;

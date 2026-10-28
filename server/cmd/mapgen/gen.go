@@ -308,9 +308,15 @@ func (g *gen) bushCluster(q int) {
 func (g *gen) terrainZones() {
 	c := g.size / 2
 	for q := 0; q < 4; q++ {
-		// Bùn ở chỗ trũng giữa vùng.
+		// Bùn ở chỗ trũng giữa vùng — đa giác méo, KHÔNG phải ellipse (spec §8.6).
 		p := g.rot90(Vec2{c - 2600, c - 2600}, q)
-		g.b.zone("mud", p.X-500, p.Y-350, 1000, 700, true)
+		g.b.organicZone("mud", p.X, p.Y, 470, 0.72)
+		// Mỗi góc bản đồ một cái ao: vùng làm chậm như bùn nhưng client vẽ mặt nước gợn
+		// sóng (spec §8.6 mục 4). 2–4 ao mỗi bản đồ.
+		if q < 3 {
+			w := g.rot90(Vec2{c - 1500, c - 3400}, q)
+			g.b.organicZone("water", w.X, w.Y, 330, 0.66)
+		}
 		// Đường gió chạy dọc đường chính, thổi về tâm.
 		s := g.sectCentre(q)
 		dir := math.Atan2(c-s.Y, c-s.X) * 180 / math.Pi

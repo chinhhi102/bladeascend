@@ -60,3 +60,45 @@ func TestGridPathAroundWall(t *testing.T) {
 		t.Fatal("broken wall should allow a straight path")
 	}
 }
+
+// Spec §8.6: vùng địa hình là ĐA GIÁC méo, và server phải xét đúng đa giác đó — nếu server
+// xét hộp bao còn client vẽ hình méo thì người chơi đứng chỗ nhìn như bùn mà không bị chậm.
+func TestPolygonZoneUsesTheDrawnShape(t *testing.T) {
+	var sh Shape
+	// Tam giác vuông lớn: góc trên-trái nằm NGOÀI tam giác nhưng TRONG hộp bao.
+	sh.SetPoly([]float64{0, 0, 1000, 0, 1000, 1000})
+	if !sh.IsPoly() {
+		t.Fatal("SetPoly phải đánh dấu đây là đa giác")
+	}
+	if sh.W != 1000 || sh.H != 1000 {
+		t.Fatalf("hộp bao %gx%g, muốn 1000x1000", sh.W, sh.H)
+	}
+	if !sh.Contains(Vec2(900, 500)) {
+		t.Fatal("điểm trong tam giác phải tính là trong vùng")
+	}
+	if sh.Contains(Vec2(100, 900)) {
+		t.Fatal("điểm ngoài tam giác nhưng trong hộp bao KHÔNG được tính là trong vùng")
+	}
+	if sh.Contains(Vec2(-50, 500)) {
+		t.Fatal("điểm ngoài hộp bao phải bị loại ngay")
+	}
+}
+
+// Bản đồ sinh ra phải có vùng hữu cơ thật, không còn chữ nhật/ellipse cho bùn và nước.
+func TestGeneratedMapsHaveOrganicZones(t *testing.T) {
+	maps, err := LoadDir("../../../maps", LoadOptions{HP: map[string]int{}, FootprintW: 1, FootprintH: 0.3})
+	if err != nil || len(maps) == 0 {
+		t.Skipf("không nạp được bản đồ: %v", err)
+	}
+	for _, m := range maps {
+		poly := 0
+		for _, z := range m.Zones {
+			if (z.Kind == "mud" || z.Kind == "water") && z.Shape.IsPoly() {
+				poly++
+			}
+		}
+		if poly == 0 {
+			t.Errorf("%s: không có vùng bùn/nước nào là đa giác — spec §8.6 cấm hình học lộ ra", m.ID)
+		}
+	}
+}
