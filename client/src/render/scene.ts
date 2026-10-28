@@ -1,7 +1,7 @@
 import { Application, Container } from 'pixi.js';
 
 import { sound } from '../audio/sound';
-import { absorbable, banksTienKhi, cameraViewHeight, type GameConfig, realmOf, tienIndex } from '../config';
+import { absorbable, banksTienKhi, cameraViewHeight, type GameConfig, realmName, realmOf, tienIndex } from '../config';
 import type { ClientWorld } from '../net/state';
 import type { ItemState } from '../net/protocol';
 import { FLAG, type GameEvent } from '../net/protocol';
@@ -10,6 +10,9 @@ import { Beast, type BeastMode, TIEN_BEASTS } from './beast';
 import { ItemSprite, MonsterSprite } from './entities';
 import { MapView, type Viewer } from './mapview';
 import { OrbLayer } from './orblayer';
+import { Breakthrough, HITSTOP_SECS } from './breakthrough';
+import { AURA_FAR_PX, TienAura } from './tienaura';
+import { VfxLayer } from './vfxlayer';
 import { PlayerSprite } from './player';
 import { ringGeom } from './ringgeom';
 import { Vfx } from './vfx';
@@ -61,6 +64,12 @@ export class GameScene {
   private readonly entities = new Container();
   /** Viên Linh khí vẽ riêng bằng particle: vài trăm viên cùng lúc, xem orblayer.ts. */
   private readonly orbs = new OrbLayer();
+  /** Lớp phát sáng dùng chung, ăn một lượt bloom cho cả màn hình (spec §3.6). */
+  private readonly glow = new VfxLayer();
+  /** Màn đột phá Tiên giới: sóng xung kích + khựng hình + chớp trắng + chữ (spec §3.6). */
+  private readonly breakthrough = new Breakthrough();
+  private hitstopUntil = 0;
+  private readonly auras = new Map<number, TienAura>();
   private readonly rings = new Container();
   private readonly vfx = new Vfx();
   private mapView: MapView | null = null;
@@ -112,7 +121,7 @@ export class GameScene {
     parent.appendChild(this.app.canvas);
     this.entities.sortableChildren = true;
     this.rings.sortableChildren = true;
-    this.app.stage.addChild(this.camera);
+    this.app.stage.addChild(this.camera, this.breakthrough.overlay);
   }
 
   setWorld(w: ClientWorld): void {
@@ -127,7 +136,9 @@ export class GameScene {
     }
     // Rings sit under every character so a blade never covers a body.
     // Viên EXP luôn nằm dưới mọi thứ khác nên xếp ngay trên mặt đất, không cần y-sort.
-    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.entities, this.mapView.over, this.vfx.layer);
+    // Lớp phát sáng nằm dưới nhân vật (hào quang ở sau lưng) nhưng trên vòng kiếm, để
+    // hàng trăm thanh kiếm không che mất hào quang.
+    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.glow.root, this.entities, this.mapView.over, this.vfx.layer);
   }
 
   clear(): void {
@@ -153,6 +164,10 @@ export class GameScene {
     this.pickedBy.clear();
     this.orbs.clear();
     this.lastOrb.clear();
+    for (const a of this.auras.values()) {
+      a.destroy();
+    }
+    this.auras.clear();
     this.players.clear();
     this.monsters.clear();
     this.items.clear();
@@ -167,13 +182,18 @@ export class GameScene {
       return;
     }
     const t0 = performance.now();
-    const now = performance.now() / 1000;
+    const now = t0 / 1000;
+    this.breakthrough.update(now, this.app.screen.width, this.app.screen.height);
+    if (now < this.hitstopUntil) {
+      return; // khựng hình: đóng băng cảnh một nhịp rất ngắn cho cú đột phá "nặng" hơn
+    }
     const frames = w.playerFrames(dt);
     this.lastFrames = frames;
     const me = frames.find((f) => f.view.id === w.myId);
     if (me) {
       this.updateCamera(me.x, me.y, me.s.sc, ringGeom(this.cfg, me.s.sc, me.s.n).reach, now);
     }
+    this.glow.apply(); // người chơi vừa đổi mức chất lượng thì gắn lại bloom (§3.6)
     this.syncPlayers(frames, now);
     this.syncMonsters(now);
     this.syncItems(now, me ? banksTienKhi(this.cfg, me.s.L) : false);
@@ -240,6 +260,7 @@ export class GameScene {
         this.rings.addChild(sp.ring);
       }
       sp.update(f, this.zoom, now, this.showHitbox, detail);
+      this.syncAura(f, now);
       this.moodChatter(f.view.id, f.s.md, now);
     }
     for (const [id, sp] of this.players) {
@@ -248,6 +269,35 @@ export class GameScene {
         this.players.delete(id);
       }
     }
+    for (const [id, a] of this.auras) {
+      if (!seen.has(id)) {
+        a.destroy();
+        this.auras.delete(id);
+      }
+    }
+  }
+
+  /** syncAura dựng / cập nhật hào quang Tiên giới trong lớp phát sáng dùng chung (§3.6). */
+  private syncAura(f: ReturnType<ClientWorld['playerFrames']>[number], now: number): void {
+    const idx = tienIndex(this.cfg, realmOf(this.cfg, f.s.L));
+    let a = this.auras.get(f.view.id);
+    if (idx < 0) {
+      if (a) {
+        a.destroy();
+        this.auras.delete(f.view.id);
+      }
+      return;
+    }
+    if (!a) {
+      a = new TienAura(this.cfg);
+      this.auras.set(f.view.id, a);
+      this.glow.root.addChild(a.root);
+    }
+    a.setRealm(idx);
+    const r = this.cfg.player.body_r * f.s.sc;
+    // Ẩn Thân / trong bụi: mờ theo chủ (spec §3.4).
+    const hidden = (f.s.fl & FLAG.stealth) !== 0 || (f.s.fl & FLAG.bush) !== 0;
+    a.update(f.x, f.y + r * 0.75, r, now, hidden ? 0.2 : 1, r * 2.6 * this.zoom >= AURA_FAR_PX);
   }
 
   private moodChatter(id: number, mood: string, now: number): void {
@@ -591,8 +641,14 @@ export class GameScene {
       // Phi thăng Tiên giới: thần thú to chui lên từ chân, ai trong tầm nhìn đều thấy (§3.5).
       // Lấy cảnh giới từ e.n (cấp MỚI) chứ không từ khung hình đã lưu — khung hình còn là
       // cảnh giới cũ nên sẽ gọi nhầm thần thú của cảnh giới vừa rời đi.
-      this.spawnBeast(e.a ?? 0, 'breakthrough', now, tienIndex(this.cfg, realmOf(this.cfg, e.n ?? 0)));
+      const realm = realmOf(this.cfg, e.n ?? 0);
+      this.spawnBeast(e.a ?? 0, 'breakthrough', now, tienIndex(this.cfg, realm));
       this.vfx.shake(22 * this.playerScale(e.a), 0.8, now);
+      if (mine) {
+        // Khựng hình 80ms + sóng xung kích + chớp trắng + chữ cảnh giới (spec §3.6 mục 5).
+        this.hitstopUntil = now + HITSTOP_SECS;
+        this.breakthrough.play(realmName(this.cfg, realm), { x: 0.5, y: 0.5 }, this.camera, now);
+      }
     }
     this.vfx.play('lightning', e.x, e.y - size, size * 3, now);
     this.vfx.play('levelup_aura', e.x, e.y, size * 3, now);

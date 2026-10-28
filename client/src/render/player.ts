@@ -5,7 +5,7 @@ import type { PlayerFrame } from '../net/state';
 import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { animShort, initials } from './catalog';
-import { BUFF_COLORS, charColor, hslToHex, REALM_COLORS, TITLE_COLORS } from './palette';
+import { BUFF_COLORS, charColor, REALM_COLORS, TITLE_COLORS } from './palette';
 import { STR } from '../ui/strings';
 import { SwordRing } from './swordring';
 
@@ -36,13 +36,6 @@ export class PlayerSprite {
   readonly root = new Container();
   private readonly swordRing: SwordRing;
   private readonly shadow = new Graphics();
-  /** tienGround is the turning rune circle at a Tiên realm character's feet (spec §3.4). */
-  private readonly tienGround = new Graphics();
-  /** tienAura is the halo behind Tiên realm characters (spec §3.4). */
-  private readonly tienAura = new Graphics();
-  /** tienFront is the part of the Tiên effect drawn in front of the body, so it reads even
-   * when the character is buried under hundreds of blades. */
-  private readonly tienFront = new Graphics();
   private readonly aura = new Graphics();
   private readonly bodyBox = new Container();
   private body: AnimatedSprite | Container | null = null;
@@ -82,9 +75,9 @@ export class PlayerSprite {
       style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '700', fill: 0xbfe9ff, stroke: { color: 0x000000, width: 4 } },
     });
     this.realmTag.anchor.set(0.5, 1);
-    // Hào quang nằm sau lưng: dưới sprite nhân vật, trên mặt đất (spec §3.4).
-    // Vòng ký tự Tiên nằm dưới cùng (sát đất), hạt sáng Tiên nằm trên cùng (trước mặt).
-    this.root.addChild(this.tienGround, this.shadow, this.tienAura, this.aura, this.bodyBox, this.tienFront, this.label, this.realmTag, this.title);
+    // Hào quang Tiên giới KHÔNG còn nằm ở đây: nó chuyển sang `vfxLayer` dùng chung để ăn
+    // một lượt bloom cho cả màn hình thay vì mỗi nhân vật một filter (spec §3.6).
+    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.label, this.realmTag, this.title);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -125,7 +118,6 @@ export class PlayerSprite {
     this.root.zIndex = f.y + r * FEET_BELOW_CENTER; // y-sort by the feet (spec §8.2)
     this.drawShadow(r);
     this.updateBody(s.md, r, Math.cos(s.f) < 0);
-    this.drawTienAura(s.L, r, now);
     this.drawAura(s.bf, r, now);
     if (s.fl & FLAG.burning) {
       this.drawBurn(r, now); // vẽ đè lên aura buff
@@ -234,114 +226,9 @@ export class PlayerSprite {
     return set.values().next().value ?? null;
   }
 
-  /**
-   * drawTienAura is the whole Tiên realm look (spec §3.4): a turning rune circle on the
-   * ground, a breathing halo behind the body and ascending motes in front of it, all in the
-   * realm's own colour. Đạo Tổ gets a yin-yang with a rainbow rim instead of a flat colour.
-   *
-   * Ba lớp chứ không chỉ một vành mờ sau lưng: ở cảnh giới Tiên nhân vật ngồi giữa hàng trăm
-   * thanh kiếm, một vòng sáng nhỏ sau lưng gần như không thấy. Vòng ký tự dưới chân và hạt
-   * sáng trước mặt là hai thứ luôn đọc được ngay.
-   */
-  private drawTienAura(level: number, r: number, now: number): void {
-    const back = this.tienAura.clear();
-    const ground = this.tienGround.clear();
-    const front = this.tienFront.clear();
-    const idx = tienIndex(this.cfg, realmOf(this.cfg, level));
-    if (idx < 0) {
-      return;
-    }
-    const spec = this.cfg.cultivation.tien_aura_colors[idx] ?? '#ffffff';
-    const rainbow = spec === 'yin_yang';
-    const color = rainbow ? hslToHex((now * 60) % 360, 0.9, 0.62) : Number(`0x${spec.replace('#', '')}`);
-    this.drawTienGround(ground, idx, color, r, now);
-    this.drawTienHalo(back, idx, color, rainbow, r, now);
-    this.drawTienMotes(front, idx, color, r, now);
-  }
 
-  /** Vòng ký tự Tiên dưới chân: hai vành dẹt xoay chậm cùng các vạch chia. */
-  private drawTienGround(g: Graphics, idx: number, color: number, r: number, now: number): void {
-    const cy = r * FEET_BELOW_CENTER;
-    const rad = r * 2.5;
-    const squash = 0.4; // nhìn nghiêng từ trên xuống
-    const spin = now * (0.3 + idx * 0.1);
-    g.ellipse(0, cy, rad, rad * squash).fill({ color, alpha: 0.1 });
-    g.ellipse(0, cy, rad, rad * squash).stroke({ color, width: r * 0.1, alpha: 0.6 });
-    g.ellipse(0, cy, rad * 0.72, rad * 0.72 * squash).stroke({ color, width: r * 0.06, alpha: 0.45 });
-    const ticks = 6 + idx * 2; // cảnh giới càng cao càng nhiều vạch
-    for (let i = 0; i < ticks; i++) {
-      const a = spin + (i / ticks) * Math.PI * 2;
-      const cx = Math.cos(a);
-      const sy = Math.sin(a) * squash;
-      g.moveTo(cx * rad * 0.76, cy + sy * rad * 0.76).lineTo(cx * rad * 1.06, cy + sy * rad * 1.06);
-    }
-    g.stroke({ color, width: r * 0.1, alpha: 0.75 });
-  }
 
-  /** Hào quang sau lưng: ba lớp sáng nhòe dần + chữ ký riêng của từng cảnh giới. */
-  private drawTienHalo(g: Graphics, idx: number, color: number, rainbow: boolean, r: number, now: number): void {
-    const breathe = 1 + 0.06 * Math.sin(now * Math.PI); // chu kỳ 2s
-    const rad = r * CHAR_HEIGHT_PER_R * 1.45 * breathe;
-    const cy = -r * 0.9; // ngang ngực
-    if (rainbow) {
-      // Đạo Tổ: vòng âm dương xoay chậm, viền đổi màu liên tục.
-      const a = now * 0.6;
-      g.circle(0, cy, rad).fill({ color: 0x101010, alpha: 0.5 });
-      g.arc(0, cy, rad, a, a + Math.PI).fill({ color: 0xf2f2f2, alpha: 0.5 });
-      g.circle(Math.cos(a) * rad * 0.5, cy + Math.sin(a) * rad * 0.5, rad * 0.5).fill({ color: 0xf2f2f2, alpha: 0.5 });
-      g.circle(-Math.cos(a) * rad * 0.5, cy - Math.sin(a) * rad * 0.5, rad * 0.5).fill({ color: 0x101010, alpha: 0.5 });
-      g.circle(0, cy, rad).stroke({ color, width: r * 0.16, alpha: 0.95 });
-      return;
-    }
-    for (const [k, a] of [[1.35, 0.08], [1.1, 0.13], [1, 0.2]] as const) {
-      g.circle(0, cy, rad * k).fill({ color, alpha: a });
-    }
-    g.circle(0, cy, rad).stroke({ color, width: r * 0.12, alpha: 0.8 });
-    switch (idx) {
-      case 0: // Chân Tiên: mây trắng trôi quanh người
-        for (let i = 0; i < 5; i++) {
-          const a = now * 0.5 + (i / 5) * Math.PI * 2;
-          g.ellipse(Math.cos(a) * rad * 0.85, cy + Math.sin(a) * rad * 0.85, rad * 0.26, rad * 0.12).fill({ color, alpha: 0.55 });
-        }
-        break;
-      case 1: // Kim Tiên: tia sáng vàng tỏa ra, dài ngắn xen kẽ
-        for (let i = 0; i < 16; i++) {
-          const a = (i / 16) * Math.PI * 2 + now * 0.3;
-          const long = i % 2 === 0 ? 1.3 : 1.12;
-          g.moveTo(Math.cos(a) * rad * 0.8, cy + Math.sin(a) * rad * 0.8).lineTo(Math.cos(a) * rad * long, cy + Math.sin(a) * rad * long);
-        }
-        g.stroke({ color, width: r * 0.09, alpha: 0.85 });
-        break;
-      case 2: // Thái Ất Ngọc Tiên: hai cung ngọc chạy ngược chiều
-        for (const dir of [1, -1]) {
-          const a = now * 0.7 * dir;
-          g.arc(0, cy, rad * (dir > 0 ? 1.18 : 1.04), a, a + Math.PI * 0.9).stroke({ color, width: r * 0.1, alpha: 0.9 });
-        }
-        break;
-      case 3: // Đại La Kim Tiên: ba quả cầu sáng bay quanh theo quỹ đạo nghiêng
-        for (let i = 0; i < 3; i++) {
-          const a = now * 1.1 + (i / 3) * Math.PI * 2;
-          g.circle(Math.cos(a) * rad * 1.15, cy + Math.sin(a) * rad * 0.5, r * 0.3).fill({ color, alpha: 0.9 });
-        }
-        g.circle(0, cy, rad * 1.15).stroke({ color, width: r * 0.05, alpha: 0.35 });
-        break;
-      default:
-    }
-  }
 
-  /** Hạt sáng bay lên trước mặt — lớp duy nhất không bao giờ bị kiếm che. */
-  private drawTienMotes(g: Graphics, idx: number, color: number, r: number, now: number): void {
-    const n = 6 + idx * 2;
-    const feet = r * FEET_BELOW_CENTER;
-    const rise = r * (CHAR_HEIGHT_PER_R + 1.2); // bay từ chân lên quá đầu
-    for (let i = 0; i < n; i++) {
-      const t = (now * 0.4 + i / n) % 1;
-      const a = i * 2.399 + now * 0.5; // góc vàng: rải đều, không thành hàng
-      const x = Math.cos(a) * r * 1.5 * (1 - t * 0.55);
-      const y = feet - rise * t;
-      g.circle(x, y, r * 0.16 * (1 - t * 0.7)).fill({ color, alpha: 0.95 * (1 - t) });
-    }
-  }
 
   /** drawBurn is the blood-red flame ring of Thiêu Đốt Tinh Huyết (spec §4.1c). */
   private drawBurn(r: number, now: number): void {

@@ -180,6 +180,7 @@ export class Beast {
       const mk = (): Sprite => {
         const sp = new Sprite(tex);
         sp.anchor.set(0.5);
+        sp.blendMode = 'add'; // spec §3.6 mục 31: đốt thân blend cộng cho sáng rực
         return sp;
       };
       const seg: Seg = { back: mk(), front: mk(), k: i / (n - 1) };
@@ -397,6 +398,7 @@ export class Beast {
     if (tex) {
       const sp = new Sprite(tex);
       sp.anchor.set(0.5);
+      sp.blendMode = 'add';
       sp.tint = color;
       sp.scale.set((r * 2.4) / Math.max(tex.width, 1));
       return sp;
