@@ -4,6 +4,7 @@ import { sound } from './audio/sound';
 import { type GameConfig, levelThresholds, loadConfig } from './config';
 import { Input } from './input';
 import { Conn } from './net/conn';
+import { PROTOCOL_VERSION } from './net/protocol';
 import type { DeadMsg, GameMap, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
@@ -162,6 +163,13 @@ class App {
   }
 
   private async onWelcome(w: Welcome): Promise<void> {
+    if ((w.pv ?? 0) !== PROTOCOL_VERSION) {
+      // Server và client nói hai thứ tiếng khác nhau. Dừng hẳn ở đây và nói rõ, thay vì
+      // đọc rác rồi treo máy — chính là chuyện đã xảy ra một lần.
+      this.conn.stop();
+      this.screens.show(h('div', 'screen center', h('div', 'panel', STR.versionMismatch)));
+      return;
+    }
     this.joining = true;
     this.early = [];
     const res = await fetch(`/api/map/${w.map}`);

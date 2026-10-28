@@ -59,6 +59,14 @@ type ObstacleState struct {
 	Broken bool `msgpack:"b"`
 }
 
+// ProtocolVersion: tăng số này MỖI KHI đổi hình dạng gói tin (thêm/bớt/đổi kiểu một
+// trường). Client so với số của chính nó và báo "tải lại trang" nếu lệch.
+//
+// Không có nó thì client mới gặp server cũ sẽ đọc rác rồi **đứng hình không báo gì** — đã
+// dính đúng một lần: client build 16:40 nói `mood` là chỉ số, server chạy từ 14:56 vẫn gửi
+// chuỗi, và người chơi chỉ thấy game treo.
+const ProtocolVersion = 2
+
 type Welcome struct {
 	T         string          `msgpack:"t"`
 	ID        uint32          `msgpack:"id"`
@@ -68,6 +76,7 @@ type Welcome struct {
 	Time      float64         `msgpack:"time"`
 	Obstacles []ObstacleState `msgpack:"obs"`
 	Debug     bool            `msgpack:"debug"`
+	Proto     int             `msgpack:"pv"`
 }
 
 // Player flags.

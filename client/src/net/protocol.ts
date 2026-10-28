@@ -68,6 +68,15 @@ export interface Snapshot {
   sv?: number;
 }
 
+/**
+ * Phải khớp với `netproto.ProtocolVersion` bên server. Tăng cả hai MỖI KHI đổi hình dạng
+ * gói tin.
+ *
+ * Không có nó thì client mới gặp server cũ sẽ đọc rác rồi **đứng hình không báo gì** — đã
+ * dính đúng một lần: client nói `mood` là chỉ số, server cũ vẫn gửi chuỗi.
+ */
+export const PROTOCOL_VERSION = 2;
+
 export interface Welcome {
   t: 'welcome';
   id: number;
@@ -77,6 +86,8 @@ export interface Welcome {
   time: number;
   obs: { id: number; hp: number; b: boolean }[] | null;
   debug: boolean;
+  /** pv: phiên bản giao thức của server; thiếu = server quá cũ, chưa có trường này. */
+  pv?: number;
 }
 
 export interface LeaderboardMsg {
