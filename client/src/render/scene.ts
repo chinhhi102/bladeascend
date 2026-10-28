@@ -3,11 +3,13 @@ import { Application, Container } from 'pixi.js';
 import { sound } from '../audio/sound';
 import { absorbable, banksTienKhi, cameraViewHeight, type GameConfig, realmOf, tienIndex } from '../config';
 import type { ClientWorld } from '../net/state';
+import type { ItemState } from '../net/protocol';
 import { BUFFS, FLAG, type GameEvent } from '../net/protocol';
 import { pick, STR } from '../ui/strings';
 import { Beast, type BeastMode, TIEN_BEASTS } from './beast';
 import { ItemSprite, MonsterSprite } from './entities';
 import { MapView, type Viewer } from './mapview';
+import { OrbLayer } from './orblayer';
 import { PlayerSprite } from './player';
 import { ringGeom } from './ringgeom';
 import { Vfx } from './vfx';
@@ -23,6 +25,8 @@ export class GameScene {
   readonly app = new Application();
   private readonly camera = new Container();
   private readonly entities = new Container();
+  /** Viên Linh khí vẽ riêng bằng particle: vài trăm viên cùng lúc, xem orblayer.ts. */
+  private readonly orbs = new OrbLayer();
   private readonly rings = new Container();
   private readonly vfx = new Vfx();
   private mapView: MapView | null = null;
@@ -32,6 +36,8 @@ export class GameScene {
   // Items picked up this snapshot: itemId → who grabbed it, so we can fly them in.
   private readonly pickedBy = new Map<number, number>();
   private readonly flying: { sp: ItemSprite; by: number; from: { x: number; y: number }; at: number }[] = [];
+  /** Bản sao trạng thái viên EXP, chỉ để dựng hiệu ứng bay hút lúc nó vừa bị nhặt. */
+  private readonly lastOrb = new Map<number, ItemState>();
   private readonly lastMood = new Map<number, string>();
   private zoom = 1;
   private viewH = 900;
@@ -78,7 +84,8 @@ export class GameScene {
       this.entities.addChild(node);
     }
     // Rings sit under every character so a blade never covers a body.
-    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.rings, this.entities, this.mapView.over, this.vfx.layer);
+    // Viên EXP luôn nằm dưới mọi thứ khác nên xếp ngay trên mặt đất, không cần y-sort.
+    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.entities, this.mapView.over, this.vfx.layer);
   }
 
   clear(): void {
@@ -103,6 +110,8 @@ export class GameScene {
     this.lastTien.clear();
     this.flying.length = 0;
     this.pickedBy.clear();
+    this.orbs.clear();
+    this.lastOrb.clear();
     this.players.clear();
     this.monsters.clear();
     this.items.clear();
@@ -228,6 +237,10 @@ export class GameScene {
       return;
     }
     for (const [id, it] of items) {
+      if (it.k === 'orb') {
+        this.orbs.add(it);
+        continue;
+      }
       if (!this.items.has(id)) {
         const sp = new ItemSprite(it, this.cfg.items.item_r);
         this.items.set(id, sp);
@@ -249,6 +262,32 @@ export class GameScene {
       }
       sp.update(now, absorbable(sp.it.k, meBanksTienKhi));
     }
+    this.syncOrbs(items, now, meBanksTienKhi);
+  }
+
+  /** syncOrbs dọn viên EXP đã biến mất và cho viên bị nhặt bay hút vào người nhặt. */
+  private syncOrbs(items: Map<number, ItemState>, now: number, meBanksTienKhi: boolean): void {
+    for (const id of this.orbs.ids()) {
+      if (items.has(id)) {
+        continue;
+      }
+      const by = this.pickedBy.get(id);
+      const at = this.orbs.at(id);
+      this.pickedBy.delete(id);
+      if (by !== undefined && at) {
+        const ghost = new ItemSprite({ ...(this.lastOrb.get(id) as ItemState), x: at.x, y: at.y }, this.cfg.items.item_r);
+        this.entities.addChild(ghost.root);
+        this.flying.push({ sp: ghost, by, from: at, at: now });
+      }
+      this.lastOrb.delete(id);
+      this.orbs.remove(id);
+    }
+    for (const [id, it] of items) {
+      if (it.k === 'orb' && !this.lastOrb.has(id)) {
+        this.lastOrb.set(id, it);
+      }
+    }
+    this.orbs.update(now, absorbable('orb', meBanksTienKhi));
   }
 
   /** updateFlyingItems tweens picked-up items into their owner, then drops them. */
@@ -391,10 +430,14 @@ export class GameScene {
           sound.play('sword_clash', mine ? 1 : 0.5);
         }
         break;
-      case 'SwordBreak':
-        this.vfx.play('sword_shatter', e.x, e.y, size * 1.5, now);
+      case 'SwordBreak': {
+        // Server gộp số kiếm gãy lại rồi mới báo (xem flushSwordBreaks), nên một sự kiện có
+        // thể là cả chục cây — vẽ một vụ nổ to theo số lượng thay vì chục vụ nổ nhỏ.
+        const many = Math.min(3, 1 + Math.log2(Math.max(1, e.n ?? 1)) / 2);
+        this.vfx.play('sword_shatter', e.x, e.y, size * 1.5 * many, now);
         sound.play('sword_break', mine ? 1 : 0.5);
         break;
+      }
       case 'Hit':
         this.vfx.play(e.s === 'shield' ? 'shield_break' : 'stun_stars', e.x, e.y - size * 0.6, size * 1.6, now);
         sound.play(e.s === 'shield' ? 'shield_break' : 'sword_hit_body', e.b === this.world?.myId || mine ? 1 : 0.5);

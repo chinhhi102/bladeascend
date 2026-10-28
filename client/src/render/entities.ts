@@ -7,7 +7,7 @@ import { BUFF_COLORS, MONSTER_COLORS, MONSTER_VARIANTS } from './palette';
 const MONSTER_HEIGHT_PER_R = 2.4;
 const ITEM_SIZE_PER_R = 2.6;
 // ART_PROMPTS §9.0: EXP uses colours the calm ground never has — glowing cyan, then gold.
-const ORB_COLORS = { small: 0x3ee6ff, medium: 0x00b4ff, large: 0xffd23f };
+export const ORB_COLORS = { small: 0x3ee6ff, medium: 0x00b4ff, large: 0xffd23f };
 const GLOW_SCALE = 1.9; // halo radius relative to the item
 const BUNDLE_COLOR = 0xe0e6ee;
 
@@ -130,7 +130,7 @@ function orbRadius(v: number): number {
   return v >= 60 ? 22 : v >= 20 ? 17 : 12;
 }
 
-function orbSize(v: number): 'small' | 'medium' | 'large' {
+export function orbSize(v: number): 'small' | 'medium' | 'large' {
   return v >= 60 ? 'large' : v >= 20 ? 'medium' : 'small';
 }
 

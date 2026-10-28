@@ -18,6 +18,12 @@ export type BeastMode = 'breakthrough' | 'ambient' | 'shatter';
 export interface BeastSpec {
   /** thư mục art trong assets/beasts (ART_PROMPTS §10.1) */
   art: 'dragon' | 'crane' | 'phoenix';
+  /**
+   * Cách ghép đốt. `serpent` (rồng): 1 đầu + nhiều đốt tròn nối được + 1 đuôi.
+   * `bird` (hạc, phượng): chỉ có **một** thân, phần còn lại là đuôi thưa dần — ảnh thân của
+   * loài chim là nguyên con chim nên lặp 14 lần sẽ thành 14 con chim xếp hàng.
+   */
+  chain: 'serpent' | 'bird';
   color: number;
   /** hạt vệt theo sau */
   trail: 'cloud' | 'spark' | 'glow' | 'feather';
@@ -27,11 +33,11 @@ export interface BeastSpec {
 
 /** Bảng thần thú theo spec §3.5, thứ tự khớp cultivation.tien_realms. */
 export const TIEN_BEASTS: BeastSpec[] = [
-  { art: 'crane', color: 0xe8f1ff, trail: 'cloud' }, // Chân Tiên — Tiên hạc
-  { art: 'dragon', color: 0xffd60a, trail: 'spark' }, // Kim Tiên — Kim long
-  { art: 'dragon', color: 0x4ce0b3, trail: 'glow' }, // Thái Ất Ngọc Tiên — Ngọc long
-  { art: 'phoenix', color: 0xb15cff, trail: 'feather' }, // Đại La Kim Tiên — Tử phượng
-  { art: 'dragon', color: 0xffffff, trail: 'cloud', twin: true }, // Đạo Tổ — Song long âm dương
+  { art: 'crane', chain: 'bird', color: 0xe8f1ff, trail: 'cloud' }, // Chân Tiên — Tiên hạc
+  { art: 'dragon', chain: 'serpent', color: 0xffd60a, trail: 'spark' }, // Kim Tiên — Kim long
+  { art: 'dragon', chain: 'serpent', color: 0x4ce0b3, trail: 'glow' }, // Thái Ất Ngọc Tiên — Ngọc long
+  { art: 'phoenix', chain: 'bird', color: 0xb15cff, trail: 'feather' }, // Đại La Kim Tiên — Tử phượng
+  { art: 'dragon', chain: 'serpent', color: 0xffffff, trail: 'cloud', twin: true }, // Đạo Tổ — Song long âm dương
 ];
 
 // Thời lượng từng kiểu xuất hiện (spec §3.5).
@@ -83,6 +89,17 @@ function placeholderParts(): { head: Texture; body: Texture; tail: Texture } {
   return placeholders;
 }
 
+/** partAt: đốt thứ i dùng bộ phận nào — rồng nhiều đốt thân, chim chỉ một thân rồi tới đuôi. */
+function partAt(spec: BeastSpec, i: number): 'head' | 'body' | 'tail' {
+  if (i === 0) {
+    return 'head';
+  }
+  if (spec.chain === 'bird') {
+    return i === 1 ? 'body' : 'tail';
+  }
+  return i === SEGMENTS - 1 ? 'tail' : 'body';
+}
+
 /** partTexture: dùng art thật nếu đã có, không thì placeholder. */
 function partTexture(spec: BeastSpec, part: 'head' | 'body' | 'tail'): Texture {
   return assets.texture(`beasts/${spec.art}_${part}.png`) ?? placeholderParts()[part];
@@ -96,7 +113,7 @@ interface Seg {
 }
 
 interface Mote {
-  node: Graphics;
+  node: Container;
   born: number;
   vx: number;
   vy: number;
@@ -126,8 +143,7 @@ export class Beast {
     this.charH = charH;
     this.size = (mode === 'ambient' ? 0.6 : 1) * bodyR * 0.85; // spec: bản thường trực 60% cỡ
     for (let i = 0; i < SEGMENTS; i++) {
-      const part = i === 0 ? 'head' : i === SEGMENTS - 1 ? 'tail' : 'body';
-      const tex = partTexture(spec, part);
+      const tex = partTexture(spec, partAt(spec, i));
       const mk = (): Sprite => {
         const sp = new Sprite(tex);
         sp.anchor.set(0.5);
@@ -165,8 +181,10 @@ export class Beast {
       const u = Math.max(0, t - i * SEG_GAP); // đốt sau đi theo vị trí đầu lúc trước
       const p = this.pathAt(u, feetY);
       const prev = this.pathAt(Math.max(0, u - 0.02), feetY);
-      // Đốt nhỏ dần về đuôi (spec §3.5).
-      const s = (this.size * (1 - 0.45 * seg.k)) / 32;
+      // Đốt nhỏ dần về đuôi (spec §3.5). `s` là bề ngang mong muốn tính bằng đơn vị thế
+      // giới; place() mới chia cho bề ngang thật của texture — placeholder 64px và art thật
+      // 512px phải ra cùng một cỡ trên màn hình.
+      const s = this.size * (1 - 0.45 * seg.k) * 2;
       const rot = Math.atan2(p.y - prev.y, p.x - prev.x);
       const front = p.depth >= 0;
       this.place(seg.back, p.x, p.y, s, rot, alpha, !front);
@@ -187,20 +205,21 @@ export class Beast {
       const r = this.bodyR * 1.1;
       const x = Math.cos(sh.a) * r * (1 + t * 0.8);
       const y = cy + Math.sin(sh.a) * r * DEPTH_SQUASH + sh.vy * t * t * 3;
-      const s = (this.size * (1 - 0.45 * seg.k) * (1 - 0.4 * t)) / 32;
+      const s = this.size * (1 - 0.45 * seg.k) * (1 - 0.4 * t) * 2;
       const front = Math.sin(sh.a) >= 0;
       this.place(seg.back, x, y, s, sh.a + t * 6, alpha, !front);
       this.place(seg.front, x, y, s, sh.a + t * 6, alpha, front);
     }
   }
 
-  private place(sp: Sprite, x: number, y: number, s: number, rot: number, alpha: number, visible: boolean): void {
+  /** place đặt một đốt; `width` là bề ngang mong muốn tính bằng đơn vị thế giới. */
+  private place(sp: Sprite, x: number, y: number, width: number, rot: number, alpha: number, visible: boolean): void {
     sp.visible = visible;
     if (!visible) {
       return;
     }
     sp.position.set(x, y);
-    sp.scale.set(s);
+    sp.scale.set(width / Math.max(sp.texture.width, 1));
     sp.rotation = rot;
     sp.alpha = alpha;
     sp.tint = this.tintOf(x);
@@ -243,19 +262,33 @@ export class Beast {
   }
 
   private emitMote(x: number, y: number, now: number): void {
-    const g = new Graphics();
     const c = this.spec.twin ? hslToHex((now * 120) % 360, 0.9, 0.65) : this.spec.color;
     const r = this.size * 0.22;
-    if (this.spec.trail === 'cloud') {
-      g.ellipse(0, 0, r * 1.4, r * 0.7).fill({ color: c, alpha: 0.8 });
-    } else if (this.spec.trail === 'feather') {
-      g.ellipse(0, 0, r * 0.4, r * 1.5).fill({ color: c, alpha: 0.85 });
-    } else {
-      g.circle(0, 0, r).fill({ color: c, alpha: 0.9 });
+    const node = this.moteNode(c, r);
+    node.position.set(x, y);
+    this.front.addChild(node);
+    this.motes.push({ node, born: now, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 60 });
+  }
+
+  /** moteNode: ảnh hạt thật nếu đã vẽ (ART_PROMPTS §10.1), không thì hình đơn giản. */
+  private moteNode(color: number, r: number): Container {
+    const tex = assets.texture(`beasts/mote_${this.spec.trail}.png`);
+    if (tex) {
+      const sp = new Sprite(tex);
+      sp.anchor.set(0.5);
+      sp.tint = color;
+      sp.scale.set((r * 2.4) / Math.max(tex.width, 1));
+      return sp;
     }
-    g.position.set(x, y);
-    this.front.addChild(g);
-    this.motes.push({ node: g, born: now, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 60 });
+    const g = new Graphics();
+    if (this.spec.trail === 'cloud') {
+      g.ellipse(0, 0, r * 1.4, r * 0.7).fill({ color, alpha: 0.8 });
+    } else if (this.spec.trail === 'feather') {
+      g.ellipse(0, 0, r * 0.4, r * 1.5).fill({ color, alpha: 0.85 });
+    } else {
+      g.circle(0, 0, r).fill({ color, alpha: 0.9 });
+    }
+    return g;
   }
 
   private updateMotes(now: number): void {

@@ -200,6 +200,7 @@ func (g *Game) Tick(dt float64) {
 	g.resolveSwordBody()
 	g.resolveSwordSword()
 	g.resolveSwordWorld()
+	g.flushSwordBreaks()
 	g.resolvePickups()
 	g.maintainSpawns()
 	g.updateAltars()
