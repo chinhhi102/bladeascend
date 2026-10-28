@@ -96,7 +96,50 @@ func alreadyHave(assets string, j Job) bool {
 	if _, redo := redoReasons[j.Name]; redo {
 		return false
 	}
-	_, err := os.Stat(filepath.Join(assets, filepath.FromSlash(j.Out)))
+	return haveOutputs(assets, j)
+}
+
+// haveOutputs reports whether every file this job is supposed to produce is on disk.
+//
+// Việc sinh ảnh dạng sheet (nhân vật, quái, vật cản, cổng, VFX) KHÔNG dùng `j.Out` — đường
+// dẫn nằm trong từng `Seg`. Trước đây chỗ này stat `filepath.Join(assets, "")`, tức chính
+// thư mục assets, nên luôn có → **mọi job sheet đều bị tính là đã xong**. Đó là lý do
+// `artgen plan` khoe "186/196 generated" trong khi `assets:report` vẫn thiếu 89 file: 9
+// nhân vật chưa có levelup / đột phá / rớt cảnh giới / hồi sinh / vào cổng / ra cổng.
+func haveOutputs(assets string, j Job) bool {
+	if j.Mode != modeSheet {
+		return j.Out != "" && exists(filepath.Join(assets, filepath.FromSlash(j.Out)))
+	}
+	for _, s := range j.Segs {
+		if s.Out == "" {
+			return false
+		}
+		// Cùng thước đo với `npm run assets:report`: đoạn hoạt ảnh `{anim}_{NN}` chỉ cần
+		// khung đầu là coi như đã có art (thiếu vài khung cuối thì hoạt ảnh ngắn đi chứ
+		// không phải chưa vẽ); đoạn đặt tên rõ (vật cản intact/cracked/...) phải đủ cả.
+		for _, name := range segFileNames(s) {
+			if !exists(filepath.Join(assets, filepath.FromSlash(s.Out), name)) {
+				return false
+			}
+		}
+	}
+	return len(j.Segs) > 0
+}
+
+// segFileNames is what must exist for a segment to count as drawn.
+func segFileNames(s Seg) []string {
+	if len(s.Names) > 0 {
+		out := make([]string, 0, len(s.Names))
+		for _, n := range s.Names {
+			out = append(out, n+".png")
+		}
+		return out
+	}
+	return []string{fmt.Sprintf("%s_00.png", s.Anim)}
+}
+
+func exists(p string) bool {
+	_, err := os.Stat(p)
 	return err == nil
 }
 
@@ -105,7 +148,7 @@ func writeStatus(jobs []Job, assets, out string) {
 	var done, missing []string
 	for _, j := range jobs {
 		line := fmt.Sprintf("| `%s` | p%d | %s |", j.Name, j.Priority, jobOutputs(j))
-		if _, err := os.Stat(rawPath(assets, j)); err == nil {
+		if alreadyHave(assets, j) {
 			done = append(done, line)
 		} else {
 			missing = append(missing, line)
@@ -151,7 +194,10 @@ func writePrompts(jobs []Job, assets, out string) {
 	n := 0
 	for _, j := range jobs {
 		why, redo := redoReasons[j.Name]
-		if _, err := os.Stat(rawPath(assets, j)); err == nil && !redo {
+		// Dùng CHUNG một phép thử với `plan`/`run`: còn raw trong scratch, hoặc đã prep ra
+		// file asset thật. Trước đây chỗ này chỉ nhìn `assets/_raw` — mà đó là thư mục tạm
+		// hay bị dọn — nên ART_JOBS.md liệt kê lại cả những ảnh đã vẽ xong từ lâu.
+		if alreadyHave(assets, j) && !redo {
 			continue
 		}
 		n++

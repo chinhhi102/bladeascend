@@ -332,6 +332,19 @@ func obstacleJobs() []Job {
 			Poses: "1) intact and solid 2) with visible cracks 3) heavily damaged, crumbling, pieces missing 4) flat pile of rubble and debris on the ground"}}
 		jobs = append(jobs, Job{Name: "obs_" + o.id + "_states", Priority: 1, Mode: modeSheet, Rows: []int{2, 2}, Segs: states,
 			Prompt: sheetPrompt(styleObject, subject, []int{2, 2}, states, true)})
+		// Đoạn DỌC: client xếp gạch theo chiều dài nên ảnh ngang kéo dọc trông sai hẳn
+		// (hàng rào nằm ngang chồng lên nhau). Mỗi vật cản cần thêm một bộ 4 trạng thái vẽ
+		// theo chiều dọc, tên file `<state>_vertical.png`.
+		vdesc := strings.ReplaceAll(o.desc, "horizontal", "vertical")
+		if vdesc == o.desc {
+			vdesc = o.desc + ", turned to run vertically up the screen"
+		}
+		vstates := []Seg{{Anim: "states", Frames: 4, Out: dir,
+			Names:  []string{"intact_vertical", "cracked_vertical", "nearly_broken_vertical", "rubble_vertical"},
+			W:      o.w, H: o.h, Pivot: "center",
+			Poses: "1) intact and solid 2) with visible cracks 3) heavily damaged, crumbling, pieces missing 4) flat pile of rubble and debris on the ground"}}
+		jobs = append(jobs, Job{Name: "obs_" + o.id + "_states_vertical", Priority: 1, Mode: modeSheet, Rows: []int{2, 2}, Segs: vstates,
+			Prompt: sheetPrompt(styleObject, "a top-down 3/4 view game obstacle, "+vdesc+", running vertically from top to bottom of the frame", []int{2, 2}, vstates, true)})
 		if o.id == "stone_wall" {
 			continue
 		}
@@ -423,9 +436,49 @@ func uiJobs() []Job {
 	}
 }
 
+// Thần thú Tiên giới (ART_PROMPTS §10.1, GAME_SPEC §3.5). Vẽ bằng tông trắng/xám để code
+// nhuộm màu theo từng cảnh giới; mỗi con dựng từ đầu + đốt thân + đuôi nên sinh cả ba phần
+// trong CÙNG một ảnh cho đồng nét và đồng độ dày viền (đúng mẹo ghi ở §10.1).
+const beastTone = ", painted in white and light grey tones for color tinting, isolated single part"
+
+var beasts = []struct {
+	id, desc string
+}{
+	{"dragon", "a fierce but funny chinese dragon: 1) side view head facing right with long whiskers, small antlers and an open mouth with a goofy grin 2) one round body segment seen from the side with overlapping scales and a small spiky fin on top, symmetrical so it can be chained repeatedly 3) side view tail tip facing left with a flowing fin like a flame"},
+	{"crane", "a flying immortal crane: 1) side view head on a long neck stretched forward facing right 2) one body segment seen from the side with layered white feathers, symmetrical so it can be chained repeatedly 3) side view tail tip facing left with long trailing feathers"},
+	{"phoenix", "a flying phoenix: 1) side view head facing right with a plumed crest 2) one body segment seen from the side with layered glowing feathers, symmetrical so it can be chained repeatedly 3) side view tail tip facing left with long flowing tail feathers"},
+}
+
+func beastJobs() []Job {
+	var jobs []Job
+	for _, b := range beasts {
+		segs := []Seg{{Anim: "parts", Frames: 3, Out: "beasts", Each: true,
+			Names: []string{b.id + "_head", b.id + "_body", b.id + "_tail"},
+			W:     512, H: 512, Pivot: "center",
+			Poses: "three separate parts side by side: head, one body segment, tail"}}
+		jobs = append(jobs, Job{Name: "beast_" + b.id, Priority: 3, Mode: modeSheet, Rows: []int{3}, Segs: segs,
+			Prompt: sheetPrompt(styleObject, b.desc+beastTone, []int{3}, segs, true)})
+	}
+	jobs = append(jobs,
+		Job{Name: "beast_dragon_leg", Priority: 5, Mode: modeSprite, Out: "beasts/dragon_leg.png", W: 128, H: 128, Pivot: "center",
+			Prompt: styleObject + " A small four-clawed dragon leg, side view" + beastTone + negative},
+		Job{Name: "beast_phoenix_feather", Priority: 5, Mode: modeSprite, Out: "beasts/phoenix_feather.png", W: 256, H: 256, Pivot: "center",
+			Prompt: styleObject + " One long flowing glowing phoenix tail feather, horizontal" + beastTone + negative})
+	for _, m := range []struct{ id, desc string }{
+		{"cloud", "a tiny white wisp of cloud"},
+		{"spark", "a tiny bright spark of fire"},
+		{"glow", "a tiny round glowing light mote"},
+		{"feather", "a tiny single glowing feather"},
+	} {
+		jobs = append(jobs, Job{Name: "beast_mote_" + m.id, Priority: 5, Mode: modeSprite, Out: "beasts/mote_" + m.id + ".png",
+			W: 64, H: 64, Pivot: "center", Prompt: styleObject + " " + m.desc + " particle, white" + beastTone + negative})
+	}
+	return jobs
+}
+
 func allJobs() []Job {
 	var jobs []Job
-	for _, f := range []func() []Job{swordJobs, itemJobs, characterJobs, monsterJobs, mapJobs, obstacleJobs, gateJobs, vfxJobs, uiJobs} {
+	for _, f := range []func() []Job{swordJobs, itemJobs, characterJobs, monsterJobs, mapJobs, obstacleJobs, gateJobs, vfxJobs, beastJobs, uiJobs} {
 		jobs = append(jobs, f()...)
 	}
 	return jobs
