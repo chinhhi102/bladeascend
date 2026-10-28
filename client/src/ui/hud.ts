@@ -4,6 +4,7 @@ import { maxSwords, realmName, realmOf, tienIndex, tierOf } from '../config';
 import type { FeedMsg, GameEvent, LeaderboardMsg, PlayerState } from '../net/protocol';
 import { BUFFS } from '../net/protocol';
 import { assets } from '../render/assets';
+import { REALM_BADGE } from '../render/palette';
 import { BUFF_COLORS } from '../render/palette';
 import { button, h } from './dom';
 import { Minimap } from './minimap';
@@ -55,9 +56,21 @@ function colorizeFeed(text: string, actor: string, target: string): Node[] {
 }
 
 /** Hud is the in-match DOM overlay: EXP bar, swords, buffs, room top 10, kill feed (spec §6, §11). */
+/** inkOnHex: chữ đen hay trắng thì đọc được trên nền này (xem nameplate.ts). */
+function inkOnHex(bg: number): string {
+  const r = (bg >> 16) & 0xff;
+  const g = (bg >> 8) & 0xff;
+  const b = bg & 0xff;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#14110c' : '#ffffff';
+}
+
 export class Hud {
   readonly root = h('div', 'hud');
   private readonly badge = h('div', 'badge');
+  private readonly portrait = h('div', 'portrait');
+  private readonly badgeTag = h('div', 'badge-tag');
+  private readonly crown = h('div', 'badge-crown');
+  private badgeKey = '';
   private readonly realm = h('div', 'realm');
   private readonly expFill = h('div', 'exp-fill');
   private readonly expBar: HTMLElement;
@@ -78,7 +91,6 @@ export class Hud {
   private perfOn = false;
   private buffEnds = new Map<string, { end: number; total: number }>();
   private bannerUntil = 0;
-  private lastLevel = -1;
 
   readonly minimap: Minimap;
   /** burnBtn is the touch-only hold button for Thiêu Đốt Tinh Huyết (spec §4.1c). */
@@ -86,8 +98,17 @@ export class Hud {
   private readonly guide = h('div', 'guide');
   private readonly isTouch: boolean;
 
+  /** char: id nhân vật đang chơi, để lấy chân dung (spec §12.4). Đặt khi vào phòng. */
+  private char = '';
+
+  setChar(char: string): void {
+    this.char = char;
+    this.badgeKey = ''; // đổi nhân vật thì dựng lại ô đại diện
+  }
+
   constructor(private readonly cfg: GameConfig, isTouch = false) {
     this.isTouch = isTouch;
+    this.badge.append(this.portrait, this.badgeTag, this.crown);
     this.expBar = h('div', 'exp-bar', this.expFill);
     this.minimap = new Minimap(cfg, isTouch);
     this.burnBtn.title = STR.burnName;
@@ -158,10 +179,8 @@ export class Hud {
       return;
     }
     const r = realmOf(this.cfg, me.L);
-    if (me.L !== this.lastLevel) {
-      this.lastLevel = me.L;
-      this.setBadge(r);
-    }
+    const tienHere = tienIndex(this.cfg, r) >= 0;
+    this.setBadge(r, tienHere ? 0 : tierOf(this.cfg, me.L), me.ti ?? 0, me.md ?? '');
     // Tiên giới: không chia tầng, thanh tiến độ đầy bằng sát mạng (spec §3.4).
     const tien = tienIndex(this.cfg, r) >= 0;
     this.realm.textContent = tien ? realmName(this.cfg, r) : STR.realmTier(realmName(this.cfg, r), tierOf(this.cfg, me.L));
@@ -180,10 +199,66 @@ export class Hud {
     this.swords.textContent = STR.swords(me.n, maxSwords(this.cfg, r));
   }
 
-  private setBadge(realm: number): void {
-    const path = `ui/badge_${realm}.png`;
-    this.badge.style.backgroundImage = assets.has(path) ? `url(/assets/${path})` : '';
-    this.badge.textContent = assets.has(path) ? '' : String(realm + 1);
+  /**
+   * setBadge vẽ ô đại diện ở góc trên trái (spec §12.4): chân dung nhân vật trong khung
+   * tròn, viền màu cảnh giới, huy hiệu cảnh giới + tầng ở góc dưới phải, vương miện nếu
+   * đang Top 1. Thay cho vòng tròn ghi mỗi con số cấp — số thì ai cũng phải dịch trong đầu,
+   * còn mặt nhân vật thì nhận ra ngay.
+   *
+   * Chưa có art chân dung riêng thì cắt phần đầu (45% trên) của khung `idle_00`.
+   */
+  private setBadge(realm: number, tier: number, rank: number, mood: string): void {
+    const key = `${realm}|${tier}|${rank}|${mood}`;
+    if (key === this.badgeKey) {
+      return; // chỉ dựng lại khi có gì đổi, không chạm DOM mỗi khung hình
+    }
+    this.badgeKey = key;
+    this.setPortrait(this.portraitUrl(mood));
+    const col = `#${(REALM_BADGE[realm] ?? 0x8d99ae).toString(16).padStart(6, '0')}`;
+    this.badge.style.borderColor = col;
+    this.badge.classList.toggle('tien', realm >= this.cfg.cultivation.realms.length);
+    this.badgeTag.textContent = tier > 0 ? String(tier) : '仙';
+    this.badgeTag.style.background = col;
+    this.badgeTag.style.color = inkOnHex(REALM_BADGE[realm] ?? 0x8d99ae);
+    this.crown.style.display = rank === 1 ? 'block' : 'none';
+    this.crown.textContent = rank === 1 ? '♚' : '';
+  }
+
+  /**
+   * portraitUrl chọn ảnh chân dung theo tâm trạng (spec §12.4). Chưa có bộ chân dung riêng
+   * thì dùng khung `idle_00` và để CSS cắt lấy phần đầu.
+   */
+  private portraitUrl(mood: string): string {
+    const want = mood === 'chase' ? 'evil' : mood === 'hit' || mood === 'no_swords' ? 'panic' : mood === 'realm_drop' ? 'cry' : 'neutral';
+    if (!this.char) {
+      return '';
+    }
+    const real = `characters/${this.char}/portrait_${want}.png`;
+    return assets.has(real) ? `/assets/${real}` : `/assets/characters/${this.char}/frames/idle_00.png`;
+  }
+
+  /**
+   * setPortrait nạp ảnh rồi mới gắn làm nền. Không kiểm tra qua danh sách asset được: ảnh
+   * từng khung của nhân vật đã được gộp vào atlas nên không nằm trong danh sách, dù file vẫn
+   * có trên đĩa. Tải hụt thì rơi về hai chữ cái đầu của tên nhân vật.
+   */
+  private setPortrait(url: string): void {
+    const initials = this.char.split('_').map((w) => w[0] ?? '').join('').toUpperCase().slice(0, 2);
+    if (!url) {
+      this.portrait.style.backgroundImage = '';
+      this.portrait.textContent = initials;
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      this.portrait.style.backgroundImage = `url(${url})`;
+      this.portrait.textContent = '';
+    };
+    img.onerror = () => {
+      this.portrait.style.backgroundImage = '';
+      this.portrait.textContent = initials;
+    };
+    img.src = url;
   }
 
   private updateBuffs(me: PlayerState | null, now: number): void {

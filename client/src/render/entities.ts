@@ -98,8 +98,10 @@ export class MonsterSprite {
       this.drawHp(s.hp, s.mx);
     }
     const hurt = now < this.hurtUntil;
+    // Chỉ nhuộm đỏ khi dính đòn. KHÔNG bóp chiều cao: dòng cũ nhân `scale.y × 0.97` mỗi
+    // KHUNG HÌNH nên mỗi lần mất máu là quái lại dẹt thêm một chút, dính vài đòn liên tiếp
+    // là bẹp thành bánh tráng và không bao giờ phồng lại.
     this.body.tint = hurt ? 0xff8080 : 0xffffff;
-    this.body.scale.y = Math.abs(this.body.scale.y) * (hurt ? 0.97 : 1);
   }
 
   destroy(): void {
