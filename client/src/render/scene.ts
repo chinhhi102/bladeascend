@@ -15,11 +15,16 @@ import { ringGeom } from './ringgeom';
 import { Vfx } from './vfx';
 
 const SUCK_SECS = 0.22; // vật phẩm nhặt được bay hút vào người trong 0.22s
-const BEAST_MAX = 6; // spec §3.5: tối đa 6 thần thú cùng lúc trên màn hình
 // Ngân sách số thanh kiếm vẽ mỗi khung hình. Vượt thì các VÒNG DÀY bị giãn bớt — vòng dày
 // vốn là một vành sát thương liền (§4.1b) nên bỏ bớt thanh trong vành nhìn vẫn y hệt, còn
 // vòng thưa giữ nguyên vì ở đó từng thanh là một lưỡi kiếm riêng người chơi phải né.
 // Không có trần này thì 5 người Đại Thừa 500 kiếm gặp nhau là 2 500 thanh × 60 khung/giây.
+// Spec §3.5 v4.7: thần thú LUÔN bay quanh người Tiên giới, không hẹn giờ, không tắt được.
+// Giới hạn duy nhất là vệt hạt — chỉ bật cho vài con gần mình nhất.
+const BEAST_TRAIL_NEAR = 6;
+// Chủ nhỏ hơn ngần này pixel trên màn hình thì thần thú rút gọn còn đầu + 4 đốt.
+const BEAST_FAR_PX = 40;
+
 const SWORD_BUDGET = 1600;
 
 /**
@@ -47,8 +52,6 @@ function countNodes(c: { children?: unknown[] }): number {
   }
   return n;
 }
-const BEAST_EVERY = 20; // spec §3.5: bản thường trực mỗi 20s
-const AMBIENT_KEY = 'kx.beastAmbient'; // tắt/bật bản thường trực trong cài đặt đồ họa
 const MOOD_EMOTE_CHANCE = 0.12; // chance per mood change that a character shouts (run/chase/flee)
 
 /** GameScene renders the ClientWorld every frame with a camera that zooms out as you grow (spec §4.1). */
@@ -83,7 +86,6 @@ export class GameScene {
   private showHitbox = false;
   // Thần thú Tiên giới (spec §3.5): mỗi con có 2 lớp, một dưới nhân vật một trên.
   private beasts: { b: Beast; owner: number }[] = [];
-  private nextAmbient = new Map<number, number>();
   /** Cảnh giới Tiên của từng người ở khung hình trước — RealmDrop cần biết họ VỪA là gì. */
   private lastTien = new Map<number, number>();
 
@@ -146,7 +148,6 @@ export class GameScene {
       e.b.destroy();
     }
     this.beasts.length = 0;
-    this.nextAmbient.clear();
     this.lastTien.clear();
     this.flying.length = 0;
     this.pickedBy.clear();
@@ -429,15 +430,6 @@ export class GameScene {
     return n;
   }
 
-  /** ambientBeasts: bản thường trực bật/tắt được trong cài đặt đồ họa (spec §3.5). */
-  static ambientBeasts(): boolean {
-    return localStorage.getItem(AMBIENT_KEY) !== 'off';
-  }
-
-  static setAmbientBeasts(on: boolean): void {
-    localStorage.setItem(AMBIENT_KEY, on ? 'on' : 'off');
-  }
-
   /**
    * updateBeasts chạy toàn bộ thần thú Tiên giới mỗi khung hình: hẹn giờ bản thường trực,
    * đặt lại vị trí theo chủ, và xếp hai lớp ôm lấy nhân vật đúng thứ tự chiều sâu.
@@ -445,32 +437,45 @@ export class GameScene {
   private updateBeasts(frames: ReturnType<ClientWorld['playerFrames']>, now: number): void {
     const byId = new Map(frames.map((f) => [f.view.id, f]));
     this.lastTien.clear();
+    const me = frames.find((f) => f.view.id === this.world?.myId);
     for (const f of frames) {
       const idx = tienIndex(this.cfg, realmOf(this.cfg, f.s.L));
       this.lastTien.set(f.view.id, idx);
-      // Ẩn Thân / trong bụi thì không phát (spec §3.5).
-      const hidden = (f.s.fl & FLAG.stealth) !== 0 || (f.s.fl & FLAG.bush) !== 0;
-      if (idx < 0 || hidden || !GameScene.ambientBeasts()) {
-        this.nextAmbient.delete(f.view.id);
+      if (idx < 0) {
         continue;
       }
-      const due = this.nextAmbient.get(f.view.id);
-      if (due === undefined) {
-        this.nextAmbient.set(f.view.id, now + BEAST_EVERY * Math.random()); // rải đều, không đồng loạt
-      } else if (now >= due) {
-        this.nextAmbient.set(f.view.id, now + BEAST_EVERY);
-        this.spawnBeast(f.view.id, 'ambient', now);
+      // Mỗi người Tiên giới luôn có thần thú đi kèm; Đạo Tổ có hai con lệch pha 180°.
+      const want = TIEN_BEASTS[idx]?.twin ? 2 : 1;
+      const have = this.beasts.filter((e) => e.owner === f.view.id && e.b.mode === 'companion').length;
+      for (let k = have; k < want; k++) {
+        this.spawnBeast(f.view.id, 'companion', now, idx, k * Math.PI);
       }
     }
+    // Vệt hạt chỉ cho vài con gần mình nhất (spec §3.5): xếp theo khoảng cách rồi bật dần.
+    const dist = (id: number): number => {
+      const f = byId.get(id);
+      return f && me ? Math.hypot(f.x - me.x, f.y - me.y) : Infinity;
+    };
+    const order = [...this.beasts].sort((a, b) => dist(a.owner) - dist(b.owner));
+    order.forEach((e, i) => {
+      e.b.trailOn = i < BEAST_TRAIL_NEAR;
+    });
+
     this.beasts = this.beasts.filter((e) => {
       const f = byId.get(e.owner);
-      if (!f || e.b.done(now)) {
+      const stillTien = f ? tienIndex(this.cfg, realmOf(this.cfg, f.s.L)) >= 0 : false;
+      // Bản companion sống tới khi chủ rời Tiên giới hoặc ra khỏi tầm nhìn.
+      if (!f || e.b.done(now) || (e.b.mode === 'companion' && !stillTien)) {
         this.removeBeast(e.b);
         return false;
       }
       const r = this.cfg.player.body_r * f.s.sc;
       const feet = f.y + r * 0.75; // chân nhân vật, khớp FEET_BELOW_CENTER của PlayerSprite
-      e.b.update(f.x, feet, now);
+      e.b.resize(r, r * 2.6);
+      // Ẩn Thân / trong bụi: mờ theo chủ (spec §3.5), không ẩn hẳn.
+      const hidden = (f.s.fl & FLAG.stealth) !== 0 || (f.s.fl & FLAG.bush) !== 0;
+      e.b.ownerAlpha = hidden ? 0.2 : 1;
+      e.b.update(f.x, feet, now, r * 2.6 * this.zoom >= BEAST_FAR_PX);
       // Lớp sau nằm ngay dưới nhân vật, lớp trước ngay trên — nhân vật zIndex = y + r×0.75.
       e.b.back.zIndex = feet - 0.5;
       e.b.front.zIndex = feet + 0.5;
@@ -479,7 +484,7 @@ export class GameScene {
   }
 
   /** spawnBeast tạo thần thú cho một người, tôn trọng trần 6 con của spec §3.5. */
-  private spawnBeast(owner: number, mode: BeastMode, now: number, realmIdx?: number): void {
+  private spawnBeast(owner: number, mode: BeastMode, now: number, realmIdx?: number, phase = 0): void {
     const f = this.lastFrames.find((p) => p.view.id === owner);
     if (!f) {
       return;
@@ -489,24 +494,10 @@ export class GameScene {
     if (!spec) {
       return;
     }
-    if (this.beasts.length >= BEAST_MAX && !this.dropOneBeast(mode)) {
-      return; // đầy mà không có con nào ưu tiên thấp hơn: bỏ qua
-    }
     const r = this.cfg.player.body_r * f.s.sc;
-    const b = new Beast(spec, mode, r, r * 2.6, now);
+    const b = new Beast(spec, mode, r, r * 2.6, now, phase);
     this.entities.addChild(b.back, b.front);
     this.beasts.push({ b, owner });
-  }
-
-  /** dropOneBeast nhường chỗ: bản đột phá được ưu tiên, bản thường trực bị bỏ trước. */
-  private dropOneBeast(incoming: BeastMode): boolean {
-    const i = this.beasts.findIndex((e) => e.b.mode === 'ambient');
-    if (i < 0 || incoming === 'ambient') {
-      return false;
-    }
-    this.removeBeast(this.beasts[i].b);
-    this.beasts.splice(i, 1);
-    return true;
   }
 
   private removeBeast(b: Beast): void {

@@ -4,6 +4,10 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v4.9:** ảnh đại diện nhân vật ở HUD thay số cấp (§12.4); bản đồ sinh động — trộn texture theo nhiễu, vùng hình hữu cơ (server dùng chung đa giác), decal, nước, ambient; cấm khối chữ nhật/tròn lộ ra (§8.6).
+
+**Thay đổi v4.8:** thiết kế lại bảng tên trên đầu: ruy băng danh hiệu theo hạng, huy hiệu cảnh giới màu theo cảnh giới + chỉ báo nguy hiểm, tên to có viền, nền chung, kích thước cố định trên màn hình (§12.3).
+
 **Thay đổi v4.7:** thần thú Tiên giới luôn lượn lờ quanh người (quỹ đạo nền + động tác ngẫu nhiên + bám theo có độ trễ) thay cho bay 1 vòng mỗi 20s (§3.5).
 
 **Thay đổi v4.6:** bộ công cụ VFX — blend cộng, hào quang nhiều lớp, bloom cho lớp VFX, pixi-filters, particle editor (revolt-fx), texture CC0 (§3.6).
@@ -532,6 +536,38 @@ Thời gian 1 người (đủ kiếm tối đa của cảnh giới) phá vỡ, t
 - Đài là địa hình không phá được, kiếm đi xuyên. Không vật cản quanh đài 300 đơn vị.
 - Minimap: hiện 5 đài; đài sắp phun lớn thì nhấp nháy.
 
+### 8.6 Hình ảnh bản đồ sinh động (không dùng khối hình học)
+
+**Quy tắc cứng**: bản đồ hiển thị **không được có hình chữ nhật thẳng cạnh hay hình tròn hoàn hảo** nào lộ ra (vùng nền, bùn, bụi, đường, sân...). Hình học đơn giản chỉ được dùng cho va chạm và chế độ debug (`H`).
+
+**1. Mặt đất: trộn texture theo nhiễu (texture splatting)**
+- Mỗi biome có 2–3 texture nền (vd Linh Sơn: đá xám, sỏi, rêu; Trúc Lâm: cỏ, lá khô, đất ẩm). Trộn bằng **mặt nạ nhiễu** (Perlin/Simplex, 2 tầng tần số) → mảng màu loang tự nhiên thay vì ô vuông.
+- Ranh giới giữa 2 biome: dải chuyển tiếp rộng 400–600, trộn theo nhiễu (không phải đường thẳng hay đường cong trơn).
+- **Bake sẵn** lúc vào phòng thành các tấm `RenderTexture` 2048×2048 (chunk), chỉ vẽ chunk trong khung nhìn. Không trộn lại mỗi frame.
+
+**2. Vùng địa hình có hình dạng hữu cơ**
+- Bùn, ao, bụi, sân, vùng gió... sinh dạng **đa giác méo theo nhiễu**: `r(θ) = r0 × (1 + 0.25 × noise(θ))`, làm mượt (Chaikin 2 lần), 24–40 đỉnh.
+- **Server dùng đúng đa giác này** cho logic (điểm-trong-đa-giác) → hình thấy và vùng tác dụng khớp nhau. `mapgen` xuất đỉnh đa giác trong file bản đồ.
+- Mép vùng: viền mềm (feather 24–48 px bake sẵn) + 1 dải viền texture riêng (mép bùn có vệt nứt, mép ao có cỏ lau, mép đường có sỏi vụn).
+- Đường đá: vẽ theo đường cong với mép răng cưa nhẹ, thỉnh thoảng có viên đá lát lệch, rêu mọc kẽ.
+
+**3. Decal & trang trí rải theo biome** (bake vào chunk, không có va chạm)
+- Mỗi chunk 30–60 decal ngẫu nhiên (Poisson-disk), **xoay / lật / co giãn 0.7–1.3 / đổi sắc nhẹ** để không lặp: vết nứt, khóm cỏ, lá rụng, sỏi, vũng nước nhỏ, rễ cây, hoa dại nhỏ màu nhạt, vết bánh xe, mảnh ngói vỡ...
+- Quanh vật cản: bóng đổ mềm + vụn nhỏ dưới chân (tường gạch có gạch vỡ, đá tảng có sỏi, sạp hàng có rác) → vật cản "cắm" vào đất thay vì nổi lên.
+- Vật cản cùng loại: xoay nhẹ ±6°, lật ngang ngẫu nhiên, 2–3 biến thể sprite.
+
+**4. Nước & điểm nhấn**
+- Mỗi bản đồ 2–4 **ao / suối nhỏ** (đa giác hữu cơ, chỉ là vùng làm chậm như bùn hoặc trang trí không va chạm), mặt nước có shader gợn sóng nhẹ + phản chiếu lấp lánh.
+- Biome Linh Sơn có **vách đá / vực** dọc biên (thay tường biên thẳng), Trúc Lâm có hàng tre dày làm biên.
+
+**5. Sự sống (ambient, chỉ client, không ảnh hưởng gameplay)**
+- **Bóng mây** trôi chậm trên mặt đất (2–4 bóng mờ cỡ lớn).
+- Theo biome: Trúc Lâm lá tre rơi + đom đóm; Linh Sơn sương mù mỏng trôi; Phàm Trấn gà chạy, bướm; Hắc Thị đèn lồng đung đưa; Thiên Tiên Đài hạt sáng bay lên.
+- Chim bay ngang màn hình thỉnh thoảng (bóng chim dưới đất).
+- Giới hạn tổng số hạt ambient theo chất lượng (Cao 150 / Vừa 60 / Thấp 0).
+
+**6. Màu sắc** vẫn tuân thủ ART_PROMPTS §9.0: nền nhạt, tương phản thấp; vật chơi được (EXP, item, quái, nhân vật) luôn nổi bật hơn nền.
+
 ## 9. Phòng, matchmaking, bot
 
 ### 9.1 Phòng
@@ -643,6 +679,88 @@ Server tính `mood` và gửi xuống (mọi người thấy giống nhau). Gi�
 
 - Emote bubble khi: mất kiếm, khiên vỡ, nhặt Rương Báu, bị lộ khỏi bụi. Mỗi loại có cooldown.
 - Client tự lật sprite trái/phải theo hướng chạy.
+
+### 12.3 Bảng tên trên đầu (nameplate): Danh hiệu · Cảnh giới · Tên
+
+**Vấn đề hiện tại**: 3 dòng chữ trơn nằm đè lên vòng kiếm nhiều màu → khó đọc, không có cấp bậc thị giác.
+
+**Bố cục** (từ trên xuống, căn giữa trên đầu nhân vật):
+
+```
+      ╭──────────────────────────────╮
+      │ 👑  Bần tăng chưa ngán ai bao giờ │   ← Ruy băng danh hiệu (chỉ Top 1–10)
+      ╰──────────────────────────────╯
+          ╭───────────────╮
+          │ ☯ ĐẠO TỔ   ▲ │                ← Huy hiệu cảnh giới (dạng viên thuốc)
+          ╰───────────────╯
+          TestThThuTianThu                ← Tên (to nhất, đậm nhất)
+```
+
+Cả cụm có **1 tấm nền chung** bo góc, đen 45%, viền mảnh sáng 1px → chữ luôn nổi trên mọi nền (kiếm, cỏ, đá). Khoảng cách các dòng 2–4px, cụm cách đỉnh đầu 8px.
+
+**1. Ruy băng danh hiệu** (chỉ Top 1–10)
+
+| Hạng | Nền ruy băng | Chữ | Hiệu ứng |
+|---|---|---|---|
+| Top 1 | Ruy băng hai đuôi xẻ, đỏ son viền vàng | Vàng kim chuyển sắc (sáng → đậm), viền nâu đậm 2px | Vương miện nhỏ bên trái; **vệt sáng lướt qua chữ mỗi 3s**; 2–3 đốm lấp lánh quanh ruy băng |
+| Top 2 | Ruy băng xanh đen viền bạc | Bạc chuyển sắc | Vệt sáng lướt qua mỗi 5s |
+| Top 3 | Ruy băng nâu viền đồng | Đồng chuyển sắc | Không |
+| Top 4–10 | Dải mảnh trong suốt 60% | Trắng ngà, chữ nhỏ hơn | Không |
+
+- Lên hạng: ruy băng **bật ra** (scale 0 → 1.2 → 1.0, 0.35s) + đốm sáng tung ra. Mất hạng: ruy băng rách đôi rơi xuống (0.4s).
+
+**2. Huy hiệu cảnh giới** (dạng viên thuốc bo tròn)
+- Bên trái: biểu tượng nhỏ của cảnh giới (dùng lại 14 huy hiệu cảnh giới, thu nhỏ). Giữa: tên cảnh giới **in hoa**, chữ đậm; phàm giới thêm số tầng nhỏ phía sau dạng chỉ số (`KIM ĐAN ⁵`).
+- Màu nền theo cảnh giới (chữ là tông đậm cùng màu hoặc trắng nếu nền tối):
+
+| Cảnh giới | Màu | | Cảnh giới | Màu |
+|---|---|---|---|---|
+| Luyện Khí | Xám xanh `#8D99AE` | | Hợp Thể | Cam `#F77F00` |
+| Trúc Cơ | Xanh lá `#57CC99` | | Độ Kiếp | Đỏ sấm `#E63946` |
+| Kim Đan | Vàng đồng `#E9C46A` | | Đại Thừa | Đen, viền & chữ vàng `#FFD60A` |
+| Nguyên Anh | Xanh lam `#4EA8DE` | | Tiên giới (5 cấp) | Màu hào quang tương ứng (§3.4) |
+| Hóa Thần | Tím `#9D4EDD` | | | |
+| Luyện Hư | Xanh ngọc `#2EC4B6` | | | |
+
+- **Tiên giới**: viền huy hiệu là dải màu chảy vòng quanh (gradient xoay), chữ phát sáng nhẹ; Đạo Tổ viền cầu vồng đổi màu liên tục.
+- **Chỉ báo nguy hiểm** (chỉ hiện trên người khác, bên phải huy hiệu): ▲ đỏ = cao cảnh giới hơn bạn · ● vàng = ngang · ▼ xanh = thấp hơn. Giúp quyết định né hay săn trong nửa giây.
+- Lên tầng: số tầng lăn lên (0.3s). Đột phá: huy hiệu chớp trắng + phình to 1.3 rồi về.
+
+**3. Tên người chơi**
+- Dòng **to nhất**: chữ đậm, trắng, viền đen 3px + bóng đổ nhẹ phía dưới.
+- **Tên của chính bạn**: vàng ấm + mũi tên nhỏ ▼ phía trên cụm (dễ tìm mình giữa đám đông).
+- Bot hiển thị giống người (không lộ là bot).
+
+**Kích thước cố định trên màn hình** (không phóng to theo scale nhân vật, không co theo camera):
+
+| | PC | Điện thoại |
+|---|---|---|
+| Tên | 18 px | 15 px |
+| Cảnh giới | 13 px | 11 px |
+| Danh hiệu | 13 px (Top 1: 15 px) | 11 px (Top 1: 13 px) |
+
+**Font**: phải hỗ trợ đầy đủ dấu tiếng Việt. Tên + cảnh giới: **Be Vietnam Pro** (ExtraBold / Bold). Danh hiệu: 1 font trang trí có bộ ký tự Vietnamese trên Google Fonts (lọc theo ngôn ngữ Vietnamese; agent tự kiểm tra hiển thị đủ dấu, ví dụ thử chuỗi "Bần tăng chưa ngán ai bao giờ"), nếu không có thì dùng Be Vietnam Pro Italic.
+
+**Gọn màn hình (declutter)**
+- Nhân vật nhỏ hơn 40 px trên màn hình: chỉ hiện **tên** (+ vương miện nếu Top 1).
+- Hơn 12 bảng tên trên màn hình: ẩn ruy băng Top 4–10 của người ở xa.
+- 2 bảng tên chồng nhau: bảng của người ở xa mờ 50%.
+- Ẩn Thân / trong bụi: ẩn cả cụm (như cũ).
+
+**Hiệu năng**
+- Dựng mỗi bảng tên thành **1 texture cache** (vẽ lại chỉ khi nội dung đổi: hạng, cảnh giới, tầng). Hiệu ứng động (vệt sáng, viền chảy, đốm lấp lánh) là sprite riêng chồng lên, không vẽ lại texture.
+- Chữ dùng BitmapFont sinh sẵn (gồm đủ ký tự tiếng Việt), không dùng `Text` thường.
+- Chất lượng Thấp: tắt vệt sáng, đốm lấp lánh, viền chảy (giữ màu tĩnh).
+
+### 12.4 Ảnh đại diện ở góc thông tin (thay số cấp)
+
+Thay vòng tròn số "14" ở góc trên trái bằng **ảnh đại diện nhân vật**:
+- **Chân dung** nhân vật đang chơi (cắt từ đầu tới vai), trong khung tròn 64 px (PC) / 52 px (điện thoại). Biểu cảm đổi theo trạng thái: bình thường · cười nham hiểm khi đang đuổi · hoảng khi bị chém / còn 1 vòng kiếm · khóc khi rớt cảnh giới (dùng 4 chân dung).
+- **Viền khung = màu cảnh giới** (bảng §12.3). Tiên giới: viền là hào quang động theo màu §3.4; Đạo Tổ viền âm dương xoay.
+- **Huy hiệu nhỏ** góc dưới phải khung: biểu tượng cảnh giới + số tầng (phàm giới) — thay cho con số to cũ.
+- Vương miện nhỏ trên khung nếu đang Top 1; ruy băng hạng nhỏ nếu Top 2–10.
+- Bị chém: khung rung + chớp đỏ. Đột phá: khung phát sáng + phình ra.
+- Chưa có art: dùng frame `idle_00` của nhân vật, tự cắt phần đầu (vùng trên 45% sprite) làm chân dung tạm.
 
 ### 12.2 Máu quái
 - **Thanh máu nhỏ** trên đầu quái (không còn số to đè lên mặt quái). Chỉ hiện khi quái đã mất máu; đổi màu xanh → vàng → đỏ theo % máu.
@@ -931,6 +1049,9 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Đột phá Kim Tiên: rồng vàng chui lên từ chân, quấn quanh người 1.5 vòng (nửa sau khuất sau nhân vật), bay vút lên, 2.5s; sau đó rồng nhỏ (60%) luôn lượn lờ quanh người, mỗi 8–15s làm 1 động tác ngẫu nhiên, khi chạy thì bị kéo dài phía sau.
 - [ ] Lên Chân Tiên thấy hào quang trắng bạc sau lưng; mỗi cảnh giới Tiên một màu; rớt về Đại Thừa thì tắt hào quang.
 - [ ] Kim Tiên đang 450 Tiên khí bị chém → Chân Tiên, Tiên khí 100; người chém (Tiên giới) +175, rơi 105 điểm viên Tiên khí.
+- [ ] Không còn vùng nền/bùn/bụi/đường nào là hình chữ nhật thẳng cạnh hay hình tròn hoàn hảo; ranh giới biome loang tự nhiên; đứng sát mép bùn thì hiệu ứng chậm khớp đúng mép đa giác.
+- [ ] HUD góc trên trái là chân dung nhân vật, viền màu cảnh giới, biểu cảm đổi theo trạng thái.
+- [ ] Bảng tên đọc rõ trên nền vòng kiếm nhiều màu; tên mình màu vàng có ▼; người cao cảnh giới hơn mình có ▲ đỏ; Top 1 có ruy băng đỏ-vàng + vương miện + vệt sáng lướt.
 - [ ] Top 1/2/3 phòng hiện đúng danh hiệu trên đầu và trong bảng; đổi hạng phải giữ 3s mới đổi danh hiệu.
 - [ ] Minimap thấy mình, khung camera, cổng, Top 1, Rương Báu; không thấy người khác; Top 1 vào bụi thì biến khỏi minimap.
 - [ ] Phòng 5 người → 15 bot; thêm người không xóa bot; người thứ 21 sang phòng mới.

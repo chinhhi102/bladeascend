@@ -290,6 +290,28 @@ Decor (nền trong suốt, 256×256 hoặc 512×512, chỉ để trang trí, kh�
 
 Tường biên: `{STYLE} a seamless horizontal stone and bamboo fence segment, top-down 3/4 view, tileable left-right`.
 
+### 9.0b Bộ texture & decal cho bản đồ sinh động (GAME_SPEC §8.6)
+
+Mọi texture nền: thêm cuối prompt `seamless tileable top-down, desaturated, low contrast, low detail, no objects`.
+
+| Biome | Texture nền (2–3 cái, 512 tileable) |
+|---|---|
+| Linh Sơn | `grey rocky ground` · `fine gravel` · `patchy moss on stone` |
+| Trúc Lâm | `soft muted grass` · `dry bamboo leaves litter on soil` · `damp dark earth` |
+| Phàm Trấn | `trampled dirt path ground` · `short village grass` |
+| Hắc Thị | `old worn cobblestone` · `dusty packed earth` |
+| Thiên Tiên Đài | `pale jade stone floor` (đã có) |
+
+Decal (nền trong suốt, 256×256 trừ khi ghi khác, màu nhạt hòa vào nền, viền mảnh không đen dày):
+`ground crack lines` · `small grass tuft` · `scattered fallen leaves` · `cluster of pebbles` · `small shallow puddle` · `exposed tree roots` · `tiny pale wildflowers` · `cart wheel tracks (512x128)` · `broken roof tile shards` · `scattered brick rubble` · `bamboo leaves pile` · `moss patch` · `footprints in dirt`.
+Prompt mẫu: `top-down game decal, {item}, soft muted colors, blends into the ground, thin outline, transparent background`.
+
+Dải viền vùng (512×128, tileable trái-phải, nền trong suốt): `muddy edge with dry cracks` · `pond shore with reeds and pebbles` · `stone path edge with broken gravel` · `bush cluster edge with leaves`.
+
+Nước & biên: `top-down seamless calm water texture, soft teal, subtle ripples` (512 tileable) · `{STYLE} top-down rocky cliff edge segment, tileable left-right, 1024x512` · `{STYLE} dense bamboo grove wall segment, tileable left-right, 1024x512`.
+
+Ambient (nhỏ, 64–128 px, vài frame): `falling bamboo leaf` (4) · `firefly glow dot` · `butterfly flapping` (4) · `small chicken running` (4) · `swaying paper lantern` (4) · `bird silhouette flying` (4) · `soft cloud shadow blob, black at 20% opacity, 1024x1024`.
+
 ### 9.1 Vật cản phá được (mỗi loại 4 trạng thái)
 
 Quy tắc vẽ vật cản: **đáy phẳng, đặt chắc trên mặt đất** (game chỉ tính va chạm ở 30% phía dưới). Hàng rào/tường phải **liền mạch nối tiếp được** (tileable trái-phải), không có khe hở giả. Màu vật cản trung tính hơn nhân vật nhưng đậm hơn nền.
@@ -403,6 +425,22 @@ Gợi ý câu thoại: `run`: "AAAAA!", "Tránh ra!"; `chase`: "Hehehe...", "Đ�
 - Trang chủ: logo game (chữ do bạn tự thiết kế hoặc render bằng font), ảnh nền: `{STYLE without transparent} wide illustration of a chaotic cartoon village square with many chibi characters spinning swords around them, sunny, no text`.
 - Màn hình Tổng kết: khung giấy cuộn cổ kính `{STYLE} an empty unrolled ancient paper scroll with wooden handles, transparent background`; ảnh "hồn bay" của nhân vật dùng lại frame cuối anim `death`.
 - Bảng xếp hạng: 3 huy chương top 1–3 `{STYLE} {gold|silver|bronze} medal with a tiny sword emblem, 128x128`.
+
+### 11.1 Bảng tên (GAME_SPEC §12.3)
+
+| Asset | Prompt | Ghi chú |
+|---|---|---|
+| Ruy băng Top 1 | `{STYLE} empty horizontal ribbon banner with forked tails, vermilion red with gold trim, no text, transparent background, 1024x256` | Cắt 9-slice (giữ 2 đuôi, kéo giãn phần giữa) |
+| Ruy băng Top 2 | như trên, `dark navy with silver trim` | |
+| Ruy băng Top 3 | như trên, `brown with bronze trim` | |
+| Vương miện nhỏ | `{STYLE} tiny golden crown icon with red gems, 128x128` | |
+| Nền huy hiệu cảnh giới | `{STYLE} empty rounded pill-shaped badge, white with light grey bevel for tinting, no text, 512x128` | 9-slice, game nhuộm màu |
+| Vệt sáng lướt | `soft diagonal white light streak, transparent background, 256x64` | Blend cộng, chạy ngang qua chữ |
+
+### 11.2 Chân dung HUD (GAME_SPEC §12.4)
+
+Mỗi nhân vật 4 chân dung, cùng prompt nhân vật ở mục 5 + `{STYLE} head and shoulders portrait, facing the viewer slightly turned right, centered, {EXPRESSION}, transparent background, 512x512`:
+`neutral smug face` · `evil grin, chasing` · `panicked, sweating` · `crying with streams of tears`.
 
 ## 12. Âm thanh (SFX / BGM) — nguồn miễn phí
 

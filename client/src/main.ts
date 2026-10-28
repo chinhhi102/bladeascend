@@ -8,6 +8,7 @@ import type { DeadMsg, GameMap, ServerMsg, Snapshot, Welcome } from './net/proto
 import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
 import { GameScene } from './render/scene';
+import { cycleQuality, QUALITY_NAME } from './render/quality';
 import { h, Screens } from './ui/dom';
 import { guestId, homeScreen, type Profile } from './ui/home';
 import { Hud } from './ui/hud';
@@ -74,10 +75,9 @@ class App {
         return;
       }
       if (this.playing && e.code === 'KeyV' && !e.repeat) {
-        // Cài đặt đồ họa (spec §3.5): tắt/bật thần thú THƯỜNG TRỰC. Bản đột phá luôn hiện.
-        const on = !GameScene.ambientBeasts();
-        GameScene.setAmbientBeasts(on);
-        this.hud.showBanner(on ? STR.beastOn : STR.beastOff, 2.5);
+        // Spec §3.6: đổi mức chất lượng Cao / Vừa / Thấp. Thần thú không còn tắt được nữa
+        // (v4.7), nhưng số đốt và vệt hạt co theo mức này.
+        this.hud.showBanner(STR.qualitySet(QUALITY_NAME[cycleQuality()]), 2.5);
         return;
       }
       this.debugKey(e);
