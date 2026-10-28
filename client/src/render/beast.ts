@@ -2,6 +2,7 @@ import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 
 import { assets } from './assets';
 import { hslToHex } from './palette';
+import { particle } from './particles';
 import { BEAST_SEGMENTS, quality, TRAIL_RATE } from './quality';
 
 /**
@@ -421,7 +422,10 @@ export class Beast {
 
   /** moteNode: ảnh hạt thật nếu đã vẽ (ART_PROMPTS §10.1), không thì hình đơn giản. */
   private moteNode(color: number, r: number): Container {
-    const tex = assets.texture(`beasts/mote_${this.spec.trail}.png`);
+    // Ưu tiên ảnh riêng của thần thú; không có thì dùng bộ hạt CC0 dùng chung (spec §3.6).
+    const shared: Record<string, 'smoke' | 'spark' | 'light' | 'star'> =
+      { cloud: 'smoke', spark: 'spark', glow: 'light', feather: 'star' };
+    const tex = assets.texture(`beasts/mote_${this.spec.trail}.png`) ?? particle(shared[this.spec.trail] ?? 'light');
     if (tex) {
       const sp = new Sprite(tex);
       sp.anchor.set(0.5);

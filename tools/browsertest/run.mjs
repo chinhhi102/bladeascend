@@ -236,8 +236,23 @@ async function runOnce(label, slow) {
 
   // Giai đoạn 2: 5 tab lên Đạo Tổ đủ kiếm, rồi tất cả chụm về giữa bản đồ
   const tien = tabs.slice(0, TIEN_TABS);
-  for (const t of tien) {
-    await t.page.evaluate(() => window.kx.conn?.send?.({ t: 'dbg', cmd: 'max' }));
+  // n: 1 = giữ bất tử. Không có nó thì 5 người Đạo Tổ chụm vào mài nhau chết sạch trong
+  // chục giây, cả phòng tụt về Luyện Khí 1 kiếm và số đo thành vô nghĩa (đã dính một lần).
+  const boost = () => Promise.all(tien.map((t) =>
+    t.page.evaluate(() => window.kx.conn?.send?.({ t: 'dbg', cmd: 'max', n: 1 })).catch(() => {})));
+  await boost();
+  // Chờ xác nhận đã lên thật rồi mới bắt đầu đo — đừng tin là lệnh nào gửi đi cũng tới nơi.
+  for (let i = 0; i < 20; i++) {
+    await sleep(500);
+    const levels = await Promise.all(tien.map((t) =>
+      t.page.evaluate(() => window.kx?.world?.me?.()?.L ?? -1).catch(() => -1)));
+    if (levels.every((L) => L >= 100)) {
+      console.log(`  xác nhận ${tien.length} tab đã lên Đạo Tổ`);
+      break;
+    }
+    if (i === 19) {
+      console.log(`  CẢNH BÁO: chỉ ${levels.filter((L) => L >= 100).length}/${tien.length} tab lên được Đạo Tổ — bảng số sẽ không đúng kịch bản`);
+    }
   }
   console.log(`  ${tien.length} tab lên Đạo Tổ, chụm lại đánh nhau ${FIGHT_S}s...`);
   phase = 'fight';
@@ -250,10 +265,10 @@ async function runOnce(label, slow) {
   let beat = 0;
   while (Date.now() < fightUntil) {
     await Promise.all(tabs.map((t) => steer(t, target.x, target.y)));
-    // Nạp lại Đạo Tổ mỗi ~5s: 5 người đủ kiếm chụm vào nhau thì mài rụng hết kiếm rồi chết
-    // trong vài chục giây, mà ta cần giữ nguyên CẢNH NẶNG NHẤT suốt pha đo.
-    if (++beat % 10 === 0) {
-      await Promise.all(tien.map((t) => t.page.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'max' })).catch(() => {})));
+    // Nạp lại kiếm mỗi 2s: dù bất tử, va kiếm vẫn mài rụng ~120 kiếm/giây khi 5 người chụm
+    // vào nhau, nên không nạp lại thì chỉ sau mươi giây là hết cảnh nặng cần đo.
+    if (++beat % 4 === 0) {
+      await boost();
     }
     await sleep(500);
     if (!shot && Date.now() > fightUntil - (FIGHT_S * 1000) / 3) { // ~2/3 pha, lúc đông nhất

@@ -33,7 +33,12 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// bấm phím "realm" 14 lần rồi "sword" 105 lần thì vừa chậm vừa hay lệch.
 			top := r.G.Prog.TienLevel(len(r.cfg.Cultivation.TienRealms) - 1)
 			r.G.ForceState(p, top, r.G.Prog.MaxSwords(r.G.Prog.Realm(top)), p.Pos)
-			p.InvulnUntil = 0 // ForceState bật bất tử để đo server, ở đây muốn đánh nhau thật
+			if d.N == 0 {
+				p.InvulnUntil = 0 // mặc định: đánh nhau thật
+			}
+			// n = 1 → giữ bất tử. Công cụ đo cần giữ nguyên cảnh NẶNG NHẤT suốt pha đo;
+			// để chúng chém chết nhau thì sau vài giây cả phòng về Luyện Khí 1 kiếm và số
+			// đo thành vô nghĩa (đã dính đúng lỗi này một lần).
 		case "sword":
 			r.G.AddSwords(p, max(1, d.N))
 		case "die":

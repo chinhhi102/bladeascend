@@ -1,5 +1,6 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 
+import { particle } from './particles';
 import { quality } from './quality';
 
 /**
@@ -52,6 +53,15 @@ function textureFor(kind: Kind): Texture {
   const hit = tex.get(kind);
   if (hit) {
     return hit;
+  }
+  // Mây, sương và đom đóm dùng được luôn bộ hạt CC0 (spec §3.6); lá, bướm, chim thì phải
+  // đúng hình nên vẫn tự vẽ.
+  const shared: Partial<Record<Kind, 'smoke' | 'light'>> = { cloud: 'smoke', mist: 'smoke', firefly: 'light' };
+  const want = shared[kind];
+  if (want) {
+    const t = particle(want);
+    tex.set(kind, t);
+    return t;
   }
   const n = 128;
   const cv = document.createElement('canvas');

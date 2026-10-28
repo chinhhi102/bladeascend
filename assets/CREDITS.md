@@ -14,14 +14,27 @@ chơi có thể không ra được Internet, mà tên nhân vật mất dấu th
 
 ## Hạt / VFX
 
-Spec §3.6 đề xuất dùng bộ texture hạt CC0 cho tia lửa, khói, ánh sáng (ảnh AI sinh cho hạt
-nhỏ thường kém ổn định). **Chưa tải về** — hiện mọi hạt đang vẽ bằng canvas trong code
-(`render/ambient.ts`, `render/decals.ts`, `render/tienaura.ts`). Khi tải thì ghi vào đây:
-
 | Bộ | Nguồn | Giấy phép |
 |---|---|---|
-| Kenney Particle Pack | https://kenney.nl/assets/particle-pack | CC0 |
-| Brackeys VFX Bundle | https://brackeysgames.itch.io/brackeys-vfx-bundle | CC0 |
+| **Kenney Particle Pack 1.1** — Kenney Vleugels | https://kenney.nl/assets/particle-pack | **CC0 1.0** |
+| Brackeys VFX Bundle | https://brackeysgames.itch.io/brackeys-vfx-bundle | CC0 — *chưa tải* |
+
+File dùng từ Kenney Particle Pack (bản nền trong suốt), đặt trong `assets/vfx/particles/`:
+
+| Tên trong dự án | File gốc | Dùng ở đâu |
+|---|---|---|
+| `spark.png` | `spark_04.png` | vệt lửa thần thú Kim Tiên |
+| `smoke.png` | `smoke_01.png` | bóng mây, sương mù, vệt mây thần thú |
+| `light.png` | `light_01.png` | quầng sáng hào quang Tiên, đom đóm, vệt sáng Ngọc long |
+| `star.png` | `star_08.png` | lông vũ phượng |
+| `dot.png` | `circle_05.png` | hạt tròn dùng chung |
+| `magic.png`, `flare.png`, `trace.png` | cùng tên | để dành |
+
+Giấy phép CC0 cho phép dùng thương mại, **không bắt buộc ghi công** — vẫn ghi ở đây vì đó là
+phép lịch sự tối thiểu với người cho không.
+
+Thả thêm hạt mới vào `assets/vfx/particles/<tên>.png` là code tự dùng, không phải sửa gì
+(`render/particles.ts`).
 
 ## Thư viện
 
