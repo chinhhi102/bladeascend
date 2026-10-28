@@ -249,6 +249,8 @@ export class GameScene {
   private syncPlayers(frames: ReturnType<ClientWorld['playerFrames']>, now: number): void {
     const seen = new Set<number>();
     const detail = this.swordDetail(frames);
+    const me = frames.find((f) => f.view.id === this.world?.myId);
+    const myRealm = me ? realmOf(this.cfg, me.s.L) : 0;
     for (const f of frames) {
       seen.add(f.view.id);
       let sp = this.players.get(f.view.id);
@@ -259,7 +261,7 @@ export class GameScene {
         this.entities.addChild(sp.root);
         this.rings.addChild(sp.ring);
       }
-      sp.update(f, this.zoom, now, this.showHitbox, detail);
+      sp.update(f, this.zoom, now, this.showHitbox, detail, myRealm, this.plateFade(f, frames));
       this.syncAura(f, now);
       this.moodChatter(f.view.id, f.s.md, now);
     }
@@ -275,6 +277,28 @@ export class GameScene {
         this.auras.delete(id);
       }
     }
+  }
+
+  /**
+   * plateFade làm mờ bảng tên của người Ở XA khi hai bảng chồng lên nhau, để cụm gần mình
+   * luôn đọc được (spec §12.3 declutter).
+   */
+  private plateFade(f: ReturnType<ClientWorld['playerFrames']>[number], all: ReturnType<ClientWorld['playerFrames']>): number {
+    const me = all.find((p) => p.view.id === this.world?.myId);
+    if (!me || f.view.id === me.view.id) {
+      return 1;
+    }
+    const mine = Math.hypot(f.x - me.x, f.y - me.y);
+    for (const o of all) {
+      if (o.view.id === f.view.id || o.view.id === me.view.id) {
+        continue;
+      }
+      // Hai bảng coi là chồng nhau khi gần nhau theo chiều ngang và sàn sàn chiều cao.
+      if (Math.abs(o.x - f.x) < 90 && Math.abs(o.y - f.y) < 50 && Math.hypot(o.x - me.x, o.y - me.y) < mine) {
+        return 0.5;
+      }
+    }
+    return 1;
   }
 
   /** syncAura dựng / cập nhật hào quang Tiên giới trong lớp phát sáng dùng chung (§3.6). */
