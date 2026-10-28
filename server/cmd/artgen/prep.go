@@ -123,6 +123,7 @@ func prepSheet(img *image.NRGBA, j Job, assets string) error {
 		frames = assignInOrder(j, rows)
 	}
 	scales := sharedScales(j, frames)
+	warnFrameCount(j, frames)
 	for si, sg := range j.Segs {
 		clearStaleFrames(filepath.Join(assets, sg.Out), sg)
 		for f, fr := range frames[si] {
@@ -263,6 +264,30 @@ func bandsBetweenLines(img *image.NRGBA, ys []int) [][2]int {
 		}
 	}
 	return out
+}
+
+// warnFrameCount kêu to khi số khung cắt được lệch xa số khung khai báo.
+//
+// Bộ cắt tìm khung bằng vùng pixel LIỀN NHAU, nên nhân vật nào có tay/chân/đồ vật tách rời
+// khỏi thân là bị đếm thành nhiều khung. Thực tế đã xảy ra: `dai_ca_dep` idle ra **22 khung**
+// thay vì 4 — trong game nhân vật thành một cái áo tím nhấp nháy, mà không ai biết cho tới
+// lúc người chơi báo. Lệch thế này thì ảnh coi như hỏng, phải sinh lại.
+func warnFrameCount(j Job, frames [][]*image.NRGBA) {
+	for si, sg := range j.Segs {
+		if sg.Frames <= 0 || si >= len(frames) {
+			continue
+		}
+		got := len(frames[si])
+		if got == sg.Frames {
+			continue
+		}
+		level := "lệch"
+		if got > sg.Frames*3/2 || got*2 < sg.Frames {
+			level = "HỎNG"
+		}
+		log.Printf("  %s %s/%s: cắt được %d khung, khai báo %d — %s",
+			level, j.Name, sg.Anim, got, sg.Frames, "sinh lại bằng `artgen run -only "+j.Name+" -redo`")
+	}
 }
 
 // clearStaleFrames removes old {anim}_NN.png files so a re-generated animation with fewer

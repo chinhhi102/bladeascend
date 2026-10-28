@@ -20,6 +20,8 @@ const BUBBLE_MAX_TEXT_W = 220;
 
 // Animations missing from an atlas fall back along this chain.
 const FALLBACK: Record<string, string[]> = {
+  // idle có thể bị bỏ nếu sheet cắt sai (xem assets.ts/miscut) — vẫn phải có gì để vẽ.
+  idle: ['run', 'chase'],
   chase: ['run'],
   flee: ['run'],
   hit: ['idle'],
