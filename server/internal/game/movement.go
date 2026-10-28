@@ -59,7 +59,8 @@ func (g *Game) ZoneMult(pos Vec, dir Vec) float64 {
 			return
 		}
 		switch z.Kind {
-		case "mud":
+		case "mud", "water":
+			// Ao/suối làm chậm như bùn (spec §8.6 mục 4); client vẽ mặt nước gợn sóng.
 			mult *= g.Cfg.Zones.MudMult
 		case "wind":
 			mult *= g.windMult(dir, z.WindDir)

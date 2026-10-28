@@ -157,6 +157,12 @@ export interface Shape {
   w?: number;
   h?: number;
   r?: number;
+  /**
+   * p: đa giác hữu cơ, toạ độ TUYỆT ĐỐI xen kẽ x,y (spec §8.6). Khi có `p` thì x,y,w,h chỉ
+   * là hộp bao. Server xét va chạm trên chính đa giác này nên client phải vẽ y hệt — vẽ
+   * khác là người chơi thấy một đằng, luật chạy một nẻo.
+   */
+  p?: number[];
 }
 
 export interface MapObstacle {

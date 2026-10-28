@@ -37,7 +37,14 @@ type object struct {
 	Visible    bool    `json:"visible"`
 	Ellipse    bool    `json:"ellipse,omitempty"`
 	Point      bool    `json:"point,omitempty"`
+	// Polygon: đỉnh TƯƠNG ĐỐI so với (X, Y) theo đúng định dạng Tiled (spec §8.6).
+	Polygon    []point `json:"polygon,omitempty"`
 	Properties []prop  `json:"properties,omitempty"`
+}
+
+type point struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 type layer struct {
@@ -87,6 +94,7 @@ func (a rect) overlaps(b rect, margin float64) bool {
 // builder accumulates objects per layer and rejects overlapping placements.
 type builder struct {
 	size   float64
+	seed   int64
 	rng    *rand.Rand
 	nextID int
 	layers map[string][]object
@@ -96,7 +104,7 @@ type builder struct {
 
 func newBuilder(size float64, seed int64) *builder {
 	c := size / 2
-	return &builder{size: size, rng: rand.New(rand.NewSource(seed)), nextID: 1, layers: map[string][]object{},
+	return &builder{size: size, seed: seed, rng: rand.New(rand.NewSource(seed)), nextID: 1, layers: map[string][]object{},
 		keep: []rect{{c - 600, c - 600, c + 600, c + 600}}}
 }
 
@@ -286,6 +294,30 @@ func (b *builder) validate() error {
 // windLane is a long strip; dir in degrees (0 = east, 90 = south).
 func (b *builder) windLane(x, y, w, h, dirDeg float64) bool {
 	return b.zone("wind", x, y, w, h, false, prop{"dir", "float", dirDeg})
+}
+
+// zonePoly đặt một vùng địa hình hình HỮU CƠ (spec §8.6). Đỉnh đưa vào là toạ độ tuyệt đối;
+// Tiled lưu tương đối nên trừ đi gốc trước khi ghi.
+func (b *builder) zonePoly(kind string, pts []float64, props ...prop) bool {
+	if len(pts) < 6 {
+		return false
+	}
+	bb := polyBounds(pts)
+	if !b.inBounds(bb) {
+		return false
+	}
+	rel := make([]point, 0, len(pts)/2)
+	for i := 0; i < len(pts); i += 2 {
+		rel = append(rel, point{X: pts[i] - bb.x0, Y: pts[i+1] - bb.y0})
+	}
+	b.add("zones", object{Type: kind, X: bb.x0, Y: bb.y0, Width: bb.x1 - bb.x0, Height: bb.y1 - bb.y0,
+		Polygon: rel, Properties: props})
+	return true
+}
+
+// organicZone là lối tắt hay dùng: vùng méo quanh một tâm.
+func (b *builder) organicZone(kind string, cx, cy, r float64, squash float64, props ...prop) bool {
+	return b.zonePoly(kind, organicPoly(cx, cy, r, 14, squash, b.seed+int64(len(b.layers["zones"]))), props...)
 }
 
 func (b *builder) write(path, name, biome string) error {
