@@ -20,6 +20,13 @@ export const REALM_COLORS = [
   0xe8f1ff, 0xffd60a, 0x4ce0b3, 0xb15cff, 0xffffff,
 ];
 
+// Màu nền huy hiệu cảnh giới trên bảng tên (spec §12.3). 9 cảnh giới phàm rồi 5 cảnh giới
+// Tiên (lấy theo màu hào quang §3.4); Đại Thừa nền đen, chữ và viền vàng.
+export const REALM_BADGE = [
+  0x8d99ae, 0x57cc99, 0xe9c46a, 0x4ea8de, 0x9d4edd, 0x2ec4b6, 0xf77f00, 0xe63946, 0x14110c,
+  0xe8f1ff, 0xffd60a, 0x4ce0b3, 0xb15cff, 0x2a2a2a,
+];
+
 // Aura colours per buff (ART_PROMPTS §8); stealth has no aura.
 export const BUFF_COLORS: Record<string, number> = {
   spin: 0x3ee6ff,

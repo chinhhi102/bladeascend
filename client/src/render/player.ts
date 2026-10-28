@@ -1,12 +1,13 @@
 import { AnimatedSprite, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 
-import { type GameConfig, realmName, realmOf, tienIndex, tierOf } from '../config';
+import type { GameConfig } from '../config';
 import type { PlayerFrame } from '../net/state';
 import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { animShort, initials } from './catalog';
-import { BUFF_COLORS, charColor, REALM_COLORS, TITLE_COLORS } from './palette';
-import { STR } from '../ui/strings';
+import { BUFF_COLORS, charColor } from './palette';
+import { Input } from '../input';
+import { Nameplate, PLATE_FAR_PX } from './nameplate';
 import { SwordRing } from './swordring';
 
 // Visual proportions relative to the body hitbox radius (not balance numbers).
@@ -39,11 +40,8 @@ export class PlayerSprite {
   private readonly aura = new Graphics();
   private readonly bodyBox = new Container();
   private body: AnimatedSprite | Container | null = null;
-  private readonly label: Text;
-  private readonly title: Text; // danh hiệu Top 1–10 phòng (spec §11.3)
-  private titleRank = 0;
-  private readonly realmTag: Text; // cảnh giới + tầng, ngay trên tên (spec §11.2)
-  private realmLevel = -1;
+  /** Bảng tên trên đầu: danh hiệu · cảnh giới · tên, gộp thành một cụm (spec §12.3). */
+  private readonly plate: Nameplate;
   private readonly atlas: AnimSet | null;
   private mood = '';
   private bubble: Container | null = null;
@@ -59,25 +57,10 @@ export class PlayerSprite {
   ) {
     this.atlas = assets.atlas(`characters/${char}`);
     this.swordRing = new SwordRing(cfg);
-    this.label = new Text({
-      text: name,
-      style: { fontFamily: 'system-ui, sans-serif', fontSize: 15, fontWeight: '700', fill: isMe ? 0xfff3a0 : 0xffffff, stroke: { color: 0x000000, width: 4 } },
-    });
-    this.label.anchor.set(0.5, 1);
-    this.title = new Text({
-      text: '',
-      style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '800', fill: 0xffd700, stroke: { color: 0x000000, width: 4 } },
-    });
-    this.title.anchor.set(0.5, 1);
-    this.title.visible = false;
-    this.realmTag = new Text({
-      text: '',
-      style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '700', fill: 0xbfe9ff, stroke: { color: 0x000000, width: 4 } },
-    });
-    this.realmTag.anchor.set(0.5, 1);
+    this.plate = new Nameplate(cfg, name, isMe, Input.isTouchDevice());
     // Hào quang Tiên giới KHÔNG còn nằm ở đây: nó chuyển sang `vfxLayer` dùng chung để ăn
     // một lượt bloom cho cả màn hình thay vì mỗi nhân vật một filter (spec §3.6).
-    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.label, this.realmTag, this.title);
+    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.plate.root);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -111,7 +94,7 @@ export class PlayerSprite {
     return this.swordRing.root;
   }
 
-  update(f: PlayerFrame, zoom: number, now: number, showHitbox: boolean, swordDetail = 1): void {
+  update(f: PlayerFrame, zoom: number, now: number, showHitbox: boolean, swordDetail = 1, myRealm = 0, plateFade = 1): void {
     const s = f.s;
     const r = this.cfg.player.body_r * s.sc;
     this.root.position.set(f.x, f.y);
@@ -125,44 +108,9 @@ export class PlayerSprite {
     this.applyAlpha(s.fl, now);
     // Xếp từ dưới lên: tên → cảnh giới → danh hiệu (spec §11.2, §11.3).
     const headY = -r * (CHAR_HEIGHT_PER_R - FEET_BELOW_CENTER) - 4 / zoom;
-    this.label.position.set(0, headY);
-    this.label.scale.set(1 / zoom);
-    const realmY = this.updateRealmTag(s.L, headY, zoom);
-    this.updateTitle(s.ti ?? 0, realmY, zoom);
+    this.plate.update(s.L, s.ti ?? 0, myRealm, headY, zoom, now, r * 2.6 * zoom >= PLATE_FAR_PX, plateFade);
     this.swordRing.update(f, now, showHitbox, swordDetail);
     this.updateBubble(r, zoom, now);
-  }
-
-  /** updateRealmTag draws "Trúc Cơ tầng 3" above the name; returns the y to stack onto. */
-  private updateRealmTag(level: number, headY: number, zoom: number): number {
-    if (level !== this.realmLevel) {
-      this.realmLevel = level;
-      const r = realmOf(this.cfg, level);
-      // Tiên giới không chia tầng nên chỉ ghi tên cảnh giới (spec §3.4).
-      this.realmTag.text = tienIndex(this.cfg, r) >= 0 ? realmName(this.cfg, r) : STR.realmTier(realmName(this.cfg, r), tierOf(this.cfg, level));
-      this.realmTag.style.fill = REALM_COLORS[r] ?? 0xffd700;
-    }
-    const y = headY - this.label.height - 1 / zoom;
-    this.realmTag.position.set(0, y);
-    this.realmTag.scale.set(1 / zoom);
-    return y;
-  }
-
-  // Danh hiệu nằm trên cùng. Server đã bỏ `ti` với người đang Ẩn Thân nên danh hiệu tự
-  // ẩn theo, không làm lộ vị trí (spec §11.3).
-  private updateTitle(rank: number, headY: number, zoom: number): void {
-    if (rank !== this.titleRank) {
-      this.titleRank = rank;
-      const name = STR.titles[rank - 1] ?? '';
-      this.title.text = rank === 1 ? `👑 ${name}` : name;
-      this.title.style.fill = TITLE_COLORS[rank - 1] ?? 0xffffff;
-      this.title.visible = rank > 0;
-    }
-    if (!this.title.visible) {
-      return;
-    }
-    this.title.position.set(0, headY - this.label.height - 2 / zoom);
-    this.title.scale.set(1 / zoom);
   }
 
   private drawShadow(r: number): void {
@@ -273,12 +221,8 @@ export class PlayerSprite {
     } else if (flags & FLAG.bush || stealth) {
       a = 0.45; // in a bush, or my own stealth so I can tell the buff is up
     }
-    // Ẩn Thân giấu luôn tên và danh hiệu của người khác.
-    this.label.visible = !stealth || this.isMe;
-    this.realmTag.visible = this.label.visible;
-    if (stealth && !this.isMe) {
-      this.title.visible = false;
-    }
+    // Ẩn Thân / trong bụi: giấu cả cụm bảng tên của người khác (spec §12.3).
+    this.plate.root.visible = (!stealth && !(flags & FLAG.bush)) || this.isMe;
     if (flags & FLAG.invuln && Math.floor(now * 10) % 2 === 0) {
       a *= 0.4; // blink while invulnerable (spec §5.1)
     }
@@ -330,6 +274,7 @@ export class PlayerSprite {
   }
 
   destroy(): void {
+    this.plate.destroy();
     this.root.destroy({ children: true });
     this.swordRing.destroy();
   }

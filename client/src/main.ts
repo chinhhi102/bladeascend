@@ -7,6 +7,7 @@ import { Conn } from './net/conn';
 import type { DeadMsg, GameMap, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
+import { loadFonts } from './render/fonts';
 import { GameScene } from './render/scene';
 import { cycleQuality, QUALITY_NAME } from './render/quality';
 import { h, Screens } from './ui/dom';
@@ -282,6 +283,7 @@ async function boot(): Promise<void> {
   try {
     const cfg = await loadConfig();
     await assets.init();
+await loadFonts(); // BitmapFont đủ dấu tiếng Việt cho bảng tên (spec §12.3)
     await assets.preload();
     sound.init();
     loading.remove();
