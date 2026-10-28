@@ -33,6 +33,26 @@ func (c *wsConn) Send(b []byte) bool {
 	}
 }
 
+// SendLossy đẩy gói MỚI vào hàng đợi, bỏ gói cũ nhất nếu đầy (spec mục 27).
+//
+// Dùng cho snapshot: client mạng yếu chỉ cần bản mới nhất, một bản cũ nằm trong hàng chỉ làm
+// nhân vật giật lùi rồi nhảy tới. Khác hẳn `welcome` hay `leaderboard` — mất là mất luôn,
+// nên những gói đó vẫn đi qua Send thường.
+func (c *wsConn) SendLossy(b []byte) bool {
+	for i := 0; i < 2; i++ {
+		select {
+		case c.out <- b:
+			return true
+		default:
+			select {
+			case <-c.out: // vứt gói cũ nhất rồi thử lại
+			default:
+			}
+		}
+	}
+	return false
+}
+
 func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	ip := clientIP(r)
 	if !s.limiter.acquire(ip) {

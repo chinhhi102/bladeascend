@@ -10,6 +10,13 @@ func (g *Game) ViewHalfExtents(p *Player) (float64, float64) {
 	return h * g.Cfg.Net.AOIAspect, h
 }
 
+// ViewHalfExtentsX là nửa chiều rộng khung nhìn, để lọc "gần hay xa" mà không phải lấy cả
+// hai chiều.
+func (g *Game) ViewHalfExtentsX(viewer *Player) float64 {
+	hw, _ := g.ViewHalfExtents(viewer)
+	return hw
+}
+
 // InView reports whether pos is inside viewer's area of interest.
 func (g *Game) InView(viewer *Player, pos Vec) bool { return g.InViewRadius(viewer, pos, 0) }
 

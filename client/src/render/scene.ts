@@ -4,7 +4,7 @@ import { sound } from '../audio/sound';
 import { absorbable, banksTienKhi, cameraViewHeight, type GameConfig, realmName, realmOf, tienIndex } from '../config';
 import type { ClientWorld } from '../net/state';
 import type { ItemState } from '../net/protocol';
-import { FLAG, type GameEvent } from '../net/protocol';
+import { FLAG, type GameEvent, moodName } from '../net/protocol';
 import { pick, STR } from '../ui/strings';
 import { Beast, type BeastMode, TIEN_BEASTS } from './beast';
 import { ItemSprite, MonsterSprite } from './entities';
@@ -91,6 +91,7 @@ export class GameScene {
   private world: ClientWorld | null = null;
   private lastFrames: ReturnType<ClientWorld['playerFrames']> = [];
   private fps = 0;
+  private fpsLast = 0;
   private fpsAcc = 0;
   private fpsFrames = 0;
   private lastRenderMs = 0;
@@ -276,7 +277,7 @@ export class GameScene {
       }
       sp.update(f, this.zoom, now, this.showHitbox, detail, myRealm, this.plateFade(f, frames));
       this.syncAura(f, now);
-      this.moodChatter(f.view.id, f.s.md, now);
+      this.moodChatter(f.view.id, moodName(f.s.md), now);
     }
     for (const [id, sp] of this.players) {
       if (!seen.has(id)) {
@@ -511,7 +512,12 @@ export class GameScene {
   }
 
   perfLine(dt: number, net: { rttMs: number; kbPerSec: number; snapBytes: number; srvMs: number }): string {
-    this.fpsAcc += dt;
+    // Đo FPS bằng ĐỒNG HỒ THẬT, không dùng `dt` của ticker: Pixi kẹp `deltaMS` ở minFPS=10,
+    // nên một máy chạy 3 khung/giây vẫn báo đúng 10.0. Bài test 10 tab headless từng cho ra
+    // cột FPS toàn 10.0 / 10.0 / 10.0 vì đúng lỗi này.
+    const t = performance.now() / 1000;
+    this.fpsAcc += this.fpsLast > 0 ? t - this.fpsLast : dt;
+    this.fpsLast = t;
     this.fpsFrames += 1;
     if (this.fpsAcc >= 0.5) {
       this.fps = this.fpsFrames / this.fpsAcc;

@@ -2,7 +2,7 @@ import { sound } from '../audio/sound';
 import type { GameConfig } from '../config';
 import { maxSwords, realmName, realmOf, tienIndex, tierOf } from '../config';
 import type { FeedMsg, GameEvent, LeaderboardMsg, PlayerState } from '../net/protocol';
-import { BUFFS } from '../net/protocol';
+import { BUFFS, moodName } from '../net/protocol';
 import { assets } from '../render/assets';
 import { REALM_BADGE } from '../render/palette';
 import { BUFF_COLORS } from '../render/palette';
@@ -180,7 +180,7 @@ export class Hud {
     }
     const r = realmOf(this.cfg, me.L);
     const tienHere = tienIndex(this.cfg, r) >= 0;
-    this.setBadge(r, tienHere ? 0 : tierOf(this.cfg, me.L), me.ti ?? 0, me.md ?? '');
+    this.setBadge(r, tienHere ? 0 : tierOf(this.cfg, me.L), me.ti ?? 0, moodName(me.md));
     // Tiên giới: không chia tầng, thanh tiến độ đầy bằng sát mạng (spec §3.4).
     const tien = tienIndex(this.cfg, r) >= 0;
     this.realm.textContent = tien ? realmName(this.cfg, r) : STR.realmTier(realmName(this.cfg, r), tierOf(this.cfg, me.L));

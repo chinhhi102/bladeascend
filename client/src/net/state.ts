@@ -135,7 +135,13 @@ export class ClientWorld {
     for (const m of s.m ?? []) {
       seen.add(m.id);
       const buf = this.monsters.get(m.id) ?? [];
-      buf.push({ t: s.tm, s: m });
+      // Loại, máu tối đa và bán kính chỉ được gửi LẦN ĐẦU (spec mục 27) — chúng không bao
+      // giờ đổi. Các gói sau thiếu ba trường đó, phải lấy lại từ gói trước.
+      const prev = buf[buf.length - 1]?.s;
+      const full: MonsterState = prev
+        ? { ...m, k: m.k || prev.k, mx: m.mx || prev.mx, r: m.r || prev.r }
+        : m;
+      buf.push({ t: s.tm, s: full });
       if (buf.length > SNAP_KEEP) {
         buf.shift();
       }
@@ -283,7 +289,7 @@ export class ClientWorld {
     const rt = this.renderTime();
     const out: PlayerFrame[] = [];
     for (const v of this.players.values()) {
-      out.push(v.id === this.myId ? this.myFrame(v) : interpPlayer(v, rt));
+      out.push(v.id === this.myId ? this.myFrame(v) : interpPlayer(v, this.cfg, rt));
     }
     return out;
   }
@@ -294,7 +300,7 @@ export class ClientWorld {
     // Advance within the current input step so motion is smooth at high frame rates.
     const since = Math.min((performance.now() - this.lastSendAt) / 1000, 1 / this.cfg.net.tick_hz);
     const ahead = this.step(this.predicted, this.lastInput, s, since);
-    const ringAngle = s.ph + s.d * s.w * (this.serverNow() - last.t);
+    const ringAngle = s.ph + s.d * omega(this.cfg, s) * (this.serverNow() - last.t);
     return { view: v, s, x: ahead.x + this.correction.x, y: ahead.y + this.correction.y, ringAngle };
   }
 
@@ -328,12 +334,22 @@ function bracket<T>(buf: Timed<T>[], t: number): { a: Timed<T>; b: Timed<T>; t: 
   return { a: buf[0], b: buf[0], t: 1 };
 }
 
-function interpPlayer(v: PlayerView, rt: number): PlayerFrame {
+/**
+ * omega: tốc độ quay vòng kiếm, rad/giây. Server KHÔNG gửi con số này nữa (spec mục 27) —
+ * nó suy ra được từ `rev_secs` trong config và buff Tốc Kiếm mà client đã có sẵn, nên gửi
+ * lại là lãng phí 7 byte mỗi người mỗi gói, 20 lần mỗi giây.
+ */
+export function omega(cfg: GameConfig, s: PlayerState): number {
+  const spin = s.bf & (1 << BUFFS.indexOf('spin')) ? (cfg.buffs.spin?.mult ?? 1) : 1;
+  return ((2 * Math.PI) / cfg.sword.rev_secs) * spin;
+}
+
+function interpPlayer(v: PlayerView, cfg: GameConfig, rt: number): PlayerFrame {
   const { a, b, t } = bracket(v.snaps, rt);
   // Large jumps (teleport, respawn) are not interpolated.
   const jump = Math.hypot(b.s.x - a.s.x, b.s.y - a.s.y) > 600;
   const k = jump ? 1 : t;
   const base = t >= 1 ? b : a;
-  const ringAngle = base.s.ph + base.s.d * base.s.w * (rt - base.t);
+  const ringAngle = base.s.ph + base.s.d * omega(cfg, base.s) * (rt - base.t);
   return { view: v, s: b.s, x: lerp(a.s.x, b.s.x, k), y: lerp(a.s.y, b.s.y, k), ringAngle };
 }

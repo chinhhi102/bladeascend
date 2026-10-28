@@ -91,10 +91,19 @@ async function startServer() {
 }
 
 /** chơi một tab: vào game với tên cho trước rồi trả về các hàm điều khiển. */
-async function openTab(browser, name, slow) {
-  // 960×540: SwiftShader tô từng điểm ảnh bằng CPU, 10 tab ở 1280×720 thì tab thứ 7 trở đi
-  // mất hơn một phút mới khởi tạo xong WebGL. Giảm khung nhìn không ảnh hưởng số liệu mạng.
-  const ctx = await browser.newContext({ viewport: { width: 960, height: 540 } });
+async function openTab(browser, name, slow, full) {
+  // SwiftShader tô TỪNG ĐIỂM ẢNH bằng CPU. 10 tab ở 960×540 ăn sạch CPU máy đo, và khi CPU
+  // hết thì Chrome bỏ cả việc xử lý gói WebSocket — lượt đo đầu tiên ra ping 400–2000 ms và
+  // băng thông 0.0 KB/s, tức là ta đang đo cái máy đo chứ không đo game.
+  //
+  // Vùng nhìn của server (AOI) tính từ config, KHÔNG phụ thuộc kích thước cửa sổ trình
+  // duyệt, nên thu nhỏ cửa sổ không làm sai một byte nào của số liệu mạng. Vì vậy: chỉ MỘT
+  // tab chạy khổ thật để lấy FPS / draw call, chín tab còn lại thu nhỏ và hạ chất lượng,
+  // chúng chỉ có nhiệm vụ tạo đúng lượng người và lượng kiếm trên server.
+  const ctx = await browser.newContext({ viewport: full ? { width: 960, height: 540 } : { width: 320, height: 180 } });
+  if (!full) {
+    await ctx.addInitScript(() => localStorage.setItem('kx.quality', 'low'));
+  }
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log(`  [${name}] lỗi trang: ${String(e).slice(0, 160)}`));
   page.on('console', (m) => {
@@ -210,7 +219,11 @@ async function runOnce(label, slow) {
   });
   const tabs = [];
   for (let i = 0; i < TABS; i++) {
-    const t = await openTab(browser, `Test${String(i + 1).padStart(2, '0')}`, slow);
+    // Tab 1 là tab "mắt người": khổ thật, chất lượng thật, chỉ nó mới cho số FPS / draw
+    // call đáng đọc. Nó cũng nằm trong nhóm Đạo Tổ nên thấy đúng cảnh nặng nhất.
+    const full = i === 0;
+    const t = await openTab(browser, `Test${String(i + 1).padStart(2, '0')}`, slow, full);
+    t.full = full;
     tabs.push(t);
     console.log(`  ${t.name} đã vào`);
   }
@@ -236,22 +249,27 @@ async function runOnce(label, slow) {
 
   // Giai đoạn 2: 5 tab lên Đạo Tổ đủ kiếm, rồi tất cả chụm về giữa bản đồ
   const tien = tabs.slice(0, TIEN_TABS);
+  // Cấp Đạo Tổ lấy từ config chứ không viết cứng: đổi số cảnh giới trong config/game.json
+  // là bài test tự theo, không âm thầm kiểm sai ngưỡng.
+  const cult = (await (await fetch(`http://127.0.0.1:${PORT}/api/config`)).json()).cultivation;
+  const TOP_LEVEL = (cult.realms.length + cult.tien_realms.length - 1) * cult.tiers_per_realm;
   // n: 1 = giữ bất tử. Không có nó thì 5 người Đạo Tổ chụm vào mài nhau chết sạch trong
   // chục giây, cả phòng tụt về Luyện Khí 1 kiếm và số đo thành vô nghĩa (đã dính một lần).
   const boost = () => Promise.all(tien.map((t) =>
     t.page.evaluate(() => window.kx.conn?.send?.({ t: 'dbg', cmd: 'max', n: 1 })).catch(() => {})));
-  await boost();
-  // Chờ xác nhận đã lên thật rồi mới bắt đầu đo — đừng tin là lệnh nào gửi đi cũng tới nơi.
+  // Gửi LẠI mỗi vòng chứ không gửi một lần: lúc 10 tab đang tranh CPU, một lệnh đi lạc là
+  // cả bảng số sai kịch bản (đã dính: cột cảnh giới ra 0.0 trong khi lẽ ra phải là 130).
   for (let i = 0; i < 20; i++) {
+    await boost();
     await sleep(500);
     const levels = await Promise.all(tien.map((t) =>
       t.page.evaluate(() => window.kx?.world?.me?.()?.L ?? -1).catch(() => -1)));
-    if (levels.every((L) => L >= 100)) {
+    if (levels.every((L) => L >= TOP_LEVEL)) {
       console.log(`  xác nhận ${tien.length} tab đã lên Đạo Tổ`);
       break;
     }
     if (i === 19) {
-      console.log(`  CẢNH BÁO: chỉ ${levels.filter((L) => L >= 100).length}/${tien.length} tab lên được Đạo Tổ — bảng số sẽ không đúng kịch bản`);
+      console.log(`  CẢNH BÁO: chỉ ${levels.filter((L) => L >= TOP_LEVEL).length}/${tien.length} tab lên được Đạo Tổ — bảng số sẽ không đúng kịch bản (cấp đọc được: ${levels.join(', ')})`);
     }
   }
   console.log(`  ${tien.length} tab lên Đạo Tổ, chụm lại đánh nhau ${FIGHT_S}s...`);
@@ -284,7 +302,7 @@ async function runOnce(label, slow) {
   const rows = [];
   for (const [name, list] of samples) {
     for (const s of list) {
-      rows.push({ ...s, name, tien: tien.some((t) => t.name === name) });
+      rows.push({ ...s, name, tien: tien.some((t) => t.name === name), full: tabs.find((t) => t.name === name)?.full === true });
     }
   }
   return { label, rows };
@@ -296,6 +314,17 @@ function table(rows, title) {
   const out = [`**${title}** — ${fight.length} mẫu trong giai đoạn đánh nhau\n`];
   out.push('| Chỉ số | 5 tab Đạo Tổ (TB / p95 / tệ nhất) | 5 tab thường (TB / p95 / tệ nhất) |');
   out.push('|---|---|---|');
+  // Chỉ tab 1 chạy khổ thật; chín tab kia thu nhỏ để không ăn hết CPU máy đo, nên số vẽ
+  // của chúng vô nghĩa. Các chỉ số VẼ lấy riêng từ tab 1, các chỉ số MẠNG lấy cả nhóm.
+  const eye = fight.filter((r) => r.full);
+  const lineEye = (name, key, unit, higherIsBetter = false) => {
+    if (!eye.length) {
+      out.push(`| ${name} | — | — |`);
+      return;
+    }
+    const s = summarise(eye, key, higherIsBetter);
+    out.push(`| ${name} | ${s.avg.toFixed(1)} / ${s.p95.toFixed(1)} / ${s.worst.toFixed(1)}${unit ? ' ' + unit : ''} | *(chỉ đo ở tab 1)* |`);
+  };
   const line = (name, key, unit, higherIsBetter = false) => {
     const cell = (g) => {
       if (!g.length) return '—';
@@ -304,16 +333,16 @@ function table(rows, title) {
     };
     out.push(`| ${name} | ${cell(group(true))} | ${cell(group(false))} |`);
   };
-  line('FPS *(TB / p5 / thấp nhất — không tin được, xem ghi chú)*', 'fps', '', true);
+  lineEye('FPS *(TB / p5 / thấp nhất — xem ghi chú)*', 'fps', '', true);
   line('Cảnh giới (cấp)', 'myLevel', '');
   line('Kiếm của chính tab', 'mySwords', '');
-  line('Thời gian vẽ', 'drawMs', 'ms');
+  lineEye('Thời gian vẽ', 'drawMs', 'ms');
   line('Ping', 'ping', 'ms');
   line('Băng thông xuống', 'kbPerSec', 'KB/s');
   line('Kích thước snapshot', 'snapKB', 'KB');
   line('Tick server', 'srvMs', 'ms');
-  line('Số sprite', 'sprites', '');
-  line('Draw call', 'drawCalls', '');
+  lineEye('Số sprite', 'sprites', '');
+  lineEye('Draw call', 'drawCalls', '');
   line('Entity trong AOI', 'aoi', '');
   line('Tổng kiếm thấy trên màn hình', 'swords', '');
   return out.join('\n');

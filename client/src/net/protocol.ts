@@ -9,10 +9,11 @@ export interface PlayerState {
   n: number; // sword count
   ph: number; // ring phase at snapshot time
   d: number; // ring direction ±1
-  w: number; // ω rad/s
+ // ω rad/s
   tl: number; // blade tilt (rad); ring sizes are derived from sc and n alone (spec v4.3)
   sc: number; // scale
-  md: string; // mood = animation name
+  /** md: chỉ số tâm trạng trong MOODS (spec mục 27) — gửi chuỗi thì tốn 13 byte mỗi gói. */
+  md: number; // mood = animation name
   bf: number; // buff bits
   fl: number; // flags
   ck?: number; // crack
@@ -28,8 +29,9 @@ export interface MonsterState {
   id: number;
   x: number;
   y: number;
-  k: string;
   hp: number;
+  /** k, mx, r chỉ có ở gói ĐẦU TIÊN thấy con quái này (spec mục 27); sau đó client giữ lại. */
+  k: string;
   mx: number;
   r: number;
 }
@@ -148,6 +150,20 @@ export const FLAG = {
 
 // Buff bit order = server game.BuffNames.
 export const BUFFS = ['spin', 'haste', 'magnet', 'hard', 'shield', 'exp2', 'stealth'] as const;
+
+/**
+ * MOODS phải khớp **đúng thứ tự** với `game.MoodList` ở server: tâm trạng gửi qua mạng bằng
+ * chỉ số. Thêm thì thêm vào CUỐI, đừng chèn giữa.
+ */
+export const MOODS = [
+  'idle', 'run', 'chase', 'flee', 'hit', 'levelup',
+  'breakthrough', 'realm_drop', 'teleport_out', 'teleport_in', 'death', 'respawn',
+] as const;
+
+/** moodName đổi chỉ số về tên hoạt ảnh; ngoài danh sách thì coi như idle. */
+export function moodName(i: number): string {
+  return MOODS[i] ?? 'idle';
+}
 
 // Map JSON from GET /api/map/{id} (server/internal/world.Map).
 export interface Shape {
