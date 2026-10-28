@@ -175,7 +175,7 @@ func (r *Room) addHuman(c *Client, j netproto.Join) {
 	c.knownItems = c.knownItems[:0]
 	r.clients[p.ID] = c
 	c.setRoom(r)
-	w := netproto.Welcome{T: "welcome", ID: p.ID, Room: r.ID, Map: r.G.Map.ID, TickHz: r.cfg.Net.TickHz, Time: r.G.Time, Debug: c.Debug}
+	w := netproto.Welcome{T: "welcome", ID: p.ID, Room: r.ID, Map: r.G.Map.ID, TickHz: r.cfg.Net.TickHz, Time: r.G.Time, Debug: c.Debug, Proto: netproto.ProtocolVersion}
 	for id, st := range r.G.Obstacles {
 		if st.Broken || st.HP != r.G.Map.Obstacles[id].MaxHP {
 			w.Obstacles = append(w.Obstacles, netproto.ObstacleState{ID: id, HP: st.HP, Broken: st.Broken})

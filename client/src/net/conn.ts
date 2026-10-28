@@ -85,6 +85,13 @@ export class Conn {
     }
   }
 
+  /** stop đóng kết nối và KHÔNG nối lại — dùng khi nối lại cũng vô ích (lệch giao thức). */
+  stop(): void {
+    this.shouldReconnect = false;
+    window.clearInterval(this.pingTimer);
+    this.ws?.close();
+  }
+
   get isOpen(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
   }

@@ -9,6 +9,7 @@ export const STR = {
   leaderboard: 'Bảng xếp hạng',
   findingRoom: 'Đang tìm phòng...',
   connecting: 'Đang kết nối máy chủ...',
+  versionMismatch: 'Máy chủ vừa được cập nhật. Hãy tải lại trang (Ctrl+F5) để chơi tiếp.',
   disconnected: 'Mất kết nối với máy chủ. Đang thử lại...',
   badName: 'Tên phải dài 2–16 ký tự.',
   controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Giữ Shift để Thiêu Đốt Tinh Huyết (chạy nhanh, hao tu vi). Không có nút đánh — kiếm tự xoay!',
