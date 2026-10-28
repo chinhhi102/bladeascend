@@ -2,6 +2,7 @@ import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 
 import type { GameConfig } from '../config';
 import { hslToHex } from './palette';
+import { particle } from './particles';
 import { quality } from './quality';
 
 /**
@@ -31,9 +32,17 @@ export const AURA_FAR_PX = 40;
 
 let glowTex: Texture | null = null;
 
-/** glowTexture: một đốm sáng gradient tròn, trắng để tint theo màu cảnh giới. */
+/**
+ * glowTexture: quầng sáng của hào quang. Ưu tiên ảnh hạt thật (bộ CC0 của Kenney, spec
+ * §3.6) vì nó có dải chuyển mượt hơn hẳn gradient tự vẽ; chưa có thì tự vẽ.
+ */
 function glowTexture(): Texture {
   if (glowTex) {
+    return glowTex;
+  }
+  const real = particle('light');
+  if (real.width > 1) {
+    glowTex = real;
     return glowTex;
   }
   const n = 256;

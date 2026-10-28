@@ -59,6 +59,8 @@ export const DECAL_IDS = [
   'footprints',
 ];
 export const ZONE_EDGES = ['mud_edge', 'pond_shore', 'stone_path_edge', 'bush_edge'];
+// Hạt dùng chung (spec §3.6): thả bộ CC0 Kenney/Brackeys vào assets/vfx/particles/.
+export const PARTICLE_IDS = ['spark', 'smoke', 'light', 'star', 'dot'];
 export const AMBIENT_IDS = ['falling_leaf', 'firefly', 'butterfly', 'chicken', 'lantern', 'bird', 'cloud_shadow'];
 
 // ART_PROMPTS §11.1 / §11.2 — bảng tên và chân dung HUD (GAME_SPEC §12.3, §12.4).
@@ -146,6 +148,9 @@ function itemEntries(): CatalogEntry[] {
   }
   for (const e of ZONE_EDGES) {
     out.push({ group: 'Decal mặt đất', label: `viền ${e}`, files: [`decals/${e}.png`], job: `decal_${e}` });
+  }
+  for (const p of PARTICLE_IDS) {
+    out.push({ group: 'Hạt VFX', label: p, files: [`vfx/particles/${p}.png`], job: `particle_${p}` });
   }
   for (const a of AMBIENT_IDS) {
     out.push({ group: 'Sự sống bản đồ', label: a, files: [`ambient/${a}.png`], job: `ambient_${a}` });
