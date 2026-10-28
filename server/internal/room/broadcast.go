@@ -144,6 +144,28 @@ func (r *Room) diffItems(c *Client, viewer *game.Player, s *netproto.Snapshot) {
 		c.knownItems = append(c.knownItems, make([]uint32, n-len(c.knownItems))...)
 	}
 	known := c.knownItems
+	// Quét XOÁ TRƯỚC, thêm sau. Thứ tự này là bắt buộc, không phải tuỳ ý:
+	//
+	// Slot được DÙNG LẠI. Viên EXP vừa bị nhặt sẽ nhả slot ra, và một viên mới có thể chiếm
+	// đúng slot đó ngay trong cùng một tick. Nếu thêm trước thì vòng thêm ghi đè
+	// `known[slot]` bằng id của viên MỚI, rồi vòng quét thấy "slot này có chủ hợp lệ" và
+	// không bao giờ báo client xoá viên CŨ — người chơi nhặt xong mà viên vẫn nằm đó mãi.
+	// Quét trước thì viên cũ được báo xoá, slot trả về 0, rồi viên mới mới được thêm.
+	for slot, id := range known {
+		if id == 0 {
+			continue
+		}
+		it := g.ItemBySlot(slot)
+		ok := it != nil && it.ID == id
+		if ok {
+			dx, dy := it.Pos.X-vp.X, it.Pos.Y-vp.Y
+			ok = r.wantItem(viewer, hw, hh, it, dx*dx+dy*dy)
+		}
+		if !ok {
+			known[slot] = 0
+			s.ItemsRemoved = append(s.ItemsRemoved, id)
+		}
+	}
 	cands := r.itemBuf[:0]
 	g.ItemsNear(vp, hw, hh, func(it *game.Item) {
 		if known[it.Slot()] == it.ID {
@@ -166,23 +188,6 @@ func (r *Room) diffItems(c *Client, viewer *game.Player, s *netproto.Snapshot) {
 		known[cd.it.Slot()] = cd.it.ID
 		s.ItemsAdded = append(s.ItemsAdded, netproto.ItemState{ID: cd.it.ID, X: float32(cd.it.Pos.X), Y: float32(cd.it.Pos.Y),
 			Kind: cd.it.Kind, Value: float32(cd.it.Value)})
-	}
-	// Quét slice theo chỉ số: không băm, không duyệt map. Viên đã nhặt mất thì slot của nó
-	// trống hoặc đã thuộc về viên khác — cả hai trường hợp đều là "client phải xoá".
-	for slot, id := range known {
-		if id == 0 {
-			continue
-		}
-		it := g.ItemBySlot(slot)
-		ok := it != nil && it.ID == id
-		if ok {
-			dx, dy := it.Pos.X-vp.X, it.Pos.Y-vp.Y
-			ok = r.wantItem(viewer, hw, hh, it, dx*dx+dy*dy)
-		}
-		if !ok {
-			known[slot] = 0
-			s.ItemsRemoved = append(s.ItemsRemoved, id)
-		}
 	}
 }
 
