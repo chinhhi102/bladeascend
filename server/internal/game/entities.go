@@ -44,6 +44,23 @@ const (
 	MoodRespawn      = "respawn"
 )
 
+// MoodList là thứ tự dùng để gửi tâm trạng dạng CHỈ SỐ thay vì chuỗi (spec mục 27). Client
+// có cùng danh sách này; **thêm vào CUỐI**, đừng chèn giữa, nếu không hai bên lệch nhau.
+var MoodList = [...]string{
+	MoodIdle, MoodRun, MoodChase, MoodFlee, MoodHit, MoodLevelup,
+	MoodBreakthrough, MoodRealmDrop, MoodTeleportOut, MoodTeleportIn, MoodDeath, MoodRespawn,
+}
+
+// MoodIndex đổi tên tâm trạng thành chỉ số; tên lạ thì trả 0 (idle).
+func MoodIndex(name string) uint8 {
+	for i, m := range MoodList {
+		if m == name {
+			return uint8(i)
+		}
+	}
+	return 0
+}
+
 // Transit tracks a player moving through a gate (spec §8.4).
 type Transit struct {
 	Dest     Vec

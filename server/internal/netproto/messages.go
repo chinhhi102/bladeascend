@@ -91,14 +91,17 @@ type PlayerState struct {
 	Count  int     `msgpack:"n"`
 	Phase  float32 `msgpack:"ph"`
 	Dir    int8    `msgpack:"d"`
-	Omega  float32 `msgpack:"w"`
 	Tilt   float32 `msgpack:"tl"` // blade lean (rad); ring geometry is derived from scale, count and buffs (spec §13.3)
 	Scale  float32 `msgpack:"sc"`
-	Mood   string  `msgpack:"md"`
-	Buffs  uint8   `msgpack:"bf"`
-	Flags  uint8   `msgpack:"fl"`
-	Crack  float32 `msgpack:"ck,omitempty"`
-	Exp    float32 `msgpack:"xp"`
+	// Mood gửi dạng CHỈ SỐ thay vì chuỗi (spec mục 27). Chuỗi "breakthrough" tốn 13 byte mỗi
+	// người mỗi gói, 20 lần/giây — mà nó hầu như không đổi.
+	Mood  uint8 `msgpack:"md"`
+	Buffs uint8 `msgpack:"bf"`
+	Flags uint8 `msgpack:"fl"`
+	Crack float32 `msgpack:"ck,omitempty"`
+	// Exp chỉ gửi cho CHÍNH người đó: không ai cần biết EXP của người khác, HUD chỉ vẽ của
+	// mình. Trước đây gửi cho tất cả, tốn 7 byte × (số người thấy được) mỗi gói.
+	Exp float32 `msgpack:"xp,omitempty"`
 	Title  int     `msgpack:"ti,omitempty"` // room rank badge 1..3 (spec §11.3), 0 = none
 	// Tiên giới (spec §3.4): sát mạng đã có / cần, để HUD vẽ thanh Tiên khí. Chỉ gửi cho
 	// chính người đó; người khác chỉ cần Level để biết cảnh giới và màu hào quang.
@@ -108,14 +111,17 @@ type PlayerState struct {
 	Char   string  `msgpack:"ch,omitempty"`
 }
 
+// MonsterState: `k`, `mx`, `r` KHÔNG BAO GIỜ đổi trong đời một con quái, nên chỉ gửi lần đầu
+// client thấy nó (spec mục 27). Trước đây gửi lại 20 lần/giây: riêng chuỗi `kind` đã 10 byte
+// mỗi con mỗi gói.
 type MonsterState struct {
 	ID   uint32  `msgpack:"id"`
 	X    float32 `msgpack:"x"`
 	Y    float32 `msgpack:"y"`
-	Kind string  `msgpack:"k"`
 	HP   int     `msgpack:"hp"`
-	Max  int     `msgpack:"mx"`
-	R    float32 `msgpack:"r"`
+	Kind string  `msgpack:"k,omitempty"`
+	Max  int     `msgpack:"mx,omitempty"`
+	R    float32 `msgpack:"r,omitempty"`
 }
 
 type ItemState struct {

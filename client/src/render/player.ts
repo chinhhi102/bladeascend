@@ -6,6 +6,7 @@ import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { animShort, initials } from './catalog';
 import { BUFF_COLORS, charColor } from './palette';
+import { moodName } from '../net/protocol';
 import { Input } from '../input';
 import { Nameplate, PLATE_FAR_PX } from './nameplate';
 import { SwordRing } from './swordring';
@@ -102,7 +103,7 @@ export class PlayerSprite {
     this.root.position.set(f.x, f.y);
     this.root.zIndex = f.y + r * FEET_BELOW_CENTER; // y-sort by the feet (spec §8.2)
     this.drawShadow(r);
-    this.updateBody(s.md, r, Math.cos(s.f) < 0);
+    this.updateBody(moodName(s.md), r, Math.cos(s.f) < 0);
     this.drawAura(s.bf, r, now);
     if (s.fl & FLAG.burning) {
       this.drawBurn(r, now); // vẽ đè lên aura buff

@@ -1,6 +1,8 @@
 package room
 
 import (
+	"sort"
+
 	"kiemxoay/server/internal/game"
 	"kiemxoay/server/internal/netproto"
 )
@@ -8,6 +10,18 @@ import (
 const (
 	leaderboardTop = 10
 	nameResendSecs = 2.0
+
+	// Ngân sách gói tin (spec §13.6 + CHANGES_v4 mục 27). Một người Đạo Tổ có tầm nhìn
+	// khổng lồ nên hàng trăm vật phẩm cùng lọt vào một lúc; không chặn thì gói đầu tiên
+	// phình lên 38 KB — đo thật bằng cmd/loadtest.
+	itemBudgetBytes = 2048 // ItemsAdded tối đa mỗi gói, ưu tiên cái gần người chơi
+	itemWireBytes   = 34   // một ItemState sau khi mã hoá msgpack, đo thực tế
+	maxEntities     = 150  // trần entity động mỗi snapshot, ưu tiên gần và to
+	// Viên EXP nhỏ ngoài bán kính này không gửi khi camera đã lùi xa (spec mục 27).
+	smallOrbRadius = 1500
+	smallOrbValue  = 20 // "nhỏ" = dưới mức này; viên vừa/lớn và Tiên khí luôn gửi
+	// Người/quái ở xa hơn nửa khung nhìn chỉ gửi 10 Hz thay vì 20 Hz.
+	farRateDivisor = 2
 )
 
 // broadcast sends each client a snapshot filtered by its area of interest (spec §13.3).
@@ -24,7 +38,7 @@ func (r *Room) broadcast() {
 		if !ok {
 			continue
 		}
-		c.send(r.snapshotFor(c, viewer, events))
+		c.sendSnapshot(r.snapshotFor(c, viewer, events))
 	}
 }
 
@@ -35,12 +49,21 @@ func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) 
 	// Names go out the first time a client sees a player, and again every couple of seconds
 	// so a client that missed the first packet still recovers.
 	resendNames := r.namesDue
+	// Người ở XA chỉ gửi 10 Hz thay vì 20 Hz (spec mục 27): client nội suy nên bỏ một nhịp
+	// không ai thấy, mà nửa số byte của người ở rìa màn hình thì tiết kiệm thật.
+	// Người MỚI thấy lần đầu luôn gửi ngay, nếu không họ "hiện ra" trễ nửa nhịp.
+	half := g.ViewHalfExtentsX(viewer) / 2
+	slow := r.tick%farRateDivisor != 0
 	for _, p := range g.PlayerList() {
 		if !g.CanSee(viewer, p) {
 			continue
 		}
 		seen[p.ID] = true
-		s.Players = append(s.Players, playerState(g, viewer, p, resendNames || !c.knownPlayers[p.ID]))
+		known := c.knownPlayers[p.ID]
+		if known && slow && p.ID != viewer.ID && p.Pos.Dist(viewer.Pos) > half {
+			continue
+		}
+		s.Players = append(s.Players, playerState(g, viewer, p, resendNames || !known))
 		c.knownPlayers[p.ID] = true
 	}
 	for id := range c.knownPlayers {
@@ -49,9 +72,26 @@ func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) 
 		}
 	}
 	for _, m := range g.Monsters {
-		if g.InView(viewer, m.Pos) {
-			s.Monsters = append(s.Monsters, netproto.MonsterState{ID: m.ID, X: float32(m.Pos.X), Y: float32(m.Pos.Y),
-				Kind: m.Kind, HP: m.HP, Max: m.MaxHP, R: float32(m.R)})
+		if !g.InView(viewer, m.Pos) {
+			continue
+		}
+		if slow && m.Pos.Dist(viewer.Pos) > half {
+			continue // quái ở xa: 10 Hz là đủ, chúng đi lang thang chậm
+		}
+		if len(s.Players)+len(s.Monsters) >= maxEntities {
+			break // trần entity động mỗi gói (spec mục 27)
+		}
+		ms := netproto.MonsterState{ID: m.ID, X: float32(m.Pos.X), Y: float32(m.Pos.Y), HP: m.HP}
+		if !c.knownMonsters[m.ID] {
+			// Lần đầu thấy: gửi kèm loại, máu tối đa và bán kính — ba thứ không bao giờ đổi.
+			c.knownMonsters[m.ID] = true
+			ms.Kind, ms.Max, ms.R = m.Kind, m.MaxHP, float32(m.R)
+		}
+		s.Monsters = append(s.Monsters, ms)
+	}
+	for id := range c.knownMonsters {
+		if _, alive := g.Monsters[id]; !alive {
+			delete(c.knownMonsters, id)
 		}
 	}
 	r.diffItems(c, viewer, &s)
@@ -60,19 +100,58 @@ func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) 
 }
 
 // diffItems sends items entering the view and ids of items that left it or were picked up.
+// wantItem quyết định một vật phẩm có đáng gửi cho người này không.
+//
+// Viên EXP NHỎ ngoài 1 500 đơn vị thì bỏ khi camera đã lùi xa (spec mục 27): người Đại
+// Thừa/Tiên giới nhìn thấy cả vùng 4 000 đơn vị, trong đó có hàng nghìn viên nhỏ mà trên màn
+// hình chúng chỉ là mấy chấm — gửi hết thì tốn băng thông cho thứ không ai nhặt tới.
+func (r *Room) wantItem(viewer *game.Player, it *game.Item, d float64) bool {
+	if !r.G.InView(viewer, it.Pos) {
+		return false
+	}
+	if it.Kind != "orb" || float64(it.Value) >= smallOrbValue {
+		return true
+	}
+	return d <= smallOrbRadius
+}
+
+// diffItems gửi vật phẩm mới lọt vào tầm nhìn và id của những cái vừa rời đi.
+//
+// ItemsAdded bị chặn theo NGÂN SÁCH BYTE và xếp theo khoảng cách: lúc một người Tiên giới
+// mới vào vùng đông đồ, cả trăm vật phẩm cùng lọt vào tầm nhìn trong một tick. Gửi hết là
+// một gói 38 KB (đo thật) — trên mạng 4G yếu thì gói đó một mình chiếm gần nửa giây. Phần
+// còn lại tự sang các gói sau, không mất gì vì `knownItems` chỉ đánh dấu cái đã gửi.
 func (r *Room) diffItems(c *Client, viewer *game.Player, s *netproto.Snapshot) {
 	g := r.G
+	type cand struct {
+		it *game.Item
+		d  float64
+	}
+	cands := r.itemBuf[:0]
 	for _, it := range g.Items {
-		in := g.InView(viewer, it.Pos)
-		if in && !c.knownItems[it.ID] {
-			c.knownItems[it.ID] = true
-			s.ItemsAdded = append(s.ItemsAdded, netproto.ItemState{ID: it.ID, X: float32(it.Pos.X), Y: float32(it.Pos.Y),
-				Kind: it.Kind, Value: float32(it.Value)})
+		if c.knownItems[it.ID] {
+			continue
 		}
+		d := it.Pos.Dist(viewer.Pos)
+		if r.wantItem(viewer, it, d) {
+			cands = append(cands, cand{it, d})
+		}
+	}
+	r.itemBuf = cands
+	sort.Slice(cands, func(a, b int) bool { return cands[a].d < cands[b].d })
+	budget := itemBudgetBytes
+	for _, cd := range cands {
+		if budget < itemWireBytes {
+			break // hết ngân sách gói này; cái còn lại đi gói sau
+		}
+		budget -= itemWireBytes
+		c.knownItems[cd.it.ID] = true
+		s.ItemsAdded = append(s.ItemsAdded, netproto.ItemState{ID: cd.it.ID, X: float32(cd.it.Pos.X), Y: float32(cd.it.Pos.Y),
+			Kind: cd.it.Kind, Value: float32(cd.it.Value)})
 	}
 	for id := range c.knownItems {
 		it, ok := g.Items[id]
-		if !ok || !g.InView(viewer, it.Pos) {
+		if !ok || !r.wantItem(viewer, it, it.Pos.Dist(viewer.Pos)) {
 			delete(c.knownItems, id)
 			s.ItemsRemoved = append(s.ItemsRemoved, id)
 		}

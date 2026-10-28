@@ -201,7 +201,12 @@ func writePrompts(jobs []Job, assets, out string) {
 	b.WriteString("2. Ảnh nên khổ ngang 16:9 (hoặc vuông với ảnh 1 món), độ phân giải càng cao càng tốt.\n")
 	b.WriteString("3. Lưu đúng tên ở dòng **Lưu thành** (đuôi `.png`; ảnh JPEG đổi tên thành .png vẫn được).\n")
 	b.WriteString("4. Chạy `cd server && go run ./cmd/artgen prep` → tool tự xóa nền magenta/trắng, cắt frame, căn pivot, ghép atlas.\n")
-	b.WriteString("5. Sheet lệch nhẹ vẫn dùng được (tool cắt theo vùng pixel liền nhau). Nhân vật sai số frame vẫn chạy; chỉ sinh lại khi hình dính chồng lên nhau.\n\n")
+	b.WriteString("5. Sheet lệch nhẹ vẫn dùng được, tool cắt theo **vùng pixel liền nhau**.\n\n")
+	b.WriteString("**Quan trọng với sheet nhân vật** — tool đếm khung bằng cách tìm các mảng pixel rời nhau, nên:\n")
+	b.WriteString("- Mỗi khung phải là MỘT khối liền: tay, chân, vũ khí, nón phải DÍNH vào thân. Một cánh tay bay rời là tool đếm thành một khung nữa.\n")
+	b.WriteString("- Giữa hai khung phải có khoảng trống nền rõ ràng, các khung không được chạm nhau.\n")
+	b.WriteString("- Không vẽ thêm bóng đổ rời, hạt bụi, vệt tốc độ tách khỏi thân.\n")
+	b.WriteString("- Sai số khung quá nhiều thì client **bỏ hẳn animation đó** và dùng tạm `idle`/`run`, nên các mục ghi \"sheet bị cắt sai số khung\" bên dưới cần sinh lại thật.\n\n")
 	n := 0
 	for _, j := range jobs {
 		why, redo := redoReasons[j.Name]

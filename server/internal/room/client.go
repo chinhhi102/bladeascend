@@ -14,6 +14,15 @@ type Conn interface {
 	Send(b []byte) bool
 }
 
+// LossyConn là Conn biết bỏ gói CŨ khi hàng đợi đầy (spec mục 27).
+//
+// Mạng yếu thì hàng đợi đầy, và một snapshot cũ nằm trong hàng là thứ vô giá trị: client chỉ
+// cần bản MỚI NHẤT. Giữ cái cũ rồi vứt cái mới là cách chắc chắn nhất để người chơi thấy
+// nhân vật giật lùi.
+type LossyConn interface {
+	SendLossy(b []byte) bool
+}
+
 // Client is a connected human. The room goroutine owns everything except the input fields.
 type Client struct {
 	Conn     Conn
@@ -23,7 +32,9 @@ type Client struct {
 	room     *Room
 
 	knownPlayers map[uint32]bool
-	knownItems   map[uint32]bool
+	knownItems    map[uint32]bool
+	// knownMonsters: đã gửi phần tĩnh (loại, máu tối đa, bán kính) của con quái này chưa.
+	knownMonsters map[uint32]bool
 
 	inMu   sync.Mutex
 	seq    uint32
@@ -75,6 +86,20 @@ func (c *Client) send(v any) {
 	}
 }
 
+// sendSnapshot gửi gói ảnh trạng thái: được phép bỏ bản cũ khi nghẽn, khác với `welcome` hay
+// `leaderboard` vốn mất là mất luôn.
+func (c *Client) sendSnapshot(v any) {
+	b, err := netproto.Encode(v)
+	if err != nil {
+		return
+	}
+	if lossy, ok := c.Conn.(LossyConn); ok {
+		lossy.SendLossy(b)
+		return
+	}
+	c.Conn.Send(b)
+}
+
 // playerState converts a game player to its wire form as seen by one viewer. Ẩn Thân is
 // per-viewer: far away the target is flagged stealth (drawn faded, no name, no title),
 // up close they look normal (spec §6.2).
@@ -83,14 +108,17 @@ func playerState(g *game.Game, viewer, p *game.Player, withName bool) netproto.P
 	s := netproto.PlayerState{
 		ID: p.ID, X: float32(p.Pos.X), Y: float32(p.Pos.Y), Facing: float32(p.Facing),
 		Level: p.Level, Count: p.Ring.Count, Phase: float32(p.Ring.Angle), Dir: int8(p.Ring.Dir),
-		Omega: float32(g.Omega(p)), Tilt: float32(p.Ring.Tilt), Scale: float32(p.Scale), Mood: p.Mood,
-		Crack: float32(p.Ring.Crack),
-		Exp:   float32(p.TotalExp), Flags: playerFlags(g, viewer, p),
+		Tilt: float32(p.Ring.Tilt), Scale: float32(p.Scale), Mood: game.MoodIndex(p.Mood),
+		Crack: float32(p.Ring.Crack), Flags: playerFlags(g, viewer, p),
 	}
+	// Omega bỏ hẳn khỏi gói tin: client tự tính được từ rev_secs và buff Tốc Kiếm mà nó đã
+	// có sẵn (spec mục 27). Gửi lại một con số suy ra được là lãng phí 7 byte mỗi người mỗi
+	// gói, 20 lần mỗi giây.
 	if !faded {
 		s.Title = p.Title
 	}
 	if p == viewer {
+		s.Exp = float32(p.TotalExp)
 		have, need := g.TienProgress(p)
 		s.TienHave, s.TienNeed = float32(have), float32(need)
 	}
