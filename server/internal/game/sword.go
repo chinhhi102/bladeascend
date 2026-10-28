@@ -108,8 +108,10 @@ func (g RingGeom) RingOf(i int) int {
 // SlotAngle is the angle of sword i relative to the ring phase. Each ring has RingCap(k)
 // evenly spaced slots; a ring that is not full spreads its swords over those slots, and ring
 // k is staggered by a fraction of one slot so the rings share out the gaps (spec §4.1a).
-func (g RingGeom) SlotAngle(n, i int) float64 {
-	k := g.RingOf(i)
+func (g RingGeom) SlotAngle(n, i int) float64 { return g.slotAngleAt(n, i, g.RingOf(i)) }
+
+// slotAngleAt là SlotAngle khi người gọi đã biết sẵn vòng k của thanh kiếm này.
+func (g RingGeom) slotAngleAt(n, i, k int) float64 {
 	cap, start := g.RingCap(k), g.RingStart(k)
 	j := i - start
 	m := min(cap, n-start)
@@ -129,9 +131,31 @@ func SwordSegment(center Vec, ring Ring, g RingGeom, i int) (Vec, Vec) {
 // swordAt is SwordSegment for an arbitrary ring phase (sub-steps of a sweep).
 func swordAt(center Vec, phase float64, ring Ring, g RingGeom, i int) (Vec, Vec) {
 	k := g.RingOf(i)
-	a := phase + g.SlotAngle(ring.Count, i)
+	a := phase + g.slotAngleAt(ring.Count, i, k)
 	hilt := center.Add(geom.FromAngle(a).Mul(g.HiltR(k)))
 	return hilt, hilt.Add(geom.FromAngle(a + ring.Tilt).Mul(g.Len(k)))
+}
+
+// swordAtRot là swordAt khi người gọi đã tính sẵn cos/sin của độ nghiêng lưỡi, và trả thêm
+// chiều dài lưỡi.
+//
+// Ba điểm khác biệt về tốc độ, cùng cho ra kết quả y hệt:
+//   - Hướng lưỡi suy ra từ hướng chuôi bằng một phép QUAY thay vì gọi cos/sin lần thứ hai.
+//     Độ nghiêng giống nhau cho mọi thanh kiếm của một người nên tính một lần là đủ.
+//   - `RingOf(i)` tính một lần rồi truyền xuống, thay vì `SlotAngle` tính lại lần nữa.
+//   - Trả về chiều dài lưỡi để người gọi khỏi đo lại bằng `Hypot` (11% CPU server).
+//
+// pprof trên server thật: cos/sin chiếm 24% CPU và RingOf thêm 12%, toàn bộ nằm trong vòng
+// so kiếm (CHANGES_v4 mục 26).
+func swordAtRot(center Vec, phase float64, ring Ring, g RingGeom, i int, tiltCos, tiltSin float64) (Vec, Vec, float64) {
+	k := g.RingOf(i)
+	a := phase + g.slotAngleAt(ring.Count, i, k)
+	d := geom.FromAngle(a)
+	hiltR, length := g.HiltR(k), g.Len(k)
+	hilt := Vec{X: center.X + d.X*hiltR, Y: center.Y + d.Y*hiltR}
+	lx := d.X*tiltCos - d.Y*tiltSin
+	ly := d.X*tiltSin + d.Y*tiltCos
+	return hilt, Vec{X: hilt.X + lx*length, Y: hilt.Y + ly*length}, length
 }
 
 // RestTilt is the blade lean for a spin direction.

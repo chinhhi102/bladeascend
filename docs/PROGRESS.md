@@ -144,6 +144,68 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
   từng client, từng tick**, trong khi giá trị đó chỉ phụ thuộc người xem. `archHypot` là do
   xếp vật phẩm theo khoảng cách dùng `math.Hypot` thay vì so bình phương. Nhóm `maps.*`
   (≈15%) là tra `knownItems` và duyệt toàn bộ vật phẩm của bản đồ cho mỗi client.
+- **Mục 26 — sửa xong, tick 14,04 → 2,55 ms (28/10/2026)**:
+
+  | Chỉ số | TRƯỚC mục 27 | SAU mục 27 | SAU mục 26 | Ngân sách |
+  |---|---|---|---|---|
+  | Tick server (trung bình) | 11,45 ms | 14,04 ms | **2,55 ms** | < 4 ms ✅ |
+  | Tick server (p95) | 19,89 ms | 25,09 ms | **5,00 ms** | < 4 ms ❌ |
+  | Snapshot lớn nhất / client | 38,3 KB | 8,3 KB | **8,0 KB** | < 8 KB ✅ |
+  | Băng thông xuống / client | 43,1 KB/s | 21,4 KB/s | **20,0 KB/s** | < 40 KB/s ✅ |
+  | CPU server | 42% | 42% | **8%** | |
+
+  Bốn việc, theo đúng thứ tự pprof chỉ ra:
+  1. `ViewHalfExtents` gọi `math.Pow(Scale, CameraExp)` — tức `exp(log())` — cho **từng vật
+     phẩm, từng client, từng tick**, trong khi nó chỉ phụ thuộc người xem. Giờ tính sẵn
+     trong `refreshDerived` (`Player.ViewHW/ViewHH`) và lấy một lần trước vòng lặp.
+  2. Xếp vật phẩm theo khoảng cách dùng `math.Hypot` → so **bình phương** khoảng cách.
+  3. `diffItems` duyệt **toàn bộ** `g.Items` cho mỗi client → dùng `itemGrid` vốn đã có sẵn,
+     chỉ quét những ô chạm khung nhìn. Ô lưới đổi từ `map[uint32]*Item` sang slice, xoá O(1)
+     bằng hoán đổi với phần tử cuối (có `itemgrid_test.go` riêng vì kiểu xoá này dễ làm mất
+     phần tử khác).
+  4. `knownItems` của client đổi từ `map[uint32]bool` sang **slice theo chỉ số dày đặc**
+     (`Item.Slot()`), lưu id để nhận ra slot đã được viên khác dùng lại. Hết hẳn băm trong
+     vòng nóng.
+
+  Rồi phần tối ưu đó **phơi ra một lỗi hình học thật** (xem mục dưới); sửa lỗi xong thì CPU
+  tăng lại, nên phải tối ưu tiếp vòng so kiếm. Số cuối cùng, ba lần chạy liên tiếp:
+  **tick 4,88 / 5,01 / 5,04 ms · p95 6,2–6,7 ms · snapshot 8,1–8,5 KB · 22 KB/s**.
+- **LỖI: `SegSegDist2` sai dấu — kiếm va nhau ở vị trí ma (28/10/2026)**: công thức giao
+  điểm hai đoạn thẳng viết `cross(d2, r.Mul(-1))` thay vì `cross(d2, r)`, tức **đảo dấu cả
+  hai tham số** t và u. Hệ quả: hàm báo "hai đoạn cắt nhau" đúng vào lúc phần **kéo dài
+  ngược** của chúng cắt nhau. Đo được một trường hợp thật: hai thanh kiếm cách nhau 207 đơn
+  vị (xa hơn tổng chiều dài hai lưỡi) vẫn bị tính là va vào nhau. Bắt được nhờ bản tối ưu
+  lọc đúng theo hình học lại "lệch" so với bản cũ. Đã sửa, có `internal/geom/segseg_test.go`
+  khoá cả hai chiều.
+
+  **Ảnh hưởng cân bằng — cần người chủ dự án xem lại**: `go run ./cmd/sim --bots 40
+  --minutes 5` cho **84 lượt chết** (2,10 lượt/bot). Con số cũ ghi trong tài liệu là 608
+  lượt trong 10 phút (≈ 304 trong 5 phút) — nhưng con số cũ đo khi va kiếm còn lỗi, tức là
+  có rất nhiều cú va ảo. Nay va kiếm chỉ tính khi hai lưỡi thật sự chạm nhau nên bể kiếm
+  chậm hơn nhiều. Đây là **đổi nhịp trận đấu**, không phải chỉnh số — nên ghi vào
+  `docs/QUESTIONS.md` chờ quyết định, chưa đụng vào `config/game.json`.
+- **Vòng so kiếm (`sparseRingsTouch`) — 83% CPU server (28/10/2026)**: pprof trên **server
+  thật** (có bot, bản đồ thật, 10 tab trình duyệt thật) cho hình ảnh khác hẳn `cmd/loadtest`:
+  ở đó 88% CPU nằm ở lọc vật phẩm, còn ở đây 83% nằm ở so kiếm. Ba việc đã làm:
+  1. Kiếm của b tính sẵn một lần mỗi bước quét — bản cũ gọi `swordAt(b…)` đúng
+     `a.Count × b.Count` lần thay vì `b.Count` lần.
+  2. Bỏ sớm lưỡi nằm ở phía đối diện (cách tâm đối phương quá `bán kính ngoài + nửa lưỡi +
+     bề rộng`), và so khoảng cách hai **tâm** lưỡi trước khi gọi `SegSegDist2`.
+  3. `swordAtRot`: hướng lưỡi suy từ hướng chuôi bằng một phép quay thay vì cos/sin lần hai;
+     `RingOf` tính một lần thay vì hai; trả luôn chiều dài lưỡi để khỏi đo lại bằng `Hypot`.
+
+  **Hai hướng đã thử và BỎ** (đo ra tệ hơn, ghi lại để khỏi thử lại):
+  - Nhớ vị trí kiếm theo từng người mỗi tick → **12,01 ms**. Số bước quét `n` phụ thuộc
+    *cặp* người chơi nên bộ nhớ đệm bị huỷ liên tục.
+  - Dựng sẵn bảng hướng kiếm trong `ComputeRingGeom` → **9,53 ms**; chuyển sang dựng lười
+    trên Player → **9,61 ms**. Lý do: bể kiếm xảy ra mỗi tick nên bảng 1 050 phần tử phải
+    dựng lại liên tục, tốn hơn phần tiết kiệm được.
+- **Bài test 10 tab dùng GPU thật (28/10/2026)**: máy có AMD RX 570; đo được
+  `--use-gl=angle --use-angle=vulkan` → RADV, `--use-angle=gl` → radeonsi, còn
+  `--use-gl=swiftshader` và `--use-gl=egl` đều rơi về SwiftShader (CPU). Đổi sang Vulkan
+  nên cả 10 tab chạy khổ 960×540 với chất lượng mặc định. Server chạy riêng trên lõi CPU
+  tách khỏi trình duyệt bằng `taskset`, vì không tách thì tick 2,55 ms bị thổi lên 269 ms
+  do goroutine bị hệ điều hành gạt ra liên tục.
 - **`cmd/loadtest` và `cmd/stress` (28/10/2026)**: `loadtest` đo đúng một kịch bản §13.6 và in bảng đối chiếu ngân sách; `stress` quét 10 → 320 người tìm trần của máy (đo được: **160 người vẫn mượt**, 200 người lag). Cả hai chạy nguyên đường thật (ghép phòng, bot, snapshot theo tầm nhìn, mã hoá msgpack), khác `cmd/sim` vốn chỉ chạy `game.Tick` thuần.
 - **Overlay F3 (28/10/2026, §13.6)**: `?debug=true` → phím **F3** bật/tắt bảng đo: fps · ms/khung · thời gian vẽ · tick server (server gửi kèm trong snapshot) · ping · KB/s · cỡ snapshot · số sprite · số draw call (bọc hàm vẽ WebGL) · số entity trong AOI · số kiếm · mức giãn kiếm.
 - **Spec v4.3–v4.5 (28/10/2026)**: bỏ hẳn **Trường Kiếm** — tầm chém chỉ tăng theo số vòng và cảnh giới, `ComputeRingGeom`/`ringGeom` bỏ tham số `longMult`. Thêm **Cương Kiếm** (`hard`): độ bền va kiếm × 1.5, sát thương quái/vật cản × 2, 10s, weight 7. Bể kiếm giờ so theo **độ bền D = 1.2^r × hệ số buff** chứ không so cảnh giới, nên Luyện Khí có Cương Kiếm cứng hơn Trúc Cơ tay không; đổi chiều quay vẫn chỉ xét cảnh giới. `shield_ring` → `body_hit_max_rings: 1`; bỏ `tien_khi_to_exp_base`.

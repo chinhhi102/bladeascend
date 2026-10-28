@@ -19,10 +19,10 @@
 // FPS**. Số đáng tin là: ping, KB/s, kích thước snapshot, tick server, số sprite, draw call.
 
 import { chromium } from 'playwright';
-import { spawn } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { cpus, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -59,11 +59,35 @@ function goBin() {
  * startServer dựng một server RIÊNG cho bài test: cổng khác, database tạm, nới trần kết nối
  * mỗi IP. Người đang chơi ở server thật không bị 10 bot giả chen vào phòng.
  */
+/**
+ * Chia lõi CPU: server giữ riêng vài lõi, trình duyệt lấy phần còn lại.
+ *
+ * Không chia thì con số "tick server" trong bảng vô nghĩa: 10 tab Chrome vẽ 5 000 sprite
+ * mỗi tab ăn sạch 12 luồng của máy, goroutine của server bị hệ điều hành gạt ra liên tục và
+ * một tick tốn 2,5 ms (đo bằng cmd/loadtest) kéo dài thành 269 ms. Đo được như vậy thật.
+ */
+const CORES = cpus().length;
+const SERVER_CORES = `0-${Math.max(1, Math.floor(CORES / 4) - 1)}`;
+const BROWSER_CORES = `${Math.max(2, Math.floor(CORES / 4))}-${CORES - 1}`;
+const HAS_TASKSET = (() => {
+  try {
+    execSync('command -v taskset', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 async function startServer() {
   const db = join(tmpdir(), `kx-browsertest-${process.pid}.db`);
+  const srvArgs = ['run', './cmd/server', '-addr', `:${PORT}`, '-db', db, '-max-conns-per-ip', '40'];
+  // --cpuprofile <file>: lấy hồ sơ CPU của SERVER THẬT trong lúc 10 tab đang chơi. Khác
+  // cmd/loadtest ở chỗ có bot, bản đồ thật và client thật — hai nơi cho hình ảnh khác nhau.
+  if (args.cpuprofile) {
+    srvArgs.push('-cpuprofile', resolve(args.cpuprofile));
+  }
   const proc = spawn(
-    goBin(),
-    ['run', './cmd/server', '-addr', `:${PORT}`, '-db', db, '-max-conns-per-ip', '40'],
+    ...(HAS_TASKSET ? ['taskset', ['-c', SERVER_CORES, goBin(), ...srvArgs]] : [goBin(), srvArgs]),
     {
       cwd: resolve(REPO, 'server'),
       env: { ...process.env, GOMODCACHE: process.env.GOMODCACHE ?? join(process.env.HOME ?? '', '.cache/kx-gomod') },
@@ -80,7 +104,7 @@ async function startServer() {
     // Chuyển tiếp ngay những dòng server từ chối lệnh test: không có nó thì bảng số ra sai
     // mà chẳng biết vì sao (đã mất hai lượt đo vì chuyện này).
     for (const line of String(b).split('\n')) {
-      if (line.includes('dbg ')) console.log(`  [server] ${line.trim()}`);
+      if (line.includes('dbg ') || line.includes('tick chậm')) console.log(`  [server] ${line.trim()}`);
     }
   };
   proc.stdout.on('data', keep);
@@ -98,16 +122,23 @@ async function startServer() {
     }
     await sleep(500);
   }
-  killTree(proc);
+  await killTree(proc);
   throw new Error(`Không dựng được server test ở cổng ${PORT}:\n${log}`);
 }
 
 /** killTree giết cả nhóm tiến trình của server (`go run` + binary con nó đẻ ra). */
-function killTree(proc) {
+async function killTree(proc) {
+  // SIGTERM trước để server kịp ghi hồ sơ CPU xuống đĩa; SIGKILL sau nếu nó lì.
+  try {
+    process.kill(-proc.pid, 'SIGTERM');
+  } catch {
+    proc.kill('SIGTERM');
+  }
+  await new Promise((r) => setTimeout(r, 1500));
   try {
     process.kill(-proc.pid, 'SIGKILL');
   } catch {
-    proc.kill('SIGKILL');
+    /* đã chết rồi */
   }
 }
 
@@ -221,6 +252,15 @@ function summarise(rows, key, higherIsBetter = false) {
 
 async function runOnce(label, slow) {
   console.log(`\n=== Lượt ${label} ===`);
+  if (HAS_TASKSET) {
+    // Đổi lõi của CHÍNH tiến trình này; Chrome là con nên thừa hưởng, server đã chạy từ
+    // trước trên lõi riêng nên không bị kéo theo.
+    try {
+      execSync(`taskset -cp ${BROWSER_CORES} ${process.pid}`, { stdio: 'ignore' });
+    } catch {
+      /* không có quyền thì thôi, chỉ mất độ chính xác của cột tick server */
+    }
+  }
   const browser = await chromium.launch({
     headless: true,
     // Chrome mặc định chỉ cho ~16 ngữ cảnh WebGL cùng lúc rồi giết bớt cái cũ; 10 tab +
@@ -416,7 +456,7 @@ try {
   }
 } finally {
   if (server) {
-    killTree(server.proc);
+    await killTree(server.proc);
     await rm(server.db, { force: true }).catch(() => {});
     console.log('Đã tắt server test và xoá database tạm.');
   }
@@ -431,9 +471,16 @@ const doc = [
   `${TABS} browser context riêng, mỗi context một người chơi; ${WARMUP_S}s đi lang thang rồi`,
   `${TIEN_TABS} tab lên Đạo Tổ đủ kiếm và cả ${TABS} tab chụm một chỗ ${FIGHT_S}s.`,
   '',
-  '> **FPS trong bảng này không dùng để kết luận được.** Chrome headless vẽ WebGL bằng CPU',
-  '> (SwiftShader, không đụng tới card đồ họa) và 10 tab tranh nhau CPU trên cùng một máy.',
-  '> Số đáng tin: **ping, KB/s, kích thước snapshot, tick server, số sprite, draw call**.',
+  `> Bài này chạy **GPU thật** (\`--use-gl=angle --use-angle=${args.angle ?? 'vulkan'}\`), không dùng`,
+  '> SwiftShader nữa. Nhưng **10 tab vẫn chia nhau MỘT card và một CPU**, nên cột FPS chỉ',
+  '> nói lên "10 người chơi trên một máy", không nói lên trải nghiệm của một người chơi thật.',
+  '>',
+  `> Server chạy riêng trên lõi ${SERVER_CORES}, trình duyệt trên lõi ${BROWSER_CORES}` +
+    `${HAS_TASKSET ? '' : ' *(không có taskset — cột tick server sẽ bị thổi phồng)*'}.`,
+  '> Con số **tick server chuẩn** lấy ở `cd server && go run ./cmd/loadtest`, nơi không có',
+  '> trình duyệt tranh CPU.',
+  '>',
+  '> Số đáng tin nhất ở bảng này: **ping, KB/s, kích thước snapshot, số entity trong AOI**.',
   '>',
   '> Lượt B bóp băng thông **sau khi đã vào game**: ta đo lưu lượng lúc chơi, không đo lúc',
   '> tải trang.',

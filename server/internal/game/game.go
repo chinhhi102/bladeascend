@@ -38,6 +38,8 @@ type Game struct {
 	// itemSlots: vật phẩm theo chỉ số dày đặc; freeSlots là các ô trống để cấp lại.
 	itemSlots []*Item
 	freeSlots []int
+	// bladeBuf dùng lại giữa các lần so kiếm — spec §13.4 cấm cấp phát trong vòng nóng.
+	bladeBuf  []blade
 	Obstacles []ObstacleState
 	Grid      *world.Grid
 	Events    []Event
