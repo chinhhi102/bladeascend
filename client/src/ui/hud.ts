@@ -75,6 +75,7 @@ export class Hud {
   private readonly debugHelp = h('div', 'debug-help', STR.debugHelp);
   /** Đồng hồ đo hiệu năng, chỉ hiện khi ?debug=true — để biết lag nằm ở đâu (xem setPerf). */
   private readonly perf = h('div', 'perf');
+  private perfOn = false;
   private buffEnds = new Map<string, { end: number; total: number }>();
   private bannerUntil = 0;
   private lastLevel = -1;
@@ -131,7 +132,14 @@ export class Hud {
 
   setDebug(on: boolean): void {
     this.debugHelp.style.display = on ? 'block' : 'none';
+    this.perfOn = on;
     this.perf.style.display = on ? 'block' : 'none';
+  }
+
+  /** togglePerf bật/tắt bảng đo bằng phím F3 (spec §13.6). */
+  togglePerf(): void {
+    this.perfOn = !this.perfOn;
+    this.perf.style.display = this.perfOn ? 'block' : 'none';
   }
 
   /** setPerf ghi một dòng số liệu hiệu năng lên góc màn hình (chỉ ở chế độ debug). */

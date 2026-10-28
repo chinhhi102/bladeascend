@@ -20,12 +20,11 @@ type Cultivation struct {
 	// Tiên giới (spec §3.4): 5 cảnh giới sau Đại Thừa, không chia tầng, chỉ lên được
 	// bằng sát mạng chứ không dùng EXP.
 	TienRealms []string `json:"tien_realms"`
-	// TienKhiPerStep: Tiên khí cần cho từng chặng. TienKhiToExpBase: người chưa tới
-	// Đại Thừa 10 nhặt 1 điểm Tiên khí thì đổi thành base × 2^r Linh khí (spec §3.4).
-	TienKhiPerStep   []float64 `json:"tien_khi_per_step"`
-	TienKhiToExpBase float64   `json:"tien_khi_to_exp_base"`
-	TienRobShare     float64   `json:"tien_rob_share"`
-	TienDropShare    float64   `json:"tien_drop_share"`
+	// TienKhiPerStep: Tiên khí cần cho từng chặng. Không còn quy đổi sang Linh khí —
+	// hai đường tu tách hẳn từ spec v4.5 §3.4.
+	TienKhiPerStep []float64 `json:"tien_khi_per_step"`
+	TienRobShare   float64   `json:"tien_rob_share"`
+	TienDropShare  float64   `json:"tien_drop_share"`
 	TienScaleStep    float64   `json:"tien_scale_step"`
 	TienAuraColors   []string  `json:"tien_aura_colors"`
 }
@@ -60,8 +59,9 @@ type Sword struct {
 	// "compound" → k = 1.2^d; "linear" → k = 1 + 0.2 × d.
 	DurabilityPerRealm float64 `json:"durability_per_realm"`
 	DurabilityMode     string  `json:"durability_mode"`
-	// ShieldRing: vòng nào làm lá chắn — "second_outermost" theo spec §5.2 v4.
-	ShieldRing string `json:"shield_ring"`
+	// BodyHitMaxRings: kiếm địch chỉ chém được vào thân khi nạn nhân còn tối đa bấy nhiêu
+	// vòng (spec v4.5 §5.2 — thay cho lá chắn chặn đường đi của bản trước).
+	BodyHitMaxRings int `json:"body_hit_max_rings"`
 	TweenSecs          float64  `json:"tween_secs"`
 }
 
@@ -100,6 +100,10 @@ type Buff struct {
 	Mult    float64 `json:"mult"`
 	Secs    float64 `json:"secs"`
 	RevealR float64 `json:"reveal_r"`
+	// Cương Kiếm only (spec v4.4 §6.2): kiếm cứng hơn khi va (DurabilityMult) và chém quái /
+	// vật cản mạnh hơn (DamageMult).
+	DurabilityMult float64 `json:"durability_mult"`
+	DamageMult     float64 `json:"damage_mult"`
 	// Ẩn Thân only (spec §6.2): the buff never stacks past MaxSecs, viewers see the player
 	// at VisibleAlpha instead of not at all, and bots only notice them within
 	// BotDetectMult × their normal sight range.

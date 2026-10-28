@@ -23,7 +23,7 @@ type Ring struct {
 
 // RingGeom is the derived ring geometry for one tick (spec §4.1a).
 type RingGeom struct {
-	Base     float64 // SWORD_LEN * scale * buff_long
+	Base     float64 // SWORD_LEN * scale
 	Inner    float64 // hilt radius of ring 0
 	Width    float64
 	HiltStep float64
@@ -36,11 +36,12 @@ type RingGeom struct {
 	outer    float64 // farthest any blade point can be at any tilt (broad phase)
 }
 
-// ComputeRingGeom applies the §4.1a formulas; longMult is buff_long_sword (1.3 | 1.0).
-func ComputeRingGeom(c config.Sword, bodyR, scale float64, n int, longMult float64) RingGeom {
+// ComputeRingGeom applies the §4.1a formulas. Spec v4.3 bỏ Trường Kiếm nên không còn hệ số
+// kéo dài: tầm chém chỉ tăng khi mở vòng mới hoặc lên cảnh giới.
+func ComputeRingGeom(c config.Sword, bodyR, scale float64, n int) RingGeom {
 	step := max(c.RingStep, 1)
 	g := RingGeom{
-		Base: c.Length * scale * longMult, Inner: (bodyR + c.HiltGap) * scale, Width: c.Width * scale,
+		Base: c.Length * scale, Inner: (bodyR + c.HiltGap) * scale, Width: c.Width * scale,
 		HiltStep: c.HiltStep, Growth: c.RingGrowth, Compound: c.RingGrowthMode == "compound",
 		Step: step,
 	}
@@ -219,6 +220,9 @@ type ClashSide struct {
 	Realm int
 	Count int
 	Crack float64
+	// DurMult: hệ số độ bền từ buff (Cương Kiếm = buffs.hard.durability_mult, spec v4.4
+	// §5.2). 0 hoặc 1 đều nghĩa là không buff.
+	DurMult float64
 }
 
 // ClashOutcome is the number of swords each side loses and their new crack values.
@@ -231,22 +235,46 @@ type ClashOutcome struct {
 func ResolveClash(c config.Sword, a, b ClashSide) ClashOutcome {
 	out := ClashOutcome{CrackA: a.Crack, CrackB: b.Crack}
 	u := max(c.ClashUnit, 1)
-	if a.Realm == b.Realm {
+	// Spec v4.4 §5.2: so theo ĐỘ BỀN D chứ không so cảnh giới nữa — Cương Kiếm làm kiếm
+	// cứng hơn nên Luyện Khí có buff vẫn có thể cứng hơn Trúc Cơ không buff.
+	da, db := SideDurability(c, a), SideDurability(c, b)
+	if da == db {
 		out.LostA = loseUpTo(a.Count, u, c.MinCount)
 		out.LostB = loseUpTo(b.Count, u, c.MinCount)
 		return out
 	}
-	// Spec v4.1 §5.2: bên thấp luôn mất đúng u kiếm; bên cao chỉ nứt `lost / k` với
-	// k = durability(r_cao) / durability(r_thấp). Kiếm cảnh giới trên bền hơn 20%.
-	k := Durability(c, a.Realm, b.Realm)
-	if a.Realm < b.Realm {
+	// Bên mềm hơn luôn mất đúng u kiếm; bên cứng hơn chỉ nứt `lost / k`.
+	if da < db {
+		k := db / da
 		out.LostA = loseUpTo(a.Count, u, c.MinCount)
 		out.LostB, out.CrackB = applyCrack(b, out.LostA, k, c.MinCount)
 		return out
 	}
+	k := da / db
 	out.LostB = loseUpTo(b.Count, u, c.MinCount)
 	out.LostA, out.CrackA = applyCrack(a, out.LostB, k, c.MinCount)
 	return out
+}
+
+// SideDurability is D = độ bền theo cảnh giới × hệ số Cương Kiếm (spec v4.4 §5.2).
+func SideDurability(c config.Sword, s ClashSide) float64 {
+	d := realmDurability(c, s.Realm)
+	if s.DurMult > 1 {
+		d *= s.DurMult
+	}
+	return d
+}
+
+// realmDurability là độ bền tuyệt đối của kiếm ở cảnh giới r.
+func realmDurability(c config.Sword, r int) float64 {
+	step := c.DurabilityPerRealm
+	if step <= 0 {
+		step = 1
+	}
+	if c.DurabilityMode == "linear" {
+		return 1 + (step-1)*float64(r)
+	}
+	return math.Pow(step, float64(r))
 }
 
 // Durability is k = độ bền kiếm bên cao chia cho bên thấp (spec v4.1 §5.2).

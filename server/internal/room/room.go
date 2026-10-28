@@ -27,6 +27,8 @@ type pendingRespawn struct {
 type Room struct {
 	ID        string
 	Created   time.Time
+	// stepMs: thời gian xử lý một tick, gửi kèm snapshot cho overlay đo (spec §13.6).
+	stepMs    float32
 	cfg       *config.Config
 	G         *game.Game
 	mgr       *Manager
@@ -81,6 +83,14 @@ func (r *Room) Run() {
 }
 
 // Step advances one tick; exported so cmd/sim can run rooms without real time.
+// Pong trả lời ping ngay lập tức, đúng như cmd/server/ws.go làm trong handler WebSocket —
+// để cmd/loadtest đo được ping không dính thời gian chờ vòng lặp (spec §13.6).
+func (r *Room) Pong(c *Client, stamp float64) {
+	if b, err := netproto.Encode(netproto.Pong{T: "pong", Client: stamp, Server: float64(time.Now().UnixMilli())}); err == nil {
+		c.Conn.Send(b)
+	}
+}
+
 // Clients là danh sách người đang trong phòng; cmd/stress dùng để bơm input giả.
 func (r *Room) Clients() []*Client {
 	out := make([]*Client, 0, len(r.clients))
@@ -91,6 +101,7 @@ func (r *Room) Clients() []*Client {
 }
 
 func (r *Room) Step(dt float64) {
+	stepStart := time.Now()
 	r.drainInbox()
 	r.applyInputs()
 	for _, b := range r.brains {
@@ -112,6 +123,8 @@ func (r *Room) Step(dt float64) {
 		r.sendLeaderboards()
 	}
 	r.checkEmpty(dt)
+	// Trung bình trượt để con số trên overlay không nhảy loạn (spec §13.6).
+	r.stepMs = r.stepMs*0.9 + float32(time.Since(stepStart).Microseconds())/1000*0.1
 }
 
 func (r *Room) drainInbox() {

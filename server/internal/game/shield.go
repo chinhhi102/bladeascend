@@ -1,26 +1,25 @@
 package game
 
-// Lá chắn vòng kế ngoài cùng (spec §5.2 v4). Vòng ngoài cùng là vùng mài: kiếm địch được
-// phép chạm vào đó. Mọi thứ sâu hơn bị bịt kín — vòng kế ngoài còn kiếm thì kiếm địch
-// không chạm tới thân được. Mài gãy vòng ngoài thì lá chắn lùi vào 1 lớp; chỉ khi còn
-// đúng 1 vòng thì §5.1 mới chém được thân.
+// Luật chém thân theo số vòng (spec v4.5 §5.2). Hai người đi XUYÊN QUA vòng kiếm của nhau
+// tự do, không bị chặn, không bật ngược. Kiếm đối thủ chỉ chém được vào thân khi nạn nhân
+// còn tối đa `body_hit_max_rings` vòng (mặc định 1, tức ≤ 10 kiếm). Còn từ 2 vòng trở lên
+// thì thân "được che" — phải mài rụng vòng ngoài trước.
 //
-// Lá chắn là LUẬT CHÉM, không phải tường chắn đường đi. Trước đây nó đẩy người đang đi ra
-// xa `reach + shield_r` (hàng trăm đơn vị), nên đi tới gần ai là nhân vật khựng lại giữa
-// khoảng không, không thấy gì chặn mà vẫn không tiến được. Giờ hai người đi xuyên qua nhau
-// thoải mái; lá chắn chỉ quyết định cú chém có vào tới thân hay không.
+// Bản trước hiểu đây là tường chắn đường đi và đẩy người đang đi ra xa hàng trăm đơn vị, nên
+// đi tới gần ai là nhân vật khựng lại giữa khoảng không. Giờ nó thuần là luật chém.
 
-// ShieldR is the radius enemy blades may not reach past: the blade tip of the
-// SECOND-outermost ring. 0 means no shield left — the player is down to a single ring and
-// §5.1 can finally land a body hit.
-func (g *Game) ShieldR(p *Player) float64 {
-	geo := p.Geom
-	if p.Ring.Count <= 0 || g.Cfg.Sword.ShieldRing == "" || geo.Rings < 2 {
-		return 0
-	}
-	return geo.TipDist(geo.Rings-2, p.Ring.Tilt) + geo.Width/2
+// Shielded reports whether p still has enough rings to keep blades off their body, i.e.
+// whether §5.1 body hits on p must be ignored this tick.
+func (g *Game) Shielded(p *Player) bool {
+	return p.Ring.Count > 0 && p.Geom.Rings > max(g.Cfg.Sword.BodyHitMaxRings, 1)
 }
 
-// Shielded reports whether p still has a sealed inner zone, i.e. whether §5.1 body hits on
-// p must be ignored this tick.
-func (g *Game) Shielded(p *Player) bool { return g.ShieldR(p) > 0 }
+// ShieldR is how far out p's body is still covered: the blade tip of the last ring that is
+// not reachable yet. 0 once §5.1 can land. Bot AI dùng để biết đứng mài ở đâu.
+func (g *Game) ShieldR(p *Player) float64 {
+	if !g.Shielded(p) {
+		return 0
+	}
+	geo := p.Geom
+	return geo.TipDist(geo.Rings-2, p.Ring.Tilt) + geo.Width/2
+}

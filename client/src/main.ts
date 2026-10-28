@@ -68,6 +68,11 @@ class App {
         this.hud.minimap.toggle(); // spec §12.1
         return;
       }
+      if (this.playing && e.code === 'F3' && !e.repeat) {
+        this.hud.togglePerf(); // spec §13.6: bảng đo bật/tắt bằng F3
+        e.preventDefault();
+        return;
+      }
       if (this.playing && e.code === 'KeyV' && !e.repeat) {
         // Cài đặt đồ họa (spec §3.5): tắt/bật thần thú THƯỜNG TRỰC. Bản đột phá luôn hiện.
         const on = !GameScene.ambientBeasts();
@@ -146,7 +151,10 @@ class App {
     }
   }
 
+  private srvMs = 0;
+
   private applySnapshot(m: Snapshot): void {
+    this.srvMs = m.sv ?? this.srvMs;
     const events = this.world.applySnapshot(m);
     this.scene.handleEvents(events);
     this.hud.onEvents(events, this.world.myId);
@@ -242,7 +250,12 @@ class App {
     const me = this.world.me();
     this.hud.update(me, this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
     if (this.debug) {
-      this.hud.setPerf(this.scene.perfLine(dt, this.conn.rttMs));
+      this.hud.setPerf(this.scene.perfLine(dt, {
+        rttMs: this.conn.rttMs,
+        kbPerSec: this.conn.kbPerSec,
+        snapBytes: this.conn.lastSnapBytes,
+        srvMs: this.srvMs,
+      }));
     }
     if (me) {
       const view = this.scene.viewSize();

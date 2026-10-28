@@ -70,3 +70,12 @@ Không cần anh trả lời nữa: nguyên nhân là **hiểu lá chắn thành
 
 Công thức đối xứng `max(reachA + shield_B, reachB + shield_A)` trong spec không còn dùng tới,
 vì nó chỉ có nghĩa khi lá chắn là tường chắn đường.
+
+### Q16–Q19 *(anh trả lời 2026-10-28 trong `docs/_raw/ANSWERS.md`)*
+- **Q16 Trường Kiếm**: bỏ hẳn. Spec v4.3 xoá khỏi §4.1a/§6.2, v4.4 thay bằng **Cương Kiếm**.
+  Ảnh `assets/buffs/long.png` giữ lại nhưng không dùng.
+- **Q17 Bó Kiếm khi rớt cảnh giới**: chấp nhận phương án 1 — Bó Kiếm chủ yếu từ xác người
+  chết và vật phẩm bản đồ.
+- **Q18 Linh khí / Tiên khí**: giữ như đã làm, không quy đổi qua lại. Bỏ
+  `tien_khi_to_exp_base`. Người phàm chém người Tiên giới chỉ nhận Uy Danh và ngược lại.
+- **Q19 Tốc độ bể kiếm**: giữ `clash_cooldown: 0`, `flip_cooldown: 0.3`.

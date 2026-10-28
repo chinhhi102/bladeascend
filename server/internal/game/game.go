@@ -119,6 +119,17 @@ func (g *Game) AddPlayer(o SpawnOptions) *Player {
 	return p
 }
 
+// ForceState đặt thẳng cảnh giới, số kiếm và vị trí của một người. Chỉ dùng cho công cụ đo
+// (cmd/loadtest, spec §13.6) để dựng kịch bản nặng nhất mà không phải chơi hàng giờ.
+func (g *Game) ForceState(p *Player, level, swords int, at Vec) {
+	p.Level = level
+	p.PeakLevel = max(p.PeakLevel, level)
+	p.Ring.Count = swords
+	p.Pos = at
+	p.InvulnUntil = g.Time + 1e9 // không để họ chém nhau chết giữa lúc đang đo
+	g.refreshDerived(p)
+}
+
 // resetPlayer (re)spawns a player at a safe spot (spec §7).
 func (g *Game) resetPlayer(p *Player, level, swords int) {
 	p.TotalExp = g.Prog.Threshold(level)
@@ -168,11 +179,8 @@ func (g *Game) SetInput(id uint32, seq uint32, angle float64, moving, burning bo
 // refreshDerived recomputes scale and ring geometry from level, sword count and buffs.
 func (g *Game) refreshDerived(p *Player) {
 	p.Scale = g.Prog.Scale(p.Level)
-	long := 1.0
-	if p.HasBuff(BuffLong, g.Time) {
-		long = g.Cfg.Buffs["long"].Mult
-	}
-	p.Geom = ComputeRingGeom(g.Cfg.Sword, g.Cfg.Player.BodyR, p.Scale, p.Ring.Count, long)
+	// Spec v4.3 bỏ Trường Kiếm: tầm chém chỉ tăng theo số vòng và cảnh giới (§4.1a).
+	p.Geom = ComputeRingGeom(g.Cfg.Sword, g.Cfg.Player.BodyR, p.Scale, p.Ring.Count)
 }
 
 func (g *Game) BodyR(p *Player) float64 { return g.Cfg.Player.BodyR * p.Scale }

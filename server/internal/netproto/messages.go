@@ -137,6 +137,9 @@ type Snapshot struct {
 	ItemsAdded   []ItemState    `msgpack:"ia,omitempty"`
 	ItemsRemoved []uint32       `msgpack:"ir,omitempty"`
 	Events       []game.Event   `msgpack:"ev,omitempty"`
+	// SrvMs: thời gian server xử lý một tick của phòng, mili-giây. Chỉ để đo (spec §13.6),
+	// client hiện lên overlay F3 để biết nghẽn nằm ở server hay ở máy mình.
+	SrvMs float32 `msgpack:"sv,omitempty"`
 }
 
 type LeaderEntry struct {

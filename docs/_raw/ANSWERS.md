@@ -86,3 +86,17 @@ Nguyên nhân vật cản yếu: damage tính theo **từng thanh kiếm**, nên
 2. Client: lớp hào quang vẽ sau lưng nhân vật (dưới sprite nhân vật, dưới vòng kiếm, trên mặt đất), tâm ngang ngực, đường kính ≈ 2.2 × chiều cao nhân vật, to theo scale, nhịp thở ±5% chu kỳ 2s. Màu theo cảnh giới Tiên; Đạo Tổ dùng sprite âm dương riêng.
 3. Ẩn Thân/bụi: hào quang ẩn/mờ theo nhân vật. Rớt cảnh giới: đổi màu ngay, về Đại Thừa thì tắt, kèm hiệu ứng vỡ.
 4. Chưa có art: placeholder là hình tròn phát sáng (radial gradient) theo màu config.
+
+---
+
+## Q16 — Trường Kiếm
+**Bỏ hẳn** (phương án 2). Spec v4.3 đã xóa khỏi §6.2 và §4.1a, v4.4 thay bằng **Cương Kiếm** — anh dán spec mới nhất vào `docs/_raw/`. Làm theo CHANGES_v4.md mục 20–23. Ảnh `assets/buffs/long.png` để đó, không dùng.
+
+## Q17 — Bó Kiếm khi rớt cảnh giới
+**Chấp nhận phương án 1.** Spec §5.2 đã ghi rõ: Bó Kiếm chủ yếu từ xác người chết và vật phẩm bản đồ. Luật chém thân theo số vòng (Q15) đã được ghi vào spec thay cho lá chắn chặn đường (config `body_hit_max_rings: 1`, bỏ `shield_ring`).
+
+## Q18 — Linh khí / Tiên khí tách hẳn
+**Giữ đúng như em đã làm.** Spec §3.4 đã sửa: không quy đổi qua lại, người phàm chém người Tiên giới chỉ nhận Uy Danh (và ngược lại). Bỏ `tien_khi_to_exp_base` khỏi config.
+
+## Q19 — Tốc độ bể kiếm
+**Giữ như em đã làm**: `clash_cooldown: 0` (bể mỗi tick), `flip_cooldown: 0.3`. Spec §5.2 đã sửa.

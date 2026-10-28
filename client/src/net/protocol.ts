@@ -10,7 +10,7 @@ export interface PlayerState {
   ph: number; // ring phase at snapshot time
   d: number; // ring direction ±1
   w: number; // ω rad/s
-  tl: number; // blade tilt (rad); ring sizes are derived from sc, n and the Trường Kiếm buff
+  tl: number; // blade tilt (rad); ring sizes are derived from sc and n alone (spec v4.3)
   sc: number; // scale
   md: string; // mood = animation name
   bf: number; // buff bits
@@ -62,6 +62,8 @@ export interface Snapshot {
   ia?: ItemState[];
   ir?: number[];
   ev?: GameEvent[];
+  /** sv: thời gian server xử lý một tick của phòng (ms) — chỉ để overlay đo (spec §13.6). */
+  sv?: number;
 }
 
 export interface Welcome {
@@ -145,7 +147,7 @@ export const FLAG = {
 } as const;
 
 // Buff bit order = server game.BuffNames.
-export const BUFFS = ['spin', 'haste', 'magnet', 'long', 'shield', 'exp2', 'stealth'] as const;
+export const BUFFS = ['spin', 'haste', 'magnet', 'hard', 'shield', 'exp2', 'stealth'] as const;
 
 // Map JSON from GET /api/map/{id} (server/internal/world.Map).
 export interface Shape {
