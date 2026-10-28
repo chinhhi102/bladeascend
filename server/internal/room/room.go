@@ -102,22 +102,39 @@ func (r *Room) Clients() []*Client {
 	return out
 }
 
+// slowStepMs: một tick lâu hơn ngần này thì in ra xem thời gian đi đâu. Ngân sách §13.6 là
+// 4 ms; đặt ngưỡng cao hơn hẳn để chỉ bắt những lần thật sự bất thường.
+const slowStepMs = 25.0
+
 func (r *Room) Step(dt float64) {
 	stepStart := time.Now()
 	r.drainInbox()
 	r.applyInputs()
+	tIn := time.Now()
 	for _, b := range r.brains {
 		b.Update(r.G)
 	}
+	tBrains := time.Now()
 	r.G.Tick(dt)
+	tGame := time.Now()
 	r.tick++
 	r.pending = append(r.pending, r.G.DrainEvents()...)
 	r.handleDeaths()
 	r.updateBots(dt)
+	tDeaths := time.Now()
 	r.snapAcc += dt
 	if r.snapAcc >= r.snapEvery-1e-9 {
 		r.snapAcc -= r.snapEvery
 		r.broadcast()
+	}
+	tCast := time.Now()
+	if ms := float64(tCast.Sub(stepStart).Microseconds()) / 1000; ms > slowStepMs {
+		log.Printf("tick chậm %.1f ms: input %.1f · bot %.1f (%d) · game %.1f · chết %.1f · gửi %.1f (%d người)",
+			ms, float64(tIn.Sub(stepStart).Microseconds())/1000,
+			float64(tBrains.Sub(tIn).Microseconds())/1000, len(r.brains),
+			float64(tGame.Sub(tBrains).Microseconds())/1000,
+			float64(tDeaths.Sub(tGame).Microseconds())/1000,
+			float64(tCast.Sub(tDeaths).Microseconds())/1000, len(r.clients))
 	}
 	r.lbTimer += dt
 	if r.lbTimer >= 1/float64(r.cfg.Net.LeaderboardHz) {

@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"os/signal"
+	"runtime/pprof"
+	"syscall"
 	"time"
 
 	"kiemxoay/server/internal/config"
@@ -29,7 +32,22 @@ func main() {
 	// Trần kết nối mỗi IP là để chống lạm dụng (§13.5). Chạy tools/browsertest thì 10 tab
 	// cùng đến từ 127.0.0.1 nên phải nới, nếu không tab thứ 9 trở đi ăn HTTP 429.
 	maxConns := flag.Int("max-conns-per-ip", 0, "ghi đè net.max_conns_per_ip (0 = theo config)")
+	// Hồ sơ CPU cho công cụ đo: cmd/loadtest chạy trong ống nghiệm, còn đây là server thật
+	// với bot, bản đồ thật và client thật — hai nơi cho ra hình ảnh CPU khác hẳn nhau.
+	cpuProf := flag.String("cpuprofile", "", "ghi hồ sơ CPU ra file này cho tới khi tắt server")
 	flag.Parse()
+
+	if *cpuProf != "" {
+		f, err := os.Create(*cpuProf)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal(err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
 	cfg, raw, err := config.Load(*cfgPath)
 	if err != nil {
@@ -53,7 +71,21 @@ func main() {
 	mux := srv.routes(*assetsDir, *clientDir)
 	log.Printf("Kiếm Xoay server listening on %s (debug=%v)", *addr, *debug)
 	httpSrv := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
-	log.Fatal(httpSrv.ListenAndServe())
+	// Tắt êm khi nhận SIGINT/SIGTERM: cần thế thì hồ sơ CPU mới được ghi xuống đĩa. Bị
+	// SIGKILL thì file hồ sơ rỗng.
+	go func() {
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+		<-ch
+		if *cpuProf != "" {
+			pprof.StopCPUProfile()
+			log.Printf("đã ghi hồ sơ CPU vào %s", *cpuProf)
+		}
+		_ = httpSrv.Close()
+	}()
+	if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
 }
 
 func openStore(path string, cfg *config.Config) *store.Store {

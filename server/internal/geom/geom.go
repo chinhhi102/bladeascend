@@ -40,8 +40,15 @@ func SegSegDist2(p1, q1, p2, q2 Vec) float64 {
 	r := p1.Sub(p2)
 	den := cross(d1, d2)
 	if math.Abs(den) > 1e-12 {
-		t := cross(d2, r.Mul(-1)) / den
-		u := cross(d1, r.Mul(-1)) / den
+		// p1 + t·d1 = p2 + u·d2, với r = p1 − p2 thì t·d1 − u·d2 = −r.
+		// Nhân chéo với d2 ra t = cross(d2, r)/den, với d1 ra u = cross(d1, r)/den.
+		//
+		// Bản cũ viết `cross(d2, r.Mul(-1))`, tức là ĐẢO DẤU cả t lẫn u, nên nó báo "hai
+		// đoạn cắt nhau" đúng vào lúc phần KÉO DÀI NGƯỢC của chúng cắt nhau — hai thanh
+		// kiếm cách nhau 207 đơn vị vẫn bị tính là va vào nhau (bắt được khi tối ưu mục 26,
+		// bản nhanh lọc đúng theo hình học lại "lệch" so với bản cũ).
+		t := cross(d2, r) / den
+		u := cross(d1, r) / den
 		if t >= 0 && t <= 1 && u >= 0 && u <= 1 {
 			return 0
 		}
