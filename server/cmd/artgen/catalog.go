@@ -482,9 +482,98 @@ func beastJobs() []Job {
 	return jobs
 }
 
+
+// Nền bản đồ, decal và sự sống (ART_PROMPTS §9.0b, GAME_SPEC §8.6). Nền phải NHẠT và ÍT
+// chi tiết: vật chơi được (EXP, item, quái, nhân vật) luôn phải nổi hơn nền (§9.0).
+const seamless = ", seamless tileable top-down, desaturated, low contrast, low detail, no objects"
+
+var biomeTiles = []struct{ id, desc string }{
+	{"rocky_ground", "grey rocky ground"},
+	{"fine_gravel", "fine gravel"},
+	{"mossy_stone", "patchy moss on stone"},
+	{"soft_grass", "soft muted grass"},
+	{"bamboo_litter", "dry bamboo leaves litter on soil"},
+	{"damp_earth", "damp dark earth"},
+	{"dirt_path", "trampled dirt path ground"},
+	{"village_grass", "short village grass"},
+	{"worn_cobble", "old worn cobblestone"},
+	{"dusty_earth", "dusty packed earth"},
+}
+
+var decals = []struct{ id, desc string }{
+	{"ground_cracks", "ground crack lines"},
+	{"grass_tuft", "small grass tuft"},
+	{"fallen_leaves", "scattered fallen leaves"},
+	{"pebbles", "cluster of pebbles"},
+	{"puddle", "small shallow puddle"},
+	{"tree_roots", "exposed tree roots"},
+	{"wildflowers", "tiny pale wildflowers"},
+	{"roof_tiles", "broken roof tile shards"},
+	{"brick_rubble", "scattered brick rubble"},
+	{"bamboo_leaves", "bamboo leaves pile"},
+	{"moss_patch", "moss patch"},
+	{"footprints", "footprints in dirt"},
+}
+
+var zoneEdges = []struct{ id, desc string }{
+	{"mud_edge", "muddy edge with dry cracks"},
+	{"pond_shore", "pond shore with reeds and pebbles"},
+	{"stone_path_edge", "stone path edge with broken gravel"},
+	{"bush_edge", "bush cluster edge with leaves"},
+}
+
+var plateParts = []struct {
+	id, desc string
+	w, h     int
+}{
+	{"ribbon_top1", "empty horizontal ribbon banner with forked tails, vermilion red with gold trim, no text", 1024, 256},
+	{"ribbon_top2", "empty horizontal ribbon banner with forked tails, dark navy with silver trim, no text", 1024, 256},
+	{"ribbon_top3", "empty horizontal ribbon banner with forked tails, brown with bronze trim, no text", 1024, 256},
+	{"crown_small", "tiny golden crown icon with red gems", 128, 128},
+	{"realm_pill", "empty rounded pill-shaped badge, white with light grey bevel for tinting, no text", 512, 128},
+	{"shine_streak", "soft diagonal white light streak", 256, 64},
+}
+
+var portraitMoods = []struct{ id, desc string }{
+	{"neutral", "neutral smug face"},
+	{"evil", "evil grin, chasing"},
+	{"panic", "panicked, sweating"},
+	{"cry", "crying with streams of tears"},
+}
+
+func mapArtJobs() []Job {
+	var jobs []Job
+	for _, t := range biomeTiles {
+		jobs = append(jobs, Job{Name: "tile_" + t.id, Priority: 2, Mode: modeTile, Out: "tiles/" + t.id + ".png",
+			W: 512, H: 512, Prompt: styleObject + " " + t.desc + seamless})
+	}
+	for _, d := range decals {
+		jobs = append(jobs, Job{Name: "decal_" + d.id, Priority: 3, Mode: modeSprite, Out: "decals/" + d.id + ".png",
+			W: 256, H: 256, Pivot: "center",
+			Prompt: styleObject + " top-down game decal, " + d.desc + ", soft muted colors, blends into the ground, thin outline" + negative})
+	}
+	for _, e := range zoneEdges {
+		jobs = append(jobs, Job{Name: "decal_" + e.id, Priority: 4, Mode: modeSprite, Out: "decals/" + e.id + ".png",
+			W: 512, H: 128, Pivot: "center",
+			Prompt: styleObject + " top-down zone border strip, " + e.desc + ", tileable left to right, soft muted colors" + negative})
+	}
+	for _, p := range plateParts {
+		jobs = append(jobs, Job{Name: "plate_" + p.id, Priority: 3, Mode: modeSprite, Out: "ui/" + p.id + ".png",
+			W: p.w, H: p.h, Pivot: "center", Prompt: style + " " + p.desc + negative})
+	}
+	for _, ch := range characters {
+		for _, m := range portraitMoods {
+			jobs = append(jobs, Job{Name: "portrait_" + ch.id + "_" + m.id, Priority: 5, Mode: modeSprite,
+				Out: "characters/" + ch.id + "/portrait_" + m.id + ".png", W: 512, H: 512, Pivot: "center",
+				Prompt: style + " " + ch.desc + ", head and shoulders portrait, facing the viewer slightly turned right, centered, " + m.desc + negative})
+		}
+	}
+	return jobs
+}
+
 func allJobs() []Job {
 	var jobs []Job
-	for _, f := range []func() []Job{swordJobs, itemJobs, characterJobs, monsterJobs, mapJobs, obstacleJobs, gateJobs, vfxJobs, beastJobs, uiJobs} {
+	for _, f := range []func() []Job{swordJobs, itemJobs, characterJobs, monsterJobs, mapJobs, obstacleJobs, gateJobs, vfxJobs, beastJobs, mapArtJobs, uiJobs} {
 		jobs = append(jobs, f()...)
 	}
 	return jobs

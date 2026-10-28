@@ -1,4 +1,4 @@
-import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Sprite, TilingSprite, type Texture } from 'pixi.js';
+import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Sprite, Texture, TilingSprite } from 'pixi.js';
 
 import type { ClientWorld } from '../net/state';
 import type { GameMap, MapObstacle, Shape } from '../net/protocol';
@@ -6,7 +6,18 @@ import { assets } from './assets';
 import { buildDecals, type DecalLayer, obstacleSkirt } from './decals';
 import { GATE_COLORS } from './palette';
 
-const BIOME_TILE: Record<string, string> = { grass: 'grass', market: 'concrete', concrete: 'concrete', dirt: 'dirt', rock: 'dirt' };
+/**
+ * Mỗi biome 2–3 texture nền, trộn bằng mặt nạ nhiễu (spec §8.6 mục 1). Lớp đầu phủ kín, các
+ * lớp sau nằm trong mặt nạ loang nên ranh giới là mảng màu tự nhiên chứ không phải ô vuông.
+ * Thiếu texture nào thì bỏ qua lớp đó, không vỡ gì.
+ */
+const BIOME_TILES: Record<string, string[]> = {
+  grass: ['grass', 'soft_grass', 'bamboo_litter'],
+  market: ['concrete', 'worn_cobble', 'dusty_earth'],
+  concrete: ['concrete', 'worn_cobble'],
+  dirt: ['dirt', 'dirt_path', 'village_grass'],
+  rock: ['dirt', 'rocky_ground', 'fine_gravel'],
+};
 const BIOME_COLOR: Record<string, number> = { grass: 0x7cc46a, concrete: 0xa9a49b, dirt: 0xc9a46a };
 const OBSTACLE_COLOR: Record<string, number> = { fence: 0xc8a165, stall: 0xe76f51, cart: 0x9c6644, brick: 0xb5523b, boulder: 0x8d8d8d, stone_wall: 0x5b6b5b };
 const TILE_WORLD = 400; // one 512px ground tile covers 400 world units
@@ -24,6 +35,43 @@ function bounds(s: Shape): { x: number; y: number; w: number; h: number } {
  * drawShape vẽ đúng hình mà SERVER dùng để xét va chạm — đa giác hữu cơ nếu có (spec §8.6),
  * không thì hình tròn / chữ nhật.
  */
+/**
+ * noiseMask dựng mặt nạ loang để trộn hai texture nền (spec §8.6 mục 1).
+ *
+ * Vẽ bằng canvas ở độ phân giải thấp (128×128 cho cả bản đồ 12 000) rồi để GPU kéo giãn —
+ * mặt nạ mờ nhoè chính là thứ ta cần, và 128² thì dựng xong trong một nhịp mắt. Dùng hai
+ * tầng tần số: tầng thô tạo mảng lớn, tầng mịn làm mép lởm chởm.
+ */
+function noiseMask(size: number, seed: number, cover: number): Sprite {
+  const n = 128;
+  const cv = document.createElement('canvas');
+  cv.width = n;
+  cv.height = n;
+  const ctx = cv.getContext('2d') as CanvasRenderingContext2D;
+  const img = ctx.createImageData(n, n);
+  const wave = (x: number, y: number, f: number, p: number): number =>
+    Math.sin(x * f + p) * Math.cos(y * f * 1.3 + p * 1.7) + Math.sin((x + y) * f * 0.7 + p * 2.1);
+  const s = (seed % 1000) * 0.013;
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const v = wave(x, y, 0.055, s) * 0.65 + wave(x, y, 0.17, s * 1.9) * 0.35;
+      // v nằm quanh [-2, 2]; đẩy qua ngưỡng để ra mảng chứ không ra gradient đều.
+      const a = v > (0.5 - cover) * 2 ? 255 : 0;
+      const i = (y * n + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = a;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  // Làm nhoè mép để hai texture hoà vào nhau thay vì cắt ngọt.
+  ctx.filter = 'blur(2px)';
+  ctx.drawImage(cv, 0, 0);
+  const sp = new Sprite(Texture.from(cv));
+  sp.width = size;
+  sp.height = size;
+  return sp;
+}
+
 /** hashSeed biến id bản đồ thành số, để mọi máy rải decal giống hệt nhau. */
 function hashSeed(id: string): number {
   let h = 2166136261;
@@ -173,13 +221,27 @@ export class MapView {
 
   private buildGround(): void {
     const size = this.map.size;
-    const tex = assets.texture(`tiles/${BIOME_TILE[this.map.biome] ?? 'grass'}.png`);
+    const names = (BIOME_TILES[this.map.biome] ?? ['grass']).filter((n) => assets.texture(`tiles/${n}.png`));
+    const tex = names.length ? assets.texture(`tiles/${names[0]}.png`) : null;
     if (tex) {
       const t = new TilingSprite({ texture: tex, width: size, height: size });
       t.tileScale.set(TILE_WORLD / tex.width);
       this.ground.addChild(t);
+      // Lớp 2–3: trộn bằng mặt nạ nhiễu nên ranh giới là mảng loang, không phải ô vuông
+      // (spec §8.6 mục 1). Mặt nạ vẽ một lần lúc vào phòng, không trộn lại mỗi khung.
+      for (let i = 1; i < names.length; i++) {
+        const t2 = assets.texture(`tiles/${names[i]}.png`);
+        if (!t2) {
+          continue;
+        }
+        const layer = new TilingSprite({ texture: t2, width: size, height: size });
+        layer.tileScale.set(TILE_WORLD / t2.width);
+        const mask = noiseMask(size, hashSeed(this.map.biome) + i * 7919, 0.42 - i * 0.12);
+        layer.mask = mask;
+        this.ground.addChild(layer, mask);
+      }
     } else {
-      const g = new Graphics().rect(0, 0, size, size).fill(BIOME_COLOR[BIOME_TILE[this.map.biome] ?? 'grass'] ?? 0x7cc46a);
+      const g = new Graphics().rect(0, 0, size, size).fill(BIOME_COLOR[(BIOME_TILES[this.map.biome] ?? ['grass'])[0]] ?? 0x7cc46a);
       for (let v = 0; v <= size; v += TILE_WORLD) {
         g.moveTo(v, 0).lineTo(v, size).moveTo(0, v).lineTo(size, v);
       }

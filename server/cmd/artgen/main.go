@@ -176,6 +176,17 @@ var redoReasons = map[string]string{
 }
 
 func init() {
+	// Sheet bị cắt sai: bộ cắt tìm khung bằng vùng pixel liền nhau nên nhân vật có tay/chân
+	// rời bị đếm thành nhiều khung. Phát hiện 28/10/2026 khi `dai_ca_dep` idle ra 22 khung
+	// thay vì 4 (trong game thành một cái áo tím nhấp nháy).
+	for _, name := range []string{
+		"char_dai_ca_dep_idle", "char_dai_ca_dep_hit",
+		"char_co_ba_ganh_idle", "char_co_ba_ganh_hit",
+		"char_cu_rua_idle", "char_ba_tam_loa_hit",
+		"char_a_hon_teleport_out", "char_su_phu_mi_death",
+	} {
+		redoReasons[name] = "sheet bị cắt sai số khung (xem cảnh báo của `artgen prep`)"
+	}
 	for i := range swords {
 		redoReasons[fmt.Sprintf("sword_realm_%d", i)] = "spec v3.1: lưỡi kiếm trắng/xám để game nhuộm màu theo vòng (ART_PROMPTS §7)"
 	}
