@@ -108,12 +108,17 @@ export class PlayerSprite {
     return c;
   }
 
+  /** swordCount: số kiếm đang vẽ, cho đồng hồ đo hiệu năng ở chế độ debug. */
+  get swordCount(): number {
+    return this.swordRing.count;
+  }
+
   /** ring is the sword ring layer; the scene draws all rings above characters and obstacles. */
   get ring(): Container {
     return this.swordRing.root;
   }
 
-  update(f: PlayerFrame, zoom: number, now: number, showHitbox: boolean): void {
+  update(f: PlayerFrame, zoom: number, now: number, showHitbox: boolean, swordDetail = 1): void {
     const s = f.s;
     const r = this.cfg.player.body_r * s.sc;
     this.root.position.set(f.x, f.y);
@@ -132,7 +137,7 @@ export class PlayerSprite {
     this.label.scale.set(1 / zoom);
     const realmY = this.updateRealmTag(s.L, headY, zoom);
     this.updateTitle(s.ti ?? 0, realmY, zoom);
-    this.swordRing.update(f, now, showHitbox);
+    this.swordRing.update(f, now, showHitbox, swordDetail);
     this.updateBubble(r, zoom, now);
   }
 

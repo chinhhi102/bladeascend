@@ -16,6 +16,11 @@ import { Vfx } from './vfx';
 
 const SUCK_SECS = 0.22; // vật phẩm nhặt được bay hút vào người trong 0.22s
 const BEAST_MAX = 6; // spec §3.5: tối đa 6 thần thú cùng lúc trên màn hình
+// Ngân sách số thanh kiếm vẽ mỗi khung hình. Vượt thì các VÒNG DÀY bị giãn bớt — vòng dày
+// vốn là một vành sát thương liền (§4.1b) nên bỏ bớt thanh trong vành nhìn vẫn y hệt, còn
+// vòng thưa giữ nguyên vì ở đó từng thanh là một lưỡi kiếm riêng người chơi phải né.
+// Không có trần này thì 5 người Đại Thừa 500 kiếm gặp nhau là 2 500 thanh × 60 khung/giây.
+const SWORD_BUDGET = 1600;
 const BEAST_EVERY = 20; // spec §3.5: bản thường trực mỗi 20s
 const AMBIENT_KEY = 'kx.beastAmbient'; // tắt/bật bản thường trực trong cài đặt đồ họa
 const MOOD_EMOTE_CHANCE = 0.12; // chance per mood change that a character shouts (run/chase/flee)
@@ -43,6 +48,11 @@ export class GameScene {
   private viewH = 900;
   private world: ClientWorld | null = null;
   private lastFrames: ReturnType<ClientWorld['playerFrames']> = [];
+  private fps = 0;
+  private fpsAcc = 0;
+  private fpsFrames = 0;
+  private lastRenderMs = 0;
+  private detail = 1;
   private lastSpark = { t: 0, x: 0, y: 0 };
   private showHitbox = false;
   // Thần thú Tiên giới (spec §3.5): mỗi con có 2 lớp, một dưới nhân vật một trên.
@@ -125,6 +135,7 @@ export class GameScene {
     if (!w || !this.mapView) {
       return;
     }
+    const t0 = performance.now();
     const now = performance.now() / 1000;
     const frames = w.playerFrames(dt);
     this.lastFrames = frames;
@@ -141,6 +152,8 @@ export class GameScene {
     const myBush = me && me.s.fl & 2 ? this.bushAt(me.x, me.y) : -1;
     this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha);
     this.vfx.update(now);
+    // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
+    this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;
   }
 
   /** toggleHitbox shows the server's sword capsules over the drawn swords (debug key H). */
@@ -179,6 +192,7 @@ export class GameScene {
 
   private syncPlayers(frames: ReturnType<ClientWorld['playerFrames']>, now: number): void {
     const seen = new Set<number>();
+    const detail = this.swordDetail(frames);
     for (const f of frames) {
       seen.add(f.view.id);
       let sp = this.players.get(f.view.id);
@@ -189,7 +203,7 @@ export class GameScene {
         this.entities.addChild(sp.root);
         this.rings.addChild(sp.ring);
       }
-      sp.update(f, this.zoom, now, this.showHitbox);
+      sp.update(f, this.zoom, now, this.showHitbox, detail);
       this.moodChatter(f.view.id, f.s.md, now);
     }
     for (const [id, sp] of this.players) {
@@ -322,6 +336,49 @@ export class GameScene {
   private playerScale(id: number | undefined): number {
     const v = id !== undefined ? this.world?.players.get(id) : undefined;
     return v ? v.snaps[v.snaps.length - 1].s.sc : 1;
+  }
+
+  /**
+   * swordDetail chọn mức giãn chung cho cả màn hình: 1 = vẽ đủ, 2 = vẽ cách một thanh…
+   * Dùng bậc thang 1/2/3/4 kèm mép trễ để số kiếm dao động quanh ngưỡng không làm dựng lại
+   * vòng kiếm liên tục.
+   */
+  private swordDetail(frames: ReturnType<ClientWorld['playerFrames']>): number {
+    let total = 0;
+    for (const f of frames) {
+      total += f.s.n;
+    }
+    const want = Math.ceil(total / SWORD_BUDGET);
+    if (want > this.detail) {
+      this.detail = want; // quá tải thì giãn ngay
+    } else if (want <= this.detail - 1 && total < SWORD_BUDGET * (this.detail - 1) * 0.85) {
+      this.detail -= 1; // nhẹ hẳn rồi mới dày lại, tránh dựng lại liên tục
+    }
+    return Math.max(1, Math.min(4, this.detail));
+  }
+
+  /**
+   * perfLine là dòng số liệu cho đồng hồ debug: khung hình, thời gian vẽ, và số thứ đang vẽ.
+   * Có nó thì lúc ai đó kêu lag là biết ngay nghẽn ở đâu — khung hình thấp mà `vẽ` nhỏ là
+   * nghẽn mạng chứ không phải máy yếu, còn `vẽ` cao là do quá nhiều thứ trên màn hình.
+   */
+  perfLine(dt: number, rttMs: number): string {
+    this.fpsAcc += dt;
+    this.fpsFrames += 1;
+    if (this.fpsAcc >= 0.5) {
+      this.fps = this.fpsFrames / this.fpsAcc;
+      this.fpsAcc = 0;
+      this.fpsFrames = 0;
+    }
+    let swords = 0;
+    for (const p of this.players.values()) {
+      swords += p.swordCount;
+    }
+    return [
+      `${this.fps.toFixed(0)} fps · vẽ ${this.lastRenderMs.toFixed(1)}ms · ping ${rttMs.toFixed(0)}ms`,
+      `người ${this.players.size} · kiếm ${swords} · quái ${this.monsters.size}`,
+      `EXP ${this.orbs.ids().length} · vật phẩm ${this.items.size} · giãn kiếm 1/${this.detail}`,
+    ].join('\n');
   }
 
   /** beastCount: số thần thú đang chạy, theo kiểu — dùng để kiểm tra bằng console debug. */

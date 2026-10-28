@@ -73,6 +73,8 @@ export class Hud {
   private readonly banner = h('div', 'banner');
   private readonly ping = h('div', 'ping');
   private readonly debugHelp = h('div', 'debug-help', STR.debugHelp);
+  /** Đồng hồ đo hiệu năng, chỉ hiện khi ?debug=true — để biết lag nằm ở đâu (xem setPerf). */
+  private readonly perf = h('div', 'perf');
   private buffEnds = new Map<string, { end: number; total: number }>();
   private bannerUntil = 0;
   private lastLevel = -1;
@@ -105,9 +107,11 @@ export class Hud {
       this.guide,
       h('div', 'corner', this.ping, mute),
       this.debugHelp,
+      this.perf,
       h('div', 'rotate-hint', STR.rotateHint),
     );
     this.debugHelp.style.display = 'none';
+    this.perf.style.display = 'none';
   }
 
   /**
@@ -127,6 +131,12 @@ export class Hud {
 
   setDebug(on: boolean): void {
     this.debugHelp.style.display = on ? 'block' : 'none';
+    this.perf.style.display = on ? 'block' : 'none';
+  }
+
+  /** setPerf ghi một dòng số liệu hiệu năng lên góc màn hình (chỉ ở chế độ debug). */
+  setPerf(text: string): void {
+    this.perf.textContent = text;
   }
 
   update(me: PlayerState | null, rttMs: number, prog: (L: number) => { from: number; to: number }): void {
