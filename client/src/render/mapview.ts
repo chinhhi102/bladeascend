@@ -511,21 +511,46 @@ export class MapView {
         const skirt = obstacleSkirt(b.w, b.h, n.o.k, n.o.id * 2654435761);
         skirt.position.set(b.x + b.w / 2, b.y + b.h / 2);
         n.node.addChild(skirt);
-        // Biến thể: xoay nhẹ ±6° và lật ngang ngẫu nhiên để hàng vật cản cùng loại không
-        // lộ ra là copy-paste.
-        const r = (n.o.id * 9301 + 49297) % 233280 / 233280;
-        art.rotation = (r - 0.5) * 0.21;
-        if ((n.o.id & 1) === 1) {
-          art.scale.x *= -1;
-        }
       }
-      n.node.addChild(art);
+      n.node.addChild(this.varied(art, n.o, look));
       const lb = n.node.getLocalBounds();
       n.box = { x: lb.x, y: lb.y, w: lb.width, h: lb.height };
       n.node.zIndex = broken ? -1e6 : bounds(n.o.s).y + bounds(n.o.s).h;
     }
     // Blink 3s before regrowing (spec §8.2).
     n.node.alpha = broken && now < n.warnUntil ? 0.5 + 0.5 * Math.sin(now * 20) : 1;
+  }
+
+  /**
+   * varied xoay nhẹ ±6° và thỉnh thoảng lật ngang một vật cản, để hàng vật cản cùng loại
+   * không lộ ra là copy-paste (spec §8.6 mục 3).
+   *
+   * Phải xoay **quanh tâm chính nó**: `obstacleArt` dựng hình ở toạ độ THẾ GIỚI, nên đặt
+   * `rotation` thẳng lên nó là xoay quanh gốc bản đồ (0,0) — vật cản ở (3000, 5000) sẽ văng
+   * đi hàng trăm đơn vị, còn lật ngang thì ném nó sang hẳn nửa kia bản đồ. Đó đúng là lỗi
+   * "vật cản nằm ngoài biên" nhìn thấy trong game.
+   *
+   * Tường dãy và tường biên thì KHÔNG đụng vào: chúng phải nối liền nhau, xoay một đoạn là
+   * hở ngay.
+   */
+  private varied(art: Container, o: MapObstacle, look: ObstacleLook): Container {
+    const b = bounds(o.s);
+    const tiled = !o.s.c && (b.w > b.h * 1.6 || b.h > b.w * 1.6);
+    if (look === 'rubble' || tiled || o.k === 'stone_wall' || o.k === 'fence' || o.k === 'brick') {
+      return art;
+    }
+    const cx = b.x + b.w / 2;
+    const cy = b.y + b.h / 2;
+    const pivot = new Container();
+    pivot.position.set(cx, cy);
+    art.position.set(art.position.x - cx, art.position.y - cy);
+    const r = ((o.id * 9301 + 49297) % 233280) / 233280;
+    pivot.rotation = (r - 0.5) * 0.21;
+    if ((o.id & 1) === 1) {
+      pivot.scale.x = -1;
+    }
+    pivot.addChild(art);
+    return pivot;
   }
 
   private obstacleArt(o: MapObstacle, look: ObstacleLook, frac: number): Container {
