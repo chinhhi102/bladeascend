@@ -4,11 +4,20 @@ Tạo lại file này: `cd server && go run ./cmd/artgen status`.
 Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.
 Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.
 
-## Còn thiếu (77 ảnh)
+## Còn thiếu (92 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
+| `obs_fence_states_vertical` | p1 | obstacles/fence (states ×4) |
+| `obs_stall_states_vertical` | p1 | obstacles/stall (states ×4) |
+| `obs_cart_states_vertical` | p1 | obstacles/cart (states ×4) |
+| `obs_brick_states_vertical` | p1 | obstacles/brick (states ×4) |
+| `obs_boulder_states_vertical` | p1 | obstacles/boulder (states ×4) |
+| `obs_stone_wall_states_vertical` | p1 | obstacles/stone_wall (states ×4) |
 | `char_cu_rua_death` | p2 | characters/cu_rua/frames (death ×8) |
+| `beast_dragon` | p3 | beasts (parts ×3) |
+| `beast_crane` | p3 | beasts (parts ×3) |
+| `beast_phoenix` | p3 | beasts (parts ×3) |
 | `char_a_hon_teleport_in` | p4 | characters/a_hon/frames (teleport_in ×4) |
 | `char_ba_tam_loa_levelup` | p4 | characters/ba_tam_loa/frames (levelup ×6) |
 | `char_ba_tam_loa_realm_drop` | p4 | characters/ba_tam_loa/frames (realm_drop ×6) |
@@ -75,6 +84,12 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `obs_boulder_break` | p4 | obstacles/boulder/break (break ×6) |
 | `obs_boulder_regrow` | p4 | obstacles/boulder/regrow (regrow ×6) |
 | `vfx_run_dust` | p4 | vfx/run_dust (run_dust ×4) |
+| `beast_dragon_leg` | p5 | beasts/dragon_leg.png |
+| `beast_phoenix_feather` | p5 | beasts/phoenix_feather.png |
+| `beast_mote_cloud` | p5 | beasts/mote_cloud.png |
+| `beast_mote_spark` | p5 | beasts/mote_spark.png |
+| `beast_mote_glow` | p5 | beasts/mote_glow.png |
+| `beast_mote_feather` | p5 | beasts/mote_feather.png |
 | `char_a_hon_ref` | p9 | characters/a_hon/ref_sheet.png |
 | `char_ba_tam_loa_ref` | p9 | characters/ba_tam_loa/ref_sheet.png |
 | `char_ong_ba_vong_ref` | p9 | characters/ong_ba_vong/ref_sheet.png |
