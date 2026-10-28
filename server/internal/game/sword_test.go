@@ -331,3 +331,55 @@ func TestSpinBuffDoesNotChangeReach(t *testing.T) {
 		t.Fatalf("Trường Kiếm làm đổi ω %v → %v", w, got)
 	}
 }
+
+// Tốc độ mài: hai vòng ngoài cùng ngang cảnh giới, 1 vòng/giây → sau đúng 1 giây cả hai
+// rụng trọn vòng ngoài. Bể kiếm tính mỗi tick (clash_cooldown = 0), không phải mỗi 0.3s.
+func TestClashGrindsOneOuterRingPerSecond(t *testing.T) {
+	g := quietGame(t, nil)
+	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 20, Swords: 60}) // 10+20+30 = 3 vòng
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 20, Swords: 60})
+	at, bt := Vec{X: 6000, Y: 6000}, Vec{X: 6200, Y: 6000}
+	place(g, a, at, 0)
+	place(g, b, bt, 0)
+	if g.Geom(a).Rings != 3 {
+		t.Fatalf("60 kiếm phải là 3 vòng, đang %d", g.Geom(a).Rings)
+	}
+	a.InvulnUntil, b.InvulnUntil = 1e9, 1e9 // chỉ đo bể kiếm, không để rớt cảnh giới xen vào
+	for i := 0; i < 30; i++ {               // đúng 1 giây
+		g.Tick(dt)
+		a.Pos, b.Pos = at, bt // giữ nguyên chỗ để đo
+	}
+	// Vòng ngoài 30 kiếm: sau 1 giây phải sạch, không hơn không kém một vòng.
+	for _, p := range []*Player{a, b} {
+		if p.Ring.Count != 30 {
+			t.Fatalf("%s còn %d kiếm sau 1 giây, muốn 30 (rụng trọn vòng ngoài 30 kiếm)", p.Name, p.Ring.Count)
+		}
+	}
+}
+
+// Đổi chiều quay vẫn phải có cooldown riêng, nếu không vòng kiếm giật 30 lần/giây.
+func TestRingFlipKeepsItsOwnCooldown(t *testing.T) {
+	g := quietGame(t, nil)
+	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 20, Swords: 60})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 20, Swords: 60})
+	at, bt := Vec{X: 6000, Y: 6000}, Vec{X: 6200, Y: 6000}
+	place(g, a, at, 0)
+	place(g, b, bt, 0)
+	a.InvulnUntil, b.InvulnUntil = 1e9, 1e9
+	flips, prev := 0, a.Ring.Dir
+	for i := 0; i < 30; i++ { // 1 giây
+		g.Tick(dt)
+		a.Pos, b.Pos = at, bt
+		if a.Ring.Dir != prev {
+			flips++
+			prev = a.Ring.Dir
+		}
+	}
+	// flip_cooldown = 0.3s → nhiều nhất 4 lần đổi chiều trong 1 giây.
+	if flips > 4 {
+		t.Fatalf("đổi chiều %d lần trong 1 giây — cooldown đổi chiều không còn tác dụng", flips)
+	}
+	if flips == 0 {
+		t.Fatal("cùng cảnh giới mà không đổi chiều lần nào")
+	}
+}

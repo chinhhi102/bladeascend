@@ -1,10 +1,11 @@
 import { Application, Container } from 'pixi.js';
 
 import { sound } from '../audio/sound';
-import { cameraViewHeight, type GameConfig, realmOf } from '../config';
+import { absorbable, banksTienKhi, cameraViewHeight, type GameConfig, realmOf, tienIndex } from '../config';
 import type { ClientWorld } from '../net/state';
-import { BUFFS, type GameEvent } from '../net/protocol';
+import { BUFFS, FLAG, type GameEvent } from '../net/protocol';
 import { pick, STR } from '../ui/strings';
+import { Beast, type BeastMode, TIEN_BEASTS } from './beast';
 import { ItemSprite, MonsterSprite } from './entities';
 import { MapView, type Viewer } from './mapview';
 import { PlayerSprite } from './player';
@@ -12,6 +13,9 @@ import { ringGeom } from './ringgeom';
 import { Vfx } from './vfx';
 
 const SUCK_SECS = 0.22; // vật phẩm nhặt được bay hút vào người trong 0.22s
+const BEAST_MAX = 6; // spec §3.5: tối đa 6 thần thú cùng lúc trên màn hình
+const BEAST_EVERY = 20; // spec §3.5: bản thường trực mỗi 20s
+const AMBIENT_KEY = 'kx.beastAmbient'; // tắt/bật bản thường trực trong cài đặt đồ họa
 const MOOD_EMOTE_CHANCE = 0.12; // chance per mood change that a character shouts (run/chase/flee)
 
 /** GameScene renders the ClientWorld every frame with a camera that zooms out as you grow (spec §4.1). */
@@ -32,8 +36,14 @@ export class GameScene {
   private zoom = 1;
   private viewH = 900;
   private world: ClientWorld | null = null;
+  private lastFrames: ReturnType<ClientWorld['playerFrames']> = [];
   private lastSpark = { t: 0, x: 0, y: 0 };
   private showHitbox = false;
+  // Thần thú Tiên giới (spec §3.5): mỗi con có 2 lớp, một dưới nhân vật một trên.
+  private beasts: { b: Beast; owner: number }[] = [];
+  private nextAmbient = new Map<number, number>();
+  /** Cảnh giới Tiên của từng người ở khung hình trước — RealmDrop cần biết họ VỪA là gì. */
+  private lastTien = new Map<number, number>();
 
   constructor(private readonly cfg: GameConfig) {}
 
@@ -85,6 +95,12 @@ export class GameScene {
     for (const f of this.flying) {
       f.sp.destroy();
     }
+    for (const e of this.beasts) {
+      e.b.destroy();
+    }
+    this.beasts.length = 0;
+    this.nextAmbient.clear();
+    this.lastTien.clear();
     this.flying.length = 0;
     this.pickedBy.clear();
     this.players.clear();
@@ -102,6 +118,7 @@ export class GameScene {
     }
     const now = performance.now() / 1000;
     const frames = w.playerFrames(dt);
+    this.lastFrames = frames;
     const me = frames.find((f) => f.view.id === w.myId);
     if (me) {
       const long = me.s.bf & (1 << BUFFS.indexOf('long')) ? (this.cfg.buffs.long?.mult ?? 1) : 1;
@@ -109,8 +126,9 @@ export class GameScene {
     }
     this.syncPlayers(frames, now);
     this.syncMonsters(now);
-    this.syncItems(now);
+    this.syncItems(now, me ? banksTienKhi(this.cfg, me.s.L) : false);
     this.updateFlyingItems(now);
+    this.updateBeasts(frames, now);
     const myBush = me && me.s.fl & 2 ? this.bushAt(me.x, me.y) : -1;
     this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha);
     this.vfx.update(now);
@@ -204,7 +222,7 @@ export class GameScene {
     }
   }
 
-  private syncItems(now: number): void {
+  private syncItems(now: number, meBanksTienKhi: boolean): void {
     const items = this.world?.items;
     if (!items) {
       return;
@@ -229,7 +247,7 @@ export class GameScene {
         }
         continue;
       }
-      sp.update(now);
+      sp.update(now, absorbable(sp.it.k, meBanksTienKhi));
     }
   }
 
@@ -265,6 +283,100 @@ export class GameScene {
   private playerScale(id: number | undefined): number {
     const v = id !== undefined ? this.world?.players.get(id) : undefined;
     return v ? v.snaps[v.snaps.length - 1].s.sc : 1;
+  }
+
+  /** beastCount: số thần thú đang chạy, theo kiểu — dùng để kiểm tra bằng console debug. */
+  beastCount(): Record<string, number> {
+    const n: Record<string, number> = { breakthrough: 0, ambient: 0, shatter: 0 };
+    for (const e of this.beasts) {
+      n[e.b.mode] += 1;
+    }
+    return n;
+  }
+
+  /** ambientBeasts: bản thường trực bật/tắt được trong cài đặt đồ họa (spec §3.5). */
+  static ambientBeasts(): boolean {
+    return localStorage.getItem(AMBIENT_KEY) !== 'off';
+  }
+
+  static setAmbientBeasts(on: boolean): void {
+    localStorage.setItem(AMBIENT_KEY, on ? 'on' : 'off');
+  }
+
+  /**
+   * updateBeasts chạy toàn bộ thần thú Tiên giới mỗi khung hình: hẹn giờ bản thường trực,
+   * đặt lại vị trí theo chủ, và xếp hai lớp ôm lấy nhân vật đúng thứ tự chiều sâu.
+   */
+  private updateBeasts(frames: ReturnType<ClientWorld['playerFrames']>, now: number): void {
+    const byId = new Map(frames.map((f) => [f.view.id, f]));
+    this.lastTien.clear();
+    for (const f of frames) {
+      const idx = tienIndex(this.cfg, realmOf(this.cfg, f.s.L));
+      this.lastTien.set(f.view.id, idx);
+      // Ẩn Thân / trong bụi thì không phát (spec §3.5).
+      const hidden = (f.s.fl & FLAG.stealth) !== 0 || (f.s.fl & FLAG.bush) !== 0;
+      if (idx < 0 || hidden || !GameScene.ambientBeasts()) {
+        this.nextAmbient.delete(f.view.id);
+        continue;
+      }
+      const due = this.nextAmbient.get(f.view.id);
+      if (due === undefined) {
+        this.nextAmbient.set(f.view.id, now + BEAST_EVERY * Math.random()); // rải đều, không đồng loạt
+      } else if (now >= due) {
+        this.nextAmbient.set(f.view.id, now + BEAST_EVERY);
+        this.spawnBeast(f.view.id, 'ambient', now);
+      }
+    }
+    this.beasts = this.beasts.filter((e) => {
+      const f = byId.get(e.owner);
+      if (!f || e.b.done(now)) {
+        this.removeBeast(e.b);
+        return false;
+      }
+      const r = this.cfg.player.body_r * f.s.sc;
+      const feet = f.y + r * 0.75; // chân nhân vật, khớp FEET_BELOW_CENTER của PlayerSprite
+      e.b.update(f.x, feet, now);
+      // Lớp sau nằm ngay dưới nhân vật, lớp trước ngay trên — nhân vật zIndex = y + r×0.75.
+      e.b.back.zIndex = feet - 0.5;
+      e.b.front.zIndex = feet + 0.5;
+      return true;
+    });
+  }
+
+  /** spawnBeast tạo thần thú cho một người, tôn trọng trần 6 con của spec §3.5. */
+  private spawnBeast(owner: number, mode: BeastMode, now: number, realmIdx?: number): void {
+    const f = this.lastFrames.find((p) => p.view.id === owner);
+    if (!f) {
+      return;
+    }
+    const idx = realmIdx ?? tienIndex(this.cfg, realmOf(this.cfg, f.s.L));
+    const spec = TIEN_BEASTS[idx];
+    if (!spec) {
+      return;
+    }
+    if (this.beasts.length >= BEAST_MAX && !this.dropOneBeast(mode)) {
+      return; // đầy mà không có con nào ưu tiên thấp hơn: bỏ qua
+    }
+    const r = this.cfg.player.body_r * f.s.sc;
+    const b = new Beast(spec, mode, r, r * 2.6, now);
+    this.entities.addChild(b.back, b.front);
+    this.beasts.push({ b, owner });
+  }
+
+  /** dropOneBeast nhường chỗ: bản đột phá được ưu tiên, bản thường trực bị bỏ trước. */
+  private dropOneBeast(incoming: BeastMode): boolean {
+    const i = this.beasts.findIndex((e) => e.b.mode === 'ambient');
+    if (i < 0 || incoming === 'ambient') {
+      return false;
+    }
+    this.removeBeast(this.beasts[i].b);
+    this.beasts.splice(i, 1);
+    return true;
+  }
+
+  private removeBeast(b: Beast): void {
+    this.entities.removeChild(b.back, b.front);
+    b.destroy();
   }
 
   private handleEvent(e: GameEvent, now: number): void {
@@ -304,6 +416,12 @@ export class GameScene {
         this.onBreakthrough(e, size, mine, now);
         break;
       case 'RealmDrop':
+        {
+          const was = this.lastTien.get(e.a ?? 0) ?? -1;
+          if (was >= 0) {
+            this.spawnBeast(e.a ?? 0, 'shatter', now, was); // thần thú gãy vụn (spec §3.5)
+          }
+        }
         if (mine) {
           sound.play('realm_drop');
         }
@@ -314,6 +432,13 @@ export class GameScene {
   }
 
   private onBreakthrough(e: GameEvent, size: number, mine: boolean, now: number): void {
+    if (e.s === 'tien') {
+      // Phi thăng Tiên giới: thần thú to chui lên từ chân, ai trong tầm nhìn đều thấy (§3.5).
+      // Lấy cảnh giới từ e.n (cấp MỚI) chứ không từ khung hình đã lưu — khung hình còn là
+      // cảnh giới cũ nên sẽ gọi nhầm thần thú của cảnh giới vừa rời đi.
+      this.spawnBeast(e.a ?? 0, 'breakthrough', now, tienIndex(this.cfg, realmOf(this.cfg, e.n ?? 0)));
+      this.vfx.shake(22 * this.playerScale(e.a), 0.8, now);
+    }
     this.vfx.play('lightning', e.x, e.y - size, size * 3, now);
     this.vfx.play('levelup_aura', e.x, e.y, size * 3, now);
     sound.play('breakthrough', mine ? 1 : 0.6);

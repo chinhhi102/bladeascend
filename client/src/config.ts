@@ -79,6 +79,26 @@ export function isTien(cfg: GameConfig, realm: number): boolean {
   return realm >= cfg.cultivation.realms.length;
 }
 
+/**
+ * banksTienKhi: từ Đại Thừa tầng 10 trở lên thì chỉ tu Tiên khí (spec §3.4). Dưới mức đó chỉ
+ * tu Linh khí — hai đường tu tách hẳn, không đổi qua lại.
+ */
+export function banksTienKhi(cfg: GameConfig, level: number): boolean {
+  const c = cfg.cultivation;
+  return level >= c.realms.length * c.tiers_per_realm - 1;
+}
+
+/** absorbable: viên này người chơi hiện tại có hấp thụ được không. */
+export function absorbable(kind: string, banks: boolean): boolean {
+  if (kind === 'orb') {
+    return !banks;
+  }
+  if (kind === 'tien_khi') {
+    return banks;
+  }
+  return true;
+}
+
 /** tienIndex: vị trí 0-based trong tien_realms, -1 nếu còn phàm. */
 export function tienIndex(cfg: GameConfig, realm: number): number {
   return isTien(cfg, realm) ? realm - cfg.cultivation.realms.length : -1;

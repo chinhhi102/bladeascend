@@ -17,6 +17,7 @@
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35, "tilt_tween_secs": 0.1,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
     "rev_secs": 1.0, "flip_cooldown": 0.3,
+    "clash_cooldown": 0,
     "clash_unit": 1, "flip_only_same_realm": true, "shield_ring": "second_outermost",
     "clash_knockback": 0, "clash_knockback_secs": 0.2, "drop_bundle_max": 10,
     "durability_per_realm": 1.2, "durability_mode": "compound",

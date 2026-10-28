@@ -4,6 +4,10 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v4.3:** bỏ vật phẩm Trường Kiếm; tầm chém chỉ tăng theo số vòng và cảnh giới (§4.1a, §6.2).
+
+**Thay đổi v4.2:** VFX thần thú bay lên từ chân cho cảnh giới Tiên (§3.5).
+
 **Thay đổi v4.1:** độ bền kiếm mỗi cảnh giới +20% (Trúc Cơ vs Luyện Khí đổi 10 : 12), thay cho tỉ lệ 1 : (d+1) (§5.2).
 
 **Thay đổi v4.0:** gộp toàn bộ thay đổi đã nhắn trực tiếp cho agent (tốc chạy, bất tử 5s, realm_mult 2.0, Thiêu Đốt Tinh Huyết, bảng phòng theo Uy Danh, danh hiệu Top 1–10, tin loan toàn server, bot ngang hạng 11, debug, thanh máu quái); không đẩy văng khi va kiếm + lá chắn vòng kế ngoài cùng; Tiên khí từ Đài Tiên Khí thay cho sát mạng; thuật toán sinh bản đồ tu tiên; sửa lỗi Tốc Kiếm.
@@ -147,9 +151,38 @@ Sau Đại Thừa tầng 10 có thêm 5 cảnh giới. **Không dùng Linh khí 
   - Rớt cảnh giới → hào quang đổi màu ngay (về Đại Thừa thì tắt), kèm hiệu ứng vỡ vụn.
   - Màu nằm trong config `tien_aura_colors`.
 - Đạo Tổ hiện trên minimap của cả phòng (giống Top 1) → cả phòng hợp sức săn.
+- **Thần thú bay lên từ chân** (VFX riêng mỗi cảnh giới Tiên, xem §3.5).
 - Uy Danh (§11.1) dùng nguyên công thức với `r` tới 13 (chém trúng Đạo Tổ = 1 400 × lật kèo). Đột phá Tiên giới vẫn `20 × r`.
 
 **Lưu ý cân bằng**: Đạo Tổ có 14 vòng / 1 050 kiếm, tầm chém ≈ 1 900 đơn vị. Nếu thấy quá lớn, giảm `tien_scale_step` trong config.
+
+### 3.5 VFX Thần thú Tiên giới
+
+Mỗi cảnh giới Tiên có một thần thú, màu khớp với hào quang:
+
+| Cảnh giới | Thần thú | Màu | Vệt theo sau |
+|---|---|---|---|
+| Chân Tiên | Tiên hạc | Trắng bạc | Mây trắng nhỏ |
+| Kim Tiên | Kim long (rồng vàng) | Vàng kim | Tia lửa vàng |
+| Thái Ất Ngọc Tiên | Ngọc long (rồng ngọc) | Xanh ngọc | Hạt sáng xanh |
+| Đại La Kim Tiên | Tử phượng (phượng hoàng tím) | Tím | Lông vũ sáng |
+| Đạo Tổ | **Song long âm dương** (1 trắng, 1 đen, quấn nhau) | Đen trắng + viền cầu vồng | Mây âm dương |
+
+**Khi nào xuất hiện**
+1. **Đột phá vào cảnh giới Tiên** (đi cùng Thiên Kiếp): thần thú to, chui lên từ dưới chân, **xoắn ốc quanh người 1.5 vòng** đi lên, bay vút lên trời rồi tan thành vệt sáng. Dài 2.5s. Camera rung nhẹ, mọi người trong tầm nhìn đều thấy.
+2. **Thường trực**: mỗi 20s, một thần thú nhỏ (60% cỡ) bay 1 vòng quanh người rồi chui vào hào quang. Dài 1.5s. Người chơi tắt được trong cài đặt đồ họa (chỉ tắt bản thường trực, không tắt bản đột phá).
+3. **Bị chém rớt cảnh giới**: thần thú hiện ra gãy vụn thành mảnh sáng rơi xuống (0.8s).
+
+**Cách làm: chuỗi đốt (procedural), không vẽ từng frame**
+- Thần thú = **1 sprite đầu + 12–20 sprite thân (đốt) + 1 sprite đuôi** (hạc/phượng thì: thân + 2 cánh vỗ 4 frame + đuôi lông). Code cho đầu chạy theo quỹ đạo, các đốt sau đi theo vị trí đầu ở các thời điểm trước đó (như con rắn) → uốn lượn mượt, không cần sinh hàng chục frame, đổi màu bằng tint.
+- **Quỹ đạo xoắn ốc**: `x = cx + R(t)·cos(θ(t))`, `y = feet_y − H(t) + R(t)·sin(θ(t))·0.35` (ép dẹt theo góc nhìn 3/4); `θ` tăng 1.5 vòng, `H` từ 0 lên `3 × chiều cao nhân vật`, `R` từ 0.6 → 1.0 × bán kính thân rồi bung ra khi bay vút lên.
+- **Chiều sâu**: đốt nào đang ở nửa sau vòng xoắn (`sin θ < 0`) vẽ **dưới** sprite nhân vật, nửa trước vẽ **trên** → trông như rồng quấn quanh người thật.
+- Mỗi đốt nhỏ dần về đuôi; đầu hơi lắc theo hướng bay; độ trong suốt tăng dần ở 0.4s cuối.
+- Vệt theo sau: hạt particle sinh từ các đốt, tồn tại 0.5s.
+- Tất cả kích thước nhân `scale` của nhân vật.
+- Chỉ chạy ở client, kích hoạt bởi event `Breakthrough` / `RealmDrop` và đồng hồ client (bản thường trực) → không tốn băng thông.
+- Ẩn Thân / trong bụi: không phát. Giới hạn tối đa 6 thần thú cùng lúc trên màn hình (ưu tiên bản đột phá, người gần mình).
+- Placeholder khi chưa có art: đầu = tam giác, đốt = hình tròn, tô màu theo bảng trên.
 
 ## 4. Kiếm, vòng quay, tầm đánh
 
@@ -159,7 +192,7 @@ Mục tiêu hình ảnh: nhiều vòng kiếm **so le, nghiêng, mỗi vòng m�
 
 **Quy tắc cố định bán kính (BẮT BUỘC)**
 - Bán kính và chiều dài của một vòng **chỉ phụ thuộc vào thứ tự vòng `k` và `scale`**, **KHÔNG phụ thuộc vào số kiếm `n`**. Thêm kiếm vào vòng đang có → chỉ lấp kín khe, vòng **không rộng ra**.
-- Tầm chém chỉ tăng khi (a) mở **vòng mới** (kiếm thứ 11, 31, 61, 101...), (b) nhân vật **lên tầng/cảnh giới** (scale tăng), hoặc (c) có buff Trường Kiếm.
+- Tầm chém chỉ tăng khi (a) mở **vòng mới** (kiếm thứ 11, 31, 61, 101...), hoặc (b) nhân vật **lên tầng/cảnh giới** (scale tăng). Không có vật phẩm nào tăng tầm chém.
 - Xóa mọi công thức cũ kiểu `ring_radius = max(..., n * spacing / 2π)` (từ spec v1) khỏi code.
 - Chuôi kiếm vòng 1 luôn sát người (`inner_r = (BODY_R + 6) * scale`), không có khoảng trống lớn giữa thân và kiếm.
 
@@ -170,7 +203,7 @@ Ví dụ ở cùng 1 tầng (scale không đổi): 1 kiếm, 5 kiếm, 10 kiếm
 - Số vòng đang hiện = số vòng cần để chứa n kiếm (`R` nhỏ nhất sao cho `5R(R+1) ≥ n`), không vượt quá `r + 1` của cảnh giới.
 - Trong 1 vòng, các kiếm chia đều 360°: vòng đầy có khoảng cách `36° / (k+1)`; vòng ngoài cùng chưa đầy (m kiếm) thì chia đều `360° / m`.
 
-**Hình học từng vòng** (`R` = tổng số vòng hiện có, `base = SWORD_LEN * scale * buff_long`, SWORD_LEN = 80)
+**Hình học từng vòng** (`R` = tổng số vòng hiện có, `base = SWORD_LEN * scale`, SWORD_LEN = 80)
 
 ```
 inner_r           = (BODY_R + 6) * scale                     // bán kính chuôi vòng 1
@@ -304,10 +337,9 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 |---|---|---|---|
 | Kiếm | +3 kiếm. Nếu đã max → +20 EXP | – | 40 |
 | Bó Kiếm | +15 kiếm (cũng là dạng rơi ra khi rớt cảnh giới/chết, khi đó chứa đúng số kiếm rơi) | – | 6 |
-| Tốc Kiếm | **Chỉ** tăng tốc độ quay: ω × 1.6. **Không** đổi chiều dài/bán kính/tầm chém (đó là Trường Kiếm) | 12s | 12 |
+| Tốc Kiếm | **Chỉ** tăng tốc độ quay: ω × 1.6. **Không** đổi chiều dài/bán kính/tầm chém | 12s | 12 |
 | Thần Hành | Tốc chạy × 1.4 | 10s | 12 |
 | Nam Châm | Bán kính hút đồ × 3 | 15s | 8 |
-| Trường Kiếm | Chiều dài mọi vòng kiếm × 1.3 | 12s | 7 |
 | Kim Cang (khiên) | Chặn 1 lần bị chém vào thân | 8s hoặc tới khi vỡ | 7 |
 | Song Bội Đan | EXP nhận × 2 | 20s | 5 |
 | Ẩn Thân Phù | Tàng hình **80%**: người khác thấy mình và vòng kiếm mờ (độ đậm 20%), không thấy tên, không hiện trên minimap. Ở rất gần (120 × scale của người nhìn) thì hiện rõ 100%. Hết hiệu lực ngay khi kiếm mình chém trúng người | **5s** (tối đa, nhặt lại chỉ làm mới về 5s) | 3 |
@@ -625,7 +657,7 @@ kiem-xoay/
 - Tick server 30 Hz, mỗi phòng 1 goroutine. Snapshot gửi client 20 Hz.
 - Client → Server: `Join{name, character, guest_id}`, `Input{seq, angle_u8, moving}` (30 Hz), `Ping`.
 - Server → Client: `Welcome`, `Snapshot`, `Event`, `Leaderboard` (1 Hz).
-- **Không gửi vị trí từng thanh kiếm**: gửi `phase, dir, n, ω, scale, buff_long, phase_tick` (client tự tính số vòng, chiều dài từng vòng); client tự tính góc. Đổi chiều → event `RingFlip`.
+- **Không gửi vị trí từng thanh kiếm**: gửi `phase, dir, n, ω, scale, phase_tick` (client tự tính số vòng, chiều dài từng vòng); client tự tính góc. Đổi chiều → event `RingFlip`.
 - Event: `Hit, SwordBreak, Death, LevelUp, Breakthrough, RealmDrop, RingFlip, ObstacleDamaged, ObstacleBroken, ObstacleRegrow, TeleportOut, TeleportIn, ItemPicked, BuffStart, BuffEnd, ChestIncoming, KillFeed`.
 - AOI: chỉ gửi những gì nằm trong vùng nhìn của người đó (+ lề). Người **trong bụi** không được gửi cho người không được thấy (chống hack nhìn xuyên). Người **Ẩn Thân** vẫn được gửi (vì vẫn hiện mờ 20%), kèm cờ `stealth`.
 - Client: nội suy người khác (trễ 100ms); tự dự đoán chuyển động của mình + hiệu chỉnh theo server.
@@ -709,13 +741,12 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "spin":   { "mult": 1.6, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },
     "magnet": { "mult": 3.0, "secs": 15 },
-    "long":   { "mult": 1.3, "secs": 12 },
     "shield": { "secs": 8 },
     "exp2":   { "mult": 2.0, "secs": 20 },
     "stealth":{ "secs": 5, "max_secs": 5, "visible_alpha": 0.2, "reveal_r": 120, "bot_detect_mult": 0.5 }
   },
   "items": {
-    "weights": { "sword": 40, "bundle": 6, "spin": 12, "haste": 12, "magnet": 8, "long": 7, "shield": 7, "exp2": 5, "stealth": 3 },
+    "weights": { "sword": 40, "bundle": 6, "spin": 12, "haste": 12, "magnet": 8, "shield": 7, "exp2": 5, "stealth": 3 },
     "sword_item_amount": 3, "bundle_amount": 15,
     "count_per_room": 200, "respawn_secs": 3, "overcap_exp": 20, "chest_every_secs": 60, "chest_items": 8
   },
@@ -772,6 +803,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 
 - [ ] Hai người cùng 3 vòng mài nhau: chỉ vòng ngoài cùng chồng lên nhau, không ai tiến sâu hơn vòng kế ngoài cùng của đối phương; hết vòng ngoài thì tiến thêm được 1 lớp; không bị bật ngược.
 - [ ] Tốc Kiếm chỉ làm kiếm quay nhanh hơn, tầm chém không đổi.
+- [ ] Không còn vật phẩm Trường Kiếm trên bản đồ, HUD, config, debug (phím 1–7 bỏ buff này).
 - [ ] Giữ Shift: chạy ×1.8, mất 8% EXP tầng/giây, không bao giờ rớt cảnh giới.
 - [ ] Đài nhỏ phun mỗi 5s, đợt lớn mỗi 30s; Thiên Tiên Đài báo trước 10s và phun viên 150 điểm mỗi 150s.
 - [ ] mapgen: 10 seed liên tiếp đều qua kiểm tra liên thông, có Thiên Tiên Đài, 4 sân môn phái, đường chính không vật cản.
@@ -803,6 +835,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Trúc Cơ chém trúng Nguyên Anh → +800 Uy Danh; chém lại cùng người trong 60s → +0.
 - [ ] Bảng Thần Tốc chỉ có những mạng đã đạt Đại Thừa.
 - [ ] Đại Thừa tầng 10 nhặt Linh khí không lên được; nhặt đủ 100 Tiên khí → Chân Tiên. Luyện Khí nhặt viên Tiên khí 2 điểm → +100 Linh khí.
+- [ ] Đột phá Kim Tiên: rồng vàng chui lên từ chân, quấn quanh người 1.5 vòng (nửa sau khuất sau nhân vật), bay vút lên, 2.5s; sau đó mỗi 20s có rồng nhỏ bay 1 vòng.
 - [ ] Lên Chân Tiên thấy hào quang trắng bạc sau lưng; mỗi cảnh giới Tiên một màu; rớt về Đại Thừa thì tắt hào quang.
 - [ ] Kim Tiên đang 450 Tiên khí bị chém → Chân Tiên, Tiên khí 100; người chém (Tiên giới) +175, rơi 105 điểm viên Tiên khí.
 - [ ] Top 1/2/3 phòng hiện đúng danh hiệu trên đầu và trong bảng; đổi hạng phải giữ 3s mới đổi danh hiệu.

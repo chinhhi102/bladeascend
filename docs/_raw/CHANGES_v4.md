@@ -35,3 +35,13 @@
 14. Bỏ `clash_ratio_base`, `clash_ratio_per_realm`. Thêm `durability_per_realm: 1.2`, `durability_mode: "compound"`.
 15. Mỗi lần va khác cảnh giới: bên thấp mất `clash_unit` (1) kiếm; bên cao `crack += lost / k` với `k = 1.2^d`. Cùng cảnh giới: mỗi bên −1, đổi chiều (như cũ).
 16. Unit test: Trúc Cơ vs Luyện Khí sau 12 lần va → Luyện Khí −12, Trúc Cơ −10. Mode "linear": `k = 1 + 0.2 × d`.
+
+## v4.2 — VFX thần thú Tiên giới
+17. Đọc spec §3.5. Làm ở client: thần thú dạng chuỗi đốt (đầu + 12–20 đốt + đuôi) chạy theo quỹ đạo xoắn ốc từ chân lên; đốt ở nửa sau vòng xoắn vẽ dưới nhân vật, nửa trước vẽ trên.
+18. Kích hoạt: event Breakthrough vào cảnh giới Tiên (bản to 2.5s), đồng hồ client mỗi 20s (bản nhỏ 1.5s, tắt được trong cài đặt), event RealmDrop (vỡ vụn 0.8s). Tối đa 6 con trên màn hình.
+19. Placeholder trước (tam giác + hình tròn tô màu theo bảng §3.5); art theo ART_PROMPTS §10.1 thả vào sau.
+
+## v4.3 — Bỏ vật phẩm Trường Kiếm
+20. Xóa buff/item `long` (Trường Kiếm) khỏi: config (`buffs.long`, `items.weights.long`), server (spawn, áp buff, công thức chiều dài kiếm — bỏ hệ số `buff_long`), gói tin (bỏ field `buff_long`), client (icon HUD, aura, art loader), bot AI, phím debug buff, assets:report.
+21. Item `long` còn trên bản đồ của phòng đang chạy: bỏ qua khi load (không crash).
+22. Chạy lại toàn bộ test; xóa/sửa test liên quan Trường Kiếm.
