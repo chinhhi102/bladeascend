@@ -30,10 +30,7 @@ type Room struct {
 	// stepMs: thời gian xử lý một tick, gửi kèm snapshot cho overlay đo (spec §13.6).
 	stepMs    float32
 	// itemBuf dùng lại giữa các lần dựng snapshot — spec §13.4 cấm cấp phát mỗi tick.
-	itemBuf   []struct {
-		it *game.Item
-		d  float64
-	}
+	itemBuf   []itemCand
 	cfg       *config.Config
 	G         *game.Game
 	mgr       *Manager
@@ -157,7 +154,8 @@ func (r *Room) addHuman(c *Client, j netproto.Join) {
 	c.Debug = c.Debug || (r.mgr != nil && r.mgr.AllowDebug && j.Debug)
 	p := r.G.AddPlayer(game.SpawnOptions{Name: j.Name, Char: j.Char, GuestID: j.GuestID, Swords: r.cfg.Sword.StartCount})
 	c.PlayerID = p.ID
-	c.knownPlayers, c.knownItems, c.knownMonsters = map[uint32]bool{}, map[uint32]bool{}, map[uint32]bool{}
+	c.knownPlayers, c.knownMonsters = map[uint32]bool{}, map[uint32]bool{}
+	c.knownItems = c.knownItems[:0]
 	r.clients[p.ID] = c
 	c.setRoom(r)
 	w := netproto.Welcome{T: "welcome", ID: p.ID, Room: r.ID, Map: r.G.Map.ID, TickHz: r.cfg.Net.TickHz, Time: r.G.Time, Debug: c.Debug}

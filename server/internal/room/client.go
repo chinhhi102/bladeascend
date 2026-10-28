@@ -32,7 +32,12 @@ type Client struct {
 	room     *Room
 
 	knownPlayers map[uint32]bool
-	knownItems    map[uint32]bool
+	// knownItems[slot] = id của viên đã gửi ở slot đó (0 = chưa gửi gì). Dùng SLICE theo chỉ
+	// số dày đặc chứ không dùng map băm: pprof đo được việc tra `knownItems[id]` trong vòng
+	// lọc tầm nhìn — chạy cho từng viên, từng người, 20 lần/giây — ăn ~25% CPU server. Lưu
+	// id chứ không lưu bool vì slot được DÙNG LẠI: viên mới nhận slot của viên cũ thì id
+	// khác nhau, so id là biết ngay client chưa thấy viên mới này.
+	knownItems    []uint32
 	// knownMonsters: đã gửi phần tĩnh (loại, máu tối đa, bán kính) của con quái này chưa.
 	knownMonsters map[uint32]bool
 

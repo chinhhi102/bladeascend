@@ -113,18 +113,13 @@ function killTree(proc) {
 
 /** chơi một tab: vào game với tên cho trước rồi trả về các hàm điều khiển. */
 async function openTab(browser, name, slow, full) {
-  // SwiftShader tô TỪNG ĐIỂM ẢNH bằng CPU. 10 tab ở 960×540 ăn sạch CPU máy đo, và khi CPU
-  // hết thì Chrome bỏ cả việc xử lý gói WebSocket — lượt đo đầu tiên ra ping 400–2000 ms và
-  // băng thông 0.0 KB/s, tức là ta đang đo cái máy đo chứ không đo game.
+  // Từ khi dùng GPU thật thì cả 10 tab chạy được khổ 960×540 với chất lượng mặc định, tức
+  // là 10 người chơi thật chứ không phải 9 cái bóng. Chỉ số VẼ vẫn chỉ đọc ở tab 1 vì 10
+  // tab dù sao cũng chia nhau một GPU.
   //
-  // Vùng nhìn của server (AOI) tính từ config, KHÔNG phụ thuộc kích thước cửa sổ trình
-  // duyệt, nên thu nhỏ cửa sổ không làm sai một byte nào của số liệu mạng. Vì vậy: chỉ MỘT
-  // tab chạy khổ thật để lấy FPS / draw call, chín tab còn lại thu nhỏ và hạ chất lượng,
-  // chúng chỉ có nhiệm vụ tạo đúng lượng người và lượng kiếm trên server.
-  const ctx = await browser.newContext({ viewport: full ? { width: 960, height: 540 } : { width: 320, height: 180 } });
-  if (!full) {
-    await ctx.addInitScript(() => localStorage.setItem('kx.quality', 'low'));
-  }
+  // (Vùng nhìn AOI của server tính từ config, không phụ thuộc kích thước cửa sổ — nên dù
+  // có thu nhỏ cửa sổ thì cũng không sai một byte số liệu mạng.)
+  const ctx = await browser.newContext({ viewport: { width: 960, height: 540 } });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log(`  [${name}] lỗi trang: ${String(e).slice(0, 160)}`));
   page.on('console', (m) => {
@@ -231,8 +226,19 @@ async function runOnce(label, slow) {
     // Chrome mặc định chỉ cho ~16 ngữ cảnh WebGL cùng lúc rồi giết bớt cái cũ; 10 tab +
     // ngữ cảnh phụ là chạm trần, nên phải nới ra.
     args: [
-      '--use-gl=swiftshader',
-      '--enable-unsafe-swiftshader',
+      // DÙNG GPU THẬT. Mặc định của Chrome headless là SwiftShader — tô từng điểm ảnh bằng
+      // CPU — nên 10 tab ăn sạch CPU máy đo, Chrome bỏ cả việc xử lý gói WebSocket và cả
+      // bảng số (ping, KB/s) hoá ra vô nghĩa. Đo được trên máy này:
+      //   --use-gl=swiftshader        → SwiftShader (CPU)
+      //   --use-gl=angle --use-angle=vulkan → AMD Radeon RX 570 qua RADV  ← dùng cái này
+      //   --use-gl=angle --use-angle=gl     → AMD Radeon RX 570 qua radeonsi (dự phòng)
+      // Máy không có GPU thì đổi `--use-angle=swiftshader`, số vẽ sẽ không đọc được nhưng
+      // số mạng vẫn đúng.
+      '--use-gl=angle',
+      `--use-angle=${args.angle ?? 'vulkan'}`,
+      '--enable-features=Vulkan',
+      '--enable-gpu',
+      '--ignore-gpu-blocklist',
       '--disable-dev-shm-usage',
       '--max-active-webgl-contexts=32',
       '--disable-frame-rate-limit',
@@ -291,12 +297,14 @@ async function runOnce(label, slow) {
   // RỜI PHÒNG — lệnh test gửi vào đó rơi vào hư vô (server báo "chưa ở trong phòng nào").
   // Bấm "Chơi tiếp" cho nó vào lại rồi mới đo.
   const revive = (list = tien) => Promise.all(list.map(async (t) => {
-    const alive = await t.page.evaluate(() => !!window.kx?.world?.me?.()).catch(() => false);
+    // Hỏi `playing()` chứ không hỏi `world.me()`: sau khi chết và rời phòng, `me()` vẫn
+    // trả về bản ghi cũ nên tab đứng ở bảng Tổng kết mà ta tưởng nó đang chơi.
+    const alive = await t.page.evaluate(() => window.kx?.playing?.() === true).catch(() => false);
     if (alive) {
       return;
     }
     await t.page.getByText('Chơi tiếp', { exact: true }).click({ timeout: 2000 }).catch(() => {});
-    await t.page.waitForFunction(() => !!window.kx?.world?.me?.(), null, { timeout: 10000 }).catch(() => {});
+    await t.page.waitForFunction(() => window.kx?.playing?.() === true, null, { timeout: 15000 }).catch(() => {});
   }));
 
   for (let i = 0; i < 20; i++) {
