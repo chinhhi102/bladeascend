@@ -25,7 +25,7 @@ export const BUFF_COLORS: Record<string, number> = {
   spin: 0x3ee6ff,
   haste: 0xff9a3c,
   magnet: 0xff4d4d,
-  long: 0xb36bff,
+  hard: 0x9fc6e8, // Cương Kiếm: ánh thép xanh bạc (ART_PROMPTS §8)
   shield: 0xffd23f,
   exp2: 0x5dff7a,
 };

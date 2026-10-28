@@ -35,7 +35,7 @@ export const MONSTER_ANIMS: AnimSpec[] = [
   { name: 'death', frames: 6, loop: false, short: 'nổ' },
 ];
 
-export const BUFF_IDS = ['spin', 'haste', 'magnet', 'long', 'shield', 'exp2', 'stealth'];
+export const BUFF_IDS = ['spin', 'haste', 'magnet', 'hard', 'shield', 'exp2', 'stealth'];
 
 // ART_PROMPTS §10.1 — thần thú Tiên giới, ghép đốt bằng code (GAME_SPEC §3.5).
 // Rồng dùng chung cho Kim Tiên / Ngọc long / Song long Đạo Tổ, chỉ đổi tint.

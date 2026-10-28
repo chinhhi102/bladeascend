@@ -83,6 +83,23 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 - Dự đoán chuyển động phía client không mô phỏng đẩy lùi (knockback) → khi bị chém thấy giật nhẹ 1 nhịp.
 - **Spec v4.0/v4.1 — ĐÃ LÀM (22/10/2026)**: số cân bằng mới (`move_base` 195, `cell` 140), độ bền kiếm `durability_per_realm` 1.2 thay `clash_ratio_*`, UI không tràn màn hình, 3 lỗi bản đồ (lề 300 + tường biên + dãy tường nối liền). Test Tốc Kiếm không đụng `reach` — PASS ngay, logic vốn đã đúng.
 - **Spec v4.0 — ĐÃ XONG CẢ 3 VIỆC LỚN (22/10/2026)**: lá chắn vòng kế ngoài cùng §5.2 (xem Q15 về mâu thuẫn công thức), Tiên khí + 5 Đài §3.4/§8.5, mapgen viết lại theo 9 bước §8.1 (`cmd/mapgen/gen.go`, có `--seed N --png out.png` xem trước).
+- **Đo hiệu năng TRƯỚC tối ưu (28/10/2026, CHANGES_v4 mục 24)** — `cd server && go run ./cmd/loadtest -secs 15`, đúng kịch bản §13.6 (40 nhân vật, 10 người Đạo Tổ đủ 1 050 kiếm đứng chụm giữa bản đồ):
+
+  | Chỉ số | Đo được | Ngân sách §13.6 | |
+  |---|---|---|---|
+  | Tick server (trung bình) | **11,45 ms** | < 4 ms | VƯỢT ~3× |
+  | Tick server (p95) | **19,89 ms** | < 4 ms | VƯỢT ~5× |
+  | Snapshot lớn nhất / client | **38,3 KB** | < 8 KB | VƯỢT ~5× |
+  | Băng thông xuống / client | **43,1 KB/s** | < 40 KB/s | VƯỢT nhẹ |
+  | Ping p95 | 0,00 ms | < 20 ms | ĐẠT |
+
+  Ping 0 ms vì loadtest chạy trong cùng tiến trình, không qua mạng thật — con số này chỉ
+  chứng minh đường trả Pong **không phải chờ vòng lặp game**, không nói gì về mạng thật.
+  Snapshot 38,3 KB là đỉnh lúc một loạt vật phẩm cùng lọt vào tầm nhìn khổng lồ của người
+  Đạo Tổ (`ItemsAdded` dồn vào một gói) — đúng chỗ mục 27 (delta + chỉ gửi sự kiện) nhắm tới.
+- **`cmd/loadtest` và `cmd/stress` (28/10/2026)**: `loadtest` đo đúng một kịch bản §13.6 và in bảng đối chiếu ngân sách; `stress` quét 10 → 320 người tìm trần của máy (đo được: **160 người vẫn mượt**, 200 người lag). Cả hai chạy nguyên đường thật (ghép phòng, bot, snapshot theo tầm nhìn, mã hoá msgpack), khác `cmd/sim` vốn chỉ chạy `game.Tick` thuần.
+- **Overlay F3 (28/10/2026, §13.6)**: `?debug=true` → phím **F3** bật/tắt bảng đo: fps · ms/khung · thời gian vẽ · tick server (server gửi kèm trong snapshot) · ping · KB/s · cỡ snapshot · số sprite · số draw call (bọc hàm vẽ WebGL) · số entity trong AOI · số kiếm · mức giãn kiếm.
+- **Spec v4.3–v4.5 (28/10/2026)**: bỏ hẳn **Trường Kiếm** — tầm chém chỉ tăng theo số vòng và cảnh giới, `ComputeRingGeom`/`ringGeom` bỏ tham số `longMult`. Thêm **Cương Kiếm** (`hard`): độ bền va kiếm × 1.5, sát thương quái/vật cản × 2, 10s, weight 7. Bể kiếm giờ so theo **độ bền D = 1.2^r × hệ số buff** chứ không so cảnh giới, nên Luyện Khí có Cương Kiếm cứng hơn Trúc Cơ tay không; đổi chiều quay vẫn chỉ xét cảnh giới. `shield_ring` → `body_hit_max_rings: 1`; bỏ `tien_khi_to_exp_base`.
 - **Thần thú Tiên giới (28/10/2026, spec v4.2 §3.5)**: VFX chuỗi đốt ở client (`render/beast.ts`) — 1 đầu + 14 đốt + 1 đuôi, đốt sau đi theo vị trí đầu lúc trước như con rắn, quỹ đạo xoắn ốc từ chân lên, đốt ở nửa sau vòng xoắn vẽ dưới nhân vật nửa trước vẽ trên. 3 kiểu: đột phá 2.5s · thường trực mỗi 20s 1.5s (phím **V** tắt/bật) · gãy vụn khi rớt cảnh giới 0.8s. Trần 6 con cùng lúc, Ẩn Thân/trong bụi không phát. Placeholder tam giác+tròn; 15 job art đã vào `assets:report` nhóm "Thần thú Tiên giới" theo ART_PROMPTS §10.1.
 - **Linh khí và Tiên khí tách hẳn (28/10/2026)**: từ Đại Thừa tầng 10 trở lên chỉ hấp thụ Tiên khí, dưới đó chỉ hấp thụ Linh khí — viên không dùng được đi xuyên qua và client làm mờ 30%. Lệch §3.4 (spec còn ghi đổi 50×2^r) → **Q18**. Phím test **R** giờ cấp thẳng Tiên khí khi đã qua Đại Thừa 10, nếu không sẽ tắc không thử được Tiên giới.
 - **Bể kiếm nhanh gấp 9 lần (28/10/2026)**: tách `clash_cooldown` (mới, = 0 → tính mỗi tick) khỏi `flip_cooldown` (giữ 0.3s, chỉ giới hạn đổi chiều quay). Hai vòng ngoài 30 kiếm ngang cảnh giới mài sạch nhau trong đúng 1 giây. Lệch câu "cooldown 0.3s" của §5.2 → **Q19**.

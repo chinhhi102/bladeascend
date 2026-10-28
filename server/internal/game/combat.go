@@ -223,6 +223,23 @@ func sparseRingsTouch(a, b *Player) (Vec, bool) {
 	return Vec{}, false
 }
 
+// hardMult is the Cương Kiếm multiplier for p right now (spec v4.4 §6.2): "durability" cho
+// va kiếm, "damage" cho chém quái và vật cản. 1 khi không có buff.
+func (g *Game) hardMult(p *Player, which string) float64 {
+	if !p.HasBuff(BuffHard, g.Time) {
+		return 1
+	}
+	b := g.Cfg.Buffs["hard"]
+	m := b.DurabilityMult
+	if which == "damage" {
+		m = b.DamageMult
+	}
+	if m <= 0 {
+		return 1
+	}
+	return m
+}
+
 func (g *Game) clash(a, b *Player, at Vec) {
 	ra, rb := g.Prog.Realm(a.Level), g.Prog.Realm(b.Level)
 	// Spec §5.2: va kiếm KHÔNG đẩy hai người ra nữa — vòng kiếm chỉ chặn không cho chém
@@ -240,8 +257,8 @@ func (g *Game) clash(a, b *Player, at Vec) {
 		}
 	}
 	out := ResolveClash(g.Cfg.Sword,
-		ClashSide{Realm: ra, Count: a.Ring.Count, Crack: a.Ring.Crack},
-		ClashSide{Realm: rb, Count: b.Ring.Count, Crack: b.Ring.Crack})
+		ClashSide{Realm: ra, Count: a.Ring.Count, Crack: a.Ring.Crack, DurMult: g.hardMult(a, "durability")},
+		ClashSide{Realm: rb, Count: b.Ring.Count, Crack: b.Ring.Crack, DurMult: g.hardMult(b, "durability")})
 	a.Ring.Crack, b.Ring.Crack = out.CrackA, out.CrackB
 	g.breakSwords(a, out.LostA)
 	g.breakSwords(b, out.LostB)
@@ -318,6 +335,8 @@ func (g *Game) hitMonsters(a *Player) {
 		if hits == 0 {
 			continue
 		}
+		// Cương Kiếm: mỗi lần chạm gây 2 damage thay vì 1 (spec v4.4 §5.3).
+		hits = int(float64(hits) * g.hardMult(a, "damage"))
 		m.HP -= hits
 		m.FleeUntil, m.FleeFrom = g.Time+g.Cfg.Monsters.FleeSecs, a.Pos
 		if m.HP <= 0 {
@@ -352,7 +371,8 @@ func (g *Game) ObstacleDamage(a *Player) float64 {
 	if a.Ring.Count == 0 {
 		return 0
 	}
-	return float64(g.Prog.Realm(a.Level)+1) * (1 + g.Cfg.Obstacles.DmgPerExtraRng*float64(rings-1))
+	// Cương Kiếm nhân đôi sức phá vật cản (spec v4.4 §5.3).
+	return float64(g.Prog.Realm(a.Level)+1) * (1 + g.Cfg.Obstacles.DmgPerExtraRng*float64(rings-1)) * g.hardMult(a, "damage")
 }
 
 func (g *Game) hitObstacles(a *Player) {

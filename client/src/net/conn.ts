@@ -22,6 +22,12 @@ export class Conn {
   private onCloseCb: (() => void) | null = null;
   private shouldReconnect = true;
   rttMs = 0;
+  // Đếm băng thông cho overlay đo (spec §13.6): bao nhiêu KB/s đang nhận và gói snapshot
+  // gần nhất to bao nhiêu. Không có số này thì không phân biệt được nghẽn mạng với nghẽn vẽ.
+  private bytesAcc = 0;
+  private bytesAt = performance.now();
+  kbPerSec = 0;
+  lastSnapBytes = 0;
 
   constructor(private readonly onMessage: Handler) {}
 
@@ -40,7 +46,18 @@ export class Conn {
       this.onOpenCb?.();
     };
     ws.onmessage = (e: MessageEvent<ArrayBuffer>) => {
+      const bytes = e.data.byteLength;
+      this.bytesAcc += bytes;
+      const now = performance.now();
+      if (now - this.bytesAt >= 1000) {
+        this.kbPerSec = this.bytesAcc / 1024 / ((now - this.bytesAt) / 1000);
+        this.bytesAcc = 0;
+        this.bytesAt = now;
+      }
       const msg = decode(new Uint8Array(e.data)) as ServerMsg;
+      if (msg.t === 'snap') {
+        this.lastSnapBytes = bytes;
+      }
       this.delay(() => this.receive(msg));
     };
     ws.onclose = () => {

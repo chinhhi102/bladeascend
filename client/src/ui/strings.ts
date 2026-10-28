@@ -201,7 +201,7 @@ export const STR = {
     spin: 'Tốc Kiếm',
     haste: 'Thần Hành',
     magnet: 'Nam Châm',
-    long: 'Trường Kiếm',
+    hard: 'Cương Kiếm',
     shield: 'Kim Cang',
     exp2: 'Song Bội Đan',
     stealth: 'Ẩn Thân Phù',

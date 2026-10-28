@@ -233,7 +233,7 @@ var buffIcons = []struct{ id, icon, color string }{
 	{"spin", "a cyan spinning whirlwind around a small sword", "cyan"},
 	{"haste", "a winged sandal", "orange"},
 	{"magnet", "a red horseshoe magnet", "red"},
-	{"long", "a very long thin sword with an up arrow", "purple"},
+	{"hard", "a thick heavy steel sword with a diamond sparkle on the blade", "silver-blue"},
 	{"shield", "a golden buddhist-style round shield", "gold"},
 	{"exp2", "a glowing magic pill made of light", "green"},
 	{"stealth", "a paper talisman with swirling ink", "grey"},

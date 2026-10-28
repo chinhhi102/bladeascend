@@ -9,14 +9,14 @@ const (
 	BuffSpin = iota
 	BuffHaste
 	BuffMagnet
-	BuffLong
+	BuffHard
 	BuffShield
 	BuffExp2
 	BuffStealth
 	BuffCount
 )
 
-var BuffNames = [BuffCount]string{"spin", "haste", "magnet", "long", "shield", "exp2", "stealth"}
+var BuffNames = [BuffCount]string{"spin", "haste", "magnet", "hard", "shield", "exp2", "stealth"}
 
 // BuffByName maps item kind → buff index.
 func BuffByName(name string) (int, bool) {

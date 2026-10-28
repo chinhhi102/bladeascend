@@ -241,6 +241,7 @@ Vật phẩm buff: mỗi cái là 1 bong bóng chứa icon, cùng 1 template:
 | Tốc Kiếm | `a cyan spinning whirlwind around a small sword` | cyan | vòng gió xanh quanh vòng kiếm |
 | Thần Hành | `a winged sandal` | orange | vệt khói chạy sau chân |
 | Nam Châm | `a red horseshoe magnet` | red | sóng tròn hút vào |
+| Cương Kiếm | `a thick heavy steel sword with a diamond sparkle on the blade` | silver-blue | lưỡi kiếm lóe ánh thép, tia lấp lánh chạy dọc vòng kiếm |
 | Kim Cang | `a golden buddhist-style round shield` | gold | quả cầu vàng trong suốt bao quanh người |
 | Song Bội Đan | `a glowing pill with "x2" shape made of light` | green | đốm sáng xanh bay lên |
 | Ẩn Thân Phù | `a paper talisman with swirling ink` | grey | (chỉ chủ nhân thấy mình mờ 40%) |

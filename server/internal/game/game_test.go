@@ -285,13 +285,34 @@ func TestExp2DoublesGains(t *testing.T) {
 	}
 }
 
-func TestLongBuffExtendsRing(t *testing.T) {
+// Spec v4.3 bỏ hẳn Trường Kiếm: không vật phẩm nào kéo dài kiếm nữa, và `long` không còn
+// là một buff hợp lệ.
+func TestNoBuffExtendsTheBlade(t *testing.T) {
 	g := quietGame(t, nil)
 	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
 	l0 := p.Geom.Len(0)
-	g.ApplyBuff(p, "long")
-	if math.Abs(p.Geom.Len(0)-l0*1.3) > 1e-9 {
-		t.Fatalf("length %v, want %v", p.Geom.Len(0), l0*1.3)
+	for _, name := range BuffNames {
+		g.ApplyBuff(p, name)
+		if math.Abs(p.Geom.Len(0)-l0) > 1e-9 {
+			t.Fatalf("buff %q đổi chiều dài kiếm %v → %v", name, l0, p.Geom.Len(0))
+		}
+	}
+	if _, ok := BuffByName("long"); ok {
+		t.Fatal("vẫn còn buff \"long\": spec v4.3 đã bỏ Trường Kiếm")
+	}
+	if _, ok := g.Cfg.Items.Weights["long"]; ok {
+		t.Fatal("config vẫn còn thả vật phẩm Trường Kiếm")
+	}
+}
+
+// Spec v4.4 §5.3: Cương Kiếm nhân đôi sức phá vật cản.
+func TestHardBuffDoublesObstacleDamage(t *testing.T) {
+	g := quietGame(t, nil)
+	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 20, Swords: 30})
+	before := g.ObstacleDamage(p)
+	g.ApplyBuff(p, "hard")
+	if after := g.ObstacleDamage(p); math.Abs(after-before*g.Cfg.Buffs["hard"].DamageMult) > 1e-9 {
+		t.Fatalf("sức phá vật cản %v → %v, muốn ×%v", before, after, g.Cfg.Buffs["hard"].DamageMult)
 	}
 }
 

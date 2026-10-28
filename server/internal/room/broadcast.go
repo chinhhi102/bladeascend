@@ -30,7 +30,7 @@ func (r *Room) broadcast() {
 
 func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) netproto.Snapshot {
 	g := r.G
-	s := netproto.Snapshot{T: "snap", Tick: r.tick, Time: g.Time, Ack: viewer.LastSeq}
+	s := netproto.Snapshot{T: "snap", Tick: r.tick, Time: g.Time, Ack: viewer.LastSeq, SrvMs: r.stepMs}
 	seen := map[uint32]bool{}
 	// Names go out the first time a client sees a player, and again every couple of seconds
 	// so a client that missed the first packet still recovers.

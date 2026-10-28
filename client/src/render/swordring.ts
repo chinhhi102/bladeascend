@@ -13,7 +13,6 @@ const ART_FILL = 0.9; // blade art fills ~90% of its canvas height
 const GHOSTS = 2; // trailing copies per sword that fake motion blur (spec §4.1b)
 const GHOST_STEP = (7 * Math.PI) / 180;
 const MAIN_ALPHA = 0.95;
-const LONG_BIT = 1 << BUFFS.indexOf('long');
 const SPIN_BIT = 1 << BUFFS.indexOf('spin');
 
 let bladeTex: Texture | null = null;
@@ -88,7 +87,7 @@ export class SwordRing {
   count = 0;
   private prevSlots: number[] = [];
   private tweenStart = 0;
-  /** Chữ ký hình học đang áp: đổi scale hoặc bật/tắt Trường Kiếm thì phải tính lại. */
+  /** Chữ ký hình học đang áp: lên tầng (scale) hay đổi số vòng thì phải tính lại. */
   private geomKey = '';
   /** Mức giãn: 1 = vẽ mọi thanh, 2 = vẽ cách một thanh… chỉ áp cho vòng dày. */
   private detail = 1;
@@ -102,15 +101,15 @@ export class SwordRing {
   update(f: PlayerFrame, now: number, showHitbox: boolean, detail = 1): void {
     const s = f.s;
     const realm = realmOf(this.cfg, s.L);
-    const g = ringGeom(this.cfg, s.sc, s.n, s.bf & LONG_BIT ? (this.cfg.buffs.long?.mult ?? 1) : 1);
+    const g = ringGeom(this.cfg, s.sc, s.n);
     if (s.n !== this.count || realm !== this.realm || detail !== this.detail) {
       this.detail = detail;
       this.rebuild(s.n, realm, g, now);
     }
-    // Hình học chỉ đổi khi lên tầng (scale) hoặc bật/tắt Trường Kiếm, không đổi mỗi khung —
+    // Hình học chỉ đổi khi lên tầng (scale) hoặc mở vòng mới, không đổi mỗi khung —
     // nên bán kính, chiều dài và tỉ lệ của từng thanh kiếm tính sẵn ở đây, không tính lại
     // trong vòng lặp nóng.
-    const key = `${g.rings}:${s.sc}:${g.width}:${s.bf & LONG_BIT}`;
+    const key = `${g.rings}:${s.sc}:${g.width}`;
     if (key !== this.geomKey) {
       this.geomKey = key;
       this.refreshGeom(g);

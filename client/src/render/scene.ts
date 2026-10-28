@@ -4,7 +4,7 @@ import { sound } from '../audio/sound';
 import { absorbable, banksTienKhi, cameraViewHeight, type GameConfig, realmOf, tienIndex } from '../config';
 import type { ClientWorld } from '../net/state';
 import type { ItemState } from '../net/protocol';
-import { BUFFS, FLAG, type GameEvent } from '../net/protocol';
+import { FLAG, type GameEvent } from '../net/protocol';
 import { pick, STR } from '../ui/strings';
 import { Beast, type BeastMode, TIEN_BEASTS } from './beast';
 import { ItemSprite, MonsterSprite } from './entities';
@@ -21,6 +21,32 @@ const BEAST_MAX = 6; // spec §3.5: tối đa 6 thần thú cùng lúc trên mà
 // vòng thưa giữ nguyên vì ở đó từng thanh là một lưỡi kiếm riêng người chơi phải né.
 // Không có trần này thì 5 người Đại Thừa 500 kiếm gặp nhau là 2 500 thanh × 60 khung/giây.
 const SWORD_BUDGET = 1600;
+
+/**
+ * drawCalls đếm số lệnh vẽ WebGL mỗi khung. Pixi không công bố con số này, mà nó lại là chỉ
+ * số quan trọng nhất để biết nghẽn ở GPU hay ở CPU, nên bọc thẳng hàm vẽ của ngữ cảnh WebGL.
+ * Chỉ bật ở chế độ debug (spec §13.6).
+ */
+export const drawCalls = { perFrame: 0, acc: 0, frames: 0 };
+
+export function countDrawCalls(gl: WebGL2RenderingContext): void {
+  for (const name of ['drawElements', 'drawArrays', 'drawElementsInstanced', 'drawArraysInstanced'] as const) {
+    const fn = gl[name] as (...a: unknown[]) => void;
+    (gl as unknown as Record<string, unknown>)[name] = (...a: unknown[]): void => {
+      drawCalls.acc += 1;
+      fn.apply(gl, a);
+    };
+  }
+}
+
+/** countNodes đếm số đối tượng hiển thị đang nằm trong cây vẽ. */
+function countNodes(c: { children?: unknown[] }): number {
+  let n = 1;
+  for (const k of (c.children ?? []) as { children?: unknown[] }[]) {
+    n += countNodes(k);
+  }
+  return n;
+}
 const BEAST_EVERY = 20; // spec §3.5: bản thường trực mỗi 20s
 const AMBIENT_KEY = 'kx.beastAmbient'; // tắt/bật bản thường trực trong cài đặt đồ họa
 const MOOD_EMOTE_CHANCE = 0.12; // chance per mood change that a character shouts (run/chase/flee)
@@ -77,6 +103,10 @@ export class GameScene {
       autoDensity: true,
     });
     this.app.ticker.maxFPS = maxFps;
+    const gl = (this.app.renderer as unknown as { gl?: WebGL2RenderingContext }).gl;
+    if (gl && new URLSearchParams(location.search).get('debug') === 'true') {
+      countDrawCalls(gl); // chỉ đếm khi đang đo, tránh phí ở bản chơi thật
+    }
     parent.appendChild(this.app.canvas);
     this.entities.sortableChildren = true;
     this.rings.sortableChildren = true;
@@ -141,8 +171,7 @@ export class GameScene {
     this.lastFrames = frames;
     const me = frames.find((f) => f.view.id === w.myId);
     if (me) {
-      const long = me.s.bf & (1 << BUFFS.indexOf('long')) ? (this.cfg.buffs.long?.mult ?? 1) : 1;
-      this.updateCamera(me.x, me.y, me.s.sc, ringGeom(this.cfg, me.s.sc, me.s.n, long).reach, now);
+      this.updateCamera(me.x, me.y, me.s.sc, ringGeom(this.cfg, me.s.sc, me.s.n).reach, now);
     }
     this.syncPlayers(frames, now);
     this.syncMonsters(now);
@@ -154,6 +183,12 @@ export class GameScene {
     this.vfx.update(now);
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
     this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;
+    drawCalls.frames += 1;
+    if (drawCalls.frames >= 30) {
+      drawCalls.perFrame = drawCalls.acc / drawCalls.frames;
+      drawCalls.acc = 0;
+      drawCalls.frames = 0;
+    }
   }
 
   /** toggleHitbox shows the server's sword capsules over the drawn swords (debug key H). */
@@ -362,7 +397,7 @@ export class GameScene {
    * Có nó thì lúc ai đó kêu lag là biết ngay nghẽn ở đâu — khung hình thấp mà `vẽ` nhỏ là
    * nghẽn mạng chứ không phải máy yếu, còn `vẽ` cao là do quá nhiều thứ trên màn hình.
    */
-  perfLine(dt: number, rttMs: number): string {
+  perfLine(dt: number, net: { rttMs: number; kbPerSec: number; snapBytes: number; srvMs: number }): string {
     this.fpsAcc += dt;
     this.fpsFrames += 1;
     if (this.fpsAcc >= 0.5) {
@@ -374,9 +409,13 @@ export class GameScene {
     for (const p of this.players.values()) {
       swords += p.swordCount;
     }
+    const aoi = this.players.size + this.monsters.size + this.items.size + this.orbs.ids().length;
     return [
-      `${this.fps.toFixed(0)} fps · vẽ ${this.lastRenderMs.toFixed(1)}ms · ping ${rttMs.toFixed(0)}ms`,
-      `người ${this.players.size} · kiếm ${swords} · quái ${this.monsters.size}`,
+      `${this.fps.toFixed(0)} fps · ${(1000 / Math.max(this.fps, 1)).toFixed(1)} ms/khung · vẽ ${this.lastRenderMs.toFixed(1)} ms`,
+      `server ${net.srvMs.toFixed(2)} ms/tick · ping ${net.rttMs.toFixed(0)} ms`,
+      `mạng ${net.kbPerSec.toFixed(1)} KB/s · snapshot ${(net.snapBytes / 1024).toFixed(1)} KB`,
+      `sprite ${countNodes(this.app.stage)} · draw call ${drawCalls.perFrame.toFixed(0)}`,
+      `AOI ${aoi} · người ${this.players.size} · kiếm ${swords} · quái ${this.monsters.size}`,
       `EXP ${this.orbs.ids().length} · vật phẩm ${this.items.size} · giãn kiếm 1/${this.detail}`,
     ].join('\n');
   }
