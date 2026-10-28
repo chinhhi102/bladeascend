@@ -81,6 +81,15 @@ func (r *Room) Run() {
 }
 
 // Step advances one tick; exported so cmd/sim can run rooms without real time.
+// Clients là danh sách người đang trong phòng; cmd/stress dùng để bơm input giả.
+func (r *Room) Clients() []*Client {
+	out := make([]*Client, 0, len(r.clients))
+	for _, c := range r.clients {
+		out = append(out, c)
+	}
+	return out
+}
+
 func (r *Room) Step(dt float64) {
 	r.drainInbox()
 	r.applyInputs()

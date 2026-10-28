@@ -208,3 +208,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
   .scroll-panel.has-scroll .btn { padding: 8px 12px; font-size: 14px; }
   .scroll-panel.has-scroll .ghost { width: 60px; height: 60px; }
 }
+
+/* Đồng hồ đo hiệu năng ở chế độ ?debug=true: cho biết lag nằm ở vẽ hay ở mạng. */
+.perf {
+  position: absolute; right: 8px; bottom: 28px; text-align: right;
+  font: 11px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  color: #bfe9ff; background: rgba(0, 0, 0, 0.45); padding: 4px 7px; border-radius: 6px;
+  white-space: pre; pointer-events: none;
+}

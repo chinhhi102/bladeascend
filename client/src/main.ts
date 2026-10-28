@@ -241,6 +241,9 @@ class App {
     this.scene.render(dt);
     const me = this.world.me();
     this.hud.update(me, this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
+    if (this.debug) {
+      this.hud.setPerf(this.scene.perfLine(dt, this.conn.rttMs));
+    }
     if (me) {
       const view = this.scene.viewSize();
       this.hud.minimap.render(me.x, me.y, me.f, view.w, view.h, performance.now() / 1000);
