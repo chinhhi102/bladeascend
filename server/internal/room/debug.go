@@ -1,6 +1,8 @@
 package room
 
 import (
+	"log"
+
 	"kiemxoay/server/internal/game"
 	"kiemxoay/server/internal/netproto"
 )
@@ -10,6 +12,10 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 	r.Do(func() {
 		p, ok := r.G.Players[c.PlayerID]
 		if !ok || p.Dead {
+			// Im lặng bỏ qua ở đây từng làm bài test 10 tab ra bảng số sai suốt hai lượt:
+			// lệnh lên Đạo Tổ gửi đi lúc nhân vật đang nằm chờ hồi sinh thì rơi vào hư vô.
+			log.Printf("dbg %q bỏ qua: người chơi %d %s", d.Cmd, c.PlayerID,
+				map[bool]string{true: "đã chết", false: "không còn trong phòng"}[ok])
 			return
 		}
 		switch d.Cmd {

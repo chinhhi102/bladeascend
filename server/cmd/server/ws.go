@@ -135,10 +135,19 @@ func (s *server) dispatch(c *room.Client, t string, data []byte) {
 		}
 	case netproto.TDebug:
 		var d netproto.Debug
-		if s.debug && c.Debug && netproto.Decode(data, &d) == nil {
-			if rm := c.Room(); rm != nil {
-				rm.Debug(c, d)
-			}
+		// Bỏ lệnh test trong im lặng từng làm hai lượt đo 10 tab ra bảng số sai mà không ai
+		// biết vì sao. Giờ nói rõ bỏ vì lý do gì.
+		switch rm := c.Room(); {
+		case !s.debug:
+			log.Printf("dbg bỏ qua: server không chạy với -debug")
+		case !c.Debug:
+			log.Printf("dbg bỏ qua: client %d không ở chế độ debug", c.PlayerID)
+		case netproto.Decode(data, &d) != nil:
+			log.Printf("dbg bỏ qua: gói hỏng (%d byte)", len(data))
+		case rm == nil:
+			log.Printf("dbg bỏ qua: client %d chưa ở trong phòng nào", c.PlayerID)
+		default:
+			rm.Debug(c, d)
 		}
 	default:
 	}
