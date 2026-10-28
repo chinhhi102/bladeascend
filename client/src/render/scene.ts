@@ -12,6 +12,7 @@ import { MapView, type Viewer } from './mapview';
 import { OrbLayer } from './orblayer';
 import { Ambient } from './ambient';
 import { Breakthrough, HITSTOP_SECS } from './breakthrough';
+import { autoQuality } from './quality';
 import { AURA_FAR_PX, TienAura } from './tienaura';
 import { VfxLayer } from './vfxlayer';
 import { PlayerSprite } from './player';
@@ -198,7 +199,8 @@ export class GameScene {
     if (me) {
       this.updateCamera(me.x, me.y, me.s.sc, ringGeom(this.cfg, me.s.sc, me.s.n).reach, now);
     }
-    this.glow.apply(); // người chơi vừa đổi mức chất lượng thì gắn lại bloom (§3.6)
+    autoQuality(this.fps, now); // máy yếu thì tự hạ chất lượng (spec §13.6 mục 8)
+    this.glow.apply(); // mức chất lượng vừa đổi thì gắn lại bloom (§3.6)
     this.syncPlayers(frames, now);
     this.syncMonsters(now);
     this.syncItems(now, me ? banksTienKhi(this.cfg, me.s.L) : false);
@@ -585,12 +587,22 @@ export class GameScene {
       // Ẩn Thân / trong bụi: mờ theo chủ (spec §3.5), không ẩn hẳn.
       const hidden = (f.s.fl & FLAG.stealth) !== 0 || (f.s.fl & FLAG.bush) !== 0;
       e.b.ownerAlpha = hidden ? 0.2 : 1;
+      e.b.burning = (f.s.fl & FLAG.burning) !== 0;
       e.b.update(f.x, feet, now, r * 2.6 * this.zoom >= BEAST_FAR_PX);
       // Lớp sau nằm ngay dưới nhân vật, lớp trước ngay trên — nhân vật zIndex = y + r×0.75.
       e.b.back.zIndex = feet - 0.5;
       e.b.front.zIndex = feet + 0.5;
       return true;
     });
+  }
+
+  /** flashBeasts cho thần thú của một người lóe sáng + lượn nhanh (spec §3.5 v4.7). */
+  private flashBeasts(owner: number, now: number): void {
+    for (const e of this.beasts) {
+      if (e.owner === owner && e.b.mode === 'companion') {
+        e.b.flash(now);
+      }
+    }
   }
 
   /** spawnBeast tạo thần thú cho một người, tôn trọng trần 6 con của spec §3.5. */
@@ -636,6 +648,9 @@ export class GameScene {
         break;
       }
       case 'Hit':
+        if (e.s === 'shield') {
+          this.flashBeasts(e.b ?? 0, now); // khiên đỡ được một đòn → thần thú lóe sáng
+        }
         this.vfx.play(e.s === 'shield' ? 'shield_break' : 'stun_stars', e.x, e.y - size * 0.6, size * 1.6, now);
         sound.play(e.s === 'shield' ? 'shield_break' : 'sword_hit_body', e.b === this.world?.myId || mine ? 1 : 0.5);
         if (e.b === this.world?.myId) {
@@ -706,6 +721,13 @@ export class GameScene {
           if (s === 'chest') {
             this.vfx.play('levelup_aura', e.x, e.y, size * 2, now);
           }
+        }
+        break;
+      case 'TienKhiPicked':
+        // Nhặt Tiên khí: thần thú mừng, lóe sáng và lượn nhanh một vòng (spec §3.5 v4.7).
+        this.flashBeasts(e.a ?? 0, now);
+        if (mine) {
+          sound.play('pickup_exp');
         }
         break;
       case 'BuffEnd':
