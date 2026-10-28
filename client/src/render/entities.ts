@@ -213,8 +213,14 @@ export class ItemSprite {
     return g;
   }
 
-  update(now: number): void {
+  /**
+   * update bobs the item and dims it when the local player cannot absorb it — Linh khí và
+   * Tiên khí là hai đường tu tách hẳn (spec §3.4), nên viên không dùng được phải nhìn ra
+   * ngay chứ không để người chơi chạy theo vô ích.
+   */
+  update(now: number, absorbable = true): void {
     this.root.pivot.y = Math.sin(now * 3 + this.phase) * 4;
+    this.root.alpha = absorbable ? 1 : 0.3;
   }
 
   destroy(): void {

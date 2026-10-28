@@ -11,6 +11,7 @@ const (
 	tagMonster uint8 = iota + 1
 	tagObstacle
 	tagClash
+	tagFlip
 )
 
 // canFight is true when a player can deal and receive sword interactions this tick.
@@ -150,7 +151,10 @@ func (g *Game) resolveSwordSword() {
 			if !g.canFight(b) || b.Ring.Count == 0 {
 				continue
 			}
-			if at, ok := g.ringsTouch(a, b); ok && g.cooldownReady(pairKey(tagClash, a.ID, b.ID, 0), g.Cfg.Sword.FlipCooldown) {
+			// Bể kiếm tính mỗi tick khi hai vòng còn chạm nhau (clash_cooldown = 0), nên
+			// hai vòng ngoài 30 kiếm ngang cảnh giới mài sạch nhau trong đúng 1 giây.
+			// Đổi chiều quay vẫn giữ cooldown riêng để vòng kiếm không giật liên hồi.
+			if at, ok := g.ringsTouch(a, b); ok && g.cooldownReady(pairKey(tagClash, a.ID, b.ID, 0), g.Cfg.Sword.ClashCooldown) {
 				g.clash(a, b, at)
 			}
 		}
@@ -226,7 +230,7 @@ func (g *Game) clash(a, b *Player, at Vec) {
 	}
 	// Spec §5.2 (v3.5): only an even match sends both rings spinning the other way; against a
 	// different realm nobody flips, so the stronger ring keeps grinding in the same direction.
-	if !g.Cfg.Sword.FlipOnlySameRealm || ra == rb {
+	if (!g.Cfg.Sword.FlipOnlySameRealm || ra == rb) && g.cooldownReady(pairKey(tagFlip, a.ID, b.ID, 0), g.Cfg.Sword.FlipCooldown) {
 		a.Ring.Dir, b.Ring.Dir = -a.Ring.Dir, -b.Ring.Dir
 		for _, p := range []*Player{a, b} {
 			g.emit(Event{Kind: "RingFlip", A: p.ID, N: int(p.Ring.Dir), X: float32(at.X), Y: float32(at.Y)})

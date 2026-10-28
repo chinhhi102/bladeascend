@@ -4,7 +4,9 @@ import "math"
 
 // GainExp adds EXP (applying Song Bội Đan when boosted) and handles level-ups (spec §3).
 func (g *Game) GainExp(p *Player, amount float64, boosted bool) {
-	if amount <= 0 || p.Dead {
+	// Hai đường tu tách hẳn (§3.4, anh chốt 2026-10-28): từ Đại Thừa tầng 10 trở lên chỉ
+	// hấp thụ Tiên khí, Linh khí không vào nữa.
+	if amount <= 0 || p.Dead || !g.CanAbsorbExp(p) {
 		return
 	}
 	if boosted && p.HasBuff(BuffExp2, g.Time) {

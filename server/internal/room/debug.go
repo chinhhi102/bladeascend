@@ -16,7 +16,16 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 		case "exp":
 			r.G.GainExp(p, float64(d.N), false)
 		case "realm":
-			// Jump to the start of the next realm.
+			// Jump to the start of the next realm. Từ Đại Thừa tầng 10 trở lên không hấp thụ
+			// Linh khí nữa (§3.4) nên phải cấp thẳng Tiên khí, không thì phím test tắc ở đó
+			// và không bao giờ thử được Tiên giới.
+			if r.G.BanksTienKhi(p) {
+				need := r.G.Prog.TienNextAt(r.G.TienRealmOf(p))
+				if need > 0 {
+					r.G.GainTienKhi(p, need-p.TienKhi)
+				}
+				return
+			}
 			next := (r.G.Prog.Realm(p.Level) + 1) * r.G.Prog.Tiers()
 			r.G.GainExp(p, r.G.Prog.Threshold(next)-p.TotalExp, false)
 		case "sword":

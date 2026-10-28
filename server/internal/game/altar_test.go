@@ -111,21 +111,59 @@ func TestTienKhiOrbExpires(t *testing.T) {
 	}
 }
 
-// Spec §3.4: Đại Thừa 10 trở lên thì Tiên khí vào thanh; dưới đó đổi 50 × 2^r Linh khí.
-func TestTienKhiBanksOrConverts(t *testing.T) {
+// Hai đường tu tách hẳn (§3.4, anh chốt 2026-10-28): Đại Thừa 10 trở lên chỉ hấp thụ Tiên
+// khí, dưới đó chỉ hấp thụ Linh khí — không đổi qua lại nữa.
+func TestTienKhiAndLinhKhiDoNotMix(t *testing.T) {
 	g := altarGame(t)
 	top := g.AddPlayer(SpawnOptions{Name: "Top", Level: g.Prog.TopMortalLevel(), Swords: 1})
 	if got := g.GainTienKhi(top, 50); got != 50 || top.TienKhi != 50 {
 		t.Fatalf("Đại Thừa 10 phải tích thẳng: nhận %v, thanh %v", got, top.TienKhi)
 	}
+	topExp := top.TotalExp
+	g.GainExp(top, 10000, false)
+	if math.Abs(top.TotalExp-topExp) > 1e-9 {
+		t.Fatalf("người tu Tiên khí vẫn hấp thụ Linh khí: %v → %v", topExp, top.TotalExp)
+	}
+
 	low := g.AddPlayer(SpawnOptions{Name: "Low", Level: 0, Swords: 1})
 	before := low.TotalExp
 	if got := g.GainTienKhi(low, 2); got != 0 {
 		t.Fatalf("Luyện Khí không được tích Tiên khí, nhận %v", got)
 	}
-	want := 2 * g.Cfg.Cultivation.TienKhiToExpBase * 1 // 50 × 2^0
-	if math.Abs(low.TotalExp-before-want) > 1e-9 {
-		t.Fatalf("đổi được %v Linh khí, muốn %v", low.TotalExp-before, want)
+	if math.Abs(low.TotalExp-before) > 1e-9 {
+		t.Fatalf("Tiên khí vẫn đổi thành %v Linh khí cho người phàm", low.TotalExp-before)
+	}
+	g.GainExp(low, 100, false)
+	if low.TotalExp <= before {
+		t.Fatal("người phàm phải hấp thụ được Linh khí")
+	}
+}
+
+// Viên nào không hấp thụ được thì đi xuyên qua, vẫn nằm đó cho người dùng được nhặt.
+func TestOrbsOnlyGoToTheRightCultivator(t *testing.T) {
+	g := altarGame(t)
+	low := g.AddPlayer(SpawnOptions{Name: "Low", Level: 0, Swords: 1})
+	place(g, low, Vec{X: 6000, Y: 6000}, 0)
+	khi := g.addItem(ItemTienKhi, 10, low.Pos) // ngay dưới chân
+	g.Tick(dt)
+	if g.Items[khi.ID] == nil {
+		t.Fatal("người phàm nhặt mất viên Tiên khí")
+	}
+
+	top := g.AddPlayer(SpawnOptions{Name: "Top", Level: g.Prog.TopMortalLevel(), Swords: 1})
+	place(g, top, Vec{X: 7000, Y: 7000}, 0)
+	orb := g.addItem("orb", 20, top.Pos)
+	g.Tick(dt)
+	if g.Items[orb.ID] == nil {
+		t.Fatal("người tu Tiên khí nhặt mất viên Linh khí")
+	}
+	// Đổi chủ: đúng người thì nhặt được. Dời Low đi để hai người không chém nhau rớt cảnh giới.
+	place(g, low, Vec{X: 9000, Y: 9000}, 0)
+	place(g, top, g.Items[khi.ID].Pos, 0)
+	top.InvulnUntil = 1e9
+	g.Tick(dt)
+	if g.Items[khi.ID] != nil {
+		t.Fatal("Đại Thừa 10 phải nhặt được viên Tiên khí")
 	}
 }
 

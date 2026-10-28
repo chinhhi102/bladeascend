@@ -89,13 +89,26 @@ func (g *Game) resolvePickups() {
 		r2 := r * r
 		var got []*Item
 		g.ItemsNear(p.Pos, r, r, func(it *Item) {
-			if it.Pos.Dist2(p.Pos) <= r2 && (it.Owner == 0 || it.Owner == p.ID || g.Time >= it.OwnerUntil) {
+			if it.Pos.Dist2(p.Pos) <= r2 && g.canAbsorb(p, it) && (it.Owner == 0 || it.Owner == p.ID || g.Time >= it.OwnerUntil) {
 				got = append(got, it)
 			}
 		})
 		for _, it := range got {
 			g.pickup(p, it)
 		}
+	}
+}
+
+// canAbsorb: viên Linh khí và viên Tiên khí không lẫn sang nhau (§3.4). Người không hấp thụ
+// được thì đi xuyên qua, viên vẫn nằm đó cho người dùng được tới nhặt.
+func (g *Game) canAbsorb(p *Player, it *Item) bool {
+	switch it.Kind {
+	case "orb":
+		return g.CanAbsorbExp(p)
+	case ItemTienKhi:
+		return g.CanAbsorbTienKhi(p)
+	default:
+		return true
 	}
 }
 
@@ -110,10 +123,9 @@ func (g *Game) pickup(p *Player, it *Item) {
 	case "bundle":
 		g.AddSwords(p, int(it.Value))
 	case ItemTienKhi:
-		// Đại Thừa 10 trở lên thì vào thanh Tiên khí; dưới đó đổi sang Linh khí (§3.4).
-		banked := g.GainTienKhi(p, it.Value)
-		g.emit(Event{Kind: "TienKhiPicked", A: p.ID, To: p.ID, N: int(it.Value),
-			S: map[bool]string{true: "khi", false: "exp"}[banked > 0],
+		// Chỉ người từ Đại Thừa tầng 10 trở lên nhặt được (canAbsorb đã lọc ở trên).
+		g.GainTienKhi(p, it.Value)
+		g.emit(Event{Kind: "TienKhiPicked", A: p.ID, To: p.ID, N: int(it.Value), S: "khi",
 			X: float32(it.Pos.X), Y: float32(it.Pos.Y)})
 	case "chest":
 		for i := 0; i < g.Cfg.Items.ChestItems; i++ {

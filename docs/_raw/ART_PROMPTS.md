@@ -241,7 +241,6 @@ Vật phẩm buff: mỗi cái là 1 bong bóng chứa icon, cùng 1 template:
 | Tốc Kiếm | `a cyan spinning whirlwind around a small sword` | cyan | vòng gió xanh quanh vòng kiếm |
 | Thần Hành | `a winged sandal` | orange | vệt khói chạy sau chân |
 | Nam Châm | `a red horseshoe magnet` | red | sóng tròn hút vào |
-| Trường Kiếm | `a very long thin sword with an up arrow` | purple | kiếm phát sáng tím |
 | Kim Cang | `a golden buddhist-style round shield` | gold | quả cầu vàng trong suốt bao quanh người |
 | Song Bội Đan | `a glowing pill with "x2" shape made of light` | green | đốm sáng xanh bay lên |
 | Ẩn Thân Phù | `a paper talisman with swirling ink` | grey | (chỉ chủ nhân thấy mình mờ 40%) |
@@ -366,6 +365,24 @@ Mỗi cặp/mạng cổng một màu (tím, xanh lam, cam) để người chơi 
 | Hào quang Tiên (dùng chung, game tự nhuộm màu) | 6 loop | `{STYLE} large round glowing halo disc seen from the front, soft radiant light rays, painted in white and light grey only so it can be color-tinted in game, transparent background, 1024x1024, frame {i} of 6` |
 | Hào quang Đạo Tổ (riêng) | 6 loop | `{STYLE} large glowing yin-yang halo disc with a thin rainbow rim, soft light rays, slowly rotating, transparent background, 1024x1024, frame {i} of 6` |
 | Hạt trang trí hào quang | 4 loop mỗi loại | mây nhỏ (Chân Tiên), tia sáng (Kim Tiên), hạt sáng bay lên (Thái Ất), vòng sáng mảnh (Đại La) — vẽ trắng/xám để nhuộm |
+
+### 10.1 Thần thú Tiên giới (ghép đốt bằng code, xem GAME_SPEC §3.5)
+
+Mọi phần vẽ **nhìn ngang, hướng sang PHẢI**, nền trong suốt, viền đen dày, tông **trắng/xám nhạt** để game nhuộm màu (trừ Đạo Tổ vẽ màu thật). Thêm vào cuối mỗi prompt: `painted in white and light grey tones for color tinting, transparent background, isolated single part`.
+
+| Phần | Prompt | Kích thước |
+|---|---|---|
+| Đầu rồng | `{STYLE} side view head of a fierce but funny chinese dragon facing right, long whiskers, small antlers, open mouth with a goofy grin` | 512×512 |
+| Đốt thân rồng | `{STYLE} one round segment of a chinese dragon body seen from the side, overlapping scales, a small spiky fin on top, symmetrical, can be chained repeatedly` | 256×256 |
+| Đuôi rồng | `{STYLE} side view tail tip of a chinese dragon facing left, flowing fin like a flame` | 256×256 |
+| Chân rồng (tùy chọn, gắn ở đốt 3 và 8) | `{STYLE} small four-clawed dragon leg, side view` | 128×128 |
+| Tiên hạc | `{STYLE} side view flying crane, long neck stretched forward facing right, wings {up|middle|down|middle}, frame {i} of 4` | 512×512 |
+| Phượng hoàng | `{STYLE} side view flying phoenix facing right, long flowing tail feathers, wings {up|middle|down|middle}, frame {i} of 4` | 512×512 |
+| Lông đuôi phượng (đốt) | `{STYLE} one long flowing glowing phoenix tail feather, horizontal` | 256×128 |
+| Song long Đạo Tổ | Dùng lại đầu/đốt/đuôi rồng nhưng sinh 2 bộ màu thật: `pure white glowing dragon` và `pure black dragon with white glowing outline` | như trên |
+| Hạt vệt sau | mây nhỏ / tia lửa / hạt sáng / lông vũ — `{STYLE} tiny {item} particle, white, 64x64` | 64×64 |
+
+Mẹo giữ đều nét: sinh **đầu + đốt + đuôi trong cùng 1 ảnh** (`three separate parts side by side: head, one body segment, tail`) để cùng phong cách và độ dày viền, rồi để tool cắt tự tách.
 | Sét đột phá | 6 | `{STYLE} thick cartoon lightning bolt striking down from the top, frame {i} of 6` |
 | Khói chết | 6 | `{STYLE} comic white smoke puff cloud, frame {i} of 6 expanding then dissipating` |
 | Bụi chạy | 4 | `{STYLE} small dust puffs behind running feet, frame {i} of 4` |

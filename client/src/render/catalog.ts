@@ -36,6 +36,15 @@ export const MONSTER_ANIMS: AnimSpec[] = [
 ];
 
 export const BUFF_IDS = ['spin', 'haste', 'magnet', 'long', 'shield', 'exp2', 'stealth'];
+
+// ART_PROMPTS §10.1 — thần thú Tiên giới, ghép đốt bằng code (GAME_SPEC §3.5).
+// Rồng dùng chung cho Kim Tiên / Ngọc long / Song long Đạo Tổ, chỉ đổi tint.
+export const BEAST_PARTS: { id: string; parts: string[] }[] = [
+  { id: 'dragon', parts: ['head', 'body', 'tail', 'leg'] },
+  { id: 'crane', parts: ['head', 'body', 'tail'] },
+  { id: 'phoenix', parts: ['head', 'body', 'tail', 'feather'] },
+];
+export const BEAST_MOTES = ['cloud', 'spark', 'glow', 'feather'];
 export const OBSTACLE_IDS = ['fence', 'stall', 'cart', 'brick', 'boulder', 'stone_wall'];
 export const OBSTACLE_STATES = ['intact', 'cracked', 'nearly_broken', 'rubble'];
 export const GATE_COLORS = ['purple', 'blue', 'orange'];
@@ -102,6 +111,14 @@ function itemEntries(): CatalogEntry[] {
   }
   for (const b of BUFF_IDS) {
     out.push({ group: 'Vật phẩm', label: b, files: [`buffs/${b}.png`], job: `buff_${b}` });
+  }
+  for (const b of BEAST_PARTS) {
+    for (const part of b.parts) {
+      out.push({ group: 'Thần thú Tiên giới', label: `${b.id} ${part}`, files: [`beasts/${b.id}_${part}.png`], job: `beast_${b.id}_${part}` });
+    }
+  }
+  for (const m of BEAST_MOTES) {
+    out.push({ group: 'Thần thú Tiên giới', label: `hạt ${m}`, files: [`beasts/mote_${m}.png`], job: `beast_mote_${m}` });
   }
   out.push({ group: 'Vật phẩm', label: 'chest', files: [...frames('items/chest', { name: 'idle', frames: 4, loop: true, short: '' }), ...frames('items/chest', { name: 'open', frames: 6, loop: false, short: '' })], job: 'chest' });
   return out;

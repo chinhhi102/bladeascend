@@ -68,6 +68,13 @@ class App {
         this.hud.minimap.toggle(); // spec §12.1
         return;
       }
+      if (this.playing && e.code === 'KeyV' && !e.repeat) {
+        // Cài đặt đồ họa (spec §3.5): tắt/bật thần thú THƯỜNG TRỰC. Bản đột phá luôn hiện.
+        const on = !GameScene.ambientBeasts();
+        GameScene.setAmbientBeasts(on);
+        this.hud.showBanner(on ? STR.beastOn : STR.beastOff, 2.5);
+        return;
+      }
       this.debugKey(e);
     });
     this.conn.connect(
@@ -155,6 +162,10 @@ class App {
     this.hud.minimap.setMap(map);
     this.debug = w.debug;
     this.hud.setDebug(w.debug);
+    if (w.debug) {
+      // ?debug=true: mở cửa sau cho console của trình duyệt (xem VFX, đếm thần thú...).
+      (window as unknown as { kx?: unknown }).kx = { scene: this.scene, world: this.world };
+    }
     this.screens.show(null);
     this.overlay.appendChild(this.hud.root);
     this.playing = true;

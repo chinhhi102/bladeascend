@@ -46,8 +46,12 @@ type Sword struct {
 	TiltTweenSecs      float64  `json:"tilt_tween_secs"`
 	RingTints          []string `json:"ring_tints"`
 	RevSecs            float64  `json:"rev_secs"`
-	FlipCooldown       float64  `json:"flip_cooldown"`
-	ClashUnit          int      `json:"clash_unit"`
+	// FlipCooldown: chỉ giới hạn việc ĐỔI CHIỀU quay, để vòng kiếm không giật 30 lần/giây.
+	FlipCooldown float64 `json:"flip_cooldown"`
+	// ClashCooldown: giãn cách giữa hai lần TÍNH BỂ KIẾM của cùng một cặp (A, B).
+	// 0 = mỗi tick một lần, tức mài hết một vòng 30 kiếm trong đúng 1 giây (spec §5.2).
+	ClashCooldown float64 `json:"clash_cooldown"`
+	ClashUnit     int     `json:"clash_unit"`
 	FlipOnlySameRealm  bool     `json:"flip_only_same_realm"`
 	ClashKnockback     float64  `json:"clash_knockback"`
 	ClashKnockbackSecs float64  `json:"clash_knockback_secs"`

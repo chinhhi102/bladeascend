@@ -12,6 +12,8 @@ export const STR = {
   disconnected: 'Mất kết nối với máy chủ. Đang thử lại...',
   badName: 'Tên phải dài 2–16 ký tự.',
   controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Giữ Shift để Thiêu Đốt Tinh Huyết (chạy nhanh, hao tu vi). Không có nút đánh — kiếm tự xoay!',
+  beastOn: 'Đã bật thần thú Tiên giới (phím V để tắt)',
+  beastOff: 'Đã tắt thần thú Tiên giới thường trực (phím V để bật lại)',
   controlsMobile: 'Kéo ngón tay để di chuyển. Giữ nút 🔥 để Thiêu Đốt Tinh Huyết. Kiếm tự xoay!',
 
   // Thiêu Đốt Tinh Huyết (spec §4.1c)
