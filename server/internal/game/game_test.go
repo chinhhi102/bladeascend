@@ -100,7 +100,9 @@ func TestRealmDropSpillsExtraSwordsAsBundles(t *testing.T) {
 	place(g, a, Vec{X: 5000, Y: 5000}, 0)
 	place(g, b, bladeMid(a), math.Pi/16)
 	a.InvulnUntil = 1e9 // B's larger ring would otherwise hit A first
-	g.resolveSwordBody()
+	// Gọi thẳng §5.1: ở đây đang kiểm luật rớt cảnh giới, không kiểm cổng lá chắn §5.2
+	// (25 kiếm = 2 vòng nên resolveSwordBody sẽ bỏ qua).
+	g.applyBodyHit(a, b)
 	if b.Ring.Count != 10 {
 		t.Fatalf("B swords = %d, want 10 (Luyện Khí max)", b.Ring.Count)
 	}
@@ -470,7 +472,7 @@ func TestKillRewardAndDeathSwordDrop(t *testing.T) {
 	a.InvulnUntil = 1e9
 	b.TotalExp = 80
 	aBefore := a.TotalExp
-	g.resolveSwordBody()
+	g.applyBodyHit(a, b) // 50 kiếm = 3 vòng: bỏ qua cổng lá chắn §5.2, kiểm riêng luật chết
 	if !b.Dead {
 		t.Fatal("B should die at Luyện Khí")
 	}

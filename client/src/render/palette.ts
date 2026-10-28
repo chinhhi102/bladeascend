@@ -13,7 +13,12 @@ export const CHAR_COLORS: Record<string, [number, number]> = {
 };
 
 // Sword skin colours per realm (ART_PROMPTS §7), used when the sword PNG is missing.
-export const REALM_COLORS = [0xc8a165, 0xb0b7bf, 0xd0705a, 0xe0e6ee, 0xff7b29, 0x7fd4ff, 0xffe14d, 0x8a3fd1, 0x9ff0c8];
+// 9 cảnh giới phàm rồi tới 5 cảnh giới Tiên (spec §3.4) — màu Tiên lấy theo
+// cultivation.tien_aura_colors để tên, vòng kiếm và hào quang cùng một màu.
+export const REALM_COLORS = [
+  0xc8a165, 0xb0b7bf, 0xd0705a, 0xe0e6ee, 0xff7b29, 0x7fd4ff, 0xffe14d, 0x8a3fd1, 0x9ff0c8,
+  0xe8f1ff, 0xffd60a, 0x4ce0b3, 0xb15cff, 0xffffff,
+];
 
 // Aura colours per buff (ART_PROMPTS §8); stealth has no aura.
 export const BUFF_COLORS: Record<string, number> = {

@@ -58,3 +58,15 @@ và `exp_orbs.cell` 226 → **140**; `items.count_per_room` giữ 200.
 ### Q14. `docs/_raw/GAME_SPEC.md` thiếu 13 mục *(trả lời 2026-10-22, CHANGES_v4)*
 Anh đã gộp đủ 13 mục vào spec v4.0 và dán lại vào `_raw`. `realm_mult` giữ **2.0**
 (mỗi cảnh giới gấp đôi cảnh giới trước). Danh hiệu Top 4–10 giữ bộ chữ đang có trong code.
+
+### Q15. Công thức lá chắn §5.2 làm không ai chém chết được ai *(xử lý 2026-10-28)*
+Không cần anh trả lời nữa: nguyên nhân là **hiểu lá chắn thành tường chắn đường đi**. Anh báo
+"đi tới gần người khác là không điều khiển nhân vật tiến lên được" → chuyển lá chắn thành
+**luật chém** thay vì luật di chuyển:
+- Người chơi **không chặn đường nhau** nữa, hai vòng kiếm chồng lên nhau mà mài.
+- `resolveSwordBody` bỏ qua nạn nhân còn `ShieldR > 0` (tức còn ≥ 2 vòng). Mài rụng hết vòng
+  ngoài, còn đúng 1 vòng thì §5.1 mới chém được thân — đúng câu "chỉ khi người đó còn 1 vòng
+  thì kiếm đối thủ mới chạm được tới thân".
+
+Công thức đối xứng `max(reachA + shield_B, reachB + shield_A)` trong spec không còn dùng tới,
+vì nó chỉ có nghĩa khi lá chắn là tường chắn đường.

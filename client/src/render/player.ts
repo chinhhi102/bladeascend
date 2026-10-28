@@ -36,8 +36,13 @@ export class PlayerSprite {
   readonly root = new Container();
   private readonly swordRing: SwordRing;
   private readonly shadow = new Graphics();
+  /** tienGround is the turning rune circle at a Tiên realm character's feet (spec §3.4). */
+  private readonly tienGround = new Graphics();
   /** tienAura is the halo behind Tiên realm characters (spec §3.4). */
   private readonly tienAura = new Graphics();
+  /** tienFront is the part of the Tiên effect drawn in front of the body, so it reads even
+   * when the character is buried under hundreds of blades. */
+  private readonly tienFront = new Graphics();
   private readonly aura = new Graphics();
   private readonly bodyBox = new Container();
   private body: AnimatedSprite | Container | null = null;
@@ -78,7 +83,8 @@ export class PlayerSprite {
     });
     this.realmTag.anchor.set(0.5, 1);
     // Hào quang nằm sau lưng: dưới sprite nhân vật, trên mặt đất (spec §3.4).
-    this.root.addChild(this.shadow, this.tienAura, this.aura, this.bodyBox, this.label, this.realmTag, this.title);
+    // Vòng ký tự Tiên nằm dưới cùng (sát đất), hạt sáng Tiên nằm trên cùng (trước mặt).
+    this.root.addChild(this.tienGround, this.shadow, this.tienAura, this.aura, this.bodyBox, this.tienFront, this.label, this.realmTag, this.title);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -224,64 +230,111 @@ export class PlayerSprite {
   }
 
   /**
-   * drawTienAura is the halo behind a Tiên realm character (spec §3.4): one colour per realm,
-   * centred at chest height, ~2.2 × character height across, breathing ±5% over 2s. Đạo Tổ
-   * gets a slowly turning yin-yang with a rainbow rim instead of a flat colour.
+   * drawTienAura is the whole Tiên realm look (spec §3.4): a turning rune circle on the
+   * ground, a breathing halo behind the body and ascending motes in front of it, all in the
+   * realm's own colour. Đạo Tổ gets a yin-yang with a rainbow rim instead of a flat colour.
+   *
+   * Ba lớp chứ không chỉ một vành mờ sau lưng: ở cảnh giới Tiên nhân vật ngồi giữa hàng trăm
+   * thanh kiếm, một vòng sáng nhỏ sau lưng gần như không thấy. Vòng ký tự dưới chân và hạt
+   * sáng trước mặt là hai thứ luôn đọc được ngay.
    */
   private drawTienAura(level: number, r: number, now: number): void {
-    const g = this.tienAura.clear();
+    const back = this.tienAura.clear();
+    const ground = this.tienGround.clear();
+    const front = this.tienFront.clear();
     const idx = tienIndex(this.cfg, realmOf(this.cfg, level));
     if (idx < 0) {
       return;
     }
-    const colors = this.cfg.cultivation.tien_aura_colors;
-    const spec = colors[idx] ?? '#ffffff';
-    const breathe = 1 + 0.05 * Math.sin(now * Math.PI); // chu kỳ 2s
-    const rad = r * CHAR_HEIGHT_PER_R * 1.1 * breathe;
+    const spec = this.cfg.cultivation.tien_aura_colors[idx] ?? '#ffffff';
+    const rainbow = spec === 'yin_yang';
+    const color = rainbow ? hslToHex((now * 60) % 360, 0.9, 0.62) : Number(`0x${spec.replace('#', '')}`);
+    this.drawTienGround(ground, idx, color, r, now);
+    this.drawTienHalo(back, idx, color, rainbow, r, now);
+    this.drawTienMotes(front, idx, color, r, now);
+  }
+
+  /** Vòng ký tự Tiên dưới chân: hai vành dẹt xoay chậm cùng các vạch chia. */
+  private drawTienGround(g: Graphics, idx: number, color: number, r: number, now: number): void {
+    const cy = r * FEET_BELOW_CENTER;
+    const rad = r * 2.5;
+    const squash = 0.4; // nhìn nghiêng từ trên xuống
+    const spin = now * (0.3 + idx * 0.1);
+    g.ellipse(0, cy, rad, rad * squash).fill({ color, alpha: 0.1 });
+    g.ellipse(0, cy, rad, rad * squash).stroke({ color, width: r * 0.1, alpha: 0.6 });
+    g.ellipse(0, cy, rad * 0.72, rad * 0.72 * squash).stroke({ color, width: r * 0.06, alpha: 0.45 });
+    const ticks = 6 + idx * 2; // cảnh giới càng cao càng nhiều vạch
+    for (let i = 0; i < ticks; i++) {
+      const a = spin + (i / ticks) * Math.PI * 2;
+      const cx = Math.cos(a);
+      const sy = Math.sin(a) * squash;
+      g.moveTo(cx * rad * 0.76, cy + sy * rad * 0.76).lineTo(cx * rad * 1.06, cy + sy * rad * 1.06);
+    }
+    g.stroke({ color, width: r * 0.1, alpha: 0.75 });
+  }
+
+  /** Hào quang sau lưng: ba lớp sáng nhòe dần + chữ ký riêng của từng cảnh giới. */
+  private drawTienHalo(g: Graphics, idx: number, color: number, rainbow: boolean, r: number, now: number): void {
+    const breathe = 1 + 0.06 * Math.sin(now * Math.PI); // chu kỳ 2s
+    const rad = r * CHAR_HEIGHT_PER_R * 1.45 * breathe;
     const cy = -r * 0.9; // ngang ngực
-    if (spec === 'yin_yang') {
+    if (rainbow) {
       // Đạo Tổ: vòng âm dương xoay chậm, viền đổi màu liên tục.
       const a = now * 0.6;
       g.circle(0, cy, rad).fill({ color: 0x101010, alpha: 0.5 });
       g.arc(0, cy, rad, a, a + Math.PI).fill({ color: 0xf2f2f2, alpha: 0.5 });
       g.circle(Math.cos(a) * rad * 0.5, cy + Math.sin(a) * rad * 0.5, rad * 0.5).fill({ color: 0xf2f2f2, alpha: 0.5 });
       g.circle(-Math.cos(a) * rad * 0.5, cy - Math.sin(a) * rad * 0.5, rad * 0.5).fill({ color: 0x101010, alpha: 0.5 });
-      const hue = (now * 60) % 360;
-      g.circle(0, cy, rad).stroke({ color: hslToHex(hue, 0.9, 0.6), width: r * 0.14, alpha: 0.95 });
+      g.circle(0, cy, rad).stroke({ color, width: r * 0.16, alpha: 0.95 });
       return;
     }
-    const color = Number(`0x${spec.replace('#', '')}`);
-    const glow = 0.18 + 0.05 * Math.sin(now * Math.PI);
-    g.circle(0, cy, rad).fill({ color, alpha: glow });
-    g.circle(0, cy, rad).stroke({ color, width: r * 0.1, alpha: 0.75 });
+    for (const [k, a] of [[1.35, 0.08], [1.1, 0.13], [1, 0.2]] as const) {
+      g.circle(0, cy, rad * k).fill({ color, alpha: a });
+    }
+    g.circle(0, cy, rad).stroke({ color, width: r * 0.12, alpha: 0.8 });
     switch (idx) {
-      case 0: // Chân Tiên: vài đốm mây nhỏ trôi quanh
-        for (let i = 0; i < 4; i++) {
-          const a = now * 0.5 + (i / 4) * Math.PI * 2;
-          g.ellipse(Math.cos(a) * rad * 0.8, cy + Math.sin(a) * rad * 0.8, rad * 0.22, rad * 0.11).fill({ color, alpha: 0.5 });
+      case 0: // Chân Tiên: mây trắng trôi quanh người
+        for (let i = 0; i < 5; i++) {
+          const a = now * 0.5 + (i / 5) * Math.PI * 2;
+          g.ellipse(Math.cos(a) * rad * 0.85, cy + Math.sin(a) * rad * 0.85, rad * 0.26, rad * 0.12).fill({ color, alpha: 0.55 });
         }
         break;
-      case 1: // Kim Tiên: tia sáng tỏa ra
-        for (let i = 0; i < 12; i++) {
-          const a = (i / 12) * Math.PI * 2 + now * 0.3;
-          g.moveTo(Math.cos(a) * rad * 0.75, cy + Math.sin(a) * rad * 0.75).lineTo(Math.cos(a) * rad * 1.15, cy + Math.sin(a) * rad * 1.15);
+      case 1: // Kim Tiên: tia sáng vàng tỏa ra, dài ngắn xen kẽ
+        for (let i = 0; i < 16; i++) {
+          const a = (i / 16) * Math.PI * 2 + now * 0.3;
+          const long = i % 2 === 0 ? 1.3 : 1.12;
+          g.moveTo(Math.cos(a) * rad * 0.8, cy + Math.sin(a) * rad * 0.8).lineTo(Math.cos(a) * rad * long, cy + Math.sin(a) * rad * long);
         }
-        g.stroke({ color, width: r * 0.07, alpha: 0.8 });
+        g.stroke({ color, width: r * 0.09, alpha: 0.85 });
         break;
-      case 2: // Thái Ất Ngọc Tiên: hạt sáng bay lên
-        for (let i = 0; i < 7; i++) {
-          const t = (now * 0.35 + i / 7) % 1;
-          const a = i * 2.4;
-          g.circle(Math.cos(a) * rad * 0.7, cy + rad * (0.9 - 1.8 * t), rad * 0.07 * (1 - t)).fill({ color, alpha: 0.85 * (1 - t) });
-        }
-        break;
-      case 3: // Đại La Kim Tiên: hai vòng sáng xoay ngược chiều
+      case 2: // Thái Ất Ngọc Tiên: hai cung ngọc chạy ngược chiều
         for (const dir of [1, -1]) {
-          const a = now * 0.8 * dir;
-          g.arc(0, cy, rad * (dir > 0 ? 0.82 : 0.64), a, a + Math.PI * 1.3).stroke({ color, width: r * 0.09, alpha: 0.85 });
+          const a = now * 0.7 * dir;
+          g.arc(0, cy, rad * (dir > 0 ? 1.18 : 1.04), a, a + Math.PI * 0.9).stroke({ color, width: r * 0.1, alpha: 0.9 });
         }
+        break;
+      case 3: // Đại La Kim Tiên: ba quả cầu sáng bay quanh theo quỹ đạo nghiêng
+        for (let i = 0; i < 3; i++) {
+          const a = now * 1.1 + (i / 3) * Math.PI * 2;
+          g.circle(Math.cos(a) * rad * 1.15, cy + Math.sin(a) * rad * 0.5, r * 0.3).fill({ color, alpha: 0.9 });
+        }
+        g.circle(0, cy, rad * 1.15).stroke({ color, width: r * 0.05, alpha: 0.35 });
         break;
       default:
+    }
+  }
+
+  /** Hạt sáng bay lên trước mặt — lớp duy nhất không bao giờ bị kiếm che. */
+  private drawTienMotes(g: Graphics, idx: number, color: number, r: number, now: number): void {
+    const n = 6 + idx * 2;
+    const feet = r * FEET_BELOW_CENTER;
+    const rise = r * (CHAR_HEIGHT_PER_R + 1.2); // bay từ chân lên quá đầu
+    for (let i = 0; i < n; i++) {
+      const t = (now * 0.4 + i / n) % 1;
+      const a = i * 2.399 + now * 0.5; // góc vàng: rải đều, không thành hàng
+      const x = Math.cos(a) * r * 1.5 * (1 - t * 0.55);
+      const y = feet - rise * t;
+      g.circle(x, y, r * 0.16 * (1 - t * 0.7)).fill({ color, alpha: 0.95 * (1 - t) });
     }
   }
 
