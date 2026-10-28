@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"os"
+	"runtime/pprof"
 	"sort"
 	"time"
 
@@ -62,7 +64,20 @@ func main() {
 	tien := flag.Int("tien", 10, "bao nhiêu người ở Đạo Tổ với đủ kiếm")
 	secs := flag.Float64("secs", 20, "số giây game cần đo")
 	seed := flag.Int64("seed", 1, "random seed")
+	cpuProf := flag.String("cpuprofile", "", "ghi hồ sơ CPU ra file này để chạy `go tool pprof`")
 	flag.Parse()
+
+	if *cpuProf != "" {
+		f, err := os.Create(*cpuProf)
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			panic(err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
 	cfg := config.MustLoadDefault()
 	cfg.Room.MaxHumans = max(cfg.Room.MaxHumans, *players) // dồn hết vào MỘT phòng

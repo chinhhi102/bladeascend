@@ -68,11 +68,23 @@ async function startServer() {
       cwd: resolve(REPO, 'server'),
       env: { ...process.env, GOMODCACHE: process.env.GOMODCACHE ?? join(process.env.HOME ?? '', '.cache/kx-gomod') },
       stdio: ['ignore', 'pipe', 'pipe'],
+      // Nhóm tiến trình riêng: `go run` chạy binary trong tiến trình CON, giết mỗi `go run`
+      // thì binary sống tiếp và giữ cổng — lần chạy sau chết vì "address already in use"
+      // (đã mất ba lượt đo vì chuyện này). Giết cả nhóm bằng `process.kill(-pid)`.
+      detached: true,
     },
   );
   let log = '';
-  proc.stdout.on('data', (b) => (log += b));
-  proc.stderr.on('data', (b) => (log += b));
+  const keep = (b) => {
+    log += b;
+    // Chuyển tiếp ngay những dòng server từ chối lệnh test: không có nó thì bảng số ra sai
+    // mà chẳng biết vì sao (đã mất hai lượt đo vì chuyện này).
+    for (const line of String(b).split('\n')) {
+      if (line.includes('dbg ')) console.log(`  [server] ${line.trim()}`);
+    }
+  };
+  proc.stdout.on('data', keep);
+  proc.stderr.on('data', keep);
   const deadline = Date.now() + 180000;
   while (Date.now() < deadline) {
     try {
@@ -86,8 +98,17 @@ async function startServer() {
     }
     await sleep(500);
   }
-  proc.kill();
+  killTree(proc);
   throw new Error(`Không dựng được server test ở cổng ${PORT}:\n${log}`);
+}
+
+/** killTree giết cả nhóm tiến trình của server (`go run` + binary con nó đẻ ra). */
+function killTree(proc) {
+  try {
+    process.kill(-proc.pid, 'SIGKILL');
+  } catch {
+    proc.kill('SIGKILL');
+  }
 }
 
 /** chơi một tab: vào game với tên cho trước rồi trả về các hàm điều khiển. */
@@ -255,12 +276,35 @@ async function runOnce(label, slow) {
   const TOP_LEVEL = (cult.realms.length + cult.tien_realms.length - 1) * cult.tiers_per_realm;
   // n: 1 = giữ bất tử. Không có nó thì 5 người Đạo Tổ chụm vào mài nhau chết sạch trong
   // chục giây, cả phòng tụt về Luyện Khí 1 kiếm và số đo thành vô nghĩa (đã dính một lần).
+  // Trả về lý do hỏng thay vì nuốt lỗi: lần trước chỉ 1/5 tab lên được mà không biết vì
+  // sao, do `.catch(() => {})` giấu hết.
   const boost = () => Promise.all(tien.map((t) =>
-    t.page.evaluate(() => window.kx.conn?.send?.({ t: 'dbg', cmd: 'max', n: 1 })).catch(() => {})));
+    t.page.evaluate(() => {
+      if (!window.kx) return 'chưa có window.kx (tab không ở chế độ debug)';
+      if (!window.kx.conn?.isOpen) return 'websocket chưa mở';
+      window.kx.conn.send({ t: 'dbg', cmd: 'max', n: 1 });
+      return '';
+    }).catch((e) => `evaluate lỗi: ${e.message.slice(0, 80)}`)));
   // Gửi LẠI mỗi vòng chứ không gửi một lần: lúc 10 tab đang tranh CPU, một lệnh đi lạc là
   // cả bảng số sai kịch bản (đã dính: cột cảnh giới ra 0.0 trong khi lẽ ra phải là 130).
+  // Trước khi boost: tab nào chết trong lúc lang thang thì đang đứng ở bảng Tổng kết, đã
+  // RỜI PHÒNG — lệnh test gửi vào đó rơi vào hư vô (server báo "chưa ở trong phòng nào").
+  // Bấm "Chơi tiếp" cho nó vào lại rồi mới đo.
+  const revive = (list = tien) => Promise.all(list.map(async (t) => {
+    const alive = await t.page.evaluate(() => !!window.kx?.world?.me?.()).catch(() => false);
+    if (alive) {
+      return;
+    }
+    await t.page.getByText('Chơi tiếp', { exact: true }).click({ timeout: 2000 }).catch(() => {});
+    await t.page.waitForFunction(() => !!window.kx?.world?.me?.(), null, { timeout: 10000 }).catch(() => {});
+  }));
+
   for (let i = 0; i < 20; i++) {
-    await boost();
+    await revive();
+    const why = (await boost()).filter(Boolean);
+    if (why.length && i % 5 === 0) {
+      console.log(`  boost chưa tới ${why.length} tab: ${[...new Set(why)].join(' · ')}`);
+    }
     await sleep(500);
     const levels = await Promise.all(tien.map((t) =>
       t.page.evaluate(() => window.kx?.world?.me?.()?.L ?? -1).catch(() => -1)));
@@ -282,6 +326,9 @@ async function runOnce(label, slow) {
   let shot = false;
   let beat = 0;
   while (Date.now() < fightUntil) {
+    // Năm tab thường vẫn chết thật trong lúc đánh nhau; để chúng nằm ở bảng Tổng kết thì
+    // mẫu đo đông cứng ở giá trị cuối và cả cột băng thông ra 0.0 KB/s.
+    await revive(tabs);
     await Promise.all(tabs.map((t) => steer(t, target.x, target.y)));
     // Nạp lại kiếm mỗi 2s: dù bất tử, va kiếm vẫn mài rụng ~120 kiếm/giây khi 5 người chụm
     // vào nhau, nên không nạp lại thì chỉ sau mươi giây là hết cảnh nặng cần đo.
@@ -351,11 +398,17 @@ function table(rows, title) {
 const server = SPAWN ? await startServer() : null;
 const runs = [];
 try {
-  runs.push(await runOnce('mang-binh-thuong', false));
-  runs.push(await runOnce('4g-yeu', true));
+  // --only mang-binh-thuong | 4g-yeu: chạy một lượt thôi, để dò lỗi cho nhanh.
+  const only = args.only;
+  if (only !== '4g-yeu') {
+    runs.push(await runOnce('mang-binh-thuong', false));
+  }
+  if (only !== 'mang-binh-thuong') {
+    runs.push(await runOnce('4g-yeu', true));
+  }
 } finally {
   if (server) {
-    server.proc.kill('SIGTERM');
+    killTree(server.proc);
     await rm(server.db, { force: true }).catch(() => {});
     console.log('Đã tắt server test và xoá database tạm.');
   }
@@ -377,10 +430,12 @@ const doc = [
   '> Lượt B bóp băng thông **sau khi đã vào game**: ta đo lưu lượng lúc chơi, không đo lúc',
   '> tải trang.',
   '',
-  table(runs[0].rows, 'Lượt A — mạng bình thường (LAN nội bộ)'),
-  '',
-  table(runs[1].rows, 'Lượt B — giả lập 4G yếu (trễ 100 ms, 1.6 Mbps xuống, 750 Kbps lên)'),
-  '',
+  ...runs.flatMap((r) => [
+    table(r.rows, r.label === '4g-yeu'
+      ? 'Lượt B — giả lập 4G yếu (trễ 100 ms, 1.6 Mbps xuống, 750 Kbps lên)'
+      : 'Lượt A — mạng bình thường (LAN nội bộ)'),
+    '',
+  ]),
   `Ảnh chụp lúc đông nhất: \`docs/perf/browsertest-mang-binh-thuong.png\` và`,
   '`docs/perf/browsertest-4g-yeu.png`.',
   '',
