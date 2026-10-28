@@ -234,247 +234,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. patchy moss on stone, seamless tileable top-down, desaturated, low contrast, low detail, no objects
 ```
 
-## 21. `tile_soft_grass` · ưu tiên 2
-
-- **Lưu thành**: `assets/_raw/tile_soft_grass.png`
-- **Bố cục**: texture vuông lặp liền mạch, phủ kín ảnh
-- **Ra file game**: tiles/soft_grass.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. soft muted grass, seamless tileable top-down, desaturated, low contrast, low detail, no objects
-```
-
-## 22. `tile_bamboo_litter` · ưu tiên 2
-
-- **Lưu thành**: `assets/_raw/tile_bamboo_litter.png`
-- **Bố cục**: texture vuông lặp liền mạch, phủ kín ảnh
-- **Ra file game**: tiles/bamboo_litter.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. dry bamboo leaves litter on soil, seamless tileable top-down, desaturated, low contrast, low detail, no objects
-```
-
-## 23. `tile_damp_earth` · ưu tiên 2
-
-- **Lưu thành**: `assets/_raw/tile_damp_earth.png`
-- **Bố cục**: texture vuông lặp liền mạch, phủ kín ảnh
-- **Ra file game**: tiles/damp_earth.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. damp dark earth, seamless tileable top-down, desaturated, low contrast, low detail, no objects
-```
-
-## 24. `tile_dirt_path` · ưu tiên 2
-
-- **Lưu thành**: `assets/_raw/tile_dirt_path.png`
-- **Bố cục**: texture vuông lặp liền mạch, phủ kín ảnh
-- **Ra file game**: tiles/dirt_path.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. trampled dirt path ground, seamless tileable top-down, desaturated, low contrast, low detail, no objects
-```
-
-## 25. `tile_village_grass` · ưu tiên 2
-
-- **Lưu thành**: `assets/_raw/tile_village_grass.png`
-- **Bố cục**: texture vuông lặp liền mạch, phủ kín ảnh
-- **Ra file game**: tiles/village_grass.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. short village grass, seamless tileable top-down, desaturated, low contrast, low detail, no objects
-```
-
-## 26. `tile_worn_cobble` · ưu tiên 2
-
-- **Lưu thành**: `assets/_raw/tile_worn_cobble.png`
-- **Bố cục**: texture vuông lặp liền mạch, phủ kín ảnh
-- **Ra file game**: tiles/worn_cobble.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. old worn cobblestone, seamless tileable top-down, desaturated, low contrast, low detail, no objects
-```
-
-## 27. `tile_dusty_earth` · ưu tiên 2
-
-- **Lưu thành**: `assets/_raw/tile_dusty_earth.png`
-- **Bố cục**: texture vuông lặp liền mạch, phủ kín ảnh
-- **Ra file game**: tiles/dusty_earth.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. dusty packed earth, seamless tileable top-down, desaturated, low contrast, low detail, no objects
-```
-
-## 28. `decal_ground_cracks` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_ground_cracks.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/ground_cracks.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, ground crack lines, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 29. `decal_grass_tuft` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_grass_tuft.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/grass_tuft.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, small grass tuft, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 30. `decal_fallen_leaves` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_fallen_leaves.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/fallen_leaves.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, scattered fallen leaves, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 31. `decal_pebbles` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_pebbles.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/pebbles.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, cluster of pebbles, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 32. `decal_puddle` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_puddle.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/puddle.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, small shallow puddle, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 33. `decal_tree_roots` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_tree_roots.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/tree_roots.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, exposed tree roots, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 34. `decal_wildflowers` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_wildflowers.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/wildflowers.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, tiny pale wildflowers, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 35. `decal_roof_tiles` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_roof_tiles.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/roof_tiles.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, broken roof tile shards, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 36. `decal_brick_rubble` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_brick_rubble.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/brick_rubble.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, scattered brick rubble, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 37. `decal_bamboo_leaves` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_bamboo_leaves.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/bamboo_leaves.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, bamboo leaves pile, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 38. `decal_moss_patch` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_moss_patch.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/moss_patch.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, moss patch, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 39. `decal_footprints` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/decal_footprints.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: decals/footprints.png
-
-```text
-STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down game decal, footprints in dirt, soft muted colors, blends into the ground, thin outline Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 40. `plate_ribbon_top1` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/plate_ribbon_top1.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: ui/ribbon_top1.png
-
-```text
-STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. empty horizontal ribbon banner with forked tails, vermilion red with gold trim, no text Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 41. `plate_ribbon_top2` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/plate_ribbon_top2.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: ui/ribbon_top2.png
-
-```text
-STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. empty horizontal ribbon banner with forked tails, dark navy with silver trim, no text Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 42. `plate_ribbon_top3` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/plate_ribbon_top3.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: ui/ribbon_top3.png
-
-```text
-STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. empty horizontal ribbon banner with forked tails, brown with bronze trim, no text Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 43. `plate_crown_small` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/plate_crown_small.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: ui/crown_small.png
-
-```text
-STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. tiny golden crown icon with red gems Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 44. `plate_realm_pill` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/plate_realm_pill.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: ui/realm_pill.png
-
-```text
-STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. empty rounded pill-shaped badge, white with light grey bevel for tinting, no text Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 45. `plate_shine_streak` · ưu tiên 3
+## 21. `plate_shine_streak` · ưu tiên 3
 
 - **Lưu thành**: `assets/_raw/plate_shine_streak.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -484,7 +244,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. soft diagonal white light streak Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 46. `char_a_hon_teleport_out` · ưu tiên 4
+## 22. `char_a_hon_teleport_out` · ưu tiên 4
 
 - **Sinh lại**: sheet bị cắt sai số khung (xem cảnh báo của `artgen prep`)
 - **Lưu thành**: `assets/_raw/char_a_hon_teleport_out.png`
@@ -495,7 +255,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a loud-mouthed scrawny street vendor with a giant steamed bun as a hat that has a big bite missing, two huge yellowish buck teeth with one chipped, a mole on his cheek with one long curly hair, sweat-stained yellowed sleeveless undershirt riding up over a round hairy belly button, baggy red shorts, mismatched flip-flops, color palette #FFFFFF #E63946 #F4A261 #2B2D42 with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_out, 4 frames] 1) startled 2) body twisting like being sucked into a vortex 3) only the sobbing head left 4) only a pair of flip-flops left. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 47. `char_co_ba_ganh_teleport_out` · ưu tiên 4
+## 23. `char_co_ba_ganh_teleport_out` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_co_ba_ganh_teleport_out.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -505,7 +265,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a hyperactive young fruit seller with one thick unibrow, a huge gap-toothed grin, two stiff braids sticking straight out sideways, a crooked conical hat, balancing a bamboo shoulder pole with two overflowing fruit baskets, patched brown blouse, mismatched plastic slippers, color palette #BC6C25 #DDA15E #606C38 #FEFAE0 with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_out, 4 frames] 1) startled 2) body twisting like being sucked into a vortex 3) only the sobbing head left 4) only a pair of flip-flops left. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 48. `char_co_ba_ganh_teleport_in` · ưu tiên 4
+## 24. `char_co_ba_ganh_teleport_in` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_co_ba_ganh_teleport_in.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -515,7 +275,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a hyperactive young fruit seller with one thick unibrow, a huge gap-toothed grin, two stiff braids sticking straight out sideways, a crooked conical hat, balancing a bamboo shoulder pole with two overflowing fruit baskets, patched brown blouse, mismatched plastic slippers, color palette #BC6C25 #DDA15E #606C38 #FEFAE0 with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_in, 4 frames] 1) spat out in mid-air 2) flailing 3) landing staggering 4) spiral eyes dizzy. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 49. `char_su_phu_mi_levelup` · ưu tiên 4
+## 25. `char_su_phu_mi_levelup` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_su_phu_mi_levelup.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -525,7 +285,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, color palette #FB8500 #FFB703 #8ECAE6 #023047 with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [levelup, 6 frames] 1) ready stance 2) golden aura bursting 3) superhero pose with aura 4) bigger aura heroic pose 5) thumbs up 6) back to ready stance. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 50. `char_su_phu_mi_realm_drop` · ưu tiên 4
+## 26. `char_su_phu_mi_realm_drop` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_su_phu_mi_realm_drop.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -535,7 +295,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, color palette #FB8500 #FFB703 #8ECAE6 #023047 with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [realm_drop, 6 frames] 1) stunned 2) knees buckling 3) sitting flat on the ground 4) crying rivers of tears 5) crying harder 6) wiping nose and standing up. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 51. `char_su_phu_mi_breakthrough` · ưu tiên 4
+## 27. `char_su_phu_mi_breakthrough` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_su_phu_mi_breakthrough.png`
 - **Bố cục**: sprite sheet, hàng 1: 5 hình · hàng 2: 5 hình, nền magenta #FF00FF
@@ -545,7 +305,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, color palette #FB8500 #FFB703 #8ECAE6 #023047 with 10 frames in total. Exactly 5 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [breakthrough, 10 frames] 1) meditating seated 2) trembling 3) trembling harder 4) hair standing straight up 5) looking up screaming at the sky 6) screaming harder 7) struck by lightning 8) lightning engulfs body 9) singed frizzy smoking hair 10) triumphant laugh. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 52. `char_su_phu_mi_respawn` · ưu tiên 4
+## 28. `char_su_phu_mi_respawn` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_su_phu_mi_respawn.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -555,7 +315,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, color palette #FB8500 #FFB703 #8ECAE6 #023047 with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [respawn, 6 frames] 1) falling from high above 2) about to hit the ground 3) landing face first 4) somersault 5) standing up dusting off 6) striking a pose. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 53. `char_su_phu_mi_teleport_out` · ưu tiên 4
+## 29. `char_su_phu_mi_teleport_out` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_su_phu_mi_teleport_out.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -565,7 +325,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, color palette #FB8500 #FFB703 #8ECAE6 #023047 with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_out, 4 frames] 1) startled 2) body twisting like being sucked into a vortex 3) only the sobbing head left 4) only a pair of flip-flops left. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 54. `char_su_phu_mi_teleport_in` · ưu tiên 4
+## 30. `char_su_phu_mi_teleport_in` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_su_phu_mi_teleport_in.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -575,7 +335,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, color palette #FB8500 #FFB703 #8ECAE6 #023047 with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_in, 4 frames] 1) spat out in mid-air 2) flailing 3) landing staggering 4) spiral eyes dizzy. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 55. `char_be_ti_levelup` · ưu tiên 4
+## 31. `char_be_ti_levelup` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_be_ti_levelup.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -585,7 +345,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, color palette #E76F51 #F4A261 #2A9D8F #1D3557 with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [levelup, 6 frames] 1) ready stance 2) golden aura bursting 3) superhero pose with aura 4) bigger aura heroic pose 5) thumbs up 6) back to ready stance. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 56. `char_be_ti_realm_drop` · ưu tiên 4
+## 32. `char_be_ti_realm_drop` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_be_ti_realm_drop.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -595,7 +355,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, color palette #E76F51 #F4A261 #2A9D8F #1D3557 with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [realm_drop, 6 frames] 1) stunned 2) knees buckling 3) sitting flat on the ground 4) crying rivers of tears 5) crying harder 6) wiping nose and standing up. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 57. `char_be_ti_breakthrough` · ưu tiên 4
+## 33. `char_be_ti_breakthrough` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_be_ti_breakthrough.png`
 - **Bố cục**: sprite sheet, hàng 1: 5 hình · hàng 2: 5 hình, nền magenta #FF00FF
@@ -605,7 +365,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, color palette #E76F51 #F4A261 #2A9D8F #1D3557 with 10 frames in total. Exactly 5 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [breakthrough, 10 frames] 1) meditating seated 2) trembling 3) trembling harder 4) hair standing straight up 5) looking up screaming at the sky 6) screaming harder 7) struck by lightning 8) lightning engulfs body 9) singed frizzy smoking hair 10) triumphant laugh. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 58. `char_be_ti_respawn` · ưu tiên 4
+## 34. `char_be_ti_respawn` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_be_ti_respawn.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -615,7 +375,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, color palette #E76F51 #F4A261 #2A9D8F #1D3557 with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [respawn, 6 frames] 1) falling from high above 2) about to hit the ground 3) landing face first 4) somersault 5) standing up dusting off 6) striking a pose. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 59. `char_be_ti_teleport_out` · ưu tiên 4
+## 35. `char_be_ti_teleport_out` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_be_ti_teleport_out.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -625,7 +385,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, color palette #E76F51 #F4A261 #2A9D8F #1D3557 with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_out, 4 frames] 1) startled 2) body twisting like being sucked into a vortex 3) only the sobbing head left 4) only a pair of flip-flops left. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 60. `char_be_ti_teleport_in` · ưu tiên 4
+## 36. `char_be_ti_teleport_in` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_be_ti_teleport_in.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -635,7 +395,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, color palette #E76F51 #F4A261 #2A9D8F #1D3557 with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_in, 4 frames] 1) spat out in mid-air 2) flailing 3) landing staggering 4) spiral eyes dizzy. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 61. `char_shipper_levelup` · ưu tiên 4
+## 37. `char_shipper_levelup` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_shipper_levelup.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -645,7 +405,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, color palette #FFBE0B #FB5607 #3A86FF #222222 with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [levelup, 6 frames] 1) ready stance 2) golden aura bursting 3) superhero pose with aura 4) bigger aura heroic pose 5) thumbs up 6) back to ready stance. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 62. `char_shipper_realm_drop` · ưu tiên 4
+## 38. `char_shipper_realm_drop` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_shipper_realm_drop.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -655,7 +415,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, color palette #FFBE0B #FB5607 #3A86FF #222222 with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [realm_drop, 6 frames] 1) stunned 2) knees buckling 3) sitting flat on the ground 4) crying rivers of tears 5) crying harder 6) wiping nose and standing up. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 63. `char_shipper_breakthrough` · ưu tiên 4
+## 39. `char_shipper_breakthrough` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_shipper_breakthrough.png`
 - **Bố cục**: sprite sheet, hàng 1: 5 hình · hàng 2: 5 hình, nền magenta #FF00FF
@@ -665,7 +425,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, color palette #FFBE0B #FB5607 #3A86FF #222222 with 10 frames in total. Exactly 5 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [breakthrough, 10 frames] 1) meditating seated 2) trembling 3) trembling harder 4) hair standing straight up 5) looking up screaming at the sky 6) screaming harder 7) struck by lightning 8) lightning engulfs body 9) singed frizzy smoking hair 10) triumphant laugh. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 64. `char_shipper_respawn` · ưu tiên 4
+## 40. `char_shipper_respawn` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_shipper_respawn.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -675,7 +435,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, color palette #FFBE0B #FB5607 #3A86FF #222222 with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [respawn, 6 frames] 1) falling from high above 2) about to hit the ground 3) landing face first 4) somersault 5) standing up dusting off 6) striking a pose. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 65. `char_shipper_teleport_out` · ưu tiên 4
+## 41. `char_shipper_teleport_out` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_shipper_teleport_out.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -685,7 +445,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, color palette #FFBE0B #FB5607 #3A86FF #222222 with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_out, 4 frames] 1) startled 2) body twisting like being sucked into a vortex 3) only the sobbing head left 4) only a pair of flip-flops left. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 66. `char_shipper_teleport_in` · ưu tiên 4
+## 42. `char_shipper_teleport_in` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_shipper_teleport_in.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -695,7 +455,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, color palette #FFBE0B #FB5607 #3A86FF #222222 with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_in, 4 frames] 1) spat out in mid-air 2) flailing 3) landing staggering 4) spiral eyes dizzy. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 67. `char_cu_rua_levelup` · ưu tiên 4
+## 43. `char_cu_rua_levelup` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_cu_rua_levelup.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -705,7 +465,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops, color palette #52B788 #D8F3DC #6F4E37 #F1FAEE with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [levelup, 6 frames] 1) ready stance 2) golden aura bursting 3) superhero pose with aura 4) bigger aura heroic pose 5) thumbs up 6) back to ready stance. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 68. `char_cu_rua_realm_drop` · ưu tiên 4
+## 44. `char_cu_rua_realm_drop` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_cu_rua_realm_drop.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -715,7 +475,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops, color palette #52B788 #D8F3DC #6F4E37 #F1FAEE with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [realm_drop, 6 frames] 1) stunned 2) knees buckling 3) sitting flat on the ground 4) crying rivers of tears 5) crying harder 6) wiping nose and standing up. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 69. `char_cu_rua_breakthrough` · ưu tiên 4
+## 45. `char_cu_rua_breakthrough` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_cu_rua_breakthrough.png`
 - **Bố cục**: sprite sheet, hàng 1: 5 hình · hàng 2: 5 hình, nền magenta #FF00FF
@@ -725,7 +485,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops, color palette #52B788 #D8F3DC #6F4E37 #F1FAEE with 10 frames in total. Exactly 5 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [breakthrough, 10 frames] 1) meditating seated 2) trembling 3) trembling harder 4) hair standing straight up 5) looking up screaming at the sky 6) screaming harder 7) struck by lightning 8) lightning engulfs body 9) singed frizzy smoking hair 10) triumphant laugh. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 70. `char_cu_rua_respawn` · ưu tiên 4
+## 46. `char_cu_rua_respawn` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_cu_rua_respawn.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -735,7 +495,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops, color palette #52B788 #D8F3DC #6F4E37 #F1FAEE with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [respawn, 6 frames] 1) falling from high above 2) about to hit the ground 3) landing face first 4) somersault 5) standing up dusting off 6) striking a pose. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 71. `char_cu_rua_teleport_out` · ưu tiên 4
+## 47. `char_cu_rua_teleport_out` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_cu_rua_teleport_out.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -745,7 +505,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops, color palette #52B788 #D8F3DC #6F4E37 #F1FAEE with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_out, 4 frames] 1) startled 2) body twisting like being sucked into a vortex 3) only the sobbing head left 4) only a pair of flip-flops left. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 72. `char_cu_rua_teleport_in` · ưu tiên 4
+## 48. `char_cu_rua_teleport_in` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/char_cu_rua_teleport_in.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -755,7 +515,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops, color palette #52B788 #D8F3DC #6F4E37 #F1FAEE with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_in, 4 frames] 1) spat out in mid-air 2) flailing 3) landing staggering 4) spiral eyes dizzy. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 73. `obs_fence_break` · ưu tiên 4
+## 49. `obs_fence_break` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/obs_fence_break.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -765,7 +525,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a top-down 3/4 view game obstacle, a straight horizontal bamboo fence segment tied with rope with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [break, 6 frames] 1) shaking 2) cracking 3) bursting apart 4) debris flying 5) dust cloud 6) rubble pile. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 74. `obs_fence_regrow` · ưu tiên 4
+## 50. `obs_fence_regrow` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/obs_fence_regrow.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -775,7 +535,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a top-down 3/4 view game obstacle, a straight horizontal bamboo fence segment tied with rope with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [regrow, 6 frames] 1) glowing rubble 2) pieces rising with light 3) half rebuilt glowing 4) almost whole 5) whole with sparkles 6) intact and solid. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 75. `obs_stall_break` · ưu tiên 4
+## 51. `obs_stall_break` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/obs_stall_break.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -785,7 +545,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a top-down 3/4 view game obstacle, a street market stall with a striped canopy and fruit baskets with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [break, 6 frames] 1) shaking 2) cracking 3) bursting apart 4) debris flying 5) dust cloud 6) rubble pile. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 76. `obs_stall_regrow` · ưu tiên 4
+## 52. `obs_stall_regrow` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/obs_stall_regrow.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -795,7 +555,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a top-down 3/4 view game obstacle, a street market stall with a striped canopy and fruit baskets with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [regrow, 6 frames] 1) glowing rubble 2) pieces rising with light 3) half rebuilt glowing 4) almost whole 5) whole with sparkles 6) intact and solid. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 77. `obs_cart_break` · ưu tiên 4
+## 53. `obs_cart_break` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/obs_cart_break.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -805,7 +565,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a top-down 3/4 view game obstacle, a wooden street food cart with a small stove with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [break, 6 frames] 1) shaking 2) cracking 3) bursting apart 4) debris flying 5) dust cloud 6) rubble pile. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 78. `obs_cart_regrow` · ưu tiên 4
+## 54. `obs_cart_regrow` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/obs_cart_regrow.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -815,7 +575,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a top-down 3/4 view game obstacle, a wooden street food cart with a small stove with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [regrow, 6 frames] 1) glowing rubble 2) pieces rising with light 3) half rebuilt glowing 4) almost whole 5) whole with sparkles 6) intact and solid. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 79. `obs_brick_break` · ưu tiên 4
+## 55. `obs_brick_break` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/obs_brick_break.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -825,7 +585,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a top-down 3/4 view game obstacle, a short horizontal red brick wall segment with moss with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [break, 6 frames] 1) shaking 2) cracking 3) bursting apart 4) debris flying 5) dust cloud 6) rubble pile. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 80. `obs_brick_regrow` · ưu tiên 4
+## 56. `obs_brick_regrow` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/obs_brick_regrow.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -835,7 +595,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a top-down 3/4 view game obstacle, a short horizontal red brick wall segment with moss with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [regrow, 6 frames] 1) glowing rubble 2) pieces rising with light 3) half rebuilt glowing 4) almost whole 5) whole with sparkles 6) intact and solid. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 81. `obs_boulder_break` · ưu tiên 4
+## 57. `obs_boulder_break` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/obs_boulder_break.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -845,7 +605,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a top-down 3/4 view game obstacle, a huge round grey boulder with cartoon crack lines with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [break, 6 frames] 1) shaking 2) cracking 3) bursting apart 4) debris flying 5) dust cloud 6) rubble pile. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 82. `obs_boulder_regrow` · ưu tiên 4
+## 58. `obs_boulder_regrow` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/obs_boulder_regrow.png`
 - **Bố cục**: sprite sheet, hàng 1: 3 hình · hàng 2: 3 hình, nền magenta #FF00FF
@@ -855,7 +615,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a top-down 3/4 view game obstacle, a huge round grey boulder with cartoon crack lines with 6 frames in total. Exactly 3 columns and 2 rows, equal cell size. Frames are read left-to-right, top-to-bottom: [regrow, 6 frames] 1) glowing rubble 2) pieces rising with light 3) half rebuilt glowing 4) almost whole 5) whole with sparkles 6) intact and solid. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 83. `vfx_run_dust` · ưu tiên 4
+## 59. `vfx_run_dust` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/vfx_run_dust.png`
 - **Bố cục**: sprite sheet, hàng 1: 4 hình, nền magenta #FF00FF
@@ -865,7 +625,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Sprite sheet of a game visual effect with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [run_dust, 4 frames] small brown dust puffs behind running feet. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 84. `decal_mud_edge` · ưu tiên 4
+## 60. `decal_mud_edge` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/decal_mud_edge.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -875,7 +635,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down zone border strip, muddy edge with dry cracks, tileable left to right, soft muted colors Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 85. `decal_pond_shore` · ưu tiên 4
+## 61. `decal_pond_shore` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/decal_pond_shore.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -885,7 +645,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down zone border strip, pond shore with reeds and pebbles, tileable left to right, soft muted colors Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 86. `decal_stone_path_edge` · ưu tiên 4
+## 62. `decal_stone_path_edge` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/decal_stone_path_edge.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -895,7 +655,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down zone border strip, stone path edge with broken gravel, tileable left to right, soft muted colors Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 87. `decal_bush_edge` · ưu tiên 4
+## 63. `decal_bush_edge` · ưu tiên 4
 
 - **Lưu thành**: `assets/_raw/decal_bush_edge.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -905,7 +665,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. top-down zone border strip, bush cluster edge with leaves, tileable left to right, soft muted colors Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 88. `portrait_a_hon_neutral` · ưu tiên 5
+## 64. `portrait_a_hon_neutral` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_a_hon_neutral.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -915,7 +675,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a loud-mouthed scrawny street vendor with a giant steamed bun as a hat that has a big bite missing, two huge yellowish buck teeth with one chipped, a mole on his cheek with one long curly hair, sweat-stained yellowed sleeveless undershirt riding up over a round hairy belly button, baggy red shorts, mismatched flip-flops, head and shoulders portrait, facing the viewer slightly turned right, centered, neutral smug face Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 89. `portrait_a_hon_evil` · ưu tiên 5
+## 65. `portrait_a_hon_evil` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_a_hon_evil.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -925,7 +685,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a loud-mouthed scrawny street vendor with a giant steamed bun as a hat that has a big bite missing, two huge yellowish buck teeth with one chipped, a mole on his cheek with one long curly hair, sweat-stained yellowed sleeveless undershirt riding up over a round hairy belly button, baggy red shorts, mismatched flip-flops, head and shoulders portrait, facing the viewer slightly turned right, centered, evil grin, chasing Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 90. `portrait_a_hon_panic` · ưu tiên 5
+## 66. `portrait_a_hon_panic` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_a_hon_panic.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -935,7 +695,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a loud-mouthed scrawny street vendor with a giant steamed bun as a hat that has a big bite missing, two huge yellowish buck teeth with one chipped, a mole on his cheek with one long curly hair, sweat-stained yellowed sleeveless undershirt riding up over a round hairy belly button, baggy red shorts, mismatched flip-flops, head and shoulders portrait, facing the viewer slightly turned right, centered, panicked, sweating Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 91. `portrait_a_hon_cry` · ưu tiên 5
+## 67. `portrait_a_hon_cry` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_a_hon_cry.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -945,7 +705,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a loud-mouthed scrawny street vendor with a giant steamed bun as a hat that has a big bite missing, two huge yellowish buck teeth with one chipped, a mole on his cheek with one long curly hair, sweat-stained yellowed sleeveless undershirt riding up over a round hairy belly button, baggy red shorts, mismatched flip-flops, head and shoulders portrait, facing the viewer slightly turned right, centered, crying with streams of tears Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 92. `portrait_ba_tam_loa_neutral` · ưu tiên 5
+## 68. `portrait_ba_tam_loa_neutral` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_ba_tam_loa_neutral.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -955,7 +715,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a stout loud fish market lady holding a dented megaphone, bright red lipstick smeared far outside her lips and stuck on her teeth, two perfectly round blotchy pink blush circles, eyebrows drawn way too high in pencil, a tiny pencil stuck in her hair bun, floral blouse with fish scales stuck on it, wet rubber apron, tall green rubber boots, head and shoulders portrait, facing the viewer slightly turned right, centered, neutral smug face Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 93. `portrait_ba_tam_loa_evil` · ưu tiên 5
+## 69. `portrait_ba_tam_loa_evil` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_ba_tam_loa_evil.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -965,7 +725,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a stout loud fish market lady holding a dented megaphone, bright red lipstick smeared far outside her lips and stuck on her teeth, two perfectly round blotchy pink blush circles, eyebrows drawn way too high in pencil, a tiny pencil stuck in her hair bun, floral blouse with fish scales stuck on it, wet rubber apron, tall green rubber boots, head and shoulders portrait, facing the viewer slightly turned right, centered, evil grin, chasing Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 94. `portrait_ba_tam_loa_panic` · ưu tiên 5
+## 70. `portrait_ba_tam_loa_panic` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_ba_tam_loa_panic.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -975,7 +735,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a stout loud fish market lady holding a dented megaphone, bright red lipstick smeared far outside her lips and stuck on her teeth, two perfectly round blotchy pink blush circles, eyebrows drawn way too high in pencil, a tiny pencil stuck in her hair bun, floral blouse with fish scales stuck on it, wet rubber apron, tall green rubber boots, head and shoulders portrait, facing the viewer slightly turned right, centered, panicked, sweating Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 95. `portrait_ba_tam_loa_cry` · ưu tiên 5
+## 71. `portrait_ba_tam_loa_cry` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_ba_tam_loa_cry.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -985,7 +745,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a stout loud fish market lady holding a dented megaphone, bright red lipstick smeared far outside her lips and stuck on her teeth, two perfectly round blotchy pink blush circles, eyebrows drawn way too high in pencil, a tiny pencil stuck in her hair bun, floral blouse with fish scales stuck on it, wet rubber apron, tall green rubber boots, head and shoulders portrait, facing the viewer slightly turned right, centered, crying with streams of tears Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 96. `portrait_ong_ba_vong_neutral` · ưu tiên 5
+## 72. `portrait_ong_ba_vong_neutral` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_ong_ba_vong_neutral.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -995,7 +755,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a skinny lazy old man with only two teeth left, nose hairs so long they look like a mustache, three strands of hair combed over a shiny bald head, half-closed sleepy eyes, toothpick in mouth, folded hammock carried on his back like a cape, saggy white tank top, striped pajama pants slipping down showing flowery underwear waistband, head and shoulders portrait, facing the viewer slightly turned right, centered, neutral smug face Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 97. `portrait_ong_ba_vong_evil` · ưu tiên 5
+## 73. `portrait_ong_ba_vong_evil` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_ong_ba_vong_evil.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1005,7 +765,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a skinny lazy old man with only two teeth left, nose hairs so long they look like a mustache, three strands of hair combed over a shiny bald head, half-closed sleepy eyes, toothpick in mouth, folded hammock carried on his back like a cape, saggy white tank top, striped pajama pants slipping down showing flowery underwear waistband, head and shoulders portrait, facing the viewer slightly turned right, centered, evil grin, chasing Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 98. `portrait_ong_ba_vong_panic` · ưu tiên 5
+## 74. `portrait_ong_ba_vong_panic` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_ong_ba_vong_panic.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1015,7 +775,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a skinny lazy old man with only two teeth left, nose hairs so long they look like a mustache, three strands of hair combed over a shiny bald head, half-closed sleepy eyes, toothpick in mouth, folded hammock carried on his back like a cape, saggy white tank top, striped pajama pants slipping down showing flowery underwear waistband, head and shoulders portrait, facing the viewer slightly turned right, centered, panicked, sweating Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 99. `portrait_ong_ba_vong_cry` · ưu tiên 5
+## 75. `portrait_ong_ba_vong_cry` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_ong_ba_vong_cry.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1025,7 +785,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a skinny lazy old man with only two teeth left, nose hairs so long they look like a mustache, three strands of hair combed over a shiny bald head, half-closed sleepy eyes, toothpick in mouth, folded hammock carried on his back like a cape, saggy white tank top, striped pajama pants slipping down showing flowery underwear waistband, head and shoulders portrait, facing the viewer slightly turned right, centered, crying with streams of tears Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 100. `portrait_dai_ca_dep_neutral` · ưu tiên 5
+## 76. `portrait_dai_ca_dep_neutral` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_dai_ca_dep_neutral.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1035,7 +795,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a pompous short gang boss in an oversized shiny purple suit with shoulder pads, tiny round black sunglasses, a gold chain as thick as a dog leash, a thin pencil mustache, slicked-back hair so greasy that flies buzz around it, a gold front tooth, cheap honeycomb plastic sandals with socks, head and shoulders portrait, facing the viewer slightly turned right, centered, neutral smug face Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 101. `portrait_dai_ca_dep_evil` · ưu tiên 5
+## 77. `portrait_dai_ca_dep_evil` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_dai_ca_dep_evil.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1045,7 +805,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a pompous short gang boss in an oversized shiny purple suit with shoulder pads, tiny round black sunglasses, a gold chain as thick as a dog leash, a thin pencil mustache, slicked-back hair so greasy that flies buzz around it, a gold front tooth, cheap honeycomb plastic sandals with socks, head and shoulders portrait, facing the viewer slightly turned right, centered, evil grin, chasing Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 102. `portrait_dai_ca_dep_panic` · ưu tiên 5
+## 78. `portrait_dai_ca_dep_panic` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_dai_ca_dep_panic.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1055,7 +815,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a pompous short gang boss in an oversized shiny purple suit with shoulder pads, tiny round black sunglasses, a gold chain as thick as a dog leash, a thin pencil mustache, slicked-back hair so greasy that flies buzz around it, a gold front tooth, cheap honeycomb plastic sandals with socks, head and shoulders portrait, facing the viewer slightly turned right, centered, panicked, sweating Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 103. `portrait_dai_ca_dep_cry` · ưu tiên 5
+## 79. `portrait_dai_ca_dep_cry` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_dai_ca_dep_cry.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1065,7 +825,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a pompous short gang boss in an oversized shiny purple suit with shoulder pads, tiny round black sunglasses, a gold chain as thick as a dog leash, a thin pencil mustache, slicked-back hair so greasy that flies buzz around it, a gold front tooth, cheap honeycomb plastic sandals with socks, head and shoulders portrait, facing the viewer slightly turned right, centered, crying with streams of tears Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 104. `portrait_map_tra_sua_neutral` · ưu tiên 5
+## 80. `portrait_map_tra_sua_neutral` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_map_tra_sua_neutral.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1075,7 +835,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a round chubby teen with huge jiggly cheeks and a double chin, tapioca pearls stuck around his mouth, clutching a giant bubble tea cup with a fat straw, oversized hoodie with sweat-soaked armpits, tiny shorts, untied sneakers, head and shoulders portrait, facing the viewer slightly turned right, centered, neutral smug face Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 105. `portrait_map_tra_sua_evil` · ưu tiên 5
+## 81. `portrait_map_tra_sua_evil` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_map_tra_sua_evil.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1085,7 +845,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a round chubby teen with huge jiggly cheeks and a double chin, tapioca pearls stuck around his mouth, clutching a giant bubble tea cup with a fat straw, oversized hoodie with sweat-soaked armpits, tiny shorts, untied sneakers, head and shoulders portrait, facing the viewer slightly turned right, centered, evil grin, chasing Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 106. `portrait_map_tra_sua_panic` · ưu tiên 5
+## 82. `portrait_map_tra_sua_panic` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_map_tra_sua_panic.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1095,7 +855,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a round chubby teen with huge jiggly cheeks and a double chin, tapioca pearls stuck around his mouth, clutching a giant bubble tea cup with a fat straw, oversized hoodie with sweat-soaked armpits, tiny shorts, untied sneakers, head and shoulders portrait, facing the viewer slightly turned right, centered, panicked, sweating Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 107. `portrait_map_tra_sua_cry` · ưu tiên 5
+## 83. `portrait_map_tra_sua_cry` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_map_tra_sua_cry.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1105,7 +865,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a round chubby teen with huge jiggly cheeks and a double chin, tapioca pearls stuck around his mouth, clutching a giant bubble tea cup with a fat straw, oversized hoodie with sweat-soaked armpits, tiny shorts, untied sneakers, head and shoulders portrait, facing the viewer slightly turned right, centered, crying with streams of tears Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 108. `portrait_co_ba_ganh_neutral` · ưu tiên 5
+## 84. `portrait_co_ba_ganh_neutral` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_co_ba_ganh_neutral.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1115,7 +875,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a hyperactive young fruit seller with one thick unibrow, a huge gap-toothed grin, two stiff braids sticking straight out sideways, a crooked conical hat, balancing a bamboo shoulder pole with two overflowing fruit baskets, patched brown blouse, mismatched plastic slippers, head and shoulders portrait, facing the viewer slightly turned right, centered, neutral smug face Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 109. `portrait_co_ba_ganh_evil` · ưu tiên 5
+## 85. `portrait_co_ba_ganh_evil` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_co_ba_ganh_evil.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1125,7 +885,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a hyperactive young fruit seller with one thick unibrow, a huge gap-toothed grin, two stiff braids sticking straight out sideways, a crooked conical hat, balancing a bamboo shoulder pole with two overflowing fruit baskets, patched brown blouse, mismatched plastic slippers, head and shoulders portrait, facing the viewer slightly turned right, centered, evil grin, chasing Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 110. `portrait_co_ba_ganh_panic` · ưu tiên 5
+## 86. `portrait_co_ba_ganh_panic` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_co_ba_ganh_panic.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1135,7 +895,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a hyperactive young fruit seller with one thick unibrow, a huge gap-toothed grin, two stiff braids sticking straight out sideways, a crooked conical hat, balancing a bamboo shoulder pole with two overflowing fruit baskets, patched brown blouse, mismatched plastic slippers, head and shoulders portrait, facing the viewer slightly turned right, centered, panicked, sweating Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 111. `portrait_co_ba_ganh_cry` · ưu tiên 5
+## 87. `portrait_co_ba_ganh_cry` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_co_ba_ganh_cry.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1145,7 +905,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a hyperactive young fruit seller with one thick unibrow, a huge gap-toothed grin, two stiff braids sticking straight out sideways, a crooked conical hat, balancing a bamboo shoulder pole with two overflowing fruit baskets, patched brown blouse, mismatched plastic slippers, head and shoulders portrait, facing the viewer slightly turned right, centered, crying with streams of tears Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 112. `portrait_su_phu_mi_neutral` · ưu tiên 5
+## 88. `portrait_su_phu_mi_neutral` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_su_phu_mi_neutral.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1155,7 +915,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, head and shoulders portrait, facing the viewer slightly turned right, centered, neutral smug face Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 113. `portrait_su_phu_mi_evil` · ưu tiên 5
+## 89. `portrait_su_phu_mi_evil` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_su_phu_mi_evil.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1165,7 +925,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, head and shoulders portrait, facing the viewer slightly turned right, centered, evil grin, chasing Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 114. `portrait_su_phu_mi_panic` · ưu tiên 5
+## 90. `portrait_su_phu_mi_panic` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_su_phu_mi_panic.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1175,7 +935,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, head and shoulders portrait, facing the viewer slightly turned right, centered, panicked, sweating Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 115. `portrait_su_phu_mi_cry` · ưu tiên 5
+## 91. `portrait_su_phu_mi_cry` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_su_phu_mi_cry.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1185,7 +945,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, head and shoulders portrait, facing the viewer slightly turned right, centered, crying with streams of tears Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 116. `portrait_be_ti_neutral` · ưu tiên 5
+## 92. `portrait_be_ti_neutral` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_be_ti_neutral.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1195,7 +955,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, head and shoulders portrait, facing the viewer slightly turned right, centered, neutral smug face Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 117. `portrait_be_ti_evil` · ưu tiên 5
+## 93. `portrait_be_ti_evil` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_be_ti_evil.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1205,7 +965,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, head and shoulders portrait, facing the viewer slightly turned right, centered, evil grin, chasing Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 118. `portrait_be_ti_panic` · ưu tiên 5
+## 94. `portrait_be_ti_panic` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_be_ti_panic.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1215,7 +975,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, head and shoulders portrait, facing the viewer slightly turned right, centered, panicked, sweating Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 119. `portrait_be_ti_cry` · ưu tiên 5
+## 95. `portrait_be_ti_cry` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_be_ti_cry.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1225,7 +985,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, head and shoulders portrait, facing the viewer slightly turned right, centered, crying with streams of tears Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 120. `portrait_shipper_neutral` · ưu tiên 5
+## 96. `portrait_shipper_neutral` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_shipper_neutral.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1235,7 +995,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, head and shoulders portrait, facing the viewer slightly turned right, centered, neutral smug face Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 121. `portrait_shipper_evil` · ưu tiên 5
+## 97. `portrait_shipper_evil` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_shipper_evil.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1245,7 +1005,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, head and shoulders portrait, facing the viewer slightly turned right, centered, evil grin, chasing Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 122. `portrait_shipper_panic` · ưu tiên 5
+## 98. `portrait_shipper_panic` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_shipper_panic.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1255,7 +1015,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, head and shoulders portrait, facing the viewer slightly turned right, centered, panicked, sweating Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 123. `portrait_shipper_cry` · ưu tiên 5
+## 99. `portrait_shipper_cry` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_shipper_cry.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1265,7 +1025,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, head and shoulders portrait, facing the viewer slightly turned right, centered, crying with streams of tears Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 124. `portrait_cu_rua_neutral` · ưu tiên 5
+## 100. `portrait_cu_rua_neutral` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_cu_rua_neutral.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1275,7 +1035,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops, head and shoulders portrait, facing the viewer slightly turned right, centered, neutral smug face Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 125. `portrait_cu_rua_evil` · ưu tiên 5
+## 101. `portrait_cu_rua_evil` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_cu_rua_evil.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1285,7 +1045,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops, head and shoulders portrait, facing the viewer slightly turned right, centered, evil grin, chasing Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 126. `portrait_cu_rua_panic` · ưu tiên 5
+## 102. `portrait_cu_rua_panic` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_cu_rua_panic.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1295,7 +1055,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops, head and shoulders portrait, facing the viewer slightly turned right, centered, panicked, sweating Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 127. `portrait_cu_rua_cry` · ưu tiên 5
+## 103. `portrait_cu_rua_cry` · ưu tiên 5
 
 - **Lưu thành**: `assets/_raw/portrait_cu_rua_cry.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1305,7 +1065,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. a tiny ancient grandpa with eyebrows so long they drag on the ground, giant earlobes, a toothless peaceful smile, wearing a turtle shell backpack covered in cheap stickers, walking cane, flip-flops, head and shoulders portrait, facing the viewer slightly turned right, centered, crying with streams of tears Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 128. `char_a_hon_ref` · ưu tiên 9
+## 104. `char_a_hon_ref` · ưu tiên 9
 
 - **Lưu thành**: `assets/_raw/char_a_hon_ref.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1315,7 +1075,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Character reference sheet of a loud-mouthed scrawny street vendor with a giant steamed bun as a hat that has a big bite missing, two huge yellowish buck teeth with one chipped, a mole on his cheek with one long curly hair, sweat-stained yellowed sleeveless undershirt riding up over a round hairy belly button, baggy red shorts, mismatched flip-flops, color palette #FFFFFF #E63946 #F4A261 #2B2D42. Show 3 views in a row: front, 3/4 facing right, side facing right. Below: 6 facial expressions (neutral, screaming, evil grin, panicked, crying, shocked). Same outfit and colors in every view, separated panels. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 129. `char_ba_tam_loa_ref` · ưu tiên 9
+## 105. `char_ba_tam_loa_ref` · ưu tiên 9
 
 - **Lưu thành**: `assets/_raw/char_ba_tam_loa_ref.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1325,7 +1085,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Character reference sheet of a stout loud fish market lady holding a dented megaphone, bright red lipstick smeared far outside her lips and stuck on her teeth, two perfectly round blotchy pink blush circles, eyebrows drawn way too high in pencil, a tiny pencil stuck in her hair bun, floral blouse with fish scales stuck on it, wet rubber apron, tall green rubber boots, color palette #2A9D8F #E9C46A #F28482 #264653. Show 3 views in a row: front, 3/4 facing right, side facing right. Below: 6 facial expressions (neutral, screaming, evil grin, panicked, crying, shocked). Same outfit and colors in every view, separated panels. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 130. `char_ong_ba_vong_ref` · ưu tiên 9
+## 106. `char_ong_ba_vong_ref` · ưu tiên 9
 
 - **Lưu thành**: `assets/_raw/char_ong_ba_vong_ref.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1335,7 +1095,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Character reference sheet of a skinny lazy old man with only two teeth left, nose hairs so long they look like a mustache, three strands of hair combed over a shiny bald head, half-closed sleepy eyes, toothpick in mouth, folded hammock carried on his back like a cape, saggy white tank top, striped pajama pants slipping down showing flowery underwear waistband, color palette #8D99AE #EDF2F4 #6D597A #B56576. Show 3 views in a row: front, 3/4 facing right, side facing right. Below: 6 facial expressions (neutral, screaming, evil grin, panicked, crying, shocked). Same outfit and colors in every view, separated panels. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 131. `char_dai_ca_dep_ref` · ưu tiên 9
+## 107. `char_dai_ca_dep_ref` · ưu tiên 9
 
 - **Lưu thành**: `assets/_raw/char_dai_ca_dep_ref.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1345,7 +1105,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Character reference sheet of a pompous short gang boss in an oversized shiny purple suit with shoulder pads, tiny round black sunglasses, a gold chain as thick as a dog leash, a thin pencil mustache, slicked-back hair so greasy that flies buzz around it, a gold front tooth, cheap honeycomb plastic sandals with socks, color palette #7209B7 #FFD60A #000000 #F72585. Show 3 views in a row: front, 3/4 facing right, side facing right. Below: 6 facial expressions (neutral, screaming, evil grin, panicked, crying, shocked). Same outfit and colors in every view, separated panels. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 132. `char_map_tra_sua_ref` · ưu tiên 9
+## 108. `char_map_tra_sua_ref` · ưu tiên 9
 
 - **Lưu thành**: `assets/_raw/char_map_tra_sua_ref.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1355,7 +1115,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Character reference sheet of a round chubby teen with huge jiggly cheeks and a double chin, tapioca pearls stuck around his mouth, clutching a giant bubble tea cup with a fat straw, oversized hoodie with sweat-soaked armpits, tiny shorts, untied sneakers, color palette #CDB4DB #A47148 #FFC8DD #3D405B. Show 3 views in a row: front, 3/4 facing right, side facing right. Below: 6 facial expressions (neutral, screaming, evil grin, panicked, crying, shocked). Same outfit and colors in every view, separated panels. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 133. `char_co_ba_ganh_ref` · ưu tiên 9
+## 109. `char_co_ba_ganh_ref` · ưu tiên 9
 
 - **Lưu thành**: `assets/_raw/char_co_ba_ganh_ref.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1365,7 +1125,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Character reference sheet of a hyperactive young fruit seller with one thick unibrow, a huge gap-toothed grin, two stiff braids sticking straight out sideways, a crooked conical hat, balancing a bamboo shoulder pole with two overflowing fruit baskets, patched brown blouse, mismatched plastic slippers, color palette #BC6C25 #DDA15E #606C38 #FEFAE0. Show 3 views in a row: front, 3/4 facing right, side facing right. Below: 6 facial expressions (neutral, screaming, evil grin, panicked, crying, shocked). Same outfit and colors in every view, separated panels. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 134. `char_su_phu_mi_ref` · ưu tiên 9
+## 110. `char_su_phu_mi_ref` · ưu tiên 9
 
 - **Lưu thành**: `assets/_raw/char_su_phu_mi_ref.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1375,7 +1135,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Character reference sheet of an eccentric old kung fu master whose long beard and eyebrows are made of curly instant noodles, cross-eyed, bright red bulbous nose, one eye squinting, stained orange robe with soup splashes, holding a pair of chopsticks like a weapon, color palette #FB8500 #FFB703 #8ECAE6 #023047. Show 3 views in a row: front, 3/4 facing right, side facing right. Below: 6 facial expressions (neutral, screaming, evil grin, panicked, crying, shocked). Same outfit and colors in every view, separated panels. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 135. `char_be_ti_ref` · ưu tiên 9
+## 111. `char_be_ti_ref` · ưu tiên 9
 
 - **Lưu thành**: `assets/_raw/char_be_ti_ref.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1385,7 +1145,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Character reference sheet of a very tiny man with absurdly huge oiled shiny bodybuilder muscles, a chubby baby face with scruffy stubble, a sweatband, a tiny wrestling singlet, veins popping on his forehead, constantly flexing, color palette #E76F51 #F4A261 #2A9D8F #1D3557. Show 3 views in a row: front, 3/4 facing right, side facing right. Below: 6 facial expressions (neutral, screaming, evil grin, panicked, crying, shocked). Same outfit and colors in every view, separated panels. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 136. `char_shipper_ref` · ưu tiên 9
+## 112. `char_shipper_ref` · ưu tiên 9
 
 - **Lưu thành**: `assets/_raw/char_shipper_ref.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
@@ -1395,7 +1155,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Character reference sheet of a sunburned delivery rider with a dented helmet, a pale sunglasses tan line across his face, a face mask pulled down under his chin, a fake overly polite grin, reflective vest, a giant delivery box on his back with a leaking sauce stain, phone in hand, color palette #FFBE0B #FB5607 #3A86FF #222222. Show 3 views in a row: front, 3/4 facing right, side facing right. Below: 6 facial expressions (neutral, screaming, evil grin, panicked, crying, shocked). Same outfit and colors in every view, separated panels. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 137. `char_cu_rua_ref` · ưu tiên 9
+## 113. `char_cu_rua_ref` · ưu tiên 9
 
 - **Lưu thành**: `assets/_raw/char_cu_rua_ref.png`
 - **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
