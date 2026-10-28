@@ -57,6 +57,11 @@ func (g *Game) addItem(kind string, value float64, at Vec) *Item {
 	return it
 }
 
+// SpawnItemForTest thả một vật phẩm ở đúng vị trí cho trước; chỉ dùng trong test.
+func (g *Game) SpawnItemForTest(kind string, value float64, at Vec) *Item {
+	return g.addItem(kind, value, at)
+}
+
 func (g *Game) removeItem(it *Item) {
 	delete(g.Items, it.ID)
 	g.freeSlot(it)
