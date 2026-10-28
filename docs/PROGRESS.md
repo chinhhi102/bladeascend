@@ -75,6 +75,14 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 - Nếu Gemini trả lời bằng chữ nhưng ảnh vẫn có trong lịch sử Gemini: tải ảnh về, đặt tên `assets/_raw/<tên job>.png` (tên job xem `artgen plan`), chạy `artgen prep`.
 
 ## Lỗi / hạn chế đã biết
+
+- **Thỉnh thoảng mất ngữ cảnh WebGL (28/10/2026)**: chạy 3 lượt kiểm tra bằng Chrome headless
+  trên AMD RX 570 (RADV) thì **1 lượt** in `PixiJS Error: Could not initialize shader` kèm
+  `WebGL context may be lost`. Khung hình không tụt (58 fps) nên có vẻ chỉ là trình điều
+  khiển trong môi trường headless. **Nhưng client hiện KHÔNG bắt sự kiện `webglcontextlost`**
+  — nếu chuyện này xảy ra với người chơi thật thì màn hình sẽ đen vĩnh viễn, phải tự tải lại
+  trang. Chưa làm vì chưa thấy tái hiện trên máy thật; nếu có người báo "màn hình đen" thì
+  đây là chỗ nhìn đầu tiên.
 - **Tài khoản minigen `pt1` đang báo UNAUTHENTICATED (cookie hết hạn)** → cần đăng nhập lại cookie bên minigen rồi chạy tiếp `artgen run`.
 - Gemini đôi khi vẽ sai số frame (5 thay vì 4, 6 thay vì 8). `artgen prep` giữ đúng số frame thực tế vẽ ra; anim vẫn chạy được.
 - Ảnh của Bà Tám Loa lấy từ bản JPEG 1024px (người dùng tải từ Gemini) → hơi mờ, có ngôi sao watermark nhỏ; nên sinh lại khi dư quota (`artgen run -only char_ba_tam_loa_core -redo`).
