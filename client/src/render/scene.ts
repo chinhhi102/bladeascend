@@ -398,6 +398,31 @@ export class GameScene {
    * Có nó thì lúc ai đó kêu lag là biết ngay nghẽn ở đâu — khung hình thấp mà `vẽ` nhỏ là
    * nghẽn mạng chứ không phải máy yếu, còn `vẽ` cao là do quá nhiều thứ trên màn hình.
    */
+  /** perfStats là cùng bộ số của overlay F3 nhưng ở dạng object (tools/browsertest đọc). */
+  perfStats(): Record<string, number> {
+    let swords = 0;
+    for (const p of this.players.values()) {
+      swords += p.swordCount;
+    }
+    const me = this.world?.me();
+    return {
+      myLevel: me?.L ?? -1,
+      mySwords: me?.n ?? 0,
+      fps: this.fps,
+      frameMs: 1000 / Math.max(this.fps, 1),
+      drawMs: this.lastRenderMs,
+      sprites: countNodes(this.app.stage),
+      drawCalls: drawCalls.perFrame,
+      players: this.players.size,
+      swords,
+      monsters: this.monsters.size,
+      orbs: this.orbs.ids().length,
+      items: this.items.size,
+      aoi: this.players.size + this.monsters.size + this.items.size + this.orbs.ids().length,
+      detail: this.detail,
+    };
+  }
+
   perfLine(dt: number, net: { rttMs: number; kbPerSec: number; snapBytes: number; srvMs: number }): string {
     this.fpsAcc += dt;
     this.fpsFrames += 1;

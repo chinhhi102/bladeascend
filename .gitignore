@@ -16,3 +16,7 @@ server/data/
 assets/_raw/
 
 .DS_Store
+
+# tools/browsertest: Playwright tải trình duyệt riêng, không đưa vào repo
+tools/browsertest/node_modules/
+docs/perf/*.png
