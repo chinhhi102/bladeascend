@@ -100,3 +100,27 @@ Nguyên nhân vật cản yếu: damage tính theo **từng thanh kiếm**, nên
 
 ## Q19 — Tốc độ bể kiếm
 **Giữ như em đã làm**: `clash_cooldown: 0` (bể mỗi tick), `flip_cooldown: 0.3`. Spec §5.2 đã sửa.
+
+---
+
+## Trả lời báo cáo đo (mục 24)
+
+Nhận xét: client trong game thật đang ổn (60 fps, vẽ 1 ms). Chỗ vượt ngân sách là **server tick** và **băng thông** (61,7 KB/s trong game thật, đỉnh snapshot 38 KB). Trên 4G yếu, gói to và đều đặn dễ gây nghẽn hàng đợi → ping hiển thị tăng. Vì vậy ưu tiên mạng và server trước client.
+
+### 1. Tối ưu — đi tiếp, theo thứ tự này
+1. **Mục 27 (mạng) trước**: delta snapshot, lượng tử hóa, item/EXP chỉ gửi sự kiện, **chia nhỏ ItemsAdded** (tối đa ~2 KB mỗi gói, phần còn lại gửi dần ở các tick sau, ưu tiên gần người chơi), không gửi viên nhỏ ngoài 1 500 khi camera lùi xa, 20/10 Hz theo khoảng cách, bỏ snapshot cũ khi client nghẽn.
+2. **Mục 26 (server)**: chạy `pprof` trên loadtest trước, gửi tôi top 10 hàm tốn CPU, rồi mới sửa đúng chỗ (va chạm theo vòng, chỉ vòng ngoài cùng, không cấp phát mỗi tick).
+3. **Mục 25 (client)**: chỉ làm phần rẻ mà lợi lớn — vẽ mỗi vòng kiếm thành 1 texture, BitmapText, cull. Web Worker và tự hạ chất lượng để sau, chỉ làm nếu đo thấy cần.
+4. Đo lại bằng loadtest + F3 sau mỗi bước, ghi bảng trước/sau vào PROGRESS.md.
+5. **Thêm 1 phép đo mạng thật**: chạy client với Chrome DevTools → Network throttling "Fast 4G" và "Slow 4G", ghi ping p95 và KB/s. Ghi luôn server đang đặt ở đâu (nước/khu vực) trong PROGRESS.md.
+
+### 2. Thư viện
+**Duyệt** `pixi-filters` và `revolt-fx`. Thêm vào CLAUDE.md quy tắc: *"Thư viện được spec ghi đích danh coi như đã duyệt; thư viện khác vẫn phải hỏi."*
+
+### 3. Thứ tự các buổi tiếp theo
+1. Tối ưu (mục 25–27 như trên).
+2. Bảng tên — mục 37–41 (nhỏ, thấy ngay).
+3. Ảnh đại diện + bản đồ sinh động — mục 42–47 (làm sau tối ưu để đo được chi phí bake chunk).
+4. VFX Tiên giới — mục 29–33, rồi thần thú luôn lượn lờ — mục 34–36 (nếu chưa làm).
+
+Mỗi buổi xong: test + build pass, cập nhật PROGRESS.md, báo số FPS/KB/s nếu có ảnh hưởng hiệu năng.

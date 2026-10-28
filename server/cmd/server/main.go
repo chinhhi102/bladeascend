@@ -26,6 +26,9 @@ func main() {
 	clientDir := flag.String("client", config.FindRepoFile("client/dist"), "built client directory")
 	dbPath := flag.String("db", "", "SQLite file (default: server/data/leaderboard.db)")
 	debug := flag.Bool("debug", true, "cho phép phím test; người chơi vẫn phải tự mở bằng ?debug=true")
+	// Trần kết nối mỗi IP là để chống lạm dụng (§13.5). Chạy tools/browsertest thì 10 tab
+	// cùng đến từ 127.0.0.1 nên phải nới, nếu không tab thứ 9 trở đi ăn HTTP 429.
+	maxConns := flag.Int("max-conns-per-ip", 0, "ghi đè net.max_conns_per_ip (0 = theo config)")
 	flag.Parse()
 
 	cfg, raw, err := config.Load(*cfgPath)
@@ -40,6 +43,9 @@ func main() {
 	st := openStore(*dbPath, cfg)
 	defer st.Close()
 
+	if *maxConns > 0 {
+		cfg.Net.MaxConnsPerIP = *maxConns
+	}
 	mgr := room.NewManager(cfg, maps, st)
 	mgr.AllowDebug = *debug // người chơi vẫn phải tự mở bằng ?debug=true mới thấy bảng
 	srv := &server{cfg: cfg, rawCfg: raw, mgr: mgr, store: st, maps: maps, debug: *debug,

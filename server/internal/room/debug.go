@@ -28,6 +28,12 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			}
 			next := (r.G.Prog.Realm(p.Level) + 1) * r.G.Prog.Tiers()
 			r.G.GainExp(p, r.G.Prog.Threshold(next)-p.TotalExp, false)
+		case "max":
+			// Lên thẳng Đạo Tổ với đủ kiếm. Chỉ dùng cho công cụ đo (tools/browsertest) —
+			// bấm phím "realm" 14 lần rồi "sword" 105 lần thì vừa chậm vừa hay lệch.
+			top := r.G.Prog.TienLevel(len(r.cfg.Cultivation.TienRealms) - 1)
+			r.G.ForceState(p, top, r.G.Prog.MaxSwords(r.G.Prog.Realm(top)), p.Pos)
+			p.InvulnUntil = 0 // ForceState bật bất tử để đo server, ở đây muốn đánh nhau thật
 		case "sword":
 			r.G.AddSwords(p, max(1, d.N))
 		case "die":

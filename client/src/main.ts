@@ -172,7 +172,17 @@ class App {
     this.hud.setDebug(w.debug);
     if (w.debug) {
       // ?debug=true: mở cửa sau cho console của trình duyệt (xem VFX, đếm thần thú...).
-      (window as unknown as { kx?: unknown }).kx = { scene: this.scene, world: this.world };
+      const g = window as unknown as { kx?: unknown; __stats?: unknown };
+      g.kx = { scene: this.scene, world: this.world, conn: this.conn };
+      // __stats là cùng bộ số của overlay F3 nhưng ở dạng object, cho tools/browsertest
+      // đọc mỗi giây. Giữ tên cố định để script không phải bám vào nội bộ renderer.
+      g.__stats = (): Record<string, number> => ({
+        ...this.scene.perfStats(),
+        ping: this.conn.rttMs,
+        kbPerSec: this.conn.kbPerSec,
+        snapKB: this.conn.lastSnapBytes / 1024,
+        srvMs: this.srvMs,
+      });
     }
     this.screens.show(null);
     this.overlay.appendChild(this.hud.root);
