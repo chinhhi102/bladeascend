@@ -27,10 +27,13 @@ func (g *Game) swordTouchesCircle(owner *Player, c Vec, r float64) (int, bool) {
 }
 
 // resolveSwordBody applies spec §5.1: at most one hit per victim per tick.
+//
+// Lá chắn (§5.2) được kiểm ở đây chứ không chặn đường đi nữa: còn vòng kế ngoài cùng thì
+// kiếm địch dù quét trùm lên thân cũng không ăn — phải mài cho rụng hết vòng ngoài đã.
 func (g *Game) resolveSwordBody() {
 	players := g.PlayerList()
 	for _, b := range players {
-		if !g.canFight(b) || b.Invulnerable(g.Time) {
+		if !g.canFight(b) || b.Invulnerable(g.Time) || g.Shielded(b) {
 			continue
 		}
 		for _, a := range players {

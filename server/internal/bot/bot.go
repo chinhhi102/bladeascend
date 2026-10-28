@@ -93,12 +93,12 @@ func (b *Brain) decide(g *game.Game, me *game.Player) {
 		b.flee(g, me, threat)
 	case prey != nil && b.rng.Float64() < 0.5+b.aggression/2:
 		b.State = StateHunt
-		// Lá chắn vòng kế ngoài cùng (spec §5.2): không thể lao thẳng vào thân, phải đứng
-		// sát mép lá chắn mà mài cho hết vòng ngoài của đối thủ trước. Nhắm đúng mép đó
-		// thay vì cố chen vào trong (chen cũng bị chặn, chỉ tổ kẹt vào tường).
-		stop := me.Geom.Reach * 0.6
-		if s := g.ShieldR(prey); s > 0 {
-			stop = me.Geom.Reach + s + 10
+		// Còn lá chắn (§5.2) thì chém thân không ăn: đứng trong vùng mài — xa hơn tầm kiếm
+		// của đối thủ nên không bị chém thân, nhưng đủ gần để hai vòng ngoài chạm nhau.
+		// Hết lá chắn thì lao thẳng vào thân.
+		stop := prey.Geom.Reach * 0.5
+		if g.ShieldR(prey) > 0 {
+			stop = prey.Geom.Reach + me.Geom.Reach*0.5
 		}
 		b.setGoal(prey.Pos, stop)
 	case b.State == StateAmbush && g.Time < b.ambushUntil:

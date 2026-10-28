@@ -5,26 +5,41 @@ Câu đã xong ở `docs/QUESTIONS_DONE.md`.
 
 ---
 
-## Q15. Công thức lá chắn §5.2 làm không ai chém chết được ai
+## Q16. Vật phẩm Trường Kiếm — spec có, anh nói không có
 
-**Bối cảnh:** §5.2 ghi ràng buộc đối xứng:
+**Bối cảnh:** anh nhắn "không có item trường kiếm, có item tăng tốc độ quay của kiếm chứ
+không có trường kiếm". Nhưng `docs/_raw/GAME_SPEC.md` §6.2 đang ghi rõ nó:
 
-> `dist(A, B) ≥ max(reachA + shield_rB, reachB + shield_rA)`
+> | Trường Kiếm | Chiều dài mọi vòng kiếm × 1.3 | 12s | 7 |
 
-Code đúng y công thức này thì **không ai hạ được ai**. Lý do: người có từ 2 vòng trở lên có
-`shield_r` (mũi kiếm vòng kế ngoài) **lớn hơn chính tầm với của mình trừ đi 1 lớp**, nên vế
-`reachB + shield_rA` đẩy nạn nhân ra xa hơn tầm kiếm của A.
+Và nó **đang có thật trong game**: đếm thử 1 phòng 200 vật phẩm ra 13 viên Trường Kiếm
+(ngang với Hộ Thuẫn 15, Song Tu 9), ảnh `assets/buffs/long.png` cũng đã vẽ xong — bong bóng
+tím, thanh kiếm kèm mũi tên lên, khác hẳn viên Tốc Kiếm (bong bóng xanh ngọc hình lốc xoáy).
 
-Ví dụ đo thật (Kim Đan, 20 kiếm = 2 vòng): `reachA` ≈ 245, `shield_rA` ≈ 222. Nạn nhân 1 vòng
-(`reach` ≈ 117, không còn lá chắn) bị giữ ở `117 + 222 = 339` — xa hơn 245 nên A vĩnh viễn
-không chạm tới thân B. Trận đấu không bao giờ kết thúc được bằng §5.1.
+**Phương án:**
+1. **Giữ nguyên** — Trường Kiếm có thật, chỉ là anh chưa nhặt trúng (7% số vật phẩm).
+2. **Bỏ hẳn** — xoá `long` khỏi `buffs` + `items.weights`, chia lại trọng số. Việc này **sửa
+   §6.2 và §4.1a của spec**, mà spec chỉ có anh sửa.
 
-**Tạm dùng — hai điều chỉnh, đã ghi chú trong `shield.go`:**
-1. **Chỉ áp theo hướng người đang đi**: `dist ≥ reach(người đi) + shield(người kia)`. Giữ đúng
-   ý "chỉ người đang đi bị chặn như va tường", và vẫn bịt kín các vòng trong.
-2. **Còn 1 vòng thì `shield_r` = 0** (spec ghi `BODY_R × scale`). Với `BODY_R × scale`, mũi
-   kiếm chỉ chạm **tiếp tuyến** mặt ngoài thân nên §5.1 bắn được hay không tuỳ sai số số học.
-   Để 0 thì "còn 1 vòng mới chạm được tới thân" xảy ra dứt khoát.
+**Tạm dùng: phương án 1** (code không đổi) vì spec đang ghi là có.
 
-Nếu anh muốn giữ nguyên công thức đối xứng, cần nói rõ **làm sao kết thúc được trận** — ví dụ
-lá chắn chỉ chặn thân chứ không chặn kiếm, hoặc `shield_r` nhỏ hơn `reach` một lớp.
+Nếu anh muốn bỏ, nhắn một câu là xoá — nhưng anh cần sửa §6.2 trong `docs/_raw/` trước, vì
+§4.1a cũng đang dùng `buff_long` trong công thức tầm chém.
+
+---
+
+## Q17. Bỏ chặn đường đi làm "Bó Kiếm khi rớt cảnh giới" gần như không xảy ra
+
+**Bối cảnh:** sau khi chuyển lá chắn thành luật chém (xem Q15 ở file DONE), nạn nhân chỉ ăn
+được cú chém thân khi **còn đúng 1 vòng, tức ≤ 10 kiếm**.
+
+Mà §5.1 nói rớt cảnh giới thì kiếm thừa so với trần cảnh giới mới rơi xuống thành **Bó Kiếm**.
+Trần thấp nhất là Luyện Khí 10 kiếm — nạn nhân lúc bị chém đã ≤ 10 kiếm rồi, nên **không bao
+giờ còn kiếm thừa để rơi**. Nhánh Bó Kiếm chỉ còn chạy lúc chết hẳn (rơi 50% số kiếm).
+
+**Phương án:**
+1. **Chấp nhận** — Bó Kiếm chủ yếu đến từ xác người chết và từ vật phẩm rơi sẵn trên bản đồ.
+2. **Cho chém thân sớm hơn**: lá chắn chỉ tính từ vòng thứ 3 trở lên (còn ≤ 2 vòng = ≤ 30
+   kiếm là chém thân được). Lúc đó rớt từ Kim Đan xuống Trúc Cơ mới có kiếm thừa rơi ra.
+
+**Tạm dùng: phương án 1** — đúng nguyên văn §5.2 ("còn 1 vòng mới chạm được tới thân").

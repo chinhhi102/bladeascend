@@ -117,17 +117,19 @@ func (g *Game) movePlayer(p *Player, dt float64) {
 	if p.KnockUntil > g.Time {
 		p.Pos = p.Pos.Add(p.KnockVel.Mul(dt))
 	}
-	// Lá chắn vòng kế ngoài cùng chặn như tường (spec §5.2): CHỈ người đang tự đi mới bị
-	// chặn. Người đứng yên không bị đẩy ra — nếu không, lá chắn của kẻ mạnh sẽ hất nạn
-	// nhân ra xa hơn tầm kiếm của chính hắn và không ai chém chết được ai.
-	if p.Moving {
-		p.Pos = g.blockedByShields(p, p.Pos)
-	}
+	// Người chơi KHÔNG chặn đường nhau (spec §5.2 là luật chém, xem shield.go): đi tới gần
+	// ai cũng vẫn điều khiển được bình thường, hai vòng kiếm chồng lên nhau mà mài.
 	p.Pos = g.resolveBlocking(p.Pos, g.BodyR(p))
 }
 
-// resolveBlocking pushes a circle out of solid obstacles and keeps it inside the map.
+// resolveBlocking pushes a circle out of solid obstacles and keeps it inside the playable
+// area — never in the void outside the border wall (spec §8.1).
+//
+// Trước đây chỗ này chỉ kẹp vào [r, size-r] tức cả dải lề ngoài tường biên, nên một cú
+// knockback hay một lần PushOut chọn nhầm mặt ngoài của tường là người chơi đứng luôn bên
+// ngoài bản đồ và không có gì kéo họ vào lại.
 func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
+	pos = g.clampToPlay(pos, r)
 	for iter := 0; iter < 3; iter++ {
 		moved := false
 		g.QueryObstacles(pos, r, func(id int) {
@@ -142,8 +144,16 @@ func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
 			break
 		}
 	}
-	size := g.Map.Size
-	return Vec{X: geom.Clamp(pos.X, r, size-r), Y: geom.Clamp(pos.Y, r, size-r)}
+	return g.clampToPlay(pos, r)
+}
+
+// clampToPlay keeps a circle of radius r inside the border wall.
+func (g *Game) clampToPlay(pos Vec, r float64) Vec {
+	lo, hi := g.PlayBounds(r)
+	if hi < lo { // bản đồ bé hơn hai lần lề: lùi về kẹp theo cả bản đồ
+		lo, hi = r, g.Map.Size-r
+	}
+	return Vec{X: geom.Clamp(pos.X, lo, hi), Y: geom.Clamp(pos.Y, lo, hi)}
 }
 
 // circleFree reports whether a circle overlaps no solid obstacle.
