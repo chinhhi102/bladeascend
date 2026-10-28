@@ -14,6 +14,9 @@ const (
 	tagFlip
 )
 
+// swordBreakFlushSecs: nhịp báo kiếm bể cho client, 6 lần/giây là đủ mượt mắt.
+const swordBreakFlushSecs = 1.0 / 6
+
 // canFight is true when a player can deal and receive sword interactions this tick.
 func (g *Game) canFight(p *Player) bool { return !p.Dead && !p.InTransit(g.Time) }
 
@@ -262,12 +265,29 @@ func (g *Game) breakSwords(p *Player, n int) {
 	}
 	lost := g.LoseSwords(p, n)
 	if lost > 0 {
-		g.emit(Event{Kind: "SwordBreak", A: p.ID, N: lost, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+		p.breakPending += lost
 		if p.Ring.Count == 0 {
 			g.emote(p, "no_swords") // spec §5.2: bị tước sạch kiếm → hoảng loạn
 		} else {
 			g.emote(p, "sword_lost")
 		}
+	}
+}
+
+// flushSwordBreaks gộp số kiếm bể của mỗi người thành MỘT sự kiện mỗi swordBreakFlushSecs,
+// kèm tổng số cây đã gãy. Client vẽ một vụ nổ to theo N thay vì N vụ nổ nhỏ.
+func (g *Game) flushSwordBreaks() {
+	for _, p := range g.PlayerList() {
+		if p.breakPending <= 0 {
+			continue
+		}
+		// Rụng sạch kiếm thì báo ngay, đó là khoảnh khắc đáng xem.
+		if g.Time < p.breakFlushAt && p.Ring.Count > 0 {
+			continue
+		}
+		g.emit(Event{Kind: "SwordBreak", A: p.ID, N: p.breakPending, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+		p.breakPending = 0
+		p.breakFlushAt = g.Time + swordBreakFlushSecs
 	}
 }
 

@@ -20,6 +20,11 @@ const FALLBACK_COLOR: Record<string, number> = {
   run_dust: 0xc9a46a,
 };
 
+// Trần số hiệu ứng chạy cùng lúc. Một sự kiện dồn dập từ server (ví dụ bể kiếm hàng loạt)
+// từng dựng ~1 800 AnimatedSprite mỗi giây và làm tụt khung hình; quá trần thì bỏ bớt hiệu
+// ứng cũ nhất, thà mất một tia lửa còn hơn giật cả màn hình.
+const MAX_EFFECTS = 60;
+
 /** Vfx plays one-shot effects (ART_PROMPTS §10) and floating texts; also owns camera shake. */
 export class Vfx {
   readonly layer = new Container();
@@ -98,6 +103,10 @@ export class Vfx {
   }
 
   private add(e: Effect): void {
+    while (this.effects.length >= MAX_EFFECTS) {
+      const old = this.effects.shift();
+      old?.node.destroy({ children: true });
+    }
     this.layer.addChild(e.node);
     this.effects.push(e);
   }

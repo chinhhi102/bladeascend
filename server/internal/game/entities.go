@@ -118,6 +118,12 @@ type Player struct {
 	lastTeleportIn float64
 	Transit        *Transit
 	EmoteReady     map[string]float64
+
+	// Kiếm bể dồn lại rồi mới báo một lần (xem flushSwordBreaks). Bể kiếm tính mỗi tick nên
+	// nếu mỗi cây gãy bắn một sự kiện thì 20 người đánh nhau đẻ ra ~1900 sự kiện/giây —
+	// server vẫn nhẹ nhưng client phải dựng từng ấy hiệu ứng + tiếng động và tụt khung hình.
+	breakPending int
+	breakFlushAt float64
 }
 
 func (p *Player) HasBuff(b int, now float64) bool { return p.Buffs[b] > now }

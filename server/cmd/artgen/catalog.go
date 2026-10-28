@@ -335,16 +335,22 @@ func obstacleJobs() []Job {
 		// Đoạn DỌC: client xếp gạch theo chiều dài nên ảnh ngang kéo dọc trông sai hẳn
 		// (hàng rào nằm ngang chồng lên nhau). Mỗi vật cản cần thêm một bộ 4 trạng thái vẽ
 		// theo chiều dọc, tên file `<state>_vertical.png`.
-		vdesc := strings.ReplaceAll(o.desc, "horizontal", "vertical")
-		if vdesc == o.desc {
-			vdesc = o.desc + ", turned to run vertically up the screen"
-		}
+		// "vertical" dễ bị hiểu thành "dựng đứng" (một tấm panel đứng), trong khi cái cần là
+		// cùng vật cản đó XOAY 90° TRÊN MẶT ĐẤT để chạy ra xa máy quay. Nên mô tả theo hướng
+		// chạy và bắt nó chạm mép trên + mép dưới khung hình thì xếp gạch mới nối liền.
+		vdesc := strings.ReplaceAll(o.desc, "horizontal ", "")
+		vdesc = strings.ReplaceAll(vdesc, " horizontal", "")
 		vstates := []Seg{{Anim: "states", Frames: 4, Out: dir,
 			Names:  []string{"intact_vertical", "cracked_vertical", "nearly_broken_vertical", "rubble_vertical"},
 			W:      o.w, H: o.h, Pivot: "center",
 			Poses: "1) intact and solid 2) with visible cracks 3) heavily damaged, crumbling, pieces missing 4) flat pile of rubble and debris on the ground"}}
 		jobs = append(jobs, Job{Name: "obs_" + o.id + "_states_vertical", Priority: 1, Mode: modeSheet, Rows: []int{2, 2}, Segs: vstates,
-			Prompt: sheetPrompt(styleObject, "a top-down 3/4 view game obstacle, "+vdesc+", running vertically from top to bottom of the frame", []int{2, 2}, vstates, true)})
+			Prompt: sheetPrompt(styleObject, "a top-down 3/4 view game obstacle, "+vdesc+
+				", rotated 90 degrees flat on the ground so its length runs AWAY from the viewer, "+
+				"going from the bottom edge of the frame straight up to the top edge; the shape is TALL and NARROW, "+
+				"it touches both the top and the bottom edge so copies stacked on top of each other join seamlessly; "+
+				"this is the same object as the horizontal version, only turned, not stood upright on its end",
+				[]int{2, 2}, vstates, true)})
 		if o.id == "stone_wall" {
 			continue
 		}
