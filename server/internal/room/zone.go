@@ -1,9 +1,12 @@
 package room
 
 import (
+	"math/rand"
+
 	"kiemxoay/server/internal/bot"
 	"kiemxoay/server/internal/config"
 	"kiemxoay/server/internal/game"
+	"kiemxoay/server/internal/netproto"
 	"kiemxoay/server/internal/world"
 )
 
@@ -33,6 +36,19 @@ type Zone struct {
 	stepMs  float32
 	tick    uint32
 	snapAcc float64
+
+	// rng và transfers RIÊNG cho từng khu: năm khu chạy song song, dùng chung một bộ sinh
+	// số ngẫu nhiên hay chung một slice là đua dữ liệu ngay. Gom lại sau khi mọi khu xong.
+	rng       *rand.Rand
+	transfers []transfer
+	// namesAt/namesDue: lần cuối gửi lại tên người chơi. Thuộc về KHU, không phải phòng —
+	// năm khu chạy song song nên để ở phòng là hai goroutine cùng ghi một ô nhớ.
+	namesAt  float64
+	namesDue bool
+	// feeds: tin kill feed khu này vừa sinh ra. Kill feed đi KHẮP PHÒNG (spec §8.0), mà
+	// gửi sang client của khu khác ngay trong goroutine của mình là ghi vào kết nối người
+	// khác đúng lúc khu kia đang ghi — đua dữ liệu. Gom lại, gửi sau khi mọi khu xong.
+	feeds []netproto.Feed
 }
 
 // ZoneMapIDs: id bản đồ của từng khu, do `cmd/mapgen` sinh ra (spec §8.0).
@@ -56,8 +72,12 @@ func newZone(index int, cfg *config.Config, m *world.Map, seed int64) *Zone {
 		G:       game.New(cfg, m, seed),
 		clients: map[uint32]*Client{},
 		brains:  map[uint32]*bot.Brain{},
+		rng:     rand.New(rand.NewSource(seed*31 + 17)),
 	}
 }
+
+// StepMs là thời gian xử lý một tick của riêng khu này (trung bình trượt), cho công cụ đo.
+func (z *Zone) StepMs() float32 { return z.stepMs }
 
 // Game mở Game của khu cho công cụ đo và test.
 func (z *Zone) Game() *game.Game { return z.G }

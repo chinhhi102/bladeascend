@@ -101,21 +101,40 @@ func main() {
 	}
 
 	// Ép M người lên Đạo Tổ đủ kiếm và đứng chụm lại — đây là cảnh nặng nhất của game.
-	top := r.Zone(0).G.Prog.TienLevel(len(cfg.Cultivation.TienRealms) - 1)
-	maxSwords := r.Zone(0).G.Prog.MaxSwords(r.Zone(0).G.Prog.Realm(top))
-	i := 0
-	var forced []*game.Player
-	center := game.Vec{X: cfg.Room.MapSize / 2, Y: cfg.Room.MapSize / 2}
-	for _, p := range r.Zone(0).G.Players {
-		if i >= *tien {
-			break
-		}
-		r.Zone(0).G.ForceState(p, top, maxSwords, center.Add(game.Vec{X: float64(i%4) * 300, Y: float64(i/4) * 300}))
-		forced = append(forced, p)
-		i++
+	//
+	// Thế giới 5 khu (spec §8.0): người chơi rải khắp các khu, nên nhóm Đạo Tổ cũng chụm
+	// theo TỪNG KHU chứ không dồn hết vào khu 0 — dồn một chỗ thì bốn khu kia rỗng và con
+	// số đo được không giống phòng thật.
+	prog := r.Zone(0).G.Prog
+	top := prog.TienLevel(len(cfg.Cultivation.TienRealms) - 1)
+	maxSwords := prog.MaxSwords(prog.Realm(top))
+	type forcedOne struct {
+		p  *game.Player
+		z  *room.Zone
+		at game.Vec
 	}
-	fmt.Printf("Phòng: %d nhân vật (%d bot), %d người Đạo Tổ %d kiếm, %d phòng\n",
-		len(r.Zone(0).G.Players), len(r.Zone(0).G.Players)-*players, i, maxSwords, len(rooms))
+	var forced []forcedOne
+	center := game.Vec{X: cfg.Room.MapSize / 2, Y: cfg.Room.MapSize / 2}
+	total := 0
+	for _, z := range r.Zones() {
+		total += len(z.Game().Players)
+	}
+	i := 0
+	for _, z := range r.Zones() {
+		inZone := 0
+		for _, p := range z.Game().Players {
+			if i >= *tien {
+				break
+			}
+			at := center.Add(game.Vec{X: float64(inZone%4) * 300, Y: float64(inZone/4) * 300})
+			z.Game().ForceState(p, top, maxSwords, at)
+			forced = append(forced, forcedOne{p, z, at})
+			inZone++
+			i++
+		}
+	}
+	fmt.Printf("Phòng: %d nhân vật (%d bot) rải %d khu, %d người Đạo Tổ %d kiếm, %d phòng\n",
+		total, total-*players, len(r.Zones()), i, maxSwords, len(rooms))
 
 	for k := 0; k < int(3/dt); k++ { // 3 giây cho vật phẩm mọc đầy rồi mới bấm giờ
 		r.Step(dt)
@@ -142,15 +161,21 @@ func main() {
 		}
 		// Giữ nhóm Đạo Tổ ở nguyên chỗ và nguyên số kiếm: ta đang đo cảnh nặng nhất, không
 		// phải đo xem họ mài nhau bao lâu thì hết kiếm.
-		for idx, p := range forced {
-			r.Zone(0).G.ForceState(p, top, maxSwords, center.Add(game.Vec{X: float64(idx%4) * 300, Y: float64(idx/4) * 300}))
+		for _, f := range forced {
+			f.z.Game().ForceState(f.p, top, maxSwords, f.at)
 		}
 		t0 := time.Now()
 		r.Step(dt)
 		durs = append(durs, float64(time.Since(t0).Microseconds())/1000)
 	}
 	wall := time.Since(start).Seconds()
-	report(cs, durs, wall, *secs, len(r.Zone(0).G.Players))
+	report(cs, durs, wall, *secs, total)
+	// Tick của TỪNG KHU (spec v5 mục 10): ngân sách §13.6 nói về cả phòng, nhưng khi một
+	// khu chậm hẳn thì phải thấy ngay là khu nào, không thì chỉ biết "phòng chậm".
+	fmt.Println("\nTick từng khu (trung bình trượt lúc kết thúc):")
+	for _, z := range r.Zones() {
+		fmt.Printf("  %-20s %6.2f ms · %d nhân vật\n", z.Name, z.StepMs(), len(z.Game().Players))
+	}
 }
 
 func report(cs []*client, durs []float64, wall, secs float64, n int) {

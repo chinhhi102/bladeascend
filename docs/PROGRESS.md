@@ -41,6 +41,31 @@ Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (d
 
 ## Đã làm
 
+- **Thế giới 5 khu xong phần còn lại (29/10/2026, CHANGES_v5 mục 4 goroutine, 7, 8, 9, 10)**
+  — và lần đầu tiên **cả 5 ngân sách §13.6 đều ĐẠT**:
+
+  | Chỉ số | Đo được | Ngân sách |
+  |---|---|---|
+  | Tick server (TB) | **1,2 ms** | < 4 ms ✅ |
+  | Tick server (p95) | **1,69 ms** | < 4 ms ✅ |
+  | Snapshot lớn nhất | **4,2 KB** | < 8 KB ✅ |
+  | Băng thông / client | **18,7 KB/s** | < 40 KB/s ✅ |
+  | Ping p95 | 0,00 ms | < 20 ms ✅ |
+
+  Kịch bản là của spec v5: 20 người + bot rải 5 khu, 10 Đạo Tổ. `cmd/loadtest` giờ in thêm
+  **tick từng khu** (0,24–0,86 ms) để khi một khu chậm hẳn thì thấy ngay là khu nào.
+
+  **Mỗi khu một goroutine.** An toàn vì trong một tick không khu nào đọc dữ liệu khu khác.
+  Để đạt được điều đó phải dọn **bốn chỗ dùng chung** mà `-race` chỉ ra:
+  1. `rng` của phòng → mỗi khu một bộ sinh số riêng.
+  2. Hàng chờ chuyển khu → hàng riêng mỗi khu, gom lại sau khi mọi khu xong.
+  3. Mốc gửi lại tên người chơi (`namesAt/namesDue`) → chuyển vào Zone.
+  4. Kill feed liên khu → gom vào `Zone.feeds`, gửi sau `wg.Wait()`; gửi thẳng sang client
+     của khu khác là ghi vào kết nối người ta đúng lúc khu kia đang ghi.
+  5. `handleDeaths` gọi xếp hạng toàn thế giới giữa lúc khu khác đang sửa dữ liệu → chụp
+     hạng **một lần đầu mỗi tick**. Hạng trên bảng Tổng kết chậm một tick thì không ai nhận
+     ra; đua dữ liệu thì có.
+
 - **5 bản đồ cho 5 khu (29/10/2026, spec §8.0, CHANGES_v5 mục 6)** — `cd server && go run
   ./cmd/mapgen` sinh cả 5; xem riêng từng khu bằng `-zone X -seed N -png ra.png`.
   Ảnh duyệt: `docs/perf/zone0.png` … `zone4.png`.

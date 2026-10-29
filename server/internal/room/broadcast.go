@@ -28,9 +28,9 @@ const (
 func (r *Room) broadcast(z *Zone) {
 	events := z.pending
 	z.pending = nil
-	r.namesDue = z.G.Time-r.namesAt >= nameResendSecs
-	if r.namesDue {
-		r.namesAt = z.G.Time
+	z.namesDue = z.G.Time-z.namesAt >= nameResendSecs
+	if z.namesDue {
+		z.namesAt = z.G.Time
 	}
 	r.sendFeeds(z, events)
 	for id, c := range z.clients {
@@ -48,7 +48,7 @@ func (r *Room) snapshotFor(z *Zone, c *Client, viewer *game.Player, events []gam
 	seen := map[uint32]bool{}
 	// Names go out the first time a client sees a player, and again every couple of seconds
 	// so a client that missed the first packet still recovers.
-	resendNames := r.namesDue
+	resendNames := z.namesDue
 	// Người ở XA chỉ gửi 10 Hz thay vì 20 Hz (spec mục 27): client nội suy nên bỏ một nhịp
 	// không ai thấy, mà nửa số byte của người ở rìa màn hình thì tiết kiệm thật.
 	// Người MỚI thấy lần đầu luôn gửi ngay, nếu không họ "hiện ra" trễ nửa nhịp.
@@ -245,17 +245,27 @@ func (r *Room) sendFeeds(z *Zone, events []game.Event) {
 				f.Top, f.Room = e.N, r.ID
 			}
 		}
-		// Kill feed đi KHẮP PHÒNG, không chỉ trong khu (spec §8.0: tin từ khu khác có tiền
-		// tố tên khu). Bảng xếp hạng tính chung cả thế giới, nên tin tức cũng phải chung —
-		// nếu không thì người ở khu vắng chẳng biết ngoài kia đang xảy ra chuyện gì.
-		for _, q := range r.zones {
-			for _, c := range q.clients {
-				c.send(f)
+		// Gom lại thôi; việc gửi làm ở flushFeeds sau khi mọi khu tick xong (xem Zone.feeds).
+		z.feeds = append(z.feeds, f)
+	}
+}
+
+// flushFeeds gửi kill feed của mọi khu tới MỌI người trong phòng (spec §8.0: tin từ khu
+// khác có tiền tố tên khu). Chạy sau khi các goroutine khu đã dừng, nên chỉ có một luồng
+// chạm vào kết nối người chơi.
+func (r *Room) flushFeeds() {
+	for _, z := range r.zones {
+		for _, f := range z.feeds {
+			for _, q := range r.zones {
+				for _, c := range q.clients {
+					c.send(f)
+				}
+			}
+			if f.Top > 0 && r.mgr != nil {
+				r.mgr.BroadcastFeed(f, r)
 			}
 		}
-		if f.Top > 0 && r.mgr != nil {
-			r.mgr.BroadcastFeed(f, r)
-		}
+		z.feeds = z.feeds[:0]
 	}
 }
 
