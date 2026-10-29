@@ -21,6 +21,10 @@ func (r *recConn) Send(b []byte) bool {
 // (tối ưu mục 26) thì đây là chỗ dễ sai nhất, nên khoá lại bằng test.
 func TestItemDisappearsAfterPickup(t *testing.T) {
 	m, _, cfg := testManager(t)
+	// Tắt bot: phòng giờ lấp tới 60 nhân vật, và một con bot đi ngang có thể nhặt mất viên
+	// trước người chơi — test thành đỏ ngẫu nhiên vì lý do chẳng liên quan gì tới luật xoá
+	// vật phẩm mà nó đang kiểm.
+	cfg.Room.BotFillTarget = 0
 	conn := &recConn{}
 	c := NewClient(conn, false)
 	m.Join(c, netproto.Join{Name: "P0", Char: "a_hon"})
@@ -77,6 +81,10 @@ func TestItemDisappearsAfterPickup(t *testing.T) {
 // người chơi nhặt xong mà viên vẫn nằm trên màn hình mãi mãi.
 func TestRemovalReportedEvenWhenSlotReused(t *testing.T) {
 	m, _, cfg := testManager(t)
+	// Tắt bot: phòng giờ lấp tới 60 nhân vật, và một con bot đi ngang có thể nhặt mất viên
+	// trước người chơi — test thành đỏ ngẫu nhiên vì lý do chẳng liên quan gì tới luật xoá
+	// vật phẩm mà nó đang kiểm.
+	cfg.Room.BotFillTarget = 0
 	conn := &recConn{}
 	c := NewClient(conn, false)
 	m.Join(c, netproto.Join{Name: "P0", Char: "a_hon"})
