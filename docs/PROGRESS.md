@@ -526,3 +526,16 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 - Chạy tại https://kiemtien.staging.maveragroups.com (container `kiemtien-web` trên máy staging, Caddy chung chuyển tiếp vào).
 - Deploy lại: `set -a; . docs/private/deploy; set +a; deploy/staging.sh` (build Go arm64 + client ở máy mình, rsync lên `~/kiemxoaytutien`, `docker compose up -d --build`, cài khối Caddy có kiểm tra trước khi reload).
 - Bảng xếp hạng lưu ở volume `kiemtien_kiemtien-data`, không mất khi deploy lại. Server đang để `-debug=true` (người chơi vẫn phải mở `?debug=true`).
+
+### Đo tải staging (2026-10-30)
+- Browsertest qua Internet: `cd tools/browsertest && node run.mjs --url https://kiemtien.staging.maveragroups.com --tabs 7`
+  → kết quả ghi `docs/perf/BROWSERTEST-staging.md` (không đè số đo trên máy). Mỗi lượt ghi file ngay khi xong.
+- Chỉ chạy **7 tab**: staging giới hạn 8 kết nối mỗi IP, chừa 1 suất cho người chơi thật cùng mạng văn phòng
+  (lần chạy 8 tab bị người thật chen vào → tab 8 ăn HTTP 429).
+- Số đo: ping ~200 ms (tab thường) / ~250 ms (tab Đạo Tổ), xuống 7–25 KB/s mỗi người, tick server 2–3 ms.
+  Container trên staging (ARM 4 nhân): CPU TB 28% / p95 40% / max 54% của 1 nhân, RAM tối đa 54 MB
+  — cho 1 phòng 7 người thật + bot lấp đầy 60.
+- Lỗi đã biết khi đo: nếu máy đo có container docker khởi động lại liên tục (vd. `mavera-sentry-worker` hỏng
+  redis) thì Chrome báo `ERR_NETWORK_CHANGED` và tab rớt liên tục → dừng container đó trước khi đo.
+  Chạy Chrome trong docker không giải quyết được vì không có GPU (vẽ bằng CPU, 800% CPU, tab 2 không mở nổi).
+- Log staging có `tick chậm ~27 ms` do AI bot (25 ms) ở khu Trúc Lâm Mê Cung khi phòng không có người — cần xem.

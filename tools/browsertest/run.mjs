@@ -9,6 +9,9 @@
 // của ai, và bảng xếp hạng thật cũng không bị bẩn.
 // Muốn dùng server có sẵn thì: `node run.mjs --port 9999 --no-spawn` (nhớ server đó phải
 // chạy với `-max-conns-per-ip 40`, vì 10 tab cùng đến từ 127.0.0.1).
+// Đo server từ xa (staging): `node run.mjs --url https://kiemtien.staging.maveragroups.com --tabs 8`
+// — không dựng server riêng, kết quả ghi sang BROWSERTEST-staging.md để không đè số đo trên máy.
+// Staging giới hạn 8 kết nối mỗi IP, nên quá 8 tab là tab thứ 9 trở đi bị từ chối.
 //
 // Mỗi tab là một **browser context riêng** → localStorage riêng, coi như một người chơi
 // khác máy. Tab tự đi lại ngẫu nhiên, sau `warmup` giây thì 5 tab lên Đạo Tổ đủ kiếm rồi
@@ -33,12 +36,15 @@ const args = Object.fromEntries(
   process.argv.slice(2).flatMap((a, i, all) => (a.startsWith('--') ? [[a.slice(2), all[i + 1] ?? '1']] : [])),
 );
 const PORT = Number(args.port ?? 8099);
-const SPAWN = args['no-spawn'] === undefined;
+const REMOTE = args.url !== undefined;
+const ORIGIN = REMOTE ? args.url.replace(/\/+$/, '') : `http://127.0.0.1:${PORT}`;
+const SPAWN = !REMOTE && args['no-spawn'] === undefined;
+const OUT_TAG = REMOTE ? '-staging' : '';
 const TABS = Number(args.tabs ?? 10);
 const TIEN_TABS = Number(args.tien ?? 5);
 const WARMUP_S = Number(args.warmup ?? 30);
 const FIGHT_S = Number(args.fight ?? 60);
-const BASE = `http://127.0.0.1:${PORT}/?debug=true`;
+const BASE = `${ORIGIN}/?debug=true`;
 
 // 4G yếu (spec yêu cầu): trễ 100 ms, 1.6 Mbps xuống, 750 Kbps lên.
 const SLOW_4G = { offline: false, latency: 100, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 };
@@ -142,8 +148,25 @@ async function killTree(proc) {
   }
 }
 
-/** chơi một tab: vào game với tên cho trước rồi trả về các hàm điều khiển. */
+/**
+ * chơi một tab: vào game với tên cho trước rồi trả về các hàm điều khiển.
+ *
+ * Thử lại tối đa 3 lần với context mới: khi đo qua Internet, Chrome trên máy đo hay báo
+ * ERR_NETWORK_CHANGED (Tailscale/bridge docker đổi route) và cắt ngang lúc tab đang tải
+ * hàng chục MB atlas — tab treo mãi ở màn hình tải dù server đã nhận người vào.
+ */
 async function openTab(browser, name, slow, full) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await openTabOnce(browser, name, slow, full);
+    } catch (e) {
+      if (attempt >= 3) throw e;
+      console.log(`  ${name} hỏng lần ${attempt}, thử lại với context mới: ${String(e.message).slice(0, 120)}`);
+    }
+  }
+}
+
+async function openTabOnce(browser, name, slow, full) {
   // Từ khi dùng GPU thật thì cả 10 tab chạy được khổ 960×540 với chất lượng mặc định, tức
   // là 10 người chơi thật chứ không phải 9 cái bóng. Chỉ số VẼ vẫn chỉ đọc ở tab 1 vì 10
   // tab dù sao cũng chia nhau một GPU.
@@ -156,13 +179,18 @@ async function openTab(browser, name, slow, full) {
   page.on('console', (m) => {
     if (m.type() === 'error') console.log(`  [${name}] console: ${m.text().slice(0, 160)}`);
   });
-  await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('input', { timeout: 180000 });
-  await page.fill('input', name);
-  await page.getByText('Vào chơi', { exact: true }).click();
-  await page.waitForFunction(() => typeof window.__stats === 'function', null, { timeout: 180000 }).catch((e) => {
+  try {
+    await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('input', { timeout: 120000 });
+    await page.fill('input', name);
+    await page.getByText('Vào chơi', { exact: true }).click();
+    await page.waitForFunction(() => typeof window.__stats === 'function', null, { timeout: 120000 });
+  } catch (e) {
+    // Đóng context hỏng để server thả kết nối cũ, không thì lần thử lại ăn thêm một suất
+    // trong giới hạn kết nối mỗi IP.
+    await ctx.close().catch(() => {});
     throw new Error(`${name} không vào được game. Nếu console báo HTTP 429 thì server đang chặn số kết nối mỗi IP — chạy server với -max-conns-per-ip 40. (${e.message})`);
-  });
+  }
   if (slow) {
     // Bóp băng thông SAU khi đã vào game: ta đo lưu lượng lúc CHƠI, không đo lúc tải trang.
     // Bóp từ đầu thì 10 tab phải tải ~500 KB JS + hàng chục MB ảnh qua 1.6 Mbps, mất hàng
@@ -318,7 +346,7 @@ async function runOnce(label, slow) {
   const tien = tabs.slice(0, TIEN_TABS);
   // Cấp Đạo Tổ lấy từ config chứ không viết cứng: đổi số cảnh giới trong config/game.json
   // là bài test tự theo, không âm thầm kiểm sai ngưỡng.
-  const cult = (await (await fetch(`http://127.0.0.1:${PORT}/api/config`)).json()).cultivation;
+  const cult = (await (await fetch(`${ORIGIN}/api/config`)).json()).cultivation;
   const TOP_LEVEL = (cult.realms.length + cult.tien_realms.length - 1) * cult.tiers_per_realm;
   // n: 1 = giữ bất tử. Không có nó thì 5 người Đạo Tổ chụm vào mài nhau chết sạch trong
   // chục giây, cả phòng tụt về Luyện Khí 1 kiếm và số đo thành vô nghĩa (đã dính một lần).
@@ -386,7 +414,7 @@ async function runOnce(label, slow) {
     await sleep(500);
     if (!shot && Date.now() > fightUntil - (FIGHT_S * 1000) / 3) { // ~2/3 pha, lúc đông nhất
       await mkdir(resolve(REPO, 'docs/perf'), { recursive: true });
-      await tien[0].page.screenshot({ path: resolve(REPO, `docs/perf/browsertest-${label}.png`) });
+      await tien[0].page.screenshot({ path: resolve(REPO, `docs/perf/browsertest${OUT_TAG}-${label}.png`) });
       shot = true;
     }
   }
@@ -407,7 +435,7 @@ function table(rows, title) {
   const fight = rows.filter((r) => r.phase === 'fight');
   const group = (want) => fight.filter((r) => r.tien === want);
   const out = [`**${title}** — ${fight.length} mẫu trong giai đoạn đánh nhau\n`];
-  out.push('| Chỉ số | 5 tab Đạo Tổ (TB / p95 / tệ nhất) | 5 tab thường (TB / p95 / tệ nhất) |');
+  out.push(`| Chỉ số | ${TIEN_TABS} tab Đạo Tổ (TB / p95 / tệ nhất) | ${TABS - TIEN_TABS} tab thường (TB / p95 / tệ nhất) |`);
   out.push('|---|---|---|');
   // Chỉ tab 1 chạy khổ thật; chín tab kia thu nhỏ để không ăn hết CPU máy đo, nên số vẽ
   // của chúng vô nghĩa. Các chỉ số VẼ lấy riêng từ tab 1, các chỉ số MẠNG lấy cả nhóm.
@@ -443,6 +471,56 @@ function table(rows, title) {
   return out.join('\n');
 }
 
+/**
+ * writeReport ghi bảng kết quả sau MỖI lượt: lượt 4G hỏng giữa chừng (vd. người thật chen vào
+ * chiếm suất kết nối cùng IP) thì số của lượt mạng thường vẫn còn trên đĩa.
+ */
+async function writeReport(runs) {
+  const doc = [
+    `# Kết quả đo ${TABS} tab Chrome headless${REMOTE ? ` — server ${ORIGIN}` : ''}`,
+    '',
+    ...(REMOTE
+      ? [`Chạy lại: \`cd tools/browsertest && node run.mjs --url ${ORIGIN} --tabs ${TABS}\` — tab chạy`,
+         'trên máy đo, nối qua Internet tới server thật; ping và KB/s là số qua mạng thật.']
+      : [`Chạy lại: \`cd tools/browsertest && node run.mjs\` — bài test **tự dựng server riêng ở`,
+         `cổng ${PORT} với database tạm** rồi tắt khi xong, không đụng tới server đang có người chơi.`]),
+    `${TABS} browser context riêng, mỗi context một người chơi; ${WARMUP_S}s đi lang thang rồi`,
+    `${TIEN_TABS} tab lên Đạo Tổ đủ kiếm và cả ${TABS} tab chụm một chỗ ${FIGHT_S}s.`,
+    '',
+    `> Bài này chạy **GPU thật** (\`--use-gl=angle --use-angle=${args.angle ?? 'vulkan'}\`), không dùng`,
+    `> SwiftShader nữa. Nhưng **${TABS} tab vẫn chia nhau MỘT card và một CPU**, nên cột FPS chỉ`,
+    `> nói lên "${TABS} người chơi trên một máy", không nói lên trải nghiệm của một người chơi thật.`,
+    '>',
+    ...(REMOTE
+      ? ['> Server chạy trên máy riêng, không tranh CPU với trình duyệt: cột **tick server** là số thật',
+         '> của máy đó (cộng thêm bot lấp phòng).']
+      : [`> Server chạy riêng trên lõi ${SERVER_CORES}, trình duyệt trên lõi ${BROWSER_CORES}` +
+           `${HAS_TASKSET ? '' : ' *(không có taskset — cột tick server sẽ bị thổi phồng)*'}.`,
+         '> Con số **tick server chuẩn** lấy ở `cd server && go run ./cmd/loadtest`, nơi không có',
+         '> trình duyệt tranh CPU.']),
+    '>',
+    '> Số đáng tin nhất ở bảng này: **ping, KB/s, kích thước snapshot, số entity trong AOI**.',
+    '>',
+    '> Lượt B bóp băng thông **sau khi đã vào game**: ta đo lưu lượng lúc chơi, không đo lúc',
+    '> tải trang.',
+    '',
+    ...runs.flatMap((r) => [
+      table(r.rows, r.label === '4g-yeu'
+        ? 'Lượt B — giả lập 4G yếu (trễ 100 ms, 1.6 Mbps xuống, 750 Kbps lên)'
+        : `Lượt A — mạng bình thường (${REMOTE ? 'Internet tới server thật' : 'LAN nội bộ'})`),
+      '',
+    ]),
+    `Ảnh chụp lúc đông nhất: \`docs/perf/browsertest${OUT_TAG}-mang-binh-thuong.png\` và`,
+    `\`docs/perf/browsertest${OUT_TAG}-4g-yeu.png\`.`,
+    '',
+  ].join('\n');
+
+  await mkdir(resolve(REPO, 'docs/perf'), { recursive: true });
+  await writeFile(resolve(REPO, `docs/perf/BROWSERTEST${OUT_TAG}.md`), doc, 'utf8');
+  console.log(`\n${doc}`);
+  console.log(`\n→ docs/perf/BROWSERTEST${OUT_TAG}.md`);
+}
+
 const server = SPAWN ? await startServer() : null;
 const runs = [];
 try {
@@ -450,9 +528,11 @@ try {
   const only = args.only;
   if (only !== '4g-yeu') {
     runs.push(await runOnce('mang-binh-thuong', false));
+    await writeReport(runs);
   }
   if (only !== 'mang-binh-thuong') {
     runs.push(await runOnce('4g-yeu', true));
+    await writeReport(runs);
   }
 } finally {
   if (server) {
@@ -462,41 +542,3 @@ try {
   }
 }
 
-
-const doc = [
-  '# Kết quả đo 10 tab Chrome headless',
-  '',
-  `Chạy lại: \`cd tools/browsertest && node run.mjs\` — bài test **tự dựng server riêng ở`,
-  `cổng ${PORT} với database tạm** rồi tắt khi xong, không đụng tới server đang có người chơi.`,
-  `${TABS} browser context riêng, mỗi context một người chơi; ${WARMUP_S}s đi lang thang rồi`,
-  `${TIEN_TABS} tab lên Đạo Tổ đủ kiếm và cả ${TABS} tab chụm một chỗ ${FIGHT_S}s.`,
-  '',
-  `> Bài này chạy **GPU thật** (\`--use-gl=angle --use-angle=${args.angle ?? 'vulkan'}\`), không dùng`,
-  '> SwiftShader nữa. Nhưng **10 tab vẫn chia nhau MỘT card và một CPU**, nên cột FPS chỉ',
-  '> nói lên "10 người chơi trên một máy", không nói lên trải nghiệm của một người chơi thật.',
-  '>',
-  `> Server chạy riêng trên lõi ${SERVER_CORES}, trình duyệt trên lõi ${BROWSER_CORES}` +
-    `${HAS_TASKSET ? '' : ' *(không có taskset — cột tick server sẽ bị thổi phồng)*'}.`,
-  '> Con số **tick server chuẩn** lấy ở `cd server && go run ./cmd/loadtest`, nơi không có',
-  '> trình duyệt tranh CPU.',
-  '>',
-  '> Số đáng tin nhất ở bảng này: **ping, KB/s, kích thước snapshot, số entity trong AOI**.',
-  '>',
-  '> Lượt B bóp băng thông **sau khi đã vào game**: ta đo lưu lượng lúc chơi, không đo lúc',
-  '> tải trang.',
-  '',
-  ...runs.flatMap((r) => [
-    table(r.rows, r.label === '4g-yeu'
-      ? 'Lượt B — giả lập 4G yếu (trễ 100 ms, 1.6 Mbps xuống, 750 Kbps lên)'
-      : 'Lượt A — mạng bình thường (LAN nội bộ)'),
-    '',
-  ]),
-  `Ảnh chụp lúc đông nhất: \`docs/perf/browsertest-mang-binh-thuong.png\` và`,
-  '`docs/perf/browsertest-4g-yeu.png`.',
-  '',
-].join('\n');
-
-await mkdir(resolve(REPO, 'docs/perf'), { recursive: true });
-await writeFile(resolve(REPO, 'docs/perf/BROWSERTEST.md'), doc, 'utf8');
-console.log(`\n${doc}`);
-console.log('\n→ docs/perf/BROWSERTEST.md');
