@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"kiemxoay/server/internal/geom"
+	"kiemxoay/server/internal/world"
 )
 
 // checkGate starts a teleport when a player's centre enters a gate (spec §8.4).
@@ -16,9 +17,7 @@ func (g *Game) checkGate(p *Player) {
 		if p.Pos.Dist(Vec{X: gate.X, Y: gate.Y}) > gc.Radius {
 			continue
 		}
-		// Cổng 2 chiều: mỗi cổng có đúng một cổng đối diện, ra cổng nào thì quay lại
-		// chính cổng đó được (spec §8.4).
-		d, ok := g.Map.GateExit(gate)
+		d, ok := g.gateExit(gate)
 		if !ok {
 			return
 		}
@@ -28,6 +27,23 @@ func (g *Game) checkGate(p *Player) {
 		g.emit(Event{Kind: "TeleportOut", A: p.ID, B: uint32(d.ID), N: gate.ID, X: float32(gate.X), Y: float32(gate.Y)})
 		return
 	}
+}
+
+// gateExit chọn cổng ra.
+//
+// Mặc định là **ngẫu nhiên**: bước vào một cổng thì ra ở một cổng bất kỳ khác cùng mạng,
+// nên không ai đoán trước được mình rơi vào đâu và không thể dùng cổng làm đường tẩu thoát
+// quen thuộc. Đặt `gates.random_exit: false` trong config để quay về kiểu cũ (cổng đôi cố
+// định, ra cổng nào thì quay lại đúng cổng đó).
+func (g *Game) gateExit(gate world.Gate) (world.Gate, bool) {
+	if !g.Cfg.Gates.RandomExit {
+		return g.Map.GateExit(gate)
+	}
+	net := g.Map.GateNetwork(gate)
+	if len(net) == 0 {
+		return world.Gate{}, false
+	}
+	return net[g.Rng.Intn(len(net))], true
 }
 
 // updateTransit moves players through gates: warn flash, reappear, end immunity.

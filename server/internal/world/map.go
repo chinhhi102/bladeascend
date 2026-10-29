@@ -147,6 +147,21 @@ func (m *Map) GatesInNetwork(g Gate) []Gate {
 // GateExit is the one gate that g leads to. Gates in a network are paired two by two in ID
 // order (0↔1, 2↔3, …), so every gate is a fixed two-way door: whatever you came out of
 // takes you straight back. A network with an odd gate left over links it to the first one.
+// GateNetwork trả về mọi cổng KHÁC cùng mạng với g, xếp theo ID cho ổn định.
+//
+// Dùng cho luật "cổng dịch chuyển ngẫu nhiên": người chơi bước vào một cổng thì ra ở một
+// cổng bất kỳ trong mạng, không phải cổng cố định như trước.
+func (m *Map) GateNetwork(g Gate) []Gate {
+	var out []Gate
+	for _, o := range m.Gates {
+		if o.Network == g.Network && o.ID != g.ID {
+			out = append(out, o)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
 func (m *Map) GateExit(g Gate) (Gate, bool) {
 	var net []Gate
 	for _, o := range m.Gates {
