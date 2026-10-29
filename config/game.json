@@ -431,6 +431,8 @@
     "leaderboard_hz": 1,
     "max_msgs_per_sec": 90,
     "max_conns_per_ip": 8,
-    "leaderboard_cache_secs": 10
+    "leaderboard_cache_secs": 10,
+    "correction_snap": 30,
+    "correction_tau_ms": 100
   }
 }

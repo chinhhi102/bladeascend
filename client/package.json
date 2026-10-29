@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "assets:report": "node --no-warnings scripts/assets-report.ts"
+    "assets:report": "node --no-warnings scripts/assets-report.ts",
+    "check:collision": "node --no-warnings --experimental-strip-types scripts/collision-check.ts"
   },
   "dependencies": {
     "@msgpack/msgpack": "3.1.3",

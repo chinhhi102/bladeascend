@@ -40,6 +40,8 @@ type Game struct {
 	freeSlots []int
 	// bladeBuf dùng lại giữa các lần so kiếm — spec §13.4 cấm cấp phát trong vòng nóng.
 	bladeBuf  []blade
+	// obsBuf: danh sách id vật cản gần, dùng lại để khỏi cấp phát mỗi bước di chuyển.
+	obsBuf    []int
 	Obstacles []ObstacleState
 	Grid      *world.Grid
 	Events    []Event

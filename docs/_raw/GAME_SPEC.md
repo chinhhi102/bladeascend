@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v5.3:** Tiên khí dư của Đạo Tổ đổi Uy Danh 10:1; va kiếm giữ nhịp đúng sau khi sửa lỗi SegSegDist2 (§3.4, §5.2).
+
 **Thay đổi v5.2:** thêm Thiên Môn ở tâm mỗi khu (trừ Thiên Đình) — cổng một chiều đích cố định tới Thiên Đình (§8.4a).
 
 **Thay đổi v5.1:** giữ 20 người/phòng (bot lấp theo phòng, sinh vào khu ít người nhất); kỹ năng chỉ dùng được khi nhặt vật phẩm Bí Kíp (tối đa 2 lượt); Thằng Mập đổi thành Phun Trân Châu bịt mắt (§6.3, §9).
@@ -156,7 +158,7 @@ Sau Đại Thừa tầng 10 có thêm 5 cảnh giới. **Không dùng Linh khí 
 
 **Đạo Tổ: Tiên khí dư thành Uy Danh**
 - Thanh Tiên khí của Đạo Tổ **dừng ở mốc Đạo Tổ (1 500)**, không phình thêm (giữ luật cướp đoạt công bằng — Đạo Tổ ngồi lâu không thành "cục mồi" khổng lồ).
-- Mỗi điểm Tiên khí nhặt thêm khi đã là Đạo Tổ → `tien_overflow_score` (mặc định 1.0) điểm Uy Danh.
+- Tiên khí nhặt thêm khi đã là Đạo Tổ → Uy Danh theo tỉ lệ **10 Tiên khí = 1 Uy Danh** (`tien_overflow_score` = 0.1).
 
 **Hiển thị & tấu hài**
 - HUD: **giữ nguyên thanh tiến độ**, chỉ đổi tên: dưới Tiên giới gọi là **Linh khí**, từ Đại Thừa tầng 10 trở lên gọi là **Tiên khí** (màu vàng kim). Ví dụ: `Kim Tiên — Tiên khí 150/300`.
@@ -1020,7 +1022,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "tien_realms": ["Chân Tiên","Kim Tiên","Thái Ất Ngọc Tiên","Đại La Kim Tiên","Đạo Tổ"],
     "tien_khi_per_step": [100, 200, 300, 400, 500],
     "tien_rob_share": 0.5, "tien_drop_share": 0.3,
-    "tien_scale_step": 0.2, "tien_overflow_score": 1.0,
+    "tien_scale_step": 0.2, "tien_overflow_score": 0.1,
     "tien_aura_colors": ["#E8F1FF", "#FFD60A", "#4CE0B3", "#B15CFF", "yin_yang"],
     "tiers_per_realm": 10,
     "exp_base": 100, "realm_mult": 2.0, "tier_step": 0.08,
@@ -1122,7 +1124,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Đi sát/đi dọc tường, rào, đá tảng: không giật, không rung; F3 'hiệu chỉnh/giây' ≈ 0 khi chỉ đi sát vật cản.
 - [ ] Không có Bí Kíp thì nút kỹ năng xám; nhặt Bí Kíp → +1 lượt (tối đa 2), dùng đúng kỹ năng của nhân vật mình; chết thì mất lượt; kỹ năng không làm chém thân người còn ≥ 2 vòng.
 - [ ] Trúng Phun Trân Châu: màn hình bị trân châu che ~60% trong 3.5s, trượt xuống rồi tan; HUD và minimap không bị che.
-- [ ] Đạo Tổ nạp 500 Tiên khí → Uy Danh +500 (×1.0), thanh Tiên khí đứng ở 1 500.
+- [ ] Đạo Tổ nạp 500 Tiên khí → Uy Danh +50 (10:1), thanh Tiên khí đứng ở 1 500.
 
 - [ ] Hai Kim Đan 60 kiếm mài nhau 1 giây → mỗi bên còn ~30 kiếm; đi xuyên qua nhau được; chỉ người còn 1 vòng mới bị chém thân.
 - [ ] Tốc Kiếm chỉ làm kiếm quay nhanh hơn, tầm chém không đổi.

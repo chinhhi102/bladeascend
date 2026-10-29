@@ -10,7 +10,41 @@ export function contains(s: Shape, x: number, y: number): boolean {
     const r = s.r ?? 0;
     return (x - s.x) ** 2 + (y - s.y) ** 2 <= r * r;
   }
-  return x >= s.x && x <= s.x + (s.w ?? 0) && y >= s.y && y <= s.y + (s.h ?? 0);
+  // Hộp bao lọc trước, y như `world.Shape.Contains` bên server.
+  if (x < s.x || x > s.x + (s.w ?? 0) || y < s.y || y > s.y + (s.h ?? 0)) {
+    return false;
+  }
+  return isPoly(s) ? containsPoly(s, x, y) : true;
+}
+
+/** Vùng địa hình hữu cơ (spec §8.6) là ĐA GIÁC, không phải hình chữ nhật. */
+function isPoly(s: Shape): boolean {
+  return (s.p?.length ?? 0) >= 6;
+}
+
+/**
+ * containsPoly: ray casting kinh điển — bắn một tia sang phải rồi đếm số cạnh nó cắt, lẻ
+ * là trong, chẵn là ngoài. Bản port đúng từng dòng của `Shape.containsPoly` bên server.
+ *
+ * Thiếu hàm này, client coi mọi vùng đa giác là **cả hộp bao** của nó: đi ngang một vũng
+ * bùn hình méo thì client tưởng mình đang lội bùn (hoặc ngược lại) trong khi server nghĩ
+ * khác, nên tốc độ hai bên lệch nhau và server kéo nhân vật về mỗi tick. Đo thật trước khi
+ * sửa: đi thẳng giữa đồng trống vẫn ra **20,2 lần hiệu chỉnh/giây**.
+ */
+function containsPoly(s: Shape, x: number, y: number): boolean {
+  const pts = s.p as number[];
+  let inside = false;
+  const n = pts.length / 2;
+  for (let i = 0, j = n - 1; i < n; j = i, i++) {
+    const xi = pts[i * 2];
+    const yi = pts[i * 2 + 1];
+    const xj = pts[j * 2];
+    const yj = pts[j * 2 + 1];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
 }
 
 /** Mirrors world.Shape.PushOut on the server so prediction agrees near walls. */

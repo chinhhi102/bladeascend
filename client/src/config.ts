@@ -51,7 +51,15 @@ export interface GameConfig {
   gates: { radius: number };
   items: { item_r: number; chest_warn_secs: number };
   obstacles: { occlusion_alpha: number };
-  net: { tick_hz: number; snapshot_hz: number; interp_ms: number };
+  net: {
+    tick_hz: number;
+    snapshot_hz: number;
+    interp_ms: number;
+    /** Lệch quá ngần này thì nhảy thẳng thay vì kéo dần (spec §8.2a). */
+    correction_snap: number;
+    /** Hằng số thời gian kéo nhân vật về vị trí server, tính bằng mili giây (spec §8.2a). */
+    correction_tau_ms: number;
+  };
   characters: string[];
   titles: string[];
   minimap: { size_pc: number; size_mobile: number; show_top1: boolean; show_chest: boolean; show_others: boolean };

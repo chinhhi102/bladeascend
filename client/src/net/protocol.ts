@@ -224,4 +224,10 @@ export interface GameMap {
   zones: MapZone[];
   gates: MapGate[];
   decor: { sp: string; x: number; y: number }[];
+  /**
+   * play_margin: lề tường biên. Vùng chơi được là `[play_margin, size − play_margin]`.
+   * Server luôn gửi trường này; client PHẢI dùng nó khi dự đoán va chạm, nếu không sẽ dự
+   * đoán ra ngoài vùng cho phép và bị server kéo về mỗi tick (spec §8.2a).
+   */
+  play_margin: number;
 }

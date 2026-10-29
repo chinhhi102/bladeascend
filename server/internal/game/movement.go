@@ -1,6 +1,7 @@
 package game
 
 import (
+	"sort"
 	"math"
 
 	"kiemxoay/server/internal/geom"
@@ -132,20 +133,43 @@ func (g *Game) movePlayer(p *Player, dt float64) {
 func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
 	pos = g.clampToPlay(pos, r)
 	for iter := 0; iter < 3; iter++ {
-		moved := false
+		// Đẩy ra theo THỨ TỰ ID TĂNG DẦN, không theo thứ tự lưới không gian trả về.
+		//
+		// Đẩy lần lượt ra khỏi nhiều vật cản là phép KHÔNG GIAO HOÁN: đứng ở góc hai vật
+		// cản, đẩy A trước rồi B cho ra chỗ khác hẳn đẩy B trước rồi A. Lưới không gian
+		// duyệt theo ô nên thứ tự phụ thuộc vị trí, còn client duyệt theo mảng — hai bên ra
+		// hai kết quả khác nhau. Bài đối chiếu 1 000 bước (cmd/collisionfixture) bắt được
+		// 4 ca lệch, ca nặng nhất **173,7 đơn vị**, đủ để người chơi thấy giật nảy.
+		ids := g.obsBuf[:0]
 		g.QueryObstacles(pos, r, func(id int) {
-			if !g.ObstacleSolid(id) {
-				return
+			if g.ObstacleSolid(id) {
+				ids = append(ids, id)
 			}
+		})
+		g.obsBuf = ids
+		sort.Ints(ids)
+		moved := false
+		for _, id := range ids {
 			if np, hit := g.Map.Obstacles[id].Block().PushOut(pos, r); hit {
 				pos, moved = np, true
 			}
-		})
+		}
 		if !moved {
 			break
 		}
 	}
 	return g.clampToPlay(pos, r)
+}
+
+// MoveStepForTest chạy đúng MỘT bước di chuyển như `movePlayer` cho công cụ đối chiếu
+// client/server (cmd/collisionfixture). Không dùng trong luật chơi.
+//
+// Phải đi qua cùng đường với movePlayer — tốc độ gốc, nhân theo vùng địa hình, rồi đẩy ra
+// khỏi vật cản — nếu không thì bài đối chiếu sẽ bỏ sót đúng những chỗ hai bên hay lệch.
+func (g *Game) MoveStepForTest(from Vec, angle, scale, dt float64) Vec {
+	dir := geom.FromAngle(angle)
+	speed := g.Cfg.Player.MoveBase * g.ZoneMult(from, dir)
+	return g.resolveBlocking(from.Add(dir.Mul(speed*dt)), g.Cfg.Player.BodyR*scale)
 }
 
 // clampToPlay keeps a circle of radius r inside the border wall.

@@ -124,3 +124,25 @@ Nhận xét: client trong game thật đang ổn (60 fps, vẽ 1 ms). Chỗ vư�
 4. VFX Tiên giới — mục 29–33, rồi thần thú luôn lượn lờ — mục 34–36 (nếu chưa làm).
 
 Mỗi buổi xong: test + build pass, cập nhật PROGRESS.md, báo số FPS/KB/s nếu có ảnh hưởng hiệu năng.
+
+---
+
+## Trả lời QUESTIONS (sau Q19)
+
+### Tối ưu (CHANGES_v4 mục 25–27) — ĐI TIẾP
+Đã đọc bảng đo. Đi tiếp theo thứ tự đã ghi ở mục "Trả lời báo cáo đo" phía trên trong file này (nếu `docs/_raw/ANSWERS.md` chưa có mục đó thì đây là bản đầy đủ):
+1. Mục 27 (mạng) trước: chia nhỏ ItemsAdded ≤ 2 KB/gói ưu tiên gần, delta snapshot, lượng tử hoá, không gửi viên nhỏ ngoài 1 500 khi camera lùi xa, 20/10 Hz theo khoảng cách, bỏ snapshot cũ khi client nghẽn.
+2. Mục 26 (server): pprof → sửa đúng chỗ (đã tìm ra lỗi SegSegDist2 — tốt).
+3. Mục 25 (client): chỉ phần rẻ lợi lớn (vòng kiếm thành 1 texture, BitmapText, cull).
+4. Đo lại loadtest + bài test 10 tab Chrome headless (thường + 4G yếu), ghi bảng trước/sau.
+
+### Thư viện — DUYỆT
+`pixi-filters` và `revolt-fx` được duyệt. Thêm vào CLAUDE.md: *"Thư viện được spec ghi đích danh coi như đã duyệt; thư viện khác vẫn phải hỏi."*
+
+### Q20 — Va kiếm chậm lại sau khi sửa lỗi
+**Chọn phương án 1: giữ nguyên luật đúng.** Lý do: tôi vừa phàn nàn "bị dí rất nhanh chết" — rất có thể chính là do lỗi này (kiếm cách cả trăm đơn vị vẫn tính là va). Không bù lại bằng cách đổi luật lúc này.
+- Ghi số 84 lượt chết / 5 phút / 40 bot làm **mốc mới** trong PROGRESS.md (gạch các số đo cũ, ghi chú "đo trên luật va kiếm sai").
+- Đo lại sau khi xong thế giới 5 khu + Bí Kíp. Nếu chơi thật thấy giao tranh quá lề mề, tôi sẽ quyết sau — ưu tiên phương án 3 (tăng `sword.width`) trước phương án 2.
+
+### Q22 — `tien_overflow_score`
+**0.1 là đúng** (10 Tiên khí = 1 Uy Danh). Giữ như em đang để. Spec v5.3 §3.4 và config đã sửa thành 0.1; checklist: nạp 500 Tiên khí → +50 Uy Danh.
