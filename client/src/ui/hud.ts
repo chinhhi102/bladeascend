@@ -120,7 +120,7 @@ export class Hud {
    * Nút kỹ năng (spec §6.3): icon kỹ năng của nhân vật + số lượt đang có, xám khi 0 lượt.
    *
    * Luôn hiện cả trên PC — ở đó nó vừa là nút bấm được, vừa là chỗ đọc còn mấy lượt. Spec
-   * chỉ nói phím Space cho PC, nhưng không hiện số lượt ở đâu thì người chơi phải đoán.
+   * chỉ nói phím bấm cho PC, nhưng không hiện số lượt ở đâu thì người chơi phải đoán.
    */
   readonly skillBtn = h('button', 'skill-btn');
   private readonly skillCount = h('span', 'skill-count', '0');
@@ -143,6 +143,7 @@ export class Hud {
     this.minimap = new Minimap(cfg, isTouch);
     this.burnBtn.title = STR.burnName;
     this.burnBtn.style.display = isTouch ? 'flex' : 'none';
+    this.skillBtn.title = STR.skillBtnHint(isTouch);
     const mute = button('🔊', 'mute', () => {
       mute.textContent = sound.toggleMute() ? '🔇' : '🔊';
     });

@@ -10,8 +10,20 @@ const KEYS: Record<string, [number, number]> = {
 const JOY_RADIUS = 60; // px
 const JOY_DEADZONE = 8; // px
 
-// Thiêu Đốt Tinh Huyết (spec §4.1c): giữ Shift trên PC, hoặc giữ nút lửa trên điện thoại.
+// Thiêu Đốt Tinh Huyết (spec §4.1c). Ba cách, cùng một việc:
+//   - giữ **Shift** (bàn phím),
+//   - **nháy đúp rồi giữ** chuột hoặc ngón tay — lần bấm thứ hai giữ luôn thì vừa chạy vừa đốt,
+//   - giữ nút **🔥** trên màn hình.
+//
+// Thêm cách nháy đúp vì hai cách cũ đều đòi tay thứ hai: trên PC thì Shift ở xa khi đang
+// lái bằng chuột, trên điện thoại thì nút 🔥 nằm ngoài tầm ngón đang đẩy cần. Nháy đúp giữ
+// nguyên một ngón/một tay đang điều khiển — đây là thói quen "chạm hai lần để chạy" mà người
+// chơi .io đã quen sẵn.
 const BURN_KEYS = ['ShiftLeft', 'ShiftRight'];
+/** Hai lần bấm cách nhau quá ngần này thì không tính là nháy đúp. */
+const DOUBLE_MS = 300;
+/** Lần bấm thứ hai phải nằm trong bán kính này so với lần đầu (px) — nếu không chỉ là hai lần bấm rời. */
+const DOUBLE_SLOP = 40;
 
 export interface MoveInput {
   angle: number;
@@ -28,6 +40,11 @@ export class Input {
   private touchId: number | null = null;
   private touchStart = { x: 0, y: 0 };
   private touchNow = { x: 0, y: 0 };
+  /** Lần bấm (chuột hoặc chạm) gần nhất — để nhận ra nháy đúp. */
+  private lastTapAt = -1e9;
+  private lastTapPos = { x: 0, y: 0 };
+  /** Lần giữ hiện tại có phải là nhịp thứ hai của nháy đúp không. */
+  private holdBurn = false;
   private lastAngle = 0;
   private readonly joyBase: HTMLDivElement;
   private readonly joyKnob: HTMLDivElement;
@@ -61,19 +78,38 @@ export class Input {
       this.held.clear();
       this.burnButton = false;
       this.mouseDown = false;
+      this.holdBurn = false;
     });
+  }
+
+  /**
+   * tapDown ghi nhận một lần bấm và trả về **có phải nhịp thứ hai của nháy đúp không**.
+   *
+   * Dùng chung cho chuột và cảm ứng vì luật phải giống hệt nhau — tách làm hai bản là kiểu
+   * lỗi chỉ hiện trên đúng một loại thiết bị.
+   */
+  private tapDown(x: number, y: number): boolean {
+    const now = performance.now();
+    const near = Math.hypot(x - this.lastTapPos.x, y - this.lastTapPos.y) <= DOUBLE_SLOP;
+    const isDouble = now - this.lastTapAt <= DOUBLE_MS && near;
+    this.lastTapAt = now;
+    this.lastTapPos = { x, y };
+    return isDouble;
   }
 
   private bindMouse(): void {
     this.surface.addEventListener('mousedown', (e) => {
       this.mouseDown = true;
       this.mouse = { x: e.clientX, y: e.clientY };
+      this.holdBurn = this.tapDown(e.clientX, e.clientY);
+      e.preventDefault(); // nháy đúp mà không chặn thì trình duyệt bôi đen chữ quanh canvas
     });
     window.addEventListener('mousemove', (e) => {
       this.mouse = { x: e.clientX, y: e.clientY };
     });
     window.addEventListener('mouseup', () => {
       this.mouseDown = false;
+      this.holdBurn = false;
     });
   }
 
@@ -84,6 +120,7 @@ export class Input {
       if (this.touchId === null && t) {
         this.touchId = t.identifier;
         this.touchStart = this.touchNow = { x: t.clientX, y: t.clientY };
+        this.holdBurn = this.tapDown(t.clientX, t.clientY);
         this.showJoystick(true);
       }
       e.preventDefault();
@@ -100,6 +137,7 @@ export class Input {
       for (const t of Array.from(e.changedTouches)) {
         if (t.identifier === this.touchId) {
           this.touchId = null;
+          this.holdBurn = false;
           this.showJoystick(false);
         }
       }
@@ -119,7 +157,7 @@ export class Input {
     if (!this.enabled) {
       return { angle: this.lastAngle, moving: false, burn: false };
     }
-    const burn = this.burnButton || BURN_KEYS.some((k) => this.held.has(k));
+    const burn = this.burnButton || this.holdBurn || BURN_KEYS.some((k) => this.held.has(k));
     if (this.touchId !== null) {
       return { ...this.readTouch(), burn };
     }

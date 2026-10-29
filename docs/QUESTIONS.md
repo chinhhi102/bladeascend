@@ -46,3 +46,20 @@ danh"* tức **0.1**.
 Tôi đang để **0.1** theo lời nhắn, vì nó mới hơn và nói rõ tỉ lệ. Nếu spec mới đúng thì đổi
 `config/game.json` → `cultivation.tien_overflow_score: 1.0` và sửa con số khoá trong
 `server/internal/game/newrules_test.go`.
+
+## Q23 — Spec còn ghi phím điều khiển cũ (chỉ cần anh dán lại vào `_raw`)
+
+Anh nhắn ngày 29/10: *"thiêu đốt tinh huyết là shift, hoặc double-click long, sử dụng skill
+= ctrl hoặc bấm vào button"*. Code đã làm đúng vậy, nhưng `docs/_raw/GAME_SPEC.md` vẫn ghi
+bản cũ — tôi không ghi vào `_raw` nên nhờ anh sửa hai dòng:
+
+- **§4.1c dòng 314**: `Giữ **Shift** (PC) hoặc giữ nút **🔥** (điện thoại)` →
+  thêm *"hoặc **nháy đúp rồi giữ** chuột / chạm 2 lần rồi giữ"*.
+- **§6.3 dòng 428**: `Phím **Space** (PC)` → `Phím **Ctrl** (PC)`.
+- **§18.1 dòng 1116**: bảng hướng dẫn giờ liệt kê thêm dòng Kỹ năng.
+
+**Một việc cần anh quyết**: phím đi là WASD, nên giữ Ctrl rồi bấm W là **Ctrl+W = đóng tab**.
+Trình duyệt không cho trang chặn phím đó (chi tiết trong `docs/PROGRESS.md`). Tôi đã làm
+phần giảm thiểu khoá bàn phím khi toàn màn hình, nhưng nó chỉ chạy ở chế độ toàn màn hình
+và chỉ trên Chrome/Edge. Nếu anh thấy rủi ro mất tab là quá lớn thì đổi sang phím khác —
+`Q`, `F` hoặc **chuột phải** đều không đụng phím tắt trình duyệt.
