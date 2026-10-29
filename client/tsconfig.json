@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    // Cho phép viết `./geom.ts` trong import: script đối chiếu va chạm chạy thẳng bằng
+    // Node (không qua Vite), mà Node ESM bắt buộc phải có đuôi file.
+    "allowImportingTsExtensions": true,
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",

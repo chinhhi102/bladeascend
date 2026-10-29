@@ -91,6 +91,24 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Lỗi / hạn chế đã biết
 
+- **Giật khi chạm vật cản — đã sửa 3 nguyên nhân, còn sót ít (29/10/2026, spec v5 §8.2a)**.
+  Thêm vào F3 dòng `hiệu chỉnh N/giây · lệch nhất X` (đếm số lần server kéo nhân vật về).
+  Đo trước khi sửa: đi tới rìa bản đồ ra **20,2 lần/giây**, nhân vật ghim cứng ở y = 11 549.
+  Ba chỗ client dự đoán khác server, tất cả đều bị bài đối chiếu 1 500 bước bắt được:
+
+  | # | Lệch ở đâu | Hậu quả |
+  |---|---|---|
+  | 1 | Client bỏ qua `play_margin` (kẹp `[r, size−r]` thay vì `[margin+r, size−margin−r]`) | Cả vành ngoài rộng 420 đơn vị — ~13% bản đồ — bị kéo về mỗi tick |
+  | 2 | Thứ tự đẩy ra khỏi vật cản khác nhau (lưới không gian vs mảng) | 4/1 000 ca lệch, nặng nhất **173,7 đơn vị** |
+  | 3 | Client thiếu phép xét **đa giác** và thiếu luật vùng **nước** | Đi qua bùn/nước/gió hình méo là lệch tốc độ liên tục |
+
+  Sau khi sửa: bài đối chiếu **0,0000 đơn vị lệch** trên 1 500 bước × 3 bản đồ; đo trong game
+  **20,2 → 4,8 lần/giây** lúc cao nhất, nhân vật không còn ghim ở rìa.
+
+  **Còn sót 1–5 lần/giây**: gần như chắc là đòn đẩy văng (`KnockVel`) — client không dự đoán
+  được va chạm chiến đấu của server. Chưa xác minh; nếu muốn triệt thì phải gửi kèm vận tốc
+  đẩy trong snapshot để client mô phỏng theo.
+
 - **Thỉnh thoảng mất ngữ cảnh WebGL (28/10/2026)**: chạy 3 lượt kiểm tra bằng Chrome headless
   trên AMD RX 570 (RADV) thì **1 lượt** in `PixiJS Error: Could not initialize shader` kèm
   `WebGL context may be lost`. Khung hình không tụt (58 fps) nên có vẻ chỉ là trình điều

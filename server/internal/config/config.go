@@ -304,6 +304,10 @@ type Net struct {
 	MaxMsgsPerSec      int     `json:"max_msgs_per_sec"`
 	MaxConnsPerIP      int     `json:"max_conns_per_ip"`
 	LeaderboardCacheSc float64 `json:"leaderboard_cache_secs"`
+	// CorrectionSnap / CorrectionTauMs: client dùng để sửa vị trí dự đoán (spec §8.2a).
+	// Server không dùng, nhưng phải có ở đây thì `/api/config` mới gửi đi được.
+	CorrectionSnap  float64 `json:"correction_snap"`
+	CorrectionTauMs float64 `json:"correction_tau_ms"`
 }
 
 // Config mirrors config/game.json.
