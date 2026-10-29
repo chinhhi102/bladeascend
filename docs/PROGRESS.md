@@ -41,6 +41,35 @@ Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (d
 
 ## Đã làm
 
+- **Kỹ năng nhân vật qua Bí Kíp (29/10/2026, spec §6.3, CHANGES_v5 mục 11–14)** — đủ 10 kỹ
+  năng, vật phẩm Bí Kíp (`skill_scroll`, weight 10), khung trạng thái chung, nút bấm, lớp
+  trân châu, bot biết dùng, và `cmd/sim --duel`.
+  - **Khung trạng thái chung** (`internal/game/status.go`): chậm · trói · bịt mắt · trượt ·
+    gồng · xuyên vật cản · mai rùa · lướt. Mười kỹ năng dùng chung một bảng thời hạn, nên
+    thêm kỹ năng sau chỉ là thêm một hằng số. Trạng thái **không cộng dồn** — trúng Ru Ngủ
+    hai lần vẫn chỉ 3 giây, nếu không hai người cùng kỹ năng khoá cứng một người vô hạn.
+  - Phím **Space** / nút tròn trên điện thoại, hiện icon + số lượt, xám khi hết. Chết là mất
+    hết lượt; rớt cảnh giới hay qua cổng thì không.
+  - **Trân châu dính màn hình**: lớp Pixi riêng, nằm dưới HUD, dồn về giữa, trượt xuống để
+    lại vệt. Bot trúng thì **tầm nhìn còn 40%** (§6.3) — không có luật này thì kỹ năng đó
+    hoàn toàn vô dụng với bot.
+  - **`cmd/sim --duel`** đấu chéo 10×10, in bảng tỉ lệ thắng + **phân tích khắc chế** (ai
+    khắc ai) + **số lần thật sự bấm được kỹ năng**.
+
+  **Ba lỗi bài đấu tìm ra, đều là lỗi thật:**
+  1. **Đàn em mài kiếm chính đại ca** — không có phép kiểm "cùng phe", nên Gọi Đàn Em là kỹ
+     năng tự sát. Đại Ca Dép từ **1,4% → 98,6%** tỉ lệ thắng sau khi sửa.
+  2. **Thiếu hẳn luật "bot bị bịt mắt còn 40% tầm nhìn"** của §6.3; `tran_chau_bot_vision`
+     có trong config mà không chỗ nào đọc.
+  3. **Ba nhân vật chưa từng bấm kỹ năng lần nào** (0/144 lượt): luật bot đòi "đang bị dí",
+     mà bot trong bài đấu thì không sợ ai. Nhìn bảng tỉ lệ thắng thì "kỹ năng yếu" và "bot
+     không bao giờ bấm" giống hệt nhau — phải đếm số lần bấm mới phân biệt được.
+
+  **Chưa cân bằng xong, và đó là chủ ý**: chủ dự án chốt 29/10 là cứ thả ra cho người chơi
+  phản hồi rồi chỉnh sau. Hiện `be_ti` và `dai_ca_dep` chưa ai khắc được; `ba_tam_loa`,
+  `co_ba_ganh`, `map_tra_sua`, `shipper` chưa khắc được ai. Chạy lại bảng bất cứ lúc nào:
+  `cd server && go run ./cmd/sim --duel`.
+
 - **Thế giới 5 khu xong phần còn lại (29/10/2026, CHANGES_v5 mục 4 goroutine, 7, 8, 9, 10)**
   — và lần đầu tiên **cả 5 ngân sách §13.6 đều ĐẠT**:
 
