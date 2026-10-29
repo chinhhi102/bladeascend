@@ -452,24 +452,6 @@
    "y": 2048,
    "w": 256,
    "h": 256
-  },
-  "teleport_out_03": {
-   "x": 768,
-   "y": 2048,
-   "w": 256,
-   "h": 256
-  },
-  "teleport_out_04": {
-   "x": 1024,
-   "y": 2048,
-   "w": 256,
-   "h": 256
-  },
-  "teleport_out_05": {
-   "x": 1280,
-   "y": 2048,
-   "w": 256,
-   "h": 256
   }
  },
  "anims": {
@@ -615,10 +597,7 @@
    "frames": [
     "teleport_out_00",
     "teleport_out_01",
-    "teleport_out_02",
-    "teleport_out_03",
-    "teleport_out_04",
-    "teleport_out_05"
+    "teleport_out_02"
    ],
    "fps": 12,
    "loop": false
