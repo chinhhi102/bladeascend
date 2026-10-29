@@ -39,6 +39,9 @@ export interface PlayerFrame {
   ringAngle: number;
 }
 
+/** Lệch dưới ngần này là sai số dấu phẩy động, không phải hiệu chỉnh thật. */
+const CORRECTION_EPS = 0.5;
+
 const SNAP_KEEP = 30;
 const OFFSET_DECAY = 0.0005; // lets the clock estimate adapt if latency grows
 
@@ -56,6 +59,12 @@ export class ClientWorld {
   private seq = 0;
   private predicted: Vec = { x: 0, y: 0 };
   private correction: Vec = { x: 0, y: 0 };
+  /** Đo "giật khi chạm vật cản" (spec §8.2a): số lần và độ lệch khi server sửa vị trí. */
+  fixPerSec = 0;
+  fixMax = 0;
+  private fixCount = 0;
+  private fixWorst = 0;
+  private fixAt = 0;
   private lastSendAt = 0;
   private lastInput: PendingInput = { seq: 0, angle: 0, moving: false, burn: false };
   lastSnapAt = 0;
@@ -198,6 +207,22 @@ export class ClientWorld {
     let pos: Vec = { x: me.x, y: me.y };
     for (const inp of this.pending) {
       pos = this.step(pos, inp, me, 1 / this.cfg.net.tick_hz);
+    }
+    // Đếm số lần server kéo nhân vật về chỗ khác (spec §8.2a): đây là thước đo trực tiếp
+    // của cảm giác "giật khi đi sát vật cản". Dự đoán đúng thì con số này ~0; lệch thì nó
+    // chạy lên bằng đúng tần số snapshot (20/giây) và người chơi thấy rung liên tục.
+    const off = Math.hypot(this.predicted.x - pos.x, this.predicted.y - pos.y);
+    if (off > CORRECTION_EPS) {
+      this.fixCount++;
+      this.fixWorst = Math.max(this.fixWorst, off);
+    }
+    const nowMs = performance.now();
+    if (nowMs - this.fixAt >= 1000) {
+      this.fixPerSec = (this.fixCount * 1000) / (nowMs - this.fixAt);
+      this.fixMax = this.fixWorst;
+      this.fixCount = 0;
+      this.fixWorst = 0;
+      this.fixAt = nowMs;
     }
     // Keep the displayed position continuous; the correction fades out in renderFrame.
     this.correction.x += this.predicted.x - pos.x;

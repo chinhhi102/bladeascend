@@ -353,6 +353,15 @@ Dùng lại art cũ cho vật cản/decor; chỉ cần sinh thêm:
 | Tường sân môn phái | `{STYLE} top-down 3/4 view ancient sect courtyard wall with grey tiles roof, tileable left-right` | 1024×512 |
 | Cổng sân môn phái | `{STYLE} top-down 3/4 view wooden sect gate archway with a blank signboard, red pillars` | 1024×1024 |
 
+### 9.2d Thiên Môn (GAME_SPEC §8.4a)
+
+| Asset | Prompt | Anim |
+|---|---|---|
+| Thiên Môn | `{STYLE} top-down 3/4 view grand celestial gate, white marble pillars with a golden curved roof, swirling golden portal inside, clouds at the base, a blank signboard on top, 1024x1024` | `idle` 6 loop (xoáy vàng), `burst` 6 |
+| Cột sáng | `vertical soft golden light beam rising into the sky, additive glow, transparent background, 256x1024` | `idle` 4 loop |
+| Bến Thiên Môn (ở Thiên Đình) | `{STYLE} top-down small round white stone landing platform with golden cloud carvings and a faint light pillar, 512x512` | `warn` 4 (lóe trước khi có người ra) |
+| Icon minimap | `{STYLE} tiny golden gate icon, 64x64` | – |
+
 ### 9.2c Đài Tiên Khí
 
 | Asset | Prompt | Anim |
@@ -441,6 +450,35 @@ Gợi ý câu thoại: `run`: "AAAAA!", "Tránh ra!"; `chase`: "Hehehe...", "Đ�
 
 Mỗi nhân vật 4 chân dung, cùng prompt nhân vật ở mục 5 + `{STYLE} head and shoulders portrait, facing the viewer slightly turned right, centered, {EXPRESSION}, transparent background, 512x512`:
 `neutral smug face` · `evil grin, chasing` · `panicked, sweating` · `crying with streams of tears`.
+
+### 11.3 Kỹ năng nhân vật (GAME_SPEC §6.3)
+
+Vật phẩm **Bí Kíp**: `{STYLE} a glossy transparent bubble containing an ancient rolled-up martial arts scroll with a red ribbon, glowing, 256x256` + icon HUD 128×128.
+
+
+Mỗi nhân vật thêm anim **`skill`** 6 frame (dùng template §4.3) + 1 icon kỹ năng 128×128 (`{STYLE} round skill icon, {ICON}, bold simple shape, no text`) + VFX riêng:
+
+| Nhân vật | Pose anim `skill` | Icon | VFX |
+|---|---|---|---|
+| A Hớn | nhét cả cái bánh bao vào miệng, má phồng, ợ ra khói | steamed bun with a bite | hơi nóng bốc lên, kiếm bay ngược về vòng |
+| Bà Tám Loa | ưỡn ngực hét vào loa, tóc bay ngược | megaphone with sound waves | sóng âm hình nón (vòng cung trắng lan ra) |
+| Ông Ba Võng | nằm võng đung đưa, mắt nhắm, bong bóng mũi | hammock with zzz | vòng chữ "zzz" + sóng ru màu tím nhạt |
+| Đại Ca | huýt sáo bằng 2 ngón tay, chỉ tay | whistle with two fingers | 2 đàn em nhỏ (vest tím rẻ tiền, kính đen) — sinh thêm sprite đàn em `run` 8 frame |
+| Thằng Mập | phồng má phun như súng máy | bubble tea pearls flying | viên trân châu đen bay + vệt; **overlay màn hình**: 6–8 biến thể `glossy black tapioca pearl splattered flat on glass with a milk tea smear, front view, transparent background, 256x256` + `milk tea drip trail, vertical, 128x512` |
+| Cô Ba | lướt ngang, đòn gánh nằm ngang, trái cây văng | fruit basket with speed lines | vệt bụi + vỏ chuối/trái cây trên đất |
+| Sư Phụ Mì | quăng lưới bằng đôi đũa | noodle net | lưới sợi mì vàng chụp xuống |
+| Bé Tí | gồng cơ, gân nổi, mặt đỏ, người phát sáng | flexed bicep | hào quang cam, tia gân nổi |
+| Shipper | rồ ga tưởng tượng, thùng hàng phụt khói | lightning bolt on delivery box | vệt tia chớp sau lưng |
+| Cụ Rùa | rụt đầu tay chân vào mai | turtle shell | mai phát sáng xanh, sóng đẩy khi bật ra |
+
+### 11.4 Art riêng cho 4 khu mới (GAME_SPEC §8.0)
+
+| Khu | Cần thêm |
+|---|---|
+| Linh Sơn Cốc | `{STYLE} top-down 3/4 view tall rocky cliff wall segment, tileable left-right, 1024x512` · `top-down wooden rope suspension bridge segment, tileable, 512x256` · nền `grey mountain rock with patches of moss` |
+| Trúc Lâm Mê Cung | `{STYLE} top-down very dense bamboo grove wall segment, tileable left-right, 1024x512` · góc rặng tre (L-shape) · nền `damp forest floor with bamboo leaves` |
+| Phàm Trấn | `{STYLE} top-down small village house roof (grey tiles), 1024x1024` (nhà nhìn từ trên, tường gạch là va chạm) · `paper lanterns string` · nền `old cobblestone street` |
+| Băng Nguyệt Hồ | nền `seamless top-down smooth glossy pale blue ice with subtle cracks and reflections` · `seamless top-down soft snow ground` · decal `ice skid marks`, `snow pile`, `frozen reeds` · `{STYLE} small ice island edge segment` |
 
 ## 12. Âm thanh (SFX / BGM) — nguồn miễn phí
 

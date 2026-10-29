@@ -37,26 +37,12 @@ chậm lại khoảng **3,5 lần**.
 
 **Claude không tự chọn**: đây là đổi luật chơi, không phải sửa lỗi. Cần chủ dự án quyết.
 
-## Q21 — Hai luật mới chủ dự án yêu cầu, GAME_SPEC chưa ghi
+## Q22 — `tien_overflow_score`: spec ghi 1.0, anh nhắn 10:1 (0.1)
 
-Chủ dự án yêu cầu trực tiếp ngày 29/10/2026, tôi đã làm trong code nhưng **không được ghi
-vào `docs/_raw/`**, nên spec và code đang lệch nhau. Nhờ anh cập nhật spec:
+`docs/_raw/CHANGES_v5.md` mục "Trả lời Q21" ghi giữ `tien_overflow_score` **1.0**, nhưng
+ngay trước đó anh nhắn *"tỉ lệ tiên khí và uy danh là 10-1, tức 10 tiên khí chỉ được 1 uy
+danh"* tức **0.1**.
 
-**1. Cổng dịch chuyển bắn ngẫu nhiên** (lệch §8.4 — spec hiện ghi "cổng đi 2 chiều, ghép
-cặp cố định"). Đã làm: bước vào một cổng thì ra ở **một cổng bất kỳ khác cùng mạng**, không
-bao giờ ra lại chính cổng vừa vào. Bật/tắt bằng `gates.random_exit` (mặc định `true`); đặt
-`false` là quay về đúng luật cũ.
-
-Lưu ý tôi hiểu câu "cổng dịch chuyển sẽ dịch chuyển ngẫu nhiên" là **đích đến ngẫu nhiên**.
-Nếu ý anh là **bản thân cái cổng tự di chuyển chỗ trên bản đồ** thì nói một tiếng, đó là
-việc khác hẳn và tôi làm lại.
-
-**2. Đạo Tổ: Tiên khí dư đổi thành Uy Danh** (spec chưa nói gì về chuyện này). Đã làm: tới
-Đạo Tổ là hết cảnh giới để lên, nên mỗi điểm Tiên khí nhặt thêm đổi thành
-`cultivation.tien_overflow_score` điểm Uy Danh — chủ dự án chốt tỉ lệ **10 Tiên khí = 1 Uy
-Danh**, tức `0.1` và thanh Tiên khí **giữ đúng ở
-mốc Đạo Tổ** thay vì phình mãi.
-
-Vì sao giữ thanh ở mốc đỉnh: `robTienKhi` tính `loss = tiên_khí − mốc_khởi_điểm_mới`. Nếu
-cho phình thì một người Đạo Tổ ngồi lâu thành cục mồi khổng lồ, ai chém được là giàu to —
-không chặn thì luật cướp đoạt §3.4 méo hẳn. Nếu anh muốn giữ nguyên cục mồi đó thì báo.
+Tôi đang để **0.1** theo lời nhắn, vì nó mới hơn và nói rõ tỉ lệ. Nếu spec mới đúng thì đổi
+`config/game.json` → `cultivation.tien_overflow_score: 1.0` và sửa con số khoá trong
+`server/internal/game/newrules_test.go`.
