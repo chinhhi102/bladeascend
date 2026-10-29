@@ -22,7 +22,10 @@ import (
 )
 
 func main() {
-	addr := flag.String("addr", ":8080", "listen address")
+	// Mặc định CHỈ nghe trên máy này, không mở ra mạng LAN. `:8080` nghe trên mọi card
+	// mạng, nghĩa là ai cùng Wi-Fi cũng vào được — không muốn thế thì phải nói rõ.
+	// Muốn cho máy khác vào: `go run ./cmd/server -addr :8080`.
+	addr := flag.String("addr", "127.0.0.1:8080", "địa chỉ nghe; để \":8080\" nếu muốn mở ra mạng LAN")
 	cfgPath := flag.String("config", config.FindRepoFile("config/game.json"), "config file")
 	mapsDir := flag.String("maps", config.FindRepoFile("maps"), "Tiled maps directory")
 	assetsDir := flag.String("assets", config.FindRepoFile("assets"), "assets directory")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/draw"
@@ -28,6 +29,7 @@ func prepAll(jobs []Job, assets string) {
 			log.Printf("prep %s: %v", j.Name, err)
 			continue
 		}
+		prepped[j.Name] = true
 		log.Printf("prep %s", j.Name)
 	}
 	if err := buildAtlases(assets); err != nil {
@@ -36,6 +38,56 @@ func prepAll(jobs []Job, assets string) {
 	if err := writeManifest(assets); err != nil {
 		log.Printf("manifest: %v", err)
 	}
+	if err := writeMiscut(assets); err != nil {
+		log.Printf("danh sách cắt sai: %v", err)
+	}
+}
+
+// miscutPath là nơi lưu danh sách sheet bị cắt sai, để `prompts` và `run` đọc lại.
+func miscutPath(assets string) string { return filepath.Join(assets, "_raw", "miscut.json") }
+
+// writeMiscut ghi danh sách sheet bị cắt sai của lượt prep này.
+//
+// Chỉ ghi khi có prep thật sự: chạy `prep` lúc chưa có ảnh thô nào mà xoá sạch danh sách
+// thì những sheet hỏng sẽ lặng lẽ biến mất khỏi ART_JOBS.md.
+func writeMiscut(assets string) error {
+	if len(prepped) == 0 {
+		return nil // không cắt lại cái nào thì không có thông tin mới để ghi
+	}
+	keep := map[string]bool{}
+	for _, n := range readMiscut(assets) {
+		keep[n] = true
+	}
+	for n := range prepped {
+		delete(keep, n) // cắt lại sạch sẽ thì gỡ khỏi danh sách...
+	}
+	for n := range miscut {
+		keep[n] = true // ...còn cái vừa cắt sai thì thêm vào
+	}
+	names := make([]string, 0, len(keep))
+	for n := range keep {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	b, err := json.MarshalIndent(names, "", "  ")
+	if err != nil {
+		return err
+	}
+	log.Printf("%d sheet cắt sai, đã ghi vào %s", len(names), miscutPath(assets))
+	return os.WriteFile(miscutPath(assets), append(b, '\n'), 0o644)
+}
+
+// readMiscut đọc lại danh sách đó. Thiếu file thì coi như không có sheet nào hỏng.
+func readMiscut(assets string) []string {
+	b, err := os.ReadFile(miscutPath(assets))
+	if err != nil {
+		return nil
+	}
+	var names []string
+	if json.Unmarshal(b, &names) != nil {
+		return nil
+	}
+	return names
 }
 
 func prepJob(j Job, raw, assets string) error {
@@ -272,6 +324,17 @@ func bandsBetweenLines(img *image.NRGBA, ys []int) [][2]int {
 // khỏi thân là bị đếm thành nhiều khung. Thực tế đã xảy ra: `dai_ca_dep` idle ra **22 khung**
 // thay vì 4 — trong game nhân vật thành một cái áo tím nhấp nháy, mà không ai biết cho tới
 // lúc người chơi báo. Lệch thế này thì ảnh coi như hỏng, phải sinh lại.
+// miscut: tên những job bị cắt sai trong lần prep này. Ghi ra đĩa cuối lượt prep để
+// `prompts` và `run -redo` tự biết phải sinh lại cái nào — trước đây danh sách này phải gõ
+// tay vào mã nguồn, nên cứ có sheet hỏng mới là lại quên.
+var miscut = map[string]bool{}
+
+// prepped: job nào đã được cắt lại trong lượt này. Chỉ những job này mới được phép XOÁ khỏi
+// danh sách cắt sai — ảnh thô của job cũ có thể đã bị dọn đi, prep bỏ qua chúng, và nếu coi
+// "không cảnh báo" là "đã lành" thì sheet hỏng sẽ lặng lẽ rơi khỏi ART_JOBS.md trong khi
+// atlas vẫn giữ 22 khung sai. Đã dính đúng lỗi này một lần.
+var prepped = map[string]bool{}
+
 func warnFrameCount(j Job, frames [][]*image.NRGBA) {
 	for si, sg := range j.Segs {
 		if sg.Frames <= 0 || si >= len(frames) {
@@ -285,6 +348,7 @@ func warnFrameCount(j Job, frames [][]*image.NRGBA) {
 		if got > sg.Frames*3/2 || got*2 < sg.Frames {
 			level = "HỎNG"
 		}
+		miscut[j.Name] = true
 		log.Printf("  %s %s/%s: cắt được %d khung, khai báo %d — %s",
 			level, j.Name, sg.Anim, got, sg.Frames, "sinh lại bằng `artgen run -only "+j.Name+" -redo`")
 	}

@@ -80,7 +80,7 @@ const HAS_TASKSET = (() => {
 
 async function startServer() {
   const db = join(tmpdir(), `kx-browsertest-${process.pid}.db`);
-  const srvArgs = ['run', './cmd/server', '-addr', `:${PORT}`, '-db', db, '-max-conns-per-ip', '40'];
+  const srvArgs = ['run', './cmd/server', '-addr', `127.0.0.1:${PORT}`, '-db', db, '-max-conns-per-ip', '40'];
   // --cpuprofile <file>: lấy hồ sơ CPU của SERVER THẬT trong lúc 10 tab đang chơi. Khác
   // cmd/loadtest ở chỗ có bot, bản đồ thật và client thật — hai nơi cho hình ảnh khác nhau.
   if (args.cpuprofile) {
