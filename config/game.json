@@ -262,6 +262,7 @@
   },
   "zones": {
     "mud_mult": 0.6,
+    "snow_mult": 0.8,
     "wind_with": 1.5,
     "wind_against": 0.8,
     "wind_with_max_deg": 60,

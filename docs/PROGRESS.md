@@ -41,6 +41,31 @@ Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (d
 
 ## Đã làm
 
+- **5 bản đồ cho 5 khu (29/10/2026, spec §8.0, CHANGES_v5 mục 6)** — `cd server && go run
+  ./cmd/mapgen` sinh cả 5; xem riêng từng khu bằng `-zone X -seed N -png ra.png`.
+  Ảnh duyệt: `docs/perf/zone0.png` … `zone4.png`.
+
+  | # | Khu | Thuật toán | Vật cản |
+  |---|---|---|---|
+  | 0 | Thiên Đình | giữ nguyên §8.1 | 296 |
+  | 1 | Linh Sơn Cốc | 5 dãy vách đá **so le** (dãy lẻ chạm mép trái, dãy chẵn mép phải) chia hẻm núi, mỗi dãy chừa 1–2 đèo rộng 200–300 có cầu treo; 2 cao nguyên quanh đài, mỗi cao nguyên 2 lối lên | 158 |
+  | 2 | Trúc Lâm Mê Cung | mê cung **đào đường lùi dần** trên lưới 11×11 — bảo đảm mọi ô đi tới được nhau **theo cách nó dựng**, không phải rải tường rồi cầu trời; bụi rậm gấp 3; vài ao | 322 |
+  | 3 | Phàm Trấn | lưới phố **cố tình lệch** (khoảng cách 1 500–2 100, mỗi phố xê dịch ±140) + một đại lộ chéo; mỗi ô phố nhồi 3–5 công trình, thỉnh thoảng bỏ trống một ô làm sân | 109 |
+  | 4 | Băng Nguyệt Hồ | hồ băng đa giác ở giữa + 4 đảo tuyết, bờ tuyết phủ quanh (`snow_mult` 0,8) | 29 |
+
+  Mỗi khu **4 cổng** thuộc mạng chung cả thế giới và **2 Đài Tiên Khí**; Thiên Đình giữ 4 đài
+  nhỏ + Thiên Tiên Đài. Khu 0 trước đây đặt 8 cổng, nay đúng 4 theo §8.4.
+
+  **Ba lỗi bộ kiểm bắt được trong lúc làm** (đều là lỗi thật, không phải chỉnh số cho qua):
+  1. `ringWall` nhận `gapArc` là **độ dài cung tính bằng đơn vị**, tôi truyền 0.5 tưởng là
+     radian → cao nguyên bị bịt kín, 3,3% ô trống bị nhốt.
+  2. `addRoad` vẽ vùng đường bằng **hộp bao** của đoạn, nên một con phố chéo biến gần hết
+     Phàm Trấn thành mặt đường. Đã sửa: đoạn chéo cắt thành nhiều khúc ngắn ôm sát đường.
+  3. `house()` nhận **góc trên-trái** chứ không phải tâm; truyền tâm vào thì nhà tràn ra
+     đường và bị từ chối — cả thị trấn chỉ còn 50 vật cản.
+
+  Ba bản đồ cũ (`lang_tre`, `cho_dem`, `nui_da`) đã xoá, 5 khu thay thế.
+
 - **Thế giới 5 khu — xong phần server (29/10/2026, spec v5 §8.0 §8.4, CHANGES_v5 mục 4+5)**:
   một phòng giờ là **5 khu**, mỗi khu một bản đồ 12 000² riêng, mô phỏng riêng, danh sách
   người riêng, AOI riêng (`internal/room/zone.go`). Số khu lấy từ `room.zones` trong config;

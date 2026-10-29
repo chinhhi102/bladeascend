@@ -12,8 +12,9 @@ func TestLoadStarterMaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(maps) != 3 {
-		t.Fatalf("loaded %d maps, want 3", len(maps))
+	// 5 bản đồ = 5 khu của một thế giới (spec §8.0); xem room.ZoneMapIDs.
+	if len(maps) != 5 {
+		t.Fatalf("nạp được %d bản đồ, muốn 5 (một bản mỗi khu)", len(maps))
 	}
 	for _, m := range maps {
 		if m.Size != cfg.Room.MapSize || m.Name == "" {
@@ -91,14 +92,18 @@ func TestGeneratedMapsHaveOrganicZones(t *testing.T) {
 		t.Skipf("không nạp được bản đồ: %v", err)
 	}
 	for _, m := range maps {
+		// Luật ở đây là về HÌNH DÁNG, không phải về loại vùng: mọi vùng địa hình tự nhiên
+		// (bùn, nước, băng, tuyết) phải là đa giác hữu cơ. Băng Nguyệt Hồ không có bùn hay
+		// nước nhưng cả hồ băng lẫn đảo tuyết đều là đa giác, vẫn đúng tinh thần §8.6.
+		natural := map[string]bool{"mud": true, "water": true, "ice": true, "snow": true}
 		poly := 0
 		for _, z := range m.Zones {
-			if (z.Kind == "mud" || z.Kind == "water") && z.Shape.IsPoly() {
+			if natural[z.Kind] && z.Shape.IsPoly() {
 				poly++
 			}
 		}
 		if poly == 0 {
-			t.Errorf("%s: không có vùng bùn/nước nào là đa giác — spec §8.6 cấm hình học lộ ra", m.ID)
+			t.Errorf("%s: không có vùng địa hình tự nhiên nào là đa giác — spec §8.6 cấm hình học lộ ra", m.ID)
 		}
 	}
 }
