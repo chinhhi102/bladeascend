@@ -2,6 +2,10 @@ import type { GameConfig } from '../config';
 import type { GameMap, LeaderboardMsg, Shape } from '../net/protocol';
 import { GATE_COLORS } from '../render/palette';
 import { h } from './dom';
+import { STR } from './strings';
+
+/** Màu vàng kim riêng của Thiên Môn trên minimap (spec §8.4a). */
+const HEAVEN = '#ffd60a';
 
 // Colours of the static layer. Kept muted so the live markers stand out (spec §12.1).
 const BG = '#13170f';
@@ -45,11 +49,19 @@ export class Minimap {
   private size: number;
   private big = false;
   private lb: LeaderboardMsg | null = null;
+  /**
+   * Cột liệt kê 5 khu + số người mỗi khu, chỉ hiện khi phóng to (spec §8.0).
+   *
+   * Cố ý **không** hiện vị trí ai ở đâu — chỉ số lượng. Biết khu nào đang đông là đủ để
+   * chọn đi hay tránh; biết chính xác ai đứng chỗ nào thì cổng dịch chuyển hết bất ngờ.
+   */
+  private readonly zoneList = h('div', 'zone-list');
+  private myZone = 0;
 
   constructor(cfg: GameConfig, isTouch: boolean) {
     this.size = isTouch ? cfg.minimap.size_mobile : cfg.minimap.size_pc;
     this.ctx = this.canvas.getContext('2d');
-    this.root.append(this.canvas);
+    this.root.append(this.canvas, this.zoneList);
     this.root.addEventListener('click', () => this.toggle());
     // Cửa sổ đổi kích thước → tính lại, nếu không bản phóng to sẽ tràn ra ngoài.
     window.addEventListener('resize', () => this.resize());
@@ -60,7 +72,66 @@ export class Minimap {
   toggle(): void {
     this.big = !this.big;
     this.root.classList.toggle('big', this.big);
+    this.drawZoneList();
     this.resize();
+  }
+
+  /**
+   * heavenArrow vẽ mũi tên nhỏ ở GÓC minimap chỉ hướng tới Thiên Môn (spec §8.4a).
+   *
+   * Chỉ vẽ khi Thiên Môn nằm ngoài khung nhìn hiện tại — thấy cổng rồi mà vẫn còn mũi tên
+   * thì chỉ thêm rối.
+   */
+  private heavenArrow(g: CanvasRenderingContext2D, px: number, meX: number, meY: number): void {
+    const gate = this.map?.gates.find((q) => q.hv);
+    if (!gate) {
+      return;
+    }
+    const dx = gate.x - meX;
+    const dy = gate.y - meY;
+    const d = Math.hypot(dx, dy);
+    if (d < 1200) {
+      return; // đã tới gần, khỏi chỉ đường nữa
+    }
+    const cx = px * 0.88;
+    const cy = px * 0.12;
+    const r = px * 0.055;
+    const a = Math.atan2(dy, dx);
+    g.save();
+    g.translate(cx, cy);
+    g.rotate(a);
+    g.fillStyle = HEAVEN;
+    g.beginPath();
+    g.moveTo(r, 0);
+    g.lineTo(-r * 0.6, r * 0.55);
+    g.lineTo(-r * 0.25, 0);
+    g.lineTo(-r * 0.6, -r * 0.55);
+    g.closePath();
+    g.fill();
+    g.restore();
+  }
+
+  /** setZone nhớ khu đang đứng để tô đậm dòng tương ứng trong bảng. */
+  setZone(index: number): void {
+    this.myZone = index;
+    this.drawZoneList();
+  }
+
+  private drawZoneList(): void {
+    const counts = this.lb?.zc;
+    if (!this.big || !counts || counts.length < 2) {
+      this.zoneList.style.display = 'none';
+      return;
+    }
+    this.zoneList.style.display = 'block';
+    this.zoneList.replaceChildren(
+      h('div', 'zone-list-title', STR.zoneListTitle),
+      ...counts.map((n, i) =>
+        h('div', `zone-row${i === this.myZone ? ' me' : ''}`,
+          h('span', 'zone-row-name', STR.zoneNames[i] ?? `Khu ${i + 1}`),
+          h('span', 'zone-row-n', String(n))),
+      ),
+    );
   }
 
   private resize(): void {
@@ -83,6 +154,7 @@ export class Minimap {
 
   setLeaderboard(lb: LeaderboardMsg): void {
     this.lb = lb;
+    this.drawZoneList();
   }
 
   /** drawTerrain renders the static layer once: it never changes during a match. */
@@ -133,8 +205,18 @@ export class Minimap {
     g.clearRect(0, 0, px, px);
     g.drawImage(this.terrain, 0, 0, px, px);
     for (const gate of this.map.gates) {
+      if (gate.hv) {
+        // Thiên Môn: icon vàng riêng, to hơn, LUÔN hiện (spec §8.4a). Nó là lối đi chắc
+        // chắn tới Thiên Đình nên người chơi phải thấy nó ở mọi lúc, khác cổng thường.
+        this.marker(g, gate.x * k, gate.y * k, px * 0.03, HEAVEN, '⛩');
+        continue;
+      }
+      if (gate.dk) {
+        continue; // bến chỉ là chỗ đặt chân, vẽ lên chỉ làm rối minimap
+      }
       this.dot(g, gate.x * k, gate.y * k, px * 0.012, hex(GATE_COLORS[gate.c] ?? 0xa55bff));
     }
+    this.heavenArrow(g, px, meX, meY);
     // Camera box: tells you how much of the map you can actually see right now.
     g.strokeStyle = VIEW;
     g.lineWidth = Math.max(1, px * 0.004);

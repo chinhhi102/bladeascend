@@ -19,6 +19,8 @@ type Event struct {
 	Y      float32 `msgpack:"y"`
 	N      int     `msgpack:"n,omitempty"`
 	S      string  `msgpack:"s,omitempty"`
+	// F: một số thực đi kèm — ví dụ số giây của một trạng thái (spec §6.3).
+	F      float32 `msgpack:"f,omitempty"`
 	Global bool    `msgpack:"-"` // broadcast to the whole room regardless of AOI
 	To     uint32  `msgpack:"-"` // when set, only this player receives it
 }
@@ -35,6 +37,21 @@ type Game struct {
 	Players   map[uint32]*Player
 	Monsters  map[uint32]*Monster
 	Items     map[uint32]*Item
+	// ZoneIndex: khu này là khu thứ mấy của phòng (spec §8.0). Phòng đặt lúc dựng.
+	ZoneIndex int
+	// GateRouter / MoveToZone: do phòng cài, để cổng dịch chuyển đi được sang khu khác.
+	// Khu không biết gì về khu khác — mọi việc qua ranh giới đều đi qua hai hàm này.
+	GateRouter func(fromZone int, gate world.Gate) (GateDest, bool)
+	MoveToZone func(p *Player, zone int, at Vec)
+	// itemSlots: vật phẩm theo chỉ số dày đặc; freeSlots là các ô trống để cấp lại.
+	itemSlots []*Item
+	freeSlots []int
+	// bladeBuf dùng lại giữa các lần so kiếm — spec §13.4 cấm cấp phát trong vòng nóng.
+	bladeBuf  []blade
+	// obsBuf: danh sách id vật cản gần, dùng lại để khỏi cấp phát mỗi bước di chuyển.
+	obsBuf    []int
+	// slicks: vệt trơn do Gánh Lướt rơi lại (spec §6.3).
+	slicks    []slick
 	Obstacles []ObstacleState
 	Grid      *world.Grid
 	Events    []Event
@@ -119,6 +136,23 @@ func (g *Game) AddPlayer(o SpawnOptions) *Player {
 	return p
 }
 
+// ForceState đặt thẳng cảnh giới, số kiếm và vị trí của một người. Chỉ dùng cho công cụ đo
+// (cmd/loadtest, spec §13.6) để dựng kịch bản nặng nhất mà không phải chơi hàng giờ.
+func (g *Game) ForceState(p *Player, level, swords int, at Vec) {
+	p.Level = level
+	p.PeakLevel = max(p.PeakLevel, level)
+	// Nhảy thẳng vào Tiên giới thì phải đặt Tiên khí đúng mốc khởi điểm của cảnh giới đó.
+	// Thiếu bước này, phím test cho ra trạng thái không bao giờ có thật: Đạo Tổ mà Tiên khí
+	// bằng 0, nên luật "Tiên khí dư đổi thành Uy Danh" và luật cướp đoạt §3.4 đều đo sai.
+	if r := g.Prog.Realm(level); g.Prog.IsTien(r) {
+		p.TienKhi = math.Max(p.TienKhi, g.Prog.TienEntry(g.Prog.TienIndex(r)))
+	}
+	p.Ring.Count = swords
+	p.Pos = at
+	p.InvulnUntil = g.Time + 1e9 // không để họ chém nhau chết giữa lúc đang đo
+	g.refreshDerived(p)
+}
+
 // resetPlayer (re)spawns a player at a safe spot (spec §7).
 func (g *Game) resetPlayer(p *Player, level, swords int) {
 	p.TotalExp = g.Prog.Threshold(level)
@@ -141,7 +175,10 @@ func (g *Game) resetPlayer(p *Player, level, swords int) {
 }
 
 // Respawn puts a dead player back at Luyện Khí 1 with 1 sword.
-func (g *Game) Respawn(p *Player, level, swords int) { g.resetPlayer(p, level, swords) }
+func (g *Game) Respawn(p *Player, level, swords int) {
+	g.onDeathClear(p)
+	g.resetPlayer(p, level, swords)
+}
 
 func (g *Game) RemovePlayer(id uint32) {
 	delete(g.Players, id)
@@ -151,6 +188,27 @@ func (g *Game) RemovePlayer(id uint32) {
 			break
 		}
 	}
+}
+
+// Detach gỡ nhân vật khỏi thế giới này mà KHÔNG xoá trạng thái của họ — dùng khi chuyển
+// sang khu khác (spec §8.0). Khác `RemovePlayer` ở chỗ người gọi giữ lại con trỏ Player và
+// gắn nó vào khu mới, nên kiếm, buff, nứt, Tiên khí, Uy Danh đều nguyên vẹn.
+func (g *Game) Detach(id uint32) *Player {
+	p, ok := g.Players[id]
+	if !ok {
+		return nil
+	}
+	g.RemovePlayer(id)
+	return p
+}
+
+// Attach nhận một nhân vật từ khu khác sang. Hình học vòng kiếm và khung nhìn tính lại theo
+// bản đồ mới; vị trí do người gọi đặt trước.
+func (g *Game) Attach(p *Player) {
+	g.Players[p.ID] = p
+	g.order = append(g.order, p.ID)
+	p.Pos = g.resolveBlocking(p.Pos, g.BodyR(p))
+	g.refreshDerived(p)
 }
 
 // SetInput applies a client input (already validated by the caller).
@@ -168,11 +226,20 @@ func (g *Game) SetInput(id uint32, seq uint32, angle float64, moving, burning bo
 // refreshDerived recomputes scale and ring geometry from level, sword count and buffs.
 func (g *Game) refreshDerived(p *Player) {
 	p.Scale = g.Prog.Scale(p.Level)
-	long := 1.0
-	if p.HasBuff(BuffLong, g.Time) {
-		long = g.Cfg.Buffs["long"].Mult
-	}
-	p.Geom = ComputeRingGeom(g.Cfg.Sword, g.Cfg.Player.BodyR, p.Scale, p.Ring.Count, long)
+	// Spec v4.3 bỏ Trường Kiếm: tầm chém chỉ tăng theo số vòng và cảnh giới (§4.1a).
+	p.Geom = ComputeRingGeom(g.Cfg.Sword, g.Cfg.Player.BodyR, p.Scale, p.Ring.Count)
+	g.refreshView(p)
+}
+
+// refreshView tính sẵn nửa khung nhìn. Nó chỉ phụ thuộc Scale và tầm kiếm — hai thứ vừa
+// tính ở trên — nên tính một lần ở đây thay vì tính lại cho TỪNG vật phẩm, TỪNG client,
+// TỪNG tick như trước. pprof đo được: `math.Pow` trong hàm này một mình ăn 35% CPU server,
+// vì nó là `exp(log())` và bị gọi hàng triệu lần mỗi giây trong vòng lọc tầm nhìn.
+func (g *Game) refreshView(p *Player) {
+	pc := g.Cfg.Player
+	view := math.Max(pc.CameraViewH*math.Pow(p.Scale, pc.CameraExp), pc.CameraReachMul*p.Geom.Reach)
+	p.ViewHH = view/2 + g.Cfg.Net.AOIMargin
+	p.ViewHW = p.ViewHH * g.Cfg.Net.AOIAspect
 }
 
 func (g *Game) BodyR(p *Player) float64 { return g.Cfg.Player.BodyR * p.Scale }
@@ -183,6 +250,11 @@ func (g *Game) Omega(p *Player) float64 {
 	if p.HasBuff(BuffSpin, g.Time) {
 		w *= g.Cfg.Buffs["spin"].Mult
 	}
+	// Ru Ngủ làm vòng kiếm quay chậm 50% (spec §6.3) — khác Ru Ngủ làm chậm CHÂN, đây là
+	// chậm KIẾM, nên người bị ru vừa khó chạy vừa mài yếu hẳn.
+	if p.HasStatus(StSlow, g.Time) {
+		w *= g.Cfg.Skills.RuNguSpin
+	}
 	return w
 }
 
@@ -190,6 +262,7 @@ func (g *Game) Omega(p *Player) float64 {
 func (g *Game) Tick(dt float64) {
 	g.Time += dt
 	g.updateTimers()
+	g.moveMinions(dt)
 	g.movePlayers(dt)
 	g.moveMonsters(dt)
 	for _, p := range g.PlayerList() {
@@ -197,9 +270,11 @@ func (g *Game) Tick(dt float64) {
 			g.spinRing(p, dt)
 		}
 	}
+	g.updateSkillState(dt)
 	g.resolveSwordBody()
 	g.resolveSwordSword()
 	g.resolveSwordWorld()
+	g.flushSwordBreaks()
 	g.resolvePickups()
 	g.maintainSpawns()
 	g.updateAltars()

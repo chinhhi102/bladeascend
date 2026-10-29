@@ -6,14 +6,57 @@ import (
 	"kiemxoay/server/internal/geom"
 )
 
-// Shape is an axis-aligned rectangle (X,Y top-left, W,H) or a circle (centre X,Y, radius R).
+// Shape là hình chữ nhật thẳng trục (X,Y góc trên trái, W,H), hình tròn (tâm X,Y bán kính
+// R), hoặc **đa giác** (Poly, toạ độ tuyệt đối, xen kẽ x,y).
+//
+// Đa giác là thứ spec §8.6 bắt buộc cho các vùng địa hình: bản đồ hiển thị không được có
+// hình chữ nhật thẳng cạnh hay hình tròn hoàn hảo nào lộ ra. Quan trọng là **server dùng
+// đúng đa giác mà client vẽ** — nếu server xét hình chữ nhật còn client vẽ hình méo thì
+// người chơi đứng chỗ nhìn như bùn mà không bị chậm, hoặc ngược lại.
+//
+// X,Y,W,H vẫn được giữ cho đa giác: đó là hộp bao, dùng để lọc nhanh qua lưới không gian
+// trước khi làm phép điểm-trong-đa-giác.
 type Shape struct {
-	Circle bool    `json:"c,omitempty"`
-	X      float64 `json:"x"`
-	Y      float64 `json:"y"`
-	W      float64 `json:"w,omitempty"`
-	H      float64 `json:"h,omitempty"`
-	R      float64 `json:"r,omitempty"`
+	Circle bool      `json:"c,omitempty"`
+	X      float64   `json:"x"`
+	Y      float64   `json:"y"`
+	W      float64   `json:"w,omitempty"`
+	H      float64   `json:"h,omitempty"`
+	R      float64   `json:"r,omitempty"`
+	Poly   []float64 `json:"p,omitempty"`
+}
+
+// SetPoly gán đa giác và tính luôn hộp bao.
+func (s *Shape) SetPoly(pts []float64) {
+	s.Poly = pts
+	s.Circle = false
+	if len(pts) < 6 {
+		return
+	}
+	minX, minY := pts[0], pts[1]
+	maxX, maxY := pts[0], pts[1]
+	for i := 2; i < len(pts); i += 2 {
+		minX = math.Min(minX, pts[i])
+		maxX = math.Max(maxX, pts[i])
+		minY = math.Min(minY, pts[i+1])
+		maxY = math.Max(maxY, pts[i+1])
+	}
+	s.X, s.Y, s.W, s.H = minX, minY, maxX-minX, maxY-minY
+}
+
+// containsPoly là phép ray casting kinh điển: bắn một tia sang phải từ điểm cần xét rồi đếm
+// số cạnh nó cắt — lẻ là trong, chẵn là ngoài.
+func (s Shape) containsPoly(p geom.Vec) bool {
+	in := false
+	n := len(s.Poly) / 2
+	for i, j := 0, n-1; i < n; j, i = i, i+1 {
+		xi, yi := s.Poly[i*2], s.Poly[i*2+1]
+		xj, yj := s.Poly[j*2], s.Poly[j*2+1]
+		if (yi > p.Y) != (yj > p.Y) && p.X < (xj-xi)*(p.Y-yi)/(yj-yi)+xi {
+			in = !in
+		}
+	}
+	return in
 }
 
 func (s Shape) Center() geom.Vec {
@@ -22,6 +65,9 @@ func (s Shape) Center() geom.Vec {
 	}
 	return geom.Vec{X: s.X + s.W/2, Y: s.Y + s.H/2}
 }
+
+// IsPoly reports whether this shape is an organic polygon (spec §8.6).
+func (s Shape) IsPoly() bool { return len(s.Poly) >= 6 }
 
 // Bounds returns min/max corners.
 func (s Shape) Bounds() (geom.Vec, geom.Vec) {
@@ -35,7 +81,14 @@ func (s Shape) Contains(p geom.Vec) bool {
 	if s.Circle {
 		return p.Dist2(geom.Vec{X: s.X, Y: s.Y}) <= s.R*s.R
 	}
-	return p.X >= s.X && p.X <= s.X+s.W && p.Y >= s.Y && p.Y <= s.Y+s.H
+	// Hộp bao lọc trước: rẻ hơn ray casting rất nhiều và loại được hầu hết trường hợp.
+	if p.X < s.X || p.X > s.X+s.W || p.Y < s.Y || p.Y > s.Y+s.H {
+		return false
+	}
+	if s.IsPoly() {
+		return s.containsPoly(p)
+	}
+	return true
 }
 
 // OverlapsCircle reports whether a circle (c, r) touches the shape.

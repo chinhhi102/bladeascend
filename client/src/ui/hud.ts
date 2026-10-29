@@ -2,8 +2,9 @@ import { sound } from '../audio/sound';
 import type { GameConfig } from '../config';
 import { maxSwords, realmName, realmOf, tienIndex, tierOf } from '../config';
 import type { FeedMsg, GameEvent, LeaderboardMsg, PlayerState } from '../net/protocol';
-import { BUFFS } from '../net/protocol';
+import { BUFFS, moodName } from '../net/protocol';
 import { assets } from '../render/assets';
+import { REALM_BADGE } from '../render/palette';
 import { BUFF_COLORS } from '../render/palette';
 import { button, h } from './dom';
 import { Minimap } from './minimap';
@@ -55,9 +56,38 @@ function colorizeFeed(text: string, actor: string, target: string): Node[] {
 }
 
 /** Hud is the in-match DOM overlay: EXP bar, swords, buffs, room top 10, kill feed (spec §6, §11). */
+/** inkOnHex: chữ đen hay trắng thì đọc được trên nền này (xem nameplate.ts). */
+function inkOnHex(bg: number): string {
+  const r = (bg >> 16) & 0xff;
+  const g = (bg >> 8) & 0xff;
+  const b = bg & 0xff;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#14110c' : '#ffffff';
+}
+
+/**
+ * Icon tạm cho 10 kỹ năng (spec §6.3). Dùng emoji cho tới khi có art thật — thà có thứ
+ * nhìn ra được ngay còn hơn một ô vuông trống chờ ảnh.
+ */
+const SKILL_ICONS: Record<string, string> = {
+  a_hon: '🥟',
+  ba_tam_loa: '📢',
+  ong_ba_vong: '💤',
+  dai_ca_dep: '🩴',
+  map_tra_sua: '🧋',
+  co_ba_ganh: '🧺',
+  su_phu_mi: '🍜',
+  be_ti: '💪',
+  shipper: '⚡',
+  cu_rua: '🐢',
+};
+
 export class Hud {
   readonly root = h('div', 'hud');
   private readonly badge = h('div', 'badge');
+  private readonly portrait = h('div', 'portrait');
+  private readonly badgeTag = h('div', 'badge-tag');
+  private readonly crown = h('div', 'badge-crown');
+  private badgeKey = '';
   private readonly realm = h('div', 'realm');
   private readonly expFill = h('div', 'exp-fill');
   private readonly expBar: HTMLElement;
@@ -71,20 +101,44 @@ export class Hud {
   /** serverFeed is the top-centre strip for server-wide announcements (spec §11.4). */
   private readonly serverFeed = h('div', 'server-feed');
   private readonly banner = h('div', 'banner');
+  /** Tên khu đang đứng, hiện cạnh minimap (spec §8.0). */
+  private readonly zoneBox = h('div', 'zone-name');
+  /** Khu người chơi đang đứng — để biết tin kill feed nào đến từ khu khác (spec §8.0). */
+  private myZone = 0;
   private readonly ping = h('div', 'ping');
   private readonly debugHelp = h('div', 'debug-help', STR.debugHelp);
+  /** Đồng hồ đo hiệu năng, chỉ hiện khi ?debug=true — để biết lag nằm ở đâu (xem setPerf). */
+  private readonly perf = h('div', 'perf');
+  private perfOn = false;
   private buffEnds = new Map<string, { end: number; total: number }>();
   private bannerUntil = 0;
-  private lastLevel = -1;
 
   readonly minimap: Minimap;
   /** burnBtn is the touch-only hold button for Thiêu Đốt Tinh Huyết (spec §4.1c). */
   readonly burnBtn = h('button', 'burn-btn', '🔥');
+  /**
+   * Nút kỹ năng (spec §6.3): icon kỹ năng của nhân vật + số lượt đang có, xám khi 0 lượt.
+   *
+   * Luôn hiện cả trên PC — ở đó nó vừa là nút bấm được, vừa là chỗ đọc còn mấy lượt. Spec
+   * chỉ nói phím Space cho PC, nhưng không hiện số lượt ở đâu thì người chơi phải đoán.
+   */
+  readonly skillBtn = h('button', 'skill-btn');
+  private readonly skillCount = h('span', 'skill-count', '0');
+  private readonly skillIcon = h('span', 'skill-icon', '✦');
   private readonly guide = h('div', 'guide');
   private readonly isTouch: boolean;
 
+  /** char: id nhân vật đang chơi, để lấy chân dung (spec §12.4). Đặt khi vào phòng. */
+  private char = '';
+
+  setChar(char: string): void {
+    this.char = char;
+    this.badgeKey = ''; // đổi nhân vật thì dựng lại ô đại diện
+  }
+
   constructor(private readonly cfg: GameConfig, isTouch = false) {
     this.isTouch = isTouch;
+    this.badge.append(this.portrait, this.badgeTag, this.crown);
     this.expBar = h('div', 'exp-bar', this.expFill);
     this.minimap = new Minimap(cfg, isTouch);
     this.burnBtn.title = STR.burnName;
@@ -92,22 +146,33 @@ export class Hud {
     const mute = button('🔊', 'mute', () => {
       mute.textContent = sound.toggleMute() ? '🔇' : '🔊';
     });
+    // Cột trái xếp theo LUỒNG DỌC, không ghim toạ độ cứng cho từng khối.
+    //
+    // Trước đây mỗi khối có `top` riêng (status 12, buffs 84, minimap 136). Chỉ cần khối
+    // trạng thái cao thêm một dòng — lên Tiên giới có thêm thanh Tiên khí, hoặc tên khu
+    // mới thêm vào — là nó đè lên hàng buff. Đã dính thật: ảnh chụp của chủ dự án cho thấy
+    // chữ "Kiếm 25/30" nằm sau ba cái icon buff.
     this.root.append(
-      this.minimap.root,
-      h('div', 'status', this.badge, h('div', 'status-text', this.realm, this.expBar, this.expLabel, this.swords, this.scoreBox)),
+      h('div', 'hud-left',
+        h('div', 'status', this.badge, h('div', 'status-text', this.realm, this.expBar, this.expLabel, this.swords, this.scoreBox)),
+        this.buffs,
+        this.zoneBox,
+        this.minimap.root),
       this.pops,
-      this.buffs,
       this.board,
       this.feed,
       this.serverFeed,
       this.banner,
       this.burnBtn,
+      this.skillBtn,
       this.guide,
       h('div', 'corner', this.ping, mute),
       this.debugHelp,
+      this.perf,
       h('div', 'rotate-hint', STR.rotateHint),
     );
     this.debugHelp.style.display = 'none';
+    this.perf.style.display = 'none';
   }
 
   /**
@@ -127,6 +192,19 @@ export class Hud {
 
   setDebug(on: boolean): void {
     this.debugHelp.style.display = on ? 'block' : 'none';
+    this.perfOn = on;
+    this.perf.style.display = on ? 'block' : 'none';
+  }
+
+  /** togglePerf bật/tắt bảng đo bằng phím F3 (spec §13.6). */
+  togglePerf(): void {
+    this.perfOn = !this.perfOn;
+    this.perf.style.display = this.perfOn ? 'block' : 'none';
+  }
+
+  /** setPerf ghi một dòng số liệu hiệu năng lên góc màn hình (chỉ ở chế độ debug). */
+  setPerf(text: string): void {
+    this.perf.textContent = text;
   }
 
   update(me: PlayerState | null, rttMs: number, prog: (L: number) => { from: number; to: number }): void {
@@ -140,10 +218,8 @@ export class Hud {
       return;
     }
     const r = realmOf(this.cfg, me.L);
-    if (me.L !== this.lastLevel) {
-      this.lastLevel = me.L;
-      this.setBadge(r);
-    }
+    const tienHere = tienIndex(this.cfg, r) >= 0;
+    this.setBadge(r, tienHere ? 0 : tierOf(this.cfg, me.L), me.ti ?? 0, moodName(me.md));
     // Tiên giới: không chia tầng, thanh tiến độ đầy bằng sát mạng (spec §3.4).
     const tien = tienIndex(this.cfg, r) >= 0;
     this.realm.textContent = tien ? realmName(this.cfg, r) : STR.realmTier(realmName(this.cfg, r), tierOf(this.cfg, me.L));
@@ -162,10 +238,66 @@ export class Hud {
     this.swords.textContent = STR.swords(me.n, maxSwords(this.cfg, r));
   }
 
-  private setBadge(realm: number): void {
-    const path = `ui/badge_${realm}.png`;
-    this.badge.style.backgroundImage = assets.has(path) ? `url(/assets/${path})` : '';
-    this.badge.textContent = assets.has(path) ? '' : String(realm + 1);
+  /**
+   * setBadge vẽ ô đại diện ở góc trên trái (spec §12.4): chân dung nhân vật trong khung
+   * tròn, viền màu cảnh giới, huy hiệu cảnh giới + tầng ở góc dưới phải, vương miện nếu
+   * đang Top 1. Thay cho vòng tròn ghi mỗi con số cấp — số thì ai cũng phải dịch trong đầu,
+   * còn mặt nhân vật thì nhận ra ngay.
+   *
+   * Chưa có art chân dung riêng thì cắt phần đầu (45% trên) của khung `idle_00`.
+   */
+  private setBadge(realm: number, tier: number, rank: number, mood: string): void {
+    const key = `${realm}|${tier}|${rank}|${mood}`;
+    if (key === this.badgeKey) {
+      return; // chỉ dựng lại khi có gì đổi, không chạm DOM mỗi khung hình
+    }
+    this.badgeKey = key;
+    this.setPortrait(this.portraitUrl(mood));
+    const col = `#${(REALM_BADGE[realm] ?? 0x8d99ae).toString(16).padStart(6, '0')}`;
+    this.badge.style.borderColor = col;
+    this.badge.classList.toggle('tien', realm >= this.cfg.cultivation.realms.length);
+    this.badgeTag.textContent = tier > 0 ? String(tier) : '仙';
+    this.badgeTag.style.background = col;
+    this.badgeTag.style.color = inkOnHex(REALM_BADGE[realm] ?? 0x8d99ae);
+    this.crown.style.display = rank === 1 ? 'block' : 'none';
+    this.crown.textContent = rank === 1 ? '♚' : '';
+  }
+
+  /**
+   * portraitUrl chọn ảnh chân dung theo tâm trạng (spec §12.4). Chưa có bộ chân dung riêng
+   * thì dùng khung `idle_00` và để CSS cắt lấy phần đầu.
+   */
+  private portraitUrl(mood: string): string {
+    const want = mood === 'chase' ? 'evil' : mood === 'hit' || mood === 'no_swords' ? 'panic' : mood === 'realm_drop' ? 'cry' : 'neutral';
+    if (!this.char) {
+      return '';
+    }
+    const real = `characters/${this.char}/portrait_${want}.png`;
+    return assets.has(real) ? `/assets/${real}` : `/assets/characters/${this.char}/frames/idle_00.png`;
+  }
+
+  /**
+   * setPortrait nạp ảnh rồi mới gắn làm nền. Không kiểm tra qua danh sách asset được: ảnh
+   * từng khung của nhân vật đã được gộp vào atlas nên không nằm trong danh sách, dù file vẫn
+   * có trên đĩa. Tải hụt thì rơi về hai chữ cái đầu của tên nhân vật.
+   */
+  private setPortrait(url: string): void {
+    const initials = this.char.split('_').map((w) => w[0] ?? '').join('').toUpperCase().slice(0, 2);
+    if (!url) {
+      this.portrait.style.backgroundImage = '';
+      this.portrait.textContent = initials;
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      this.portrait.style.backgroundImage = `url(${url})`;
+      this.portrait.textContent = '';
+    };
+    img.onerror = () => {
+      this.portrait.style.backgroundImage = '';
+      this.portrait.textContent = initials;
+    };
+    img.src = url;
   }
 
   private updateBuffs(me: PlayerState | null, now: number): void {
@@ -205,6 +337,27 @@ export class Hud {
         this.showBanner(STR.chestIncoming(e.n ?? this.cfg.items.chest_warn_secs), 4);
       }
     }
+  }
+
+  /**
+   * setSkill cập nhật nút kỹ năng: icon theo nhân vật, số lượt, và xám khi hết lượt.
+   */
+  setSkill(char: string, charges: number): void {
+    this.skillIcon.textContent = SKILL_ICONS[char] ?? '✦';
+    this.skillCount.textContent = String(charges);
+    this.skillBtn.classList.toggle('empty', charges <= 0);
+    this.skillBtn.title = STR.skillNames[char] ?? '';
+    if (!this.skillBtn.firstChild) {
+      this.skillBtn.append(this.skillIcon, this.skillCount);
+    }
+  }
+
+  /** setZone đổi tên khu cạnh minimap; chuỗi rỗng thì ẩn hẳn (phòng 1 khu như trước). */
+  setZone(name: string, index = 0): void {
+    this.myZone = index;
+    this.minimap.setZone(index);
+    this.zoneBox.textContent = name;
+    this.zoneBox.style.display = name ? 'block' : 'none';
   }
 
   showBanner(text: string, secs: number): void {
@@ -255,6 +408,7 @@ export class Hud {
       : f.k === 'title_gain' ? STR.feed.title_gain(f.a)
       : f.k === 'title_lose' ? STR.feed.title_lose(f.a)
       : f.k === 'tien_ascend' ? STR.feed.tien_ascend(f.a, realmName(this.cfg, f.r))
+      : f.k === 'heaven_gate' ? STR.feed.heaven_gate(f.a, STR.titles[(f.r || 1) - 1] ?? '')
       : '';
     if (!text) {
       return;
@@ -270,7 +424,13 @@ export class Hud {
       window.setTimeout(() => big.remove(), SERVER_FEED_SECS * 1000);
       return;
     }
-    const line = h('div', 'feed-line', ...colorizeFeed(text, f.a, f.b ?? ''));
+    const line = h('div', 'feed-line');
+    // Tin từ KHU KHÁC hiện kèm tên khu (spec §8.0) — không có tiền tố thì người chơi tưởng
+    // vừa có người chết ngay cạnh mình, trong khi chuyện xảy ra ở đầu kia thế giới.
+    if (f.znm && (f.zn ?? 0) !== this.myZone) {
+      line.append(h('span', 'feed-zone', `[${f.znm}]`), document.createTextNode(' '));
+    }
+    line.append(...colorizeFeed(text, f.a, f.b ?? ''));
     this.feed.prepend(line);
     while (this.feed.children.length > FEED_KEEP) {
       this.feed.lastElementChild?.remove();

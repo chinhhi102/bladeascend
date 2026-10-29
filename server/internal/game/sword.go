@@ -23,7 +23,7 @@ type Ring struct {
 
 // RingGeom is the derived ring geometry for one tick (spec §4.1a).
 type RingGeom struct {
-	Base     float64 // SWORD_LEN * scale * buff_long
+	Base     float64 // SWORD_LEN * scale
 	Inner    float64 // hilt radius of ring 0
 	Width    float64
 	HiltStep float64
@@ -36,11 +36,12 @@ type RingGeom struct {
 	outer    float64 // farthest any blade point can be at any tilt (broad phase)
 }
 
-// ComputeRingGeom applies the §4.1a formulas; longMult is buff_long_sword (1.3 | 1.0).
-func ComputeRingGeom(c config.Sword, bodyR, scale float64, n int, longMult float64) RingGeom {
+// ComputeRingGeom applies the §4.1a formulas. Spec v4.3 bỏ Trường Kiếm nên không còn hệ số
+// kéo dài: tầm chém chỉ tăng khi mở vòng mới hoặc lên cảnh giới.
+func ComputeRingGeom(c config.Sword, bodyR, scale float64, n int) RingGeom {
 	step := max(c.RingStep, 1)
 	g := RingGeom{
-		Base: c.Length * scale * longMult, Inner: (bodyR + c.HiltGap) * scale, Width: c.Width * scale,
+		Base: c.Length * scale, Inner: (bodyR + c.HiltGap) * scale, Width: c.Width * scale,
 		HiltStep: c.HiltStep, Growth: c.RingGrowth, Compound: c.RingGrowthMode == "compound",
 		Step: step,
 	}
@@ -107,8 +108,10 @@ func (g RingGeom) RingOf(i int) int {
 // SlotAngle is the angle of sword i relative to the ring phase. Each ring has RingCap(k)
 // evenly spaced slots; a ring that is not full spreads its swords over those slots, and ring
 // k is staggered by a fraction of one slot so the rings share out the gaps (spec §4.1a).
-func (g RingGeom) SlotAngle(n, i int) float64 {
-	k := g.RingOf(i)
+func (g RingGeom) SlotAngle(n, i int) float64 { return g.slotAngleAt(n, i, g.RingOf(i)) }
+
+// slotAngleAt là SlotAngle khi người gọi đã biết sẵn vòng k của thanh kiếm này.
+func (g RingGeom) slotAngleAt(n, i, k int) float64 {
 	cap, start := g.RingCap(k), g.RingStart(k)
 	j := i - start
 	m := min(cap, n-start)
@@ -128,9 +131,31 @@ func SwordSegment(center Vec, ring Ring, g RingGeom, i int) (Vec, Vec) {
 // swordAt is SwordSegment for an arbitrary ring phase (sub-steps of a sweep).
 func swordAt(center Vec, phase float64, ring Ring, g RingGeom, i int) (Vec, Vec) {
 	k := g.RingOf(i)
-	a := phase + g.SlotAngle(ring.Count, i)
+	a := phase + g.slotAngleAt(ring.Count, i, k)
 	hilt := center.Add(geom.FromAngle(a).Mul(g.HiltR(k)))
 	return hilt, hilt.Add(geom.FromAngle(a + ring.Tilt).Mul(g.Len(k)))
+}
+
+// swordAtRot là swordAt khi người gọi đã tính sẵn cos/sin của độ nghiêng lưỡi, và trả thêm
+// chiều dài lưỡi.
+//
+// Ba điểm khác biệt về tốc độ, cùng cho ra kết quả y hệt:
+//   - Hướng lưỡi suy ra từ hướng chuôi bằng một phép QUAY thay vì gọi cos/sin lần thứ hai.
+//     Độ nghiêng giống nhau cho mọi thanh kiếm của một người nên tính một lần là đủ.
+//   - `RingOf(i)` tính một lần rồi truyền xuống, thay vì `SlotAngle` tính lại lần nữa.
+//   - Trả về chiều dài lưỡi để người gọi khỏi đo lại bằng `Hypot` (11% CPU server).
+//
+// pprof trên server thật: cos/sin chiếm 24% CPU và RingOf thêm 12%, toàn bộ nằm trong vòng
+// so kiếm (CHANGES_v4 mục 26).
+func swordAtRot(center Vec, phase float64, ring Ring, g RingGeom, i int, tiltCos, tiltSin float64) (Vec, Vec, float64) {
+	k := g.RingOf(i)
+	a := phase + g.slotAngleAt(ring.Count, i, k)
+	d := geom.FromAngle(a)
+	hiltR, length := g.HiltR(k), g.Len(k)
+	hilt := Vec{X: center.X + d.X*hiltR, Y: center.Y + d.Y*hiltR}
+	lx := d.X*tiltCos - d.Y*tiltSin
+	ly := d.X*tiltSin + d.Y*tiltCos
+	return hilt, Vec{X: hilt.X + lx*length, Y: hilt.Y + ly*length}, length
 }
 
 // RestTilt is the blade lean for a spin direction.
@@ -219,6 +244,9 @@ type ClashSide struct {
 	Realm int
 	Count int
 	Crack float64
+	// DurMult: hệ số độ bền từ buff (Cương Kiếm = buffs.hard.durability_mult, spec v4.4
+	// §5.2). 0 hoặc 1 đều nghĩa là không buff.
+	DurMult float64
 }
 
 // ClashOutcome is the number of swords each side loses and their new crack values.
@@ -231,22 +259,46 @@ type ClashOutcome struct {
 func ResolveClash(c config.Sword, a, b ClashSide) ClashOutcome {
 	out := ClashOutcome{CrackA: a.Crack, CrackB: b.Crack}
 	u := max(c.ClashUnit, 1)
-	if a.Realm == b.Realm {
+	// Spec v4.4 §5.2: so theo ĐỘ BỀN D chứ không so cảnh giới nữa — Cương Kiếm làm kiếm
+	// cứng hơn nên Luyện Khí có buff vẫn có thể cứng hơn Trúc Cơ không buff.
+	da, db := SideDurability(c, a), SideDurability(c, b)
+	if da == db {
 		out.LostA = loseUpTo(a.Count, u, c.MinCount)
 		out.LostB = loseUpTo(b.Count, u, c.MinCount)
 		return out
 	}
-	// Spec v4.1 §5.2: bên thấp luôn mất đúng u kiếm; bên cao chỉ nứt `lost / k` với
-	// k = durability(r_cao) / durability(r_thấp). Kiếm cảnh giới trên bền hơn 20%.
-	k := Durability(c, a.Realm, b.Realm)
-	if a.Realm < b.Realm {
+	// Bên mềm hơn luôn mất đúng u kiếm; bên cứng hơn chỉ nứt `lost / k`.
+	if da < db {
+		k := db / da
 		out.LostA = loseUpTo(a.Count, u, c.MinCount)
 		out.LostB, out.CrackB = applyCrack(b, out.LostA, k, c.MinCount)
 		return out
 	}
+	k := da / db
 	out.LostB = loseUpTo(b.Count, u, c.MinCount)
 	out.LostA, out.CrackA = applyCrack(a, out.LostB, k, c.MinCount)
 	return out
+}
+
+// SideDurability is D = độ bền theo cảnh giới × hệ số Cương Kiếm (spec v4.4 §5.2).
+func SideDurability(c config.Sword, s ClashSide) float64 {
+	d := realmDurability(c, s.Realm)
+	if s.DurMult > 1 {
+		d *= s.DurMult
+	}
+	return d
+}
+
+// realmDurability là độ bền tuyệt đối của kiếm ở cảnh giới r.
+func realmDurability(c config.Sword, r int) float64 {
+	step := c.DurabilityPerRealm
+	if step <= 0 {
+		step = 1
+	}
+	if c.DurabilityMode == "linear" {
+		return 1 + (step-1)*float64(r)
+	}
+	return math.Pow(step, float64(r))
 }
 
 // Durability is k = độ bền kiếm bên cao chia cho bên thấp (spec v4.1 §5.2).

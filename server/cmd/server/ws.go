@@ -33,6 +33,26 @@ func (c *wsConn) Send(b []byte) bool {
 	}
 }
 
+// SendLossy đẩy gói MỚI vào hàng đợi, bỏ gói cũ nhất nếu đầy (spec mục 27).
+//
+// Dùng cho snapshot: client mạng yếu chỉ cần bản mới nhất, một bản cũ nằm trong hàng chỉ làm
+// nhân vật giật lùi rồi nhảy tới. Khác hẳn `welcome` hay `leaderboard` — mất là mất luôn,
+// nên những gói đó vẫn đi qua Send thường.
+func (c *wsConn) SendLossy(b []byte) bool {
+	for i := 0; i < 2; i++ {
+		select {
+		case c.out <- b:
+			return true
+		default:
+			select {
+			case <-c.out: // vứt gói cũ nhất rồi thử lại
+			default:
+			}
+		}
+	}
+	return false
+}
+
 func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	ip := clientIP(r)
 	if !s.limiter.acquire(ip) {
@@ -115,10 +135,19 @@ func (s *server) dispatch(c *room.Client, t string, data []byte) {
 		}
 	case netproto.TDebug:
 		var d netproto.Debug
-		if s.debug && c.Debug && netproto.Decode(data, &d) == nil {
-			if rm := c.Room(); rm != nil {
-				rm.Debug(c, d)
-			}
+		// Bỏ lệnh test trong im lặng từng làm hai lượt đo 10 tab ra bảng số sai mà không ai
+		// biết vì sao. Giờ nói rõ bỏ vì lý do gì.
+		switch rm := c.Room(); {
+		case !s.debug:
+			log.Printf("dbg bỏ qua: server không chạy với -debug")
+		case !c.Debug:
+			log.Printf("dbg bỏ qua: client %d không ở chế độ debug", c.PlayerID)
+		case netproto.Decode(data, &d) != nil:
+			log.Printf("dbg bỏ qua: gói hỏng (%d byte)", len(data))
+		case rm == nil:
+			log.Printf("dbg bỏ qua: client %d chưa ở trong phòng nào", c.PlayerID)
+		default:
+			rm.Debug(c, d)
 		}
 	default:
 	}

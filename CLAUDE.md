@@ -17,11 +17,13 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
 - Không thêm thư viện/framework khác khi chưa hỏi.
 
 ## Lệnh
-- Chạy server: `cd server && go run ./cmd/server` (mặc định cổng 8080)
+- Chạy server: `cd server && go run ./cmd/server` (mặc định cổng 9999, mở ra mạng LAN)
 - Chạy client dev: `cd client && npm run dev`
 - Test luật chơi: `cd server && go test ./...`
 - Giả lập cân bằng: `cd server && go run ./cmd/sim --bots 40 --minutes 10`
 - Build client: `cd client && npm run build`
+- Đối chiếu va chạm client↔server (spec §8.2a):
+  `cd server && go run ./cmd/collisionfixture -o /tmp/fx.json && cd ../client && npm run check:collision -- /tmp/fx.json`
 
 ## Quy tắc bắt buộc
 1. Server authoritative: mọi luật chơi chạy trên server (`server/internal/game`). Client chỉ gửi input và vẽ.

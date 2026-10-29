@@ -1,11 +1,23 @@
-import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Sprite, TilingSprite, type Texture } from 'pixi.js';
+import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Sprite, Texture, TilingSprite } from 'pixi.js';
 
 import type { ClientWorld } from '../net/state';
 import type { GameMap, MapObstacle, Shape } from '../net/protocol';
 import { assets } from './assets';
+import { buildDecals, type DecalLayer, obstacleSkirt } from './decals';
 import { GATE_COLORS } from './palette';
 
-const BIOME_TILE: Record<string, string> = { grass: 'grass', market: 'concrete', concrete: 'concrete', dirt: 'dirt', rock: 'dirt' };
+/**
+ * Mỗi biome 2–3 texture nền, trộn bằng mặt nạ nhiễu (spec §8.6 mục 1). Lớp đầu phủ kín, các
+ * lớp sau nằm trong mặt nạ loang nên ranh giới là mảng màu tự nhiên chứ không phải ô vuông.
+ * Thiếu texture nào thì bỏ qua lớp đó, không vỡ gì.
+ */
+const BIOME_TILES: Record<string, string[]> = {
+  grass: ['grass', 'soft_grass', 'bamboo_litter'],
+  market: ['concrete', 'worn_cobble', 'dusty_earth'],
+  concrete: ['concrete', 'worn_cobble'],
+  dirt: ['dirt', 'dirt_path', 'village_grass'],
+  rock: ['dirt', 'rocky_ground', 'fine_gravel'],
+};
 const BIOME_COLOR: Record<string, number> = { grass: 0x7cc46a, concrete: 0xa9a49b, dirt: 0xc9a46a };
 const OBSTACLE_COLOR: Record<string, number> = { fence: 0xc8a165, stall: 0xe76f51, cart: 0x9c6644, brick: 0xb5523b, boulder: 0x8d8d8d, stone_wall: 0x5b6b5b };
 const TILE_WORLD = 400; // one 512px ground tile covers 400 world units
@@ -19,7 +31,60 @@ function bounds(s: Shape): { x: number; y: number; w: number; h: number } {
   return { x: s.x, y: s.y, w: s.w ?? 0, h: s.h ?? 0 };
 }
 
+/**
+ * drawShape vẽ đúng hình mà SERVER dùng để xét va chạm — đa giác hữu cơ nếu có (spec §8.6),
+ * không thì hình tròn / chữ nhật.
+ */
+/**
+ * noiseMask dựng mặt nạ loang để trộn hai texture nền (spec §8.6 mục 1).
+ *
+ * Vẽ bằng canvas ở độ phân giải thấp (128×128 cho cả bản đồ 12 000) rồi để GPU kéo giãn —
+ * mặt nạ mờ nhoè chính là thứ ta cần, và 128² thì dựng xong trong một nhịp mắt. Dùng hai
+ * tầng tần số: tầng thô tạo mảng lớn, tầng mịn làm mép lởm chởm.
+ */
+function noiseMask(size: number, seed: number, cover: number): Sprite {
+  const n = 128;
+  const cv = document.createElement('canvas');
+  cv.width = n;
+  cv.height = n;
+  const ctx = cv.getContext('2d') as CanvasRenderingContext2D;
+  const img = ctx.createImageData(n, n);
+  const wave = (x: number, y: number, f: number, p: number): number =>
+    Math.sin(x * f + p) * Math.cos(y * f * 1.3 + p * 1.7) + Math.sin((x + y) * f * 0.7 + p * 2.1);
+  const s = (seed % 1000) * 0.013;
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const v = wave(x, y, 0.055, s) * 0.65 + wave(x, y, 0.17, s * 1.9) * 0.35;
+      // v nằm quanh [-2, 2]; đẩy qua ngưỡng để ra mảng chứ không ra gradient đều.
+      const a = v > (0.5 - cover) * 2 ? 255 : 0;
+      const i = (y * n + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = a;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  // Làm nhoè mép để hai texture hoà vào nhau thay vì cắt ngọt.
+  ctx.filter = 'blur(2px)';
+  ctx.drawImage(cv, 0, 0);
+  const sp = new Sprite(Texture.from(cv));
+  sp.width = size;
+  sp.height = size;
+  return sp;
+}
+
+/** hashSeed biến id bản đồ thành số, để mọi máy rải decal giống hệt nhau. */
+function hashSeed(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  }
+  return h >>> 0;
+}
+
 function drawShape(g: Graphics, s: Shape): Graphics {
+  if (s.p && s.p.length >= 6) {
+    return g.poly(s.p);
+  }
   return s.c ? g.circle(s.x, s.y, s.r ?? 0) : g.rect(s.x, s.y, s.w ?? 0, s.h ?? 0);
 }
 
@@ -122,6 +187,9 @@ export class MapView {
   readonly decor = new Container();
   readonly under = new Container(); // zones under entities (mud, wind) + gates
   readonly over = new Container(); // bush canopy above entities
+  /** Ao/suối: mặt nước gợn sóng, cập nhật mỗi khung (spec §8.6 mục 4). */
+  private readonly water: { root: Container; ripple: Graphics; s: Shape }[] = [];
+  private decals!: DecalLayer;
   private readonly obstacleNodes = new Map<number, ObstacleNode>();
   private readonly bushes: { id: number; node: Container }[] = [];
   private readonly gates = new Map<number, { node: Container; warnUntil: number }>();
@@ -131,6 +199,9 @@ export class MapView {
     private readonly gateR: number,
   ) {
     this.buildGround();
+    // Decal rải khắp mặt đất (spec §8.6 mục 3): nằm trên nền, dưới mọi vùng và vật cản.
+    this.decals = buildDecals(map.id, map.size, hashSeed(map.id));
+    this.ground.addChild(this.decals.root);
     this.buildZones();
     this.buildGates();
     this.buildDecor();
@@ -150,13 +221,27 @@ export class MapView {
 
   private buildGround(): void {
     const size = this.map.size;
-    const tex = assets.texture(`tiles/${BIOME_TILE[this.map.biome] ?? 'grass'}.png`);
+    const names = (BIOME_TILES[this.map.biome] ?? ['grass']).filter((n) => assets.texture(`tiles/${n}.png`));
+    const tex = names.length ? assets.texture(`tiles/${names[0]}.png`) : null;
     if (tex) {
       const t = new TilingSprite({ texture: tex, width: size, height: size });
       t.tileScale.set(TILE_WORLD / tex.width);
       this.ground.addChild(t);
+      // Lớp 2–3: trộn bằng mặt nạ nhiễu nên ranh giới là mảng loang, không phải ô vuông
+      // (spec §8.6 mục 1). Mặt nạ vẽ một lần lúc vào phòng, không trộn lại mỗi khung.
+      for (let i = 1; i < names.length; i++) {
+        const t2 = assets.texture(`tiles/${names[i]}.png`);
+        if (!t2) {
+          continue;
+        }
+        const layer = new TilingSprite({ texture: t2, width: size, height: size });
+        layer.tileScale.set(TILE_WORLD / t2.width);
+        const mask = noiseMask(size, hashSeed(this.map.biome) + i * 7919, 0.42 - i * 0.12);
+        layer.mask = mask;
+        this.ground.addChild(layer, mask);
+      }
     } else {
-      const g = new Graphics().rect(0, 0, size, size).fill(BIOME_COLOR[BIOME_TILE[this.map.biome] ?? 'grass'] ?? 0x7cc46a);
+      const g = new Graphics().rect(0, 0, size, size).fill(BIOME_COLOR[(BIOME_TILES[this.map.biome] ?? ['grass'])[0]] ?? 0x7cc46a);
       for (let v = 0; v <= size; v += TILE_WORLD) {
         g.moveTo(v, 0).lineTo(v, size).moveTo(0, v).lineTo(size, v);
       }
@@ -218,6 +303,10 @@ export class MapView {
       } else if (z.k === 'road') {
         // Đường lát đá sáng màu (spec §8.1 bước 2): chỉ là nền, không chặn ai.
         this.under.addChild(drawShape(new Graphics(), z.s).fill({ color: 0x8c8378, alpha: 0.55 }));
+      } else if (z.k === 'water') {
+        const node = this.waterNode(z.s);
+        this.water.push(node);
+        this.under.addChild(node.root);
       } else if (z.k === 'bush') {
         const node = this.bushNode(z.s);
         this.bushes.push({ id: z.id, node });
@@ -263,6 +352,49 @@ export class MapView {
       }
     }
     return c;
+  }
+
+  /**
+   * waterNode vẽ ao/suối: nền nước xanh mờ bên trong đa giác, cộng vài gợn sóng chạy chậm
+   * và đốm lấp lánh. Gợn sóng vẽ lại mỗi khung nhưng chỉ vài nét nên rất rẻ; cả mặt nước
+   * nằm trong mặt nạ hình đa giác nên không tràn ra ngoài bờ.
+   */
+  private waterNode(s: Shape): { root: Container; ripple: Graphics; s: Shape } {
+    const root = new Container();
+    const mask = drawShape(new Graphics(), s).fill(0xffffff);
+    const base = drawShape(new Graphics(), s).fill({ color: 0x3f7f8c, alpha: 0.55 });
+    const ripple = new Graphics();
+    ripple.mask = mask;
+    // Bờ nước: viền đậm hơn một chút cho mặt nước "lõm" xuống thay vì dán lên mặt đất.
+    const edge = drawShape(new Graphics(), s).stroke({ color: 0x2b5c66, width: 10, alpha: 0.6 });
+    root.addChild(base, ripple, edge, mask);
+    return { root, ripple, s };
+  }
+
+  /** updateWater chạy gợn sóng; gọi mỗi khung từ MapView.update. */
+  private updateWater(now: number): void {
+    for (const w of this.water) {
+      const b = bounds(w.s);
+      const g = w.ripple.clear();
+      const lines = 5;
+      for (let i = 0; i < lines; i++) {
+        const t = (now * 0.12 + i / lines) % 1;
+        const y = b.y + b.h * t;
+        g.moveTo(b.x, y);
+        // Sóng là một đường sin chạy ngang, lệch pha theo thời gian.
+        for (let x = b.x; x <= b.x + b.w; x += 24) {
+          g.lineTo(x, y + Math.sin(x * 0.02 + now * 1.6 + i) * 4);
+        }
+      }
+      g.stroke({ color: 0xcfeff5, width: 2.5, alpha: 0.28 });
+      // Đốm lấp lánh thưa thớt.
+      for (let i = 0; i < 4; i++) {
+        const a = now * 0.5 + i * 1.9;
+        const x = b.x + b.w * (0.2 + 0.6 * ((Math.sin(a) + 1) / 2));
+        const y = b.y + b.h * (0.2 + 0.6 * ((Math.cos(a * 1.3) + 1) / 2));
+        g.circle(x, y, 3 * Math.abs(Math.sin(now * 2 + i))).fill({ color: 0xffffff, alpha: 0.5 });
+      }
+    }
   }
 
   private bushNode(s: Shape): Container {
@@ -327,7 +459,11 @@ export class MapView {
     }
   }
 
-  update(w: ClientWorld, now: number, myBush: number, me: Viewer | null, occlusionAlpha: number): void {
+  update(w: ClientWorld, now: number, myBush: number, me: Viewer | null, occlusionAlpha: number, view?: { x: number; y: number; w: number; h: number }): void {
+    this.updateWater(now);
+    if (view) {
+      this.decals.update(view.x, view.y, view.w / 2, view.h / 2);
+    }
     for (const n of this.obstacleNodes.values()) {
       this.updateObstacle(n, w, now);
       if (me && n.look !== 'rubble' && this.covers(n, me)) {
@@ -367,13 +503,54 @@ export class MapView {
       n.look = look;
       n.hpDrawn = hp;
       n.node.removeChildren().forEach((c) => c.destroy());
-      n.node.addChild(this.obstacleArt(n.o, look, frac));
+      const art = this.obstacleArt(n.o, look, frac);
+      if (look !== 'rubble') {
+        // Bóng đổ mềm + vụn dưới chân để vật cản "cắm" vào đất thay vì nổi lên như dán
+        // (spec §8.6 mục 3). Vẽ TRƯỚC phần art nên nằm dưới.
+        const b = bounds(n.o.s);
+        const skirt = obstacleSkirt(b.w, b.h, n.o.k, n.o.id * 2654435761);
+        skirt.position.set(b.x + b.w / 2, b.y + b.h / 2);
+        n.node.addChild(skirt);
+      }
+      n.node.addChild(this.varied(art, n.o, look));
       const lb = n.node.getLocalBounds();
       n.box = { x: lb.x, y: lb.y, w: lb.width, h: lb.height };
       n.node.zIndex = broken ? -1e6 : bounds(n.o.s).y + bounds(n.o.s).h;
     }
     // Blink 3s before regrowing (spec §8.2).
     n.node.alpha = broken && now < n.warnUntil ? 0.5 + 0.5 * Math.sin(now * 20) : 1;
+  }
+
+  /**
+   * varied xoay nhẹ ±6° và thỉnh thoảng lật ngang một vật cản, để hàng vật cản cùng loại
+   * không lộ ra là copy-paste (spec §8.6 mục 3).
+   *
+   * Phải xoay **quanh tâm chính nó**: `obstacleArt` dựng hình ở toạ độ THẾ GIỚI, nên đặt
+   * `rotation` thẳng lên nó là xoay quanh gốc bản đồ (0,0) — vật cản ở (3000, 5000) sẽ văng
+   * đi hàng trăm đơn vị, còn lật ngang thì ném nó sang hẳn nửa kia bản đồ. Đó đúng là lỗi
+   * "vật cản nằm ngoài biên" nhìn thấy trong game.
+   *
+   * Tường dãy và tường biên thì KHÔNG đụng vào: chúng phải nối liền nhau, xoay một đoạn là
+   * hở ngay.
+   */
+  private varied(art: Container, o: MapObstacle, look: ObstacleLook): Container {
+    const b = bounds(o.s);
+    const tiled = !o.s.c && (b.w > b.h * 1.6 || b.h > b.w * 1.6);
+    if (look === 'rubble' || tiled || o.k === 'stone_wall' || o.k === 'fence' || o.k === 'brick') {
+      return art;
+    }
+    const cx = b.x + b.w / 2;
+    const cy = b.y + b.h / 2;
+    const pivot = new Container();
+    pivot.position.set(cx, cy);
+    art.position.set(art.position.x - cx, art.position.y - cy);
+    const r = ((o.id * 9301 + 49297) % 233280) / 233280;
+    pivot.rotation = (r - 0.5) * 0.21;
+    if ((o.id & 1) === 1) {
+      pivot.scale.x = -1;
+    }
+    pivot.addChild(art);
+    return pivot;
   }
 
   private obstacleArt(o: MapObstacle, look: ObstacleLook, frac: number): Container {

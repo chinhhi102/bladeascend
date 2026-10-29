@@ -38,6 +38,14 @@ func main() {
 	_ = fs.Parse(os.Args[2:])
 
 	assets := config.FindRepoFile("assets")
+	// Sheet bị cắt sai thì phải sinh lại. Danh sách do chính `prep` ghi ra (xem
+	// writeMiscut) chứ không gõ tay vào mã nguồn nữa — gõ tay thì cứ có sheet hỏng mới là
+	// lại quên. Bộ cắt tìm khung bằng vùng pixel liền nhau, nên nhân vật có tay/chân rời bị
+	// đếm thành nhiều khung; phát hiện 28/10/2026 khi `dai_ca_dep` idle ra 22 khung thay vì
+	// 4 (trong game thành một cái áo tím nhấp nháy).
+	for _, name := range readMiscut(assets) {
+		redoReasons[name] = "sheet bị cắt sai số khung (xem cảnh báo của `artgen prep`)"
+	}
 	jobs := filterJobs(allJobs(), *maxPri, *only)
 	switch os.Args[1] {
 	case "plan":
@@ -96,7 +104,50 @@ func alreadyHave(assets string, j Job) bool {
 	if _, redo := redoReasons[j.Name]; redo {
 		return false
 	}
-	_, err := os.Stat(filepath.Join(assets, filepath.FromSlash(j.Out)))
+	return haveOutputs(assets, j)
+}
+
+// haveOutputs reports whether every file this job is supposed to produce is on disk.
+//
+// Việc sinh ảnh dạng sheet (nhân vật, quái, vật cản, cổng, VFX) KHÔNG dùng `j.Out` — đường
+// dẫn nằm trong từng `Seg`. Trước đây chỗ này stat `filepath.Join(assets, "")`, tức chính
+// thư mục assets, nên luôn có → **mọi job sheet đều bị tính là đã xong**. Đó là lý do
+// `artgen plan` khoe "186/196 generated" trong khi `assets:report` vẫn thiếu 89 file: 9
+// nhân vật chưa có levelup / đột phá / rớt cảnh giới / hồi sinh / vào cổng / ra cổng.
+func haveOutputs(assets string, j Job) bool {
+	if j.Mode != modeSheet {
+		return j.Out != "" && exists(filepath.Join(assets, filepath.FromSlash(j.Out)))
+	}
+	for _, s := range j.Segs {
+		if s.Out == "" {
+			return false
+		}
+		// Cùng thước đo với `npm run assets:report`: đoạn hoạt ảnh `{anim}_{NN}` chỉ cần
+		// khung đầu là coi như đã có art (thiếu vài khung cuối thì hoạt ảnh ngắn đi chứ
+		// không phải chưa vẽ); đoạn đặt tên rõ (vật cản intact/cracked/...) phải đủ cả.
+		for _, name := range segFileNames(s) {
+			if !exists(filepath.Join(assets, filepath.FromSlash(s.Out), name)) {
+				return false
+			}
+		}
+	}
+	return len(j.Segs) > 0
+}
+
+// segFileNames is what must exist for a segment to count as drawn.
+func segFileNames(s Seg) []string {
+	if len(s.Names) > 0 {
+		out := make([]string, 0, len(s.Names))
+		for _, n := range s.Names {
+			out = append(out, n+".png")
+		}
+		return out
+	}
+	return []string{fmt.Sprintf("%s_00.png", s.Anim)}
+}
+
+func exists(p string) bool {
+	_, err := os.Stat(p)
 	return err == nil
 }
 
@@ -105,7 +156,7 @@ func writeStatus(jobs []Job, assets, out string) {
 	var done, missing []string
 	for _, j := range jobs {
 		line := fmt.Sprintf("| `%s` | p%d | %s |", j.Name, j.Priority, jobOutputs(j))
-		if _, err := os.Stat(rawPath(assets, j)); err == nil {
+		if alreadyHave(assets, j) {
 			done = append(done, line)
 		} else {
 			missing = append(missing, line)
@@ -147,11 +198,19 @@ func writePrompts(jobs []Job, assets, out string) {
 	b.WriteString("2. Ảnh nên khổ ngang 16:9 (hoặc vuông với ảnh 1 món), độ phân giải càng cao càng tốt.\n")
 	b.WriteString("3. Lưu đúng tên ở dòng **Lưu thành** (đuôi `.png`; ảnh JPEG đổi tên thành .png vẫn được).\n")
 	b.WriteString("4. Chạy `cd server && go run ./cmd/artgen prep` → tool tự xóa nền magenta/trắng, cắt frame, căn pivot, ghép atlas.\n")
-	b.WriteString("5. Sheet lệch nhẹ vẫn dùng được (tool cắt theo vùng pixel liền nhau). Nhân vật sai số frame vẫn chạy; chỉ sinh lại khi hình dính chồng lên nhau.\n\n")
+	b.WriteString("5. Sheet lệch nhẹ vẫn dùng được, tool cắt theo **vùng pixel liền nhau**.\n\n")
+	b.WriteString("**Quan trọng với sheet nhân vật** — tool đếm khung bằng cách tìm các mảng pixel rời nhau, nên:\n")
+	b.WriteString("- Mỗi khung phải là MỘT khối liền: tay, chân, vũ khí, nón phải DÍNH vào thân. Một cánh tay bay rời là tool đếm thành một khung nữa.\n")
+	b.WriteString("- Giữa hai khung phải có khoảng trống nền rõ ràng, các khung không được chạm nhau.\n")
+	b.WriteString("- Không vẽ thêm bóng đổ rời, hạt bụi, vệt tốc độ tách khỏi thân.\n")
+	b.WriteString("- Sai số khung quá nhiều thì client **bỏ hẳn animation đó** và dùng tạm `idle`/`run`, nên các mục ghi \"sheet bị cắt sai số khung\" bên dưới cần sinh lại thật.\n\n")
 	n := 0
 	for _, j := range jobs {
 		why, redo := redoReasons[j.Name]
-		if _, err := os.Stat(rawPath(assets, j)); err == nil && !redo {
+		// Dùng CHUNG một phép thử với `plan`/`run`: còn raw trong scratch, hoặc đã prep ra
+		// file asset thật. Trước đây chỗ này chỉ nhìn `assets/_raw` — mà đó là thư mục tạm
+		// hay bị dọn — nên ART_JOBS.md liệt kê lại cả những ảnh đã vẽ xong từ lâu.
+		if alreadyHave(assets, j) && !redo {
 			continue
 		}
 		n++

@@ -23,6 +23,10 @@ func testManager(t *testing.T) (*Manager, *memRecorder, *config.Config) {
 	cfg := config.MustLoadDefault()
 	cfg.Room.MonsterCount = 0
 	cfg.Items.CountPerRoom = 0
+	// Các test dưới đây kiểm luật chiến đấu và bot, không kiểm thế giới nhiều khu: để 5 khu
+	// thì hai người tham gia có thể rơi vào hai khu khác nhau và không bao giờ gặp nhau.
+	// Thế giới 5 khu có test riêng trong zone_test.go.
+	cfg.Room.Zones = 1
 	rec := &memRecorder{}
 	m := NewManager(cfg, nil, rec)
 	m.Start = func(*Room) {} // tests step rooms manually
@@ -46,26 +50,33 @@ func stepSecs(r *Room, secs float64) {
 	}
 }
 
-func TestBotFillToTwenty(t *testing.T) {
-	m, _, _ := testManager(t)
+func TestBotFillToTarget(t *testing.T) {
+	m, _, cfg := testManager(t)
 	cs := joinN(m, 5)
 	r := m.AllRooms()[0]
 	r.Step(1.0 / 30)
 	for _, c := range cs {
-		r.G.Players[c.PlayerID].InvulnUntil = 1e9 // keep humans alive while bots fill
+		r.Zone(0).G.Players[c.PlayerID].InvulnUntil = 1e9 // keep humans alive while bots fill
 	}
 	stepSecs(r, 30)
-	if r.Humans() != 5 || r.Bots() != 15 {
-		t.Fatalf("humans %d bots %d, want 5 and 15", r.Humans(), r.Bots())
+	// Trần cả phòng là `room.bot_fill_target`; bot lấp cho đủ phần còn lại.
+	wantBots := cfg.Room.BotFillTarget - 5
+	if r.Humans() != 5 || r.Bots() != wantBots {
+		t.Fatalf("có %d người %d bot, muốn 5 và %d (trần phòng %d)", r.Humans(), r.Bots(), wantBots, cfg.Room.BotFillTarget)
 	}
 	joinN(m, 3)
 	r.Step(1.0 / 30)
-	for _, p := range r.G.Players {
+	for _, p := range r.Zone(0).G.Players {
 		p.InvulnUntil = 1e9 // v3 swords are lethal to Luyện Khí: keep everyone alive for this check
 	}
 	stepSecs(r, 5)
-	if r.Bots() != 15 {
-		t.Fatalf("joining humans must not remove bots: bots = %d", r.Bots())
+	// Người thật được ƯU TIÊN trong trần phòng: thêm người thì bot phải nhường chỗ dần
+	// (bot chết thì không hồi sinh nữa), nhưng tổng số nhân vật không bao giờ vượt trần.
+	if total := r.Humans() + r.Bots(); total > cfg.Room.BotFillTarget {
+		t.Fatalf("phòng có %d nhân vật, vượt trần %d", total, cfg.Room.BotFillTarget)
+	}
+	if r.Humans() != 8 {
+		t.Fatalf("có %d người thật, muốn 8", r.Humans())
 	}
 }
 
@@ -76,11 +87,11 @@ func TestBotsSpawnAtLuyenKhiWhenRoomIsSmall(t *testing.T) {
 	r := m.AllRooms()[0]
 	for i := 0; i < 200; i++ {
 		level, swords := r.randomBotLevel()
-		if realm := r.G.Prog.Realm(level); realm != 0 {
+		if realm := r.Zone(0).G.Prog.Realm(level); realm != 0 {
 			t.Fatalf("phòng ít người mà bot sinh ở cảnh giới %d (level %d), muốn Luyện Khí", realm, level)
 		}
-		if swords < 1 || swords > r.G.Prog.MaxSwords(0) {
-			t.Fatalf("bot sinh ra với %d kiếm, ngoài khoảng [1, %d]", swords, r.G.Prog.MaxSwords(0))
+		if swords < 1 || swords > r.Zone(0).G.Prog.MaxSwords(0) {
+			t.Fatalf("bot sinh ra với %d kiếm, ngoài khoảng [1, %d]", swords, r.Zone(0).G.Prog.MaxSwords(0))
 		}
 	}
 }
@@ -98,11 +109,11 @@ func TestBotsSpawnAtRank11NoRealmCap(t *testing.T) {
 		if i < cfg.Bots.SpawnRank-1 {
 			level = 60 // Top 10 toàn người cảnh giới rất cao
 		}
-		p := r.G.AddPlayer(game.SpawnOptions{Name: "P", Level: level, Swords: 1, IsBot: true})
+		p := r.Zone(0).G.AddPlayer(game.SpawnOptions{Name: "P", Level: level, Swords: 1, IsBot: true})
 		p.Score = float64(100 * (cfg.Bots.SpawnRank + 3 - i))
 	}
-	want := r.G.Ranking()[cfg.Bots.SpawnRank-1].Level
-	if r.G.Prog.Realm(want) <= 1 {
+	want := r.Zone(0).G.Ranking()[cfg.Bots.SpawnRank-1].Level
+	if r.Zone(0).G.Prog.Realm(want) <= 1 {
 		t.Fatalf("thiết lập sai: hạng 11 phải ở cảnh giới cao hơn Trúc Cơ, đang là level %d", want)
 	}
 	for i := 0; i < 50; i++ {
@@ -111,7 +122,7 @@ func TestBotsSpawnAtRank11NoRealmCap(t *testing.T) {
 			t.Fatalf("bot sinh ở level %d, muốn %d (ngang hạng %d, không bị chặn trần)",
 				level, want, cfg.Bots.SpawnRank)
 		}
-		if maxS := r.G.Prog.MaxSwords(r.G.Prog.Realm(level)); swords < 1 || swords > maxS {
+		if maxS := r.Zone(0).G.Prog.MaxSwords(r.Zone(0).G.Prog.Realm(level)); swords < 1 || swords > maxS {
 			t.Fatalf("bot sinh với %d kiếm, ngoài [1, %d]", swords, maxS)
 		}
 	}
@@ -124,12 +135,12 @@ func TestTopFiveKillAnnouncedServerWide(t *testing.T) {
 	r := m.AllRooms()[0]
 	r.Step(1.0 / 30)
 
-	killer := r.G.AddPlayer(game.SpawnOptions{Name: "SátThủ", Level: 30, Swords: 20})
-	victim := r.G.AddPlayer(game.SpawnOptions{Name: "ĐạiCa", Level: 0, Swords: 1})
+	killer := r.Zone(0).G.AddPlayer(game.SpawnOptions{Name: "SátThủ", Level: 30, Swords: 20})
+	victim := r.Zone(0).G.AddPlayer(game.SpawnOptions{Name: "ĐạiCa", Level: 0, Swords: 1})
 	victim.Score = 9999 // đang đứng hạng 1 trong phòng
 	collected := map[string][]netproto.Feed{}
 	collect := func(room *Room) {
-		for _, c := range room.clients {
+		for _, c := range room.Clients() {
 			c.Conn = &feedSpy{room: room.ID, out: collected}
 		}
 	}
@@ -142,12 +153,12 @@ func TestTopFiveKillAnnouncedServerWide(t *testing.T) {
 	collect(other)
 
 	// Đặt nạn nhân nằm trong vòng kiếm của sát thủ rồi chạy tới khi chết thật.
-	killer.Pos = r.G.Vec(6000, 6000)
-	victim.Pos = r.G.Vec(6000+r.G.Geom(killer).Inner, 6000)
+	killer.Pos = r.Zone(0).G.Vec(6000, 6000)
+	victim.Pos = r.Zone(0).G.Vec(6000+r.Zone(0).G.Geom(killer).Inner, 6000)
 	killer.InvulnUntil, victim.InvulnUntil = 0, 0
 	for i := 0; i < 120 && !victim.Dead; i++ {
 		r.Step(1.0 / 30)
-		victim.Pos = r.G.Vec(6000+r.G.Geom(killer).Inner, 6000)
+		victim.Pos = r.Zone(0).G.Vec(6000+r.Zone(0).G.Geom(killer).Inner, 6000)
 	}
 	if !victim.Dead {
 		t.Fatal("không chém chết được nạn nhân Luyện Khí")
@@ -228,8 +239,8 @@ func TestDeathRecordsHumanOnlyAndFreesSlot(t *testing.T) {
 	cs := joinN(m, 1)
 	r := m.AllRooms()[0]
 	stepSecs(r, 3) // let bots spawn
-	p := r.G.Players[cs[0].PlayerID]
-	p.Dead, p.DiedAt = true, r.G.Time
+	p := r.Zone(0).G.Players[cs[0].PlayerID]
+	p.Dead, p.DiedAt = true, r.Zone(0).G.Time
 	stepSecs(r, 1.2)
 	if len(rec.lives) != 1 || rec.lives[0].Name != "P0" {
 		t.Fatalf("recorded %+v, want exactly the human", rec.lives)
@@ -237,8 +248,8 @@ func TestDeathRecordsHumanOnlyAndFreesSlot(t *testing.T) {
 	if cs[0].Room() != nil || m.humansOf(r) != 0 {
 		t.Fatal("dead human should leave the room and free the slot")
 	}
-	for _, b := range r.G.Players {
-		b.Dead, b.DiedAt = true, r.G.Time
+	for _, b := range r.Zone(0).G.Players {
+		b.Dead, b.DiedAt = true, r.Zone(0).G.Time
 	}
 	stepSecs(r, 1.2)
 	if len(rec.lives) != 1 {
@@ -280,11 +291,11 @@ func TestSnapshotSendsStealthFlaggedWithoutName(t *testing.T) {
 	cs := joinN(m, 2)
 	r := m.AllRooms()[0]
 	r.Step(1.0 / 30)
-	viewer, hider := r.G.Players[cs[0].PlayerID], r.G.Players[cs[1].PlayerID]
-	viewer.Pos, hider.Pos = r.G.Vec(3000, 3000), r.G.Vec(3400, 3000)
+	viewer, hider := r.Zone(0).G.Players[cs[0].PlayerID], r.Zone(0).G.Players[cs[1].PlayerID]
+	viewer.Pos, hider.Pos = r.Zone(0).G.Vec(3000, 3000), r.Zone(0).G.Vec(3400, 3000)
 	hider.Title = 1
-	r.G.ApplyBuff(hider, "stealth")
-	snap := r.snapshotFor(cs[0], viewer, r.G.DrainEvents())
+	r.Zone(0).G.ApplyBuff(hider, "stealth")
+	snap := r.snapshotFor(r.Zone(0), cs[0], viewer, r.Zone(0).G.DrainEvents())
 	var got *netproto.PlayerState
 	for i, p := range snap.Players {
 		if p.ID == hider.ID {

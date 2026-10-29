@@ -1,0 +1,14 @@
+{
+  "name": "kx-browsertest",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "10 tab Chrome headless tự chơi để đo hiệu năng client (GAME_SPEC §13.6)",
+  "scripts": {
+    "test": "node run.mjs",
+    "install-browser": "playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

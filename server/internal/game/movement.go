@@ -1,6 +1,7 @@
 package game
 
 import (
+	"sort"
 	"math"
 
 	"kiemxoay/server/internal/geom"
@@ -16,6 +17,16 @@ func (g *Game) MoveSpeed(p *Player) float64 {
 	}
 	if g.Burning(p) {
 		s *= g.Cfg.Burn.Mult
+	}
+	// Kỹ năng (spec §6.3): Ru Ngủ làm chậm, Giao Hỏa Tốc làm nhanh, Lưới Mì trói chết chân.
+	if p.HasStatus(StSlow, g.Time) {
+		s *= g.Cfg.Skills.RuNguMove
+	}
+	if p.HasStatus(StGhost, g.Time) {
+		s *= g.Cfg.Skills.GhostSpeed
+	}
+	if p.HasStatus(StRoot, g.Time) || p.HasStatus(StShell, g.Time) {
+		s = 0 // bị trói, hoặc đang rụt trong mai
 	}
 	return s
 }
@@ -59,8 +70,12 @@ func (g *Game) ZoneMult(pos Vec, dir Vec) float64 {
 			return
 		}
 		switch z.Kind {
-		case "mud":
+		case "mud", "water":
+			// Ao/suối làm chậm như bùn (spec §8.6 mục 4); client vẽ mặt nước gợn sóng.
 			mult *= g.Cfg.Zones.MudMult
+		case "snow":
+			// Bờ tuyết quanh hồ băng (spec §8.0, khu Băng Nguyệt Hồ).
+			mult *= g.Cfg.Zones.SnowMult
 		case "wind":
 			mult *= g.windMult(dir, z.WindDir)
 		default:
@@ -110,40 +125,162 @@ func (g *Game) movePlayers(dt float64) {
 
 func (g *Game) movePlayer(p *Player, dt float64) {
 	if p.Moving {
+		p.Facing = p.InputAngle
+	}
+	// Trượt vì vệt trái cây của Cô Ba cũng dùng đúng cơ chế mặt băng (spec §6.3) — một
+	// luật quán tính, hai nguồn gây ra.
+	if g.OnIce(p.Pos) || p.HasStatus(StSlip, g.Time) {
+		g.slideOnIce(p, dt)
+	} else if p.Moving {
 		dir := geom.FromAngle(p.InputAngle)
 		p.Pos = p.Pos.Add(dir.Mul(g.MoveSpeed(p) * g.ZoneMult(p.Pos, dir) * dt))
-		p.Facing = p.InputAngle
+		p.Vel = Vec{}
+	} else {
+		p.Vel = Vec{}
 	}
 	if p.KnockUntil > g.Time {
 		p.Pos = p.Pos.Add(p.KnockVel.Mul(dt))
 	}
-	// Lá chắn vòng kế ngoài cùng chặn như tường (spec §5.2): CHỈ người đang tự đi mới bị
-	// chặn. Người đứng yên không bị đẩy ra — nếu không, lá chắn của kẻ mạnh sẽ hất nạn
-	// nhân ra xa hơn tầm kiếm của chính hắn và không ai chém chết được ai.
-	if p.Moving {
-		p.Pos = g.blockedByShields(p, p.Pos)
-	}
-	p.Pos = g.resolveBlocking(p.Pos, g.BodyR(p))
+	// Người chơi KHÔNG chặn đường nhau (spec §5.2 là luật chém, xem shield.go): đi tới gần
+	// ai cũng vẫn điều khiển được bình thường, hai vòng kiếm chồng lên nhau mà mài.
+	p.Pos = g.resolveBlockingFor(p, p.Pos, g.BodyR(p))
 }
 
-// resolveBlocking pushes a circle out of solid obstacles and keeps it inside the map.
-func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
+// OnIce: điểm này có nằm trên mặt băng không (spec §8.0, khu Băng Nguyệt Hồ).
+func (g *Game) OnIce(pos Vec) bool {
+	on := false
+	g.QueryZones(pos, 1, func(id int) {
+		if z := g.Map.Zones[id]; z.Kind == "ice" && z.Shape.Contains(pos) {
+			on = true
+		}
+	})
+	return on
+}
+
+// slideOnIce di chuyển theo QUÁN TÍNH (spec §8.0):
+//
+//	vận tốc mới = vận tốc cũ × friction + hướng input × accel × dt
+//
+// Khác hẳn trên đất, nơi thả phím là dừng ngay. Trên băng, thả phím thì vẫn trôi tiếp, và
+// đổi hướng phải "lái" chứ không bẻ ngoặt được — đó là cái khó mà khu này bán.
+//
+// Hàm này phải khớp từng con số với `iceStep` bên client (spec §8.2a: dùng chung một thuật
+// toán), nếu không server sẽ kéo nhân vật về mỗi tick suốt thời gian ở trên hồ.
+func (g *Game) slideOnIce(p *Player, dt float64) {
+	ic := g.Cfg.Ice
+	p.Vel = p.Vel.Mul(ic.Friction)
+	if p.Moving {
+		// Buff tốc và Thiêu Đốt vẫn ăn vào gia tốc, không ăn vào ma sát: trên băng người
+		// nhanh hơn thì tăng tốc nhanh hơn, chứ không phải dừng giỏi hơn.
+		boost := g.MoveSpeed(p) / math.Max(g.Cfg.Player.MoveBase, 1e-9)
+		p.Vel = p.Vel.Add(geom.FromAngle(p.InputAngle).Mul(ic.Accel * boost * dt))
+	}
+	p.Pos = p.Pos.Add(p.Vel.Mul(dt))
+}
+
+// resolveBlocking pushes a circle out of solid obstacles and keeps it inside the playable
+// area — never in the void outside the border wall (spec §8.1).
+//
+// Trước đây chỗ này chỉ kẹp vào [r, size-r] tức cả dải lề ngoài tường biên, nên một cú
+// knockback hay một lần PushOut chọn nhầm mặt ngoài của tường là người chơi đứng luôn bên
+// ngoài bản đồ và không có gì kéo họ vào lại.
+// resolveBlockingFor là resolveBlocking có xét kỹ năng: Giao Hỏa Tốc đi xuyên vật cản
+// PHÁ ĐƯỢC (spec §6.3), nhưng không xuyên tường/vách không phá được.
+func (g *Game) resolveBlockingFor(p *Player, pos Vec, r float64) Vec {
+	if !p.HasStatus(StGhost, g.Time) {
+		return g.resolveBlocking(pos, r)
+	}
+	pos = g.clampToPlay(pos, r)
 	for iter := 0; iter < 3; iter++ {
-		moved := false
+		ids := g.obsBuf[:0]
 		g.QueryObstacles(pos, r, func(id int) {
-			if !g.ObstacleSolid(id) {
-				return
+			// Chỉ bị chặn bởi thứ KHÔNG phá được (MaxHP 0); nhà cửa, rào, sạp thì đi xuyên.
+			if g.ObstacleSolid(id) && g.Map.Obstacles[id].MaxHP == 0 {
+				ids = append(ids, id)
 			}
+		})
+		g.obsBuf = ids
+		sort.Ints(ids)
+		moved := false
+		for _, id := range ids {
 			if np, hit := g.Map.Obstacles[id].Block().PushOut(pos, r); hit {
 				pos, moved = np, true
 			}
-		})
+		}
 		if !moved {
 			break
 		}
 	}
-	size := g.Map.Size
-	return Vec{X: geom.Clamp(pos.X, r, size-r), Y: geom.Clamp(pos.Y, r, size-r)}
+	return g.clampToPlay(pos, r)
+}
+
+func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
+	pos = g.clampToPlay(pos, r)
+	for iter := 0; iter < 3; iter++ {
+		// Đẩy ra theo THỨ TỰ ID TĂNG DẦN, không theo thứ tự lưới không gian trả về.
+		//
+		// Đẩy lần lượt ra khỏi nhiều vật cản là phép KHÔNG GIAO HOÁN: đứng ở góc hai vật
+		// cản, đẩy A trước rồi B cho ra chỗ khác hẳn đẩy B trước rồi A. Lưới không gian
+		// duyệt theo ô nên thứ tự phụ thuộc vị trí, còn client duyệt theo mảng — hai bên ra
+		// hai kết quả khác nhau. Bài đối chiếu 1 000 bước (cmd/collisionfixture) bắt được
+		// 4 ca lệch, ca nặng nhất **173,7 đơn vị**, đủ để người chơi thấy giật nảy.
+		ids := g.obsBuf[:0]
+		g.QueryObstacles(pos, r, func(id int) {
+			if g.ObstacleSolid(id) {
+				ids = append(ids, id)
+			}
+		})
+		g.obsBuf = ids
+		sort.Ints(ids)
+		moved := false
+		for _, id := range ids {
+			if np, hit := g.Map.Obstacles[id].Block().PushOut(pos, r); hit {
+				pos, moved = np, true
+			}
+		}
+		if !moved {
+			break
+		}
+	}
+	return g.clampToPlay(pos, r)
+}
+
+// MoveStepForTest chạy đúng MỘT bước di chuyển như `movePlayer` cho công cụ đối chiếu
+// client/server (cmd/collisionfixture). Không dùng trong luật chơi.
+//
+// Phải đi qua cùng đường với movePlayer — tốc độ gốc, nhân theo vùng địa hình, rồi đẩy ra
+// khỏi vật cản — nếu không thì bài đối chiếu sẽ bỏ sót đúng những chỗ hai bên hay lệch.
+func (g *Game) MoveStepForTest(from, vel Vec, angle, scale, dt float64, moving bool) (Vec, Vec) {
+	p := &Player{Pos: from, Vel: vel, InputAngle: angle, Moving: moving, Scale: scale}
+	p.Level = 0
+	g.movePlayerForTest(p, dt)
+	return p.Pos, p.Vel
+}
+
+// movePlayerForTest chạy đúng phần DI CHUYỂN của movePlayer (không có đẩy văng, không có
+// va kiếm) để công cụ đối chiếu so với client.
+func (g *Game) movePlayerForTest(p *Player, dt float64) {
+	// Trượt vì vệt trái cây của Cô Ba cũng dùng đúng cơ chế mặt băng (spec §6.3) — một
+	// luật quán tính, hai nguồn gây ra.
+	if g.OnIce(p.Pos) || p.HasStatus(StSlip, g.Time) {
+		g.slideOnIce(p, dt)
+	} else if p.Moving {
+		dir := geom.FromAngle(p.InputAngle)
+		p.Pos = p.Pos.Add(dir.Mul(g.Cfg.Player.MoveBase * g.ZoneMult(p.Pos, dir) * dt))
+		p.Vel = Vec{}
+	} else {
+		p.Vel = Vec{}
+	}
+	p.Pos = g.resolveBlocking(p.Pos, g.Cfg.Player.BodyR*p.Scale)
+}
+
+// clampToPlay keeps a circle of radius r inside the border wall.
+func (g *Game) clampToPlay(pos Vec, r float64) Vec {
+	lo, hi := g.PlayBounds(r)
+	if hi < lo { // bản đồ bé hơn hai lần lề: lùi về kẹp theo cả bản đồ
+		lo, hi = r, g.Map.Size-r
+	}
+	return Vec{X: geom.Clamp(pos.X, lo, hi), Y: geom.Clamp(pos.Y, lo, hi)}
 }
 
 // circleFree reports whether a circle overlaps no solid obstacle.

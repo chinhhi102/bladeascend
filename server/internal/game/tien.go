@@ -15,35 +15,55 @@ func (g *Game) TienRealmOf(p *Player) int {
 	return g.Prog.TienIndex(r)
 }
 
-// BanksTienKhi is true from Đại Thừa tầng 10 upwards: those players put Tiên khí straight
-// into the bar. Everyone below converts it to Linh khí instead.
+// BanksTienKhi is true from Đại Thừa tầng 10 upwards: those players cultivate Tiên khí.
+//
+// Nó cũng là ranh giới của HAI ĐƯỜNG TU TÁCH HẲN (anh chốt 2026-10-28, xem Q18): ai đã tích
+// Tiên khí thì không hấp thụ Linh khí nữa, ai còn tu Linh khí thì không hấp thụ được Tiên
+// khí. Trước đây người phàm nhặt Tiên khí vẫn đổi ra Linh khí theo §3.4.
 func (g *Game) BanksTienKhi(p *Player) bool { return p.Level >= g.Prog.TopMortalLevel() }
 
-// TienKhiAsExp is what one Tiên khí point is worth as Linh khí for a player who cannot bank
-// it yet: base × 2^r (spec §3.4). That keeps the altars worth fighting over at every realm.
-func (g *Game) TienKhiAsExp(p *Player, points float64) float64 {
-	c := g.Cfg.Cultivation
-	return points * c.TienKhiToExpBase * math.Pow(2, float64(g.Prog.Realm(p.Level)))
-}
+// CanAbsorbTienKhi / CanAbsorbExp: mỗi người chỉ hấp thụ đúng một loại tu vi.
+func (g *Game) CanAbsorbTienKhi(p *Player) bool { return g.BanksTienKhi(p) }
+func (g *Game) CanAbsorbExp(p *Player) bool     { return !g.BanksTienKhi(p) }
 
-// GainTienKhi banks Tiên khí (or converts it to Linh khí) and promotes when a threshold is
-// crossed. Returns how much actually went into the Tiên khí bar.
+// GainTienKhi banks Tiên khí and promotes when a threshold is crossed. Returns how much
+// actually went into the Tiên khí bar — 0 for anyone still on the Linh khí path.
 func (g *Game) GainTienKhi(p *Player, points float64) float64 {
-	if points <= 0 || p.Dead {
-		return 0
-	}
-	if !g.BanksTienKhi(p) {
-		g.GainExp(p, g.TienKhiAsExp(p, points), false)
+	if points <= 0 || p.Dead || !g.CanAbsorbTienKhi(p) {
 		return 0
 	}
 	p.TienKhi += points
 	for {
 		idx := g.TienRealmOf(p)
 		next := g.Prog.TienNextAt(idx)
-		if next <= 0 || p.TienKhi < next {
+		if next <= 0 {
+			// Đã Đạo Tổ — hết cảnh giới để lên. Phần tu vi dư KHÔNG bỏ phí nữa mà đổi thẳng
+			// sang Uy Danh, để người đã lên đỉnh vẫn còn thứ để đua.
+			g.overflowToScore(p)
+			return points
+		}
+		if p.TienKhi < next {
 			return points
 		}
 		g.promoteTien(p, idx+1)
+	}
+}
+
+// overflowToScore đổi phần Tiên khí vượt mốc Đạo Tổ thành Uy Danh.
+//
+// Giữ `TienKhi` đúng ở mốc Đạo Tổ chứ không cho phình mãi: thanh Tiên khí trên HUD hiện đầy
+// (đúng ý nghĩa "đã tới đỉnh"), và quan trọng hơn là tiền thưởng khi bị chém không phình
+// theo thời gian cắm trại — `robTienKhi` tính `loss = tien_khi − mốc_khởi_điểm_mới`, không
+// chặn thì một người Đạo Tổ ngồi lâu thành cục mồi khổng lồ.
+func (g *Game) overflowToScore(p *Player) {
+	cap := g.Prog.TienEntry(g.Prog.TienCount() - 1)
+	over := p.TienKhi - cap
+	if over <= 0 {
+		return
+	}
+	p.TienKhi = cap
+	if rate := g.Cfg.Cultivation.TienOverflowScore; rate > 0 {
+		g.addScore(p, "tien_overflow", over*rate)
 	}
 }
 

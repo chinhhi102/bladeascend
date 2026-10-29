@@ -100,7 +100,9 @@ func TestRealmDropSpillsExtraSwordsAsBundles(t *testing.T) {
 	place(g, a, Vec{X: 5000, Y: 5000}, 0)
 	place(g, b, bladeMid(a), math.Pi/16)
 	a.InvulnUntil = 1e9 // B's larger ring would otherwise hit A first
-	g.resolveSwordBody()
+	// Gọi thẳng §5.1: ở đây đang kiểm luật rớt cảnh giới, không kiểm cổng lá chắn §5.2
+	// (25 kiếm = 2 vòng nên resolveSwordBody sẽ bỏ qua).
+	g.applyBodyHit(a, b)
 	if b.Ring.Count != 10 {
 		t.Fatalf("B swords = %d, want 10 (Luyện Khí max)", b.Ring.Count)
 	}
@@ -283,13 +285,34 @@ func TestExp2DoublesGains(t *testing.T) {
 	}
 }
 
-func TestLongBuffExtendsRing(t *testing.T) {
+// Spec v4.3 bỏ hẳn Trường Kiếm: không vật phẩm nào kéo dài kiếm nữa, và `long` không còn
+// là một buff hợp lệ.
+func TestNoBuffExtendsTheBlade(t *testing.T) {
 	g := quietGame(t, nil)
 	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
 	l0 := p.Geom.Len(0)
-	g.ApplyBuff(p, "long")
-	if math.Abs(p.Geom.Len(0)-l0*1.3) > 1e-9 {
-		t.Fatalf("length %v, want %v", p.Geom.Len(0), l0*1.3)
+	for _, name := range BuffNames {
+		g.ApplyBuff(p, name)
+		if math.Abs(p.Geom.Len(0)-l0) > 1e-9 {
+			t.Fatalf("buff %q đổi chiều dài kiếm %v → %v", name, l0, p.Geom.Len(0))
+		}
+	}
+	if _, ok := BuffByName("long"); ok {
+		t.Fatal("vẫn còn buff \"long\": spec v4.3 đã bỏ Trường Kiếm")
+	}
+	if _, ok := g.Cfg.Items.Weights["long"]; ok {
+		t.Fatal("config vẫn còn thả vật phẩm Trường Kiếm")
+	}
+}
+
+// Spec v4.4 §5.3: Cương Kiếm nhân đôi sức phá vật cản.
+func TestHardBuffDoublesObstacleDamage(t *testing.T) {
+	g := quietGame(t, nil)
+	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 20, Swords: 30})
+	before := g.ObstacleDamage(p)
+	g.ApplyBuff(p, "hard")
+	if after := g.ObstacleDamage(p); math.Abs(after-before*g.Cfg.Buffs["hard"].DamageMult) > 1e-9 {
+		t.Fatalf("sức phá vật cản %v → %v, muốn ×%v", before, after, g.Cfg.Buffs["hard"].DamageMult)
 	}
 }
 
@@ -412,9 +435,10 @@ func TestGateTeleportsWithoutInvulnerability(t *testing.T) {
 	}
 }
 
-// Spec §8.4: cổng đi 2 chiều — bước vào cổng vừa ra là quay đúng về chỗ cũ, kể cả khi
-// mạng có 4 cổng (ghép cặp cố định chứ không bắn ngẫu nhiên).
-func TestGatesAreTwoWayPairs(t *testing.T) {
+// Cổng ghép cặp 2 chiều là luật CŨ của §8.4. Chủ dự án đã đổi: mặc định bây giờ cổng bắn
+// ngẫu nhiên (xem `gates.random_exit`, test trong newrules_test.go). Cách ghép cặp vẫn giữ
+// nguyên và vẫn phải đúng, vì đó là đường chạy khi tắt `random_exit`.
+func TestGatesAreTwoWayPairsWhenRandomOff(t *testing.T) {
 	m := world.EmptyMap(12000)
 	m.Gates = []world.Gate{
 		{ID: 0, X: 2000, Y: 2000, Network: "ring"}, {ID: 1, X: 9000, Y: 9000, Network: "ring"},
@@ -430,8 +454,9 @@ func TestGatesAreTwoWayPairs(t *testing.T) {
 			t.Fatalf("cổng %d → %d nhưng %d → %d: không phải 2 chiều", gate.ID, exit.ID, exit.ID, back.ID)
 		}
 	}
-	// Và luật thực tế cũng đưa người chơi đúng tới cổng đã ghép cặp.
+	// Và luật thực tế cũng đưa người chơi đúng tới cổng đã ghép cặp — khi đã tắt bắn ngẫu nhiên.
 	g := quietGame(t, m)
+	g.Cfg.Gates.RandomExit = false
 	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
 	place(g, p, Vec{X: 2000, Y: 2000}, 0)
 	for g.Time < g.Cfg.Gates.TransitSecs+2*dt {
@@ -470,7 +495,7 @@ func TestKillRewardAndDeathSwordDrop(t *testing.T) {
 	a.InvulnUntil = 1e9
 	b.TotalExp = 80
 	aBefore := a.TotalExp
-	g.resolveSwordBody()
+	g.applyBodyHit(a, b) // 50 kiếm = 3 vòng: bỏ qua cổng lá chắn §5.2, kiểm riêng luật chết
 	if !b.Dead {
 		t.Fatal("B should die at Luyện Khí")
 	}

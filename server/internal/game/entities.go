@@ -9,14 +9,14 @@ const (
 	BuffSpin = iota
 	BuffHaste
 	BuffMagnet
-	BuffLong
+	BuffHard
 	BuffShield
 	BuffExp2
 	BuffStealth
 	BuffCount
 )
 
-var BuffNames = [BuffCount]string{"spin", "haste", "magnet", "long", "shield", "exp2", "stealth"}
+var BuffNames = [BuffCount]string{"spin", "haste", "magnet", "hard", "shield", "exp2", "stealth"}
 
 // BuffByName maps item kind → buff index.
 func BuffByName(name string) (int, bool) {
@@ -44,10 +44,29 @@ const (
 	MoodRespawn      = "respawn"
 )
 
+// MoodList là thứ tự dùng để gửi tâm trạng dạng CHỈ SỐ thay vì chuỗi (spec mục 27). Client
+// có cùng danh sách này; **thêm vào CUỐI**, đừng chèn giữa, nếu không hai bên lệch nhau.
+var MoodList = [...]string{
+	MoodIdle, MoodRun, MoodChase, MoodFlee, MoodHit, MoodLevelup,
+	MoodBreakthrough, MoodRealmDrop, MoodTeleportOut, MoodTeleportIn, MoodDeath, MoodRespawn,
+}
+
+// MoodIndex đổi tên tâm trạng thành chỉ số; tên lạ thì trả 0 (idle).
+func MoodIndex(name string) uint8 {
+	for i, m := range MoodList {
+		if m == name {
+			return uint8(i)
+		}
+	}
+	return 0
+}
+
 // Transit tracks a player moving through a gate (spec §8.4).
 type Transit struct {
 	Dest     Vec
 	DestGate int
+	// DestZone: khu đích (spec §8.4 — 20 cổng của cả thế giới nằm chung một mạng).
+	DestZone int
 	OutAt    float64 // time the player reappears at Dest
 	DoneAt   float64 // time transit (immunity from combat) ends
 	Arrived  bool
@@ -75,6 +94,13 @@ type Player struct {
 	Ring     Ring
 	Geom     RingGeom
 	Scale    float64
+	// ViewHW/ViewHH: nửa khung nhìn, tính sẵn trong refreshDerived (xem refreshView).
+	// Đừng đọc thẳng — gọi g.ViewHalfExtents(p) để nó tự tính nếu chưa có.
+	// Vel: vận tốc hiện tại, CHỈ dùng trên mặt băng (spec §8.0). Ngoài băng luôn bằng 0 —
+	// trên đất thả phím là dừng ngay, không có quán tính.
+	Vel    Vec
+	ViewHW float64
+	ViewHH float64
 
 	PeakExp   float64
 	PeakLevel int
@@ -99,6 +125,20 @@ type Player struct {
 
 	InvulnUntil float64
 	Buffs       [BuffCount]float64 // expiry time; 0 = inactive
+	// Status: trạng thái có thời hạn do kỹ năng gây ra (spec §6.3, xem status.go).
+	Status      [StatusCount]float64
+	// SkillCharges: số lượt dùng kỹ năng đang giữ, nhặt Bí Kíp mà có (§6.3). Tối đa 2.
+	SkillCharges int
+	// SkillReadyAt: khoá 3 giây giữa hai lần dùng (§6.3 — không có hồi chiêu tự động).
+	SkillReadyAt float64
+	// lostSwords: sổ ghi từng lần bị bể kiếm, cho Bánh Bao Thần (xem skillstate.go).
+	lostSwords []lostSword
+	// shellOn: đang trong mai rùa — dùng để bắt đúng khoảnh khắc RA khỏi mai.
+	shellOn bool
+	// Đàn em của Đại Ca (§6.3): sống có hạn, không chém thân được.
+	IsMinion    bool
+	MinionOf    uint32
+	MinionUntil float64
 	KnockVel    Vec
 	KnockUntil  float64
 
@@ -118,6 +158,12 @@ type Player struct {
 	lastTeleportIn float64
 	Transit        *Transit
 	EmoteReady     map[string]float64
+
+	// Kiếm bể dồn lại rồi mới báo một lần (xem flushSwordBreaks). Bể kiếm tính mỗi tick nên
+	// nếu mỗi cây gãy bắn một sự kiện thì 20 người đánh nhau đẻ ra ~1900 sự kiện/giây —
+	// server vẫn nhẹ nhưng client phải dựng từng ấy hiệu ứng + tiếng động và tụt khung hình.
+	breakPending int
+	breakFlushAt float64
 }
 
 func (p *Player) HasBuff(b int, now float64) bool { return p.Buffs[b] > now }
@@ -154,6 +200,12 @@ type Item struct {
 	Owner      uint32 // only this player may pick it up until OwnerUntil
 	OwnerUntil float64
 	ExpireAt   float64 // > 0: viên tự tan vào lúc này (Tiên khí, spec §8.5)
+
+	// cell/slot: vị trí của viên này trong itemGrid, để xoá O(1) mà không phải dò.
+	cell int
+	slot int
+	// slotIdx: chỉ số dày đặc toàn cục (xem Game.itemSlots), để client nhớ bằng slice.
+	slotIdx int
 }
 
 // ObstacleState is the dynamic state of a destructible obstacle (spec §8.2).

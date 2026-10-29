@@ -132,12 +132,30 @@ var charAnims = map[string]anim{
 	"respawn":      {"respawn", "1) falling from high above 2) about to hit the ground 3) landing face first 4) somersault 5) standing up dusting off 6) striking a pose", 6},
 	"teleport_out": {"teleport_out", "1) startled 2) body twisting like being sucked into a vortex 3) only the sobbing head left 4) only a pair of flip-flops left", 4},
 	"teleport_in":  {"teleport_in", "1) spat out in mid-air 2) flailing 3) landing staggering 4) spiral eyes dizzy", 4},
+	// Kỹ năng riêng của từng nhân vật (ART_PROMPTS §11.3). Tư thế cụ thể lấy từ
+	// `skillPoses` bên dưới và thay vào chỗ này, nên chuỗi ở đây chỉ là khung chung.
+	"skill": {"skill", "1) wind-up 2) wind-up further 3) release 4) peak of the move 5) follow-through 6) back to standing", 6},
+}
+
+// skillPoses: tư thế anim `skill` của từng nhân vật, đúng bảng ART_PROMPTS §11.3.
+var skillPoses = map[string]string{
+	"a_hon":       "1) holding a whole steamed bun 2) stuffing the entire bun into the mouth 3) cheeks puffed out hugely 4) swallowing, eyes bulging 5) burping out a cloud of smoke 6) satisfied grin patting belly",
+	"ba_tam_loa":  "1) raising a dented megaphone 2) inhaling deeply, chest out 3) screaming into the megaphone, hair blown backwards 4) screaming harder, face red 5) sound waves bursting out 6) lowering the megaphone smugly",
+	"ong_ba_vong": "1) unrolling a hammock 2) lying down in the hammock 3) swinging gently, eyes closed 4) swinging more, a snot bubble forming 5) big snot bubble, fast asleep 6) one eye peeking open",
+	"dai_ca_dep":  "1) looking around 2) raising two fingers to the mouth 3) whistling loudly 4) whistling harder, pointing forward 5) crossing arms waiting 6) smug nod",
+	"map_tra_sua": "1) sipping bubble tea 2) cheeks filling up with pearls 3) cheeks hugely puffed 4) spitting pearls like a machine gun 5) still spitting, head shaking 6) wiping mouth with the back of the hand",
+	"co_ba_ganh":  "1) crouching with the carrying pole 2) pushing off 3) dashing sideways, pole horizontal 4) fruit flying off the baskets 5) skidding to a stop 6) straightening up panting",
+	"su_phu_mi":   "1) holding a noodle net on two giant chopsticks 2) winding up 3) throwing the net forward 4) the net spreading open in the air 5) pointing at where it landed 6) folding arms proudly",
+	"be_ti":       "1) standing relaxed 2) clenching fists 3) flexing both biceps, veins popping 4) flexing harder, face red, body glowing 5) roaring 6) holding the flex pose",
+	"shipper":     "1) gripping imaginary handlebars 2) twisting the throttle 3) delivery box puffing smoke 4) leaning forward hard, lightning behind 5) nearly horizontal from speed 6) skidding to a stop",
+	"cu_rua":      "1) sitting cross-legged 2) starting to pull limbs in 3) head half retracted 4) fully retracted, only the shell left 5) shell glowing 6) head popping back out",
 }
 
 // poseHeight: tallest frame of each animation relative to the standing idle pose.
 var poseHeight = map[string]float64{
 	"idle": 1, "run": 0.88, "chase": 0.85, "flee": 0.95, "hit": 0.92, "levelup": 1,
 	"breakthrough": 1.15, "realm_drop": 1, "death": 0.95, "respawn": 1, "teleport_out": 1, "teleport_in": 1,
+	"skill": 1.05,
 }
 
 // charSheets: one animation per image (ART_PROMPTS §5.1) laid out on an exact grid.
@@ -158,6 +176,7 @@ var charSheets = []struct {
 	{"respawn", []int{3, 3}, 4},
 	{"teleport_out", []int{4}, 4},
 	{"teleport_in", []int{4}, 4},
+	{"skill", []int{3, 3}, 3}, // kỹ năng riêng (§11.3) — ưu tiên 3 vì gameplay đã chạy
 }
 
 func characterJobs() []Job {
@@ -173,6 +192,11 @@ func characterJobs() []Job {
 		for _, cs := range charSheets {
 			an := charAnims[cs.anim]
 			poses := an.poses
+			if cs.anim == "skill" {
+				if sp, ok := skillPoses[ch.id]; ok {
+					poses = sp // tư thế kỹ năng riêng của nhân vật (§11.3)
+				}
+			}
 			if gag, ok := ch.gags[cs.anim]; ok {
 				poses += "; comedy gag of this character in this animation: " + gag
 			}
@@ -233,7 +257,7 @@ var buffIcons = []struct{ id, icon, color string }{
 	{"spin", "a cyan spinning whirlwind around a small sword", "cyan"},
 	{"haste", "a winged sandal", "orange"},
 	{"magnet", "a red horseshoe magnet", "red"},
-	{"long", "a very long thin sword with an up arrow", "purple"},
+	{"hard", "a thick heavy steel sword with a diamond sparkle on the blade", "silver-blue"},
 	{"shield", "a golden buddhist-style round shield", "gold"},
 	{"exp2", "a glowing magic pill made of light", "green"},
 	{"stealth", "a paper talisman with swirling ink", "grey"},
@@ -332,6 +356,25 @@ func obstacleJobs() []Job {
 			Poses: "1) intact and solid 2) with visible cracks 3) heavily damaged, crumbling, pieces missing 4) flat pile of rubble and debris on the ground"}}
 		jobs = append(jobs, Job{Name: "obs_" + o.id + "_states", Priority: 1, Mode: modeSheet, Rows: []int{2, 2}, Segs: states,
 			Prompt: sheetPrompt(styleObject, subject, []int{2, 2}, states, true)})
+		// Đoạn DỌC: client xếp gạch theo chiều dài nên ảnh ngang kéo dọc trông sai hẳn
+		// (hàng rào nằm ngang chồng lên nhau). Mỗi vật cản cần thêm một bộ 4 trạng thái vẽ
+		// theo chiều dọc, tên file `<state>_vertical.png`.
+		// "vertical" dễ bị hiểu thành "dựng đứng" (một tấm panel đứng), trong khi cái cần là
+		// cùng vật cản đó XOAY 90° TRÊN MẶT ĐẤT để chạy ra xa máy quay. Nên mô tả theo hướng
+		// chạy và bắt nó chạm mép trên + mép dưới khung hình thì xếp gạch mới nối liền.
+		vdesc := strings.ReplaceAll(o.desc, "horizontal ", "")
+		vdesc = strings.ReplaceAll(vdesc, " horizontal", "")
+		vstates := []Seg{{Anim: "states", Frames: 4, Out: dir,
+			Names:  []string{"intact_vertical", "cracked_vertical", "nearly_broken_vertical", "rubble_vertical"},
+			W:      o.w, H: o.h, Pivot: "center",
+			Poses: "1) intact and solid 2) with visible cracks 3) heavily damaged, crumbling, pieces missing 4) flat pile of rubble and debris on the ground"}}
+		jobs = append(jobs, Job{Name: "obs_" + o.id + "_states_vertical", Priority: 1, Mode: modeSheet, Rows: []int{2, 2}, Segs: vstates,
+			Prompt: sheetPrompt(styleObject, "a top-down 3/4 view game obstacle, "+vdesc+
+				", rotated 90 degrees flat on the ground so its length runs AWAY from the viewer, "+
+				"going from the bottom edge of the frame straight up to the top edge; the shape is TALL and NARROW, "+
+				"it touches both the top and the bottom edge so copies stacked on top of each other join seamlessly; "+
+				"this is the same object as the horizontal version, only turned, not stood upright on its end",
+				[]int{2, 2}, vstates, true)})
 		if o.id == "stone_wall" {
 			continue
 		}
@@ -423,9 +466,217 @@ func uiJobs() []Job {
 	}
 }
 
+// Thần thú Tiên giới (ART_PROMPTS §10.1, GAME_SPEC §3.5). Vẽ bằng tông trắng/xám để code
+// nhuộm màu theo từng cảnh giới; mỗi con dựng từ đầu + đốt thân + đuôi nên sinh cả ba phần
+// trong CÙNG một ảnh cho đồng nét và đồng độ dày viền (đúng mẹo ghi ở §10.1).
+const beastTone = ", painted in white and light grey tones for color tinting, isolated single part"
+
+var beasts = []struct {
+	id, desc string
+}{
+	{"dragon", "a fierce but funny chinese dragon: 1) side view head facing right with long whiskers, small antlers and an open mouth with a goofy grin 2) one round body segment seen from the side with overlapping scales and a small spiky fin on top, symmetrical so it can be chained repeatedly 3) side view tail tip facing left with a flowing fin like a flame"},
+	{"crane", "a flying immortal crane: 1) side view head on a long neck stretched forward facing right 2) one body segment seen from the side with layered white feathers, symmetrical so it can be chained repeatedly 3) side view tail tip facing left with long trailing feathers"},
+	{"phoenix", "a flying phoenix: 1) side view head facing right with a plumed crest 2) one body segment seen from the side with layered glowing feathers, symmetrical so it can be chained repeatedly 3) side view tail tip facing left with long flowing tail feathers"},
+}
+
+// skillArtJobs: icon kỹ năng, vật phẩm Bí Kíp, VFX và art riêng cho 4 khu mới
+// (ART_PROMPTS §11.3, §11.4 — CHANGES_v5 mục 15).
+func skillArtJobs() []Job {
+	var jobs []Job
+	// Vật phẩm Bí Kíp + icon HUD.
+	jobs = append(jobs,
+		Job{Name: "item_skill_scroll", Priority: 2, Mode: modeSprite, Out: "items/skill_scroll.png", W: 256, H: 256, Pivot: "center",
+			Prompt: styleObject + " A glossy transparent bubble containing an ancient rolled-up martial arts scroll with a red ribbon, glowing" + negative},
+		Job{Name: "icon_skill_scroll", Priority: 3, Mode: modeSprite, Out: "ui/icon_skill_scroll.png", W: 128, H: 128, Pivot: "center",
+			Prompt: styleObject + " Round HUD icon of an ancient rolled-up scroll with a red ribbon, bold simple shape, no text" + negative})
+
+	// Icon kỹ năng của từng nhân vật (§11.3).
+	for _, k := range []struct{ id, icon string }{
+		{"a_hon", "a steamed bun with a bite taken out of it"},
+		{"ba_tam_loa", "a megaphone with sound waves"},
+		{"ong_ba_vong", "a hammock with zzz above it"},
+		{"dai_ca_dep", "a mouth whistling with two fingers"},
+		{"map_tra_sua", "bubble tea pearls flying"},
+		{"co_ba_ganh", "a fruit basket with speed lines"},
+		{"su_phu_mi", "a net woven from noodles"},
+		{"be_ti", "a flexed bicep"},
+		{"shipper", "a lightning bolt on a delivery box"},
+		{"cu_rua", "a turtle shell"},
+	} {
+		jobs = append(jobs, Job{Name: "icon_skill_" + k.id, Priority: 3, Mode: modeSprite,
+			Out: "ui/skills/" + k.id + ".png", W: 128, H: 128, Pivot: "center",
+			Prompt: styleObject + " Round skill icon, " + k.icon + ", bold simple shape, no text" + negative})
+	}
+
+	// Sprite đàn em của Đại Ca (§11.3) — anim `run` 8 khung.
+	minionSegs := []Seg{{Anim: "run", Frames: 8, Out: "characters/dan_em/frames", W: 512, H: 512, Pivot: "feet",
+		HeightK: 0.88, Poses: charAnims["run"].poses}}
+	jobs = append(jobs, Job{Name: "char_dan_em_run", Priority: 3, Mode: modeSheet, Rows: []int{4, 4}, Segs: minionSegs,
+		Prompt: sheetPrompt(style, "a short skinny gangster underling in a cheap purple vest and black sunglasses, smaller than a normal character", []int{4, 4}, minionSegs, true)})
+
+	// Overlay trân châu: 6 biến thể viên bẹp + vệt trà sữa (§11.3).
+	for i := 1; i <= 6; i++ {
+		jobs = append(jobs, Job{Name: fmt.Sprintf("vfx_boba_%d", i), Priority: 4, Mode: modeSprite,
+			Out: fmt.Sprintf("vfx/boba_%d.png", i), W: 256, H: 256, Pivot: "center",
+			Prompt: styleObject + " A glossy black tapioca pearl splattered flat on glass with a milk tea smear, front view" + negative})
+	}
+	jobs = append(jobs, Job{Name: "vfx_boba_drip", Priority: 4, Mode: modeSprite, Out: "vfx/boba_drip.png", W: 128, H: 512, Pivot: "center",
+		Prompt: styleObject + " A milk tea drip trail running vertically down glass" + negative})
+
+	// Art riêng cho 4 khu mới (§11.4).
+	for _, z := range []struct{ id, desc string; w, h int }{
+		{"cliff_wall", "A tall rocky cliff wall segment seen from a top-down 3/4 view, tileable left to right", 1024, 512},
+		{"rope_bridge", "A wooden rope suspension bridge segment seen from above, tileable", 512, 256},
+		{"bamboo_wall", "A very dense bamboo grove wall segment seen from above, tileable left to right", 1024, 512},
+		{"bamboo_corner", "A very dense bamboo grove corner piece seen from above, L-shaped", 512, 512},
+		{"village_roof", "A small village house roof of grey tiles seen from directly above", 1024, 1024},
+		{"lantern_string", "A string of paper lanterns seen from above", 512, 256},
+		{"ice_island_edge", "A small ice island edge segment seen from above", 512, 256},
+	} {
+		jobs = append(jobs, Job{Name: "zone_" + z.id, Priority: 4, Mode: modeSprite, Out: "obstacles/" + z.id + ".png",
+			W: z.w, H: z.h, Pivot: "center", Prompt: styleObject + " " + z.desc + negative})
+	}
+	for _, t := range []struct{ id, desc string }{
+		{"mountain_rock", "grey mountain rock with patches of moss"},
+		{"bamboo_floor", "damp forest floor covered with bamboo leaves"},
+		{"cobblestone", "old cobblestone street"},
+		{"ice", "smooth glossy pale blue ice with subtle cracks and reflections"},
+		{"snow", "soft deep snow ground"},
+	} {
+		jobs = append(jobs, Job{Name: "tile_" + t.id, Priority: 4, Mode: modeTile, Out: "tiles/" + t.id + ".png",
+			W: 512, H: 512, Pivot: "center",
+			Prompt: styleObject + " Seamless tileable top-down ground texture: " + t.desc + ", flat even lighting, no shadows" + negative})
+	}
+	for _, d := range []struct{ id, desc string }{
+		{"ice_skid", "a pair of curved ice skid marks"},
+		{"snow_pile", "a small pile of snow"},
+		{"frozen_reeds", "a few frozen reeds poking through ice"},
+	} {
+		jobs = append(jobs, Job{Name: "decal_" + d.id, Priority: 5, Mode: modeSprite, Out: "decals/" + d.id + ".png",
+			W: 256, H: 256, Pivot: "center", Prompt: styleObject + " Top-down ground decal: " + d.desc + negative})
+	}
+	return jobs
+}
+
+func beastJobs() []Job {
+	var jobs []Job
+	for _, b := range beasts {
+		segs := []Seg{{Anim: "parts", Frames: 3, Out: "beasts", Each: true,
+			Names: []string{b.id + "_head", b.id + "_body", b.id + "_tail"},
+			W:     512, H: 512, Pivot: "center",
+			Poses: "three separate parts side by side: head, one body segment, tail"}}
+		jobs = append(jobs, Job{Name: "beast_" + b.id, Priority: 3, Mode: modeSheet, Rows: []int{3}, Segs: segs,
+			Prompt: sheetPrompt(styleObject, b.desc+beastTone, []int{3}, segs, true)})
+	}
+	jobs = append(jobs,
+		Job{Name: "beast_dragon_leg", Priority: 5, Mode: modeSprite, Out: "beasts/dragon_leg.png", W: 128, H: 128, Pivot: "center",
+			Prompt: styleObject + " A small four-clawed dragon leg, side view" + beastTone + negative},
+		Job{Name: "beast_phoenix_feather", Priority: 5, Mode: modeSprite, Out: "beasts/phoenix_feather.png", W: 256, H: 256, Pivot: "center",
+			Prompt: styleObject + " One long flowing glowing phoenix tail feather, horizontal" + beastTone + negative})
+	for _, m := range []struct{ id, desc string }{
+		{"cloud", "a tiny white wisp of cloud"},
+		{"spark", "a tiny bright spark of fire"},
+		{"glow", "a tiny round glowing light mote"},
+		{"feather", "a tiny single glowing feather"},
+	} {
+		jobs = append(jobs, Job{Name: "beast_mote_" + m.id, Priority: 5, Mode: modeSprite, Out: "beasts/mote_" + m.id + ".png",
+			W: 64, H: 64, Pivot: "center", Prompt: styleObject + " " + m.desc + " particle, white" + beastTone + negative})
+	}
+	return jobs
+}
+
+
+// Nền bản đồ, decal và sự sống (ART_PROMPTS §9.0b, GAME_SPEC §8.6). Nền phải NHẠT và ÍT
+// chi tiết: vật chơi được (EXP, item, quái, nhân vật) luôn phải nổi hơn nền (§9.0).
+const seamless = ", seamless tileable top-down, desaturated, low contrast, low detail, no objects"
+
+var biomeTiles = []struct{ id, desc string }{
+	{"rocky_ground", "grey rocky ground"},
+	{"fine_gravel", "fine gravel"},
+	{"mossy_stone", "patchy moss on stone"},
+	{"soft_grass", "soft muted grass"},
+	{"bamboo_litter", "dry bamboo leaves litter on soil"},
+	{"damp_earth", "damp dark earth"},
+	{"dirt_path", "trampled dirt path ground"},
+	{"village_grass", "short village grass"},
+	{"worn_cobble", "old worn cobblestone"},
+	{"dusty_earth", "dusty packed earth"},
+}
+
+var decals = []struct{ id, desc string }{
+	{"ground_cracks", "ground crack lines"},
+	{"grass_tuft", "small grass tuft"},
+	{"fallen_leaves", "scattered fallen leaves"},
+	{"pebbles", "cluster of pebbles"},
+	{"puddle", "small shallow puddle"},
+	{"tree_roots", "exposed tree roots"},
+	{"wildflowers", "tiny pale wildflowers"},
+	{"roof_tiles", "broken roof tile shards"},
+	{"brick_rubble", "scattered brick rubble"},
+	{"bamboo_leaves", "bamboo leaves pile"},
+	{"moss_patch", "moss patch"},
+	{"footprints", "footprints in dirt"},
+}
+
+var zoneEdges = []struct{ id, desc string }{
+	{"mud_edge", "muddy edge with dry cracks"},
+	{"pond_shore", "pond shore with reeds and pebbles"},
+	{"stone_path_edge", "stone path edge with broken gravel"},
+	{"bush_edge", "bush cluster edge with leaves"},
+}
+
+var plateParts = []struct {
+	id, desc string
+	w, h     int
+}{
+	{"ribbon_top1", "empty horizontal ribbon banner with forked tails, vermilion red with gold trim, no text", 1024, 256},
+	{"ribbon_top2", "empty horizontal ribbon banner with forked tails, dark navy with silver trim, no text", 1024, 256},
+	{"ribbon_top3", "empty horizontal ribbon banner with forked tails, brown with bronze trim, no text", 1024, 256},
+	{"crown_small", "tiny golden crown icon with red gems", 128, 128},
+	{"realm_pill", "empty rounded pill-shaped badge, white with light grey bevel for tinting, no text", 512, 128},
+	{"shine_streak", "soft diagonal white light streak", 256, 64},
+}
+
+var portraitMoods = []struct{ id, desc string }{
+	{"neutral", "neutral smug face"},
+	{"evil", "evil grin, chasing"},
+	{"panic", "panicked, sweating"},
+	{"cry", "crying with streams of tears"},
+}
+
+func mapArtJobs() []Job {
+	var jobs []Job
+	for _, t := range biomeTiles {
+		jobs = append(jobs, Job{Name: "tile_" + t.id, Priority: 2, Mode: modeTile, Out: "tiles/" + t.id + ".png",
+			W: 512, H: 512, Prompt: styleObject + " " + t.desc + seamless})
+	}
+	for _, d := range decals {
+		jobs = append(jobs, Job{Name: "decal_" + d.id, Priority: 3, Mode: modeSprite, Out: "decals/" + d.id + ".png",
+			W: 256, H: 256, Pivot: "center",
+			Prompt: styleObject + " top-down game decal, " + d.desc + ", soft muted colors, blends into the ground, thin outline" + negative})
+	}
+	for _, e := range zoneEdges {
+		jobs = append(jobs, Job{Name: "decal_" + e.id, Priority: 4, Mode: modeSprite, Out: "decals/" + e.id + ".png",
+			W: 512, H: 128, Pivot: "center",
+			Prompt: styleObject + " top-down zone border strip, " + e.desc + ", tileable left to right, soft muted colors" + negative})
+	}
+	for _, p := range plateParts {
+		jobs = append(jobs, Job{Name: "plate_" + p.id, Priority: 3, Mode: modeSprite, Out: "ui/" + p.id + ".png",
+			W: p.w, H: p.h, Pivot: "center", Prompt: style + " " + p.desc + negative})
+	}
+	for _, ch := range characters {
+		for _, m := range portraitMoods {
+			jobs = append(jobs, Job{Name: "portrait_" + ch.id + "_" + m.id, Priority: 5, Mode: modeSprite,
+				Out: "characters/" + ch.id + "/portrait_" + m.id + ".png", W: 512, H: 512, Pivot: "center",
+				Prompt: style + " " + ch.desc + ", head and shoulders portrait, facing the viewer slightly turned right, centered, " + m.desc + negative})
+		}
+	}
+	return jobs
+}
+
 func allJobs() []Job {
 	var jobs []Job
-	for _, f := range []func() []Job{swordJobs, itemJobs, characterJobs, monsterJobs, mapJobs, obstacleJobs, gateJobs, vfxJobs, uiJobs} {
+	for _, f := range []func() []Job{skillArtJobs, swordJobs, itemJobs, characterJobs, monsterJobs, mapJobs, obstacleJobs, gateJobs, vfxJobs, beastJobs, mapArtJobs, uiJobs} {
 		jobs = append(jobs, f()...)
 	}
 	return jobs

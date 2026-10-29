@@ -61,6 +61,7 @@ func (g *Game) addAmbientOrb(at Vec) {
 	n := g.orbRegions()
 	it.Region = min(int(at.Y/size), n-1)*n + min(int(at.X/size), n-1)
 	g.Items[it.ID] = it
+	g.takeSlot(it)
 	g.itemGrid.add(it)
 }
 

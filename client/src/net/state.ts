@@ -1,5 +1,6 @@
 import { type GameConfig } from '../config';
-import { contains, lerp, pushOut, type Vec } from './geom';
+import { lerp, type Vec } from './geom';
+import { moveStep } from './movestep.ts';
 import {
   BUFFS,
   type GameEvent,
@@ -39,6 +40,9 @@ export interface PlayerFrame {
   ringAngle: number;
 }
 
+/** Lệch dưới ngần này là sai số dấu phẩy động, không phải hiệu chỉnh thật. */
+const CORRECTION_EPS = 0.5;
+
 const SNAP_KEEP = 30;
 const OFFSET_DECAY = 0.0005; // lets the clock estimate adapt if latency grows
 
@@ -56,6 +60,16 @@ export class ClientWorld {
   private seq = 0;
   private predicted: Vec = { x: 0, y: 0 };
   private correction: Vec = { x: 0, y: 0 };
+  /** Vận tốc dự đoán — chỉ khác 0 khi đang trượt trên băng (spec §8.0). */
+  private predictedVel: Vec = { x: 0, y: 0 };
+  /** Đo "giật khi chạm vật cản" (spec §8.2a): số lần và độ lệch khi server sửa vị trí. */
+  fixPerSec = 0;
+  fixMax = 0;
+  private fixCount = 0;
+  private fixWorst = 0;
+  private fixAt = 0;
+  /** Số cú nhảy thẳng (dịch chuyển, hồi sinh) — tách khỏi hiệu chỉnh để không làm sai số đo. */
+  teleports = 0;
   private lastSendAt = 0;
   private lastInput: PendingInput = { seq: 0, angle: 0, moving: false, burn: false };
   lastSnapAt = 0;
@@ -135,7 +149,13 @@ export class ClientWorld {
     for (const m of s.m ?? []) {
       seen.add(m.id);
       const buf = this.monsters.get(m.id) ?? [];
-      buf.push({ t: s.tm, s: m });
+      // Loại, máu tối đa và bán kính chỉ được gửi LẦN ĐẦU (spec mục 27) — chúng không bao
+      // giờ đổi. Các gói sau thiếu ba trường đó, phải lấy lại từ gói trước.
+      const prev = buf[buf.length - 1]?.s;
+      const full: MonsterState = prev
+        ? { ...m, k: m.k || prev.k, mx: m.mx || prev.mx, r: m.r || prev.r }
+        : m;
+      buf.push({ t: s.tm, s: full });
       if (buf.length > SNAP_KEEP) {
         buf.shift();
       }
@@ -171,16 +191,23 @@ export class ClientWorld {
   // ---- input & prediction ------------------------------------------------
 
   /** Records and returns the input message to send this network tick. */
-  makeInput(angle: number, moving: boolean, burn = false): Record<string, unknown> {
+  makeInput(angle: number, moving: boolean, burn = false, skill = false): Record<string, unknown> {
     const inp = { seq: ++this.seq, angle: quantize(angle), moving, burn };
     this.pending.push(inp);
     const me = this.me();
     if (me && !(me.fl & 16)) {
-      this.predicted = this.step(this.predicted, inp, me, 1 / this.cfg.net.tick_hz);
+      const r = this.step(this.predicted, this.predictedVel, inp, me, 1 / this.cfg.net.tick_hz);
+      this.predicted = r.pos;
+      this.predictedVel = r.vel;
     }
     this.lastInput = inp;
     this.lastSendAt = performance.now();
-    return { t: 'in', s: inp.seq, a: Math.round((inp.angle / (2 * Math.PI)) * 256) & 255, m: moving, b: burn };
+    const msg: Record<string, unknown> = { t: 'in', s: inp.seq, a: Math.round((inp.angle / (2 * Math.PI)) * 256) & 255, m: moving, b: burn };
+    if (skill) {
+      // Chỉ gửi khi thật sự bấm: đây là sự kiện một lần, không phải trạng thái giữ phím.
+      msg.sk = true;
+    }
+    return msg;
   }
 
   private reconcile(ack: number): void {
@@ -190,100 +217,84 @@ export class ClientWorld {
     }
     this.pending = this.pending.filter((p) => p.seq > ack);
     let pos: Vec = { x: me.x, y: me.y };
+    // Phát lại từ đúng VẬN TỐC server đang giữ, không phải từ 0: trên mặt băng vận tốc là
+    // trạng thái, bỏ nó đi là mỗi snapshot lại dự đoán sai và nhân vật giật cả mặt hồ.
+    let vel: Vec = { x: me.vx ?? 0, y: me.vy ?? 0 };
     for (const inp of this.pending) {
-      pos = this.step(pos, inp, me, 1 / this.cfg.net.tick_hz);
+      const r = this.step(pos, vel, inp, me, 1 / this.cfg.net.tick_hz);
+      pos = r.pos;
+      vel = r.vel;
+    }
+    // Đếm số lần server kéo nhân vật về chỗ khác (spec §8.2a): đây là thước đo trực tiếp
+    // của cảm giác "giật khi đi sát vật cản". Dự đoán đúng thì con số này ~0; lệch thì nó
+    // chạy lên bằng đúng tần số snapshot (20/giây) và người chơi thấy rung liên tục.
+    const off = Math.hypot(this.predicted.x - pos.x, this.predicted.y - pos.y);
+    // Bỏ qua cú nhảy lớn: đó là dịch chuyển qua cổng hoặc hồi sinh, không phải lỗi dự đoán.
+    // Không lọc thì một lần qua cổng làm "lệch nhất" nhảy lên 12 000 và che hết số thật.
+    if (off > CORRECTION_EPS && off <= this.cfg.net.correction_snap) {
+      this.fixCount++;
+      this.fixWorst = Math.max(this.fixWorst, off);
+    }
+    const nowMs = performance.now();
+    if (nowMs - this.fixAt >= 1000) {
+      this.fixPerSec = (this.fixCount * 1000) / (nowMs - this.fixAt);
+      this.fixMax = this.fixWorst;
+      this.fixCount = 0;
+      this.fixWorst = 0;
+      this.fixAt = nowMs;
     }
     // Keep the displayed position continuous; the correction fades out in renderFrame.
     this.correction.x += this.predicted.x - pos.x;
     this.correction.y += this.predicted.y - pos.y;
-    if (Math.hypot(this.correction.x, this.correction.y) > 400) {
-      this.correction = { x: 0, y: 0 }; // teleport or respawn: snap
+    // Spec §8.2a: lệch nhỏ thì kéo dần về trong `correction_tau_ms`; lệch lớn (dịch chuyển
+    // qua cổng, hồi sinh) thì nhảy thẳng — kéo dần một cú nhảy nửa bản đồ chỉ làm nhân vật
+    // trôi dài qua màn hình. Ngưỡng cũ 400 đơn vị quá rộng: một cú lệch 200 đơn vị vẫn bị
+    // kéo dần và người chơi thấy nhân vật "bơi" về chỗ cũ.
+    if (Math.hypot(this.correction.x, this.correction.y) > this.cfg.net.correction_snap) {
+      this.correction = { x: 0, y: 0 };
+      this.teleports++;
     }
     this.predicted = pos;
+    this.predictedVel = vel;
   }
 
   /** One movement step, mirroring game.movePlayer on the server. */
-  private step(from: Vec, inp: PendingInput, me: PlayerState, dt: number): Vec {
-    if (!inp.moving || me.fl & 8) {
-      return from;
+  private step(from: Vec, vel: Vec, inp: PendingInput, me: PlayerState, dt: number): { pos: Vec; vel: Vec } {
+    const map = this.map;
+    if (!map) {
+      return { pos: from, vel };
     }
-    const dir = { x: Math.cos(inp.angle), y: Math.sin(inp.angle) };
-    let speed = this.cfg.player.move_base;
+    // fl & 8 = đang dịch chuyển qua cổng: không điều khiển được, cũng không trôi.
+    if (me.fl & 8) {
+      return { pos: from, vel: { x: 0, y: 0 } };
+    }
+    let mult = 1;
     if (me.bf & (1 << BUFFS.indexOf('haste'))) {
-      speed *= this.cfg.buffs.haste.mult;
+      mult *= this.cfg.buffs.haste.mult;
     }
     // Thiêu Đốt Tinh Huyết (spec §4.1c). Server dừng cộng tốc khi EXP chạm đáy cảnh giới
     // và sẽ sửa lại vị trí; ở đây chỉ cần dự đoán đúng trường hợp thường gặp.
     if (inp.burn) {
-      speed *= this.cfg.burn.mult;
+      mult *= this.cfg.burn.mult;
     }
-    speed *= this.zoneMult(from, dir);
-    return this.resolveBlocking({ x: from.x + dir.x * speed * dt, y: from.y + dir.y * speed * dt }, this.cfg.player.body_r * me.sc);
+    return moveStep(this.cfg, map, from, inp.angle, me.sc, dt,
+      (id: number) => this.brokenObstacles.get(id) === true, mult, vel, inp.moving);
   }
 
-  private zoneMult(p: Vec, dir: Vec): number {
-    let mult = 1;
-    for (const z of this.map?.zones ?? []) {
-      if (!contains(z.s, p.x, p.y)) {
-        continue;
-      }
-      if (z.k === 'mud') {
-        mult *= this.cfg.zones.mud_mult;
-      } else if (z.k === 'wind') {
-        mult *= this.windMult(dir, z.wd ?? 0);
-      }
-    }
-    return mult;
-  }
 
-  /** Same thresholds as game.windMult on the server (spec §8.3). */
-  private windMult(dir: Vec, wd: number): number {
-    const cos = Math.max(-1, Math.min(1, dir.x * Math.cos(wd) + dir.y * Math.sin(wd)));
-    const deg = (Math.acos(cos) * 180) / Math.PI;
-    if (deg < this.cfg.zones.wind_with_max_deg) {
-      return this.cfg.zones.wind_with;
-    }
-    if (deg > this.cfg.zones.wind_against_min_deg) {
-      return this.cfg.zones.wind_against;
-    }
-    return 1;
-  }
 
-  private resolveBlocking(p: Vec, r: number): Vec {
-    const map = this.map;
-    if (!map) {
-      return p;
-    }
-    for (let iter = 0; iter < 3; iter++) {
-      let moved = false;
-      for (const o of map.obstacles) {
-        if (this.brokenObstacles.get(o.id)) {
-          continue;
-        }
-        const np = pushOut(o.f && (o.f.w ?? 0) > 0 ? o.f : o.s, p, r);
-        if (np) {
-          p = np;
-          moved = true;
-        }
-      }
-      if (!moved) {
-        break;
-      }
-    }
-    return { x: Math.max(r, Math.min(map.size - r, p.x)), y: Math.max(r, Math.min(map.size - r, p.y)) };
-  }
 
   // ---- per-frame queries -------------------------------------------------
 
   /** Interpolated (others) or predicted (me) state for rendering. */
   playerFrames(dt: number): PlayerFrame[] {
-    const decay = Math.exp(-dt * 10);
+    const decay = Math.exp((-dt * 1000) / Math.max(this.cfg.net.correction_tau_ms, 1));
     this.correction.x *= decay;
     this.correction.y *= decay;
     const rt = this.renderTime();
     const out: PlayerFrame[] = [];
     for (const v of this.players.values()) {
-      out.push(v.id === this.myId ? this.myFrame(v) : interpPlayer(v, rt));
+      out.push(v.id === this.myId ? this.myFrame(v) : interpPlayer(v, this.cfg, rt));
     }
     return out;
   }
@@ -293,8 +304,8 @@ export class ClientWorld {
     const s = last.s;
     // Advance within the current input step so motion is smooth at high frame rates.
     const since = Math.min((performance.now() - this.lastSendAt) / 1000, 1 / this.cfg.net.tick_hz);
-    const ahead = this.step(this.predicted, this.lastInput, s, since);
-    const ringAngle = s.ph + s.d * s.w * (this.serverNow() - last.t);
+    const ahead = this.step(this.predicted, this.predictedVel, this.lastInput, s, since).pos;
+    const ringAngle = s.ph + s.d * omega(this.cfg, s) * (this.serverNow() - last.t);
     return { view: v, s, x: ahead.x + this.correction.x, y: ahead.y + this.correction.y, ringAngle };
   }
 
@@ -328,12 +339,22 @@ function bracket<T>(buf: Timed<T>[], t: number): { a: Timed<T>; b: Timed<T>; t: 
   return { a: buf[0], b: buf[0], t: 1 };
 }
 
-function interpPlayer(v: PlayerView, rt: number): PlayerFrame {
+/**
+ * omega: tốc độ quay vòng kiếm, rad/giây. Server KHÔNG gửi con số này nữa (spec mục 27) —
+ * nó suy ra được từ `rev_secs` trong config và buff Tốc Kiếm mà client đã có sẵn, nên gửi
+ * lại là lãng phí 7 byte mỗi người mỗi gói, 20 lần mỗi giây.
+ */
+export function omega(cfg: GameConfig, s: PlayerState): number {
+  const spin = s.bf & (1 << BUFFS.indexOf('spin')) ? (cfg.buffs.spin?.mult ?? 1) : 1;
+  return ((2 * Math.PI) / cfg.sword.rev_secs) * spin;
+}
+
+function interpPlayer(v: PlayerView, cfg: GameConfig, rt: number): PlayerFrame {
   const { a, b, t } = bracket(v.snaps, rt);
   // Large jumps (teleport, respawn) are not interpolated.
   const jump = Math.hypot(b.s.x - a.s.x, b.s.y - a.s.y) > 600;
   const k = jump ? 1 : t;
   const base = t >= 1 ? b : a;
-  const ringAngle = base.s.ph + base.s.d * base.s.w * (rt - base.t);
+  const ringAngle = base.s.ph + base.s.d * omega(cfg, base.s) * (rt - base.t);
   return { view: v, s: b.s, x: lerp(a.s.x, b.s.x, k), y: lerp(a.s.y, b.s.y, k), ringAngle };
 }

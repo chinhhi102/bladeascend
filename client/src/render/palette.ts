@@ -13,14 +13,26 @@ export const CHAR_COLORS: Record<string, [number, number]> = {
 };
 
 // Sword skin colours per realm (ART_PROMPTS §7), used when the sword PNG is missing.
-export const REALM_COLORS = [0xc8a165, 0xb0b7bf, 0xd0705a, 0xe0e6ee, 0xff7b29, 0x7fd4ff, 0xffe14d, 0x8a3fd1, 0x9ff0c8];
+// 9 cảnh giới phàm rồi tới 5 cảnh giới Tiên (spec §3.4) — màu Tiên lấy theo
+// cultivation.tien_aura_colors để tên, vòng kiếm và hào quang cùng một màu.
+export const REALM_COLORS = [
+  0xc8a165, 0xb0b7bf, 0xd0705a, 0xe0e6ee, 0xff7b29, 0x7fd4ff, 0xffe14d, 0x8a3fd1, 0x9ff0c8,
+  0xe8f1ff, 0xffd60a, 0x4ce0b3, 0xb15cff, 0xffffff,
+];
+
+// Màu nền huy hiệu cảnh giới trên bảng tên (spec §12.3). 9 cảnh giới phàm rồi 5 cảnh giới
+// Tiên (lấy theo màu hào quang §3.4); Đại Thừa nền đen, chữ và viền vàng.
+export const REALM_BADGE = [
+  0x8d99ae, 0x57cc99, 0xe9c46a, 0x4ea8de, 0x9d4edd, 0x2ec4b6, 0xf77f00, 0xe63946, 0x14110c,
+  0xe8f1ff, 0xffd60a, 0x4ce0b3, 0xb15cff, 0x2a2a2a,
+];
 
 // Aura colours per buff (ART_PROMPTS §8); stealth has no aura.
 export const BUFF_COLORS: Record<string, number> = {
   spin: 0x3ee6ff,
   haste: 0xff9a3c,
   magnet: 0xff4d4d,
-  long: 0xb36bff,
+  hard: 0x9fc6e8, // Cương Kiếm: ánh thép xanh bạc (ART_PROMPTS §8)
   shield: 0xffd23f,
   exp2: 0x5dff7a,
 };

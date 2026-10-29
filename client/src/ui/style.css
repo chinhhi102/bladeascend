@@ -67,8 +67,27 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 /* ---- HUD ---- */
 .hud { position: absolute; inset: 0; pointer-events: none !important; color: #fff; text-shadow: 0 2px 0 #000; font-weight: 800; }
 .hud button { pointer-events: auto; }
-.status { position: absolute; left: 12px; top: 12px; display: flex; gap: 10px; align-items: center; }
-.badge { width: 56px; height: 56px; border-radius: 50%; background: #333 center / contain no-repeat; border: 3px solid #000; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+/* Cột trái: ô đại diện + thanh tiến độ, hàng buff, tên khu, minimap — xếp dọc theo luồng
+   nên khối nào cao lên thì khối dưới tự tụt xuống, không bao giờ đè nhau. */
+.hud-left {
+  position: absolute; left: 12px; top: 12px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  max-height: calc(100vh - 24px);
+}
+.status { display: flex; gap: 10px; align-items: center; }
+/* Ô đại diện góc trên trái (spec §12.4): chân dung trong khung tròn, viền màu cảnh giới,
+   huy hiệu tầng ở góc dưới phải, vương miện nếu Top 1. */
+.badge { width: 64px; height: 64px; border-radius: 50%; border: 3px solid #8d99ae; position: relative; background: #2a2622; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.portrait { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: center top / 180% no-repeat; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #e8e2d6; }
+.badge-tag { position: absolute; right: -3px; bottom: -3px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; border: 2px solid rgba(0,0,0,.6); font-size: 12px; font-weight: 800; line-height: 16px; text-align: center; }
+.badge-crown { position: absolute; left: 50%; top: -15px; transform: translateX(-50%); font-size: 17px; color: #ffd60a; text-shadow: 0 1px 2px #000; display: none; }
+/* Tiên giới: viền là hào quang động (spec §12.4). */
+.badge.tien { animation: tien-rim 2.4s linear infinite; }
+@keyframes tien-rim {
+  0%   { box-shadow: 0 0 6px 1px rgba(255,255,255,.55), 0 2px 6px rgba(0,0,0,.5); }
+  50%  { box-shadow: 0 0 14px 3px rgba(255,255,255,.9), 0 2px 6px rgba(0,0,0,.5); }
+  100% { box-shadow: 0 0 6px 1px rgba(255,255,255,.55), 0 2px 6px rgba(0,0,0,.5); }
+}
 .status-text { min-width: 180px; }
 .realm { font-size: 18px; }
 .exp-bar { height: 12px; background: rgba(0,0,0,.5); border: 2px solid #000; border-radius: 8px; overflow: hidden; margin: 4px 0; }
@@ -78,7 +97,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .exp-bar.tien .exp-fill { background: linear-gradient(90deg, #ffd60a, #fff3a0); }
 .exp-label { font-size: 11px; opacity: .85; margin-bottom: 2px; }
 .swords { font-size: 14px; }
-.buffs { position: absolute; left: 12px; top: 84px; display: flex; gap: 6px; }
+.buffs { display: flex; gap: 6px; min-height: 0; }
 .buff { width: 44px; height: 44px; border-radius: 50%; padding: 4px; position: relative; }
 .buff-inner { width: 100%; height: 100%; border-radius: 50%; background: #222 center / 120% no-repeat; display: flex; align-items: center; justify-content: center; font-size: 12px; }
 .buff-left { position: absolute; right: -4px; bottom: -4px; font-size: 12px; }
@@ -93,12 +112,39 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 
 /* Minimap (spec §12.1): under the realm bar and the buff row. */
 .minimap {
-  position: absolute; left: 12px; top: 136px;
+  position: relative;
   max-width: calc(100vw - 24px); max-height: calc(100vh - 148px);
   border-radius: 12px; border: 3px solid rgba(0,0,0,.7); background: rgba(0,0,0,.6);
   overflow: hidden; pointer-events: auto; cursor: pointer;
 }
-.minimap.big { left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; border-width: 5px; }
+.minimap.big { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; border-width: 5px; }
+
+/* Bảng 5 khu + số người, chỉ hiện khi minimap phóng to (spec §8.0). */
+.zone-list {
+  display: none; position: absolute; right: -210px; top: 0; width: 196px;
+  padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.72);
+  color: #e8eef4; font-size: clamp(11px, 1.4vw, 14px); pointer-events: none;
+}
+.zone-list-title { font-weight: 700; color: #ffe9a8; margin-bottom: 4px; }
+.zone-row { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+.zone-row.me { color: #ffe9a8; font-weight: 700; }
+.zone-row-n { opacity: .85; }
+/* Màn hẹp thì bảng nằm dưới minimap thay vì bên cạnh, khỏi tràn ra ngoài. */
+@media (max-width: 900px) {
+  .zone-list { right: auto; left: 0; top: calc(100% + 8px); width: 100%; }
+}
+
+/* Tiền tố tên khu trong kill feed khi tin đến từ khu khác (spec §8.0). */
+.feed-zone { color: #9fb4c8; opacity: .85; }
+
+/* Tên khu đang đứng, ngay trên minimap (spec §8.0). Ẩn khi phòng chỉ có 1 khu. */
+.zone-name {
+  display: none;
+  padding: 2px 10px; border-radius: 8px;
+  background: rgba(0,0,0,.55); color: #ffe9a8;
+  font-weight: 700; font-size: clamp(12px, 1.6vw, 16px);
+  text-shadow: 0 2px 0 rgba(0,0,0,.8); pointer-events: none; white-space: nowrap;
+}
 
 /* Bảng phòng luôn nằm trọn trong màn hình: neo 12px theo mép, rộng/cao tối đa theo
    viewport, chữ co lại khi cửa sổ hẹp (clamp), danh hiệu dài thì cắt bằng "…". */
@@ -150,14 +196,22 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .debug-help { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); font-size: 12px; opacity: .8; max-width: calc(100vw - 520px); text-align: center; }
 
 /* Bảng hướng dẫn mờ 2 giây đầu trận (spec §18.1). Không chặn chuột/chạm. */
-.guide { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); opacity: 0; pointer-events: none; background: rgba(8,10,14,.6); border: 3px solid rgba(255,215,0,.6); border-radius: 18px; padding: 20px 28px; }
+/* Hướng dẫn lúc mới vào (spec §18.1): nằm GIỮA DƯỚI màn hình, không nằm cột trái.
+   Trước đây nó đặt ở mép trái giữa màn hình và đè thẳng lên minimap — người mới vào vừa
+   không đọc được bản đồ vừa tưởng minimap hỏng. */
+.guide {
+  position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%);
+  opacity: 0; pointer-events: none; background: rgba(8,10,14,.6);
+  border: 3px solid rgba(255,215,0,.6); border-radius: 18px; padding: 20px 28px;
+  max-width: min(520px, calc(100vw - 32px));
+}
 .guide.fade { animation: guideFade 2.6s ease-out forwards; }
-@keyframes guideFade { 0% { opacity: 0; transform: translate(-16px, -50%); } 12% { opacity: .92; transform: translate(0, -50%); } 72% { opacity: .92; } 100% { opacity: 0; } }
+@keyframes guideFade { 0% { opacity: 0; transform: translate(-50%, 16px); } 12% { opacity: .92; transform: translate(-50%, 0); } 72% { opacity: .92; } 100% { opacity: 0; } }
 .guide-title { color: var(--gold); font-size: 25px; text-align: center; margin-bottom: 12px; }
 .guide-line { display: flex; align-items: center; gap: 14px; font-size: 21px; line-height: 2; color: #eef4fb; white-space: nowrap; }
 .guide-key { min-width: 118px; text-align: center; padding: 4px 12px; border-radius: 9px; background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.4); font-weight: 900; }
 @media (max-width: 720px) {
-  .guide { padding: 12px 16px; left: 10px; }
+  .guide { padding: 12px 16px; bottom: 18%; }
   .guide-title { font-size: 17px; margin-bottom: 7px; }
   .guide-line { font-size: 15px; gap: 10px; line-height: 1.9; }
   .guide-key { min-width: 76px; padding: 2px 8px; }
@@ -177,7 +231,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
   .my-rank { font-size: .88em; }
   .status-text { min-width: 120px; }
   .realm { font-size: 14px; }
-  .badge { width: 42px; height: 42px; }
+  .badge { width: 52px; height: 52px; }
+  .badge-tag { min-width: 17px; height: 17px; font-size: 10px; line-height: 13px; }
   .buffs { top: 64px; }
   .minimap { top: 112px; }
   .score-pops { left: 70px; top: 56px; }
@@ -208,3 +263,23 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
   .scroll-panel.has-scroll .btn { padding: 8px 12px; font-size: 14px; }
   .scroll-panel.has-scroll .ghost { width: 60px; height: 60px; }
 }
+
+/* Đồng hồ đo hiệu năng ở chế độ ?debug=true: cho biết lag nằm ở vẽ hay ở mạng. */
+.perf {
+  position: absolute; right: 8px; bottom: 28px; text-align: right;
+  font: 11px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  color: #bfe9ff; background: rgba(0, 0, 0, 0.45); padding: 4px 7px; border-radius: 6px;
+  white-space: pre; pointer-events: none;
+}
+
+/* Nút kỹ năng (spec §6.3): icon + số lượt, xám hẳn khi hết lượt. */
+.skill-btn {
+  position: absolute; right: 18px; bottom: 150px;
+  width: 76px; height: 76px; border-radius: 50%;
+  border: 3px solid rgba(0,0,0,.65); background: rgba(40,28,70,.85); color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0; pointer-events: auto; cursor: pointer; user-select: none;
+}
+.skill-btn .skill-icon { font-size: 26px; line-height: 1; }
+.skill-btn .skill-count { font-size: 15px; font-weight: 700; color: #ffe9a8; }
+.skill-btn.empty { opacity: .45; filter: grayscale(1); }

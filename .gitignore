@@ -6,6 +6,9 @@ client/node_modules/
 client/dist/
 server/bin/
 *.exe
+# Binary biên dịch của công cụ art — `go build ./cmd/artgen` mặc định ghi ra đây.
+# Gần 10 MB, đổi mỗi lần build, không ai cần bản của máy người khác.
+server/artgen
 
 # Runtime data
 server/data/
@@ -16,3 +19,7 @@ server/data/
 assets/_raw/
 
 .DS_Store
+
+# tools/browsertest: Playwright tải trình duyệt riêng, không đưa vào repo
+tools/browsertest/node_modules/
+docs/perf/*.png

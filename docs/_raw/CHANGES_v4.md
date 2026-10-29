@@ -35,3 +35,51 @@
 14. Bỏ `clash_ratio_base`, `clash_ratio_per_realm`. Thêm `durability_per_realm: 1.2`, `durability_mode: "compound"`.
 15. Mỗi lần va khác cảnh giới: bên thấp mất `clash_unit` (1) kiếm; bên cao `crack += lost / k` với `k = 1.2^d`. Cùng cảnh giới: mỗi bên −1, đổi chiều (như cũ).
 16. Unit test: Trúc Cơ vs Luyện Khí sau 12 lần va → Luyện Khí −12, Trúc Cơ −10. Mode "linear": `k = 1 + 0.2 × d`.
+
+## v4.2 — VFX thần thú Tiên giới
+17. Đọc spec §3.5. Làm ở client: thần thú dạng chuỗi đốt (đầu + 12–20 đốt + đuôi) chạy theo quỹ đạo xoắn ốc từ chân lên; đốt ở nửa sau vòng xoắn vẽ dưới nhân vật, nửa trước vẽ trên.
+18. Kích hoạt: event Breakthrough vào cảnh giới Tiên (bản to 2.5s), đồng hồ client mỗi 20s (bản nhỏ 1.5s, tắt được trong cài đặt), event RealmDrop (vỡ vụn 0.8s). Tối đa 6 con trên màn hình.
+19. Placeholder trước (tam giác + hình tròn tô màu theo bảng §3.5); art theo ART_PROMPTS §10.1 thả vào sau.
+
+## v4.3 — Bỏ vật phẩm Trường Kiếm
+20. Xóa buff/item `long` (Trường Kiếm) khỏi: config (`buffs.long`, `items.weights.long`), server (spawn, áp buff, công thức chiều dài kiếm — bỏ hệ số `buff_long`), gói tin (bỏ field `buff_long`), client (icon HUD, aura, art loader), bot AI, phím debug buff, assets:report.
+21. Item `long` còn trên bản đồ của phòng đang chạy: bỏ qua khi load (không crash).
+22. Chạy lại toàn bộ test; xóa/sửa test liên quan Trường Kiếm.
+
+## v4.4 — Cương Kiếm + Tối ưu hiệu năng
+**Cương Kiếm** (spec §6.2, §5.2, §5.3)
+23. Buff `hard`: 10s, weight 7. Độ bền khi va kiếm `D = 1.2^r × 1.5`; bên có D lớn hơn là bên "cứng". Đổi chiều vẫn chỉ xét cảnh giới. Sát thương quái và vật cản × 2. Icon/aura theo ART_PROMPTS (placeholder trước). Thêm vào phím debug buff.
+
+**Tối ưu** (spec §13.4, §13.6) — làm theo thứ tự, đo trước và sau mỗi bước, ghi số vào docs/PROGRESS.md:
+24. Đo: overlay F3 (với ?debug=true), sửa cách đo ping (trả Pong ngay trong handler/worker), viết `cmd/loadtest`. Gửi tôi bảng số đo trước khi tối ưu.
+25. Client: vẽ mỗi vòng kiếm vào 1 RenderTexture và chỉ xoay sprite (ưu tiên số 1); BitmapText; ParticleContainer cho EXP/item/particle; cull; LOD; giải mã msgpack trong Web Worker; pool object; tự hạ chất lượng + tùy chọn Cao/Vừa/Thấp.
+26. Server: va chạm theo vòng (không duyệt từng kiếm), chỉ xét vòng ngoài cùng cho kiếm–kiếm; không cấp phát mỗi tick.
+27. Mạng: lượng tử hóa, delta snapshot, viên EXP chỉ gửi sự kiện, không gửi viên nhỏ ngoài 1 500 khi camera lùi xa, 20/10 Hz theo khoảng cách, tối đa 150 entity/snapshot, bỏ snapshot cũ khi client nghẽn.
+28. Đạt mục tiêu bảng §13.6 với loadtest (10 người Đạo Tổ đủ kiếm). Gửi tôi bảng số đo sau tối ưu.
+
+## v4.6 — Nâng cấp VFX (spec §3.6)
+29. Cài `pixi-filters` (bản tương thích PixiJS 8) và `revolt-fx`. Tạo `vfxLayer` riêng; gắn `AdvancedBloomFilter` cho layer đó.
+30. Làm lại hào quang Tiên giới thành 4 lớp (quầng sáng, vòng phù văn, tia sáng, hạt bay lên), tất cả blend 'add', mỗi lớp quay/thở với tốc độ khác nhau. Đạo Tổ thêm âm dương quay + viền hue shift.
+31. Đột phá Tiên: ShockwaveFilter + hit-stop 80ms + chớp trắng + chữ cảnh giới bật ra. Thiên Tiên Đài: GodrayFilter khi sắp phun. Thần thú §3.5: đốt thân blend 'add' + vệt particle.
+32. Tải Kenney Particle Pack và Brackeys VFX Bundle (CC0), dùng cho tia lửa/khói/ánh sáng; ghi CREDITS.md.
+33. Gắn vào cài đặt chất lượng Cao/Vừa/Thấp (§3.6) và đo lại FPS bằng F3 với 5 người Tiên giới trên màn hình. Gửi tôi ảnh chụp trước/sau.
+
+## v4.7 — Thần thú luôn lượn lờ (spec §3.5 mục 2)
+34. Bỏ chế độ "mỗi 20s bay 1 vòng" và tùy chọn tắt. Sau màn đột phá, thần thú (60% cỡ) ở lại bay quanh chủ liên tục khi còn ở Tiên giới: quỹ đạo elip ~4s/vòng + nhấp nhô, tâm bám chủ có độ trễ (lerp 0.1), động tác ngẫu nhiên mỗi 8–15s (xoắn ốc vút lên, số 8, đổi chiều, lao ra rồi về, cuộn quanh đầu), chuyển mượt về quỹ đạo nền.
+35. Phản ứng: lóe sáng khi chủ nhặt Tiên khí / khiên đỡ đòn; bay sát + vệt đỏ khi Thiêu Đốt. Đạo Tổ: 2 con lệch pha 180°.
+36. Số đốt theo chất lượng (16 / 10 / 6), chủ ở xa chỉ vẽ đầu + 4 đốt, vệt hạt tối đa 6 con gần nhất. Đo lại FPS bằng F3 với 5 người Tiên giới.
+
+## v4.8 — Bảng tên mới (spec §12.3)
+37. Làm lại nameplate: nền chung đen 45% bo góc; ruy băng danh hiệu theo hạng (Top 1 đỏ-vàng + vương miện + vệt sáng mỗi 3s + đốm lấp lánh; Top 2 bạc; Top 3 đồng; 4–10 dải mảnh); huy hiệu cảnh giới dạng viên thuốc màu theo bảng §12.3, Tiên giới viền chảy; chỉ báo ▲●▼ so với mình; tên to trắng viền đen 3px, tên mình màu vàng + ▼.
+38. Kích thước cố định trên màn hình (PC 18/13/13, mobile 15/11/11), font Be Vietnam Pro + 1 font trang trí hỗ trợ tiếng Việt cho danh hiệu (thử đủ dấu).
+39. Declutter (nhân vật < 40 px chỉ hiện tên; > 12 bảng thì ẩn ruy băng Top 4–10 ở xa; chồng nhau thì mờ bảng ở xa).
+40. Cache mỗi bảng tên thành 1 texture, BitmapFont có đủ ký tự tiếng Việt, hiệu ứng động là sprite chồng; chất lượng Thấp tắt hiệu ứng động. Art theo ART_PROMPTS §11.1 (placeholder: vẽ bằng Graphics trước).
+41. Hoạt ảnh: lên hạng ruy băng bật ra, mất hạng ruy băng rách rơi; lên tầng số lăn; đột phá huy hiệu chớp + phình.
+
+## v4.9 — Ảnh đại diện HUD + Bản đồ sinh động
+42. HUD (spec §12.4): thay vòng số cấp bằng chân dung nhân vật trong khung tròn, viền màu cảnh giới (Tiên giới viền hào quang động), huy hiệu cảnh giới + tầng ở góc, vương miện/ruy băng nếu Top; 4 biểu cảm theo trạng thái. Placeholder: cắt phần đầu từ `idle_00`.
+43. Bản đồ (spec §8.6): bỏ mọi hình chữ nhật/hình tròn lộ ra. Mặt đất trộn 2–3 texture/biome theo nhiễu, ranh giới biome loang; bake thành chunk 2048, chỉ vẽ chunk trong khung nhìn.
+44. mapgen xuất vùng (bùn, ao, bụi, sân, gió) dạng đa giác méo theo nhiễu đã làm mượt; **server dùng chính đa giác này** cho logic. Mép vùng có feather + dải viền texture.
+45. Decal 30–60/chunk (xoay/lật/co giãn/đổi sắc), bóng + vụn quanh vật cản, biến thể & xoay nhẹ cho vật cản; 2–4 ao/suối có shader gợn sóng; biên Linh Sơn là vách đá, Trúc Lâm là rặng tre.
+46. Ambient theo biome (bóng mây, lá rơi, đom đóm, sương, gà, bướm, đèn lồng, chim) giới hạn 150/60/0 theo chất lượng.
+47. Chưa có art: dùng màu đơn + nhiễu thủ tục cho texture, decal vẽ bằng Graphics có cạnh méo; danh sách asset cần sinh thêm vào assets:report (ART_PROMPTS §9.0b, §11.2). Đo FPS lại sau khi bake chunk.

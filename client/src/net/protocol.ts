@@ -9,14 +9,22 @@ export interface PlayerState {
   n: number; // sword count
   ph: number; // ring phase at snapshot time
   d: number; // ring direction ±1
-  w: number; // ω rad/s
-  tl: number; // blade tilt (rad); ring sizes are derived from sc, n and the Trường Kiếm buff
+ // ω rad/s
+  tl: number; // blade tilt (rad); ring sizes are derived from sc and n alone (spec v4.3)
   sc: number; // scale
-  md: string; // mood = animation name
+  /** md: chỉ số tâm trạng trong MOODS (spec mục 27) — gửi chuỗi thì tốn 13 byte mỗi gói. */
+  md: number; // mood = animation name
   bf: number; // buff bits
   fl: number; // flags
   ck?: number; // crack
   xp: number;
+  /** vx/vy: vận tốc, chỉ có ở gói gửi cho CHÍNH MÌNH và chỉ khi đang trượt trên băng (§8.0). */
+  vx?: number;
+  vy?: number;
+  /** skc: số lượt kỹ năng đang giữ, chỉ gửi cho chính mình (spec §6.3). */
+  skc?: number;
+  /** st: bit trạng thái do kỹ năng gây ra (spec §6.3) — xem STATUS. */
+  st?: number;
   ti?: number; // room title badge 1..3 (spec §11.3)
   th?: number; // Tiên khí đang có (spec §3.4), chỉ gửi cho chính mình
   tn?: number; // Tiên khí cần cho cảnh giới sau; 0 = đã Đạo Tổ
@@ -28,8 +36,9 @@ export interface MonsterState {
   id: number;
   x: number;
   y: number;
-  k: string;
   hp: number;
+  /** k, mx, r chỉ có ở gói ĐẦU TIÊN thấy con quái này (spec mục 27); sau đó client giữ lại. */
+  k: string;
   mx: number;
   r: number;
 }
@@ -50,6 +59,8 @@ export interface GameEvent {
   y: number;
   n?: number;
   s?: string;
+  /** f: một số thực đi kèm — ví dụ số giây của trạng thái (spec §6.3). */
+  f?: number;
 }
 
 export interface Snapshot {
@@ -62,7 +73,21 @@ export interface Snapshot {
   ia?: ItemState[];
   ir?: number[];
   ev?: GameEvent[];
+  /** sv: thời gian server xử lý một tick của phòng (ms) — chỉ để overlay đo (spec §13.6). */
+  sv?: number;
 }
+
+/**
+ * Phải khớp với `netproto.ProtocolVersion` bên server. Tăng cả hai MỖI KHI đổi hình dạng
+ * gói tin.
+ *
+ * Không có nó thì client mới gặp server cũ sẽ đọc rác rồi **đứng hình không báo gì** — đã
+ * dính đúng một lần: client nói `mood` là chỉ số, server cũ vẫn gửi chuỗi.
+ */
+/** Thứ tự phải khớp game.StatusNames bên server (spec §6.3). */
+export const STATUS = ['slow', 'root', 'blind', 'slip', 'brace', 'ghost', 'shell', 'dash'] as const;
+
+export const PROTOCOL_VERSION = 3;
 
 export interface Welcome {
   t: 'welcome';
@@ -73,9 +98,16 @@ export interface Welcome {
   time: number;
   obs: { id: number; hp: number; b: boolean }[] | null;
   debug: boolean;
+  /** pv: phiên bản giao thức của server; thiếu = server quá cũ, chưa có trường này. */
+  pv?: number;
+  /** zn / znm: khu đang ở và tên khu (spec §8.0). Gửi lại mỗi lần sang khu khác. */
+  zn?: number;
+  znm?: string;
 }
 
 export interface LeaderboardMsg {
+  /** zc: số nhân vật mỗi khu, cho bảng phóng to bằng phím M (spec §8.0). */
+  zc?: number[];
   t: 'lb';
   top: { id: number; nm: string; xp: number; L: number; sc: number; ti?: number }[];
   rank: number;
@@ -100,6 +132,9 @@ export interface FeedMsg {
   r: number;
   tp?: number; // hạng của nạn nhân; > 0 = tin loan toàn server (spec §11.4)
   rm?: string; // phòng xảy ra, chỉ có khi loan toàn server
+  /** zn/znm: khu xảy ra chuyện (spec §8.0); tin từ khu khác hiện kèm tên khu. */
+  zn?: number;
+  znm?: string;
 }
 
 export interface DeadMsg {
@@ -145,7 +180,21 @@ export const FLAG = {
 } as const;
 
 // Buff bit order = server game.BuffNames.
-export const BUFFS = ['spin', 'haste', 'magnet', 'long', 'shield', 'exp2', 'stealth'] as const;
+export const BUFFS = ['spin', 'haste', 'magnet', 'hard', 'shield', 'exp2', 'stealth'] as const;
+
+/**
+ * MOODS phải khớp **đúng thứ tự** với `game.MoodList` ở server: tâm trạng gửi qua mạng bằng
+ * chỉ số. Thêm thì thêm vào CUỐI, đừng chèn giữa.
+ */
+export const MOODS = [
+  'idle', 'run', 'chase', 'flee', 'hit', 'levelup',
+  'breakthrough', 'realm_drop', 'teleport_out', 'teleport_in', 'death', 'respawn',
+] as const;
+
+/** moodName đổi chỉ số về tên hoạt ảnh; ngoài danh sách thì coi như idle. */
+export function moodName(i: number): string {
+  return MOODS[i] ?? 'idle';
+}
 
 // Map JSON from GET /api/map/{id} (server/internal/world.Map).
 export interface Shape {
@@ -155,6 +204,12 @@ export interface Shape {
   w?: number;
   h?: number;
   r?: number;
+  /**
+   * p: đa giác hữu cơ, toạ độ TUYỆT ĐỐI xen kẽ x,y (spec §8.6). Khi có `p` thì x,y,w,h chỉ
+   * là hộp bao. Server xét va chạm trên chính đa giác này nên client phải vẽ y hệt — vẽ
+   * khác là người chơi thấy một đằng, luật chạy một nẻo.
+   */
+  p?: number[];
 }
 
 export interface MapObstacle {
@@ -178,6 +233,10 @@ export interface MapGate {
   y: number;
   n: string;
   c: string;
+  /** hv: đây là Thiên Môn — một chiều, luôn ra ở Thiên Đình (spec §8.4a). */
+  hv?: boolean;
+  /** dk: đây là Bến Thiên Môn ở Thiên Đình — chỗ đặt chân, không đi được. */
+  dk?: boolean;
 }
 
 export interface GameMap {
@@ -189,4 +248,10 @@ export interface GameMap {
   zones: MapZone[];
   gates: MapGate[];
   decor: { sp: string; x: number; y: number }[];
+  /**
+   * play_margin: lề tường biên. Vùng chơi được là `[play_margin, size − play_margin]`.
+   * Server luôn gửi trường này; client PHẢI dùng nó khi dự đoán va chạm, nếu không sẽ dự
+   * đoán ra ngoài vùng cho phép và bị server kéo về mỗi tick (spec §8.2a).
+   */
+  play_margin: number;
 }

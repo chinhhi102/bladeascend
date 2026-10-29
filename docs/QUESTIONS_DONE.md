@@ -58,3 +58,56 @@ và `exp_orbs.cell` 226 → **140**; `items.count_per_room` giữ 200.
 ### Q14. `docs/_raw/GAME_SPEC.md` thiếu 13 mục *(trả lời 2026-10-22, CHANGES_v4)*
 Anh đã gộp đủ 13 mục vào spec v4.0 và dán lại vào `_raw`. `realm_mult` giữ **2.0**
 (mỗi cảnh giới gấp đôi cảnh giới trước). Danh hiệu Top 4–10 giữ bộ chữ đang có trong code.
+
+### Q15. Công thức lá chắn §5.2 làm không ai chém chết được ai *(xử lý 2026-10-28)*
+Không cần anh trả lời nữa: nguyên nhân là **hiểu lá chắn thành tường chắn đường đi**. Anh báo
+"đi tới gần người khác là không điều khiển nhân vật tiến lên được" → chuyển lá chắn thành
+**luật chém** thay vì luật di chuyển:
+- Người chơi **không chặn đường nhau** nữa, hai vòng kiếm chồng lên nhau mà mài.
+- `resolveSwordBody` bỏ qua nạn nhân còn `ShieldR > 0` (tức còn ≥ 2 vòng). Mài rụng hết vòng
+  ngoài, còn đúng 1 vòng thì §5.1 mới chém được thân — đúng câu "chỉ khi người đó còn 1 vòng
+  thì kiếm đối thủ mới chạm được tới thân".
+
+Công thức đối xứng `max(reachA + shield_B, reachB + shield_A)` trong spec không còn dùng tới,
+vì nó chỉ có nghĩa khi lá chắn là tường chắn đường.
+
+### Q16–Q19 *(anh trả lời 2026-10-28 trong `docs/_raw/ANSWERS.md`)*
+- **Q16 Trường Kiếm**: bỏ hẳn. Spec v4.3 xoá khỏi §4.1a/§6.2, v4.4 thay bằng **Cương Kiếm**.
+  Ảnh `assets/buffs/long.png` giữ lại nhưng không dùng.
+- **Q17 Bó Kiếm khi rớt cảnh giới**: chấp nhận phương án 1 — Bó Kiếm chủ yếu từ xác người
+  chết và vật phẩm bản đồ.
+- **Q18 Linh khí / Tiên khí**: giữ như đã làm, không quy đổi qua lại. Bỏ
+  `tien_khi_to_exp_base`. Người phàm chém người Tiên giới chỉ nhận Uy Danh và ngược lại.
+- **Q19 Tốc độ bể kiếm**: giữ `clash_cooldown: 0`, `flip_cooldown: 0.3`.
+
+## Q21 — Hai luật mới chủ dự án yêu cầu, GAME_SPEC chưa ghi
+
+Chủ dự án yêu cầu trực tiếp ngày 29/10/2026, tôi đã làm trong code nhưng **không được ghi
+vào `docs/_raw/`**, nên spec và code đang lệch nhau. Nhờ anh cập nhật spec:
+
+**1. Cổng dịch chuyển bắn ngẫu nhiên** (lệch §8.4 — spec hiện ghi "cổng đi 2 chiều, ghép
+cặp cố định"). Đã làm: bước vào một cổng thì ra ở **một cổng bất kỳ khác cùng mạng**, không
+bao giờ ra lại chính cổng vừa vào. Bật/tắt bằng `gates.random_exit` (mặc định `true`); đặt
+`false` là quay về đúng luật cũ.
+
+Lưu ý tôi hiểu câu "cổng dịch chuyển sẽ dịch chuyển ngẫu nhiên" là **đích đến ngẫu nhiên**.
+Nếu ý anh là **bản thân cái cổng tự di chuyển chỗ trên bản đồ** thì nói một tiếng, đó là
+việc khác hẳn và tôi làm lại.
+
+**2. Đạo Tổ: Tiên khí dư đổi thành Uy Danh** (spec chưa nói gì về chuyện này). Đã làm: tới
+Đạo Tổ là hết cảnh giới để lên, nên mỗi điểm Tiên khí nhặt thêm đổi thành
+`cultivation.tien_overflow_score` điểm Uy Danh — chủ dự án chốt tỉ lệ **10 Tiên khí = 1 Uy
+Danh**, tức `0.1` và thanh Tiên khí **giữ đúng ở
+mốc Đạo Tổ** thay vì phình mãi.
+
+Vì sao giữ thanh ở mốc đỉnh: `robTienKhi` tính `loss = tiên_khí − mốc_khởi_điểm_mới`. Nếu
+cho phình thì một người Đạo Tổ ngồi lâu thành cục mồi khổng lồ, ai chém được là giàu to —
+không chặn thì luật cướp đoạt §3.4 méo hẳn. Nếu anh muốn giữ nguyên cục mồi đó thì báo.
+
+**Đã trả lời (CHANGES_v5.md, 29/10/2026)**: cổng đúng là **đích ngẫu nhiên**, không phải cổng
+tự đổi chỗ — spec §8.4 đã viết lại thành mạng chung 20 cổng của cả 5 khu. Đạo Tổ đổi Tiên khí
+dư sang Uy Danh thì giữ nguyên cách đã làm, ghi vào §3.4.
+
+**Còn một điểm lệch**: CHANGES_v5 ghi `tien_overflow_score` là **1.0**, nhưng sau đó anh nhắn
+trực tiếp "10 tiên khí chỉ được 1 uy danh" tức **0.1**. Tôi đang để **0.1** theo lời nhắn (mới
+hơn và nói rõ tỉ lệ). Xem Q22.

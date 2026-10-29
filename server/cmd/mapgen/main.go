@@ -37,7 +37,14 @@ type object struct {
 	Visible    bool    `json:"visible"`
 	Ellipse    bool    `json:"ellipse,omitempty"`
 	Point      bool    `json:"point,omitempty"`
+	// Polygon: đỉnh TƯƠNG ĐỐI so với (X, Y) theo đúng định dạng Tiled (spec §8.6).
+	Polygon    []point `json:"polygon,omitempty"`
 	Properties []prop  `json:"properties,omitempty"`
+}
+
+type point struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 type layer struct {
@@ -87,6 +94,7 @@ func (a rect) overlaps(b rect, margin float64) bool {
 // builder accumulates objects per layer and rejects overlapping placements.
 type builder struct {
 	size   float64
+	seed   int64
 	rng    *rand.Rand
 	nextID int
 	layers map[string][]object
@@ -96,7 +104,7 @@ type builder struct {
 
 func newBuilder(size float64, seed int64) *builder {
 	c := size / 2
-	return &builder{size: size, rng: rand.New(rand.NewSource(seed)), nextID: 1, layers: map[string][]object{},
+	return &builder{size: size, seed: seed, rng: rand.New(rand.NewSource(seed)), nextID: 1, layers: map[string][]object{},
 		keep: []rect{{c - 600, c - 600, c + 600, c + 600}}}
 }
 
@@ -203,6 +211,33 @@ func (b *builder) gate(x, y float64, network, color string) bool {
 	return true
 }
 
+// heavenGate đặt **Thiên Môn** (spec §8.4a): to gấp đôi cổng thường, chừa trống bán kính
+// 500 quanh nó — spec đòi một quảng trường ở tâm khu, có ít nhất 2 đường dẫn vào.
+func (b *builder) heavenGate(x, y float64) bool {
+	const r = 200.0
+	if !b.inBounds(rect{x - r, y - r, x + r, y + r}) {
+		return false
+	}
+	b.keep = append(b.keep, rect{x - 500, y - 500, x + 500, y + 500})
+	b.add("gates", object{Type: "gate", X: x - r, Y: y - r, Width: 2 * r, Height: 2 * r, Ellipse: true,
+		Properties: []prop{{"network", "string", gateNet}, {"color", "string", "gold"}, {"heaven", "string", "1"}}})
+	return true
+}
+
+// heavenDock đặt **Bến Thiên Môn** ở Thiên Đình — điểm ra cố định của Thiên Môn khu `zone`.
+// Spec §8.4a: cách tâm ~1 400, trống bán kính 400.
+func (b *builder) heavenDock(x, y float64, zone int) bool {
+	const r = 150.0
+	if !b.inBounds(rect{x - r, y - r, x + r, y + r}) {
+		return false
+	}
+	b.keep = append(b.keep, rect{x - 400, y - 400, x + 400, y + 400})
+	b.add("gates", object{Type: "gate", X: x - r, Y: y - r, Width: 2 * r, Height: 2 * r, Ellipse: true,
+		Properties: []prop{{"network", "string", gateNet}, {"color", "string", "gold"},
+			{"dock", "string", "1"}, {"dock_for", "float", float64(zone)}}})
+	return true
+}
+
 // altar places a Đài Tiên Khí and keeps a clear_r radius around it free of obstacles
 // (spec §8.5). Kind is "small" or "center".
 func (b *builder) altar(kind string, cx, cy, r, clear float64) bool {
@@ -288,6 +323,30 @@ func (b *builder) windLane(x, y, w, h, dirDeg float64) bool {
 	return b.zone("wind", x, y, w, h, false, prop{"dir", "float", dirDeg})
 }
 
+// zonePoly đặt một vùng địa hình hình HỮU CƠ (spec §8.6). Đỉnh đưa vào là toạ độ tuyệt đối;
+// Tiled lưu tương đối nên trừ đi gốc trước khi ghi.
+func (b *builder) zonePoly(kind string, pts []float64, props ...prop) bool {
+	if len(pts) < 6 {
+		return false
+	}
+	bb := polyBounds(pts)
+	if !b.inBounds(bb) {
+		return false
+	}
+	rel := make([]point, 0, len(pts)/2)
+	for i := 0; i < len(pts); i += 2 {
+		rel = append(rel, point{X: pts[i] - bb.x0, Y: pts[i+1] - bb.y0})
+	}
+	b.add("zones", object{Type: kind, X: bb.x0, Y: bb.y0, Width: bb.x1 - bb.x0, Height: bb.y1 - bb.y0,
+		Polygon: rel, Properties: props})
+	return true
+}
+
+// organicZone là lối tắt hay dùng: vùng méo quanh một tâm.
+func (b *builder) organicZone(kind string, cx, cy, r float64, squash float64, props ...prop) bool {
+	return b.zonePoly(kind, organicPoly(cx, cy, r, 14, squash, b.seed+int64(len(b.layers["zones"]))), props...)
+}
+
 func (b *builder) write(path, name, biome string) error {
 	if err := b.validate(); err != nil {
 		return fmt.Errorf("%s: %w", name, err)
@@ -311,38 +370,47 @@ func (b *builder) write(path, name, biome string) error {
 
 func main() {
 	out := flag.String("out", config.FindRepoFile("maps"), "output directory")
-	seed := flag.Int64("seed", 0, "chỉ sinh 1 bản đồ với seed này (0 = sinh cả 3 bản mặc định)")
-	png := flag.String("png", "", "xuất ảnh xem trước ra file này (dùng với --seed)")
+	seed := flag.Int64("seed", 0, "seed; 0 = seed mặc định theo từng khu")
+	zone := flag.Int("zone", -1, "chỉ sinh khu này (0..4); -1 = sinh cả 5 khu")
+	png := flag.String("png", "", "xuất ảnh xem trước ra file này (chỉ dùng với --zone)")
 	flag.Parse()
 	cfg := config.MustLoadDefault()
 	size := cfg.Room.MapSize
 	if err := os.MkdirAll(*out, 0o755); err != nil {
 		log.Fatal(err)
 	}
-	gens := []struct{ id, name, biome string }{
-		{"lang_tre", "Làng Tre", "grass"},
-		{"cho_dem", "Chợ Đêm", "concrete"},
-		{"nui_da", "Núi Đá", "dirt"},
+
+	want := make([]int, 0, len(zoneDefs))
+	if *zone >= 0 {
+		if *zone >= len(zoneDefs) {
+			log.Fatalf("khu %d không có (chỉ có 0..%d)", *zone, len(zoneDefs)-1)
+		}
+		want = append(want, *zone)
+	} else {
+		for i := range zoneDefs {
+			want = append(want, i)
+		}
 	}
-	if *seed != 0 {
-		gens = gens[:1]
-		gens[0] = struct{ id, name, biome string }{"preview", "Xem trước", "grass"}
+	if *png != "" && len(want) != 1 {
+		log.Fatal("--png phải đi kèm --zone (mỗi lần xem trước một khu)")
 	}
-	for i, gdef := range gens {
-		base := int64(1000 + i)
+
+	for _, zi := range want {
+		zd := zoneDefs[zi]
+		base := int64(1000 + zi)
 		if *seed != 0 {
 			base = *seed
 		}
-		b, used, err := buildWithRetries(size, base, cfg.Mapgen)
+		b, used, err := buildZoneWithRetries(size, base, cfg.Mapgen, zi)
 		if err != nil {
+			log.Fatalf("khu %d (%s): %v", zi, zd.name, err)
+		}
+		path := filepath.Join(*out, zd.id+".tmj")
+		if err := b.write(path, zd.name, zd.biome); err != nil {
 			log.Fatal(err)
 		}
-		path := filepath.Join(*out, gdef.id+".tmj")
-		if err := b.write(path, gdef.name, gdef.biome); err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("%s (seed %d): %d obstacles, %d zones, %d gates, %d đài → %s\n",
-			gdef.name, used, len(b.layers["obstacles"]), len(b.layers["zones"]),
+		fmt.Printf("khu %d %s (seed %d): %d vật cản, %d vùng, %d cổng, %d đài → %s\n",
+			zi, zd.name, used, len(b.layers["obstacles"]), len(b.layers["zones"]),
 			len(b.layers["gates"]), len(b.layers["altars"]), path)
 		if *png != "" {
 			if err := writePreview(b, *png); err != nil {
@@ -351,6 +419,24 @@ func main() {
 			fmt.Printf("ảnh xem trước → %s\n", *png)
 		}
 	}
+}
+
+// buildZoneWithRetries sinh một khu, thử lại với seed+1 khi kiểm tra không đạt (§8.1 bước 8).
+func buildZoneWithRetries(size float64, seed int64, mg config.Mapgen, zone int) (*builder, int64, error) {
+	tries := mg.MaxRetries
+	if tries <= 0 {
+		tries = 10
+	}
+	var last error
+	for i := 0; i < tries; i++ {
+		b := newBuilder(size, seed+int64(i))
+		if err := generateZone(b, mg, zone); err != nil {
+			last = err
+			continue
+		}
+		return b, seed + int64(i), nil
+	}
+	return nil, 0, fmt.Errorf("sinh thất bại sau %d lần (lỗi cuối: %w)", tries, last)
 }
 
 // buildWithRetries runs the §8.1 generator, retrying with seed+1 when validation fails

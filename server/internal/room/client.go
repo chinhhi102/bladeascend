@@ -14,6 +14,15 @@ type Conn interface {
 	Send(b []byte) bool
 }
 
+// LossyConn là Conn biết bỏ gói CŨ khi hàng đợi đầy (spec mục 27).
+//
+// Mạng yếu thì hàng đợi đầy, và một snapshot cũ nằm trong hàng là thứ vô giá trị: client chỉ
+// cần bản MỚI NHẤT. Giữ cái cũ rồi vứt cái mới là cách chắc chắn nhất để người chơi thấy
+// nhân vật giật lùi.
+type LossyConn interface {
+	SendLossy(b []byte) bool
+}
+
 // Client is a connected human. The room goroutine owns everything except the input fields.
 type Client struct {
 	Conn     Conn
@@ -23,13 +32,22 @@ type Client struct {
 	room     *Room
 
 	knownPlayers map[uint32]bool
-	knownItems   map[uint32]bool
+	// knownItems[slot] = id của viên đã gửi ở slot đó (0 = chưa gửi gì). Dùng SLICE theo chỉ
+	// số dày đặc chứ không dùng map băm: pprof đo được việc tra `knownItems[id]` trong vòng
+	// lọc tầm nhìn — chạy cho từng viên, từng người, 20 lần/giây — ăn ~25% CPU server. Lưu
+	// id chứ không lưu bool vì slot được DÙNG LẠI: viên mới nhận slot của viên cũ thì id
+	// khác nhau, so id là biết ngay client chưa thấy viên mới này.
+	knownItems    []uint32
+	// knownMonsters: đã gửi phần tĩnh (loại, máu tối đa, bán kính) của con quái này chưa.
+	knownMonsters map[uint32]bool
 
 	inMu   sync.Mutex
 	seq    uint32
 	angle  float64
 	moving bool
 	burn   bool
+	// skill: nút kỹ năng vừa được bấm (sự kiện một lần, xem SetInput).
+	skill  bool
 	dirty  bool
 }
 
@@ -38,21 +56,31 @@ func NewClient(c Conn, debug bool) *Client {
 }
 
 // SetInput is called from the connection goroutine; the room applies it on its next tick.
+// resetKnown xoá trí nhớ "đã gửi gì cho client này" — gọi khi vào phòng và khi sang khu
+// khác, vì sang khu là đổi hẳn bản đồ, mọi id cũ không còn nghĩa gì.
+func (c *Client) resetKnown() {
+	c.knownPlayers, c.knownMonsters = map[uint32]bool{}, map[uint32]bool{}
+	c.knownItems = c.knownItems[:0]
+}
+
 func (c *Client) SetInput(in netproto.Input) {
 	c.inMu.Lock()
 	defer c.inMu.Unlock()
 	c.seq = in.Seq
 	c.angle = float64(in.Angle) / 256 * 2 * math.Pi
 	c.moving, c.burn = in.Moving, in.Burn
+	// Nút kỹ năng là sự kiện MỘT LẦN, không phải trạng thái giữ phím: gộp bằng OR để một
+	// lần bấm không bị mất khi hai gói input rơi vào cùng một tick.
+	c.skill = c.skill || in.Skill
 	c.dirty = true
 }
 
-func (c *Client) takeInput() (seq uint32, angle float64, moving, burn, ok bool) {
+func (c *Client) takeInput() (seq uint32, angle float64, moving, burn, skill, ok bool) {
 	c.inMu.Lock()
 	defer c.inMu.Unlock()
-	d := c.dirty
-	c.dirty = false
-	return c.seq, c.angle, c.moving, c.burn, d
+	d, sk := c.dirty, c.skill
+	c.dirty, c.skill = false, false
+	return c.seq, c.angle, c.moving, c.burn, sk, d
 }
 
 // Room returns the room the client is currently in (nil between matches).
@@ -75,6 +103,20 @@ func (c *Client) send(v any) {
 	}
 }
 
+// sendSnapshot gửi gói ảnh trạng thái: được phép bỏ bản cũ khi nghẽn, khác với `welcome` hay
+// `leaderboard` vốn mất là mất luôn.
+func (c *Client) sendSnapshot(v any) {
+	b, err := netproto.Encode(v)
+	if err != nil {
+		return
+	}
+	if lossy, ok := c.Conn.(LossyConn); ok {
+		lossy.SendLossy(b)
+		return
+	}
+	c.Conn.Send(b)
+}
+
 // playerState converts a game player to its wire form as seen by one viewer. Ẩn Thân is
 // per-viewer: far away the target is flagged stealth (drawn faded, no name, no title),
 // up close they look normal (spec §6.2).
@@ -83,17 +125,23 @@ func playerState(g *game.Game, viewer, p *game.Player, withName bool) netproto.P
 	s := netproto.PlayerState{
 		ID: p.ID, X: float32(p.Pos.X), Y: float32(p.Pos.Y), Facing: float32(p.Facing),
 		Level: p.Level, Count: p.Ring.Count, Phase: float32(p.Ring.Angle), Dir: int8(p.Ring.Dir),
-		Omega: float32(g.Omega(p)), Tilt: float32(p.Ring.Tilt), Scale: float32(p.Scale), Mood: p.Mood,
-		Crack: float32(p.Ring.Crack),
-		Exp:   float32(p.TotalExp), Flags: playerFlags(g, viewer, p),
+		Tilt: float32(p.Ring.Tilt), Scale: float32(p.Scale), Mood: game.MoodIndex(p.Mood),
+		Crack: float32(p.Ring.Crack), Flags: playerFlags(g, viewer, p),
 	}
+	// Omega bỏ hẳn khỏi gói tin: client tự tính được từ rev_secs và buff Tốc Kiếm mà nó đã
+	// có sẵn (spec mục 27). Gửi lại một con số suy ra được là lãng phí 7 byte mỗi người mỗi
+	// gói, 20 lần mỗi giây.
 	if !faded {
 		s.Title = p.Title
 	}
 	if p == viewer {
+		s.Exp = float32(p.TotalExp)
+		s.Vx, s.Vy = float32(p.Vel.X), float32(p.Vel.Y)
+		s.Charges = p.SkillCharges
 		have, need := g.TienProgress(p)
 		s.TienHave, s.TienNeed = float32(have), float32(need)
 	}
+	s.St = p.StatusBits(g.Time)
 	for b := 0; b < game.BuffCount; b++ {
 		if p.HasBuff(b, g.Time) {
 			s.Buffs |= 1 << b

@@ -57,11 +57,37 @@ func (m *Manager) Join(c *Client, j netproto.Join) *Room {
 
 func (m *Manager) createLocked() *Room {
 	m.nextID++
-	mp := m.maps[m.rng.Intn(len(m.maps))]
-	r := newRoom(fmt.Sprintf("r%d", m.nextID), m.cfg, mp, m, m.recorder, m.rng.Int63())
+	r := newRoom(fmt.Sprintf("r%d", m.nextID), m.cfg, m.zoneMaps(), m, m.recorder, m.rng.Int63())
 	m.rooms = append(m.rooms, r)
 	m.Start(r)
 	return r
+}
+
+// zoneMaps chọn bản đồ cho 5 khu của một phòng (spec §8.0).
+//
+// Mỗi khu phải là một bản đồ KHÁC NHAU; khi chưa đủ 5 bản đồ thì dùng lại bản đã có để
+// phòng vẫn chạy — thà năm khu giống nhau còn hơn không vào được game. `cmd/mapgen` sẽ
+// sinh đủ 5 kiểu khu (spec v5 mục 6).
+func (m *Manager) zoneMaps() []*world.Map {
+	n := m.cfg.Room.Zones
+	if n < 1 {
+		n = 1
+	}
+	byID := map[string]*world.Map{}
+	for _, mp := range m.maps {
+		byID[mp.ID] = mp
+	}
+	out := make([]*world.Map, 0, n)
+	for i := 0; i < n; i++ {
+		if mp, ok := byID[ZoneMapIDs[min(i, len(ZoneMapIDs)-1)]]; ok {
+			out = append(out, mp)
+			continue
+		}
+		// Chưa sinh đủ 5 bản đồ khu thì dùng lại bản có sẵn — thà năm khu giống nhau còn
+		// hơn không vào được game. Sinh đủ bằng `cd server && go run ./cmd/mapgen`.
+		out = append(out, m.maps[i%len(m.maps)])
+	}
+	return out
 }
 
 // release frees a human slot when a player leaves or dies.
@@ -108,7 +134,7 @@ func (m *Manager) BroadcastFeed(f netproto.Feed, from *Room) {
 		}
 		room := r
 		room.Do(func() {
-			for _, c := range room.clients {
+			for _, c := range room.Clients() {
 				c.send(f)
 			}
 		})
@@ -127,7 +153,7 @@ func (m *Manager) Rooms() []RoomInfo {
 	defer m.mu.Unlock()
 	out := make([]RoomInfo, 0, len(m.rooms))
 	for _, r := range m.rooms {
-		out = append(out, RoomInfo{ID: r.ID, Map: r.G.Map.ID, Humans: r.reserved})
+		out = append(out, RoomInfo{ID: r.ID, Map: r.zones[0].G.Map.ID, Humans: r.reserved})
 	}
 	return out
 }

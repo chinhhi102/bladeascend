@@ -29,46 +29,62 @@ func TestShieldRadiusIsSecondOutermostRing(t *testing.T) {
 	}
 }
 
-// Spec §5.2: đi vào bị chặn như va tường — không lọt qua lá chắn, và không bị bật ngược.
-func TestShieldBlocksWalkingIn(t *testing.T) {
+// Người chơi không chặn đường nhau: đi thẳng vào người khác thì vẫn tới được tận nơi,
+// không khựng lại giữa khoảng không.
+func TestPlayersDoNotBlockEachOther(t *testing.T) {
 	g := quietGame(t, nil)
 	wall := g.AddPlayer(SpawnOptions{Name: "Wall", Level: 20, Swords: 60})
 	mover := g.AddPlayer(SpawnOptions{Name: "Mover", Level: 20, Swords: 8})
 	place(g, wall, Vec{X: 6000, Y: 6000}, 0)
 	place(g, mover, Vec{X: 6000 + 2000, Y: 6000}, 0)
 	mover.Moving, mover.InputAngle = true, math.Pi // đi thẳng vào
-	need := g.minSeparation(mover, wall)
-	if need <= 0 {
-		t.Fatal("thiết lập sai: đối thủ 3 vòng phải có lá chắn")
-	}
+	mover.InvulnUntil = 1e9                        // chỉ đo đường đi, không để chết giữa chừng
+	closest := math.Inf(1)
 	for i := 0; i < 30*20; i++ {
 		g.Tick(dt)
 		wall.Pos = Vec{X: 6000, Y: 6000} // giữ nguyên để đo
+		closest = math.Min(closest, mover.Pos.Dist(wall.Pos))
 	}
-	d := mover.Pos.Dist(wall.Pos)
-	if d < need-1 {
-		t.Fatalf("lọt qua lá chắn: cách %.0f, tối thiểu %.0f", d, need)
-	}
-	if d > need+60 {
-		t.Fatalf("bị bật ra quá xa: cách %.0f, tối thiểu %.0f (phải dừng sát lá chắn)", d, need)
+	// Tốc độ 195/s × 20s = 3900 > 2000 nên nếu không bị chặn thì phải chạm được tới thân.
+	if closest > g.BodyR(wall)+g.BodyR(mover) {
+		t.Fatalf("vẫn bị chặn: gần nhất chỉ tới %.0f đơn vị — phải đi được tới sát thân", closest)
 	}
 }
 
-// Lá chắn chỉ chặn người ĐANG tự đi; người đứng yên không bị hất ra, nếu không kẻ mạnh
-// sẽ tự đẩy nạn nhân ra ngoài tầm kiếm của chính mình.
-func TestShieldDoesNotShoveStandingVictim(t *testing.T) {
+// Spec §5.2: còn lá chắn thì kiếm địch quét trùm lên thân cũng không ăn — phải mài rụng
+// vòng ngoài trước. Đây là chỗ thay cho việc chặn đường đi ngày xưa.
+func TestShieldedBodyTakesNoHit(t *testing.T) {
 	g := quietGame(t, nil)
-	big := g.AddPlayer(SpawnOptions{Name: "Big", Level: 20, Swords: 60})
-	small := g.AddPlayer(SpawnOptions{Name: "Small", Level: 20, Swords: 1})
-	place(g, big, Vec{X: 6000, Y: 6000}, 0)
-	at := Vec{X: 6000 + g.Geom(big).Inner, Y: 6000}
-	place(g, small, at, 0)
-	small.InvulnUntil = 1e9
-	for i := 0; i < 30; i++ {
-		g.Tick(dt)
+	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 20, Swords: 1})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 20, Swords: 60}) // 3 vòng → còn lá chắn
+	place(g, a, Vec{X: 6000, Y: 6000}, 0)
+	place(g, b, bladeMid(a), math.Pi/2) // kiếm của A nằm ngay trên thân B
+	a.InvulnUntil = 1e9
+	if !g.Shielded(b) {
+		t.Fatal("thiết lập sai: 60 kiếm phải còn lá chắn")
 	}
-	if d := small.Pos.Dist(at); d > 1 {
-		t.Fatalf("người đứng yên bị đẩy %.0f đơn vị", d)
+	lv := b.Level
+	g.resolveSwordBody()
+	if b.Dead || b.Level != lv {
+		t.Fatalf("còn lá chắn mà vẫn ăn đòn: dead=%v level %d → %d", b.Dead, lv, b.Level)
+	}
+}
+
+// Hết lá chắn (còn 1 vòng) thì §5.1 chém được thân ngay.
+func TestUnshieldedBodyTakesHit(t *testing.T) {
+	g := quietGame(t, nil)
+	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 20, Swords: 1})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 20, Swords: 5}) // 1 vòng → không lá chắn
+	place(g, a, Vec{X: 6000, Y: 6000}, 0)
+	place(g, b, bladeMid(a), math.Pi/2)
+	a.InvulnUntil = 1e9
+	if g.Shielded(b) {
+		t.Fatal("thiết lập sai: 5 kiếm phải là 1 vòng, không còn lá chắn")
+	}
+	lv := b.Level
+	g.resolveSwordBody()
+	if b.Level >= lv {
+		t.Fatalf("không còn lá chắn mà vẫn không ăn cú chém thân (level %d)", b.Level)
 	}
 }
 
