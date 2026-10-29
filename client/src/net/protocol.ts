@@ -88,6 +88,9 @@ export interface Welcome {
   debug: boolean;
   /** pv: phiên bản giao thức của server; thiếu = server quá cũ, chưa có trường này. */
   pv?: number;
+  /** zn / znm: khu đang ở và tên khu (spec §8.0). Gửi lại mỗi lần sang khu khác. */
+  zn?: number;
+  znm?: string;
 }
 
 export interface LeaderboardMsg {

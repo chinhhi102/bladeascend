@@ -146,7 +146,7 @@ func measure(cfg *config.Config, n int, secs float64, seed int64) result {
 		bytes += s.bytes
 	}
 	for _, r := range rooms {
-		items += len(r.G.Items)
+		items += len(r.Zone(0).G.Items)
 	}
 	return result{
 		players:   n,

@@ -40,6 +40,30 @@ Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (d
   - (Q8 đã xong: spec gốc v3.5 đặt `clash_unit` = 1 và sửa checklist §17 cho khớp.)
 
 ## Đã làm
+
+- **Thế giới 5 khu — xong phần server (29/10/2026, spec v5 §8.0 §8.4, CHANGES_v5 mục 4+5)**:
+  một phòng giờ là **5 khu**, mỗi khu một bản đồ 12 000² riêng, mô phỏng riêng, danh sách
+  người riêng, AOI riêng (`internal/room/zone.go`). Số khu lấy từ `room.zones` trong config;
+  để 1 là quay về thế giới một bản đồ như cũ.
+  - Người mới vào **khu ít người thật nhất**; bot sinh và hồi sinh vào **khu ít nhân vật
+    nhất**; trần người + bot vẫn tính cho cả phòng (20), không nhân năm.
+  - **Bảng xếp hạng, danh hiệu, Uy Danh tính chung cả thế giới**; riêng **dấu trên minimap**
+    (Đài Tiên Khí, rương, ngôi sao Top 1) chỉ vẽ của khu đang đứng — vẽ dấu khu khác lên thì
+    người chơi đuổi theo một chấm không bao giờ tới được.
+  - **Cổng nối cả thế giới**: 20 cổng chung một mạng, bước vào một cổng ra ở một cổng bất kỳ
+    khác, không bao giờ ra lại cổng vừa vào. Khu không biết gì về khu khác — phòng làm người
+    chỉ đường qua `GateRouter`/`MoveToZone`. Chuyển người làm ở **ranh giới tick**, lúc không
+    khu nào đang chạy, nên không cần khoá.
+  - Client nhận `welcome` mới giữa trận = vừa sang khu: tải lại bản đồ, **không** phát lại
+    âm thanh hồi sinh hay hướng dẫn, hiện chữ lớn tên khu 1,5s và tên khu cạnh minimap.
+  - Thử thật: đi vào cổng ở Thiên Đình → sang **Trúc Lâm Mê Cung**, giữ nguyên kiếm và Uy
+    Danh. Test: 6 bài trong `internal/room/zone_test.go`, trong đó bài cổng bắn 2 000 lần
+    kiểm đủ 5 khu đều tới được và ~80% lần sang khu khác đúng như spec.
+
+  **Chưa làm trong mục 2**: mỗi khu 1 goroutine (hiện 5 khu chạy tuần tự trong một goroutine
+  — đủ nhanh ở quy mô 20 người, chưa cần song song); 4 thuật toán mapgen mới (mục 6) nên 5
+  khu hiện dùng lại 3 bản đồ cũ; băng trơn (mục 7); bảng 5 khu khi bấm M (mục 9); loadtest
+  ghi tick từng khu (mục 10).
 | Milestone | Nội dung | Trạng thái |
 |---|---|---|
 | M0 | Repo theo mục 13.2, server Go + WebSocket + MessagePack, client Vite + PixiJS, `config/game.json` | ✅ |

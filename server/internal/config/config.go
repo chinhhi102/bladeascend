@@ -191,6 +191,9 @@ type Gates struct {
 	// RandomExit: bước vào một cổng thì ra ở một cổng BẤT KỲ khác cùng mạng, thay vì cổng
 	// đôi cố định. Đặt false để quay về kiểu cũ.
 	RandomExit   bool    `json:"random_exit"`
+	// ExitPool: "all" (mặc định) = ra ở cổng bất kỳ trong cả thế giới; "other_zone" = luôn
+	// sang khu khác (spec §8.4).
+	ExitPool     string  `json:"exit_pool"`
 	Radius       float64 `json:"radius"`
 	TransitSecs  float64 `json:"transit_secs"`
 	ExitWarnSecs float64 `json:"exit_warn_secs"`
@@ -199,6 +202,8 @@ type Gates struct {
 }
 
 type Room struct {
+	// Zones: số khu mỗi phòng (spec §8.0). Để 1 là quay về thế giới một bản đồ như trước.
+	Zones          int     `json:"zones"`
 	MaxHumans      int     `json:"max_humans"`
 	BotFillTarget  int     `json:"bot_fill_target"`
 	MapSize        float64 `json:"map_size"`

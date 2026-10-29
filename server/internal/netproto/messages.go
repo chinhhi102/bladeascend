@@ -77,6 +77,10 @@ type Welcome struct {
 	Obstacles []ObstacleState `msgpack:"obs"`
 	Debug     bool            `msgpack:"debug"`
 	Proto     int             `msgpack:"pv"`
+	// Zone / ZoneName: khu đang ở (spec §8.0). Gửi lại mỗi lần sang khu khác, vì sang khu
+	// là đổi hẳn bản đồ.
+	Zone     int    `msgpack:"zn"`
+	ZoneName string `msgpack:"znm,omitempty"`
 }
 
 // Player flags.
@@ -169,6 +173,8 @@ type LeaderEntry struct {
 // Leaderboard goes out once a second. It also carries the minimap's live markers, which are
 // the only positions a client is allowed to know outside its own view (spec §12.1).
 type Leaderboard struct {
+	// ZoneCounts: số nhân vật ở mỗi khu, cho bảng phóng to bằng phím M (spec §8.0).
+	ZoneCounts []int `msgpack:"zc,omitempty"`
 	T       string        `msgpack:"t"`
 	Top     []LeaderEntry `msgpack:"top"`
 	Rank    int           `msgpack:"rank"`

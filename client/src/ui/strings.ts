@@ -9,6 +9,7 @@ export const STR = {
   leaderboard: 'Bảng xếp hạng',
   findingRoom: 'Đang tìm phòng...',
   connecting: 'Đang kết nối máy chủ...',
+  zoneEntered: (name: string): string => `— ${name} —`,
   glLost: 'Card màn hình vừa bị gián đoạn. Đang khôi phục, bạn sẽ vào lại phòng ngay…',
   glLostManual: 'Đồ hoạ lỗi liên tục. Hãy hạ chất lượng bằng phím V rồi tải lại trang (Ctrl+F5).',
   versionMismatch: 'Máy chủ vừa được cập nhật. Hãy tải lại trang (Ctrl+F5) để chơi tiếp.',

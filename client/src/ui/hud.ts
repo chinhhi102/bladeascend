@@ -84,6 +84,8 @@ export class Hud {
   /** serverFeed is the top-centre strip for server-wide announcements (spec §11.4). */
   private readonly serverFeed = h('div', 'server-feed');
   private readonly banner = h('div', 'banner');
+  /** Tên khu đang đứng, hiện cạnh minimap (spec §8.0). */
+  private readonly zoneBox = h('div', 'zone-name');
   private readonly ping = h('div', 'ping');
   private readonly debugHelp = h('div', 'debug-help', STR.debugHelp);
   /** Đồng hồ đo hiệu năng, chỉ hiện khi ?debug=true — để biết lag nằm ở đâu (xem setPerf). */
@@ -118,6 +120,7 @@ export class Hud {
     });
     this.root.append(
       this.minimap.root,
+      this.zoneBox,
       h('div', 'status', this.badge, h('div', 'status-text', this.realm, this.expBar, this.expLabel, this.swords, this.scoreBox)),
       this.pops,
       this.buffs,
@@ -298,6 +301,12 @@ export class Hud {
         this.showBanner(STR.chestIncoming(e.n ?? this.cfg.items.chest_warn_secs), 4);
       }
     }
+  }
+
+  /** setZone đổi tên khu cạnh minimap; chuỗi rỗng thì ẩn hẳn (phòng 1 khu như trước). */
+  setZone(name: string): void {
+    this.zoneBox.textContent = name;
+    this.zoneBox.style.display = name ? 'block' : 'none';
   }
 
   showBanner(text: string, secs: number): void {

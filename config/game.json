@@ -271,6 +271,7 @@
   },
   "gates": {
     "random_exit": true,
+    "exit_pool": "all",
     "radius": 150,
     "transit_secs": 2.0,
     "exit_warn_secs": 0.5,
@@ -345,6 +346,7 @@
     "max_retries": 10
   },
   "room": {
+    "zones": 5,
     "max_humans": 20,
     "bot_fill_target": 20,
     "map_size": 12000,

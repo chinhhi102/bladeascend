@@ -25,26 +25,26 @@ const (
 )
 
 // broadcast sends each client a snapshot filtered by its area of interest (spec §13.3).
-func (r *Room) broadcast() {
-	events := r.pending
-	r.pending = nil
-	r.namesDue = r.G.Time-r.namesAt >= nameResendSecs
+func (r *Room) broadcast(z *Zone) {
+	events := z.pending
+	z.pending = nil
+	r.namesDue = z.G.Time-r.namesAt >= nameResendSecs
 	if r.namesDue {
-		r.namesAt = r.G.Time
+		r.namesAt = z.G.Time
 	}
-	r.sendFeeds(events)
-	for id, c := range r.clients {
-		viewer, ok := r.G.Players[id]
+	r.sendFeeds(z, events)
+	for id, c := range z.clients {
+		viewer, ok := z.G.Players[id]
 		if !ok {
 			continue
 		}
-		c.sendSnapshot(r.snapshotFor(c, viewer, events))
+		c.sendSnapshot(r.snapshotFor(z, c, viewer, events))
 	}
 }
 
-func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) netproto.Snapshot {
-	g := r.G
-	s := netproto.Snapshot{T: "snap", Tick: r.tick, Time: g.Time, Ack: viewer.LastSeq, SrvMs: r.stepMs}
+func (r *Room) snapshotFor(z *Zone, c *Client, viewer *game.Player, events []game.Event) netproto.Snapshot {
+	g := z.G
+	s := netproto.Snapshot{T: "snap", Tick: z.tick, Time: g.Time, Ack: viewer.LastSeq, SrvMs: z.stepMs}
 	seen := map[uint32]bool{}
 	// Names go out the first time a client sees a player, and again every couple of seconds
 	// so a client that missed the first packet still recovers.
@@ -53,7 +53,7 @@ func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) 
 	// không ai thấy, mà nửa số byte của người ở rìa màn hình thì tiết kiệm thật.
 	// Người MỚI thấy lần đầu luôn gửi ngay, nếu không họ "hiện ra" trễ nửa nhịp.
 	half := g.ViewHalfExtentsX(viewer) / 2
-	slow := r.tick%farRateDivisor != 0
+	slow := z.tick%farRateDivisor != 0
 	for _, p := range g.PlayerList() {
 		if !g.CanSee(viewer, p) {
 			continue
@@ -94,8 +94,8 @@ func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) 
 			delete(c.knownMonsters, id)
 		}
 	}
-	r.diffItems(c, viewer, &s)
-	s.Events = r.eventsFor(viewer, events, seen)
+	r.diffItems(z, c, viewer, &s)
+	s.Events = r.eventsFor(z, viewer, events, seen)
 	return s
 }
 
@@ -108,7 +108,7 @@ func (r *Room) snapshotFor(c *Client, viewer *game.Player, events []game.Event) 
 // `d2` là BÌNH PHƯƠNG khoảng cách, không phải khoảng cách: so sánh cho ra cùng kết quả mà
 // khỏi phải khai căn. pprof đo được `math.Hypot` ăn 8% CPU server chỉ vì chỗ này chạy cho
 // từng vật phẩm, từng client, từng tick.
-func (r *Room) wantItem(viewer *game.Player, hw, hh float64, it *game.Item, d2 float64) bool {
+func (r *Room) wantItem(z *Zone, viewer *game.Player, hw, hh float64, it *game.Item, d2 float64) bool {
 	if !game.InViewAt(viewer.Pos, hw, hh, it.Pos, 0) {
 		return false
 	}
@@ -130,8 +130,8 @@ type itemCand struct {
 	d2 float64
 }
 
-func (r *Room) diffItems(c *Client, viewer *game.Player, s *netproto.Snapshot) {
-	g := r.G
+func (r *Room) diffItems(z *Zone, c *Client, viewer *game.Player, s *netproto.Snapshot) {
+	g := z.G
 	// Lấy nửa khung nhìn MỘT LẦN cho cả vòng lặp: nó chỉ phụ thuộc người xem. Trước đây mỗi
 	// vật phẩm gọi lại `ViewHalfExtents`, và hàm đó có `math.Pow` — 44% CPU server đi vào
 	// đúng chỗ này (pprof, CHANGES_v4 mục 26).
@@ -159,25 +159,25 @@ func (r *Room) diffItems(c *Client, viewer *game.Player, s *netproto.Snapshot) {
 		ok := it != nil && it.ID == id
 		if ok {
 			dx, dy := it.Pos.X-vp.X, it.Pos.Y-vp.Y
-			ok = r.wantItem(viewer, hw, hh, it, dx*dx+dy*dy)
+			ok = r.wantItem(z, viewer, hw, hh, it, dx*dx+dy*dy)
 		}
 		if !ok {
 			known[slot] = 0
 			s.ItemsRemoved = append(s.ItemsRemoved, id)
 		}
 	}
-	cands := r.itemBuf[:0]
+	cands := z.itemBuf[:0]
 	g.ItemsNear(vp, hw, hh, func(it *game.Item) {
 		if known[it.Slot()] == it.ID {
 			return
 		}
 		dx, dy := it.Pos.X-vp.X, it.Pos.Y-vp.Y
 		d2 := dx*dx + dy*dy
-		if r.wantItem(viewer, hw, hh, it, d2) {
+		if r.wantItem(z, viewer, hw, hh, it, d2) {
 			cands = append(cands, itemCand{it, d2})
 		}
 	})
-	r.itemBuf = cands
+	z.itemBuf = cands
 	sort.Slice(cands, func(a, b int) bool { return cands[a].d2 < cands[b].d2 })
 	budget := itemBudgetBytes
 	for _, cd := range cands {
@@ -193,14 +193,14 @@ func (r *Room) diffItems(c *Client, viewer *game.Player, s *netproto.Snapshot) {
 
 // eventsFor keeps events the viewer may know about: global ones, their own, and those in view.
 // Events about hidden players are dropped so stealth cannot be detected from events.
-func (r *Room) eventsFor(viewer *game.Player, events []game.Event, seen map[uint32]bool) []game.Event {
+func (r *Room) eventsFor(z *Zone, viewer *game.Player, events []game.Event, seen map[uint32]bool) []game.Event {
 	var out []game.Event
 	for _, e := range events {
 		if e.Kind == "KillFeed" || (e.To != 0 && e.To != viewer.ID) {
 			continue
 		}
 		mine := e.A == viewer.ID || e.B == viewer.ID
-		if !(e.Global || mine || r.eventVisible(viewer, e, seen)) {
+		if !(e.Global || mine || r.eventVisible(z, viewer, e, seen)) {
 			continue
 		}
 		out = append(out, e)
@@ -212,8 +212,8 @@ func (r *Room) eventsFor(viewer *game.Player, events []game.Event, seen map[uint
 var playerEvents = map[string]bool{"LevelUp": true, "Breakthrough": true, "RealmDrop": true,
 	"RingFlip": true, "SwordBreak": true, "BuffStart": true, "BuffEnd": true, "Emote": true, "TeleportIn": true}
 
-func (r *Room) eventVisible(viewer *game.Player, e game.Event, seen map[uint32]bool) bool {
-	if !r.G.InView(viewer, game.Vec{X: float64(e.X), Y: float64(e.Y)}) {
+func (r *Room) eventVisible(z *Zone, viewer *game.Player, e game.Event, seen map[uint32]bool) bool {
+	if !z.G.InView(viewer, game.Vec{X: float64(e.X), Y: float64(e.Y)}) {
 		return false
 	}
 	if playerEvents[e.Kind] {
@@ -230,7 +230,7 @@ const serverWideTopN = 5
 
 // sendFeeds turns KillFeed events into named feed lines for everyone in the room, and
 // relays the big ones to every other room.
-func (r *Room) sendFeeds(events []game.Event) {
+func (r *Room) sendFeeds(z *Zone, events []game.Event) {
 	for _, e := range events {
 		if e.Kind != "KillFeed" {
 			continue
@@ -244,7 +244,7 @@ func (r *Room) sendFeeds(events []game.Event) {
 				f.Top, f.Room = e.N, r.ID
 			}
 		}
-		for _, c := range r.clients {
+		for _, c := range z.clients {
 			c.send(f)
 		}
 		if f.Top > 0 && r.mgr != nil {
@@ -254,16 +254,23 @@ func (r *Room) sendFeeds(events []game.Event) {
 }
 
 func (r *Room) nameOf(id uint32) string {
-	if p, ok := r.G.Players[id]; ok {
-		return p.Name
+	for _, z := range r.zones {
+		if p, ok := z.G.Players[id]; ok {
+			return p.Name
+		}
 	}
 	return ""
 }
 
 // sendLeaderboards sends the in-room top 10, each client's own rank and Uy Danh, and the
 // minimap markers (spec §11.2, §12.1).
+//
+// Bảng xếp hạng tính CHUNG CẢ THẾ GIỚI (spec §8.0), nhưng **dấu trên minimap thì theo
+// KHU**: minimap chỉ vẽ khu đang đứng, nên chỉ ra Đài Tiên Khí, rương và ngôi sao Top 1 của
+// chính khu đó. Vẽ dấu của khu khác lên thì người chơi đuổi theo một chấm không bao giờ tới
+// được — năm khu không nối nhau bằng đường đi.
 func (r *Room) sendLeaderboards() {
-	ranking := r.G.Ranking()
+	ranking := r.Ranking()
 	top := make([]netproto.LeaderEntry, 0, leaderboardTop)
 	rankOf := map[uint32]int{}
 	for i, p := range ranking {
@@ -273,28 +280,39 @@ func (r *Room) sendLeaderboards() {
 				Level: p.Level, Score: float32(p.Score), Title: p.Title})
 		}
 	}
-	base := netproto.Leaderboard{T: "lb", Top: top, Total: len(ranking)}
-	// Spec §12.1: the crown shows for the whole room, but a leader in a bush or under
-	// Ẩn Thân drops off the minimap so it never gives their position away.
-	if len(ranking) > 0 && r.cfg.Minimap.ShowTop1 {
-		if lead := ranking[0]; !r.G.HiddenInBush(lead) && !lead.HasBuff(game.BuffStealth, r.G.Time) {
-			base.Top1, base.Top1X, base.Top1Y = true, float32(lead.Pos.X), float32(lead.Pos.Y)
-		}
+	// Số người mỗi khu cho bảng M (spec §8.0) — ai cũng thấy giống nhau.
+	counts := make([]int, len(r.zones))
+	for i, z := range r.zones {
+		counts[i] = z.Count()
 	}
-	for _, a := range r.G.AltarMarkers() {
-		base.Altars = append(base.Altars, netproto.AltarMark{X: float32(a.X), Y: float32(a.Y), Kind: a.Kind, Warn: a.Warning})
+	var lead *game.Player
+	if len(ranking) > 0 {
+		lead = ranking[0]
 	}
-	if r.cfg.Minimap.ShowChest {
-		if pos, warning, ok := r.G.ChestMarker(); ok {
-			base.HasBau, base.ChestX, base.ChestY, base.ChestIn = true, float32(pos.X), float32(pos.Y), warning
+	for _, z := range r.zones {
+		base := netproto.Leaderboard{T: "lb", Top: top, Total: len(ranking), ZoneCounts: counts}
+		// Spec §12.1: the crown shows for the whole room, but a leader in a bush or under
+		// Ẩn Thân drops off the minimap so it never gives their position away.
+		if lead != nil && r.cfg.Minimap.ShowTop1 {
+			if _, here := z.G.Players[lead.ID]; here && !z.G.HiddenInBush(lead) && !lead.HasBuff(game.BuffStealth, z.G.Time) {
+				base.Top1, base.Top1X, base.Top1Y = true, float32(lead.Pos.X), float32(lead.Pos.Y)
+			}
 		}
-	}
-	for id, c := range r.clients {
-		msg := base
-		msg.Rank = rankOf[id]
-		if p, ok := r.G.Players[id]; ok {
-			msg.MyScore = float32(p.Score)
+		for _, a := range z.G.AltarMarkers() {
+			base.Altars = append(base.Altars, netproto.AltarMark{X: float32(a.X), Y: float32(a.Y), Kind: a.Kind, Warn: a.Warning})
 		}
-		c.send(msg)
+		if r.cfg.Minimap.ShowChest {
+			if pos, warning, ok := z.G.ChestMarker(); ok {
+				base.HasBau, base.ChestX, base.ChestY, base.ChestIn = true, float32(pos.X), float32(pos.Y), warning
+			}
+		}
+		for id, c := range z.clients {
+			msg := base
+			msg.Rank = rankOf[id]
+			if p, ok := z.G.Players[id]; ok {
+				msg.MyScore = float32(p.Score)
+			}
+			c.send(msg)
+		}
 	}
 }

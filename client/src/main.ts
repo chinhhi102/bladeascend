@@ -4,6 +4,9 @@ import { sound } from './audio/sound';
 import { type GameConfig, levelThresholds, loadConfig } from './config';
 import { Input } from './input';
 import { Conn } from './net/conn';
+/** Chữ tên khu hiện bao lâu khi vào khu mới (spec §8.0). */
+const ZONE_BANNER_SECS = 1.5;
+
 import { PROTOCOL_VERSION } from './net/protocol';
 import { pendingRejoin, watchContextLoss } from './render/glrecover';
 import type { DeadMsg, GameMap, ServerMsg, Snapshot, Welcome } from './net/protocol';
@@ -189,6 +192,10 @@ class App {
       this.screens.show(h('div', 'screen center', h('div', 'panel', STR.versionMismatch)));
       return;
     }
+    // Welcome đến GIỮA TRẬN nghĩa là vừa qua cổng sang khu khác (spec §8.0, §8.4): sang
+    // khu là đổi hẳn bản đồ nên phải tải lại từ đầu, nhưng KHÔNG phải vào trận lại — giữ
+    // nguyên hồ sơ, không phát lại âm thanh hồi sinh, không hiện lại hướng dẫn.
+    const changedZone = this.playing;
     this.joining = true;
     this.early = [];
     const res = await fetch(`/api/map/${w.map}`);
@@ -225,6 +232,12 @@ class App {
     }
     this.early = [];
     this.input.enabled = true;
+    this.hud.setZone(w.znm ?? '');
+    if (changedZone) {
+      // Chữ lớn mờ dần giữa màn hình khi vào khu mới (spec §8.0).
+      this.hud.showBanner(STR.zoneEntered(w.znm ?? ''), ZONE_BANNER_SECS);
+      return;
+    }
     this.hud.showGuide(); // hướng dẫn mờ trong lúc còn bất tử (spec §18.1)
     sound.play('respawn');
   }

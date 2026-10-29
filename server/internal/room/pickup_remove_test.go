@@ -28,13 +28,13 @@ func TestItemDisappearsAfterPickup(t *testing.T) {
 	dt := 1 / float64(cfg.Net.TickHz)
 	r.Step(dt)
 
-	p := r.G.Players[c.PlayerID]
+	p := r.Zone(0).G.Players[c.PlayerID]
 	p.InvulnUntil = 1e9
 	// Thả viên trong tầm nhìn nhưng NGOÀI tầm nhặt, để server kịp gửi nó cho client; nếu
 	// thả ngay dưới chân thì nhặt xong trong tick đầu, client chưa từng thấy nó.
 	at := p.Pos
 	at.X += 400
-	it := r.G.SpawnItemForTest("orb", 10, at)
+	it := r.Zone(0).G.SpawnItemForTest("orb", 10, at)
 	itemID := it.ID
 	for tick := 0; tick < 20; tick++ {
 		r.Step(dt)
@@ -64,7 +64,7 @@ func TestItemDisappearsAfterPickup(t *testing.T) {
 	if !seenAdded {
 		t.Fatal("server chưa bao giờ gửi viên này cho client")
 	}
-	if _, still := r.G.Items[itemID]; still {
+	if _, still := r.Zone(0).G.Items[itemID]; still {
 		t.Fatal("viên vẫn còn trong game — người chơi chưa nhặt được, test sai kịch bản")
 	}
 	if !seenRemoved {
@@ -84,20 +84,20 @@ func TestRemovalReportedEvenWhenSlotReused(t *testing.T) {
 	dt := 1 / float64(cfg.Net.TickHz)
 	r.Step(dt)
 
-	p := r.G.Players[c.PlayerID]
+	p := r.Zone(0).G.Players[c.PlayerID]
 	p.InvulnUntil = 1e9
 	at := p.Pos
 	at.X += 400
-	oldID := r.G.SpawnItemForTest("orb", 10, at).ID
+	oldID := r.Zone(0).G.SpawnItemForTest("orb", 10, at).ID
 	for tick := 0; tick < 20; tick++ {
 		r.Step(dt) // để server kịp gửi viên cũ cho client
 	}
 
 	// Nhặt viên cũ rồi thả ngay một viên mới: viên mới sẽ nhận đúng slot vừa được nhả.
-	oldSlot := r.G.Items[oldID].Slot()
+	oldSlot := r.Zone(0).G.Items[oldID].Slot()
 	p.Pos = at
 	r.Step(dt)
-	if _, still := r.G.Items[oldID]; still {
+	if _, still := r.Zone(0).G.Items[oldID]; still {
 		t.Fatal("chưa nhặt được viên cũ, test sai kịch bản")
 	}
 	// Thả viên mới cho tới khi có một viên nhận đúng slot vừa nhả ra. Thả ở CHỖ KHÁC để nó
@@ -106,7 +106,7 @@ func TestRemovalReportedEvenWhenSlotReused(t *testing.T) {
 	far.X += 700
 	reused := false
 	for i := 0; i < 200 && !reused; i++ {
-		reused = r.G.SpawnItemForTest("orb", 10, far).Slot() == oldSlot
+		reused = r.Zone(0).G.SpawnItemForTest("orb", 10, far).Slot() == oldSlot
 	}
 	if !reused {
 		t.Fatalf("không có viên nào nhận lại slot %d — không tái hiện được kịch bản", oldSlot)

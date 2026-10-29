@@ -82,10 +82,10 @@ func TestGateExitIsRandom(t *testing.T) {
 		if !ok {
 			t.Fatal("không tìm được cổng ra")
 		}
-		if d.ID == 1 {
+		if d.GateID == 1 {
 			t.Fatal("cổng ra trùng cổng vào — người chơi sẽ bị kẹt dịch chuyển tại chỗ")
 		}
-		seen[d.ID]++
+		seen[d.GateID]++
 	}
 	if len(seen) != 3 {
 		t.Fatalf("chỉ ra ở %d cổng (%v), phải rải đều cả 3 cổng còn lại", len(seen), seen)
@@ -109,8 +109,8 @@ func TestGateExitFixedWhenDisabled(t *testing.T) {
 	}
 	first, _ := g.gateExit(g.Map.Gates[0])
 	for i := 0; i < 20; i++ {
-		if d, _ := g.gateExit(g.Map.Gates[0]); d.ID != first.ID {
-			t.Fatalf("tắt random_exit rồi mà cổng ra vẫn đổi: %d rồi %d", first.ID, d.ID)
+		if d, _ := g.gateExit(g.Map.Gates[0]); d.GateID != first.GateID {
+			t.Fatalf("tắt random_exit rồi mà cổng ra vẫn đổi: %d rồi %d", first.GateID, d.GateID)
 		}
 	}
 }
