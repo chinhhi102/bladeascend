@@ -3,6 +3,10 @@
 _Cập nhật: 2026-10-22_
 
 ## Cách chạy (máy dev)
+
+> Server **chỉ nghe trên máy này** (`127.0.0.1:8080`), không mở ra mạng LAN. Muốn cho máy
+> khác cùng Wi-Fi vào thì chạy `go run ./cmd/server -addr :8080`, và client dev thì
+> `npm run dev -- --host`.
 ```bash
 cd server && go run ./cmd/server          # http://localhost:8080 (đã build client) — đổi cổng: -addr :8090
 cd client && npm run dev                  # http://localhost:5173 (tự cập nhật khi sửa code)
@@ -55,6 +59,17 @@ Test: 50 test Go (EXP, scale, bảng bể kiếm, rớt cảnh giới + rơi ki�
 Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Art (minigen)
+
+- **`teleport_out` của MỌI nhân vật cắt được 3/4 khung (29/10/2026)** — không phải lỗi ảnh:
+  khung cuối là lúc nhân vật đã biến mất nên không còn pixel nào để bộ cắt tìm ra. Sinh lại
+  bao nhiêu lần cũng vậy, chỉ tốn quota. Client vẫn chạy bình thường với 3 khung. Vì thế
+  `artgen prep` giờ **chỉ đánh dấu sinh lại khi sheet thật sự hỏng**, dùng đúng ngưỡng của
+  client (`render/assets.ts`: bỏ animation khi lệch quá 1,5× hoặc dưới 0,5×). Danh sách sinh
+  lại nhờ vậy từ 15 xuống 4.
+- **Danh sách sheet cắt sai nằm ở `assets/_raw/miscut.json`**, do chính `artgen prep` ghi ra
+  chứ không gõ tay vào mã nguồn nữa. Ghi theo kiểu hợp nhất: chỉ gỡ tên nào vừa được cắt lại
+  sạch sẽ — ảnh thô của job cũ có thể đã bị dọn đi nên prep bỏ qua chúng, mà coi "không cảnh
+  báo" là "đã lành" thì sheet hỏng rơi khỏi ART_JOBS.md trong khi atlas vẫn giữ 22 khung sai.
 - **2026-10-22 (phiên sau): 90/211 asset đủ** (artgen: 66 job xong, 130 còn thiếu). Mới có: khung thoại, rương, hit/death Ông Ba Vòng, death Đại Ca, hit Thằng Mập; run Cô Ba Gánh cắt lại được (không cần sinh lại).
   - `artgen run` giờ gửi **mỗi prompt đúng 1 lần**, tuần tự (`-c 1`), nghỉ 30s giữa prompt (`-gap`); hết quota thì chờ tới `reset_at` rồi gửi lại (lúc đó Gemini chưa vẽ gì).
   - `artgen prep`: sheet nhiều hàng mà cắt theo hàng ra sai (hàng dính nhau, ma bay tách khỏi xác) → tự cắt theo lưới cột × hàng, mỗi mảnh vào ô chứa tâm của nó.
