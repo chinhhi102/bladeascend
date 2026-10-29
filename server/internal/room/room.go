@@ -40,7 +40,6 @@ type Room struct {
 	// transfers: người chờ sang khu khác, gom lại rồi chuyển một lượt ở RANH GIỚI TICK —
 	// lúc không khu nào đang chạy, nên không cần khoá (xem Zone).
 	transfers []transfer
-	respawns  []pendingRespawn
 	recorder  Recorder
 	rng       *rand.Rand
 	botTimer  float64
@@ -439,7 +438,7 @@ func (r *Room) handleDeaths(z *Zone) {
 			r.detach(z, c)
 			continue
 		}
-		if b, ok := z.brains[p.ID]; ok && !r.respawnQueued(b.ID) {
+		if b, ok := z.brains[p.ID]; ok && !z.respawnQueued(b.ID) {
 			r.onBotDeath(z, p)
 		}
 	}
