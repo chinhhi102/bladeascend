@@ -23,17 +23,14 @@ import { STR } from './ui/strings';
 import { summaryScreen } from './ui/summary';
 
 /**
- * Phím dùng kỹ năng (spec §6.3). **Ctrl** là phím chính, Space giữ lại cho người đã quen.
+ * Phím dùng kỹ năng (spec §6.3): **Space**.
  *
- * ⚠ Ctrl có một cái bẫy của trình duyệt, không phải lỗi của game: phím đi là **WASD**, nên
- * vừa giữ Ctrl vừa bấm W là **Ctrl+W — đóng tab**. Chrome xếp Ctrl+W vào nhóm phím tắt dành
- * riêng cho trình duyệt, `preventDefault()` KHÔNG chặn được. Hai cách giảm thiệt hại:
- *   - Bấm Ctrl rồi nhả (kỹ năng tính lúc bấm xuống), đừng giữ — nhưng không ép được người chơi.
- *   - `lockKeyboard()` bên dưới: ở chế độ toàn màn hình thì Keyboard Lock API cho trang giữ
- *     luôn cả Ctrl+W. Đây là cách duy nhất chặn được thật, và chỉ chạy khi toàn màn hình.
- * Ai không muốn dính thì dùng phím mũi tên để đi, hoặc bấm nút kỹ năng trên màn hình.
+ * Từng thử **Ctrl** nhưng bỏ, và lý do đáng ghi lại để đừng ai đổi lại: phím đi là **WASD**,
+ * nên vừa giữ Ctrl vừa bấm W là **Ctrl+W — đóng tab**. Chrome xếp Ctrl+W vào nhóm phím tắt
+ * dành riêng cho trình duyệt, `preventDefault()` KHÔNG chặn được; cách duy nhất chặn thật là
+ * Keyboard Lock API, mà nó chỉ chạy ở chế độ toàn màn hình. Space không đụng phím tắt nào.
  */
-const SKILL_KEYS = ['ControlLeft', 'ControlRight', 'Space'];
+const SKILL_KEYS = ['Space'];
 
 const DEBUG_KEYS: Record<string, Record<string, unknown>> = {
   KeyE: { cmd: 'exp', n: 100 },
@@ -43,31 +40,6 @@ const DEBUG_KEYS: Record<string, Record<string, unknown>> = {
   KeyB: { cmd: 'bot', n: 0 }, // thả 1 bot cùng cảnh giới ngay cạnh mình
   KeyG: { cmd: 'skill', n: 1 }, // +1 lượt kỹ năng, khỏi phải đi nhặt Bí Kíp
 };
-
-/**
- * lockKeyboard giành lại **Ctrl+W** khi trang đang toàn màn hình.
- *
- * Keyboard Lock API chỉ chạy ở chế độ toàn màn hình — đó là ràng buộc của trình duyệt, cố
- * ý, để một trang bất kỳ không giam được người dùng trong tab. Vậy nên chỉ khoá đúng `KeyW`:
- * nó là phím duy nhất vừa là phím đi vừa là phím tắt phá game (Ctrl+W = đóng tab). Khoá thêm
- * phím khác là lấy mất của người chơi những phím tắt mà game không cần.
- *
- * Trình duyệt không có API này (Firefox, Safari) thì bỏ qua — không có cách nào khác, và
- * nút kỹ năng trên màn hình vẫn dùng được.
- */
-function lockKeyboard(): void {
-  const kb = (navigator as Navigator & {
-    keyboard?: { lock(keys?: string[]): Promise<void>; unlock(): void };
-  }).keyboard;
-  if (!kb) {
-    return;
-  }
-  if (document.fullscreenElement) {
-    void kb.lock(['KeyW']).catch(() => undefined);
-  } else {
-    kb.unlock();
-  }
-}
 
 /** fpsCap: 60 on PC, 45 on phones to save battery; override with ?fps=30 (M7). */
 function fpsCap(): number {
@@ -110,7 +82,6 @@ class App {
     await this.scene.init(stage, fpsCap());
     this.scene.app.ticker.add((t) => this.frame(t.deltaMS / 1000));
     window.setInterval(() => this.sendInput(), 1000 / this.cfg.net.tick_hz);
-    document.addEventListener('fullscreenchange', lockKeyboard);
     window.addEventListener('keydown', (e) => {
       if (this.playing && SKILL_KEYS.includes(e.code) && !e.repeat) {
         this.skillPressed = true; // kỹ năng nhân vật (spec §6.3)

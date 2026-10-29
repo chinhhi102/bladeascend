@@ -209,23 +209,20 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Lỗi / hạn chế đã biết
 
-- **⚠ Ctrl+W đóng tab, không chặn được (29/10/2026)**. Kỹ năng nay bấm bằng **Ctrl** theo yêu
-  cầu chủ dự án, mà phím đi là **WASD** — vừa giữ Ctrl vừa bấm W là trình duyệt đóng tab.
-  Chrome xếp Ctrl+W vào nhóm phím tắt dành riêng cho trình duyệt, `preventDefault()` không
-  chặn được; đây là giới hạn của trình duyệt chứ không phải lỗi sửa được trong game. Ba cách
-  né, không cách nào triệt để:
-  - `lockKeyboard()` trong `main.ts` — Keyboard Lock API giữ lại `KeyW`, nhưng **chỉ chạy khi
-    toàn màn hình** (ràng buộc cố ý của trình duyệt) và chỉ có trên Chrome/Edge.
-  - Bấm Ctrl rồi nhả thay vì giữ (kỹ năng tính lúc bấm xuống).
-  - Đi bằng phím mũi tên, hoặc bấm nút kỹ năng trên màn hình.
-  Nếu người chơi phản ánh mất tab thì phương án chắc ăn là đổi sang phím không phải phím
-  tắt trình duyệt (`Q`, `F`, hoặc chuột phải).
 - **Điều khiển gọn lại (29/10/2026)**. Thiêu Đốt Tinh Huyết thêm cách **nháy đúp rồi giữ**
   (300 ms, lệch dưới 40 px) bên cạnh Shift và nút 🔥 — hai cách cũ đều đòi tay thứ hai, còn
-  nháy đúp giữ nguyên ngón/tay đang lái. Kỹ năng thêm **Ctrl** bên cạnh Space và nút bấm.
-  Luật nhận nháy đúp (`tapDown`) viết một lần dùng chung cho chuột và cảm ứng, vì tách làm
-  hai bản là kiểu lỗi chỉ hiện trên đúng một loại thiết bị. Thêm phím test **G** (+1 lượt kỹ
-  năng) — không có nó thì muốn thử kỹ năng phải chạy quanh bản đồ chờ Bí Kíp rơi.
+  nháy đúp giữ nguyên ngón/tay đang lái. Luật nhận nháy đúp (`tapDown`) viết một lần dùng
+  chung cho chuột và cảm ứng, vì tách làm hai bản là kiểu lỗi chỉ hiện trên đúng một loại
+  thiết bị. Thêm phím test **G** (+1 lượt kỹ năng) — không có nó thì muốn thử kỹ năng phải
+  chạy quanh bản đồ chờ Bí Kíp rơi.
+- **Kỹ năng giữ phím Space, KHÔNG dùng Ctrl (29/10/2026)**. Có thử Ctrl một nhịp rồi bỏ; lý
+  do ghi lại ở đây để đừng ai đổi lại: phím đi là **WASD**, nên vừa giữ Ctrl vừa bấm W là
+  **Ctrl+W — đóng tab**. Chrome xếp Ctrl+W vào nhóm phím tắt dành riêng cho trình duyệt,
+  `preventDefault()` không chặn được. Cách duy nhất chặn thật là Keyboard Lock API, mà nó
+  **chỉ chạy ở chế độ toàn màn hình** (ràng buộc cố ý của trình duyệt, để trang web bất kỳ
+  không giam được người dùng trong tab) và chỉ có trên Chrome/Edge — tức là người chơi cửa
+  sổ thường vẫn mất tab. Space không đụng phím tắt nào. Cùng lý do đó, tránh `Ctrl`, `Alt`
+  và `F`-key cho bất kỳ phím game nào sau này.
 - **HUD trái tự đè lên nhau — đã sửa (29/10/2026)**. Ba khối bên trái (chỉ số · hàng buff ·
   minimap) trước đây mỗi khối một `top:` cố định (12 / 84 / 136 px). Hễ khối chỉ số cao thêm
   một dòng — thanh Tiên khí ở Tiên giới, rồi nhãn tên khu mới thêm — là nó tràn xuống đè

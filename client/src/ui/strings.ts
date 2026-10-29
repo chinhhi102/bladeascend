@@ -44,14 +44,14 @@ export const STR = {
   versionMismatch: 'Máy chủ vừa được cập nhật. Hãy tải lại trang (Ctrl+F5) để chơi tiếp.',
   disconnected: 'Mất kết nối với máy chủ. Đang thử lại...',
   badName: 'Tên phải dài 2–16 ký tự.',
-  controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Thiêu Đốt Tinh Huyết: giữ Shift, hoặc nháy đúp chuột rồi giữ. Kỹ năng: Ctrl. Không có nút đánh — kiếm tự xoay!',
+  controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Thiêu Đốt Tinh Huyết: giữ Shift, hoặc nháy đúp chuột rồi giữ. Kỹ năng: Space. Không có nút đánh — kiếm tự xoay!',
   qualitySet: (name: string) => `Chất lượng đồ họa: ${name} (phím V để đổi)`,
   controlsMobile: 'Kéo ngón tay để di chuyển. Thiêu Đốt Tinh Huyết: chạm 2 lần rồi giữ, hoặc giữ nút 🔥. Kiếm tự xoay!',
 
   // Thiêu Đốt Tinh Huyết (spec §4.1c)
   burnName: 'Thiêu Đốt Tinh Huyết',
   burnHint: (mult: number) => `Giữ Shift hoặc nháy đúp rồi giữ: chạy nhanh ×${mult}, đốt tu vi mỗi giây`,
-  skillBtnHint: (isTouch: boolean) => (isTouch ? 'Kỹ năng — chạm để dùng' : 'Kỹ năng — bấm Ctrl hoặc nhấn vào đây'),
+  skillBtnHint: (isTouch: boolean) => (isTouch ? 'Kỹ năng — chạm để dùng' : 'Kỹ năng — bấm Space hoặc nhấn vào đây'),
   burnSpent: 'Tu vi đã thiêu đốt',
   burnEmpty: 'Cạn tinh huyết rồi!',
   debugHelp: 'Phím test: E +100 EXP · R lên cảnh giới · K +10 kiếm · G +1 lượt kỹ năng · B thả 1 bot cạnh mình · 1–7 buff · X tự chết · H xem hitbox kiếm',
@@ -258,7 +258,7 @@ export const STR = {
       : [
           { key: 'W A S D', what: 'Di chuyển' },
           { key: 'Shift', what: 'Chạy nhanh' },
-          { key: 'Ctrl', what: 'Kỹ năng' },
+          { key: 'Space', what: 'Kỹ năng' },
           { key: 'M', what: 'Bản đồ' },
         ],
 };
