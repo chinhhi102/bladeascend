@@ -79,3 +79,32 @@ thì bấm thế nào cũng không chạy nhanh. Đã khoá bằng
 3. Cho đốt EXP xuống dưới đáy cảnh giới chỉ riêng ở Tiên giới.
 
 **Claude không tự chọn**: đây là đổi luật chơi, không phải sửa lỗi.
+
+## Q25 — Bảng tỉ lệ thắng sau v5.4/v5.5 (spec mục 21 và 27 nhờ gửi bảng)
+
+Đã chạy `go run ./cmd/sim --duel` sau khi code xong v5.4 + v5.5. **Đọc bảng này cần một
+cảnh báo trước**: bài đo cũ cho mỗi bên một vòng kiếm (10) trong khi trần Kim Đan là 100,
+nên nó thổi phồng gấp mười mọi kỹ năng tính theo trần — Bánh Bao Thần ra 100% thắng. Đã đổi
+mặc định sang **đủ trần cảnh giới** (9% hoà, còn ít hơn kiểu cũ 18%). Bảng dưới là bản mới.
+
+| Nhân vật | Tỉ lệ thắng | Khắc được | Bị khắc bởi |
+|---|---|---|---|
+| Đại Ca Dép | **87,0%** | 8 người | Cô Ba |
+| Bé Tí | **85,2%** | 7 người | Cô Ba, Đại Ca |
+| A Hớn | **75,9%** | 6 người | Bé Tí, Cô Ba, Đại Ca |
+| Cô Ba Gánh | 53,7% | 5 người | A Hớn, Bà Tám, Bé Tí |
+| Cụ Rùa | 42,6% | 5 người | 4 người |
+| Shipper | 31,5% | Bà Tám | 7 người |
+| Bà Tám Loa | 24,1% | Thằng Mập | 8 người |
+| Ông Ba Võng | 22,2% | Sư Phụ Mì | 5 người |
+| Thằng Mập | 20,4% | **không ai** | 8 người |
+| Sư Phụ Mì | 13,0% | Bà Tám | 8 người |
+
+**Điểm sáng**: 9/10 nhân vật đều vừa khắc được ai đó vừa bị ai đó khắc — đúng ý anh
+*"không phải ai yếu ai mạnh mà nên là khắc chế lẫn nhau"*. Kể cả Đại Ca 87% vẫn bị Cô Ba
+khắc, nên không ai là lựa chọn vô đối.
+
+**Ba chỗ lệch**: Đại Ca 87% và Bé Tí 85% quá cao (spec nói > 60% là phải giảm); Thằng Mập
+không khắc được ai. Tôi **chưa chỉnh** vì anh đã nhắn *"không nhất thiết phải cân bằng, cứ
+để người chơi feedback"*, và vì mọi con số này đều là số spec vừa chốt. Nếu anh muốn chỉnh
+thì ba nút gần nhất: `dan_em_sword_share` (0.5), `brace_secs` (5), `tran_chau_secs` (5).

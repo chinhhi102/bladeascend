@@ -197,17 +197,23 @@ export function moveStep(
   speedMult = 1,
   vel: Vec = { x: 0, y: 0 },
   moving = true,
+  ghost = false,
 ): { pos: Vec; vel: Vec } {
   const r = cfg.player.body_r * scale;
+  // Giao Hỏa Tốc (spec v5.5 §6.3): xuyên MỌI vật cản, chỉ còn biên khu chặn. Phải có ở
+  // đây chứ không chỉ ở server — client dự đoán bị tường chặn trong khi server cho đi
+  // xuyên là lệch vị trí mỗi tick, đúng loại lỗi giật mà §8.2a vừa sửa xong.
+  const settle = (p: Vec): Vec =>
+    ghost ? clampPlay(p, r, map.size, map.play_margin ?? 0) : resolveBlocking(p, r, map, broken);
   if (onIce(map, from)) {
     const step = iceStep(cfg, from, vel, angle, moving, dt, speedMult);
-    return { pos: resolveBlocking(step.pos, r, map, broken), vel: step.vel };
+    return { pos: settle(step.pos), vel: step.vel };
   }
   if (!moving) {
-    return { pos: resolveBlocking(from, r, map, broken), vel: { x: 0, y: 0 } };
+    return { pos: settle(from), vel: { x: 0, y: 0 } };
   }
   const dir = { x: Math.cos(angle), y: Math.sin(angle) };
   const speed = cfg.player.move_base * speedMult * zoneMult(cfg, map, from, dir);
   const to = { x: from.x + dir.x * speed * dt, y: from.y + dir.y * speed * dt };
-  return { pos: resolveBlocking(to, r, map, broken), vel: { x: 0, y: 0 } };
+  return { pos: settle(to), vel: { x: 0, y: 0 } };
 }

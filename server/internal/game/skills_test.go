@@ -198,23 +198,35 @@ func TestRutCoProtectsThenBursts(t *testing.T) {
 	}
 }
 
-// Bánh Bao Thần chỉ hồi phần kiếm bể TRONG CỬA SỔ 10 giây, không hồi cả trận (spec §6.3).
-func TestBanhBaoOnlyRestoresRecentLosses(t *testing.T) {
+// Bánh Bao Thần hồi 20% số kiếm TỐI ĐA của cảnh giới, không phụ thuộc vừa bị đánh hay chưa
+// (spec v5.5 §6.3).
+func TestBanhBaoRestoresShareOfMax(t *testing.T) {
 	g := skillGame(t)
-	// Để số kiếm thấp hơn trần của cảnh giới, nếu không AddSwords bị chặn và phép đo thành
-	// vô nghĩa — không phải lỗi kỹ năng mà là test tự đặt sai.
 	p := put(g, "a_hon", Vec{X: 3000, Y: 3000}, 30, 10)
+	maxSw := g.Prog.MaxSwords(g.Prog.Realm(p.Level))
 
-	g.noteSwordLoss(p, 100)                                 // bể từ lâu
-	g.Time += g.Cfg.Skills.BanhBaoWindowSecs + 1            // ... quá cửa sổ
-	g.noteSwordLoss(p, 20)                                  // bể gần đây
 	before := p.Ring.Count
 	g.AddSkillCharge(p)
 	g.CastSkill(p)
 
-	want := int(20 * g.Cfg.Skills.BanhBaoShare)
+	want := int(float64(maxSw) * g.Cfg.Skills.BanhBaoMaxShare)
 	if got := p.Ring.Count - before; got != want {
-		t.Fatalf("hồi %d kiếm, muốn %d — đang tính cả phần bể quá lâu", got, want)
+		t.Fatalf("hồi %d kiếm, muốn %d (20%% của trần %d)", got, want, maxSw)
+	}
+}
+
+// ... và không bao giờ vượt trần của cảnh giới: gần đầy kiếm thì chỉ hồi phần còn thiếu.
+func TestBanhBaoNeverExceedsMax(t *testing.T) {
+	g := skillGame(t)
+	p := put(g, "a_hon", Vec{X: 3000, Y: 3000}, 30, 10)
+	maxSw := g.Prog.MaxSwords(g.Prog.Realm(p.Level))
+	g.AddSwords(p, maxSw-p.Ring.Count-1) // còn thiếu đúng 1 kiếm
+
+	g.AddSkillCharge(p)
+	g.CastSkill(p)
+
+	if p.Ring.Count != maxSw {
+		t.Fatalf("có %d kiếm, trần là %d — phải lấp đúng tới trần", p.Ring.Count, maxSw)
 	}
 }
 
@@ -261,8 +273,8 @@ func TestMinionsExpire(t *testing.T) {
 	}
 }
 
-// Giao Hỏa Tốc đi xuyên vật cản PHÁ ĐƯỢC nhưng không xuyên tường không phá được.
-func TestGhostPassesBreakableOnly(t *testing.T) {
+// Giao Hỏa Tốc đi xuyên MỌI vật cản (spec v5.5 §6.3), nhưng vẫn không ra khỏi biên khu.
+func TestGhostPassesEverythingButBorder(t *testing.T) {
 	cfg := config.MustLoadDefault()
 	cfg.Room.MonsterCount, cfg.Items.CountPerRoom = 0, 0
 	m := world.EmptyMap(cfg.Room.MapSize)
@@ -275,13 +287,60 @@ func TestGhostPassesBreakableOnly(t *testing.T) {
 	g.AddSkillCharge(p)
 	g.CastSkill(p)
 
-	inBrick := g.resolveBlockingFor(p, Vec{X: 3300, Y: 3000}, g.BodyR(p))
-	if inBrick.Dist(Vec{X: 3300, Y: 3000}) > 1e-9 {
-		t.Fatal("đang Giao Hỏa Tốc mà vẫn bị tường gạch (phá được) chặn")
+	for _, c := range []struct {
+		name string
+		at   Vec
+	}{
+		{"tường gạch (phá được)", Vec{X: 3300, Y: 3000}},
+		{"vách đá (KHÔNG phá được)", Vec{X: 4300, Y: 3000}},
+	} {
+		if got := g.resolveBlockingFor(p, c.at, g.BodyR(p)); got.Dist(c.at) > 1e-9 {
+			t.Errorf("đang Giao Hỏa Tốc mà vẫn bị %s chặn", c.name)
+		}
 	}
-	inWall := g.resolveBlockingFor(p, Vec{X: 4300, Y: 3000}, g.BodyR(p))
-	if inWall.Dist(Vec{X: 4300, Y: 3000}) < 1e-9 {
-		t.Fatal("xuyên qua cả tường KHÔNG phá được — spec cấm")
+
+	// Biên khu thì không: spec nói rõ "trừ biên khu vực". Cho xuyên luôn thì Shipper ra
+	// đứng ngoài bản đồ và không gì kéo vào lại.
+	out := Vec{X: -500, Y: 3000}
+	if got := g.resolveBlockingFor(p, out, g.BodyR(p)); got.Dist(out) < 1e-9 {
+		t.Error("xuyên ra ngoài biên khu — spec cấm")
+	}
+}
+
+// Hết Giao Hỏa Tốc giữa lòng vật cản thì được đẩy MƯỢT ra chỗ trống, không bật ra tức thời.
+func TestGhostUnsticksSmoothly(t *testing.T) {
+	cfg := config.MustLoadDefault()
+	cfg.Room.MonsterCount, cfg.Items.CountPerRoom = 0, 0
+	m := world.EmptyMap(cfg.Room.MapSize)
+	m.Obstacles = []world.Obstacle{
+		{ID: 0, Kind: "stone_wall", MaxHP: 0, Shape: world.Shape{X: 3200, Y: 2900, W: 400, H: 400}},
+	}
+	g := New(cfg, m, 1)
+	p := put(g, "shipper", Vec{X: 3000, Y: 3000}, 10, 20)
+	g.AddSkillCharge(p)
+	g.CastSkill(p)
+
+	// Đi vào giữa vách đá rồi để kỹ năng hết hạn.
+	stuck := Vec{X: 3400, Y: 3100}
+	p.Pos = stuck
+	dt := 1.0 / 30
+	g.Time += g.Cfg.Skills.GhostSecs + 0.01
+	g.updateSkillState(dt)
+
+	if p.unstickUntil <= g.Time {
+		t.Fatal("hết Giao Hỏa Tốc trong lòng vách đá mà không khởi động việc đẩy ra")
+	}
+	if p.Pos.Dist(stuck) > 1e-9 {
+		t.Fatalf("bật ra ngay %0.1f đơn vị — phải trượt dần, nếu không client thấy giật",
+			p.Pos.Dist(stuck))
+	}
+	// Chạy hết 0,3 giây: phải ra tới chỗ trống thật.
+	for i := 0; i < int(g.Cfg.Skills.GhostUnstickSecs/dt)+2; i++ {
+		g.Time += dt
+		g.updateSkillState(dt)
+	}
+	if free := g.resolveBlocking(p.Pos, g.BodyR(p)); free.Dist(p.Pos) > 1e-6 {
+		t.Errorf("đẩy xong vẫn còn kẹt trong vật cản (lệch %.1f)", free.Dist(p.Pos))
 	}
 }
 

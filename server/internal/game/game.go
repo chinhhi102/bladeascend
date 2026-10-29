@@ -12,13 +12,13 @@ import (
 
 // Event is sent to clients (spec §13.3). Kind names match the spec's event list.
 type Event struct {
-	Kind   string  `msgpack:"k"`
-	A      uint32  `msgpack:"a,omitempty"`
-	B      uint32  `msgpack:"b,omitempty"`
-	X      float32 `msgpack:"x"`
-	Y      float32 `msgpack:"y"`
-	N      int     `msgpack:"n,omitempty"`
-	S      string  `msgpack:"s,omitempty"`
+	Kind string  `msgpack:"k"`
+	A    uint32  `msgpack:"a,omitempty"`
+	B    uint32  `msgpack:"b,omitempty"`
+	X    float32 `msgpack:"x"`
+	Y    float32 `msgpack:"y"`
+	N    int     `msgpack:"n,omitempty"`
+	S    string  `msgpack:"s,omitempty"`
 	// F: một số thực đi kèm — ví dụ số giây của một trạng thái (spec §6.3).
 	F      float32 `msgpack:"f,omitempty"`
 	Global bool    `msgpack:"-"` // broadcast to the whole room regardless of AOI
@@ -33,10 +33,10 @@ type Game struct {
 	Rng  *rand.Rand
 	Time float64
 
-	altars    []altarState
-	Players   map[uint32]*Player
-	Monsters  map[uint32]*Monster
-	Items     map[uint32]*Item
+	altars   []altarState
+	Players  map[uint32]*Player
+	Monsters map[uint32]*Monster
+	Items    map[uint32]*Item
 	// ZoneIndex: khu này là khu thứ mấy của phòng (spec §8.0). Phòng đặt lúc dựng.
 	ZoneIndex int
 	// GateRouter / MoveToZone: do phòng cài, để cổng dịch chuyển đi được sang khu khác.
@@ -47,9 +47,9 @@ type Game struct {
 	itemSlots []*Item
 	freeSlots []int
 	// bladeBuf dùng lại giữa các lần so kiếm — spec §13.4 cấm cấp phát trong vòng nóng.
-	bladeBuf  []blade
+	bladeBuf []blade
 	// obsBuf: danh sách id vật cản gần, dùng lại để khỏi cấp phát mỗi bước di chuyển.
-	obsBuf    []int
+	obsBuf []int
 	// slicks: vệt trơn do Gánh Lướt rơi lại (spec §6.3).
 	slicks    []slick
 	Obstacles []ObstacleState

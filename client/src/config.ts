@@ -49,6 +49,12 @@ export interface GameConfig {
   buffs: Record<string, BuffCfg>;
   /** Mặt băng ở Băng Nguyệt Hồ (spec §8.0): quán tính khi trượt. */
   ice: { friction: number; accel: number };
+  /**
+   * Kỹ năng nhân vật (spec §6.3). Client chỉ cần những con số ảnh hưởng tới **dự đoán vị
+   * trí**: dự đoán sai tốc độ là bị server kéo về mỗi tick (§8.2a). Phần còn lại của bảng
+   * kỹ năng là việc của server.
+   */
+  skills: { ru_ngu_move: number; ghost_speed: number; tran_chau_secs: number };
   zones: { mud_mult: number; snow_mult: number; wind_with: number; wind_against: number; wind_with_max_deg: number; wind_against_min_deg: number };
   gates: { radius: number };
   items: { item_r: number; chest_warn_secs: number };

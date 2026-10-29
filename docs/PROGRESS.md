@@ -209,6 +209,41 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Lỗi / hạn chế đã biết
 
+- **Spec v5.4 + v5.5 — chỉnh 10 kỹ năng (29/10/2026, §6.3)**. Mọi con số vào `config/game.json`,
+  có `TestSkillDurationsMatchSpec` khoá lại để lần sau spec đổi mà quên sửa config thì test đỏ.
+  - **Bánh Bao Thần đổi hẳn luật**: trước hồi 30% số kiếm bể trong 10 giây, giờ hồi thẳng
+    **20% số kiếm tối đa của cảnh giới**. Luật cũ có lỗ không chữa được bằng cách chỉnh số:
+    ai chưa bị đánh thì ăn bánh bao chẳng được gì, nên kỹ năng vô dụng đúng lúc muốn dùng
+    nhất. Sổ ghi kiếm bể (`lostSwords`) gỡ bỏ hẳn.
+  - **Gọi Đàn Em**: 2 đàn em, 10s, mỗi con mang **50% số kiếm hiện tại của đại ca** (tối
+    thiểu 1) xếp vòng như người chơi, nhỏ hơn 30%, không nhặt đồ, không qua cổng. Đại ca
+    không bị trừ kiếm.
+  - **Giao Hỏa Tốc**: ×3 trong 5s, xuyên **mọi** vật cản (trước chỉ xuyên thứ phá được),
+    trừ biên khu. Hết giờ mà kẹt trong vật cản → trượt mượt ra chỗ trống trong 0,3s bằng
+    chính `resolveBlocking` — không bật ra tức thời, vì nhảy một phát là client thấy đúng
+    kiểu giật mà §8.2a vừa sửa xong.
+  - **Phun Trân Châu**: 5s, và trong 5s đó **không nhặt được gì** — chặn ở đúng một cửa
+    (`CanPickUp`, ngay đầu `resolvePickups`) chứ không rải vào từng loại vật phẩm, vì spec
+    nói cả vật phẩm/Linh khí/Tiên khí/Bí Kíp đều đi xuyên qua. Người ngoài thấy icon 🚫 bay
+    quanh nạn nhân: lớp trân châu chỉ nạn nhân nhìn thấy, không có icon thì từ ngoài nhìn
+    vào không ai hiểu vì sao họ đứng cạnh viên Linh khí mà không nhặt.
+  - **Gánh Lướt**: vệt trái cây giờ gây **choáng** (`StStun`) cùng lúc với trượt — không đi,
+    không dùng kỹ năng, không Thiêu Đốt, kiếm vẫn quay. Tách khỏi `StSlip` vì trượt là đổi
+    *cách* di chuyển còn choáng là *cấm* di chuyển.
+  - Lưới Mì 5s · Gồng Cơ 5s · Rụt Cổ 5s · Loa Phường đẩy 500 · Ru Ngủ bán kính 500.
+- **Bài đối chiếu va chạm phủ thêm Giao Hỏa Tốc (29/10/2026)**. Kỹ năng này đổi **cả hai**
+  thứ quyết định vị trí — tốc độ ×3 và xuyên vật cản — nên nếu client không biết thì lệch
+  mỗi tick. 1/4 số ca trong `cmd/collisionfixture` giờ đang xuyên. Đo: **0,0000 đơn vị lệch**
+  trên 1 500 bước × 5 bản đồ; và khi cố tình tắt phần xuyên ở client thì bài kiểm báo **46 ca
+  quá ngưỡng, nặng nhất 100,6 đơn vị** — nên đây không phải một dòng chữ xanh vô nghĩa.
+- **⚠ Bài đấu từng cặp trước đây đo sai (sửa 29/10/2026)**. `--duel` cho mỗi bên **một vòng
+  kiếm** (10 kiếm) trong khi trần Kim Đan là **100** — tức 1/10 số kiếm thật của người chơi
+  cùng cảnh giới. Mọi kỹ năng tính theo TRẦN cảnh giới bị thổi phồng gấp mười: Bánh Bao Thần
+  ra **100% thắng (54/54)** với một vòng, **75,9%** với đủ kiếm. Lý do cũ của việc dùng một
+  vòng là "2 vòng trở lên thì 85% trận hoà", nhưng con số ấy đo TRƯỚC khi `clash_cooldown`
+  về 0; đo lại thì đủ kiếm chỉ **9% hoà**, còn ít hơn một vòng (18%). Mặc định đã đổi sang
+  **đủ trần cảnh giới**; `--duel-swords N` để quay lại kiểu cũ.
+
 - **Data race thứ 6 — `moveToZone` đọc map của khu khác (sửa 29/10/2026)**. Lúc chia năm khu
   ra năm goroutine tôi tìm và sửa 5 race; con thứ 6 lọt vì nó nấp sau một hàm trông vô hại.
   `MoveToZone` (cổng dịch chuyển gọi, chạy TRONG goroutine của một khu) gọi `zoneOf(p.ID)`,

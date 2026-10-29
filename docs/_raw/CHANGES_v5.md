@@ -34,3 +34,16 @@ Anh đã dán GAME_SPEC v5.0 vào docs/_raw/. Làm theo thứ tự, mỗi phần
 16. mapgen 4 khu (trừ Thiên Đình): chừa quảng trường bán kính 500 ở tâm, ≥ 2 đường dẫn vào, đặt Thiên Môn. Thiên Đình: 4 Bến Thiên Môn cách tâm ~1 400 ở đầu 4 đường chính, trống bán kính 400.
 17. Thiên Môn: một chiều, luôn ra ở bến cố định theo khu (`heaven_gate.map`), cùng luật cổng thường (0.8s, không bất tử khi ra, bến lóe trước 0.5s, cooldown chung 8s).
 18. Hiển thị: cổng to + cột sáng thấy từ xa, icon minimap luôn hiện + mũi tên chỉ hướng ở góc minimap. Bot dùng khi ≥ Đại Thừa hoặc Thiên Tiên Đài sắp phun. Kill feed khi Top 3 qua Thiên Môn.
+
+## v5.4 — Chỉnh kỹ năng (§6.3)
+19. Đại Ca **Gọi Đàn Em**: 2 đàn em tồn tại 10s; mỗi đàn em có số kiếm = floor(50% số kiếm hiện tại của đại ca), tối thiểu 1, xếp vòng như người chơi, cùng cảnh giới; nhỏ hơn đại ca 30%; không chém thân, không nhặt đồ, không qua cổng; hết kiếm/hết giờ thì biến mất. Đại ca không bị trừ kiếm. Chú ý hiệu năng: đàn em dùng chung đường vẽ vòng kiếm (texture) và va chạm theo vòng như người chơi.
+20. Sư Phụ Mì **Lưới Mì**: trói 5s. Bé Tí **Gồng Cơ**: 5s. Cụ Rùa **Rụt Cổ**: 5s.
+21. Cập nhật test + chạy lại `cmd/sim --duel`, gửi bảng tỉ lệ thắng 10×10.
+
+## v5.5 — Chỉnh kỹ năng lần 2 (§6.3)
+22. A Hớn: hồi ngay 20% số kiếm tối đa của cảnh giới (không vượt tối đa, lấp vòng trong trước).
+23. Bà Tám: đẩy lùi 500. Ông Ba Võng: bán kính 500.
+24. Thằng Mập: bịt mắt 5s + không nhặt được gì trong 5s (server bỏ qua nhặt đồ, item đi xuyên), icon 🚫 quanh nhân vật; bot tương tự.
+25. Cô Ba: trượt 1s = choáng (không điều khiển, không dùng kỹ năng/Thiêu Đốt, kiếm vẫn quay).
+26. Shipper: tốc × 3 trong 5s, xuyên mọi vật cản kể cả không phá được, không xuyên biên khu; hết giờ kẹt trong vật cản → đẩy mượt ra chỗ trống gần nhất 0.3s (dùng chung mã va chạm client/server).
+27. Cập nhật test + chạy lại `cmd/sim --duel`.

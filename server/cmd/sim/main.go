@@ -36,11 +36,13 @@ func main() {
 	farm := flag.Bool("farm", false, "nobody can be hit: measures pure farming pace (spec §6.1 target 60–90s to Trúc Cơ)")
 	duel := flag.Bool("duel", false, "đấu từng cặp nhân vật để đo cân bằng kỹ năng (spec §6.3)")
 	duelRounds := flag.Int("duel-rounds", 6, "số trận mỗi cặp khi chạy --duel")
+	duelSw := flag.Int("duel-swords", 0, "số kiếm mỗi bên khi --duel; 0 = đầy trần cảnh giới")
 	duelSecs := flag.Float64("duel-secs", 45, "số giây mỗi trận khi chạy --duel")
 	flag.Parse()
 
 	cfg := config.MustLoadDefault()
 	if *duel {
+		duelSwords = *duelSw
 		runDuels(cfg, *seed, *duelRounds, *duelSecs)
 		return
 	}
