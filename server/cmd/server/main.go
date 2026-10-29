@@ -1,6 +1,6 @@
 // Command server runs the game: HTTP API, WebSocket rooms and the built client.
 //
-//	go run ./cmd/server              # http://localhost:8080
+//	go run ./cmd/server              # http://localhost:9999
 //	go run ./cmd/server -debug=false # production: disable debug keys
 package main
 
@@ -22,10 +22,10 @@ import (
 )
 
 func main() {
-	// Mặc định CHỈ nghe trên máy này, không mở ra mạng LAN. `:8080` nghe trên mọi card
-	// mạng, nghĩa là ai cùng Wi-Fi cũng vào được — không muốn thế thì phải nói rõ.
-	// Muốn cho máy khác vào: `go run ./cmd/server -addr :8080`.
-	addr := flag.String("addr", "127.0.0.1:8080", "địa chỉ nghe; để \":8080\" nếu muốn mở ra mạng LAN")
+	// `:9999` nghe trên MỌI card mạng, nên máy khác cùng Wi-Fi vào được bằng
+	// `http://<IP-máy-này>:9999`. Muốn đóng lại, chỉ cho máy này chơi:
+	// `go run ./cmd/server -addr 127.0.0.1:9999`.
+	addr := flag.String("addr", ":9999", "địa chỉ nghe; \":9999\" = mở ra mạng LAN, \"127.0.0.1:9999\" = chỉ máy này")
 	cfgPath := flag.String("config", config.FindRepoFile("config/game.json"), "config file")
 	mapsDir := flag.String("maps", config.FindRepoFile("maps"), "Tiled maps directory")
 	assetsDir := flag.String("assets", config.FindRepoFile("assets"), "assets directory")

@@ -5,9 +5,9 @@
 //   node run.mjs --tabs 10 --warmup 30 --fight 60
 //
 // Bài test **tự dựng một server riêng** ở cổng 8099 với database tạm, rồi tắt khi xong —
-// không đụng tới server 8080 đang có người chơi thật. 10 bot giả sẽ không chen vào phòng
+// không đụng tới server 9999 đang có người chơi thật. 10 bot giả sẽ không chen vào phòng
 // của ai, và bảng xếp hạng thật cũng không bị bẩn.
-// Muốn dùng server có sẵn thì: `node run.mjs --port 8080 --no-spawn` (nhớ server đó phải
+// Muốn dùng server có sẵn thì: `node run.mjs --port 9999 --no-spawn` (nhớ server đó phải
 // chạy với `-max-conns-per-ip 40`, vì 10 tab cùng đến từ 127.0.0.1).
 //
 // Mỗi tab là một **browser context riêng** → localStorage riêng, coi như một người chơi

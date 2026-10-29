@@ -1,13 +1,13 @@
 import { defineConfig } from 'vite';
 
-// The Go server (port 8080) owns the API, WebSocket and assets; Vite proxies to it in dev.
-// Chỉ nghe trên máy này: không mở ra mạng LAN. Muốn cho điện thoại cùng Wi-Fi vào thì chạy
-// `npm run dev -- --host` (và server Go cũng phải chạy với `-addr :8080`).
-// Override with KX_SERVER=http://localhost:8090 npm run dev when port 8080 is busy.
-const target = process.env.KX_SERVER ?? 'http://localhost:8080';
+// The Go server (port 9999) owns the API, WebSocket and assets; Vite proxies to it in dev.
+// host: true để điện thoại cùng Wi-Fi mở được http://<IP-PC>:5173.
+// Override with KX_SERVER=http://localhost:8090 npm run dev when port 9999 is busy.
+const target = process.env.KX_SERVER ?? 'http://localhost:9999';
 
 export default defineConfig({
   server: {
+    host: true,
     proxy: {
       '/api': target,
       '/assets': target,
