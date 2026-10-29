@@ -15,6 +15,14 @@ import (
 //     và vẫn có khu trống trơn — người chơi qua cổng sang đó thấy một thế giới chết.
 func (r *Room) updateBots(dt float64) {
 	r.processRespawns()
+	// Vá sàn chạy MỖI TICK, không theo nhịp sinh bot. Bot đi lại giữa các khu bất cứ lúc
+	// nào (qua cổng, hồi sinh), nên một khu có thể tụt xuống dưới sàn ngay giữa hai nhịp
+	// sinh bot — mà nhịp đó là 2 giây. Buộc phải chờ hết nhịp mới sửa thì người chơi vừa
+	// bước qua cổng có thể rơi vào một khu gần như trống. Việc này rẻ: 5 khu, vài phép so.
+	//
+	// Phòng đã chạm trần thì không sinh thêm được, nên cách duy nhất là ĐIỀU bot từ khu đông
+	// sang — đó chính là việc `rebalanceZones` làm.
+	r.rebalanceZones()
 	r.botTimer += dt
 	if r.botTimer < r.cfg.Bots.SpawnEverySecs {
 		return
@@ -24,10 +32,6 @@ func (r *Room) updateBots(dt float64) {
 	// trần thì phải bớt bot NGAY, không đợi bot chết. Chờ chết thì một phòng đông người có
 	// thể vượt trần suốt mấy phút.
 	r.trimOverCap()
-	// Bot đi lại giữa các khu (qua cổng, hồi sinh) nên một khu có thể tụt xuống dưới sàn
-	// trong khi phòng đã chạm trần — lúc đó không sinh thêm được, phải ĐIỀU bot từ khu đông
-	// sang. Không làm thế thì sàn mỗi khu chỉ đúng lúc mới mở phòng.
-	r.rebalanceZones()
 	room := r.Humans() + r.Bots()
 	target := r.cfg.Room.BotFillTarget
 	// Chỉ `bot_fill_target` mới chặn việc sinh bot. `max_humans` là trần NGƯỜI THẬT, hai
@@ -69,33 +73,79 @@ func (r *Room) trimOverCap() {
 	}
 }
 
-// rebalanceZones điều một bot từ khu đông nhất sang khu đang dưới sàn.
+// rebalanceZones điều bot từ khu đông sang khu đang dưới sàn.
+//
+// Chỗ dễ sai nhất ở đây là **việc chuyển khu chỉ xảy ra ở ranh giới tick**, nên `z.Count()`
+// KHÔNG nhúc nhích trong lúc vòng lặp này chạy. Bản trước đọc thẳng `Count()` nên cả năm
+// lượt đều thấy y hệt tình trạng cũ, xếp năm lệnh chuyển cùng một chiều, và khu cho đi bị
+// rút quá tay thành khu thiếu mới — lượt sau kéo ngược về, cứ thế qua lại. Triệu chứng là
+// phòng đủ 60 nhân vật mà vẫn luôn có một khu 8–9 người, lúc này lúc khác.
+//
+// Nên ở đây phải tự cộng sổ phần đã xếp hàng (`delta`) và quyết định theo con số DỰ KIẾN.
 func (r *Room) rebalanceZones() {
+	delta := make(map[*Zone]int, len(r.zones))
+	count := func(z *Zone) int { return z.Count() + delta[z] }
+	floor := r.cfg.Room.ZoneMinChars
+
 	for i := 0; i < len(r.zones); i++ {
-		thin := r.zoneBelowFloor()
+		var thin *Zone
+		for _, z := range r.zones {
+			if count(z) >= floor {
+				continue
+			}
+			if thin == nil || count(z) < count(thin) {
+				thin = z
+			}
+		}
 		if thin == nil {
-			return
+			return // mọi khu đã đạt sàn, hoặc sẽ đạt sau khi hàng chờ chạy
 		}
 		var fat *Zone
 		for _, z := range r.zones {
 			if z == thin || len(z.brains) == 0 {
 				continue
 			}
-			if fat == nil || z.Count() > fat.Count() {
+			if fat == nil || count(z) > count(fat) {
 				fat = z
 			}
 		}
-		// Chỉ điều khi khu kia thật sự dư: điều qua điều lại giữa hai khu cùng thiếu thì
-		// chỉ làm bot nhấp nháy giữa hai bản đồ.
-		if fat == nil || fat.Count() <= thin.Count()+1 {
+		// Hai điều kiện, hai lý do khác nhau:
+		//   - khu kia phải thật sự dư, nếu không bot chỉ nhấp nháy giữa hai khu cùng thiếu;
+		//   - cho đi xong nó không được tụt xuống dưới sàn, nếu không ta chỉ chuyển chỗ
+		//     thiếu chứ không chữa được gì.
+		if fat == nil || count(fat) <= count(thin)+1 || count(fat)-1 < floor {
 			return
 		}
-		for id := range fat.brains {
-			r.queueTransfer(transfer{playerID: id, from: fat, to: thin,
-				at: game.Vec{X: thin.G.Map.Size / 2, Y: thin.G.Map.Size / 2}})
-			break
+		id, ok := fat.spareBot()
+		if !ok {
+			return
+		}
+		r.queueTransfer(transfer{playerID: id, from: fat, to: thin,
+			at: game.Vec{X: thin.G.Map.Size / 2, Y: thin.G.Map.Size / 2}})
+		delta[fat]--
+		delta[thin]++
+	}
+}
+
+// spareBot bốc một bot của khu **chưa nằm trong hàng chờ chuyển đi**.
+//
+// Không lọc thì vòng lặp của `rebalanceZones` có thể bốc trúng cùng một con mấy lượt liền
+// (duyệt map là ngẫu nhiên): lệnh thứ hai trở đi bị bỏ qua lúc chạy thật, nên khu thiếu
+// nhận được ít hơn số đã trừ trong sổ.
+func (z *Zone) spareBot() (uint32, bool) {
+	for id := range z.brains {
+		queued := false
+		for _, t := range z.transfers {
+			if t.playerID == id {
+				queued = true
+				break
+			}
+		}
+		if !queued {
+			return id, true
 		}
 	}
+	return 0, false
 }
 
 // zoneBelowFloor trả về khu thiếu người nhất trong số các khu chưa đạt sàn, nil nếu đủ cả.
@@ -210,7 +260,10 @@ func (r *Room) processRespawns() {
 				continue
 			}
 			level, swords := r.randomBotLevel()
-			if to := r.thinnestByCount(); to != nil && to != z {
+			// Chỉ điều đi khi khu cũ có người để dư. Khu đang đúng sàn mà cho đi thì chỗ
+			// thiếu chỉ chạy sang chỗ khác chứ không mất — cùng một kiểu sai với
+			// `rebalanceZones` bản cũ.
+			if to := r.thinnestByCount(); to != nil && to != z && z.Count() > r.cfg.Room.ZoneMinChars {
 				z.G.RemovePlayer(p.ID)
 				delete(z.brains, p.ID)
 				r.spawnBotIn(to, level, swords)

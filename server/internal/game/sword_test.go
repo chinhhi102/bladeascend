@@ -388,7 +388,7 @@ func TestRingFlipKeepsItsOwnCooldown(t *testing.T) {
 // va, Luyện Khí nứt 1/1.25; phá rào tre nhanh gấp đôi."
 func TestHardBuffMakesLowRealmTheHarderSide(t *testing.T) {
 	g := quietGame(t, nil)
-	low := g.AddPlayer(SpawnOptions{Name: "Low", Level: 0, Swords: 40})  // Luyện Khí
+	low := g.AddPlayer(SpawnOptions{Name: "Low", Level: 0, Swords: 40})    // Luyện Khí
 	high := g.AddPlayer(SpawnOptions{Name: "High", Level: 10, Swords: 40}) // Trúc Cơ
 	g.ApplyBuff(low, "hard")
 	at, bt := Vec{X: 6000, Y: 6000}, Vec{X: 6150, Y: 6000}
@@ -412,7 +412,7 @@ func TestBodyHitThresholdComesFromConfig(t *testing.T) {
 	if g.Cfg.Sword.BodyHitMaxRings != 1 {
 		t.Fatalf("body_hit_max_rings = %d, spec v4.5 ghi 1", g.Cfg.Sword.BodyHitMaxRings)
 	}
-	one := g.AddPlayer(SpawnOptions{Name: "One", Level: 20, Swords: 8}) // 1 vòng
+	one := g.AddPlayer(SpawnOptions{Name: "One", Level: 20, Swords: 8})  // 1 vòng
 	two := g.AddPlayer(SpawnOptions{Name: "Two", Level: 20, Swords: 25}) // 2 vòng
 	if g.Shielded(one) {
 		t.Fatal("còn 1 vòng thì phải chém được thân")

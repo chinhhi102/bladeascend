@@ -40,6 +40,9 @@ type oneCase struct {
 	Scale float64 `json:"sc"`
 	DT    float64 `json:"dt"`
 	Moving bool   `json:"mv"`
+	// Ghost: đang Giao Hỏa Tốc — xuyên mọi vật cản và chạy ×3 (spec v5.5 §6.3). Phải có
+	// trong bài đối chiếu vì nó đổi CẢ hai thứ quyết định vị trí: tốc độ và va chạm.
+	Ghost bool    `json:"gh"`
 	EX    float64 `json:"ex"`
 	EY    float64 `json:"ey"`
 	EVX   float64 `json:"evx"`
@@ -137,9 +140,14 @@ func main() {
 		moving := rng.Intn(5) > 0    // một phần năm số ca là "thả phím": trên băng vẫn trôi
 		// Vận tốc đầu vào khác 0 để kiểm đúng phần QUÁN TÍNH, không chỉ bước đầu tiên.
 		vel := game.Vec{X: rng.Float64()*400 - 200, Y: rng.Float64()*400 - 200}
-		end, endVel := g.MoveStepForTest(from, vel, a, scale, dt, moving)
+		// Một phần tư số ca đang Giao Hỏa Tốc. Phải có tỉ lệ đáng kể chứ không phải vài ca
+		// lẻ: chỗ dễ lệch nhất là **ngay trong lòng vật cản**, nơi server cho đi qua còn
+		// client (nếu quên) đẩy bật ra.
+		ghost := rng.Intn(4) == 0
+		end, endVel := g.MoveStepForTest(from, vel, a, scale, dt, moving, ghost)
 		f.Cases = append(f.Cases, oneCase{X: from.X, Y: from.Y, VX: vel.X, VY: vel.Y, Angle: a,
-			Scale: scale, DT: dt, Moving: moving, EX: end.X, EY: end.Y, EVX: endVel.X, EVY: endVel.Y})
+			Scale: scale, DT: dt, Moving: moving, Ghost: ghost,
+			EX: end.X, EY: end.Y, EVX: endVel.X, EVY: endVel.Y})
 	}
 
 	b, err := json.Marshal(f)

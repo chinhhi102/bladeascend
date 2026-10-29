@@ -19,6 +19,11 @@ func (g *Game) checkGate(p *Player) {
 	if p.Transit != nil || g.Time < p.GateReadyAt || len(g.Map.Gates) == 0 {
 		return
 	}
+	// Đàn em của Đại Ca không qua cổng (spec v5.4 §6.3). Cho đi thì chúng rơi sang khu khác
+	// và sống tiếp ở đó mà không còn đại ca — vừa sai luật vừa thành NPC mồ côi lang thang.
+	if p.IsMinion {
+		return
+	}
 	gc := g.Cfg.Gates
 	for _, gate := range g.Map.Gates {
 		// Bến Thiên Môn chỉ là chỗ ĐẶT CHÂN, không phải cổng đi: đứng lên bến mà bị hút đi

@@ -22,12 +22,23 @@ import { leaderboardScreen } from './ui/leaderboard';
 import { STR } from './ui/strings';
 import { summaryScreen } from './ui/summary';
 
+/**
+ * Phím dùng kỹ năng (spec §6.3): **Space**.
+ *
+ * Từng thử **Ctrl** nhưng bỏ, và lý do đáng ghi lại để đừng ai đổi lại: phím đi là **WASD**,
+ * nên vừa giữ Ctrl vừa bấm W là **Ctrl+W — đóng tab**. Chrome xếp Ctrl+W vào nhóm phím tắt
+ * dành riêng cho trình duyệt, `preventDefault()` KHÔNG chặn được; cách duy nhất chặn thật là
+ * Keyboard Lock API, mà nó chỉ chạy ở chế độ toàn màn hình. Space không đụng phím tắt nào.
+ */
+const SKILL_KEYS = ['Space'];
+
 const DEBUG_KEYS: Record<string, Record<string, unknown>> = {
   KeyE: { cmd: 'exp', n: 100 },
   KeyR: { cmd: 'realm', n: 0 },
   KeyK: { cmd: 'sword', n: 10 },
   KeyX: { cmd: 'die', n: 0 },
   KeyB: { cmd: 'bot', n: 0 }, // thả 1 bot cùng cảnh giới ngay cạnh mình
+  KeyG: { cmd: 'skill', n: 1 }, // +1 lượt kỹ năng, khỏi phải đi nhặt Bí Kíp
 };
 
 /** fpsCap: 60 on PC, 45 on phones to save battery; override with ?fps=30 (M7). */
@@ -72,7 +83,7 @@ class App {
     this.scene.app.ticker.add((t) => this.frame(t.deltaMS / 1000));
     window.setInterval(() => this.sendInput(), 1000 / this.cfg.net.tick_hz);
     window.addEventListener('keydown', (e) => {
-      if (this.playing && e.code === 'Space' && !e.repeat) {
+      if (this.playing && SKILL_KEYS.includes(e.code) && !e.repeat) {
         this.skillPressed = true; // kỹ năng nhân vật (spec §6.3)
         e.preventDefault();
         return;

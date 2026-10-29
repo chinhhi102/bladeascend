@@ -115,7 +115,7 @@ type PlayerState struct {
 	Flags uint8 `msgpack:"fl"`
 	// St: trạng thái do kỹ năng gây ra, mỗi bit một trạng thái (spec §6.3, game.StatusNames).
 	// Gửi cho mọi người vì client phải vẽ "zzz", mai rùa, vệt lướt… của người khác.
-	St uint16 `msgpack:"st,omitempty"`
+	St    uint16  `msgpack:"st,omitempty"`
 	Crack float32 `msgpack:"ck,omitempty"`
 	// Exp chỉ gửi cho CHÍNH người đó: không ai cần biết EXP của người khác, HUD chỉ vẽ của
 	// mình. Trước đây gửi cho tất cả, tốn 7 byte × (số người thấy được) mỗi gói.
@@ -127,13 +127,13 @@ type PlayerState struct {
 	Vy float32 `msgpack:"vy,omitempty"`
 	// Charges: số lượt kỹ năng đang giữ, chỉ gửi cho chính chủ (spec §6.3).
 	Charges int `msgpack:"skc,omitempty"`
-	Title  int     `msgpack:"ti,omitempty"` // room rank badge 1..3 (spec §11.3), 0 = none
+	Title   int `msgpack:"ti,omitempty"` // room rank badge 1..3 (spec §11.3), 0 = none
 	// Tiên giới (spec §3.4): sát mạng đã có / cần, để HUD vẽ thanh Tiên khí. Chỉ gửi cho
 	// chính người đó; người khác chỉ cần Level để biết cảnh giới và màu hào quang.
 	TienHave float32 `msgpack:"th,omitempty"`
 	TienNeed float32 `msgpack:"tn,omitempty"`
-	Name   string  `msgpack:"nm,omitempty"` // only the first time a client sees this player
-	Char   string  `msgpack:"ch,omitempty"`
+	Name     string  `msgpack:"nm,omitempty"` // only the first time a client sees this player
+	Char     string  `msgpack:"ch,omitempty"`
 }
 
 // MonsterState: `k`, `mx`, `r` KHÔNG BAO GIỜ đổi trong đời một con quái, nên chỉ gửi lần đầu
@@ -186,12 +186,12 @@ type LeaderEntry struct {
 // the only positions a client is allowed to know outside its own view (spec §12.1).
 type Leaderboard struct {
 	// ZoneCounts: số nhân vật ở mỗi khu, cho bảng phóng to bằng phím M (spec §8.0).
-	ZoneCounts []int `msgpack:"zc,omitempty"`
-	T       string        `msgpack:"t"`
-	Top     []LeaderEntry `msgpack:"top"`
-	Rank    int           `msgpack:"rank"`
-	Total   int           `msgpack:"total"`
-	MyScore float32       `msgpack:"ms"`
+	ZoneCounts []int         `msgpack:"zc,omitempty"`
+	T          string        `msgpack:"t"`
+	Top        []LeaderEntry `msgpack:"top"`
+	Rank       int           `msgpack:"rank"`
+	Total      int           `msgpack:"total"`
+	MyScore    float32       `msgpack:"ms"`
 	// Top1 is the leader's position for the minimap crown; absent while they are hiding.
 	Top1    bool    `msgpack:"t1,omitempty"`
 	Top1X   float32 `msgpack:"t1x,omitempty"`
@@ -242,7 +242,7 @@ type Dead struct {
 	Score       float64            `msgpack:"score"`
 	Hits        int                `msgpack:"hits"`
 	BurnedExp   float64            `msgpack:"burned_exp"` // EXP đã đốt (spec §4.1c)
-	ScoreBy     map[string]float64 `msgpack:"score_by"` // điểm theo từng nguồn (§11.1)
+	ScoreBy     map[string]float64 `msgpack:"score_by"`   // điểm theo từng nguồn (§11.1)
 	DaiThuaSecs float64            `msgpack:"dai_thua_secs"`
 	Top1Secs    float64            `msgpack:"top1_secs"`
 }

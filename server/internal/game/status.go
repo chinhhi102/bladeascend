@@ -27,18 +27,25 @@ const (
 	StShell
 	// StDash: đang lướt (Gánh Lướt của Cô Ba).
 	StDash
+	// StStun: choáng — không điều khiển, không dùng kỹ năng, không Thiêu Đốt; kiếm vẫn
+	// quay (spec v5.5 §6.3: ai đi vào vệt trái cây của Cô Ba thì vừa trượt vừa choáng 1s).
+	//
+	// Tách khỏi StSlip vì hai thứ làm hai việc khác nhau: trượt là đổi CÁCH di chuyển (quán
+	// tính), choáng là CẤM di chuyển. Gộp lại thì không nói được "trượt mà vẫn lái được"
+	// nếu sau này spec đổi ý.
+	StStun
 	StatusCount
 )
 
 // StatusNames dùng cho log và event gửi xuống client.
-var StatusNames = [StatusCount]string{"slow", "root", "blind", "slip", "brace", "ghost", "shell", "dash"}
+var StatusNames = [StatusCount]string{"slow", "root", "blind", "slip", "brace", "ghost", "shell", "dash", "stun"}
 
 // HasStatus: trạng thái này còn hiệu lực không.
 func (p *Player) HasStatus(s int, now float64) bool { return p.Status[s] > now }
 
 // controlStatuses là những trạng thái bị người khác giáng lên; Gồng miễn hết nhóm này
 // (spec §6.3: "không bị đẩy lùi/chậm/trói").
-var controlStatuses = []int{StSlow, StRoot, StSlip, StBlind}
+var controlStatuses = []int{StSlow, StRoot, StSlip, StBlind, StStun}
 
 // ApplyStatus giáng một trạng thái lên người chơi trong `secs` giây.
 //
@@ -83,7 +90,6 @@ func (g *Game) ClearStatuses(p *Player) {
 func (g *Game) onDeathClear(p *Player) {
 	p.SkillCharges = 0
 	p.Vel = Vec{}
-	p.lostSwords = p.lostSwords[:0]
 	p.shellOn = false
 	g.ClearStatuses(p)
 }

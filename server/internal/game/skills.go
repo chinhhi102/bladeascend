@@ -61,7 +61,7 @@ func (g *Game) AddSkillCharge(p *Player) bool {
 // CanCastSkill: đủ điều kiện bấm kỹ năng chưa (spec §6.3).
 func (g *Game) CanCastSkill(p *Player) bool {
 	return !p.Dead && p.SkillCharges > 0 && g.Time >= p.SkillReadyAt &&
-		!p.InTransit(g.Time) && SkillOf(p.Char) != nil
+		!p.InTransit(g.Time) && !p.HasStatus(StStun, g.Time) && SkillOf(p.Char) != nil
 }
 
 // CastSkill dùng kỹ năng của nhân vật. Trả về false nếu chưa dùng được.
@@ -111,16 +111,21 @@ func (g *Game) targetsNear(p *Player, r float64) []*Player {
 	return out
 }
 
-// Bánh Bao Thần — hồi 30% số kiếm đã bể trong 10 giây gần nhất.
+// Bánh Bao Thần — hồi ngay 20% số kiếm TỐI ĐA của cảnh giới hiện tại (spec v5.5 §6.3).
+//
+// Bản v5.0 hồi theo "số kiếm vừa bể trong 10 giây", và cái đó có một lỗ hổng không chữa
+// được bằng cách chỉnh số: ai chưa bị đánh thì ăn bánh bao chẳng được gì, nên kỹ năng vô
+// dụng đúng lúc muốn dùng nhất là lúc mở đầu. Lấy mốc theo kiếm tối đa thì luôn có tác
+// dụng, và vẫn tự giới hạn vì không vượt được trần của cảnh giới.
+//
+// `AddSwords` lấp vòng trong trước (xem `ring.go`), đúng ý spec — đó cũng là chỗ che chắn
+// tốt nhất cho người vừa bị mài gần hết.
 func castBanhBao(g *Game, p *Player, _ Vec) {
-	sc := g.Cfg.Skills
-	lost := 0
-	for _, e := range p.lostSwords {
-		if g.Time-e.at <= sc.BanhBaoWindowSecs {
-			lost += e.n
-		}
+	maxSw := g.Prog.MaxSwords(g.Prog.Realm(p.Level))
+	back := int(float64(maxSw) * g.Cfg.Skills.BanhBaoMaxShare)
+	if room := maxSw - p.Ring.Count; back > room {
+		back = room // không vượt trần cảnh giới
 	}
-	back := int(float64(lost) * sc.BanhBaoShare)
 	if back > 0 {
 		g.AddSwords(p, back)
 	}
@@ -223,6 +228,10 @@ func castGongCo(g *Game, p *Player, _ Vec) {
 func castGiaoHoaToc(g *Game, p *Player, _ Vec) {
 	sc := g.Cfg.Skills
 	g.ApplyStatus(p, StGhost, sc.GhostSecs)
+	// Bật cờ ngay tại đây chứ không đợi updateSkillState — y hệt lý do của `shellOn`: nếu
+	// kỹ năng hết hạn trước tick kế tiếp (hoặc test nhảy thẳng thời gian) thì cờ chưa kịp
+	// bật, và việc đẩy ra khỏi vật cản không bao giờ chạy.
+	p.ghostOn = true
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "giao_hoa_toc", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 

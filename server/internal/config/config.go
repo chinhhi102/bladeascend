@@ -12,14 +12,14 @@ type Cultivation struct {
 	// TienOverflowScore: đã Đạo Tổ thì không còn cảnh giới để lên, nên mỗi điểm Tiên khí
 	// nhặt thêm đổi thành ngần này điểm Uy Danh thay vì bỏ phí. 0 = tắt.
 	// Hiện là 0,1 — tỉ lệ 10 Tiên khí ăn 1 Uy Danh (chủ dự án quyết 29/10/2026).
-	TienOverflowScore float64 `json:"tien_overflow_score"`
-	Realms        []string `json:"realms"`
-	TiersPerRealm int      `json:"tiers_per_realm"`
-	ExpBase       float64  `json:"exp_base"`
-	RealmMult     float64  `json:"realm_mult"`
-	TierStep      float64  `json:"tier_step"`
-	ScaleMin      float64  `json:"scale_min"`
-	ScaleMax      float64  `json:"scale_max"`
+	TienOverflowScore float64  `json:"tien_overflow_score"`
+	Realms            []string `json:"realms"`
+	TiersPerRealm     int      `json:"tiers_per_realm"`
+	ExpBase           float64  `json:"exp_base"`
+	RealmMult         float64  `json:"realm_mult"`
+	TierStep          float64  `json:"tier_step"`
+	ScaleMin          float64  `json:"scale_min"`
+	ScaleMax          float64  `json:"scale_max"`
 
 	// Tiên giới (spec §3.4): 5 cảnh giới sau Đại Thừa, không chia tầng, chỉ lên được
 	// bằng sát mạng chứ không dùng EXP.
@@ -29,44 +29,44 @@ type Cultivation struct {
 	TienKhiPerStep []float64 `json:"tien_khi_per_step"`
 	TienRobShare   float64   `json:"tien_rob_share"`
 	TienDropShare  float64   `json:"tien_drop_share"`
-	TienScaleStep    float64   `json:"tien_scale_step"`
-	TienAuraColors   []string  `json:"tien_aura_colors"`
+	TienScaleStep  float64   `json:"tien_scale_step"`
+	TienAuraColors []string  `json:"tien_aura_colors"`
 }
 
 type Sword struct {
-	StartCount         int      `json:"start_count"`
-	MinCount           int      `json:"min_count"`
-	MaxSwords          []int    `json:"max_swords"`
+	StartCount int   `json:"start_count"`
+	MinCount   int   `json:"min_count"`
+	MaxSwords  []int `json:"max_swords"`
 	// RingStep: vòng thứ k chứa RingStep × k kiếm (vòng 1 = 10, vòng 2 = 20… spec §4.1a).
-	RingStep           int      `json:"ring_capacity_step"`
-	Length             float64  `json:"length"`
-	Width              float64  `json:"width"`
-	HiltGap            float64  `json:"hilt_gap"`
-	RingGrowth         float64  `json:"ring_growth"`
-	RingGrowthMode     string   `json:"ring_growth_mode"`
-	HiltStep           float64  `json:"hilt_step"`
-	TiltDeg            float64  `json:"tilt_deg"`
-	TiltTweenSecs      float64  `json:"tilt_tween_secs"`
-	RingTints          []string `json:"ring_tints"`
-	RevSecs            float64  `json:"rev_secs"`
+	RingStep       int      `json:"ring_capacity_step"`
+	Length         float64  `json:"length"`
+	Width          float64  `json:"width"`
+	HiltGap        float64  `json:"hilt_gap"`
+	RingGrowth     float64  `json:"ring_growth"`
+	RingGrowthMode string   `json:"ring_growth_mode"`
+	HiltStep       float64  `json:"hilt_step"`
+	TiltDeg        float64  `json:"tilt_deg"`
+	TiltTweenSecs  float64  `json:"tilt_tween_secs"`
+	RingTints      []string `json:"ring_tints"`
+	RevSecs        float64  `json:"rev_secs"`
 	// FlipCooldown: chỉ giới hạn việc ĐỔI CHIỀU quay, để vòng kiếm không giật 30 lần/giây.
 	FlipCooldown float64 `json:"flip_cooldown"`
 	// ClashCooldown: giãn cách giữa hai lần TÍNH BỂ KIẾM của cùng một cặp (A, B).
 	// 0 = mỗi tick một lần, tức mài hết một vòng 30 kiếm trong đúng 1 giây (spec §5.2).
-	ClashCooldown float64 `json:"clash_cooldown"`
-	ClashUnit     int     `json:"clash_unit"`
-	FlipOnlySameRealm  bool     `json:"flip_only_same_realm"`
-	ClashKnockback     float64  `json:"clash_knockback"`
-	ClashKnockbackSecs float64  `json:"clash_knockback_secs"`
-	DropBundleMax      int      `json:"drop_bundle_max"`
+	ClashCooldown      float64 `json:"clash_cooldown"`
+	ClashUnit          int     `json:"clash_unit"`
+	FlipOnlySameRealm  bool    `json:"flip_only_same_realm"`
+	ClashKnockback     float64 `json:"clash_knockback"`
+	ClashKnockbackSecs float64 `json:"clash_knockback_secs"`
+	DropBundleMax      int     `json:"drop_bundle_max"`
 	// Độ bền kiếm (spec v4.1 §5.2): mỗi cảnh giới bền hơn cảnh giới dưới 20%.
 	// "compound" → k = 1.2^d; "linear" → k = 1 + 0.2 × d.
 	DurabilityPerRealm float64 `json:"durability_per_realm"`
 	DurabilityMode     string  `json:"durability_mode"`
 	// BodyHitMaxRings: kiếm địch chỉ chém được vào thân khi nạn nhân còn tối đa bấy nhiêu
 	// vòng (spec v4.5 §5.2 — thay cho lá chắn chặn đường đi của bản trước).
-	BodyHitMaxRings int `json:"body_hit_max_rings"`
-	TweenSecs          float64  `json:"tween_secs"`
+	BodyHitMaxRings int     `json:"body_hit_max_rings"`
+	TweenSecs       float64 `json:"tween_secs"`
 }
 
 type Player struct {
@@ -192,14 +192,16 @@ type Ice struct {
 // Skills: mọi con số của 10 kỹ năng nhân vật (spec §6.3). Bán kính và tầm xa còn được
 // nhân theo scale người dùng lúc thi hành.
 type Skills struct {
-	MaxCharges int     `json:"max_charges"`
-	LockSecs   float64 `json:"lock_secs"`
-	OvercapExp float64 `json:"overcap_exp"`
+	MaxCharges  int     `json:"max_charges"`
+	LockSecs    float64 `json:"lock_secs"`
+	OvercapExp  float64 `json:"overcap_exp"`
 	OvercapTien float64 `json:"overcap_tien"`
-	KnockSecs  float64 `json:"knock_secs"`
+	KnockSecs   float64 `json:"knock_secs"`
 
-	BanhBaoWindowSecs float64 `json:"banh_bao_window_secs"`
-	BanhBaoShare      float64 `json:"banh_bao_share"`
+	// BanhBaoMaxShare: hồi ngay ngần này phần của số kiếm TỐI ĐA ở cảnh giới hiện tại
+	// (spec v5.5 §6.3). Bản v5.0 hồi theo số kiếm vừa bể trong 10s — đổi rồi, không còn
+	// sổ ghi kiếm bể nữa.
+	BanhBaoMaxShare float64 `json:"banh_bao_max_share"`
 
 	LoaConeDeg float64 `json:"loa_cone_deg"`
 	LoaReach   float64 `json:"loa_reach"`
@@ -210,13 +212,19 @@ type Skills struct {
 	RuNguMove   float64 `json:"ru_ngu_move"`
 	RuNguSpin   float64 `json:"ru_ngu_spin"`
 
-	DanEmCount  int     `json:"dan_em_count"`
-	DanEmSecs   float64 `json:"dan_em_secs"`
-	DanEmSwords int     `json:"dan_em_swords"`
+	DanEmCount int     `json:"dan_em_count"`
+	DanEmSecs  float64 `json:"dan_em_secs"`
+	// DanEmSwordShare: mỗi đàn em có ngần này phần số kiếm HIỆN TẠI của đại ca (làm tròn
+	// xuống, tối thiểu 1). Đại ca không bị trừ kiếm — đây là bản sao, không phải chia của.
+	DanEmSwordShare float64 `json:"dan_em_sword_share"`
+	// DanEmScale: đàn em nhỏ hơn đại ca (0.7 = nhỏ hơn 30%).
+	DanEmScale float64 `json:"dan_em_scale"`
 
-	TranChauConeDeg   float64 `json:"tran_chau_cone_deg"`
-	TranChauReach     float64 `json:"tran_chau_reach"`
-	TranChauSecs      float64 `json:"tran_chau_secs"`
+	TranChauConeDeg float64 `json:"tran_chau_cone_deg"`
+	TranChauReach   float64 `json:"tran_chau_reach"`
+	TranChauSecs    float64 `json:"tran_chau_secs"`
+	// TranChauNoPickup: người đang bị bịt mắt không nhặt được gì (spec v5.5 §6.3).
+	TranChauNoPickup  bool    `json:"tran_chau_no_pickup"`
 	TranChauBotVision float64 `json:"tran_chau_bot_vision"`
 
 	DashDist    float64 `json:"dash_dist"`
@@ -235,6 +243,10 @@ type Skills struct {
 
 	GhostSecs  float64 `json:"ghost_secs"`
 	GhostSpeed float64 `json:"ghost_speed"`
+	// GhostUnstickSecs: hết Giao Hỏa Tốc mà đang đứng trong vật cản thì được đẩy mượt ra
+	// chỗ trống gần nhất trong ngần này giây (spec v5.5 §6.3) — không dịch tức thời, vì
+	// nhảy một phát là client thấy giật y như lỗi §8.2a vừa sửa xong.
+	GhostUnstickSecs float64 `json:"ghost_unstick_secs"`
 
 	ShellSecs       float64 `json:"shell_secs"`
 	ShellPushRadius float64 `json:"shell_push_radius"`
@@ -243,7 +255,7 @@ type Skills struct {
 
 type Zones struct {
 	// SnowMult: bờ tuyết ở Băng Nguyệt Hồ làm chậm (spec §8.0). Cùng cơ chế với bùn.
-	SnowMult           float64 `json:"snow_mult"`
+	SnowMult            float64 `json:"snow_mult"`
 	MudMult             float64 `json:"mud_mult"`
 	WindWith            float64 `json:"wind_with"`
 	WindAgainst         float64 `json:"wind_against"`
@@ -256,11 +268,11 @@ type Zones struct {
 type Gates struct {
 	// RandomExit: bước vào một cổng thì ra ở một cổng BẤT KỲ khác cùng mạng, thay vì cổng
 	// đôi cố định. Đặt false để quay về kiểu cũ.
-	RandomExit   bool    `json:"random_exit"`
+	RandomExit bool `json:"random_exit"`
 	// ExitPool: "all" (mặc định) = ra ở cổng bất kỳ trong cả thế giới; "other_zone" = luôn
 	// sang khu khác (spec §8.4).
-	ExitPool     string  `json:"exit_pool"`
-	Radius       float64 `json:"radius"`
+	ExitPool string  `json:"exit_pool"`
+	Radius   float64 `json:"radius"`
 	// HeavenRadius: bán kính kích hoạt Thiên Môn — to gấp đôi cổng thường (spec §8.4a).
 	HeavenRadius float64 `json:"heaven_radius"`
 	TransitSecs  float64 `json:"transit_secs"`
@@ -271,7 +283,7 @@ type Gates struct {
 
 type Room struct {
 	// Zones: số khu mỗi phòng (spec §8.0). Để 1 là quay về thế giới một bản đồ như trước.
-	Zones          int     `json:"zones"`
+	Zones int `json:"zones"`
 	// ZoneMinChars: sàn nhân vật mỗi khu. Bot được thả thêm cho tới khi khu nào cũng đạt
 	// sàn này, nhưng không bao giờ vượt `BotFillTarget` của cả phòng — nếu không thì một
 	// khu đông người sẽ kéo tổng số vượt trần.
@@ -285,25 +297,25 @@ type Room struct {
 }
 
 type Bots struct {
-	SpawnEverySecs float64  `json:"spawn_every_secs"`
-	SpawnBatch     int      `json:"spawn_batch"`
-	RespawnSecs    float64  `json:"respawn_secs"`
+	SpawnEverySecs float64 `json:"spawn_every_secs"`
+	SpawnBatch     int     `json:"spawn_batch"`
+	RespawnSecs    float64 `json:"respawn_secs"`
 	// SpawnRank: bot sinh ra ngang với người đang đứng hạng này trong phòng (mặc định 11,
 	// tức ngay dưới Top 10). Phòng chưa đủ người để có hạng đó → sinh ở Luyện Khí.
 	// Không có trần cảnh giới: phòng toàn Nguyên Anh thì bot mới cũng Nguyên Anh.
-	SpawnRank      int      `json:"spawn_rank"`
-	DecideMin      float64  `json:"decide_min"`
-	DecideMax      float64  `json:"decide_max"`
-	ReactionMin    float64  `json:"reaction_min"`
-	ReactionMax    float64  `json:"reaction_max"`
-	HuntR          float64  `json:"hunt_r"`
-	HuntRatio      float64  `json:"hunt_ratio"`
-	FleeR          float64  `json:"flee_r"`
-	FleeRatio      float64  `json:"flee_ratio"`
-	PathGrid       float64  `json:"path_grid"`
-	AmbushR        float64  `json:"ambush_r"`
-	AmbushSecs     float64  `json:"ambush_secs"`
-	Names          []string `json:"names"`
+	SpawnRank   int      `json:"spawn_rank"`
+	DecideMin   float64  `json:"decide_min"`
+	DecideMax   float64  `json:"decide_max"`
+	ReactionMin float64  `json:"reaction_min"`
+	ReactionMax float64  `json:"reaction_max"`
+	HuntR       float64  `json:"hunt_r"`
+	HuntRatio   float64  `json:"hunt_ratio"`
+	FleeR       float64  `json:"flee_r"`
+	FleeRatio   float64  `json:"flee_ratio"`
+	PathGrid    float64  `json:"path_grid"`
+	AmbushR     float64  `json:"ambush_r"`
+	AmbushSecs  float64  `json:"ambush_secs"`
+	Names       []string `json:"names"`
 }
 
 type Mood struct {
@@ -389,8 +401,8 @@ type Net struct {
 
 // Config mirrors config/game.json.
 type Config struct {
-	Skills     Skills     `json:"skills"`
-	Ice        Ice        `json:"ice"`
+	Skills      Skills          `json:"skills"`
+	Ice         Ice             `json:"ice"`
 	Cultivation Cultivation     `json:"cultivation"`
 	Sword       Sword           `json:"sword"`
 	Player      Player          `json:"player"`

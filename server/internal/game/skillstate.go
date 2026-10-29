@@ -1,5 +1,10 @@
 package game
 
+import (
+	"math"
+
+	"kiemxoay/server/internal/geom"
+)
 
 // Trạng thái phụ trợ cho kỹ năng (spec §6.3): vệt trơn của Cô Ba, đàn em của Đại Ca, và
 // sổ ghi kiếm vừa bể của A Hớn.
@@ -11,41 +16,24 @@ type slick struct {
 	owner uint32
 }
 
-// lostSword ghi một lần bị bể kiếm, để Bánh Bao Thần biết hồi lại bao nhiêu.
+// spawnMinion thả một đàn em của Đại Ca Dép Tổ Ong (spec v5.4 §6.3).
 //
-// Phải ghi theo TỪNG LẦN kèm mốc thời gian, không cộng dồn vào một con số: kỹ năng chỉ hồi
-// phần bể trong 10 giây gần nhất, mà một người Đạo Tổ có thể bể cả trăm kiếm trong một trận
-// kéo dài — cộng dồn thì ăn một cái bánh bao là về đầy kiếm.
-type lostSword struct {
-	n  int
-	at float64
-}
-
-// noteSwordLoss ghi lại số kiếm vừa bể và dọn những lần đã quá cũ.
-func (g *Game) noteSwordLoss(p *Player, n int) {
-	if n <= 0 {
-		return
-	}
-	w := g.Cfg.Skills.BanhBaoWindowSecs
-	keep := p.lostSwords[:0]
-	for _, e := range p.lostSwords {
-		if g.Time-e.at <= w {
-			keep = append(keep, e)
-		}
-	}
-	p.lostSwords = append(keep, lostSword{n: n, at: g.Time})
-}
-
-// spawnMinion thả một đàn em của Đại Ca Dép Tổ Ong (spec §6.3).
+// Đàn em là **người chơi do máy điều khiển**, cùng cảnh giới với đại ca và mang **50% số
+// kiếm hiện tại của đại ca** (tối thiểu 1), xếp vòng y như người chơi. Làm thành Player
+// thay vì một loại thực thể mới để mọi luật va kiếm sẵn có chạy nguyên vẹn, khỏi phải viết
+// lại một bản va chạm thứ hai — và cũng để vòng kiếm của chúng dùng chung đúng đường vẽ của
+// người chơi ở client, đúng ghi chú hiệu năng của spec.
 //
-// Đàn em là **người chơi do máy điều khiển**, cùng cảnh giới với đại ca nhưng chỉ 1 vòng
-// 10 kiếm, và **không chém thân được** — nên chúng chỉ mài kiếm đối thủ chứ không giết ai.
-// Làm thành Player thay vì một loại thực thể mới để mọi luật va kiếm sẵn có chạy nguyên
-// vẹn, khỏi phải viết lại một bản va chạm thứ hai.
+// Đại ca KHÔNG bị trừ kiếm: đây là bản sao, không phải chia của.
 func (g *Game) spawnMinion(boss *Player, at Vec, secs float64) *Player {
+	sc := g.Cfg.Skills
+	sw := int(float64(boss.Ring.Count) * sc.DanEmSwordShare)
+	if sw < 1 {
+		sw = 1
+	}
 	m := g.AddPlayer(SpawnOptions{
 		Name: boss.Name + " (đàn em)", Char: boss.Char, IsBot: true,
-		Level: boss.Level, Swords: g.Cfg.Skills.DanEmSwords,
+		Level: boss.Level, Swords: sw,
 	})
 	if m == nil {
 		return nil
@@ -55,6 +43,9 @@ func (g *Game) spawnMinion(boss *Player, at Vec, secs float64) *Player {
 	m.MinionOf = boss.ID
 	m.MinionUntil = g.Time + secs
 	m.InvulnUntil = 0
+	// Nhỏ hơn đại ca 30% (spec). Đặt SAU khi vào bàn cờ vì `AddPlayer` tự tính scale theo
+	// cảnh giới, mà đàn em thì cùng cảnh giới với đại ca nên sẽ to bằng nếu không chỉnh.
+	m.Scale *= sc.DanEmScale
 	return m
 }
 
@@ -73,13 +64,17 @@ func (g *Game) updateSkillState(dt float64) {
 				continue
 			}
 			if p.Pos.Dist(s.at) <= g.Cfg.Skills.SlickRadius {
+				// Trượt VÀ choáng cùng lúc (spec v5.5): trượt theo quán tính, đồng thời
+				// mất quyền điều khiển trong đúng khoảng đó.
 				g.ApplyStatus(p, StSlip, g.Cfg.Skills.SlipSecs)
+				g.ApplyStatus(p, StStun, g.Cfg.Skills.SlipSecs)
 			}
 		}
 	}
 	g.slicks = keep
 
 	for _, p := range g.PlayerList() {
+		g.updateUnstick(p, dt)
 		// Cụ Rùa vừa ra khỏi mai → sóng đẩy. Dùng cờ riêng chứ không so thời gian, vì tick
 		// có thể nhảy qua đúng khoảnh khắc hết hạn.
 		if p.shellOn && !p.HasStatus(StShell, g.Time) {
@@ -94,6 +89,39 @@ func (g *Game) updateSkillState(dt float64) {
 			g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "dan_em_gone", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 			g.RemovePlayer(p.ID)
 		}
+	}
+}
+
+// updateUnstick lo khoảnh khắc Giao Hỏa Tốc hết hạn khi Shipper đang đứng TRONG vật cản
+// (spec v5.5 §6.3): đẩy mượt ra chỗ trống gần nhất trong 0,3 giây.
+//
+// Vì sao không bật ra ngay: nhảy một phát là client thấy đúng kiểu giật mà §8.2a vừa mất
+// cả buổi để sửa — client dự đoán một đằng, server kéo về một nẻo. Trượt trong 0,3 giây thì
+// bộ nội suy của client bám theo được.
+//
+// Chỗ trống gần nhất lấy bằng chính `resolveBlocking` — tức là **dùng lại đúng mã va chạm
+// mà client cũng chạy** (spec đòi vậy), không viết một phép tìm chỗ trống thứ hai.
+func (g *Game) updateUnstick(p *Player, dt float64) {
+	// Đang trượt ra: nội suy tuyến tính từ chỗ kẹt tới chỗ trống.
+	if p.unstickUntil > g.Time {
+		total := math.Max(g.Cfg.Skills.GhostUnstickSecs, 1e-6)
+		left := p.unstickUntil - g.Time
+		t := geom.Clamp(1-left/total, 0, 1)
+		p.Pos = p.unstickFrom.Add(p.unstickTo.Sub(p.unstickFrom).Mul(t))
+		return
+	}
+	if p.ghostOn && !p.HasStatus(StGhost, g.Time) {
+		p.ghostOn = false
+		free := g.resolveBlocking(p.Pos, g.BodyR(p))
+		if free.Dist2(p.Pos) > 1e-6 {
+			p.unstickFrom, p.unstickTo = p.Pos, free
+			p.unstickUntil = g.Time + g.Cfg.Skills.GhostUnstickSecs
+			g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "ghost_unstick",
+				X: float32(free.X), Y: float32(free.Y)})
+		}
+	}
+	if p.HasStatus(StGhost, g.Time) {
+		p.ghostOn = true
 	}
 }
 

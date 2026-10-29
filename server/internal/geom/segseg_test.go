@@ -10,9 +10,9 @@ import (
 // tính là va vào nhau. Test này khoá lại cả hai chiều.
 func TestSegSegDist2(t *testing.T) {
 	cases := []struct {
-		name                   string
-		p1, q1, p2, q2         Vec
-		want                   float64
+		name           string
+		p1, q1, p2, q2 Vec
+		want           float64
 	}{
 		{"cắt nhau hình chữ thập", Vec{-1, 0}, Vec{1, 0}, Vec{0, -1}, Vec{0, 1}, 0},
 		{"chạm đúng đầu mút", Vec{0, 0}, Vec{1, 0}, Vec{1, 0}, Vec{2, 0}, 0},
