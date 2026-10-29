@@ -3,6 +3,7 @@ package room
 
 import (
 	"log"
+	"sync"
 	"sort"
 	"math/rand"
 	"time"
@@ -48,8 +49,12 @@ type Room struct {
 	reserved  int // humans counted by the manager (guarded by Manager.mu)
 	closed    bool
 	snapEvery float64
-	namesAt   float64
-	namesDue  bool
+	// rankAt: hạng của từng người, chụp MỘT LẦN đầu mỗi tick.
+	//
+	// Bảng xếp hạng tính chung cả thế giới, nên tính nó phải đọc người chơi của mọi khu —
+	// làm việc đó trong goroutine của một khu là đọc dữ liệu đúng lúc khu khác đang sửa.
+	// Hạng trên bảng Tổng kết chậm một tick thì không ai nhận ra; đua dữ liệu thì có.
+	rankAt map[uint32]int
 }
 
 // transfer: chuyển một nhân vật sang khu khác ở ranh giới tick, giữ nguyên mọi trạng thái.
@@ -139,7 +144,8 @@ func (r *Room) routeGate(fromZone int, gate world.Gate) (game.GateDest, bool) {
 	if len(pool) == 0 {
 		return game.GateDest{}, false
 	}
-	c := pool[r.rng.Intn(len(pool))]
+	// Dùng rng CỦA KHU gọi tới, không dùng rng của phòng: năm khu chạy song song.
+	c := pool[r.zones[fromZone].rng.Intn(len(pool))]
 	return game.GateDest{Zone: c.zone, GateID: c.g.ID, At: game.Vec{X: c.g.X, Y: c.g.Y}}, true
 }
 
@@ -157,11 +163,16 @@ func (r *Room) moveToZone(p *game.Player, zone int, at game.Vec) {
 
 // Send chuyển một nhân vật sang khu khác ở ranh giới tick (spec §8.0, §8.4). Mọi trạng thái
 // — kiếm, buff, nứt, Tiên khí, Uy Danh — giữ nguyên; chỉ đổi bản đồ và vị trí.
-func (r *Room) queueTransfer(t transfer) { r.transfers = append(r.transfers, t) }
+func (r *Room) queueTransfer(t transfer) { t.from.transfers = append(t.from.transfers, t) }
 
 // applyTransfers chạy SAU khi mọi khu đã tick xong, nên không khu nào đang đọc dữ liệu của
 // mình lúc nhân vật bị bê đi.
 func (r *Room) applyTransfers() {
+	r.transfers = r.transfers[:0]
+	for _, z := range r.zones {
+		r.transfers = append(r.transfers, z.transfers...)
+		z.transfers = z.transfers[:0]
+	}
 	if len(r.transfers) == 0 {
 		return
 	}
@@ -268,11 +279,24 @@ const slowStepMs = 25.0
 func (r *Room) Step(dt float64) {
 	stepStart := time.Now()
 	r.drainInbox()
-	// Mỗi khu chạy độc lập: không khu nào đọc dữ liệu của khu khác trong một tick. Việc duy
-	// nhất đi qua ranh giới là chuyển người, và nó làm SAU khi mọi khu đã chạy xong.
-	for _, z := range r.zones {
-		r.stepZone(z, dt)
+	r.snapshotRanks()
+	// Mỗi khu một GOROUTINE (spec v5 mục 4). An toàn vì trong một tick không khu nào đọc
+	// dữ liệu của khu khác: việc duy nhất đi qua ranh giới là chuyển người, và nó gom vào
+	// hàng chờ riêng của từng khu rồi chạy SAU khi mọi khu đã xong.
+	if len(r.zones) == 1 {
+		r.stepZone(r.zones[0], dt)
+	} else {
+		var wg sync.WaitGroup
+		for _, z := range r.zones {
+			wg.Add(1)
+			go func(z *Zone) {
+				defer wg.Done()
+				r.stepZone(z, dt)
+			}(z)
+		}
+		wg.Wait()
 	}
+	r.flushFeeds()
 	r.applyTransfers()
 	r.updateBots(dt)
 	r.lbTimer += dt
@@ -431,17 +455,24 @@ func (r *Room) record(z *Zone, p *game.Player) {
 	}
 }
 
-// rankOf is the player's 1-based rank in the room board (spec §11.2: Uy Danh, then exp).
-// Xếp hạng tính CHUNG CẢ THẾ GIỚI, không theo khu (spec §8.0).
-func (r *Room) rankOf(p *game.Player) int {
-	rank := 1
-	for _, o := range r.Ranking() {
-		if o.ID == p.ID {
-			return rank
-		}
-		rank++
+// snapshotRanks chụp hạng của mọi người trong phòng, chạy một luồng ở đầu tick.
+func (r *Room) snapshotRanks() {
+	if r.rankAt == nil {
+		r.rankAt = map[uint32]int{}
 	}
-	return rank
+	clear(r.rankAt)
+	for i, p := range r.Ranking() {
+		r.rankAt[p.ID] = i + 1
+	}
+}
+
+// rankOf is the player's 1-based rank in the room board (spec §11.2: Uy Danh, then exp).
+// Xếp hạng tính CHUNG CẢ THẾ GIỚI, không theo khu (spec §8.0); đọc từ bản chụp đầu tick.
+func (r *Room) rankOf(p *game.Player) int {
+	if rank, ok := r.rankAt[p.ID]; ok {
+		return rank
+	}
+	return len(r.rankAt) + 1
 }
 
 func (r *Room) checkEmpty(dt float64) {
