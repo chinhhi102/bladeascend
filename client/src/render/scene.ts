@@ -501,6 +501,8 @@ export class GameScene {
       drawMs: this.lastRenderMs,
       sprites: countNodes(this.app.stage),
       drawCalls: drawCalls.perFrame,
+      fixPerSec: this.world?.fixPerSec ?? 0,
+      fixMax: this.world?.fixMax ?? 0,
       players: this.players.size,
       swords,
       monsters: this.monsters.size,
@@ -536,6 +538,9 @@ export class GameScene {
       `sprite ${countNodes(this.app.stage)} · draw call ${drawCalls.perFrame.toFixed(0)}`,
       `AOI ${aoi} · người ${this.players.size} · kiếm ${swords} · quái ${this.monsters.size}`,
       `EXP ${this.orbs.ids().length} · vật phẩm ${this.items.size} · giãn kiếm 1/${this.detail}`,
+      // Spec §8.2a: số lần server kéo nhân vật về chỗ khác. Dự đoán đúng thì ~0; lệch thì
+      // nó chạy lên bằng tần số snapshot và người chơi thấy rung khi đi sát vật cản.
+      `hiệu chỉnh ${(this.world?.fixPerSec ?? 0).toFixed(1)}/giây · lệch nhất ${(this.world?.fixMax ?? 0).toFixed(1)}`,
     ].join('\n');
   }
 
