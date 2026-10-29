@@ -252,13 +252,13 @@ export const STR = {
     isTouch
       ? [
           { key: 'Kéo', what: 'Di chuyển' },
-          { key: 'Chạm 2 lần rồi giữ', what: 'Chạy nhanh' },
-          { key: '✦', what: 'Kỹ năng' },
+          { key: 'Chạm 2 lần rồi giữ · 🔥', what: 'Thiêu Đốt' },
+          { key: '✦', what: 'Kỹ năng (cần Bí Kíp)' },
         ]
       : [
           { key: 'W A S D', what: 'Di chuyển' },
-          { key: 'Shift', what: 'Chạy nhanh' },
-          { key: 'Space', what: 'Kỹ năng' },
+          { key: 'Shift · nháy đúp giữ', what: 'Thiêu Đốt' },
+          { key: 'Space', what: 'Kỹ năng (cần Bí Kíp)' },
           { key: 'M', what: 'Bản đồ' },
         ],
 };

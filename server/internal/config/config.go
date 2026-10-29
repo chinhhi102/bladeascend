@@ -97,7 +97,12 @@ type Player struct {
 type Burn struct {
 	Mult          float64 `json:"mult"`
 	ExpFracPerSec float64 `json:"exp_frac_per_sec"`
-	KeepRealm     bool    `json:"keep_realm"` // never burn below the floor of the current realm
+	// TienFracPerSec: người Tiên giới đốt **Tiên khí** thay cho EXP (spec v5.6 §4.1c) —
+	// mỗi giây ngần này phần của BƯỚC Tiên khí hiện tại. Spec §16 ghi khoá này trong khối
+	// `player` tên `burn_tien_frac_per_sec`; ở đây để cạnh `exp_frac_per_sec` cho khớp
+	// cách config đang xếp (khối `burn` riêng), đúng như `burn_exp_per_sec` đã làm.
+	TienFracPerSec float64 `json:"tien_frac_per_sec"`
+	KeepRealm      bool    `json:"keep_realm"` // never burn below the floor of the current realm
 }
 
 type Buff struct {

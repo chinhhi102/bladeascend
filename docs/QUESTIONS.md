@@ -47,39 +47,6 @@ Tôi đang để **0.1** theo lời nhắn, vì nó mới hơn và nói rõ tỉ
 `config/game.json` → `cultivation.tien_overflow_score: 1.0` và sửa con số khoá trong
 `server/internal/game/newrules_test.go`.
 
-## Q23 — Spec còn ghi cách bật Thiêu Đốt cũ (chỉ cần anh dán lại vào `_raw`, không phải hỏi)
-
-Anh nhắn ngày 29/10: *"thiêu đốt tinh huyết là shift, hoặc double-click long"*, và sau đó
-chốt kỹ năng *"đổi sang space cũng được"*. Code đã làm đúng vậy. Phần kỹ năng thì
-`docs/_raw/GAME_SPEC.md` §6.3 vốn đã ghi Space nên khớp sẵn; chỉ còn hai dòng nhờ anh sửa
-trong `_raw` (tôi không ghi vào đó):
-
-- **§4.1c dòng 314**: `Giữ **Shift** (PC) hoặc giữ nút **🔥** (điện thoại)` →
-  thêm *"hoặc **nháy đúp rồi giữ** chuột / chạm 2 lần rồi giữ"*.
-- **§18.1 dòng 1116**: bảng hướng dẫn giờ liệt kê thêm dòng Kỹ năng.
-
-## Q24 — Lên Tiên giới là mất luôn Thiêu Đốt Tinh Huyết (chạy nhanh)
-
-Phát hiện khi đo lại phím điều khiển ngày 29/10. Không phải lỗi mới — là hệ quả của hai luật
-đã có cộng vào nhau:
-
-- §4.1c: Thiêu Đốt tiêu **EXP của tầng hiện tại**, và không bao giờ cho rớt cảnh giới, nên
-  `Burning()` đòi `TotalExp > đáy cảnh giới`.
-- §3.4: từ Đại Thừa tầng 10 trở lên **không hấp thụ Linh khí nữa**, lên cảnh giới bằng sát
-  mạng. Người Tiên giới đứng đúng ở đáy cảnh giới của mình → `TotalExp == đáy` → không đốt
-  được. Tiên khí đầy cũng không giúp: đốt chỉ nhìn vào EXP.
-
-Đo được: cùng một nhân vật, lúc Luyện Khí thì nháy đúp giữ là chạy nhanh; sau khi lên Đạo Tổ
-thì bấm thế nào cũng không chạy nhanh. Đã khoá bằng
-`server/internal/game/burn_tien_test.go` (test chỉ khoá hiện trạng, không phán đúng sai).
-
-**Các phương án**:
-1. Giữ nguyên — Tiên giới mạnh sẵn rồi, không cho chạy nhanh nữa là cân bằng.
-2. Cho đốt **Tiên khí** thay EXP (thêm `burn.tien_frac_per_sec`), giữ nguyên "không rớt cảnh giới".
-3. Cho đốt EXP xuống dưới đáy cảnh giới chỉ riêng ở Tiên giới.
-
-**Claude không tự chọn**: đây là đổi luật chơi, không phải sửa lỗi.
-
 ## Q25 — Bảng tỉ lệ thắng sau v5.4/v5.5 (spec mục 21 và 27 nhờ gửi bảng)
 
 Đã chạy `go run ./cmd/sim --duel` sau khi code xong v5.4 + v5.5. **Đọc bảng này cần một
@@ -108,3 +75,28 @@ khắc, nên không ai là lựa chọn vô đối.
 không khắc được ai. Tôi **chưa chỉnh** vì anh đã nhắn *"không nhất thiết phải cân bằng, cứ
 để người chơi feedback"*, và vì mọi con số này đều là số spec vừa chốt. Nếu anh muốn chỉnh
 thì ba nút gần nhất: `dan_em_sword_share` (0.5), `brace_secs` (5), `tran_chau_secs` (5).
+
+## Q26 — Đạo Tổ vẫn không Thiêu Đốt được, dù v5.6 đã cho Tiên giới đốt Tiên khí
+
+v5.6 §4.1c nói người Tiên giới đốt Tiên khí và **"không bao giờ xuống dưới mốc khởi điểm của
+cảnh giới đang đứng"**. Luật đó chạy đúng cho Chân Tiên → Kim Tiên: họ đứng giữa hai mốc nên
+luôn có phần dư để đốt.
+
+**Đạo Tổ thì không**, vì một luật khác đã có từ trước: `overflowToScore` ghim Tiên khí đúng
+ở mốc 1 500 và đổi mọi phần dư sang Uy Danh (10:1, Q22). Nên Tiên khí của Đạo Tổ **luôn
+bằng đúng đáy** → không còn gì để đốt. Hai luật đều đúng theo câu chữ, nhưng cộng lại thì
+người ở đỉnh lại là người duy nhất không chạy nhanh được.
+
+Ví dụ trong chính spec — *"Đạo Tổ: 8% × 500 = 40/giây"* — có thể đọc hai cách, và tôi không
+đoán: (a) chỉ minh hoạ cách tính 8% bằng con số bước lớn nhất, hay (b) khẳng định Đạo Tổ
+phải đốt được thật.
+
+**Các phương án**:
+1. Giữ nguyên — Đạo Tổ đã đạt đỉnh, đổi Tiên khí dư sang Uy Danh có giá trị hơn chạy nhanh.
+2. Cho Đạo Tổ giữ một phần dư làm "bình xăng": đổi sang Uy Danh phần vượt quá
+   `1500 + tien_khi_per_step[4]` thay vì vượt quá 1500.
+3. Riêng Đạo Tổ lấy đáy là mốc Kim Tiên (1 000) — đốt được nhưng vẫn không rớt cảnh giới vì
+   cảnh giới tính theo `Level`, không theo Tiên khí.
+
+**Tạm dùng**: phương án 1 (hiện trạng, không cần đổi mã). Đã khoá bằng
+`TestDaoToHasNoTienKhiHeadroom` — test ghi rõ là khoá hiện trạng, không phải khẳng định ý đồ.

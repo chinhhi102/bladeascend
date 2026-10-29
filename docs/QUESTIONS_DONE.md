@@ -111,3 +111,18 @@ dư sang Uy Danh thì giữ nguyên cách đã làm, ghi vào §3.4.
 **Còn một điểm lệch**: CHANGES_v5 ghi `tien_overflow_score` là **1.0**, nhưng sau đó anh nhắn
 trực tiếp "10 tiên khí chỉ được 1 uy danh" tức **0.1**. Tôi đang để **0.1** theo lời nhắn (mới
 hơn và nói rõ tỉ lệ). Xem Q22.
+
+## Q23 — Spec còn ghi cách bật Thiêu Đốt cũ — **xong (spec v5.6)**
+
+Anh đã dán vào `_raw` ngày 30/10: §4.1c giờ ghi *"Giữ **Shift**, hoặc **nháy đúp rồi giữ**
+chuột (PC); giữ nút **🔥**, hoặc **chạm 2 lần rồi giữ** (điện thoại)"*, và §18.1 có thêm dòng
+Kỹ năng. Code đã khớp sẵn từ 29/10; bảng hướng dẫn trong game đã sửa theo đúng câu chữ mới.
+
+## Q24 — Lên Tiên giới là mất Thiêu Đốt — **xong (spec v5.6)**
+
+Trả lời: **phương án 2** — người Tiên giới đốt **Tiên khí** thay EXP, mỗi giây 8% Tiên khí
+của bước hiện tại, không xuống dưới mốc khởi điểm của cảnh giới đang đứng. Đại Thừa tầng 10
+chưa nhặt Tiên khí thì chưa đốt được.
+
+Đã code: `burn.tien_frac_per_sec` = 0.08, `tienFloor` / `tienStepCost` trong `movement.go`,
+5 test trong `burn_tien_test.go`. **Một hệ quả cần anh xem**: Đạo Tổ không đốt được — xem Q26.
