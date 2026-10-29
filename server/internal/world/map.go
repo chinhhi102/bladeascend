@@ -73,6 +73,32 @@ type Gate struct {
 	Y       float64 `json:"y"`
 	Network string  `json:"n"`
 	Color   string  `json:"c"`
+	// Heaven: đây là **Thiên Môn** (spec §8.4a) — cổng MỘT CHIỀU luôn ra ở Thiên Đình,
+	// khác hẳn 4 cổng thường vốn bắn ngẫu nhiên khắp thế giới.
+	Heaven bool `json:"hv,omitempty"`
+	// Dock: đây là **Bến Thiên Môn** ở Thiên Đình — điểm RA của Thiên Môn khu `DockFor`.
+	Dock    bool `json:"dk,omitempty"`
+	DockFor int  `json:"df,omitempty"`
+}
+
+// HeavenGate trả về Thiên Môn của bản đồ này (nil nếu khu này không có).
+func (m *Map) HeavenGate() *Gate {
+	for i := range m.Gates {
+		if m.Gates[i].Heaven {
+			return &m.Gates[i]
+		}
+	}
+	return nil
+}
+
+// DockFor trả về Bến Thiên Môn dành cho khu `zone` (nil nếu không có).
+func (m *Map) DockFor(zone int) *Gate {
+	for i := range m.Gates {
+		if m.Gates[i].Dock && m.Gates[i].DockFor == zone {
+			return &m.Gates[i]
+		}
+	}
+	return nil
 }
 
 // Altar is a Đài Tiên Khí (spec §8.5): "small" quanh 4 sân môn phái, "center" ở giữa.
@@ -238,7 +264,10 @@ func (m *Map) addLayer(l tmjLayer, opt LoadOptions) {
 		case "gates":
 			c := o.shape().Center()
 			m.Gates = append(m.Gates, Gate{ID: len(m.Gates), X: c.X, Y: c.Y,
-				Network: propString(o.Properties, "network", "a"), Color: propString(o.Properties, "color", "purple")})
+				Network: propString(o.Properties, "network", "a"), Color: propString(o.Properties, "color", "purple"),
+				Heaven:  propString(o.Properties, "heaven", "") == "1",
+				Dock:    propString(o.Properties, "dock", "") == "1",
+				DockFor: int(propFloat(o.Properties, "dock_for", -1))})
 		case "altars":
 			sh := o.shape()
 			c := sh.Center()

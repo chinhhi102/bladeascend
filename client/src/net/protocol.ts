@@ -233,6 +233,10 @@ export interface MapGate {
   y: number;
   n: string;
   c: string;
+  /** hv: đây là Thiên Môn — một chiều, luôn ra ở Thiên Đình (spec §8.4a). */
+  hv?: boolean;
+  /** dk: đây là Bến Thiên Môn ở Thiên Đình — chỗ đặt chân, không đi được. */
+  dk?: boolean;
 }
 
 export interface GameMap {

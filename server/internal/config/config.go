@@ -261,6 +261,8 @@ type Gates struct {
 	// sang khu khác (spec §8.4).
 	ExitPool     string  `json:"exit_pool"`
 	Radius       float64 `json:"radius"`
+	// HeavenRadius: bán kính kích hoạt Thiên Môn — to gấp đôi cổng thường (spec §8.4a).
+	HeavenRadius float64 `json:"heaven_radius"`
 	TransitSecs  float64 `json:"transit_secs"`
 	ExitWarnSecs float64 `json:"exit_warn_secs"`
 	CooldownSecs float64 `json:"cooldown_secs"`

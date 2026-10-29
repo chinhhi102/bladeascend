@@ -401,6 +401,7 @@ export class Hud {
       : f.k === 'title_gain' ? STR.feed.title_gain(f.a)
       : f.k === 'title_lose' ? STR.feed.title_lose(f.a)
       : f.k === 'tien_ascend' ? STR.feed.tien_ascend(f.a, realmName(this.cfg, f.r))
+      : f.k === 'heaven_gate' ? STR.feed.heaven_gate(f.a, STR.titles[(f.r || 1) - 1] ?? '')
       : '';
     if (!text) {
       return;

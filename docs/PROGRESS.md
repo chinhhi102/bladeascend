@@ -41,6 +41,21 @@ Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (d
 
 ## Đã làm
 
+- **Thiên Môn (29/10/2026, spec §8.4a, CHANGES_v5 mục 16–18)** — lối đi **chắc chắn** tới
+  Thiên Đình, ngược hẳn với 4 cổng thường vốn cố tình giấu đích đến.
+  - Mỗi khu trừ Thiên Đình có **1 Thiên Môn ở tâm khu**, mapgen chừa quảng trường trống bán
+    kính 500 quanh nó. Thiên Đình có **4 Bến Thiên Môn** cách tâm 1 400 ở đầu 4 đường chính.
+  - **Một chiều, đích cố định**: mỗi khu nối cố định với một bến (Linh Sơn → Bắc, Trúc Lâm →
+    Đông, Phàm Trấn → Nam, Băng Nguyệt → Tây). Cố định chứ không ngẫu nhiên là có lý do:
+    người chơi quen đường sẽ biết ai vừa từ khu nào lên, và ở khu trung tâm đó là thông tin
+    đáng giá.
+  - Thiên Môn và bến **không nằm trong bể ngẫu nhiên** của cổng thường; **đứng trên bến
+    không bị hút đi tiếp** — thiếu luật này thì người vừa lên Thiên Đình bị bắn ngược về khu
+    khác ngay lập tức. Cả ba điều có test riêng.
+  - Minimap: icon ⛩ vàng **luôn hiện**, cộng mũi tên ở góc chỉ hướng khi còn cách trên 1 200.
+    Kill feed khi Top 3 bước qua. Bot chỉ dùng Thiên Môn khi đã Đại Thừa trở lên — dưới cảnh
+    giới đó Thiên Môn chỉ ném chúng vào giữa ổ kiến lửa.
+
 - **Kỹ năng nhân vật qua Bí Kíp (29/10/2026, spec §6.3, CHANGES_v5 mục 11–14)** — đủ 10 kỹ
   năng, vật phẩm Bí Kíp (`skill_scroll`, weight 10), khung trạng thái chung, nút bấm, lớp
   trân châu, bot biết dùng, và `cmd/sim --duel`.

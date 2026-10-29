@@ -275,6 +275,7 @@
     "random_exit": true,
     "exit_pool": "all",
     "radius": 150,
+    "heaven_radius": 200.0,
     "transit_secs": 2.0,
     "exit_warn_secs": 0.5,
     "cooldown_secs": 8,

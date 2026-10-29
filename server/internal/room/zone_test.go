@@ -40,6 +40,11 @@ func zoneManager(t *testing.T) (*Manager, *config.Config) {
 	return m, cfg
 }
 
+// worldGate dựng nhanh một cổng cho test.
+func worldGate(id int, x, y float64, heaven, dock bool, dockFor int) world.Gate {
+	return world.Gate{ID: id, X: x, Y: y, Network: "world", Heaven: heaven, Dock: dock, DockFor: dockFor}
+}
+
 // settle chạy vài tick để phòng nuốt hết hàng chờ — `Manager.Join` chỉ xếp việc vào inbox,
 // nhân vật chưa thật sự có mặt cho tới khi phòng tick.
 func settle(r *Room, cfg *config.Config) {

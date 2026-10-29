@@ -157,6 +157,8 @@ export const STR = {
 
   // Kill feed (spec §7) — mỗi dòng bốc ngẫu nhiên một cách nói cho đỡ nhàm
   feed: {
+    /** Top 3 bước qua Thiên Môn (spec §8.4a). */
+    heaven_gate: (a: string, title: string): string => `${a} (${title}) vừa bước qua Thiên Môn — Thiên Đình dậy sóng!`,
     kill: (a: string, b: string) => pick([
       `${a} vừa tiễn ${b} về quê nuôi cá`,
       `${a} tặng ${b} một vé về quê, không hoàn không huỷ`,

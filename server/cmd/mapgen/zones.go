@@ -45,10 +45,26 @@ func (g *gen) thienDinh() error {
 	// Cổng đặt TRƯỚC vật cản: b.gate() ghi vùng giữ trống 300 quanh cổng, nên vật cản sinh
 	// sau sẽ tự tránh. Đặt sau thì không có cách nào bảo đảm luật "trống 300 quanh cổng".
 	g.gatesStep()
+	g.heavenDocks()
 	g.quadrantContent()
 	g.terrainZones()
 	g.decorStep()
 	return nil
+}
+
+// heavenDocks đặt 4 Bến Thiên Môn ở Thiên Đình (spec §8.4a).
+//
+// Mỗi khu nối cố định với một bến theo hướng: Linh Sơn Cốc → Bắc, Trúc Lâm → Đông,
+// Phàm Trấn → Nam, Băng Nguyệt Hồ → Tây. Cố định chứ không ngẫu nhiên là có lý do: người
+// chơi quen đường sẽ biết ai vừa từ khu nào lên, và đó là thông tin đáng giá ở khu trung
+// tâm — khác hẳn cổng thường vốn cố tình giấu đích đến.
+func (g *gen) heavenDocks() {
+	c := g.size / 2
+	const d = 1400
+	// Thứ tự: khu 1 Bắc, khu 2 Đông, khu 3 Nam, khu 4 Tây.
+	for i, p := range []Vec2{{c, c - d}, {c + d, c}, {c, c + d}, {c - d, c}} {
+		g.b.heavenDock(p.X, p.Y, i+1)
+	}
 }
 
 // fourGates đặt 4 cổng rải đều bốn phía của khu (spec §8.4: "khu khác: rải đều 4 phía").
@@ -79,6 +95,8 @@ func (g *gen) linhSonCoc() error {
 	s := g.size
 	lo, hi := g.b.playable()
 	g.twoAltars(Vec2{s * 0.22, s * 0.24}, Vec2{s * 0.78, s * 0.76})
+	// Thiên Môn trên một bình nguyên giữa các hẻm núi (spec §8.4a).
+	g.b.heavenGate(s/2, s/2)
 	g.fourGates("slate")
 
 	// Vách đá xếp SO LE: dãy lẻ chạm mép trái và hụt mép phải, dãy chẵn ngược lại. Nhờ vậy
@@ -177,6 +195,8 @@ func (g *gen) trucLam() error {
 	a := Vec2{lo + cell*2.5, hi - cell*2.5}
 	bb := Vec2{hi - cell*2.5, lo + cell*2.5}
 	g.twoAltars(a, bb)
+	// Thiên Môn ở khoảng trống trung tâm mê cung (spec §8.4a) — đường vào ngoằn ngoèo.
+	g.b.heavenGate(s/2, s/2)
 	g.fourGates("green")
 
 	walls := carveMaze(cells, func(n int) int { return g.b.rng.Intn(n) })
@@ -209,7 +229,6 @@ func (g *gen) trucLam() error {
 	for _, d := range []string{"bamboo", "bush_small"} {
 		g.b.decor(d, 90)
 	}
-	_ = s
 	return nil
 }
 
@@ -308,6 +327,8 @@ func (g *gen) phamTran() error {
 	sqA := Vec2{s * 0.27, s * 0.27}
 	sqB := Vec2{s * 0.73, s * 0.73}
 	g.twoAltars(sqA, sqB)
+	// Thiên Môn ở quảng trường chính giữa thị trấn (spec §8.4a).
+	g.b.heavenGate(s/2, s/2)
 	g.fourGates("red")
 
 	// Lưới phố — nhưng **cố tình không đều**. Bản đầu tôi chia đúng 1 800 một ô và ra một
@@ -441,6 +462,9 @@ func (g *gen) bangNguyetHo() error {
 	islandA := Vec2{c.X - 1700, c.Y - 1100}
 	islandB := Vec2{c.X + 1700, c.Y + 1100}
 	g.twoAltars(islandA, islandB)
+	// Thiên Môn trên đảo băng giữa hồ (spec §8.4a) — phải trượt băng mới tới.
+	g.b.organicZone("snow", c.X, c.Y, 700, 0.9)
+	g.b.heavenGate(c.X, c.Y)
 	g.fourGates("cyan")
 
 	// Đảo băng: vùng tuyết nhỏ giữa hồ (đứng được, không trượt) viền vài tảng băng.
