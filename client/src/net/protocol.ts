@@ -97,6 +97,8 @@ export interface Welcome {
 }
 
 export interface LeaderboardMsg {
+  /** zc: số nhân vật mỗi khu, cho bảng phóng to bằng phím M (spec §8.0). */
+  zc?: number[];
   t: 'lb';
   top: { id: number; nm: string; xp: number; L: number; sc: number; ti?: number }[];
   rank: number;
@@ -121,6 +123,9 @@ export interface FeedMsg {
   r: number;
   tp?: number; // hạng của nạn nhân; > 0 = tin loan toàn server (spec §11.4)
   rm?: string; // phòng xảy ra, chỉ có khi loan toàn server
+  /** zn/znm: khu xảy ra chuyện (spec §8.0); tin từ khu khác hiện kèm tên khu. */
+  zn?: number;
+  znm?: string;
 }
 
 export interface DeadMsg {

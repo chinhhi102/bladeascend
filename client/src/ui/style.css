@@ -112,6 +112,24 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 }
 .minimap.big { left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; border-width: 5px; }
 
+/* Bảng 5 khu + số người, chỉ hiện khi minimap phóng to (spec §8.0). */
+.zone-list {
+  display: none; position: absolute; right: -210px; top: 0; width: 196px;
+  padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.72);
+  color: #e8eef4; font-size: clamp(11px, 1.4vw, 14px); pointer-events: none;
+}
+.zone-list-title { font-weight: 700; color: #ffe9a8; margin-bottom: 4px; }
+.zone-row { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+.zone-row.me { color: #ffe9a8; font-weight: 700; }
+.zone-row-n { opacity: .85; }
+/* Màn hẹp thì bảng nằm dưới minimap thay vì bên cạnh, khỏi tràn ra ngoài. */
+@media (max-width: 900px) {
+  .zone-list { right: auto; left: 0; top: calc(100% + 8px); width: 100%; }
+}
+
+/* Tiền tố tên khu trong kill feed khi tin đến từ khu khác (spec §8.0). */
+.feed-zone { color: #9fb4c8; opacity: .85; }
+
 /* Tên khu đang đứng, ngay trên minimap (spec §8.0). Ẩn khi phòng chỉ có 1 khu. */
 .zone-name {
   position: absolute; left: 12px; top: 110px; display: none;

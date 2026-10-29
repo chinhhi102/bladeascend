@@ -44,6 +44,9 @@ type Brain struct {
 	pathFor     Vec
 	pathAt      float64
 	ambushUntil float64
+	// gateUntil: đang trên đường ra cổng tới khi nào. Không có mốc này thì bot đổi ý ngay
+	// ở tick sau và đứng rung trước cổng mãi.
+	gateUntil float64
 }
 
 func New(id uint32, seed int64, g *game.Game) *Brain {
@@ -82,6 +85,8 @@ func (b *Brain) decide(g *game.Game, me *game.Player) {
 	myPow := g.Power(me)
 	threat, prey := b.scanPlayers(g, me, myPow)
 	switch {
+	case b.gateUntil > g.Time && b.headToGate(g, me):
+		// Đang chạy ra cổng: giữ ý định, đừng đổi mỗi tick.
 	case me.Ring.Count == 0 && threat != nil:
 		// Spec §5.2 (v3.5): bị tước sạch kiếm thì chỉ còn nước chạy.
 		b.State = StateFlee
@@ -91,6 +96,11 @@ func (b *Brain) decide(g *game.Game, me *game.Player) {
 	case threat != nil:
 		b.State = StateFlee
 		b.flee(g, me, threat)
+	case threat == nil && prey == nil && b.wantsGate(g, me) && b.headToGate(g, me):
+		// Khu đang vắng mà cũng chẳng có gì nhặt: đi cổng sang khu khác tìm người. Không
+		// có luật này thì bot nào rơi vào khu vắng sẽ quanh quẩn ở đó tới hết trận, và cả
+		// một khu của thế giới thành vùng chết (spec v5 mục 8: "bot biết dùng cổng").
+		b.gateUntil = g.Time + 20
 	case prey != nil && b.rng.Float64() < 0.5+b.aggression/2:
 		b.State = StateHunt
 		// Còn lá chắn (§5.2) thì chém thân không ăn: đứng trong vùng mài — xa hơn tầm kiếm
@@ -109,6 +119,41 @@ func (b *Brain) decide(g *game.Game, me *game.Player) {
 	default:
 		b.farm(g, me)
 	}
+}
+
+// wantsGate: bot có nên đi cổng không. Chỉ khi quanh đây **không còn ai** — bot đang đánh
+// nhau hay đang có mồi thì bỏ đi là vô lý.
+func (b *Brain) wantsGate(g *game.Game, me *game.Player) bool {
+	if me.InTransit(g.Time) || g.Time < me.GateReadyAt || len(g.Map.Gates) == 0 {
+		return false
+	}
+	near := 0
+	for _, o := range g.PlayerList() {
+		if o.ID != me.ID && !o.Dead && o.Pos.Dist(me.Pos) < g.Geom(me).Reach*6 {
+			near++
+		}
+	}
+	return near == 0 && b.rng.Float64() < 0.02 // ~2% mỗi lần quyết định, không dồn cục
+}
+
+// headToGate đặt đích là cổng gần nhất. Trả về false khi không có cổng nào để đi.
+func (b *Brain) headToGate(g *game.Game, me *game.Player) bool {
+	if me.InTransit(g.Time) {
+		return true // đang dịch chuyển, cứ đứng yên chờ
+	}
+	best, bd := Vec{}, math.MaxFloat64
+	for _, gate := range g.Map.Gates {
+		at := Vec{X: gate.X, Y: gate.Y}
+		if d := me.Pos.Dist(at); d < bd {
+			best, bd = at, d
+		}
+	}
+	if bd == math.MaxFloat64 {
+		return false
+	}
+	b.State = StateFarm
+	b.setGoal(best, 0) // đi thẳng vào tâm cổng thì mới kích hoạt
+	return true
 }
 
 // scanPlayers returns the nearest visible threat and the nearest visible prey.
