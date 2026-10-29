@@ -17,7 +17,7 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
 - Không thêm thư viện/framework khác khi chưa hỏi.
 
 ## Lệnh
-- Chạy server: `cd server && go run ./cmd/server` (mặc định cổng 8080)
+- Chạy server: `cd server && go run ./cmd/server` (mặc định cổng 9999, mở ra mạng LAN)
 - Chạy client dev: `cd client && npm run dev`
 - Test luật chơi: `cd server && go test ./...`
 - Giả lập cân bằng: `cd server && go run ./cmd/sim --bots 40 --minutes 10`

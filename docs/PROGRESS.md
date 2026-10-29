@@ -4,11 +4,11 @@ _Cập nhật: 2026-10-22_
 
 ## Cách chạy (máy dev)
 
-> Server **chỉ nghe trên máy này** (`127.0.0.1:8080`), không mở ra mạng LAN. Muốn cho máy
-> khác cùng Wi-Fi vào thì chạy `go run ./cmd/server -addr :8080`, và client dev thì
-> `npm run dev -- --host`.
+> Server nghe `:9999` trên **mọi card mạng**, nên máy khác cùng Wi-Fi vào được bằng
+> `http://<IP-máy-này>:9999`. Muốn đóng lại, chỉ cho máy này chơi:
+> `go run ./cmd/server -addr 127.0.0.1:9999`.
 ```bash
-cd server && go run ./cmd/server          # http://localhost:8080 (đã build client) — đổi cổng: -addr :8090
+cd server && go run ./cmd/server          # http://localhost:9999 (đã build client) — đổi cổng: -addr :8090
 cd client && npm run dev                  # http://localhost:5173 (tự cập nhật khi sửa code)
 cd server && go test ./... && go vet ./...
 cd client && npm run build
