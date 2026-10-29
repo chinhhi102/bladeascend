@@ -86,6 +86,8 @@ export class Hud {
   private readonly banner = h('div', 'banner');
   /** Tên khu đang đứng, hiện cạnh minimap (spec §8.0). */
   private readonly zoneBox = h('div', 'zone-name');
+  /** Khu người chơi đang đứng — để biết tin kill feed nào đến từ khu khác (spec §8.0). */
+  private myZone = 0;
   private readonly ping = h('div', 'ping');
   private readonly debugHelp = h('div', 'debug-help', STR.debugHelp);
   /** Đồng hồ đo hiệu năng, chỉ hiện khi ?debug=true — để biết lag nằm ở đâu (xem setPerf). */
@@ -304,7 +306,9 @@ export class Hud {
   }
 
   /** setZone đổi tên khu cạnh minimap; chuỗi rỗng thì ẩn hẳn (phòng 1 khu như trước). */
-  setZone(name: string): void {
+  setZone(name: string, index = 0): void {
+    this.myZone = index;
+    this.minimap.setZone(index);
     this.zoneBox.textContent = name;
     this.zoneBox.style.display = name ? 'block' : 'none';
   }
@@ -372,7 +376,13 @@ export class Hud {
       window.setTimeout(() => big.remove(), SERVER_FEED_SECS * 1000);
       return;
     }
-    const line = h('div', 'feed-line', ...colorizeFeed(text, f.a, f.b ?? ''));
+    const line = h('div', 'feed-line');
+    // Tin từ KHU KHÁC hiện kèm tên khu (spec §8.0) — không có tiền tố thì người chơi tưởng
+    // vừa có người chết ngay cạnh mình, trong khi chuyện xảy ra ở đầu kia thế giới.
+    if (f.znm && (f.zn ?? 0) !== this.myZone) {
+      line.append(h('span', 'feed-zone', `[${f.znm}]`), document.createTextNode(' '));
+    }
+    line.append(...colorizeFeed(text, f.a, f.b ?? ''));
     this.feed.prepend(line);
     while (this.feed.children.length > FEED_KEEP) {
       this.feed.lastElementChild?.remove();

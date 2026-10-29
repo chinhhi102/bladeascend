@@ -232,7 +232,7 @@ class App {
     }
     this.early = [];
     this.input.enabled = true;
-    this.hud.setZone(w.znm ?? '');
+    this.hud.setZone(w.znm ?? '', w.zn ?? 0);
     if (changedZone) {
       // Chữ lớn mờ dần giữa màn hình khi vào khu mới (spec §8.0).
       this.hud.showBanner(STR.zoneEntered(w.znm ?? ''), ZONE_BANNER_SECS);

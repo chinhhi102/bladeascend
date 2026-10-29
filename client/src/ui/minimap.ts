@@ -2,6 +2,7 @@ import type { GameConfig } from '../config';
 import type { GameMap, LeaderboardMsg, Shape } from '../net/protocol';
 import { GATE_COLORS } from '../render/palette';
 import { h } from './dom';
+import { STR } from './strings';
 
 // Colours of the static layer. Kept muted so the live markers stand out (spec §12.1).
 const BG = '#13170f';
@@ -45,11 +46,19 @@ export class Minimap {
   private size: number;
   private big = false;
   private lb: LeaderboardMsg | null = null;
+  /**
+   * Cột liệt kê 5 khu + số người mỗi khu, chỉ hiện khi phóng to (spec §8.0).
+   *
+   * Cố ý **không** hiện vị trí ai ở đâu — chỉ số lượng. Biết khu nào đang đông là đủ để
+   * chọn đi hay tránh; biết chính xác ai đứng chỗ nào thì cổng dịch chuyển hết bất ngờ.
+   */
+  private readonly zoneList = h('div', 'zone-list');
+  private myZone = 0;
 
   constructor(cfg: GameConfig, isTouch: boolean) {
     this.size = isTouch ? cfg.minimap.size_mobile : cfg.minimap.size_pc;
     this.ctx = this.canvas.getContext('2d');
-    this.root.append(this.canvas);
+    this.root.append(this.canvas, this.zoneList);
     this.root.addEventListener('click', () => this.toggle());
     // Cửa sổ đổi kích thước → tính lại, nếu không bản phóng to sẽ tràn ra ngoài.
     window.addEventListener('resize', () => this.resize());
@@ -60,7 +69,31 @@ export class Minimap {
   toggle(): void {
     this.big = !this.big;
     this.root.classList.toggle('big', this.big);
+    this.drawZoneList();
     this.resize();
+  }
+
+  /** setZone nhớ khu đang đứng để tô đậm dòng tương ứng trong bảng. */
+  setZone(index: number): void {
+    this.myZone = index;
+    this.drawZoneList();
+  }
+
+  private drawZoneList(): void {
+    const counts = this.lb?.zc;
+    if (!this.big || !counts || counts.length < 2) {
+      this.zoneList.style.display = 'none';
+      return;
+    }
+    this.zoneList.style.display = 'block';
+    this.zoneList.replaceChildren(
+      h('div', 'zone-list-title', STR.zoneListTitle),
+      ...counts.map((n, i) =>
+        h('div', `zone-row${i === this.myZone ? ' me' : ''}`,
+          h('span', 'zone-row-name', STR.zoneNames[i] ?? `Khu ${i + 1}`),
+          h('span', 'zone-row-n', String(n))),
+      ),
+    );
   }
 
   private resize(): void {
@@ -83,6 +116,7 @@ export class Minimap {
 
   setLeaderboard(lb: LeaderboardMsg): void {
     this.lb = lb;
+    this.drawZoneList();
   }
 
   /** drawTerrain renders the static layer once: it never changes during a match. */

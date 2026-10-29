@@ -216,6 +216,10 @@ type Feed struct {
 	Realm int    `msgpack:"r"`
 	Top   int    `msgpack:"tp,omitempty"`
 	Room  string `msgpack:"rm,omitempty"` // phòng xảy ra, chỉ gửi khi loan toàn server
+	// Zone: khu xảy ra chuyện (spec §8.0). Client thêm tiền tố "[tên khu]" khi tin đến từ
+	// khu khác — không có nó thì người chơi tưởng vừa có người chết ngay cạnh mình.
+	Zone     int    `msgpack:"zn"`
+	ZoneName string `msgpack:"znm,omitempty"`
 }
 
 // Dead is the Tổng kết screen payload (spec §7, §11.1).

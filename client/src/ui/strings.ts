@@ -9,6 +9,9 @@ export const STR = {
   leaderboard: 'Bảng xếp hạng',
   findingRoom: 'Đang tìm phòng...',
   connecting: 'Đang kết nối máy chủ...',
+  /** Tên 5 khu, khớp với room.ZoneNames bên server (spec §8.0). */
+  zoneNames: ['Thiên Đình', 'Linh Sơn Cốc', 'Trúc Lâm Mê Cung', 'Phàm Trấn', 'Băng Nguyệt Hồ'],
+  zoneListTitle: 'Khu vực',
   zoneEntered: (name: string): string => `— ${name} —`,
   glLost: 'Card màn hình vừa bị gián đoạn. Đang khôi phục, bạn sẽ vào lại phòng ngay…',
   glLostManual: 'Đồ hoạ lỗi liên tục. Hãy hạ chất lượng bằng phím V rồi tải lại trang (Ctrl+F5).',

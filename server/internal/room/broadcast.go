@@ -235,7 +235,8 @@ func (r *Room) sendFeeds(z *Zone, events []game.Event) {
 		if e.Kind != "KillFeed" {
 			continue
 		}
-		f := netproto.Feed{T: "feed", Kind: e.S, A: r.nameOf(e.A), B: r.nameOf(e.B), Realm: e.N}
+		f := netproto.Feed{T: "feed", Kind: e.S, A: r.nameOf(e.A), B: r.nameOf(e.B), Realm: e.N,
+			Zone: z.Index, ZoneName: z.Name}
 		// Với dòng chém chết, e.N là hạng của nạn nhân chứ không phải cảnh giới.
 		kill := e.S == "kill" || e.S == "gate_kill"
 		if kill {
@@ -244,8 +245,13 @@ func (r *Room) sendFeeds(z *Zone, events []game.Event) {
 				f.Top, f.Room = e.N, r.ID
 			}
 		}
-		for _, c := range z.clients {
-			c.send(f)
+		// Kill feed đi KHẮP PHÒNG, không chỉ trong khu (spec §8.0: tin từ khu khác có tiền
+		// tố tên khu). Bảng xếp hạng tính chung cả thế giới, nên tin tức cũng phải chung —
+		// nếu không thì người ở khu vắng chẳng biết ngoài kia đang xảy ra chuyện gì.
+		for _, q := range r.zones {
+			for _, c := range q.clients {
+				c.send(f)
+			}
 		}
 		if f.Top > 0 && r.mgr != nil {
 			r.mgr.BroadcastFeed(f, r)
