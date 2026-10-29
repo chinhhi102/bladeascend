@@ -125,6 +125,20 @@ type Player struct {
 
 	InvulnUntil float64
 	Buffs       [BuffCount]float64 // expiry time; 0 = inactive
+	// Status: trạng thái có thời hạn do kỹ năng gây ra (spec §6.3, xem status.go).
+	Status      [StatusCount]float64
+	// SkillCharges: số lượt dùng kỹ năng đang giữ, nhặt Bí Kíp mà có (§6.3). Tối đa 2.
+	SkillCharges int
+	// SkillReadyAt: khoá 3 giây giữa hai lần dùng (§6.3 — không có hồi chiêu tự động).
+	SkillReadyAt float64
+	// lostSwords: sổ ghi từng lần bị bể kiếm, cho Bánh Bao Thần (xem skillstate.go).
+	lostSwords []lostSword
+	// shellOn: đang trong mai rùa — dùng để bắt đúng khoảnh khắc RA khỏi mai.
+	shellOn bool
+	// Đàn em của Đại Ca (§6.3): sống có hạn, không chém thân được.
+	IsMinion    bool
+	MinionOf    uint32
+	MinionUntil float64
 	KnockVel    Vec
 	KnockUntil  float64
 

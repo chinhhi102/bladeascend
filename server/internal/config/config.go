@@ -189,6 +189,58 @@ type Ice struct {
 	Accel    float64 `json:"accel"`
 }
 
+// Skills: mọi con số của 10 kỹ năng nhân vật (spec §6.3). Bán kính và tầm xa còn được
+// nhân theo scale người dùng lúc thi hành.
+type Skills struct {
+	MaxCharges int     `json:"max_charges"`
+	LockSecs   float64 `json:"lock_secs"`
+	OvercapExp float64 `json:"overcap_exp"`
+	OvercapTien float64 `json:"overcap_tien"`
+	KnockSecs  float64 `json:"knock_secs"`
+
+	BanhBaoWindowSecs float64 `json:"banh_bao_window_secs"`
+	BanhBaoShare      float64 `json:"banh_bao_share"`
+
+	LoaConeDeg float64 `json:"loa_cone_deg"`
+	LoaReach   float64 `json:"loa_reach"`
+	LoaPush    float64 `json:"loa_push"`
+
+	RuNguRadius float64 `json:"ru_ngu_radius"`
+	RuNguSecs   float64 `json:"ru_ngu_secs"`
+	RuNguMove   float64 `json:"ru_ngu_move"`
+	RuNguSpin   float64 `json:"ru_ngu_spin"`
+
+	DanEmCount  int     `json:"dan_em_count"`
+	DanEmSecs   float64 `json:"dan_em_secs"`
+	DanEmSwords int     `json:"dan_em_swords"`
+
+	TranChauConeDeg   float64 `json:"tran_chau_cone_deg"`
+	TranChauReach     float64 `json:"tran_chau_reach"`
+	TranChauSecs      float64 `json:"tran_chau_secs"`
+	TranChauBotVision float64 `json:"tran_chau_bot_vision"`
+
+	DashDist    float64 `json:"dash_dist"`
+	DashSecs    float64 `json:"dash_secs"`
+	SlickCount  int     `json:"slick_count"`
+	SlickSecs   float64 `json:"slick_secs"`
+	SlickRadius float64 `json:"slick_radius"`
+	SlipSecs    float64 `json:"slip_secs"`
+
+	LuoiMiRange  float64 `json:"luoi_mi_range"`
+	LuoiMiRadius float64 `json:"luoi_mi_radius"`
+	LuoiMiSecs   float64 `json:"luoi_mi_secs"`
+
+	BraceSecs       float64 `json:"brace_secs"`
+	BraceDurability float64 `json:"brace_durability"`
+
+	GhostSecs  float64 `json:"ghost_secs"`
+	GhostSpeed float64 `json:"ghost_speed"`
+
+	ShellSecs       float64 `json:"shell_secs"`
+	ShellPushRadius float64 `json:"shell_push_radius"`
+	ShellPush       float64 `json:"shell_push"`
+}
+
 type Zones struct {
 	// SnowMult: bờ tuyết ở Băng Nguyệt Hồ làm chậm (spec §8.0). Cùng cơ chế với bùn.
 	SnowMult           float64 `json:"snow_mult"`
@@ -218,6 +270,10 @@ type Gates struct {
 type Room struct {
 	// Zones: số khu mỗi phòng (spec §8.0). Để 1 là quay về thế giới một bản đồ như trước.
 	Zones          int     `json:"zones"`
+	// ZoneMinChars: sàn nhân vật mỗi khu. Bot được thả thêm cho tới khi khu nào cũng đạt
+	// sàn này, nhưng không bao giờ vượt `BotFillTarget` của cả phòng — nếu không thì một
+	// khu đông người sẽ kéo tổng số vượt trần.
+	ZoneMinChars   int     `json:"zone_min_chars"`
 	MaxHumans      int     `json:"max_humans"`
 	BotFillTarget  int     `json:"bot_fill_target"`
 	MapSize        float64 `json:"map_size"`
@@ -331,6 +387,7 @@ type Net struct {
 
 // Config mirrors config/game.json.
 type Config struct {
+	Skills     Skills     `json:"skills"`
 	Ice        Ice        `json:"ice"`
 	Cultivation Cultivation     `json:"cultivation"`
 	Sword       Sword           `json:"sword"`

@@ -38,6 +38,8 @@ type Input struct {
 	Angle  uint8  `msgpack:"a"`
 	Moving bool   `msgpack:"m"`
 	Burn   bool   `msgpack:"b"` // đang giữ Thiêu Đốt Tinh Huyết (spec §4.1c)
+	// Skill: người chơi vừa bấm nút kỹ năng (Space / nút trên điện thoại), spec §6.3.
+	Skill bool `msgpack:"sk,omitempty"`
 }
 
 type Ping struct {
@@ -65,7 +67,7 @@ type ObstacleState struct {
 // Không có nó thì client mới gặp server cũ sẽ đọc rác rồi **đứng hình không báo gì** — đã
 // dính đúng một lần: client build 16:40 nói `mood` là chỉ số, server chạy từ 14:56 vẫn gửi
 // chuỗi, và người chơi chỉ thấy game treo.
-const ProtocolVersion = 2
+const ProtocolVersion = 3
 
 type Welcome struct {
 	T         string          `msgpack:"t"`
@@ -111,6 +113,9 @@ type PlayerState struct {
 	Mood  uint8 `msgpack:"md"`
 	Buffs uint8 `msgpack:"bf"`
 	Flags uint8 `msgpack:"fl"`
+	// St: trạng thái do kỹ năng gây ra, mỗi bit một trạng thái (spec §6.3, game.StatusNames).
+	// Gửi cho mọi người vì client phải vẽ "zzz", mai rùa, vệt lướt… của người khác.
+	St uint16 `msgpack:"st,omitempty"`
 	Crack float32 `msgpack:"ck,omitempty"`
 	// Exp chỉ gửi cho CHÍNH người đó: không ai cần biết EXP của người khác, HUD chỉ vẽ của
 	// mình. Trước đây gửi cho tất cả, tốn 7 byte × (số người thấy được) mỗi gói.
@@ -120,6 +125,8 @@ type PlayerState struct {
 	// nhận snapshot là dự đoán lại từ vận tốc 0 và nhân vật giật trên cả mặt hồ.
 	Vx float32 `msgpack:"vx,omitempty"`
 	Vy float32 `msgpack:"vy,omitempty"`
+	// Charges: số lượt kỹ năng đang giữ, chỉ gửi cho chính chủ (spec §6.3).
+	Charges int `msgpack:"skc,omitempty"`
 	Title  int     `msgpack:"ti,omitempty"` // room rank badge 1..3 (spec §11.3), 0 = none
 	// Tiên giới (spec §3.4): sát mạng đã có / cần, để HUD vẽ thanh Tiên khí. Chỉ gửi cho
 	// chính người đó; người khác chỉ cần Level để biết cảnh giới và màu hào quang.

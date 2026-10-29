@@ -18,6 +18,16 @@ func (g *Game) MoveSpeed(p *Player) float64 {
 	if g.Burning(p) {
 		s *= g.Cfg.Burn.Mult
 	}
+	// Kỹ năng (spec §6.3): Ru Ngủ làm chậm, Giao Hỏa Tốc làm nhanh, Lưới Mì trói chết chân.
+	if p.HasStatus(StSlow, g.Time) {
+		s *= g.Cfg.Skills.RuNguMove
+	}
+	if p.HasStatus(StGhost, g.Time) {
+		s *= g.Cfg.Skills.GhostSpeed
+	}
+	if p.HasStatus(StRoot, g.Time) || p.HasStatus(StShell, g.Time) {
+		s = 0 // bị trói, hoặc đang rụt trong mai
+	}
 	return s
 }
 
@@ -117,7 +127,9 @@ func (g *Game) movePlayer(p *Player, dt float64) {
 	if p.Moving {
 		p.Facing = p.InputAngle
 	}
-	if g.OnIce(p.Pos) {
+	// Trượt vì vệt trái cây của Cô Ba cũng dùng đúng cơ chế mặt băng (spec §6.3) — một
+	// luật quán tính, hai nguồn gây ra.
+	if g.OnIce(p.Pos) || p.HasStatus(StSlip, g.Time) {
 		g.slideOnIce(p, dt)
 	} else if p.Moving {
 		dir := geom.FromAngle(p.InputAngle)
@@ -131,7 +143,7 @@ func (g *Game) movePlayer(p *Player, dt float64) {
 	}
 	// Người chơi KHÔNG chặn đường nhau (spec §5.2 là luật chém, xem shield.go): đi tới gần
 	// ai cũng vẫn điều khiển được bình thường, hai vòng kiếm chồng lên nhau mà mài.
-	p.Pos = g.resolveBlocking(p.Pos, g.BodyR(p))
+	p.Pos = g.resolveBlockingFor(p, p.Pos, g.BodyR(p))
 }
 
 // OnIce: điểm này có nằm trên mặt băng không (spec §8.0, khu Băng Nguyệt Hồ).
@@ -172,6 +184,36 @@ func (g *Game) slideOnIce(p *Player, dt float64) {
 // Trước đây chỗ này chỉ kẹp vào [r, size-r] tức cả dải lề ngoài tường biên, nên một cú
 // knockback hay một lần PushOut chọn nhầm mặt ngoài của tường là người chơi đứng luôn bên
 // ngoài bản đồ và không có gì kéo họ vào lại.
+// resolveBlockingFor là resolveBlocking có xét kỹ năng: Giao Hỏa Tốc đi xuyên vật cản
+// PHÁ ĐƯỢC (spec §6.3), nhưng không xuyên tường/vách không phá được.
+func (g *Game) resolveBlockingFor(p *Player, pos Vec, r float64) Vec {
+	if !p.HasStatus(StGhost, g.Time) {
+		return g.resolveBlocking(pos, r)
+	}
+	pos = g.clampToPlay(pos, r)
+	for iter := 0; iter < 3; iter++ {
+		ids := g.obsBuf[:0]
+		g.QueryObstacles(pos, r, func(id int) {
+			// Chỉ bị chặn bởi thứ KHÔNG phá được (MaxHP 0); nhà cửa, rào, sạp thì đi xuyên.
+			if g.ObstacleSolid(id) && g.Map.Obstacles[id].MaxHP == 0 {
+				ids = append(ids, id)
+			}
+		})
+		g.obsBuf = ids
+		sort.Ints(ids)
+		moved := false
+		for _, id := range ids {
+			if np, hit := g.Map.Obstacles[id].Block().PushOut(pos, r); hit {
+				pos, moved = np, true
+			}
+		}
+		if !moved {
+			break
+		}
+	}
+	return g.clampToPlay(pos, r)
+}
+
 func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
 	pos = g.clampToPlay(pos, r)
 	for iter := 0; iter < 3; iter++ {
@@ -218,7 +260,9 @@ func (g *Game) MoveStepForTest(from, vel Vec, angle, scale, dt float64, moving b
 // movePlayerForTest chạy đúng phần DI CHUYỂN của movePlayer (không có đẩy văng, không có
 // va kiếm) để công cụ đối chiếu so với client.
 func (g *Game) movePlayerForTest(p *Player, dt float64) {
-	if g.OnIce(p.Pos) {
+	// Trượt vì vệt trái cây của Cô Ba cũng dùng đúng cơ chế mặt băng (spec §6.3) — một
+	// luật quán tính, hai nguồn gây ra.
+	if g.OnIce(p.Pos) || p.HasStatus(StSlip, g.Time) {
 		g.slideOnIce(p, dt)
 	} else if p.Moving {
 		dir := geom.FromAngle(p.InputAngle)

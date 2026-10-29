@@ -46,6 +46,8 @@ type Client struct {
 	angle  float64
 	moving bool
 	burn   bool
+	// skill: nút kỹ năng vừa được bấm (sự kiện một lần, xem SetInput).
+	skill  bool
 	dirty  bool
 }
 
@@ -67,15 +69,18 @@ func (c *Client) SetInput(in netproto.Input) {
 	c.seq = in.Seq
 	c.angle = float64(in.Angle) / 256 * 2 * math.Pi
 	c.moving, c.burn = in.Moving, in.Burn
+	// Nút kỹ năng là sự kiện MỘT LẦN, không phải trạng thái giữ phím: gộp bằng OR để một
+	// lần bấm không bị mất khi hai gói input rơi vào cùng một tick.
+	c.skill = c.skill || in.Skill
 	c.dirty = true
 }
 
-func (c *Client) takeInput() (seq uint32, angle float64, moving, burn, ok bool) {
+func (c *Client) takeInput() (seq uint32, angle float64, moving, burn, skill, ok bool) {
 	c.inMu.Lock()
 	defer c.inMu.Unlock()
-	d := c.dirty
-	c.dirty = false
-	return c.seq, c.angle, c.moving, c.burn, d
+	d, sk := c.dirty, c.skill
+	c.dirty, c.skill = false, false
+	return c.seq, c.angle, c.moving, c.burn, sk, d
 }
 
 // Room returns the room the client is currently in (nil between matches).
@@ -132,9 +137,11 @@ func playerState(g *game.Game, viewer, p *game.Player, withName bool) netproto.P
 	if p == viewer {
 		s.Exp = float32(p.TotalExp)
 		s.Vx, s.Vy = float32(p.Vel.X), float32(p.Vel.Y)
+		s.Charges = p.SkillCharges
 		have, need := g.TienProgress(p)
 		s.TienHave, s.TienNeed = float32(have), float32(need)
 	}
+	s.St = p.StatusBits(g.Time)
 	for b := 0; b < game.BuffCount; b++ {
 		if p.HasBuff(b, g.Time) {
 			s.Buffs |= 1 << b

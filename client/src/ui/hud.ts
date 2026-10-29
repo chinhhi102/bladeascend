@@ -64,6 +64,23 @@ function inkOnHex(bg: number): string {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#14110c' : '#ffffff';
 }
 
+/**
+ * Icon tạm cho 10 kỹ năng (spec §6.3). Dùng emoji cho tới khi có art thật — thà có thứ
+ * nhìn ra được ngay còn hơn một ô vuông trống chờ ảnh.
+ */
+const SKILL_ICONS: Record<string, string> = {
+  a_hon: '🥟',
+  ba_tam_loa: '📢',
+  ong_ba_vong: '💤',
+  dai_ca_dep: '🩴',
+  map_tra_sua: '🧋',
+  co_ba_ganh: '🧺',
+  su_phu_mi: '🍜',
+  be_ti: '💪',
+  shipper: '⚡',
+  cu_rua: '🐢',
+};
+
 export class Hud {
   readonly root = h('div', 'hud');
   private readonly badge = h('div', 'badge');
@@ -99,6 +116,15 @@ export class Hud {
   readonly minimap: Minimap;
   /** burnBtn is the touch-only hold button for Thiêu Đốt Tinh Huyết (spec §4.1c). */
   readonly burnBtn = h('button', 'burn-btn', '🔥');
+  /**
+   * Nút kỹ năng (spec §6.3): icon kỹ năng của nhân vật + số lượt đang có, xám khi 0 lượt.
+   *
+   * Luôn hiện cả trên PC — ở đó nó vừa là nút bấm được, vừa là chỗ đọc còn mấy lượt. Spec
+   * chỉ nói phím Space cho PC, nhưng không hiện số lượt ở đâu thì người chơi phải đoán.
+   */
+  readonly skillBtn = h('button', 'skill-btn');
+  private readonly skillCount = h('span', 'skill-count', '0');
+  private readonly skillIcon = h('span', 'skill-icon', '✦');
   private readonly guide = h('div', 'guide');
   private readonly isTouch: boolean;
 
@@ -131,6 +157,7 @@ export class Hud {
       this.serverFeed,
       this.banner,
       this.burnBtn,
+      this.skillBtn,
       this.guide,
       h('div', 'corner', this.ping, mute),
       this.debugHelp,
@@ -302,6 +329,19 @@ export class Hud {
       } else if (e.k === 'ChestIncoming') {
         this.showBanner(STR.chestIncoming(e.n ?? this.cfg.items.chest_warn_secs), 4);
       }
+    }
+  }
+
+  /**
+   * setSkill cập nhật nút kỹ năng: icon theo nhân vật, số lượt, và xám khi hết lượt.
+   */
+  setSkill(char: string, charges: number): void {
+    this.skillIcon.textContent = SKILL_ICONS[char] ?? '✦';
+    this.skillCount.textContent = String(charges);
+    this.skillBtn.classList.toggle('empty', charges <= 0);
+    this.skillBtn.title = STR.skillNames[char] ?? '';
+    if (!this.skillBtn.firstChild) {
+      this.skillBtn.append(this.skillIcon, this.skillCount);
     }
   }
 

@@ -161,7 +161,8 @@
       "hard": 7,
       "shield": 7,
       "exp2": 5,
-      "stealth": 3
+      "stealth": 3,
+      "skill_scroll": 10
     },
     "sword_item_amount": 3,
     "bundle_amount": 15,
@@ -349,7 +350,8 @@
   "room": {
     "zones": 5,
     "max_humans": 20,
-    "bot_fill_target": 20,
+    "bot_fill_target": 60,
+    "zone_min_chars": 10,
     "map_size": 12000,
     "monster_count": 150,
     "empty_close_secs": 60,
@@ -357,7 +359,7 @@
   },
   "bots": {
     "spawn_every_secs": 2,
-    "spawn_batch": 2,
+    "spawn_batch": 4,
     "respawn_secs": 3,
     "spawn_rank": 11,
     "decide_min": 0.3,
@@ -441,5 +443,44 @@
   "ice": {
     "friction": 0.92,
     "accel": 468.0
+  },
+  "skills": {
+    "max_charges": 2,
+    "lock_secs": 3.0,
+    "overcap_exp": 20.0,
+    "overcap_tien": 2.0,
+    "knock_secs": 0.25,
+    "banh_bao_window_secs": 10.0,
+    "banh_bao_share": 0.3,
+    "loa_cone_deg": 60.0,
+    "loa_reach": 500.0,
+    "loa_push": 300.0,
+    "ru_ngu_radius": 350.0,
+    "ru_ngu_secs": 3.0,
+    "ru_ngu_move": 0.6,
+    "ru_ngu_spin": 0.5,
+    "dan_em_count": 2,
+    "dan_em_secs": 8.0,
+    "dan_em_swords": 10,
+    "tran_chau_cone_deg": 45.0,
+    "tran_chau_reach": 700.0,
+    "tran_chau_secs": 3.5,
+    "tran_chau_bot_vision": 0.4,
+    "dash_dist": 600.0,
+    "dash_secs": 0.3,
+    "slick_count": 5,
+    "slick_secs": 4.0,
+    "slick_radius": 120.0,
+    "slip_secs": 1.0,
+    "luoi_mi_range": 400.0,
+    "luoi_mi_radius": 250.0,
+    "luoi_mi_secs": 1.5,
+    "brace_secs": 4.0,
+    "brace_durability": 2.0,
+    "ghost_secs": 3.0,
+    "ghost_speed": 2.0,
+    "shell_secs": 2.5,
+    "shell_push_radius": 200.0,
+    "shell_push": 200.0
   }
 }

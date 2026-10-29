@@ -49,6 +49,59 @@ type Brain struct {
 	gateUntil float64
 }
 
+// trySkill: bot dùng kỹ năng của nhân vật mình theo luật đơn giản (spec §6.3).
+//
+// Mỗi nhân vật một điều kiện riêng, cố ý giữ THÔ: mục đích là để kỹ năng xuất hiện trong
+// trận và đo được cân bằng (cmd/sim --duel), không phải để bot chơi giỏi. Bot tính toán
+// quá khéo thì người chơi thật thấy ức chế, mà cũng không nói lên điều gì về cân bằng
+// giữa người với người.
+func (b *Brain) trySkill(g *game.Game, me *game.Player, threat, prey *game.Player) {
+	if !g.CanCastSkill(me) {
+		return
+	}
+	near := threat
+	if near == nil {
+		near = prey
+	}
+	reach := g.Geom(me).Reach
+	switch me.Char {
+	case "cu_rua": // Rụt Cổ: chỉ còn một vòng mà địch đã sát bên
+		if g.Geom(me).Rings <= 1 && near != nil && near.Pos.Dist(me.Pos) < reach*1.5 {
+			g.CastSkill(me)
+		}
+	case "ba_tam_loa", "map_tra_sua": // kỹ năng hình nón: địch phải ở phía trước
+		if near != nil && b.inFront(me, near, 60) {
+			g.CastSkill(me)
+		}
+	case "a_hon": // Bánh Bao: khi đã mất kha khá kiếm
+		if me.Ring.Count*2 < g.Prog.MaxSwords(g.Prog.Realm(me.Level)) {
+			g.CastSkill(me)
+		}
+	case "be_ti", "cu_rua_x": // Gồng: khi đang bị dí
+		if threat != nil && threat.Pos.Dist(me.Pos) < reach*2 {
+			g.CastSkill(me)
+		}
+	case "shipper", "co_ba_ganh": // chạy/lướt: khi đang bỏ chạy
+		if threat != nil {
+			g.CastSkill(me)
+		}
+	default: // Ru Ngủ, Lưới Mì, Gọi Đàn Em: cứ có địch gần là dùng
+		if near != nil && near.Pos.Dist(me.Pos) < reach*2.5 {
+			g.CastSkill(me)
+		}
+	}
+}
+
+// inFront: mục tiêu có nằm trong nón `deg` độ trước mặt không.
+func (b *Brain) inFront(me, target *game.Player, deg float64) bool {
+	to := target.Pos.Sub(me.Pos)
+	if to.Len() < 1e-6 {
+		return false
+	}
+	d := math.Abs(math.Atan2(math.Sin(to.Angle()-me.Facing), math.Cos(to.Angle()-me.Facing)))
+	return d*180/math.Pi <= deg/2
+}
+
 func New(id uint32, seed int64, g *game.Game) *Brain {
 	r := rand.New(rand.NewSource(seed))
 	bc := g.Cfg.Bots
@@ -84,6 +137,7 @@ func (b *Brain) decide(g *game.Game, me *game.Player) {
 	bc := g.Cfg.Bots
 	myPow := g.Power(me)
 	threat, prey := b.scanPlayers(g, me, myPow)
+	b.trySkill(g, me, threat, prey)
 	switch {
 	case b.gateUntil > g.Time && b.headToGate(g, me):
 		// Đang chạy ra cổng: giữ ý định, đừng đổi mỗi tick.

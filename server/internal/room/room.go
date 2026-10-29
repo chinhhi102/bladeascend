@@ -356,8 +356,15 @@ func (r *Room) drainInbox() {
 
 func (r *Room) applyInputs(z *Zone) {
 	for id, c := range z.clients {
-		if seq, ang, mov, burn, ok := c.takeInput(); ok {
-			z.G.SetInput(id, seq, ang, mov, burn)
+		seq, ang, mov, burn, skill, ok := c.takeInput()
+		if !ok {
+			continue
+		}
+		z.G.SetInput(id, seq, ang, mov, burn)
+		if skill {
+			if p, alive := z.G.Players[id]; alive {
+				z.G.CastSkill(p)
+			}
 		}
 	}
 }

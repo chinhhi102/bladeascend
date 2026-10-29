@@ -119,6 +119,9 @@ func (g *Game) canAbsorb(p *Player, it *Item) bool {
 	}
 }
 
+// ItemSkillScroll là vật phẩm Bí Kíp (spec §6.3).
+const ItemSkillScroll = "skill_scroll"
+
 func (g *Game) pickup(p *Player, it *Item) {
 	g.removeItem(it)
 	g.emit(Event{Kind: "ItemPicked", A: p.ID, B: it.ID, S: it.Kind, X: float32(it.Pos.X), Y: float32(it.Pos.Y)})
@@ -134,6 +137,19 @@ func (g *Game) pickup(p *Player, it *Item) {
 		g.GainTienKhi(p, it.Value)
 		g.emit(Event{Kind: "TienKhiPicked", A: p.ID, To: p.ID, N: int(it.Value), S: "khi",
 			X: float32(it.Pos.X), Y: float32(it.Pos.Y)})
+	case ItemSkillScroll:
+		// Bí Kíp: +1 lượt dùng kỹ năng của CHÍNH nhân vật mình (spec §6.3). Đủ 2 lượt rồi
+		// thì không bỏ phí — đổi sang tu vi, giống luật quá tay của các vật phẩm khác.
+		if g.AddSkillCharge(p) {
+			g.emit(Event{Kind: "SkillCharge", A: p.ID, To: p.ID, N: p.SkillCharges,
+				X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+			break
+		}
+		if g.BanksTienKhi(p) {
+			g.GainTienKhi(p, g.Cfg.Skills.OvercapTien)
+		} else {
+			g.GainExp(p, p.TotalExp+g.Cfg.Skills.OvercapExp, false)
+		}
 	case "chest":
 		for i := 0; i < g.Cfg.Items.ChestItems; i++ {
 			g.spawnItemNear(g.randomItemKind(), 0, it.Pos, g.Cfg.Items.ScatterR*2)

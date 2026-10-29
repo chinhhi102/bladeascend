@@ -75,3 +75,34 @@ func TestBotFillCountsWholeRoomNotPerZone(t *testing.T) {
 	}
 	var _ = game.Vec{}
 }
+
+// Trần phòng và sàn mỗi khu (chủ dự án chốt 29/10/2026): tối đa 20 người thật, tổng nhân
+// vật cả phòng không quá `bot_fill_target`, và mỗi khu phải đạt sàn `zone_min_chars` để
+// không khu nào trống trơn.
+func TestZoneFloorAndRoomCap(t *testing.T) {
+	m, cfg := zoneManager(t)
+	cfg.Room.BotFillTarget = 60
+	cfg.Room.ZoneMinChars = 10
+	joinN(m, 2)
+	r := m.AllRooms()[0]
+	dt := 1 / float64(cfg.Net.TickHz)
+	for i := 0; i < int(float64(cfg.Net.TickHz)*cfg.Bots.SpawnEverySecs*40); i++ {
+		r.Step(dt)
+	}
+	total := r.Humans() + r.Bots()
+	if total > cfg.Room.BotFillTarget {
+		t.Fatalf("phòng có %d nhân vật, trần là %d", total, cfg.Room.BotFillTarget)
+	}
+	if total < cfg.Room.BotFillTarget {
+		t.Fatalf("phòng mới có %d nhân vật, chưa lấp đủ trần %d", total, cfg.Room.BotFillTarget)
+	}
+	for _, z := range r.Zones() {
+		if z.Count() < cfg.Room.ZoneMinChars {
+			counts := make([]int, 0, len(r.Zones()))
+			for _, q := range r.Zones() {
+				counts = append(counts, q.Count())
+			}
+			t.Fatalf("khu %s chỉ có %d nhân vật, sàn là %d (phân bố %v)", z.Name, z.Count(), cfg.Room.ZoneMinChars, counts)
+		}
+	}
+}
