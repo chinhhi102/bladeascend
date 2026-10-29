@@ -131,6 +131,7 @@ func playerState(g *game.Game, viewer, p *game.Player, withName bool) netproto.P
 	}
 	if p == viewer {
 		s.Exp = float32(p.TotalExp)
+		s.Vx, s.Vy = float32(p.Vel.X), float32(p.Vel.Y)
 		have, need := g.TienProgress(p)
 		s.TienHave, s.TienNeed = float32(have), float32(need)
 	}

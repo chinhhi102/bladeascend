@@ -34,11 +34,16 @@ type oneCase struct {
 	// ra 20 lần hiệu chỉnh mỗi giây.
 	X     float64 `json:"x"`
 	Y     float64 `json:"y"`
+	VX    float64 `json:"vx"`
+	VY    float64 `json:"vy"`
 	Angle float64 `json:"a"`
 	Scale float64 `json:"sc"`
 	DT    float64 `json:"dt"`
+	Moving bool   `json:"mv"`
 	EX    float64 `json:"ex"`
 	EY    float64 `json:"ey"`
+	EVX   float64 `json:"evx"`
+	EVY   float64 `json:"evy"`
 }
 
 type fixture struct {
@@ -80,7 +85,7 @@ func main() {
 	// tới chỗ cần kiểm thì nó chỉ là một dòng chữ xanh vô nghĩa.
 	var speedZones []world.Zone
 	for _, z := range m.Zones {
-		if z.Kind == "mud" || z.Kind == "water" || z.Kind == "wind" {
+		if z.Kind == "mud" || z.Kind == "water" || z.Kind == "wind" || z.Kind == "snow" || z.Kind == "ice" {
 			speedZones = append(speedZones, z)
 		}
 	}
@@ -129,8 +134,12 @@ func main() {
 		}
 		a := rng.Float64() * 2 * math.Pi
 		scale := 1 + rng.Float64()*2 // thân từ cỡ Luyện Khí tới Đạo Tổ
-		end := g.MoveStepForTest(from, a, scale, dt)
-		f.Cases = append(f.Cases, oneCase{X: from.X, Y: from.Y, Angle: a, Scale: scale, DT: dt, EX: end.X, EY: end.Y})
+		moving := rng.Intn(5) > 0    // một phần năm số ca là "thả phím": trên băng vẫn trôi
+		// Vận tốc đầu vào khác 0 để kiểm đúng phần QUÁN TÍNH, không chỉ bước đầu tiên.
+		vel := game.Vec{X: rng.Float64()*400 - 200, Y: rng.Float64()*400 - 200}
+		end, endVel := g.MoveStepForTest(from, vel, a, scale, dt, moving)
+		f.Cases = append(f.Cases, oneCase{X: from.X, Y: from.Y, VX: vel.X, VY: vel.Y, Angle: a,
+			Scale: scale, DT: dt, Moving: moving, EX: end.X, EY: end.Y, EVX: endVel.X, EVY: endVel.Y})
 	}
 
 	b, err := json.Marshal(f)

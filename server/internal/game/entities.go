@@ -96,6 +96,9 @@ type Player struct {
 	Scale    float64
 	// ViewHW/ViewHH: nửa khung nhìn, tính sẵn trong refreshDerived (xem refreshView).
 	// Đừng đọc thẳng — gọi g.ViewHalfExtents(p) để nó tự tính nếu chưa có.
+	// Vel: vận tốc hiện tại, CHỈ dùng trên mặt băng (spec §8.0). Ngoài băng luôn bằng 0 —
+	// trên đất thả phím là dừng ngay, không có quán tính.
+	Vel    Vec
 	ViewHW float64
 	ViewHH float64
 

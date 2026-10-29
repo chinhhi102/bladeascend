@@ -115,6 +115,11 @@ type PlayerState struct {
 	// Exp chỉ gửi cho CHÍNH người đó: không ai cần biết EXP của người khác, HUD chỉ vẽ của
 	// mình. Trước đây gửi cho tất cả, tốn 7 byte × (số người thấy được) mỗi gói.
 	Exp float32 `msgpack:"xp,omitempty"`
+	// Vx/Vy: vận tốc, chỉ gửi cho CHÍNH người đó và chỉ khi đang trượt trên băng (§8.0).
+	// Client cần nó để phát lại dự đoán từ đúng vận tốc server đang giữ; thiếu thì mỗi lần
+	// nhận snapshot là dự đoán lại từ vận tốc 0 và nhân vật giật trên cả mặt hồ.
+	Vx float32 `msgpack:"vx,omitempty"`
+	Vy float32 `msgpack:"vy,omitempty"`
 	Title  int     `msgpack:"ti,omitempty"` // room rank badge 1..3 (spec §11.3), 0 = none
 	// Tiên giới (spec §3.4): sát mạng đã có / cần, để HUD vẽ thanh Tiên khí. Chỉ gửi cho
 	// chính người đó; người khác chỉ cần Level để biết cảnh giới và màu hào quang.

@@ -140,6 +140,45 @@ export function windMult(cfg: GameConfig, dir: Vec, windDir: number): number {
   return 1;
 }
 
+/** onIce: điểm này có nằm trên mặt băng không (spec §8.0). */
+export function onIce(map: Pick<GameMap, 'zones'>, p: Vec): boolean {
+  for (const z of map.zones ?? []) {
+    if (z.k === 'ice' && contains(z.s, p.x, p.y)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * iceStep: một bước trượt trên băng (spec §8.0) — bản port của `game.slideOnIce`.
+ *
+ *     vận tốc mới = vận tốc cũ × friction + hướng input × accel × dt
+ *
+ * Trả về cả vị trí lẫn vận tốc mới, vì vận tốc là TRẠNG THÁI: bước sau phụ thuộc bước
+ * trước. Đó cũng là lý do server phải gửi kèm `vx/vy` cho chính chủ — không có nó thì mỗi
+ * lần nhận snapshot client lại phát lại dự đoán từ vận tốc 0 và nhân vật giật trên cả hồ.
+ */
+export function iceStep(
+  cfg: GameConfig,
+  from: Vec,
+  vel: Vec,
+  angle: number,
+  moving: boolean,
+  dt: number,
+  speedMult: number,
+): { pos: Vec; vel: Vec } {
+  const ic = cfg.ice;
+  let vx = vel.x * ic.friction;
+  let vy = vel.y * ic.friction;
+  if (moving) {
+    const a = ic.accel * speedMult * dt;
+    vx += Math.cos(angle) * a;
+    vy += Math.sin(angle) * a;
+  }
+  return { pos: { x: from.x + vx * dt, y: from.y + vy * dt }, vel: { x: vx, y: vy } };
+}
+
 /**
  * moveStep chạy đúng MỘT bước di chuyển, khớp từng con số với `game.movePlayer` bên server.
  *
@@ -156,9 +195,19 @@ export function moveStep(
   dt: number,
   broken: (id: number) => boolean,
   speedMult = 1,
-): Vec {
+  vel: Vec = { x: 0, y: 0 },
+  moving = true,
+): { pos: Vec; vel: Vec } {
+  const r = cfg.player.body_r * scale;
+  if (onIce(map, from)) {
+    const step = iceStep(cfg, from, vel, angle, moving, dt, speedMult);
+    return { pos: resolveBlocking(step.pos, r, map, broken), vel: step.vel };
+  }
+  if (!moving) {
+    return { pos: resolveBlocking(from, r, map, broken), vel: { x: 0, y: 0 } };
+  }
   const dir = { x: Math.cos(angle), y: Math.sin(angle) };
   const speed = cfg.player.move_base * speedMult * zoneMult(cfg, map, from, dir);
   const to = { x: from.x + dir.x * speed * dt, y: from.y + dir.y * speed * dt };
-  return resolveBlocking(to, cfg.player.body_r * scale, map, broken);
+  return { pos: resolveBlocking(to, r, map, broken), vel: { x: 0, y: 0 } };
 }

@@ -177,6 +177,18 @@ type Obstacles struct {
 	DmgPerExtraRng float64 `json:"dmg_per_extra_ring"`
 }
 
+// Ice: mặt băng ở Băng Nguyệt Hồ (spec §8.0). Di chuyển có quán tính:
+//
+//	vận tốc mới = vận tốc cũ × friction + hướng input × accel × dt
+//
+// Tốc độ tới hạn = accel × dt / (1 − friction). Với friction 0,92, dt 1/30 và accel 468 thì
+// tới hạn ≈ 195 = đúng `player.move_base`, nên chạy thẳng trên băng vẫn nhanh bằng trên
+// đất — cái khó là **dừng và đổi hướng**, đúng ý spec.
+type Ice struct {
+	Friction float64 `json:"friction"`
+	Accel    float64 `json:"accel"`
+}
+
 type Zones struct {
 	// SnowMult: bờ tuyết ở Băng Nguyệt Hồ làm chậm (spec §8.0). Cùng cơ chế với bùn.
 	SnowMult           float64 `json:"snow_mult"`
@@ -319,6 +331,7 @@ type Net struct {
 
 // Config mirrors config/game.json.
 type Config struct {
+	Ice        Ice        `json:"ice"`
 	Cultivation Cultivation     `json:"cultivation"`
 	Sword       Sword           `json:"sword"`
 	Player      Player          `json:"player"`

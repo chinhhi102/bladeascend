@@ -437,5 +437,9 @@
     "leaderboard_cache_secs": 10,
     "correction_snap": 30,
     "correction_tau_ms": 100
+  },
+  "ice": {
+    "friction": 0.92,
+    "accel": 468.0
   }
 }
