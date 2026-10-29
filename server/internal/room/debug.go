@@ -55,6 +55,12 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			z.G.GainTienKhi(p, float64(max(1, d.N)))
 		case "sword":
 			z.G.AddSwords(p, max(1, d.N))
+		case "skill":
+			// Cấp lượt kỹ năng mà không phải đi tìm Bí Kíp. Không có lệnh này thì muốn thử
+			// một kỹ năng phải chạy quanh bản đồ chờ Bí Kíp rơi — đủ lâu để không ai thử.
+			for i := 0; i < max(1, d.N); i++ {
+				z.G.AddSkillCharge(p)
+			}
 		case "die":
 			z.G.DebugKill(p)
 		case "buff":
