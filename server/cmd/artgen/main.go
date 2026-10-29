@@ -381,6 +381,16 @@ func generateOnce(mg *minigen, st *state, j Job, dest string) (string, error) {
 	}
 	out, err := waitJob(mg, id)
 	if err != nil {
+		// Job BIẾN MẤT phía minigen (404 "not found or expired") thì giữ id lại là tự hại:
+		// id đó không bao giờ hồi lại được, nên mọi lần chạy sau đều hỏng y hệt và ảnh ấy
+		// kẹt vĩnh viễn. `plate_shine_streak` đã kẹt đúng hai đợt vì chuyện này.
+		//
+		// Khác hẳn trường hợp hết giờ chờ: ở đó job vẫn đang vẽ, giữ id để lần sau lấy về
+		// là đúng — và cũng là để không tốn thêm một lượt quota vẽ lại.
+		if jobGone(err) {
+			st.set(j.Name, "")
+			return "", err
+		}
 		if out == nil || out.Status != "failed" {
 			return "", err // id kept: resumed next run
 		}
@@ -428,6 +438,21 @@ func submitOnce(mg *minigen, prompt string) (*jobOut, error) {
 func rejected(err error) bool {
 	m := strings.ToLower(err.Error())
 	return strings.Contains(m, "http 429") || strings.Contains(m, "too many") || strings.Contains(m, "quota")
+}
+
+// jobGone: minigen báo job này không còn tồn tại, tức là chờ nữa cũng vô ích.
+//
+// Nhận theo CẢ mã HTTP lẫn câu chữ: mã 404 là tín hiệu chắc chắn, còn câu "not found or
+// expired" phòng trường hợp minigen đổi sang trả 410 hay 400 — thà bắt rộng một chút còn
+// hơn để một ảnh kẹt vĩnh viễn mà không ai biết vì sao.
+func jobGone(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := strings.ToLower(err.Error())
+	return strings.Contains(s, "http 404") ||
+		strings.Contains(s, "not found or expired") ||
+		strings.Contains(s, "job not found")
 }
 
 func waitJob(mg *minigen, id string) (*jobOut, error) {

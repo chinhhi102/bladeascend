@@ -365,8 +365,8 @@ func obstacleJobs() []Job {
 		vdesc := strings.ReplaceAll(o.desc, "horizontal ", "")
 		vdesc = strings.ReplaceAll(vdesc, " horizontal", "")
 		vstates := []Seg{{Anim: "states", Frames: 4, Out: dir,
-			Names:  []string{"intact_vertical", "cracked_vertical", "nearly_broken_vertical", "rubble_vertical"},
-			W:      o.w, H: o.h, Pivot: "center",
+			Names: []string{"intact_vertical", "cracked_vertical", "nearly_broken_vertical", "rubble_vertical"},
+			W:     o.w, H: o.h, Pivot: "center",
 			Poses: "1) intact and solid 2) with visible cracks 3) heavily damaged, crumbling, pieces missing 4) flat pile of rubble and debris on the ground"}}
 		jobs = append(jobs, Job{Name: "obs_" + o.id + "_states_vertical", Priority: 1, Mode: modeSheet, Rows: []int{2, 2}, Segs: vstates,
 			Prompt: sheetPrompt(styleObject, "a top-down 3/4 view game obstacle, "+vdesc+
@@ -524,7 +524,10 @@ func skillArtJobs() []Job {
 		Prompt: styleObject + " A milk tea drip trail running vertically down glass" + negative})
 
 	// Art riêng cho 4 khu mới (§11.4).
-	for _, z := range []struct{ id, desc string; w, h int }{
+	for _, z := range []struct {
+		id, desc string
+		w, h     int
+	}{
 		{"cliff_wall", "A tall rocky cliff wall segment seen from a top-down 3/4 view, tileable left to right", 1024, 512},
 		{"rope_bridge", "A wooden rope suspension bridge segment seen from above, tileable", 512, 256},
 		{"bamboo_wall", "A very dense bamboo grove wall segment seen from above, tileable left to right", 1024, 512},
@@ -584,7 +587,6 @@ func beastJobs() []Job {
 	}
 	return jobs
 }
-
 
 // Nền bản đồ, decal và sự sống (ART_PROMPTS §9.0b, GAME_SPEC §8.6). Nền phải NHẠT và ÍT
 // chi tiết: vật chơi được (EXP, item, quái, nhân vật) luôn phải nổi hơn nền (§9.0).
