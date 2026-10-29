@@ -47,19 +47,35 @@ Tôi đang để **0.1** theo lời nhắn, vì nó mới hơn và nói rõ tỉ
 `config/game.json` → `cultivation.tien_overflow_score: 1.0` và sửa con số khoá trong
 `server/internal/game/newrules_test.go`.
 
-## Q23 — Spec còn ghi phím điều khiển cũ (chỉ cần anh dán lại vào `_raw`)
+## Q23 — Spec còn ghi cách bật Thiêu Đốt cũ (chỉ cần anh dán lại vào `_raw`, không phải hỏi)
 
-Anh nhắn ngày 29/10: *"thiêu đốt tinh huyết là shift, hoặc double-click long, sử dụng skill
-= ctrl hoặc bấm vào button"*. Code đã làm đúng vậy, nhưng `docs/_raw/GAME_SPEC.md` vẫn ghi
-bản cũ — tôi không ghi vào `_raw` nên nhờ anh sửa hai dòng:
+Anh nhắn ngày 29/10: *"thiêu đốt tinh huyết là shift, hoặc double-click long"*, và sau đó
+chốt kỹ năng *"đổi sang space cũng được"*. Code đã làm đúng vậy. Phần kỹ năng thì
+`docs/_raw/GAME_SPEC.md` §6.3 vốn đã ghi Space nên khớp sẵn; chỉ còn hai dòng nhờ anh sửa
+trong `_raw` (tôi không ghi vào đó):
 
 - **§4.1c dòng 314**: `Giữ **Shift** (PC) hoặc giữ nút **🔥** (điện thoại)` →
   thêm *"hoặc **nháy đúp rồi giữ** chuột / chạm 2 lần rồi giữ"*.
-- **§6.3 dòng 428**: `Phím **Space** (PC)` → `Phím **Ctrl** (PC)`.
 - **§18.1 dòng 1116**: bảng hướng dẫn giờ liệt kê thêm dòng Kỹ năng.
 
-**Một việc cần anh quyết**: phím đi là WASD, nên giữ Ctrl rồi bấm W là **Ctrl+W = đóng tab**.
-Trình duyệt không cho trang chặn phím đó (chi tiết trong `docs/PROGRESS.md`). Tôi đã làm
-phần giảm thiểu khoá bàn phím khi toàn màn hình, nhưng nó chỉ chạy ở chế độ toàn màn hình
-và chỉ trên Chrome/Edge. Nếu anh thấy rủi ro mất tab là quá lớn thì đổi sang phím khác —
-`Q`, `F` hoặc **chuột phải** đều không đụng phím tắt trình duyệt.
+## Q24 — Lên Tiên giới là mất luôn Thiêu Đốt Tinh Huyết (chạy nhanh)
+
+Phát hiện khi đo lại phím điều khiển ngày 29/10. Không phải lỗi mới — là hệ quả của hai luật
+đã có cộng vào nhau:
+
+- §4.1c: Thiêu Đốt tiêu **EXP của tầng hiện tại**, và không bao giờ cho rớt cảnh giới, nên
+  `Burning()` đòi `TotalExp > đáy cảnh giới`.
+- §3.4: từ Đại Thừa tầng 10 trở lên **không hấp thụ Linh khí nữa**, lên cảnh giới bằng sát
+  mạng. Người Tiên giới đứng đúng ở đáy cảnh giới của mình → `TotalExp == đáy` → không đốt
+  được. Tiên khí đầy cũng không giúp: đốt chỉ nhìn vào EXP.
+
+Đo được: cùng một nhân vật, lúc Luyện Khí thì nháy đúp giữ là chạy nhanh; sau khi lên Đạo Tổ
+thì bấm thế nào cũng không chạy nhanh. Đã khoá bằng
+`server/internal/game/burn_tien_test.go` (test chỉ khoá hiện trạng, không phán đúng sai).
+
+**Các phương án**:
+1. Giữ nguyên — Tiên giới mạnh sẵn rồi, không cho chạy nhanh nữa là cân bằng.
+2. Cho đốt **Tiên khí** thay EXP (thêm `burn.tien_frac_per_sec`), giữ nguyên "không rớt cảnh giới".
+3. Cho đốt EXP xuống dưới đáy cảnh giới chỉ riêng ở Tiên giới.
+
+**Claude không tự chọn**: đây là đổi luật chơi, không phải sửa lỗi.
