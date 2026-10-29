@@ -36,10 +36,34 @@ func (g *Game) GainTienKhi(p *Player, points float64) float64 {
 	for {
 		idx := g.TienRealmOf(p)
 		next := g.Prog.TienNextAt(idx)
-		if next <= 0 || p.TienKhi < next {
+		if next <= 0 {
+			// Đã Đạo Tổ — hết cảnh giới để lên. Phần tu vi dư KHÔNG bỏ phí nữa mà đổi thẳng
+			// sang Uy Danh, để người đã lên đỉnh vẫn còn thứ để đua.
+			g.overflowToScore(p)
+			return points
+		}
+		if p.TienKhi < next {
 			return points
 		}
 		g.promoteTien(p, idx+1)
+	}
+}
+
+// overflowToScore đổi phần Tiên khí vượt mốc Đạo Tổ thành Uy Danh.
+//
+// Giữ `TienKhi` đúng ở mốc Đạo Tổ chứ không cho phình mãi: thanh Tiên khí trên HUD hiện đầy
+// (đúng ý nghĩa "đã tới đỉnh"), và quan trọng hơn là tiền thưởng khi bị chém không phình
+// theo thời gian cắm trại — `robTienKhi` tính `loss = tien_khi − mốc_khởi_điểm_mới`, không
+// chặn thì một người Đạo Tổ ngồi lâu thành cục mồi khổng lồ.
+func (g *Game) overflowToScore(p *Player) {
+	cap := g.Prog.TienEntry(g.Prog.TienCount() - 1)
+	over := p.TienKhi - cap
+	if over <= 0 {
+		return
+	}
+	p.TienKhi = cap
+	if rate := g.Cfg.Cultivation.TienOverflowScore; rate > 0 {
+		g.addScore(p, "tien_overflow", over*rate)
 	}
 }
 

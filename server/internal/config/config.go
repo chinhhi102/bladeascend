@@ -9,6 +9,9 @@ import (
 )
 
 type Cultivation struct {
+	// TienOverflowScore: đã Đạo Tổ thì không còn cảnh giới để lên, nên mỗi điểm Tiên khí
+	// nhặt thêm đổi thành ngần này điểm Uy Danh thay vì bỏ phí. 0 = tắt.
+	TienOverflowScore float64 `json:"tien_overflow_score"`
 	Realms        []string `json:"realms"`
 	TiersPerRealm int      `json:"tiers_per_realm"`
 	ExpBase       float64  `json:"exp_base"`
@@ -184,6 +187,9 @@ type Zones struct {
 }
 
 type Gates struct {
+	// RandomExit: bước vào một cổng thì ra ở một cổng BẤT KỲ khác cùng mạng, thay vì cổng
+	// đôi cố định. Đặt false để quay về kiểu cũ.
+	RandomExit   bool    `json:"random_exit"`
 	Radius       float64 `json:"radius"`
 	TransitSecs  float64 `json:"transit_secs"`
 	ExitWarnSecs float64 `json:"exit_warn_secs"`

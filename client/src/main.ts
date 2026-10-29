@@ -5,6 +5,7 @@ import { type GameConfig, levelThresholds, loadConfig } from './config';
 import { Input } from './input';
 import { Conn } from './net/conn';
 import { PROTOCOL_VERSION } from './net/protocol';
+import { pendingRejoin, watchContextLoss } from './render/glrecover';
 import type { DeadMsg, GameMap, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
@@ -96,7 +97,25 @@ class App {
         }
       },
     );
-    this.showHome();
+    // Mất ngữ cảnh WebGL (trình điều khiển card reset, máy ngủ dậy): canvas sẽ đen vĩnh
+    // viễn nếu không làm gì. Nhớ lại tên + nhân vật rồi tải lại trang và tự vào lại phòng.
+    watchContextLoss(
+      this.scene.app.canvas as HTMLCanvasElement,
+      () => this.profile,
+      (canRecover) => {
+        this.playing = false;
+        this.input.enabled = false;
+        this.hud.root.remove();
+        this.screens.show(h('div', 'screen center', h('div', 'panel', canRecover ? STR.glLost : STR.glLostManual)));
+      },
+    );
+    // Vừa tải lại vì mất đồ hoạ thì vào thẳng phòng, đừng bắt bấm lại "Vào chơi".
+    const again = pendingRejoin();
+    if (again) {
+      this.join(again);
+    } else {
+      this.showHome();
+    }
   }
 
   private showHome(): void {

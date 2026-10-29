@@ -435,9 +435,10 @@ func TestGateTeleportsWithoutInvulnerability(t *testing.T) {
 	}
 }
 
-// Spec §8.4: cổng đi 2 chiều — bước vào cổng vừa ra là quay đúng về chỗ cũ, kể cả khi
-// mạng có 4 cổng (ghép cặp cố định chứ không bắn ngẫu nhiên).
-func TestGatesAreTwoWayPairs(t *testing.T) {
+// Cổng ghép cặp 2 chiều là luật CŨ của §8.4. Chủ dự án đã đổi: mặc định bây giờ cổng bắn
+// ngẫu nhiên (xem `gates.random_exit`, test trong newrules_test.go). Cách ghép cặp vẫn giữ
+// nguyên và vẫn phải đúng, vì đó là đường chạy khi tắt `random_exit`.
+func TestGatesAreTwoWayPairsWhenRandomOff(t *testing.T) {
 	m := world.EmptyMap(12000)
 	m.Gates = []world.Gate{
 		{ID: 0, X: 2000, Y: 2000, Network: "ring"}, {ID: 1, X: 9000, Y: 9000, Network: "ring"},
@@ -453,8 +454,9 @@ func TestGatesAreTwoWayPairs(t *testing.T) {
 			t.Fatalf("cổng %d → %d nhưng %d → %d: không phải 2 chiều", gate.ID, exit.ID, exit.ID, back.ID)
 		}
 	}
-	// Và luật thực tế cũng đưa người chơi đúng tới cổng đã ghép cặp.
+	// Và luật thực tế cũng đưa người chơi đúng tới cổng đã ghép cặp — khi đã tắt bắn ngẫu nhiên.
 	g := quietGame(t, m)
+	g.Cfg.Gates.RandomExit = false
 	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
 	place(g, p, Vec{X: 2000, Y: 2000}, 0)
 	for g.Time < g.Cfg.Gates.TransitSecs+2*dt {
