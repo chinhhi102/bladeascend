@@ -47,6 +47,8 @@ export interface GameConfig {
   };
   burn: { mult: number; exp_frac_per_sec: number; keep_realm: boolean };
   buffs: Record<string, BuffCfg>;
+  /** Mặt băng ở Băng Nguyệt Hồ (spec §8.0): quán tính khi trượt. */
+  ice: { friction: number; accel: number };
   zones: { mud_mult: number; snow_mult: number; wind_with: number; wind_against: number; wind_with_max_deg: number; wind_against_min_deg: number };
   gates: { radius: number };
   items: { item_r: number; chest_warn_secs: number };

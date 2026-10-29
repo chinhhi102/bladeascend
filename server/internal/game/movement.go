@@ -115,9 +115,16 @@ func (g *Game) movePlayers(dt float64) {
 
 func (g *Game) movePlayer(p *Player, dt float64) {
 	if p.Moving {
+		p.Facing = p.InputAngle
+	}
+	if g.OnIce(p.Pos) {
+		g.slideOnIce(p, dt)
+	} else if p.Moving {
 		dir := geom.FromAngle(p.InputAngle)
 		p.Pos = p.Pos.Add(dir.Mul(g.MoveSpeed(p) * g.ZoneMult(p.Pos, dir) * dt))
-		p.Facing = p.InputAngle
+		p.Vel = Vec{}
+	} else {
+		p.Vel = Vec{}
 	}
 	if p.KnockUntil > g.Time {
 		p.Pos = p.Pos.Add(p.KnockVel.Mul(dt))
@@ -125,6 +132,38 @@ func (g *Game) movePlayer(p *Player, dt float64) {
 	// Người chơi KHÔNG chặn đường nhau (spec §5.2 là luật chém, xem shield.go): đi tới gần
 	// ai cũng vẫn điều khiển được bình thường, hai vòng kiếm chồng lên nhau mà mài.
 	p.Pos = g.resolveBlocking(p.Pos, g.BodyR(p))
+}
+
+// OnIce: điểm này có nằm trên mặt băng không (spec §8.0, khu Băng Nguyệt Hồ).
+func (g *Game) OnIce(pos Vec) bool {
+	on := false
+	g.QueryZones(pos, 1, func(id int) {
+		if z := g.Map.Zones[id]; z.Kind == "ice" && z.Shape.Contains(pos) {
+			on = true
+		}
+	})
+	return on
+}
+
+// slideOnIce di chuyển theo QUÁN TÍNH (spec §8.0):
+//
+//	vận tốc mới = vận tốc cũ × friction + hướng input × accel × dt
+//
+// Khác hẳn trên đất, nơi thả phím là dừng ngay. Trên băng, thả phím thì vẫn trôi tiếp, và
+// đổi hướng phải "lái" chứ không bẻ ngoặt được — đó là cái khó mà khu này bán.
+//
+// Hàm này phải khớp từng con số với `iceStep` bên client (spec §8.2a: dùng chung một thuật
+// toán), nếu không server sẽ kéo nhân vật về mỗi tick suốt thời gian ở trên hồ.
+func (g *Game) slideOnIce(p *Player, dt float64) {
+	ic := g.Cfg.Ice
+	p.Vel = p.Vel.Mul(ic.Friction)
+	if p.Moving {
+		// Buff tốc và Thiêu Đốt vẫn ăn vào gia tốc, không ăn vào ma sát: trên băng người
+		// nhanh hơn thì tăng tốc nhanh hơn, chứ không phải dừng giỏi hơn.
+		boost := g.MoveSpeed(p) / math.Max(g.Cfg.Player.MoveBase, 1e-9)
+		p.Vel = p.Vel.Add(geom.FromAngle(p.InputAngle).Mul(ic.Accel * boost * dt))
+	}
+	p.Pos = p.Pos.Add(p.Vel.Mul(dt))
 }
 
 // resolveBlocking pushes a circle out of solid obstacles and keeps it inside the playable
@@ -169,10 +208,26 @@ func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
 //
 // Phải đi qua cùng đường với movePlayer — tốc độ gốc, nhân theo vùng địa hình, rồi đẩy ra
 // khỏi vật cản — nếu không thì bài đối chiếu sẽ bỏ sót đúng những chỗ hai bên hay lệch.
-func (g *Game) MoveStepForTest(from Vec, angle, scale, dt float64) Vec {
-	dir := geom.FromAngle(angle)
-	speed := g.Cfg.Player.MoveBase * g.ZoneMult(from, dir)
-	return g.resolveBlocking(from.Add(dir.Mul(speed*dt)), g.Cfg.Player.BodyR*scale)
+func (g *Game) MoveStepForTest(from, vel Vec, angle, scale, dt float64, moving bool) (Vec, Vec) {
+	p := &Player{Pos: from, Vel: vel, InputAngle: angle, Moving: moving, Scale: scale}
+	p.Level = 0
+	g.movePlayerForTest(p, dt)
+	return p.Pos, p.Vel
+}
+
+// movePlayerForTest chạy đúng phần DI CHUYỂN của movePlayer (không có đẩy văng, không có
+// va kiếm) để công cụ đối chiếu so với client.
+func (g *Game) movePlayerForTest(p *Player, dt float64) {
+	if g.OnIce(p.Pos) {
+		g.slideOnIce(p, dt)
+	} else if p.Moving {
+		dir := geom.FromAngle(p.InputAngle)
+		p.Pos = p.Pos.Add(dir.Mul(g.Cfg.Player.MoveBase * g.ZoneMult(p.Pos, dir) * dt))
+		p.Vel = Vec{}
+	} else {
+		p.Vel = Vec{}
+	}
+	p.Pos = g.resolveBlocking(p.Pos, g.Cfg.Player.BodyR*p.Scale)
 }
 
 // clampToPlay keeps a circle of radius r inside the border wall.

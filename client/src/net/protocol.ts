@@ -18,6 +18,9 @@ export interface PlayerState {
   fl: number; // flags
   ck?: number; // crack
   xp: number;
+  /** vx/vy: vận tốc, chỉ có ở gói gửi cho CHÍNH MÌNH và chỉ khi đang trượt trên băng (§8.0). */
+  vx?: number;
+  vy?: number;
   ti?: number; // room title badge 1..3 (spec §11.3)
   th?: number; // Tiên khí đang có (spec §3.4), chỉ gửi cho chính mình
   tn?: number; // Tiên khí cần cho cảnh giới sau; 0 = đã Đạo Tổ
