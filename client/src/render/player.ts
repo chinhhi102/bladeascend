@@ -1,12 +1,14 @@
 import { AnimatedSprite, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 
-import { type GameConfig, realmName, realmOf, tienIndex, tierOf } from '../config';
+import type { GameConfig } from '../config';
 import type { PlayerFrame } from '../net/state';
 import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { animShort, initials } from './catalog';
-import { BUFF_COLORS, charColor, hslToHex, REALM_COLORS, TITLE_COLORS } from './palette';
-import { STR } from '../ui/strings';
+import { BUFF_COLORS, charColor } from './palette';
+import { moodName } from '../net/protocol';
+import { Input } from '../input';
+import { Nameplate, PLATE_FAR_PX } from './nameplate';
 import { SwordRing } from './swordring';
 
 // Visual proportions relative to the body hitbox radius (not balance numbers).
@@ -19,6 +21,8 @@ const BUBBLE_MAX_TEXT_W = 220;
 
 // Animations missing from an atlas fall back along this chain.
 const FALLBACK: Record<string, string[]> = {
+  // idle có thể bị bỏ nếu sheet cắt sai (xem assets.ts/miscut) — vẫn phải có gì để vẽ.
+  idle: ['run', 'chase'],
   chase: ['run'],
   flee: ['run'],
   hit: ['idle'],
@@ -36,16 +40,11 @@ export class PlayerSprite {
   readonly root = new Container();
   private readonly swordRing: SwordRing;
   private readonly shadow = new Graphics();
-  /** tienAura is the halo behind Tiên realm characters (spec §3.4). */
-  private readonly tienAura = new Graphics();
   private readonly aura = new Graphics();
   private readonly bodyBox = new Container();
   private body: AnimatedSprite | Container | null = null;
-  private readonly label: Text;
-  private readonly title: Text; // danh hiệu Top 1–10 phòng (spec §11.3)
-  private titleRank = 0;
-  private readonly realmTag: Text; // cảnh giới + tầng, ngay trên tên (spec §11.2)
-  private realmLevel = -1;
+  /** Bảng tên trên đầu: danh hiệu · cảnh giới · tên, gộp thành một cụm (spec §12.3). */
+  private readonly plate: Nameplate;
   private readonly atlas: AnimSet | null;
   private mood = '';
   private bubble: Container | null = null;
@@ -61,24 +60,10 @@ export class PlayerSprite {
   ) {
     this.atlas = assets.atlas(`characters/${char}`);
     this.swordRing = new SwordRing(cfg);
-    this.label = new Text({
-      text: name,
-      style: { fontFamily: 'system-ui, sans-serif', fontSize: 15, fontWeight: '700', fill: isMe ? 0xfff3a0 : 0xffffff, stroke: { color: 0x000000, width: 4 } },
-    });
-    this.label.anchor.set(0.5, 1);
-    this.title = new Text({
-      text: '',
-      style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '800', fill: 0xffd700, stroke: { color: 0x000000, width: 4 } },
-    });
-    this.title.anchor.set(0.5, 1);
-    this.title.visible = false;
-    this.realmTag = new Text({
-      text: '',
-      style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '700', fill: 0xbfe9ff, stroke: { color: 0x000000, width: 4 } },
-    });
-    this.realmTag.anchor.set(0.5, 1);
-    // Hào quang nằm sau lưng: dưới sprite nhân vật, trên mặt đất (spec §3.4).
-    this.root.addChild(this.shadow, this.tienAura, this.aura, this.bodyBox, this.label, this.realmTag, this.title);
+    this.plate = new Nameplate(cfg, name, isMe, Input.isTouchDevice());
+    // Hào quang Tiên giới KHÔNG còn nằm ở đây: nó chuyển sang `vfxLayer` dùng chung để ăn
+    // một lượt bloom cho cả màn hình thay vì mỗi nhân vật một filter (spec §3.6).
+    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.plate.root);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -102,19 +87,23 @@ export class PlayerSprite {
     return c;
   }
 
+  /** swordCount: số kiếm đang vẽ, cho đồng hồ đo hiệu năng ở chế độ debug. */
+  get swordCount(): number {
+    return this.swordRing.count;
+  }
+
   /** ring is the sword ring layer; the scene draws all rings above characters and obstacles. */
   get ring(): Container {
     return this.swordRing.root;
   }
 
-  update(f: PlayerFrame, zoom: number, now: number, showHitbox: boolean): void {
+  update(f: PlayerFrame, zoom: number, now: number, showHitbox: boolean, swordDetail = 1, myRealm = 0, plateFade = 1): void {
     const s = f.s;
     const r = this.cfg.player.body_r * s.sc;
     this.root.position.set(f.x, f.y);
     this.root.zIndex = f.y + r * FEET_BELOW_CENTER; // y-sort by the feet (spec §8.2)
     this.drawShadow(r);
-    this.updateBody(s.md, r, Math.cos(s.f) < 0);
-    this.drawTienAura(s.L, r, now);
+    this.updateBody(moodName(s.md), r, Math.cos(s.f) < 0);
     this.drawAura(s.bf, r, now);
     if (s.fl & FLAG.burning) {
       this.drawBurn(r, now); // vẽ đè lên aura buff
@@ -122,44 +111,9 @@ export class PlayerSprite {
     this.applyAlpha(s.fl, now);
     // Xếp từ dưới lên: tên → cảnh giới → danh hiệu (spec §11.2, §11.3).
     const headY = -r * (CHAR_HEIGHT_PER_R - FEET_BELOW_CENTER) - 4 / zoom;
-    this.label.position.set(0, headY);
-    this.label.scale.set(1 / zoom);
-    const realmY = this.updateRealmTag(s.L, headY, zoom);
-    this.updateTitle(s.ti ?? 0, realmY, zoom);
-    this.swordRing.update(f, now, showHitbox);
+    this.plate.update(s.L, s.ti ?? 0, myRealm, headY, zoom, now, r * 2.6 * zoom >= PLATE_FAR_PX, plateFade);
+    this.swordRing.update(f, now, showHitbox, swordDetail);
     this.updateBubble(r, zoom, now);
-  }
-
-  /** updateRealmTag draws "Trúc Cơ tầng 3" above the name; returns the y to stack onto. */
-  private updateRealmTag(level: number, headY: number, zoom: number): number {
-    if (level !== this.realmLevel) {
-      this.realmLevel = level;
-      const r = realmOf(this.cfg, level);
-      // Tiên giới không chia tầng nên chỉ ghi tên cảnh giới (spec §3.4).
-      this.realmTag.text = tienIndex(this.cfg, r) >= 0 ? realmName(this.cfg, r) : STR.realmTier(realmName(this.cfg, r), tierOf(this.cfg, level));
-      this.realmTag.style.fill = REALM_COLORS[r] ?? 0xffd700;
-    }
-    const y = headY - this.label.height - 1 / zoom;
-    this.realmTag.position.set(0, y);
-    this.realmTag.scale.set(1 / zoom);
-    return y;
-  }
-
-  // Danh hiệu nằm trên cùng. Server đã bỏ `ti` với người đang Ẩn Thân nên danh hiệu tự
-  // ẩn theo, không làm lộ vị trí (spec §11.3).
-  private updateTitle(rank: number, headY: number, zoom: number): void {
-    if (rank !== this.titleRank) {
-      this.titleRank = rank;
-      const name = STR.titles[rank - 1] ?? '';
-      this.title.text = rank === 1 ? `👑 ${name}` : name;
-      this.title.style.fill = TITLE_COLORS[rank - 1] ?? 0xffffff;
-      this.title.visible = rank > 0;
-    }
-    if (!this.title.visible) {
-      return;
-    }
-    this.title.position.set(0, headY - this.label.height - 2 / zoom);
-    this.title.scale.set(1 / zoom);
   }
 
   private drawShadow(r: number): void {
@@ -223,67 +177,9 @@ export class PlayerSprite {
     return set.values().next().value ?? null;
   }
 
-  /**
-   * drawTienAura is the halo behind a Tiên realm character (spec §3.4): one colour per realm,
-   * centred at chest height, ~2.2 × character height across, breathing ±5% over 2s. Đạo Tổ
-   * gets a slowly turning yin-yang with a rainbow rim instead of a flat colour.
-   */
-  private drawTienAura(level: number, r: number, now: number): void {
-    const g = this.tienAura.clear();
-    const idx = tienIndex(this.cfg, realmOf(this.cfg, level));
-    if (idx < 0) {
-      return;
-    }
-    const colors = this.cfg.cultivation.tien_aura_colors;
-    const spec = colors[idx] ?? '#ffffff';
-    const breathe = 1 + 0.05 * Math.sin(now * Math.PI); // chu kỳ 2s
-    const rad = r * CHAR_HEIGHT_PER_R * 1.1 * breathe;
-    const cy = -r * 0.9; // ngang ngực
-    if (spec === 'yin_yang') {
-      // Đạo Tổ: vòng âm dương xoay chậm, viền đổi màu liên tục.
-      const a = now * 0.6;
-      g.circle(0, cy, rad).fill({ color: 0x101010, alpha: 0.5 });
-      g.arc(0, cy, rad, a, a + Math.PI).fill({ color: 0xf2f2f2, alpha: 0.5 });
-      g.circle(Math.cos(a) * rad * 0.5, cy + Math.sin(a) * rad * 0.5, rad * 0.5).fill({ color: 0xf2f2f2, alpha: 0.5 });
-      g.circle(-Math.cos(a) * rad * 0.5, cy - Math.sin(a) * rad * 0.5, rad * 0.5).fill({ color: 0x101010, alpha: 0.5 });
-      const hue = (now * 60) % 360;
-      g.circle(0, cy, rad).stroke({ color: hslToHex(hue, 0.9, 0.6), width: r * 0.14, alpha: 0.95 });
-      return;
-    }
-    const color = Number(`0x${spec.replace('#', '')}`);
-    const glow = 0.18 + 0.05 * Math.sin(now * Math.PI);
-    g.circle(0, cy, rad).fill({ color, alpha: glow });
-    g.circle(0, cy, rad).stroke({ color, width: r * 0.1, alpha: 0.75 });
-    switch (idx) {
-      case 0: // Chân Tiên: vài đốm mây nhỏ trôi quanh
-        for (let i = 0; i < 4; i++) {
-          const a = now * 0.5 + (i / 4) * Math.PI * 2;
-          g.ellipse(Math.cos(a) * rad * 0.8, cy + Math.sin(a) * rad * 0.8, rad * 0.22, rad * 0.11).fill({ color, alpha: 0.5 });
-        }
-        break;
-      case 1: // Kim Tiên: tia sáng tỏa ra
-        for (let i = 0; i < 12; i++) {
-          const a = (i / 12) * Math.PI * 2 + now * 0.3;
-          g.moveTo(Math.cos(a) * rad * 0.75, cy + Math.sin(a) * rad * 0.75).lineTo(Math.cos(a) * rad * 1.15, cy + Math.sin(a) * rad * 1.15);
-        }
-        g.stroke({ color, width: r * 0.07, alpha: 0.8 });
-        break;
-      case 2: // Thái Ất Ngọc Tiên: hạt sáng bay lên
-        for (let i = 0; i < 7; i++) {
-          const t = (now * 0.35 + i / 7) % 1;
-          const a = i * 2.4;
-          g.circle(Math.cos(a) * rad * 0.7, cy + rad * (0.9 - 1.8 * t), rad * 0.07 * (1 - t)).fill({ color, alpha: 0.85 * (1 - t) });
-        }
-        break;
-      case 3: // Đại La Kim Tiên: hai vòng sáng xoay ngược chiều
-        for (const dir of [1, -1]) {
-          const a = now * 0.8 * dir;
-          g.arc(0, cy, rad * (dir > 0 ? 0.82 : 0.64), a, a + Math.PI * 1.3).stroke({ color, width: r * 0.09, alpha: 0.85 });
-        }
-        break;
-      default:
-    }
-  }
+
+
+
 
   /** drawBurn is the blood-red flame ring of Thiêu Đốt Tinh Huyết (spec §4.1c). */
   private drawBurn(r: number, now: number): void {
@@ -328,12 +224,8 @@ export class PlayerSprite {
     } else if (flags & FLAG.bush || stealth) {
       a = 0.45; // in a bush, or my own stealth so I can tell the buff is up
     }
-    // Ẩn Thân giấu luôn tên và danh hiệu của người khác.
-    this.label.visible = !stealth || this.isMe;
-    this.realmTag.visible = this.label.visible;
-    if (stealth && !this.isMe) {
-      this.title.visible = false;
-    }
+    // Ẩn Thân / trong bụi: giấu cả cụm bảng tên của người khác (spec §12.3).
+    this.plate.root.visible = (!stealth && !(flags & FLAG.bush)) || this.isMe;
     if (flags & FLAG.invuln && Math.floor(now * 10) % 2 === 0) {
       a *= 0.4; // blink while invulnerable (spec §5.1)
     }
@@ -385,6 +277,7 @@ export class PlayerSprite {
   }
 
   destroy(): void {
+    this.plate.destroy();
     this.root.destroy({ children: true });
     this.swordRing.destroy();
   }

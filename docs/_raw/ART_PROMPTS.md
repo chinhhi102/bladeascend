@@ -241,7 +241,7 @@ Vật phẩm buff: mỗi cái là 1 bong bóng chứa icon, cùng 1 template:
 | Tốc Kiếm | `a cyan spinning whirlwind around a small sword` | cyan | vòng gió xanh quanh vòng kiếm |
 | Thần Hành | `a winged sandal` | orange | vệt khói chạy sau chân |
 | Nam Châm | `a red horseshoe magnet` | red | sóng tròn hút vào |
-| Trường Kiếm | `a very long thin sword with an up arrow` | purple | kiếm phát sáng tím |
+| Cương Kiếm | `a thick heavy steel sword with a diamond sparkle on the blade` | silver-blue | lưỡi kiếm lóe ánh thép, tia lấp lánh chạy dọc vòng kiếm |
 | Kim Cang | `a golden buddhist-style round shield` | gold | quả cầu vàng trong suốt bao quanh người |
 | Song Bội Đan | `a glowing pill with "x2" shape made of light` | green | đốm sáng xanh bay lên |
 | Ẩn Thân Phù | `a paper talisman with swirling ink` | grey | (chỉ chủ nhân thấy mình mờ 40%) |
@@ -290,6 +290,28 @@ Decor (nền trong suốt, 256×256 hoặc 512×512, chỉ để trang trí, kh�
 
 Tường biên: `{STYLE} a seamless horizontal stone and bamboo fence segment, top-down 3/4 view, tileable left-right`.
 
+### 9.0b Bộ texture & decal cho bản đồ sinh động (GAME_SPEC §8.6)
+
+Mọi texture nền: thêm cuối prompt `seamless tileable top-down, desaturated, low contrast, low detail, no objects`.
+
+| Biome | Texture nền (2–3 cái, 512 tileable) |
+|---|---|
+| Linh Sơn | `grey rocky ground` · `fine gravel` · `patchy moss on stone` |
+| Trúc Lâm | `soft muted grass` · `dry bamboo leaves litter on soil` · `damp dark earth` |
+| Phàm Trấn | `trampled dirt path ground` · `short village grass` |
+| Hắc Thị | `old worn cobblestone` · `dusty packed earth` |
+| Thiên Tiên Đài | `pale jade stone floor` (đã có) |
+
+Decal (nền trong suốt, 256×256 trừ khi ghi khác, màu nhạt hòa vào nền, viền mảnh không đen dày):
+`ground crack lines` · `small grass tuft` · `scattered fallen leaves` · `cluster of pebbles` · `small shallow puddle` · `exposed tree roots` · `tiny pale wildflowers` · `cart wheel tracks (512x128)` · `broken roof tile shards` · `scattered brick rubble` · `bamboo leaves pile` · `moss patch` · `footprints in dirt`.
+Prompt mẫu: `top-down game decal, {item}, soft muted colors, blends into the ground, thin outline, transparent background`.
+
+Dải viền vùng (512×128, tileable trái-phải, nền trong suốt): `muddy edge with dry cracks` · `pond shore with reeds and pebbles` · `stone path edge with broken gravel` · `bush cluster edge with leaves`.
+
+Nước & biên: `top-down seamless calm water texture, soft teal, subtle ripples` (512 tileable) · `{STYLE} top-down rocky cliff edge segment, tileable left-right, 1024x512` · `{STYLE} dense bamboo grove wall segment, tileable left-right, 1024x512`.
+
+Ambient (nhỏ, 64–128 px, vài frame): `falling bamboo leaf` (4) · `firefly glow dot` · `butterfly flapping` (4) · `small chicken running` (4) · `swaying paper lantern` (4) · `bird silhouette flying` (4) · `soft cloud shadow blob, black at 20% opacity, 1024x1024`.
+
 ### 9.1 Vật cản phá được (mỗi loại 4 trạng thái)
 
 Quy tắc vẽ vật cản: **đáy phẳng, đặt chắc trên mặt đất** (game chỉ tính va chạm ở 30% phía dưới). Hàng rào/tường phải **liền mạch nối tiếp được** (tileable trái-phải), không có khe hở giả. Màu vật cản trung tính hơn nhân vật nhưng đậm hơn nền.
@@ -331,6 +353,15 @@ Dùng lại art cũ cho vật cản/decor; chỉ cần sinh thêm:
 | Tường sân môn phái | `{STYLE} top-down 3/4 view ancient sect courtyard wall with grey tiles roof, tileable left-right` | 1024×512 |
 | Cổng sân môn phái | `{STYLE} top-down 3/4 view wooden sect gate archway with a blank signboard, red pillars` | 1024×1024 |
 
+### 9.2d Thiên Môn (GAME_SPEC §8.4a)
+
+| Asset | Prompt | Anim |
+|---|---|---|
+| Thiên Môn | `{STYLE} top-down 3/4 view grand celestial gate, white marble pillars with a golden curved roof, swirling golden portal inside, clouds at the base, a blank signboard on top, 1024x1024` | `idle` 6 loop (xoáy vàng), `burst` 6 |
+| Cột sáng | `vertical soft golden light beam rising into the sky, additive glow, transparent background, 256x1024` | `idle` 4 loop |
+| Bến Thiên Môn (ở Thiên Đình) | `{STYLE} top-down small round white stone landing platform with golden cloud carvings and a faint light pillar, 512x512` | `warn` 4 (lóe trước khi có người ra) |
+| Icon minimap | `{STYLE} tiny golden gate icon, 64x64` | – |
+
 ### 9.2c Đài Tiên Khí
 
 | Asset | Prompt | Anim |
@@ -366,6 +397,24 @@ Mỗi cặp/mạng cổng một màu (tím, xanh lam, cam) để người chơi 
 | Hào quang Tiên (dùng chung, game tự nhuộm màu) | 6 loop | `{STYLE} large round glowing halo disc seen from the front, soft radiant light rays, painted in white and light grey only so it can be color-tinted in game, transparent background, 1024x1024, frame {i} of 6` |
 | Hào quang Đạo Tổ (riêng) | 6 loop | `{STYLE} large glowing yin-yang halo disc with a thin rainbow rim, soft light rays, slowly rotating, transparent background, 1024x1024, frame {i} of 6` |
 | Hạt trang trí hào quang | 4 loop mỗi loại | mây nhỏ (Chân Tiên), tia sáng (Kim Tiên), hạt sáng bay lên (Thái Ất), vòng sáng mảnh (Đại La) — vẽ trắng/xám để nhuộm |
+
+### 10.1 Thần thú Tiên giới (ghép đốt bằng code, xem GAME_SPEC §3.5)
+
+Mọi phần vẽ **nhìn ngang, hướng sang PHẢI**, nền trong suốt, viền đen dày, tông **trắng/xám nhạt** để game nhuộm màu (trừ Đạo Tổ vẽ màu thật). Thêm vào cuối mỗi prompt: `painted in white and light grey tones for color tinting, transparent background, isolated single part`.
+
+| Phần | Prompt | Kích thước |
+|---|---|---|
+| Đầu rồng | `{STYLE} side view head of a fierce but funny chinese dragon facing right, long whiskers, small antlers, open mouth with a goofy grin` | 512×512 |
+| Đốt thân rồng | `{STYLE} one round segment of a chinese dragon body seen from the side, overlapping scales, a small spiky fin on top, symmetrical, can be chained repeatedly` | 256×256 |
+| Đuôi rồng | `{STYLE} side view tail tip of a chinese dragon facing left, flowing fin like a flame` | 256×256 |
+| Chân rồng (tùy chọn, gắn ở đốt 3 và 8) | `{STYLE} small four-clawed dragon leg, side view` | 128×128 |
+| Tiên hạc | `{STYLE} side view flying crane, long neck stretched forward facing right, wings {up|middle|down|middle}, frame {i} of 4` | 512×512 |
+| Phượng hoàng | `{STYLE} side view flying phoenix facing right, long flowing tail feathers, wings {up|middle|down|middle}, frame {i} of 4` | 512×512 |
+| Lông đuôi phượng (đốt) | `{STYLE} one long flowing glowing phoenix tail feather, horizontal` | 256×128 |
+| Song long Đạo Tổ | Dùng lại đầu/đốt/đuôi rồng nhưng sinh 2 bộ màu thật: `pure white glowing dragon` và `pure black dragon with white glowing outline` | như trên |
+| Hạt vệt sau | mây nhỏ / tia lửa / hạt sáng / lông vũ — `{STYLE} tiny {item} particle, white, 64x64` | 64×64 |
+
+Mẹo giữ đều nét: sinh **đầu + đốt + đuôi trong cùng 1 ảnh** (`three separate parts side by side: head, one body segment, tail`) để cùng phong cách và độ dày viền, rồi để tool cắt tự tách.
 | Sét đột phá | 6 | `{STYLE} thick cartoon lightning bolt striking down from the top, frame {i} of 6` |
 | Khói chết | 6 | `{STYLE} comic white smoke puff cloud, frame {i} of 6 expanding then dissipating` |
 | Bụi chạy | 4 | `{STYLE} small dust puffs behind running feet, frame {i} of 4` |
@@ -385,6 +434,51 @@ Gợi ý câu thoại: `run`: "AAAAA!", "Tránh ra!"; `chase`: "Hehehe...", "Đ�
 - Trang chủ: logo game (chữ do bạn tự thiết kế hoặc render bằng font), ảnh nền: `{STYLE without transparent} wide illustration of a chaotic cartoon village square with many chibi characters spinning swords around them, sunny, no text`.
 - Màn hình Tổng kết: khung giấy cuộn cổ kính `{STYLE} an empty unrolled ancient paper scroll with wooden handles, transparent background`; ảnh "hồn bay" của nhân vật dùng lại frame cuối anim `death`.
 - Bảng xếp hạng: 3 huy chương top 1–3 `{STYLE} {gold|silver|bronze} medal with a tiny sword emblem, 128x128`.
+
+### 11.1 Bảng tên (GAME_SPEC §12.3)
+
+| Asset | Prompt | Ghi chú |
+|---|---|---|
+| Ruy băng Top 1 | `{STYLE} empty horizontal ribbon banner with forked tails, vermilion red with gold trim, no text, transparent background, 1024x256` | Cắt 9-slice (giữ 2 đuôi, kéo giãn phần giữa) |
+| Ruy băng Top 2 | như trên, `dark navy with silver trim` | |
+| Ruy băng Top 3 | như trên, `brown with bronze trim` | |
+| Vương miện nhỏ | `{STYLE} tiny golden crown icon with red gems, 128x128` | |
+| Nền huy hiệu cảnh giới | `{STYLE} empty rounded pill-shaped badge, white with light grey bevel for tinting, no text, 512x128` | 9-slice, game nhuộm màu |
+| Vệt sáng lướt | `soft diagonal white light streak, transparent background, 256x64` | Blend cộng, chạy ngang qua chữ |
+
+### 11.2 Chân dung HUD (GAME_SPEC §12.4)
+
+Mỗi nhân vật 4 chân dung, cùng prompt nhân vật ở mục 5 + `{STYLE} head and shoulders portrait, facing the viewer slightly turned right, centered, {EXPRESSION}, transparent background, 512x512`:
+`neutral smug face` · `evil grin, chasing` · `panicked, sweating` · `crying with streams of tears`.
+
+### 11.3 Kỹ năng nhân vật (GAME_SPEC §6.3)
+
+Vật phẩm **Bí Kíp**: `{STYLE} a glossy transparent bubble containing an ancient rolled-up martial arts scroll with a red ribbon, glowing, 256x256` + icon HUD 128×128.
+
+
+Mỗi nhân vật thêm anim **`skill`** 6 frame (dùng template §4.3) + 1 icon kỹ năng 128×128 (`{STYLE} round skill icon, {ICON}, bold simple shape, no text`) + VFX riêng:
+
+| Nhân vật | Pose anim `skill` | Icon | VFX |
+|---|---|---|---|
+| A Hớn | nhét cả cái bánh bao vào miệng, má phồng, ợ ra khói | steamed bun with a bite | hơi nóng bốc lên, kiếm bay ngược về vòng |
+| Bà Tám Loa | ưỡn ngực hét vào loa, tóc bay ngược | megaphone with sound waves | sóng âm hình nón (vòng cung trắng lan ra) |
+| Ông Ba Võng | nằm võng đung đưa, mắt nhắm, bong bóng mũi | hammock with zzz | vòng chữ "zzz" + sóng ru màu tím nhạt |
+| Đại Ca | huýt sáo bằng 2 ngón tay, chỉ tay | whistle with two fingers | 2 đàn em nhỏ (vest tím rẻ tiền, kính đen) — sinh thêm sprite đàn em `run` 8 frame |
+| Thằng Mập | phồng má phun như súng máy | bubble tea pearls flying | viên trân châu đen bay + vệt; **overlay màn hình**: 6–8 biến thể `glossy black tapioca pearl splattered flat on glass with a milk tea smear, front view, transparent background, 256x256` + `milk tea drip trail, vertical, 128x512` |
+| Cô Ba | lướt ngang, đòn gánh nằm ngang, trái cây văng | fruit basket with speed lines | vệt bụi + vỏ chuối/trái cây trên đất |
+| Sư Phụ Mì | quăng lưới bằng đôi đũa | noodle net | lưới sợi mì vàng chụp xuống |
+| Bé Tí | gồng cơ, gân nổi, mặt đỏ, người phát sáng | flexed bicep | hào quang cam, tia gân nổi |
+| Shipper | rồ ga tưởng tượng, thùng hàng phụt khói | lightning bolt on delivery box | vệt tia chớp sau lưng |
+| Cụ Rùa | rụt đầu tay chân vào mai | turtle shell | mai phát sáng xanh, sóng đẩy khi bật ra |
+
+### 11.4 Art riêng cho 4 khu mới (GAME_SPEC §8.0)
+
+| Khu | Cần thêm |
+|---|---|
+| Linh Sơn Cốc | `{STYLE} top-down 3/4 view tall rocky cliff wall segment, tileable left-right, 1024x512` · `top-down wooden rope suspension bridge segment, tileable, 512x256` · nền `grey mountain rock with patches of moss` |
+| Trúc Lâm Mê Cung | `{STYLE} top-down very dense bamboo grove wall segment, tileable left-right, 1024x512` · góc rặng tre (L-shape) · nền `damp forest floor with bamboo leaves` |
+| Phàm Trấn | `{STYLE} top-down small village house roof (grey tiles), 1024x1024` (nhà nhìn từ trên, tường gạch là va chạm) · `paper lanterns string` · nền `old cobblestone street` |
+| Băng Nguyệt Hồ | nền `seamless top-down smooth glossy pale blue ice with subtle cracks and reflections` · `seamless top-down soft snow ground` · decal `ice skid marks`, `snow pile`, `frozen reeds` · `{STYLE} small ice island edge segment` |
 
 ## 12. Âm thanh (SFX / BGM) — nguồn miễn phí
 

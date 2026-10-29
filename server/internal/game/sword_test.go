@@ -16,14 +16,20 @@ func TestResolveClashTable(t *testing.T) {
 		lostA, lostB   int
 		crackA, crackB float64
 	}{
-		{"same realm each lose u=1", ClashSide{2, 30, 0}, ClashSide{2, 27, 0}, 1, 1, 0, 0},
+		{"same realm each lose u=1", ClashSide{Realm: 2, Count: 30, Crack: 0}, ClashSide{Realm: 2, Count: 27, Crack: 0}, 1, 1, 0, 0},
 		// Khác cảnh giới: bên thấp luôn mất đúng u = 1, bên cao chỉ nứt lost/k (v4.1).
-		{"Trúc Cơ vs Luyện Khí: thấp -1, cao nứt 1/1.2", ClashSide{1, 60, 0}, ClashSide{0, 50, 0}, 0, 1, 0.8333, 0},
-		{"Kim Đan vs Luyện Khí: cao nứt 1/1.44", ClashSide{2, 60, 0}, ClashSide{0, 50, 0}, 0, 1, 0.6944, 0},
-		{"Luyện Khí vs Nguyên Anh: thấp -1, cao nứt 1/1.728", ClashSide{0, 50, 0}, ClashSide{3, 100, 0}, 1, 0, 0, 0.5787},
-		{"Luyện Khí(1 kiếm) vs Nguyên Anh: mất nốt cây cuối", ClashSide{0, 1, 0}, ClashSide{3, 100, 0.5}, 1, 1, 0, 0.0787},
-		{"nứt đủ 1 thì bên cao mới mất kiếm", ClashSide{3, 100, 0.9}, ClashSide{0, 3, 0}, 1, 1, 0.4787, 0},
-		{"Đại Thừa vs Luyện Khí: cao nứt 1/4.3", ClashSide{8, 400, 0}, ClashSide{0, 60, 0}, 0, 1, 0.2326, 0},
+		{"Trúc Cơ vs Luyện Khí: thấp -1, cao nứt 1/1.2", ClashSide{Realm: 1, Count: 60, Crack: 0}, ClashSide{Realm: 0, Count: 50, Crack: 0}, 0, 1, 0.8333, 0},
+		{"Kim Đan vs Luyện Khí: cao nứt 1/1.44", ClashSide{Realm: 2, Count: 60, Crack: 0}, ClashSide{Realm: 0, Count: 50, Crack: 0}, 0, 1, 0.6944, 0},
+		{"Luyện Khí vs Nguyên Anh: thấp -1, cao nứt 1/1.728", ClashSide{Realm: 0, Count: 50, Crack: 0}, ClashSide{Realm: 3, Count: 100, Crack: 0}, 1, 0, 0, 0.5787},
+		{"Luyện Khí(1 kiếm) vs Nguyên Anh: mất nốt cây cuối", ClashSide{Realm: 0, Count: 1, Crack: 0}, ClashSide{Realm: 3, Count: 100, Crack: 0.5}, 1, 1, 0, 0.0787},
+		{"nứt đủ 1 thì bên cao mới mất kiếm", ClashSide{Realm: 3, Count: 100, Crack: 0.9}, ClashSide{Realm: 0, Count: 3, Crack: 0}, 1, 1, 0.4787, 0},
+		{"Đại Thừa vs Luyện Khí: cao nứt 1/4.3", ClashSide{Realm: 8, Count: 400, Crack: 0}, ClashSide{Realm: 0, Count: 60, Crack: 0}, 0, 1, 0.2326, 0},
+		// Spec v4.4: so theo độ bền D chứ không so cảnh giới. Luyện Khí có Cương Kiếm
+		// (D = 1 × 1.5 = 1.5) CỨNG HƠN Trúc Cơ không buff (D = 1.2) → Trúc Cơ mất 1 mỗi lần,
+		// Luyện Khí chỉ nứt 1 / (1.5/1.2) = 0.8.
+		{"Luyện Khí + Cương Kiếm vs Trúc Cơ: Trúc Cơ là bên mềm", ClashSide{Realm: 0, Count: 50, Crack: 0, DurMult: 1.5}, ClashSide{Realm: 1, Count: 60, Crack: 0}, 0, 1, 0.8, 0},
+		// Cùng cảnh giới nhưng một bên có Cương Kiếm → bên không buff là bên mềm.
+		{"cùng Kim Đan, một bên Cương Kiếm", ClashSide{Realm: 2, Count: 60, Crack: 0, DurMult: 1.5}, ClashSide{Realm: 2, Count: 60, Crack: 0}, 0, 1, 0.6667, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -117,7 +123,7 @@ func swordCfg(t *testing.T) config.Sword {
 func geomFor(t *testing.T, n int) RingGeom {
 	t.Helper()
 	c := config.MustLoadDefault()
-	return ComputeRingGeom(c.Sword, c.Player.BodyR, 1, n, 1)
+	return ComputeRingGeom(c.Sword, c.Player.BodyR, 1, n)
 }
 
 // Spec §4.1a: vòng thứ k chứa step × k kiếm — vòng 1 là 10, vòng 2 là 20, vòng 10 là 100.
@@ -202,8 +208,8 @@ func TestPartialRingSpreadsOverSlots(t *testing.T) {
 func TestReachGrowsWithRingsAndOuterTipsAreFarther(t *testing.T) {
 	c := swordCfg(t)
 	// 10 kiếm = vừa đủ vòng 1; 60 kiếm = đủ 3 vòng (10 + 20 + 30).
-	g10 := ComputeRingGeom(c, 30, 1, 10, 1)
-	g60 := ComputeRingGeom(c, 30, 1, 60, 1)
+	g10 := ComputeRingGeom(c, 30, 1, 10)
+	g60 := ComputeRingGeom(c, 30, 1, 60)
 	if g10.Rings != 1 || g60.Rings != 3 || g60.Reach <= g10.Reach {
 		t.Fatalf("rings %d/%d reach %v/%v", g10.Rings, g60.Rings, g10.Reach, g60.Reach)
 	}
@@ -218,13 +224,9 @@ func TestReachGrowsWithRingsAndOuterTipsAreFarther(t *testing.T) {
 			t.Errorf("ring %d grows %v, want %v", k, d, c.RingGrowth*g60.Base)
 		}
 	}
-	big := ComputeRingGeom(c, 30, 5, 60, 1)
+	big := ComputeRingGeom(c, 30, 5, 60)
 	if big.Reach <= g60.Reach*4.9 {
 		t.Fatalf("reach must scale with the character: %v vs %v", big.Reach, g60.Reach)
-	}
-	long := ComputeRingGeom(c, 30, 1, 10, 1.3)
-	if math.Abs(long.Len(0)-c.Length*1.3) > 1e-9 {
-		t.Fatalf("Trường Kiếm length %v", long.Len(0))
 	}
 }
 
@@ -246,7 +248,7 @@ func TestTiltFlipsWithDirection(t *testing.T) {
 // Spec §4.1b: a target the blade swept past between ticks is hit; one just outside the arc is not.
 func TestSweptHitCatchesFastBlades(t *testing.T) {
 	c := swordCfg(t)
-	g := ComputeRingGeom(c, 30, 1, 1, 1)
+	g := ComputeRingGeom(c, 30, 1, 1)
 	ring := Ring{Count: 1, Dir: 1, Tilt: RestTilt(c, 1), SweepLo: 0, Sweep: 40 * math.Pi / 180}
 	h, tip := swordAt(Vec{}, 0, ring, g, 0)
 	mid := h.Add(tip).Mul(0.5)
@@ -283,9 +285,9 @@ func TestOneRevolutionPerRevSecs(t *testing.T) {
 // Spec v3.2: ring radius and length depend only on the ring index and scale, never on n.
 func TestRingRadiusIndependentOfSwordCount(t *testing.T) {
 	c := swordCfg(t)
-	one := ComputeRingGeom(c, 30, 1.4, 1, 1)
+	one := ComputeRingGeom(c, 30, 1.4, 1)
 	for _, n := range []int{5, 10} { // vòng 1 chứa 10 kiếm
-		g := ComputeRingGeom(c, 30, 1.4, n, 1)
+		g := ComputeRingGeom(c, 30, 1.4, n)
 		if g.HiltR(0) != one.HiltR(0) || g.Len(0) != one.Len(0) || g.Reach != one.Reach {
 			t.Fatalf("n=%d changed ring 1: %+v vs %+v", n, g, one)
 		}
@@ -293,21 +295,21 @@ func TestRingRadiusIndependentOfSwordCount(t *testing.T) {
 	if one.HiltR(0) != (30+c.HiltGap)*1.4 {
 		t.Fatalf("ring 1 hilt %v must sit next to the body", one.HiltR(0))
 	}
-	g11, g30 := ComputeRingGeom(c, 30, 1.4, 11, 1), ComputeRingGeom(c, 30, 1.4, 30, 1)
+	g11, g30 := ComputeRingGeom(c, 30, 1.4, 11), ComputeRingGeom(c, 30, 1.4, 30)
 	if g11.Rings != 2 || g11.HiltR(1) <= g11.HiltR(0) || g11.Reach <= one.Reach {
 		t.Fatalf("kiếm thứ 11 phải mở vòng 2 rộng hơn: %+v", g11)
 	}
 	if g30.Rings != 2 || g30.Reach != g11.Reach || g30.HiltR(1) != g11.HiltR(1) {
 		t.Fatalf("30 kiếm vẫn 2 vòng, bán kính phải y như 11 kiếm: %+v vs %+v", g30, g11)
 	}
-	full := ComputeRingGeom(c, 30, 1.4, 60, 1) // Luyện Khí 10, full swords: spec says ≈ 200
+	full := ComputeRingGeom(c, 30, 1.4, 60) // Luyện Khí 10, full swords: spec says ≈ 200
 	if full.Reach < 180 || full.Reach > 230 {
 		t.Fatalf("Luyện Khí 10 reach %v, spec reference ≈ 200", full.Reach)
 	}
 }
 
-// Spec v4 §6.2: Tốc Kiếm CHỈ nhân vào ω. Nó không được làm tầm chém dài ra —
-// đó là việc của Trường Kiếm.
+// Spec v4 §6.2: Tốc Kiếm CHỈ nhân vào ω. Spec v4.3 đã bỏ Trường Kiếm nên KHÔNG còn vật
+// phẩm nào kéo dài tầm chém — tầm chỉ tăng theo số vòng và cảnh giới.
 func TestSpinBuffDoesNotChangeReach(t *testing.T) {
 	g := quietGame(t, nil)
 	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 20, Swords: 30})
@@ -321,13 +323,101 @@ func TestSpinBuffDoesNotChangeReach(t *testing.T) {
 	if got := g.Omega(p); math.Abs(got-want) > 1e-9 {
 		t.Fatalf("ω khi có Tốc Kiếm = %v, muốn %v", got, want)
 	}
-	// Trường Kiếm thì ngược lại: dài ra nhưng không đổi tốc.
-	w := g.Omega(p)
-	g.ApplyBuff(p, "long")
-	if after := g.Geom(p).Reach; after <= before {
-		t.Fatalf("Trường Kiếm phải làm tầm chém dài ra: %v → %v", before, after)
+	// Không vật phẩm nào còn kéo dài tầm chém nữa (spec v4.3).
+	for _, name := range BuffNames {
+		g.ApplyBuff(p, name)
+		if after := g.Geom(p).Reach; after != before {
+			t.Fatalf("buff %q làm đổi tầm chém %v → %v, spec v4.3 bỏ Trường Kiếm rồi", name, before, after)
+		}
 	}
-	if got := g.Omega(p); math.Abs(got-w) > 1e-9 {
-		t.Fatalf("Trường Kiếm làm đổi ω %v → %v", w, got)
+}
+
+// Tốc độ mài: hai vòng ngoài cùng ngang cảnh giới, 1 vòng/giây → sau đúng 1 giây cả hai
+// rụng trọn vòng ngoài. Bể kiếm tính mỗi tick (clash_cooldown = 0), không phải mỗi 0.3s.
+func TestClashGrindsOneOuterRingPerSecond(t *testing.T) {
+	g := quietGame(t, nil)
+	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 20, Swords: 60}) // 10+20+30 = 3 vòng
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 20, Swords: 60})
+	at, bt := Vec{X: 6000, Y: 6000}, Vec{X: 6200, Y: 6000}
+	place(g, a, at, 0)
+	place(g, b, bt, 0)
+	if g.Geom(a).Rings != 3 {
+		t.Fatalf("60 kiếm phải là 3 vòng, đang %d", g.Geom(a).Rings)
+	}
+	a.InvulnUntil, b.InvulnUntil = 1e9, 1e9 // chỉ đo bể kiếm, không để rớt cảnh giới xen vào
+	for i := 0; i < 30; i++ {               // đúng 1 giây
+		g.Tick(dt)
+		a.Pos, b.Pos = at, bt // giữ nguyên chỗ để đo
+	}
+	// Vòng ngoài 30 kiếm: sau 1 giây phải sạch, không hơn không kém một vòng.
+	for _, p := range []*Player{a, b} {
+		if p.Ring.Count != 30 {
+			t.Fatalf("%s còn %d kiếm sau 1 giây, muốn 30 (rụng trọn vòng ngoài 30 kiếm)", p.Name, p.Ring.Count)
+		}
+	}
+}
+
+// Đổi chiều quay vẫn phải có cooldown riêng, nếu không vòng kiếm giật 30 lần/giây.
+func TestRingFlipKeepsItsOwnCooldown(t *testing.T) {
+	g := quietGame(t, nil)
+	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 20, Swords: 60})
+	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 20, Swords: 60})
+	at, bt := Vec{X: 6000, Y: 6000}, Vec{X: 6200, Y: 6000}
+	place(g, a, at, 0)
+	place(g, b, bt, 0)
+	a.InvulnUntil, b.InvulnUntil = 1e9, 1e9
+	flips, prev := 0, a.Ring.Dir
+	for i := 0; i < 30; i++ { // 1 giây
+		g.Tick(dt)
+		a.Pos, b.Pos = at, bt
+		if a.Ring.Dir != prev {
+			flips++
+			prev = a.Ring.Dir
+		}
+	}
+	// flip_cooldown = 0.3s → nhiều nhất 4 lần đổi chiều trong 1 giây.
+	if flips > 4 {
+		t.Fatalf("đổi chiều %d lần trong 1 giây — cooldown đổi chiều không còn tác dụng", flips)
+	}
+	if flips == 0 {
+		t.Fatal("cùng cảnh giới mà không đổi chiều lần nào")
+	}
+}
+
+// Ô kiểm spec v4.4: "Luyện Khí có Cương Kiếm va Trúc Cơ không buff → Trúc Cơ mất 1 mỗi lần
+// va, Luyện Khí nứt 1/1.25; phá rào tre nhanh gấp đôi."
+func TestHardBuffMakesLowRealmTheHarderSide(t *testing.T) {
+	g := quietGame(t, nil)
+	low := g.AddPlayer(SpawnOptions{Name: "Low", Level: 0, Swords: 40})  // Luyện Khí
+	high := g.AddPlayer(SpawnOptions{Name: "High", Level: 10, Swords: 40}) // Trúc Cơ
+	g.ApplyBuff(low, "hard")
+	at, bt := Vec{X: 6000, Y: 6000}, Vec{X: 6150, Y: 6000}
+	place(g, low, at, 0)
+	place(g, high, bt, 0)
+	low.InvulnUntil, high.InvulnUntil = 1e9, 1e9
+	lowStart, highStart := low.Ring.Count, high.Ring.Count
+	for i := 0; i < 15; i++ {
+		g.Tick(dt)
+		low.Pos, high.Pos = at, bt
+	}
+	lostLow, lostHigh := lowStart-low.Ring.Count, highStart-high.Ring.Count
+	if lostHigh <= lostLow {
+		t.Fatalf("Luyện Khí có Cương Kiếm phải cứng hơn Trúc Cơ: Luyện Khí mất %d, Trúc Cơ mất %d", lostLow, lostHigh)
+	}
+}
+
+// Spec v4.5 §5.2: còn ≥ 2 vòng thì thân được che; `body_hit_max_rings` quyết định ngưỡng.
+func TestBodyHitThresholdComesFromConfig(t *testing.T) {
+	g := quietGame(t, nil)
+	if g.Cfg.Sword.BodyHitMaxRings != 1 {
+		t.Fatalf("body_hit_max_rings = %d, spec v4.5 ghi 1", g.Cfg.Sword.BodyHitMaxRings)
+	}
+	one := g.AddPlayer(SpawnOptions{Name: "One", Level: 20, Swords: 8}) // 1 vòng
+	two := g.AddPlayer(SpawnOptions{Name: "Two", Level: 20, Swords: 25}) // 2 vòng
+	if g.Shielded(one) {
+		t.Fatal("còn 1 vòng thì phải chém được thân")
+	}
+	if !g.Shielded(two) {
+		t.Fatal("còn 2 vòng thì thân phải được che")
 	}
 }

@@ -13,7 +13,6 @@ const ART_FILL = 0.9; // blade art fills ~90% of its canvas height
 const GHOSTS = 2; // trailing copies per sword that fake motion blur (spec §4.1b)
 const GHOST_STEP = (7 * Math.PI) / 180;
 const MAIN_ALPHA = 0.95;
-const LONG_BIT = 1 << BUFFS.indexOf('long');
 const SPIN_BIT = 1 << BUFFS.indexOf('spin');
 
 let bladeTex: Texture | null = null;
@@ -60,6 +59,13 @@ interface Blade {
   main: Particle;
   ghosts: Particle[];
   ring: number;
+  /** Góc cố định của khe này so với `ringAngle`, cùng cos/sin đã tính sẵn. */
+  off: number;
+  cosOff: number;
+  sinOff: number;
+  /** Chiều cao gốc kiếm và tỉ lệ co, chỉ phụ thuộc vòng nên tính một lần lúc dựng. */
+  hilt: number;
+  len: number;
 }
 
 /**
@@ -77,9 +83,14 @@ export class SwordRing {
   private blades: Blade[] = [];
   private angles: number[] = [];
   private realm = -1;
-  private count = 0;
+  /** count: số kiếm đang vẽ (đồng hồ debug đọc qua PlayerSprite.swordCount). */
+  count = 0;
   private prevSlots: number[] = [];
   private tweenStart = 0;
+  /** Chữ ký hình học đang áp: lên tầng (scale) hay đổi số vòng thì phải tính lại. */
+  private geomKey = '';
+  /** Mức giãn: 1 = vẽ mọi thanh, 2 = vẽ cách một thanh… chỉ áp cho vòng dày. */
+  private detail = 1;
   private readonly tints: number[];
 
   constructor(private readonly cfg: GameConfig) {
@@ -87,30 +98,83 @@ export class SwordRing {
     this.root.addChild(this.blur, this.tinted, this.skin, this.cracks, this.hitbox);
   }
 
-  update(f: PlayerFrame, now: number, showHitbox: boolean): void {
+  update(f: PlayerFrame, now: number, showHitbox: boolean, detail = 1): void {
     const s = f.s;
     const realm = realmOf(this.cfg, s.L);
-    const g = ringGeom(this.cfg, s.sc, s.n, s.bf & LONG_BIT ? (this.cfg.buffs.long?.mult ?? 1) : 1);
-    if (s.n !== this.count || realm !== this.realm) {
+    const g = ringGeom(this.cfg, s.sc, s.n);
+    if (s.n !== this.count || realm !== this.realm || detail !== this.detail) {
+      this.detail = detail;
       this.rebuild(s.n, realm, g, now);
+    }
+    // Hình học chỉ đổi khi lên tầng (scale) hoặc mở vòng mới, không đổi mỗi khung —
+    // nên bán kính, chiều dài và tỉ lệ của từng thanh kiếm tính sẵn ở đây, không tính lại
+    // trong vòng lặp nóng.
+    const key = `${g.rings}:${s.sc}:${g.width}`;
+    if (key !== this.geomKey) {
+      this.geomKey = key;
+      this.refreshGeom(g);
     }
     this.root.position.set(f.x, f.y);
     this.root.zIndex = f.y + 1;
     const t = Math.min(1, (now - this.tweenStart) / this.cfg.sword.tween_secs);
     const spin = s.bf & SPIN_BIT ? (this.cfg.buffs.spin?.mult ?? 1) : 1;
     this.drawBlur(g, s.tl, realm, spin);
-    for (let i = 0; i < this.blades.length; i++) {
-      const a = f.ringAngle + this.slot(i, s.n, g, t);
-      this.angles[i] = a;
-      this.placeBlade(this.blades[i], g, a, s.tl, s.d);
-    }
+    this.placeAll(f, t, s.tl, s.d);
     this.drawCracks(f, g);
     this.drawHitbox(f, g, showHitbox);
   }
 
+  /**
+   * placeAll đặt lại mọi thanh kiếm cho khung hình này.
+   *
+   * Đây là vòng lặp nóng nhất của client: Đại Thừa 450 kiếm × 3 bản (thân + 2 vệt mờ) = 1 350
+   * particle, nhân thêm chục người trong tầm nhìn. Trước đây mỗi particle gọi một cặp
+   * cos/sin — hàng trăm nghìn lượt lượng giác mỗi giây. Giờ góc của từng khe là CỐ ĐỊNH so
+   * với `ringAngle`, nên chỉ cần cos/sin của `ringAngle` (và của mỗi mức vệt mờ) một lần cho
+   * cả khung hình, rồi xoay bằng công thức cộng góc: 4 phép nhân cho mỗi particle.
+   *
+   * Lúc số kiếm vừa đổi thì các khe đang tween nên vẫn đi đường cũ trong `tween_secs`.
+   */
+  private placeAll(f: PlayerFrame, t: number, tilt: number, dir: number): void {
+    if (t < 1) {
+      for (let i = 0; i < this.blades.length; i++) {
+        const a = f.ringAngle + this.slot(i, this.blades[i].off, t);
+        this.angles[i] = a;
+        this.placeBlade(this.blades[i], a, tilt, dir);
+      }
+      return;
+    }
+    const base = f.ringAngle;
+    // Một cặp cos/sin cho thân kiếm và cho mỗi mức vệt mờ — tổng 3 cặp cho cả khung hình.
+    const cosB = Math.cos(base);
+    const sinB = Math.sin(base);
+    const gc: number[] = [];
+    const gs: number[] = [];
+    for (let j = 0; j < GHOSTS; j++) {
+      const ga = base - dir * GHOST_STEP * (j + 1);
+      gc.push(Math.cos(ga));
+      gs.push(Math.sin(ga));
+    }
+    const turn = tilt + Math.PI / 2;
+    for (let i = 0; i < this.blades.length; i++) {
+      const b = this.blades[i];
+      const a = base + b.off;
+      this.angles[i] = a;
+      const m = b.main;
+      m.x = (cosB * b.cosOff - sinB * b.sinOff) * b.hilt;
+      m.y = (sinB * b.cosOff + cosB * b.sinOff) * b.hilt;
+      m.rotation = a + turn;
+      for (let j = 0; j < b.ghosts.length; j++) {
+        const p = b.ghosts[j];
+        p.x = (gc[j] * b.cosOff - gs[j] * b.sinOff) * b.hilt;
+        p.y = (gs[j] * b.cosOff + gc[j] * b.sinOff) * b.hilt;
+        p.rotation = a - dir * GHOST_STEP * (j + 1) + turn;
+      }
+    }
+  }
+
   /** slot is sword i's angle offset, tweened for tween_secs after the count changes. */
-  private slot(i: number, n: number, g: RingGeom, t: number): number {
-    const to = slotAngle(g, n, i);
+  private slot(i: number, to: number, t: number): number {
     const from = this.prevSlots[i];
     if (from === undefined || t >= 1) {
       return to;
@@ -120,16 +184,12 @@ export class SwordRing {
     return from + d * t;
   }
 
-  private placeBlade(b: Blade, g: RingGeom, a: number, tilt: number, dir: number): void {
-    const h = hiltR(g, b.ring);
-    const len = bladeLen(g, b.ring);
+  /** placeBlade: đường chậm, chỉ dùng trong lúc tween sau khi số kiếm đổi. */
+  private placeBlade(b: Blade, a: number, tilt: number, dir: number): void {
     const set = (p: Particle, ang: number): void => {
-      p.x = Math.cos(ang) * h;
-      p.y = Math.sin(ang) * h;
+      p.x = Math.cos(ang) * b.hilt;
+      p.y = Math.sin(ang) * b.hilt;
       p.rotation = ang + tilt + Math.PI / 2;
-      const ky = len / (p.texture.height * ART_FILL);
-      p.scaleY = ky;
-      p.scaleX = p.texture === bladeTex ? g.width / p.texture.width : ky;
     };
     set(b.main, a);
     b.ghosts.forEach((p, j) => set(p, a - dir * GHOST_STEP * (j + 1)));
@@ -172,7 +232,9 @@ export class SwordRing {
   }
 
   private rebuild(n: number, realm: number, g: RingGeom, now: number): void {
-    this.prevSlots = this.blades.map((_, i) => slotAngle(g, this.count, i));
+    // Giữ góc cũ của chính các thanh đang vẽ: khi giãn chi tiết thì chỉ số mảng không còn
+    // khớp chỉ số kiếm nữa, nên không thể tính lại bằng slotAngle(count cũ).
+    this.prevSlots = this.blades.map((b) => b.off);
     this.tweenStart = now;
     this.count = n;
     this.realm = realm;
@@ -182,12 +244,42 @@ export class SwordRing {
     const skinTex = assets.texture(`swords/realm_${realm}.png`);
     const plain = placeholderBlade();
     const byRing: Blade[][] = [];
+    // Vòng nào quét kín cả vành mỗi tick thì coi là dày (cùng phép thử với drawBlur), và
+    // `minDense` là số kiếm tối thiểu để còn kín. Giãn chi tiết chỉ được phép tới mức vòng
+    // VẪN còn kín — bỏ quá tay thì vành sát thương liền biến thành mấy thanh kiếm rời rạc,
+    // nhìn ra ngay và còn nói dối người chơi về tầm chém.
+    const minDense = Math.ceil(this.cfg.sword.rev_secs * this.cfg.net.tick_hz);
+    const denseRings: boolean[] = [];
+    const ringDetail: number[] = [];
+    for (let k = 0; k < g.rings; k++) {
+      const inRing = Math.min(ringCap(g, k), n - ringStart(g, k));
+      denseRings[k] = inRing >= minDense;
+      ringDetail[k] = denseRings[k] ? Math.max(1, Math.min(this.detail, Math.floor(inRing / minDense))) : 1;
+    }
     for (let i = 0; i < n; i++) {
       const k = ringOf(g, i);
+      // Vòng dày vốn là một vành sát thương liền (§4.1b) nên bỏ bớt thanh trong vành vẫn
+      // nhìn y hệt; vòng thưa thì từng thanh là một lưỡi kiếm riêng, phải vẽ đủ.
+      if (ringDetail[k] > 1 && (i - ringStart(g, k)) % ringDetail[k] !== 0) {
+        continue;
+      }
       const tex = k === 0 && skinTex ? skinTex : plain;
       const tint = this.ringTint(k, realm, false);
       const mk = (alpha: number): Particle => new Particle({ texture: tex, anchorX: 0.5, anchorY: HILT_ANCHOR, tint, alpha });
-      const b: Blade = { main: mk(MAIN_ALPHA), ghosts: Array.from({ length: GHOSTS }, (_, j) => mk(0.35 / (j + 1))), ring: k };
+      const off = slotAngle(g, n, i);
+      // Vòng dày thì hai thanh cạnh nhau chỉ cách vài độ, vệt mờ 7°/bước nằm trùng lên thanh
+      // bên cạnh nên vẽ cũng không ai thấy — bỏ đi, tiết kiệm 2/3 số particle của vòng to.
+      const ghosts = denseRings[k] ? 0 : GHOSTS;
+      const b: Blade = {
+        main: mk(MAIN_ALPHA),
+        ghosts: Array.from({ length: ghosts }, (_, j) => mk(0.35 / (j + 1))),
+        ring: k,
+        off,
+        cosOff: Math.cos(off),
+        sinOff: Math.sin(off),
+        hilt: hiltR(g, k),
+        len: bladeLen(g, k),
+      };
       this.blades.push(b);
       (byRing[k] ??= []).push(b);
     }
@@ -199,6 +291,20 @@ export class SwordRing {
       }
       for (const b of byRing[k] ?? []) {
         target.addParticle(b.main);
+      }
+    }
+    this.geomKey = ''; // particle mới chưa có tỉ lệ: buộc refreshGeom chạy ngay khung này
+  }
+
+  /** refreshGeom tính lại bán kính gốc kiếm, chiều dài và tỉ lệ vẽ của mọi thanh. */
+  private refreshGeom(g: RingGeom): void {
+    for (const b of this.blades) {
+      b.hilt = hiltR(g, b.ring);
+      b.len = bladeLen(g, b.ring);
+      for (const p of [b.main, ...b.ghosts]) {
+        const ky = b.len / (p.texture.height * ART_FILL);
+        p.scaleY = ky;
+        p.scaleX = p.texture === bladeTex ? g.width / p.texture.width : ky;
       }
     }
   }

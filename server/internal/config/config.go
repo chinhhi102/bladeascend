@@ -9,6 +9,10 @@ import (
 )
 
 type Cultivation struct {
+	// TienOverflowScore: đã Đạo Tổ thì không còn cảnh giới để lên, nên mỗi điểm Tiên khí
+	// nhặt thêm đổi thành ngần này điểm Uy Danh thay vì bỏ phí. 0 = tắt.
+	// Hiện là 0,1 — tỉ lệ 10 Tiên khí ăn 1 Uy Danh (chủ dự án quyết 29/10/2026).
+	TienOverflowScore float64 `json:"tien_overflow_score"`
 	Realms        []string `json:"realms"`
 	TiersPerRealm int      `json:"tiers_per_realm"`
 	ExpBase       float64  `json:"exp_base"`
@@ -20,12 +24,11 @@ type Cultivation struct {
 	// Tiên giới (spec §3.4): 5 cảnh giới sau Đại Thừa, không chia tầng, chỉ lên được
 	// bằng sát mạng chứ không dùng EXP.
 	TienRealms []string `json:"tien_realms"`
-	// TienKhiPerStep: Tiên khí cần cho từng chặng. TienKhiToExpBase: người chưa tới
-	// Đại Thừa 10 nhặt 1 điểm Tiên khí thì đổi thành base × 2^r Linh khí (spec §3.4).
-	TienKhiPerStep   []float64 `json:"tien_khi_per_step"`
-	TienKhiToExpBase float64   `json:"tien_khi_to_exp_base"`
-	TienRobShare     float64   `json:"tien_rob_share"`
-	TienDropShare    float64   `json:"tien_drop_share"`
+	// TienKhiPerStep: Tiên khí cần cho từng chặng. Không còn quy đổi sang Linh khí —
+	// hai đường tu tách hẳn từ spec v4.5 §3.4.
+	TienKhiPerStep []float64 `json:"tien_khi_per_step"`
+	TienRobShare   float64   `json:"tien_rob_share"`
+	TienDropShare  float64   `json:"tien_drop_share"`
 	TienScaleStep    float64   `json:"tien_scale_step"`
 	TienAuraColors   []string  `json:"tien_aura_colors"`
 }
@@ -46,8 +49,12 @@ type Sword struct {
 	TiltTweenSecs      float64  `json:"tilt_tween_secs"`
 	RingTints          []string `json:"ring_tints"`
 	RevSecs            float64  `json:"rev_secs"`
-	FlipCooldown       float64  `json:"flip_cooldown"`
-	ClashUnit          int      `json:"clash_unit"`
+	// FlipCooldown: chỉ giới hạn việc ĐỔI CHIỀU quay, để vòng kiếm không giật 30 lần/giây.
+	FlipCooldown float64 `json:"flip_cooldown"`
+	// ClashCooldown: giãn cách giữa hai lần TÍNH BỂ KIẾM của cùng một cặp (A, B).
+	// 0 = mỗi tick một lần, tức mài hết một vòng 30 kiếm trong đúng 1 giây (spec §5.2).
+	ClashCooldown float64 `json:"clash_cooldown"`
+	ClashUnit     int     `json:"clash_unit"`
 	FlipOnlySameRealm  bool     `json:"flip_only_same_realm"`
 	ClashKnockback     float64  `json:"clash_knockback"`
 	ClashKnockbackSecs float64  `json:"clash_knockback_secs"`
@@ -56,8 +63,9 @@ type Sword struct {
 	// "compound" → k = 1.2^d; "linear" → k = 1 + 0.2 × d.
 	DurabilityPerRealm float64 `json:"durability_per_realm"`
 	DurabilityMode     string  `json:"durability_mode"`
-	// ShieldRing: vòng nào làm lá chắn — "second_outermost" theo spec §5.2 v4.
-	ShieldRing string `json:"shield_ring"`
+	// BodyHitMaxRings: kiếm địch chỉ chém được vào thân khi nạn nhân còn tối đa bấy nhiêu
+	// vòng (spec v4.5 §5.2 — thay cho lá chắn chặn đường đi của bản trước).
+	BodyHitMaxRings int `json:"body_hit_max_rings"`
 	TweenSecs          float64  `json:"tween_secs"`
 }
 
@@ -96,6 +104,10 @@ type Buff struct {
 	Mult    float64 `json:"mult"`
 	Secs    float64 `json:"secs"`
 	RevealR float64 `json:"reveal_r"`
+	// Cương Kiếm only (spec v4.4 §6.2): kiếm cứng hơn khi va (DurabilityMult) và chém quái /
+	// vật cản mạnh hơn (DamageMult).
+	DurabilityMult float64 `json:"durability_mult"`
+	DamageMult     float64 `json:"damage_mult"`
 	// Ẩn Thân only (spec §6.2): the buff never stacks past MaxSecs, viewers see the player
 	// at VisibleAlpha instead of not at all, and bots only notice them within
 	// BotDetectMult × their normal sight range.
@@ -165,7 +177,73 @@ type Obstacles struct {
 	DmgPerExtraRng float64 `json:"dmg_per_extra_ring"`
 }
 
+// Ice: mặt băng ở Băng Nguyệt Hồ (spec §8.0). Di chuyển có quán tính:
+//
+//	vận tốc mới = vận tốc cũ × friction + hướng input × accel × dt
+//
+// Tốc độ tới hạn = accel × dt / (1 − friction). Với friction 0,92, dt 1/30 và accel 468 thì
+// tới hạn ≈ 195 = đúng `player.move_base`, nên chạy thẳng trên băng vẫn nhanh bằng trên
+// đất — cái khó là **dừng và đổi hướng**, đúng ý spec.
+type Ice struct {
+	Friction float64 `json:"friction"`
+	Accel    float64 `json:"accel"`
+}
+
+// Skills: mọi con số của 10 kỹ năng nhân vật (spec §6.3). Bán kính và tầm xa còn được
+// nhân theo scale người dùng lúc thi hành.
+type Skills struct {
+	MaxCharges int     `json:"max_charges"`
+	LockSecs   float64 `json:"lock_secs"`
+	OvercapExp float64 `json:"overcap_exp"`
+	OvercapTien float64 `json:"overcap_tien"`
+	KnockSecs  float64 `json:"knock_secs"`
+
+	BanhBaoWindowSecs float64 `json:"banh_bao_window_secs"`
+	BanhBaoShare      float64 `json:"banh_bao_share"`
+
+	LoaConeDeg float64 `json:"loa_cone_deg"`
+	LoaReach   float64 `json:"loa_reach"`
+	LoaPush    float64 `json:"loa_push"`
+
+	RuNguRadius float64 `json:"ru_ngu_radius"`
+	RuNguSecs   float64 `json:"ru_ngu_secs"`
+	RuNguMove   float64 `json:"ru_ngu_move"`
+	RuNguSpin   float64 `json:"ru_ngu_spin"`
+
+	DanEmCount  int     `json:"dan_em_count"`
+	DanEmSecs   float64 `json:"dan_em_secs"`
+	DanEmSwords int     `json:"dan_em_swords"`
+
+	TranChauConeDeg   float64 `json:"tran_chau_cone_deg"`
+	TranChauReach     float64 `json:"tran_chau_reach"`
+	TranChauSecs      float64 `json:"tran_chau_secs"`
+	TranChauBotVision float64 `json:"tran_chau_bot_vision"`
+
+	DashDist    float64 `json:"dash_dist"`
+	DashSecs    float64 `json:"dash_secs"`
+	SlickCount  int     `json:"slick_count"`
+	SlickSecs   float64 `json:"slick_secs"`
+	SlickRadius float64 `json:"slick_radius"`
+	SlipSecs    float64 `json:"slip_secs"`
+
+	LuoiMiRange  float64 `json:"luoi_mi_range"`
+	LuoiMiRadius float64 `json:"luoi_mi_radius"`
+	LuoiMiSecs   float64 `json:"luoi_mi_secs"`
+
+	BraceSecs       float64 `json:"brace_secs"`
+	BraceDurability float64 `json:"brace_durability"`
+
+	GhostSecs  float64 `json:"ghost_secs"`
+	GhostSpeed float64 `json:"ghost_speed"`
+
+	ShellSecs       float64 `json:"shell_secs"`
+	ShellPushRadius float64 `json:"shell_push_radius"`
+	ShellPush       float64 `json:"shell_push"`
+}
+
 type Zones struct {
+	// SnowMult: bờ tuyết ở Băng Nguyệt Hồ làm chậm (spec §8.0). Cùng cơ chế với bùn.
+	SnowMult           float64 `json:"snow_mult"`
 	MudMult             float64 `json:"mud_mult"`
 	WindWith            float64 `json:"wind_with"`
 	WindAgainst         float64 `json:"wind_against"`
@@ -176,7 +254,15 @@ type Zones struct {
 }
 
 type Gates struct {
+	// RandomExit: bước vào một cổng thì ra ở một cổng BẤT KỲ khác cùng mạng, thay vì cổng
+	// đôi cố định. Đặt false để quay về kiểu cũ.
+	RandomExit   bool    `json:"random_exit"`
+	// ExitPool: "all" (mặc định) = ra ở cổng bất kỳ trong cả thế giới; "other_zone" = luôn
+	// sang khu khác (spec §8.4).
+	ExitPool     string  `json:"exit_pool"`
 	Radius       float64 `json:"radius"`
+	// HeavenRadius: bán kính kích hoạt Thiên Môn — to gấp đôi cổng thường (spec §8.4a).
+	HeavenRadius float64 `json:"heaven_radius"`
 	TransitSecs  float64 `json:"transit_secs"`
 	ExitWarnSecs float64 `json:"exit_warn_secs"`
 	CooldownSecs float64 `json:"cooldown_secs"`
@@ -184,6 +270,12 @@ type Gates struct {
 }
 
 type Room struct {
+	// Zones: số khu mỗi phòng (spec §8.0). Để 1 là quay về thế giới một bản đồ như trước.
+	Zones          int     `json:"zones"`
+	// ZoneMinChars: sàn nhân vật mỗi khu. Bot được thả thêm cho tới khi khu nào cũng đạt
+	// sàn này, nhưng không bao giờ vượt `BotFillTarget` của cả phòng — nếu không thì một
+	// khu đông người sẽ kéo tổng số vượt trần.
+	ZoneMinChars   int     `json:"zone_min_chars"`
 	MaxHumans      int     `json:"max_humans"`
 	BotFillTarget  int     `json:"bot_fill_target"`
 	MapSize        float64 `json:"map_size"`
@@ -289,10 +381,16 @@ type Net struct {
 	MaxMsgsPerSec      int     `json:"max_msgs_per_sec"`
 	MaxConnsPerIP      int     `json:"max_conns_per_ip"`
 	LeaderboardCacheSc float64 `json:"leaderboard_cache_secs"`
+	// CorrectionSnap / CorrectionTauMs: client dùng để sửa vị trí dự đoán (spec §8.2a).
+	// Server không dùng, nhưng phải có ở đây thì `/api/config` mới gửi đi được.
+	CorrectionSnap  float64 `json:"correction_snap"`
+	CorrectionTauMs float64 `json:"correction_tau_ms"`
 }
 
 // Config mirrors config/game.json.
 type Config struct {
+	Skills     Skills     `json:"skills"`
+	Ice        Ice        `json:"ice"`
 	Cultivation Cultivation     `json:"cultivation"`
 	Sword       Sword           `json:"sword"`
 	Player      Player          `json:"player"`

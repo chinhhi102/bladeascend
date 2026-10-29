@@ -45,11 +45,11 @@ function ringsFor(step: number, n: number): number {
   return r;
 }
 
-export function ringGeom(cfg: GameConfig, scale: number, n: number, longMult: number): RingGeom {
+export function ringGeom(cfg: GameConfig, scale: number, n: number): RingGeom {
   const c = cfg.sword;
   const step = Math.max(1, c.ring_capacity_step);
   const g: RingGeom = {
-    base: c.length * scale * longMult,
+    base: c.length * scale,
     inner: (cfg.player.body_r + c.hilt_gap) * scale,
     width: c.width * scale,
     hiltStep: c.hilt_step,

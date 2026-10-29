@@ -47,11 +47,21 @@ export interface GameConfig {
   };
   burn: { mult: number; exp_frac_per_sec: number; keep_realm: boolean };
   buffs: Record<string, BuffCfg>;
-  zones: { mud_mult: number; wind_with: number; wind_against: number; wind_with_max_deg: number; wind_against_min_deg: number };
+  /** Mặt băng ở Băng Nguyệt Hồ (spec §8.0): quán tính khi trượt. */
+  ice: { friction: number; accel: number };
+  zones: { mud_mult: number; snow_mult: number; wind_with: number; wind_against: number; wind_with_max_deg: number; wind_against_min_deg: number };
   gates: { radius: number };
   items: { item_r: number; chest_warn_secs: number };
   obstacles: { occlusion_alpha: number };
-  net: { tick_hz: number; snapshot_hz: number; interp_ms: number };
+  net: {
+    tick_hz: number;
+    snapshot_hz: number;
+    interp_ms: number;
+    /** Lệch quá ngần này thì nhảy thẳng thay vì kéo dần (spec §8.2a). */
+    correction_snap: number;
+    /** Hằng số thời gian kéo nhân vật về vị trí server, tính bằng mili giây (spec §8.2a). */
+    correction_tau_ms: number;
+  };
   characters: string[];
   titles: string[];
   minimap: { size_pc: number; size_mobile: number; show_top1: boolean; show_chest: boolean; show_others: boolean };
@@ -77,6 +87,26 @@ export function tierOf(cfg: GameConfig, level: number): number {
 /** isTien: cảnh giới r thuộc Tiên giới (spec §3.4). */
 export function isTien(cfg: GameConfig, realm: number): boolean {
   return realm >= cfg.cultivation.realms.length;
+}
+
+/**
+ * banksTienKhi: từ Đại Thừa tầng 10 trở lên thì chỉ tu Tiên khí (spec §3.4). Dưới mức đó chỉ
+ * tu Linh khí — hai đường tu tách hẳn, không đổi qua lại.
+ */
+export function banksTienKhi(cfg: GameConfig, level: number): boolean {
+  const c = cfg.cultivation;
+  return level >= c.realms.length * c.tiers_per_realm - 1;
+}
+
+/** absorbable: viên này người chơi hiện tại có hấp thụ được không. */
+export function absorbable(kind: string, banks: boolean): boolean {
+  if (kind === 'orb') {
+    return !banks;
+  }
+  if (kind === 'tien_khi') {
+    return banks;
+  }
+  return true;
 }
 
 /** tienIndex: vị trí 0-based trong tien_realms, -1 nếu còn phàm. */

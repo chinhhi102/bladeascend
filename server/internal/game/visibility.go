@@ -4,10 +4,23 @@ import "math"
 
 // ViewHalfExtents returns the half width/height of what a player can see (spec §4.1: the camera backs off to show the whole ring, + AOI margin).
 func (g *Game) ViewHalfExtents(p *Player) (float64, float64) {
-	pc := g.Cfg.Player
-	view := math.Max(pc.CameraViewH*math.Pow(p.Scale, pc.CameraExp), pc.CameraReachMul*p.Geom.Reach)
-	h := view/2 + g.Cfg.Net.AOIMargin
-	return h * g.Cfg.Net.AOIAspect, h
+	if p.ViewHH == 0 {
+		g.refreshView(p) // nhân vật vừa tạo, chưa qua refreshDerived lần nào
+	}
+	return p.ViewHW, p.ViewHH
+}
+
+// ViewHalfExtentsX là nửa chiều rộng khung nhìn, để lọc "gần hay xa" mà không phải lấy cả
+// hai chiều.
+func (g *Game) ViewHalfExtentsX(viewer *Player) float64 {
+	hw, _ := g.ViewHalfExtents(viewer)
+	return hw
+}
+
+// InViewAt là InViewRadius khi người gọi ĐÃ có sẵn nửa khung nhìn — dùng trong vòng lặp
+// duyệt hàng nghìn vật phẩm để khỏi phải lấy lại cùng một con số mỗi lần.
+func InViewAt(viewer Vec, hw, hh float64, pos Vec, r float64) bool {
+	return math.Abs(pos.X-viewer.X) <= hw+r && math.Abs(pos.Y-viewer.Y) <= hh+r
 }
 
 // InView reports whether pos is inside viewer's area of interest.

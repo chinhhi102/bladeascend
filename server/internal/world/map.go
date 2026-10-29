@@ -73,6 +73,32 @@ type Gate struct {
 	Y       float64 `json:"y"`
 	Network string  `json:"n"`
 	Color   string  `json:"c"`
+	// Heaven: đây là **Thiên Môn** (spec §8.4a) — cổng MỘT CHIỀU luôn ra ở Thiên Đình,
+	// khác hẳn 4 cổng thường vốn bắn ngẫu nhiên khắp thế giới.
+	Heaven bool `json:"hv,omitempty"`
+	// Dock: đây là **Bến Thiên Môn** ở Thiên Đình — điểm RA của Thiên Môn khu `DockFor`.
+	Dock    bool `json:"dk,omitempty"`
+	DockFor int  `json:"df,omitempty"`
+}
+
+// HeavenGate trả về Thiên Môn của bản đồ này (nil nếu khu này không có).
+func (m *Map) HeavenGate() *Gate {
+	for i := range m.Gates {
+		if m.Gates[i].Heaven {
+			return &m.Gates[i]
+		}
+	}
+	return nil
+}
+
+// DockFor trả về Bến Thiên Môn dành cho khu `zone` (nil nếu không có).
+func (m *Map) DockFor(zone int) *Gate {
+	for i := range m.Gates {
+		if m.Gates[i].Dock && m.Gates[i].DockFor == zone {
+			return &m.Gates[i]
+		}
+	}
+	return nil
 }
 
 // Altar is a Đài Tiên Khí (spec §8.5): "small" quanh 4 sân môn phái, "center" ở giữa.
@@ -147,6 +173,21 @@ func (m *Map) GatesInNetwork(g Gate) []Gate {
 // GateExit is the one gate that g leads to. Gates in a network are paired two by two in ID
 // order (0↔1, 2↔3, …), so every gate is a fixed two-way door: whatever you came out of
 // takes you straight back. A network with an odd gate left over links it to the first one.
+// GateNetwork trả về mọi cổng KHÁC cùng mạng với g, xếp theo ID cho ổn định.
+//
+// Dùng cho luật "cổng dịch chuyển ngẫu nhiên": người chơi bước vào một cổng thì ra ở một
+// cổng bất kỳ trong mạng, không phải cổng cố định như trước.
+func (m *Map) GateNetwork(g Gate) []Gate {
+	var out []Gate
+	for _, o := range m.Gates {
+		if o.Network == g.Network && o.ID != g.ID {
+			out = append(out, o)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
 func (m *Map) GateExit(g Gate) (Gate, bool) {
 	var net []Gate
 	for _, o := range m.Gates {
@@ -223,7 +264,10 @@ func (m *Map) addLayer(l tmjLayer, opt LoadOptions) {
 		case "gates":
 			c := o.shape().Center()
 			m.Gates = append(m.Gates, Gate{ID: len(m.Gates), X: c.X, Y: c.Y,
-				Network: propString(o.Properties, "network", "a"), Color: propString(o.Properties, "color", "purple")})
+				Network: propString(o.Properties, "network", "a"), Color: propString(o.Properties, "color", "purple"),
+				Heaven:  propString(o.Properties, "heaven", "") == "1",
+				Dock:    propString(o.Properties, "dock", "") == "1",
+				DockFor: int(propFloat(o.Properties, "dock_for", -1))})
 		case "altars":
 			sh := o.shape()
 			c := sh.Center()
@@ -254,7 +298,14 @@ type tmjObject struct {
 	Height     float64   `json:"height"`
 	Ellipse    bool      `json:"ellipse"`
 	Point      bool      `json:"point"`
-	Properties []tmjProp `json:"properties"`
+	// Polygon: đỉnh tương đối so với (X, Y) — vùng địa hình hữu cơ của spec §8.6.
+	Polygon    []tmjPoint `json:"polygon"`
+	Properties []tmjProp  `json:"properties"`
+}
+
+type tmjPoint struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 type tmjLayer struct {
@@ -283,6 +334,17 @@ func (o tmjObject) kind() string {
 }
 
 func (o tmjObject) shape() Shape {
+	if len(o.Polygon) >= 3 {
+		// Đa giác hữu cơ (spec §8.6). Đỉnh trong Tiled là toạ độ TƯƠNG ĐỐI so với gốc của
+		// object, đổi sang tuyệt đối để server và client cùng một hệ.
+		pts := make([]float64, 0, len(o.Polygon)*2)
+		for _, pt := range o.Polygon {
+			pts = append(pts, o.X+pt.X, o.Y+pt.Y)
+		}
+		var sh Shape
+		sh.SetPoly(pts)
+		return sh
+	}
 	if o.Point {
 		return Shape{Circle: true, X: o.X, Y: o.Y, R: 1}
 	}

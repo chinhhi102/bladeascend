@@ -7,7 +7,7 @@ import { BUFF_COLORS, MONSTER_COLORS, MONSTER_VARIANTS } from './palette';
 const MONSTER_HEIGHT_PER_R = 2.4;
 const ITEM_SIZE_PER_R = 2.6;
 // ART_PROMPTS §9.0: EXP uses colours the calm ground never has — glowing cyan, then gold.
-const ORB_COLORS = { small: 0x3ee6ff, medium: 0x00b4ff, large: 0xffd23f };
+export const ORB_COLORS = { small: 0x3ee6ff, medium: 0x00b4ff, large: 0xffd23f };
 const GLOW_SCALE = 1.9; // halo radius relative to the item
 const BUNDLE_COLOR = 0xe0e6ee;
 
@@ -98,8 +98,10 @@ export class MonsterSprite {
       this.drawHp(s.hp, s.mx);
     }
     const hurt = now < this.hurtUntil;
+    // Chỉ nhuộm đỏ khi dính đòn. KHÔNG bóp chiều cao: dòng cũ nhân `scale.y × 0.97` mỗi
+    // KHUNG HÌNH nên mỗi lần mất máu là quái lại dẹt thêm một chút, dính vài đòn liên tiếp
+    // là bẹp thành bánh tráng và không bao giờ phồng lại.
     this.body.tint = hurt ? 0xff8080 : 0xffffff;
-    this.body.scale.y = Math.abs(this.body.scale.y) * (hurt ? 0.97 : 1);
   }
 
   destroy(): void {
@@ -130,7 +132,7 @@ function orbRadius(v: number): number {
   return v >= 60 ? 22 : v >= 20 ? 17 : 12;
 }
 
-function orbSize(v: number): 'small' | 'medium' | 'large' {
+export function orbSize(v: number): 'small' | 'medium' | 'large' {
   return v >= 60 ? 'large' : v >= 20 ? 'medium' : 'small';
 }
 
@@ -213,8 +215,14 @@ export class ItemSprite {
     return g;
   }
 
-  update(now: number): void {
+  /**
+   * update bobs the item and dims it when the local player cannot absorb it — Linh khí và
+   * Tiên khí là hai đường tu tách hẳn (spec §3.4), nên viên không dùng được phải nhìn ra
+   * ngay chứ không để người chơi chạy theo vô ích.
+   */
+  update(now: number, absorbable = true): void {
     this.root.pivot.y = Math.sin(now * 3 + this.phase) * 4;
+    this.root.alpha = absorbable ? 1 : 0.3;
   }
 
   destroy(): void {

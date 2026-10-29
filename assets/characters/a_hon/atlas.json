@@ -411,38 +411,44 @@
    "w": 256,
    "h": 256
   },
-  "teleport_out_00": {
+  "teleport_in_00": {
    "x": 1280,
    "y": 1792,
    "w": 256,
    "h": 256
   },
-  "teleport_out_01": {
+  "teleport_in_01": {
    "x": 1536,
    "y": 1792,
    "w": 256,
    "h": 256
   },
-  "teleport_out_02": {
+  "teleport_in_02": {
    "x": 1792,
    "y": 1792,
    "w": 256,
    "h": 256
   },
-  "teleport_out_03": {
+  "teleport_in_03": {
    "x": 2048,
    "y": 1792,
    "w": 256,
    "h": 256
   },
-  "teleport_out_04": {
+  "teleport_out_00": {
    "x": 0,
    "y": 2048,
    "w": 256,
    "h": 256
   },
-  "teleport_out_05": {
+  "teleport_out_01": {
    "x": 256,
+   "y": 2048,
+   "w": 256,
+   "h": 256
+  },
+  "teleport_out_02": {
+   "x": 512,
    "y": 2048,
    "w": 256,
    "h": 256
@@ -577,14 +583,21 @@
    "fps": 12,
    "loop": true
   },
+  "teleport_in": {
+   "frames": [
+    "teleport_in_00",
+    "teleport_in_01",
+    "teleport_in_02",
+    "teleport_in_03"
+   ],
+   "fps": 12,
+   "loop": false
+  },
   "teleport_out": {
    "frames": [
     "teleport_out_00",
     "teleport_out_01",
-    "teleport_out_02",
-    "teleport_out_03",
-    "teleport_out_04",
-    "teleport_out_05"
+    "teleport_out_02"
    ],
    "fps": 12,
    "loop": false

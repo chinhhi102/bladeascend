@@ -9,9 +9,43 @@ export const STR = {
   leaderboard: 'Bảng xếp hạng',
   findingRoom: 'Đang tìm phòng...',
   connecting: 'Đang kết nối máy chủ...',
+  /** Tên 5 khu, khớp với room.ZoneNames bên server (spec §8.0). */
+  /** Tên 10 kỹ năng (spec §6.3), khớp key nhân vật bên server. */
+  skillNames: {
+    a_hon: 'Bánh Bao Thần',
+    ba_tam_loa: 'Loa Phường',
+    ong_ba_vong: 'Ru Ngủ',
+    dai_ca_dep: 'Gọi Đàn Em',
+    map_tra_sua: 'Phun Trân Châu',
+    co_ba_ganh: 'Gánh Lướt',
+    su_phu_mi: 'Lưới Mì',
+    be_ti: 'Gồng Cơ',
+    shipper: 'Giao Hỏa Tốc',
+    cu_rua: 'Rụt Cổ',
+  } as Record<string, string>,
+  /** Câu thoại tấu hài khi dùng kỹ năng (spec §6.3). */
+  skillLines: {
+    a_hon: 'Ăn miếng bánh bao, kiếm về như mới!',
+    ba_tam_loa: 'A lô a lô, tránh ra cho bà đi!',
+    ong_ba_vong: 'À ơi… ngủ đi con…',
+    dai_ca_dep: 'Tụi bay đâu, lên đây!',
+    map_tra_sua: 'Nếm thử trân châu nhà tao!',
+    co_ba_ganh: 'Tránh đường, hàng nóng!',
+    su_phu_mi: 'Mì gói ba phút, trói mày ba giây!',
+    be_ti: 'Gồng! Không đứa nào đẩy nổi!',
+    shipper: 'Đơn gấp, xin phép đi xuyên!',
+    cu_rua: 'Thiền… các ngươi cứ chém đi.',
+  } as Record<string, string>,
+  zoneNames: ['Thiên Đình', 'Linh Sơn Cốc', 'Trúc Lâm Mê Cung', 'Phàm Trấn', 'Băng Nguyệt Hồ'],
+  zoneListTitle: 'Khu vực',
+  zoneEntered: (name: string): string => `— ${name} —`,
+  glLost: 'Card màn hình vừa bị gián đoạn. Đang khôi phục, bạn sẽ vào lại phòng ngay…',
+  glLostManual: 'Đồ hoạ lỗi liên tục. Hãy hạ chất lượng bằng phím V rồi tải lại trang (Ctrl+F5).',
+  versionMismatch: 'Máy chủ vừa được cập nhật. Hãy tải lại trang (Ctrl+F5) để chơi tiếp.',
   disconnected: 'Mất kết nối với máy chủ. Đang thử lại...',
   badName: 'Tên phải dài 2–16 ký tự.',
   controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Giữ Shift để Thiêu Đốt Tinh Huyết (chạy nhanh, hao tu vi). Không có nút đánh — kiếm tự xoay!',
+  qualitySet: (name: string) => `Chất lượng đồ họa: ${name} (phím V để đổi)`,
   controlsMobile: 'Kéo ngón tay để di chuyển. Giữ nút 🔥 để Thiêu Đốt Tinh Huyết. Kiếm tự xoay!',
 
   // Thiêu Đốt Tinh Huyết (spec §4.1c)
@@ -123,6 +157,8 @@ export const STR = {
 
   // Kill feed (spec §7) — mỗi dòng bốc ngẫu nhiên một cách nói cho đỡ nhàm
   feed: {
+    /** Top 3 bước qua Thiên Môn (spec §8.4a). */
+    heaven_gate: (a: string, title: string): string => `${a} (${title}) vừa bước qua Thiên Môn — Thiên Đình dậy sóng!`,
     kill: (a: string, b: string) => pick([
       `${a} vừa tiễn ${b} về quê nuôi cá`,
       `${a} tặng ${b} một vé về quê, không hoàn không huỷ`,
@@ -199,7 +235,7 @@ export const STR = {
     spin: 'Tốc Kiếm',
     haste: 'Thần Hành',
     magnet: 'Nam Châm',
-    long: 'Trường Kiếm',
+    hard: 'Cương Kiếm',
     shield: 'Kim Cang',
     exp2: 'Song Bội Đan',
     stealth: 'Ẩn Thân Phù',

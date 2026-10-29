@@ -86,3 +86,63 @@ Nguyên nhân vật cản yếu: damage tính theo **từng thanh kiếm**, nên
 2. Client: lớp hào quang vẽ sau lưng nhân vật (dưới sprite nhân vật, dưới vòng kiếm, trên mặt đất), tâm ngang ngực, đường kính ≈ 2.2 × chiều cao nhân vật, to theo scale, nhịp thở ±5% chu kỳ 2s. Màu theo cảnh giới Tiên; Đạo Tổ dùng sprite âm dương riêng.
 3. Ẩn Thân/bụi: hào quang ẩn/mờ theo nhân vật. Rớt cảnh giới: đổi màu ngay, về Đại Thừa thì tắt, kèm hiệu ứng vỡ.
 4. Chưa có art: placeholder là hình tròn phát sáng (radial gradient) theo màu config.
+
+---
+
+## Q16 — Trường Kiếm
+**Bỏ hẳn** (phương án 2). Spec v4.3 đã xóa khỏi §6.2 và §4.1a, v4.4 thay bằng **Cương Kiếm** — anh dán spec mới nhất vào `docs/_raw/`. Làm theo CHANGES_v4.md mục 20–23. Ảnh `assets/buffs/long.png` để đó, không dùng.
+
+## Q17 — Bó Kiếm khi rớt cảnh giới
+**Chấp nhận phương án 1.** Spec §5.2 đã ghi rõ: Bó Kiếm chủ yếu từ xác người chết và vật phẩm bản đồ. Luật chém thân theo số vòng (Q15) đã được ghi vào spec thay cho lá chắn chặn đường (config `body_hit_max_rings: 1`, bỏ `shield_ring`).
+
+## Q18 — Linh khí / Tiên khí tách hẳn
+**Giữ đúng như em đã làm.** Spec §3.4 đã sửa: không quy đổi qua lại, người phàm chém người Tiên giới chỉ nhận Uy Danh (và ngược lại). Bỏ `tien_khi_to_exp_base` khỏi config.
+
+## Q19 — Tốc độ bể kiếm
+**Giữ như em đã làm**: `clash_cooldown: 0` (bể mỗi tick), `flip_cooldown: 0.3`. Spec §5.2 đã sửa.
+
+---
+
+## Trả lời báo cáo đo (mục 24)
+
+Nhận xét: client trong game thật đang ổn (60 fps, vẽ 1 ms). Chỗ vượt ngân sách là **server tick** và **băng thông** (61,7 KB/s trong game thật, đỉnh snapshot 38 KB). Trên 4G yếu, gói to và đều đặn dễ gây nghẽn hàng đợi → ping hiển thị tăng. Vì vậy ưu tiên mạng và server trước client.
+
+### 1. Tối ưu — đi tiếp, theo thứ tự này
+1. **Mục 27 (mạng) trước**: delta snapshot, lượng tử hóa, item/EXP chỉ gửi sự kiện, **chia nhỏ ItemsAdded** (tối đa ~2 KB mỗi gói, phần còn lại gửi dần ở các tick sau, ưu tiên gần người chơi), không gửi viên nhỏ ngoài 1 500 khi camera lùi xa, 20/10 Hz theo khoảng cách, bỏ snapshot cũ khi client nghẽn.
+2. **Mục 26 (server)**: chạy `pprof` trên loadtest trước, gửi tôi top 10 hàm tốn CPU, rồi mới sửa đúng chỗ (va chạm theo vòng, chỉ vòng ngoài cùng, không cấp phát mỗi tick).
+3. **Mục 25 (client)**: chỉ làm phần rẻ mà lợi lớn — vẽ mỗi vòng kiếm thành 1 texture, BitmapText, cull. Web Worker và tự hạ chất lượng để sau, chỉ làm nếu đo thấy cần.
+4. Đo lại bằng loadtest + F3 sau mỗi bước, ghi bảng trước/sau vào PROGRESS.md.
+5. **Thêm 1 phép đo mạng thật**: chạy client với Chrome DevTools → Network throttling "Fast 4G" và "Slow 4G", ghi ping p95 và KB/s. Ghi luôn server đang đặt ở đâu (nước/khu vực) trong PROGRESS.md.
+
+### 2. Thư viện
+**Duyệt** `pixi-filters` và `revolt-fx`. Thêm vào CLAUDE.md quy tắc: *"Thư viện được spec ghi đích danh coi như đã duyệt; thư viện khác vẫn phải hỏi."*
+
+### 3. Thứ tự các buổi tiếp theo
+1. Tối ưu (mục 25–27 như trên).
+2. Bảng tên — mục 37–41 (nhỏ, thấy ngay).
+3. Ảnh đại diện + bản đồ sinh động — mục 42–47 (làm sau tối ưu để đo được chi phí bake chunk).
+4. VFX Tiên giới — mục 29–33, rồi thần thú luôn lượn lờ — mục 34–36 (nếu chưa làm).
+
+Mỗi buổi xong: test + build pass, cập nhật PROGRESS.md, báo số FPS/KB/s nếu có ảnh hưởng hiệu năng.
+
+---
+
+## Trả lời QUESTIONS (sau Q19)
+
+### Tối ưu (CHANGES_v4 mục 25–27) — ĐI TIẾP
+Đã đọc bảng đo. Đi tiếp theo thứ tự đã ghi ở mục "Trả lời báo cáo đo" phía trên trong file này (nếu `docs/_raw/ANSWERS.md` chưa có mục đó thì đây là bản đầy đủ):
+1. Mục 27 (mạng) trước: chia nhỏ ItemsAdded ≤ 2 KB/gói ưu tiên gần, delta snapshot, lượng tử hoá, không gửi viên nhỏ ngoài 1 500 khi camera lùi xa, 20/10 Hz theo khoảng cách, bỏ snapshot cũ khi client nghẽn.
+2. Mục 26 (server): pprof → sửa đúng chỗ (đã tìm ra lỗi SegSegDist2 — tốt).
+3. Mục 25 (client): chỉ phần rẻ lợi lớn (vòng kiếm thành 1 texture, BitmapText, cull).
+4. Đo lại loadtest + bài test 10 tab Chrome headless (thường + 4G yếu), ghi bảng trước/sau.
+
+### Thư viện — DUYỆT
+`pixi-filters` và `revolt-fx` được duyệt. Thêm vào CLAUDE.md: *"Thư viện được spec ghi đích danh coi như đã duyệt; thư viện khác vẫn phải hỏi."*
+
+### Q20 — Va kiếm chậm lại sau khi sửa lỗi
+**Chọn phương án 1: giữ nguyên luật đúng.** Lý do: tôi vừa phàn nàn "bị dí rất nhanh chết" — rất có thể chính là do lỗi này (kiếm cách cả trăm đơn vị vẫn tính là va). Không bù lại bằng cách đổi luật lúc này.
+- Ghi số 84 lượt chết / 5 phút / 40 bot làm **mốc mới** trong PROGRESS.md (gạch các số đo cũ, ghi chú "đo trên luật va kiếm sai").
+- Đo lại sau khi xong thế giới 5 khu + Bí Kíp. Nếu chơi thật thấy giao tranh quá lề mề, tôi sẽ quyết sau — ưu tiên phương án 3 (tăng `sword.width`) trước phương án 2.
+
+### Q22 — `tien_overflow_score`
+**0.1 là đúng** (10 Tiên khí = 1 Uy Danh). Giữ như em đang để. Spec v5.3 §3.4 và config đã sửa thành 0.1; checklist: nạp 500 Tiên khí → +50 Uy Danh.

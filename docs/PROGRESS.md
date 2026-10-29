@@ -3,8 +3,12 @@
 _Cập nhật: 2026-10-22_
 
 ## Cách chạy (máy dev)
+
+> Server nghe `:9999` trên **mọi card mạng**, nên máy khác cùng Wi-Fi vào được bằng
+> `http://<IP-máy-này>:9999`. Muốn đóng lại, chỉ cho máy này chơi:
+> `go run ./cmd/server -addr 127.0.0.1:9999`.
 ```bash
-cd server && go run ./cmd/server          # http://localhost:8080 (đã build client) — đổi cổng: -addr :8090
+cd server && go run ./cmd/server          # http://localhost:9999 (đã build client) — đổi cổng: -addr :8090
 cd client && npm run dev                  # http://localhost:5173 (tự cập nhật khi sửa code)
 cd server && go test ./... && go vet ./...
 cd client && npm run build
@@ -36,6 +40,124 @@ Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (d
   - (Q8 đã xong: spec gốc v3.5 đặt `clash_unit` = 1 và sửa checklist §17 cho khớp.)
 
 ## Đã làm
+
+- **Thiên Môn (29/10/2026, spec §8.4a, CHANGES_v5 mục 16–18)** — lối đi **chắc chắn** tới
+  Thiên Đình, ngược hẳn với 4 cổng thường vốn cố tình giấu đích đến.
+  - Mỗi khu trừ Thiên Đình có **1 Thiên Môn ở tâm khu**, mapgen chừa quảng trường trống bán
+    kính 500 quanh nó. Thiên Đình có **4 Bến Thiên Môn** cách tâm 1 400 ở đầu 4 đường chính.
+  - **Một chiều, đích cố định**: mỗi khu nối cố định với một bến (Linh Sơn → Bắc, Trúc Lâm →
+    Đông, Phàm Trấn → Nam, Băng Nguyệt → Tây). Cố định chứ không ngẫu nhiên là có lý do:
+    người chơi quen đường sẽ biết ai vừa từ khu nào lên, và ở khu trung tâm đó là thông tin
+    đáng giá.
+  - Thiên Môn và bến **không nằm trong bể ngẫu nhiên** của cổng thường; **đứng trên bến
+    không bị hút đi tiếp** — thiếu luật này thì người vừa lên Thiên Đình bị bắn ngược về khu
+    khác ngay lập tức. Cả ba điều có test riêng.
+  - Minimap: icon ⛩ vàng **luôn hiện**, cộng mũi tên ở góc chỉ hướng khi còn cách trên 1 200.
+    Kill feed khi Top 3 bước qua. Bot chỉ dùng Thiên Môn khi đã Đại Thừa trở lên — dưới cảnh
+    giới đó Thiên Môn chỉ ném chúng vào giữa ổ kiến lửa.
+
+- **Kỹ năng nhân vật qua Bí Kíp (29/10/2026, spec §6.3, CHANGES_v5 mục 11–14)** — đủ 10 kỹ
+  năng, vật phẩm Bí Kíp (`skill_scroll`, weight 10), khung trạng thái chung, nút bấm, lớp
+  trân châu, bot biết dùng, và `cmd/sim --duel`.
+  - **Khung trạng thái chung** (`internal/game/status.go`): chậm · trói · bịt mắt · trượt ·
+    gồng · xuyên vật cản · mai rùa · lướt. Mười kỹ năng dùng chung một bảng thời hạn, nên
+    thêm kỹ năng sau chỉ là thêm một hằng số. Trạng thái **không cộng dồn** — trúng Ru Ngủ
+    hai lần vẫn chỉ 3 giây, nếu không hai người cùng kỹ năng khoá cứng một người vô hạn.
+  - Phím **Space** / nút tròn trên điện thoại, hiện icon + số lượt, xám khi hết. Chết là mất
+    hết lượt; rớt cảnh giới hay qua cổng thì không.
+  - **Trân châu dính màn hình**: lớp Pixi riêng, nằm dưới HUD, dồn về giữa, trượt xuống để
+    lại vệt. Bot trúng thì **tầm nhìn còn 40%** (§6.3) — không có luật này thì kỹ năng đó
+    hoàn toàn vô dụng với bot.
+  - **`cmd/sim --duel`** đấu chéo 10×10, in bảng tỉ lệ thắng + **phân tích khắc chế** (ai
+    khắc ai) + **số lần thật sự bấm được kỹ năng**.
+
+  **Ba lỗi bài đấu tìm ra, đều là lỗi thật:**
+  1. **Đàn em mài kiếm chính đại ca** — không có phép kiểm "cùng phe", nên Gọi Đàn Em là kỹ
+     năng tự sát. Đại Ca Dép từ **1,4% → 98,6%** tỉ lệ thắng sau khi sửa.
+  2. **Thiếu hẳn luật "bot bị bịt mắt còn 40% tầm nhìn"** của §6.3; `tran_chau_bot_vision`
+     có trong config mà không chỗ nào đọc.
+  3. **Ba nhân vật chưa từng bấm kỹ năng lần nào** (0/144 lượt): luật bot đòi "đang bị dí",
+     mà bot trong bài đấu thì không sợ ai. Nhìn bảng tỉ lệ thắng thì "kỹ năng yếu" và "bot
+     không bao giờ bấm" giống hệt nhau — phải đếm số lần bấm mới phân biệt được.
+
+  **Chưa cân bằng xong, và đó là chủ ý**: chủ dự án chốt 29/10 là cứ thả ra cho người chơi
+  phản hồi rồi chỉnh sau. Hiện `be_ti` và `dai_ca_dep` chưa ai khắc được; `ba_tam_loa`,
+  `co_ba_ganh`, `map_tra_sua`, `shipper` chưa khắc được ai. Chạy lại bảng bất cứ lúc nào:
+  `cd server && go run ./cmd/sim --duel`.
+
+- **Thế giới 5 khu xong phần còn lại (29/10/2026, CHANGES_v5 mục 4 goroutine, 7, 8, 9, 10)**
+  — và lần đầu tiên **cả 5 ngân sách §13.6 đều ĐẠT**:
+
+  | Chỉ số | Đo được | Ngân sách |
+  |---|---|---|
+  | Tick server (TB) | **1,2 ms** | < 4 ms ✅ |
+  | Tick server (p95) | **1,69 ms** | < 4 ms ✅ |
+  | Snapshot lớn nhất | **4,2 KB** | < 8 KB ✅ |
+  | Băng thông / client | **18,7 KB/s** | < 40 KB/s ✅ |
+  | Ping p95 | 0,00 ms | < 20 ms ✅ |
+
+  Kịch bản là của spec v5: 20 người + bot rải 5 khu, 10 Đạo Tổ. `cmd/loadtest` giờ in thêm
+  **tick từng khu** (0,24–0,86 ms) để khi một khu chậm hẳn thì thấy ngay là khu nào.
+
+  **Mỗi khu một goroutine.** An toàn vì trong một tick không khu nào đọc dữ liệu khu khác.
+  Để đạt được điều đó phải dọn **bốn chỗ dùng chung** mà `-race` chỉ ra:
+  1. `rng` của phòng → mỗi khu một bộ sinh số riêng.
+  2. Hàng chờ chuyển khu → hàng riêng mỗi khu, gom lại sau khi mọi khu xong.
+  3. Mốc gửi lại tên người chơi (`namesAt/namesDue`) → chuyển vào Zone.
+  4. Kill feed liên khu → gom vào `Zone.feeds`, gửi sau `wg.Wait()`; gửi thẳng sang client
+     của khu khác là ghi vào kết nối người ta đúng lúc khu kia đang ghi.
+  5. `handleDeaths` gọi xếp hạng toàn thế giới giữa lúc khu khác đang sửa dữ liệu → chụp
+     hạng **một lần đầu mỗi tick**. Hạng trên bảng Tổng kết chậm một tick thì không ai nhận
+     ra; đua dữ liệu thì có.
+
+- **5 bản đồ cho 5 khu (29/10/2026, spec §8.0, CHANGES_v5 mục 6)** — `cd server && go run
+  ./cmd/mapgen` sinh cả 5; xem riêng từng khu bằng `-zone X -seed N -png ra.png`.
+  Ảnh duyệt: `docs/perf/zone0.png` … `zone4.png`.
+
+  | # | Khu | Thuật toán | Vật cản |
+  |---|---|---|---|
+  | 0 | Thiên Đình | giữ nguyên §8.1 | 296 |
+  | 1 | Linh Sơn Cốc | 5 dãy vách đá **so le** (dãy lẻ chạm mép trái, dãy chẵn mép phải) chia hẻm núi, mỗi dãy chừa 1–2 đèo rộng 200–300 có cầu treo; 2 cao nguyên quanh đài, mỗi cao nguyên 2 lối lên | 158 |
+  | 2 | Trúc Lâm Mê Cung | mê cung **đào đường lùi dần** trên lưới 11×11 — bảo đảm mọi ô đi tới được nhau **theo cách nó dựng**, không phải rải tường rồi cầu trời; bụi rậm gấp 3; vài ao | 322 |
+  | 3 | Phàm Trấn | lưới phố **cố tình lệch** (khoảng cách 1 500–2 100, mỗi phố xê dịch ±140) + một đại lộ chéo; mỗi ô phố nhồi 3–5 công trình, thỉnh thoảng bỏ trống một ô làm sân | 109 |
+  | 4 | Băng Nguyệt Hồ | hồ băng đa giác ở giữa + 4 đảo tuyết, bờ tuyết phủ quanh (`snow_mult` 0,8) | 29 |
+
+  Mỗi khu **4 cổng** thuộc mạng chung cả thế giới và **2 Đài Tiên Khí**; Thiên Đình giữ 4 đài
+  nhỏ + Thiên Tiên Đài. Khu 0 trước đây đặt 8 cổng, nay đúng 4 theo §8.4.
+
+  **Ba lỗi bộ kiểm bắt được trong lúc làm** (đều là lỗi thật, không phải chỉnh số cho qua):
+  1. `ringWall` nhận `gapArc` là **độ dài cung tính bằng đơn vị**, tôi truyền 0.5 tưởng là
+     radian → cao nguyên bị bịt kín, 3,3% ô trống bị nhốt.
+  2. `addRoad` vẽ vùng đường bằng **hộp bao** của đoạn, nên một con phố chéo biến gần hết
+     Phàm Trấn thành mặt đường. Đã sửa: đoạn chéo cắt thành nhiều khúc ngắn ôm sát đường.
+  3. `house()` nhận **góc trên-trái** chứ không phải tâm; truyền tâm vào thì nhà tràn ra
+     đường và bị từ chối — cả thị trấn chỉ còn 50 vật cản.
+
+  Ba bản đồ cũ (`lang_tre`, `cho_dem`, `nui_da`) đã xoá, 5 khu thay thế.
+
+- **Thế giới 5 khu — xong phần server (29/10/2026, spec v5 §8.0 §8.4, CHANGES_v5 mục 4+5)**:
+  một phòng giờ là **5 khu**, mỗi khu một bản đồ 12 000² riêng, mô phỏng riêng, danh sách
+  người riêng, AOI riêng (`internal/room/zone.go`). Số khu lấy từ `room.zones` trong config;
+  để 1 là quay về thế giới một bản đồ như cũ.
+  - Người mới vào **khu ít người thật nhất**; bot sinh và hồi sinh vào **khu ít nhân vật
+    nhất**; trần người + bot vẫn tính cho cả phòng (20), không nhân năm.
+  - **Bảng xếp hạng, danh hiệu, Uy Danh tính chung cả thế giới**; riêng **dấu trên minimap**
+    (Đài Tiên Khí, rương, ngôi sao Top 1) chỉ vẽ của khu đang đứng — vẽ dấu khu khác lên thì
+    người chơi đuổi theo một chấm không bao giờ tới được.
+  - **Cổng nối cả thế giới**: 20 cổng chung một mạng, bước vào một cổng ra ở một cổng bất kỳ
+    khác, không bao giờ ra lại cổng vừa vào. Khu không biết gì về khu khác — phòng làm người
+    chỉ đường qua `GateRouter`/`MoveToZone`. Chuyển người làm ở **ranh giới tick**, lúc không
+    khu nào đang chạy, nên không cần khoá.
+  - Client nhận `welcome` mới giữa trận = vừa sang khu: tải lại bản đồ, **không** phát lại
+    âm thanh hồi sinh hay hướng dẫn, hiện chữ lớn tên khu 1,5s và tên khu cạnh minimap.
+  - Thử thật: đi vào cổng ở Thiên Đình → sang **Trúc Lâm Mê Cung**, giữ nguyên kiếm và Uy
+    Danh. Test: 6 bài trong `internal/room/zone_test.go`, trong đó bài cổng bắn 2 000 lần
+    kiểm đủ 5 khu đều tới được và ~80% lần sang khu khác đúng như spec.
+
+  **Chưa làm trong mục 2**: mỗi khu 1 goroutine (hiện 5 khu chạy tuần tự trong một goroutine
+  — đủ nhanh ở quy mô 20 người, chưa cần song song); 4 thuật toán mapgen mới (mục 6) nên 5
+  khu hiện dùng lại 3 bản đồ cũ; băng trơn (mục 7); bảng 5 khu khi bấm M (mục 9); loadtest
+  ghi tick từng khu (mục 10).
 | Milestone | Nội dung | Trạng thái |
 |---|---|---|
 | M0 | Repo theo mục 13.2, server Go + WebSocket + MessagePack, client Vite + PixiJS, `config/game.json` | ✅ |
@@ -55,6 +177,17 @@ Test: 50 test Go (EXP, scale, bảng bể kiếm, rớt cảnh giới + rơi ki�
 Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Art (minigen)
+
+- **`teleport_out` của MỌI nhân vật cắt được 3/4 khung (29/10/2026)** — không phải lỗi ảnh:
+  khung cuối là lúc nhân vật đã biến mất nên không còn pixel nào để bộ cắt tìm ra. Sinh lại
+  bao nhiêu lần cũng vậy, chỉ tốn quota. Client vẫn chạy bình thường với 3 khung. Vì thế
+  `artgen prep` giờ **chỉ đánh dấu sinh lại khi sheet thật sự hỏng**, dùng đúng ngưỡng của
+  client (`render/assets.ts`: bỏ animation khi lệch quá 1,5× hoặc dưới 0,5×). Danh sách sinh
+  lại nhờ vậy từ 15 xuống 4.
+- **Danh sách sheet cắt sai nằm ở `assets/_raw/miscut.json`**, do chính `artgen prep` ghi ra
+  chứ không gõ tay vào mã nguồn nữa. Ghi theo kiểu hợp nhất: chỉ gỡ tên nào vừa được cắt lại
+  sạch sẽ — ảnh thô của job cũ có thể đã bị dọn đi nên prep bỏ qua chúng, mà coi "không cảnh
+  báo" là "đã lành" thì sheet hỏng rơi khỏi ART_JOBS.md trong khi atlas vẫn giữ 22 khung sai.
 - **2026-10-22 (phiên sau): 90/211 asset đủ** (artgen: 66 job xong, 130 còn thiếu). Mới có: khung thoại, rương, hit/death Ông Ba Vòng, death Đại Ca, hit Thằng Mập; run Cô Ba Gánh cắt lại được (không cần sinh lại).
   - `artgen run` giờ gửi **mỗi prompt đúng 1 lần**, tuần tự (`-c 1`), nghỉ 30s giữa prompt (`-gap`); hết quota thì chờ tới `reset_at` rồi gửi lại (lúc đó Gemini chưa vẽ gì).
   - `artgen prep`: sheet nhiều hàng mà cắt theo hàng ra sai (hàng dính nhau, ma bay tách khỏi xác) → tự cắt theo lưới cột × hàng, mỗi mảnh vào ô chứa tâm của nó.
@@ -75,6 +208,47 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 - Nếu Gemini trả lời bằng chữ nhưng ảnh vẫn có trong lịch sử Gemini: tải ảnh về, đặt tên `assets/_raw/<tên job>.png` (tên job xem `artgen plan`), chạy `artgen prep`.
 
 ## Lỗi / hạn chế đã biết
+
+- **HUD trái tự đè lên nhau — đã sửa (29/10/2026)**. Ba khối bên trái (chỉ số · hàng buff ·
+  minimap) trước đây mỗi khối một `top:` cố định (12 / 84 / 136 px). Hễ khối chỉ số cao thêm
+  một dòng — thanh Tiên khí ở Tiên giới, rồi nhãn tên khu mới thêm — là nó tràn xuống đè
+  khối dưới. Đây là loại lỗi tự sinh lại: mỗi lần thêm một dòng vào HUD lại phải nhớ dời tay
+  cả ba con số, và quên là chuyện chắc chắn xảy ra. Giờ gom vào `.hud-left` xếp dọc bằng
+  flex nên khối sau tự đẩy xuống, thêm bao nhiêu dòng cũng không hỏng. Bảng hướng dẫn lúc
+  mới vào (`.guide`) cũng đang nằm đè minimap → chuyển xuống **giữa-dưới**. Đo ở trường hợp
+  xấu nhất (Đạo Tổ, có thanh Tiên khí, 1 050 kiếm, 5 buff): 12 → 119 → 171 → 205, không
+  khối nào chồng nhau.
+- **Nền bản đồ có vệt hồng — đã sửa (29/10/2026)**. 7 ảnh nền (`soft_grass` 17,3%,
+  `bamboo_litter` 15,7%, `mossy_stone` 10,3%, …) vẫn còn magenta nguyên bản. `modeTile` cố ý
+  **không** lọc magenta cho ảnh nền vì nền phải đặc — nhưng magenta *trong* ảnh nền nghĩa là
+  bên sinh ảnh không vẽ kín khung, chứ không phải nền cần giữ. `patchMagenta` (`cmd/artgen/prep.go`)
+  vá các pixel đó bằng màu trung bình vùng lành **và** ghi job vào `miscut.json` để lần sau
+  vẽ lại. Quét lại: 0 asset còn magenta, chụp màn hình đo 0,000% magenta.
+- **Giật khi chạm vật cản — đã sửa 3 nguyên nhân, còn sót ít (29/10/2026, spec v5 §8.2a)**.
+  Thêm vào F3 dòng `hiệu chỉnh N/giây · lệch nhất X` (đếm số lần server kéo nhân vật về).
+  Đo trước khi sửa: đi tới rìa bản đồ ra **20,2 lần/giây**, nhân vật ghim cứng ở y = 11 549.
+  Ba chỗ client dự đoán khác server, tất cả đều bị bài đối chiếu 1 500 bước bắt được:
+
+  | # | Lệch ở đâu | Hậu quả |
+  |---|---|---|
+  | 1 | Client bỏ qua `play_margin` (kẹp `[r, size−r]` thay vì `[margin+r, size−margin−r]`) | Cả vành ngoài rộng 420 đơn vị — ~13% bản đồ — bị kéo về mỗi tick |
+  | 2 | Thứ tự đẩy ra khỏi vật cản khác nhau (lưới không gian vs mảng) | 4/1 000 ca lệch, nặng nhất **173,7 đơn vị** |
+  | 3 | Client thiếu phép xét **đa giác** và thiếu luật vùng **nước** | Đi qua bùn/nước/gió hình méo là lệch tốc độ liên tục |
+
+  Sau khi sửa: bài đối chiếu **0,0000 đơn vị lệch** trên 1 500 bước × 3 bản đồ; đo trong game
+  **20,2 → 4,8 lần/giây** lúc cao nhất, nhân vật không còn ghim ở rìa.
+
+  **Còn sót 1–5 lần/giây**: gần như chắc là đòn đẩy văng (`KnockVel`) — client không dự đoán
+  được va chạm chiến đấu của server. Chưa xác minh; nếu muốn triệt thì phải gửi kèm vận tốc
+  đẩy trong snapshot để client mô phỏng theo.
+
+- **Thỉnh thoảng mất ngữ cảnh WebGL (28/10/2026)**: chạy 3 lượt kiểm tra bằng Chrome headless
+  trên AMD RX 570 (RADV) thì **1 lượt** in `PixiJS Error: Could not initialize shader` kèm
+  `WebGL context may be lost`. Khung hình không tụt (58 fps) nên có vẻ chỉ là trình điều
+  khiển trong môi trường headless. **Nhưng client hiện KHÔNG bắt sự kiện `webglcontextlost`**
+  — nếu chuyện này xảy ra với người chơi thật thì màn hình sẽ đen vĩnh viễn, phải tự tải lại
+  trang. Chưa làm vì chưa thấy tái hiện trên máy thật; nếu có người báo "màn hình đen" thì
+  đây là chỗ nhìn đầu tiên.
 - **Tài khoản minigen `pt1` đang báo UNAUTHENTICATED (cookie hết hạn)** → cần đăng nhập lại cookie bên minigen rồi chạy tiếp `artgen run`.
 - Gemini đôi khi vẽ sai số frame (5 thay vì 4, 6 thay vì 8). `artgen prep` giữ đúng số frame thực tế vẽ ra; anim vẫn chạy được.
 - Ảnh của Bà Tám Loa lấy từ bản JPEG 1024px (người dùng tải từ Gemini) → hơi mờ, có ngôi sao watermark nhỏ; nên sinh lại khi dư quota (`artgen run -only char_ba_tam_loa_core -redo`).
@@ -83,6 +257,155 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 - Dự đoán chuyển động phía client không mô phỏng đẩy lùi (knockback) → khi bị chém thấy giật nhẹ 1 nhịp.
 - **Spec v4.0/v4.1 — ĐÃ LÀM (22/10/2026)**: số cân bằng mới (`move_base` 195, `cell` 140), độ bền kiếm `durability_per_realm` 1.2 thay `clash_ratio_*`, UI không tràn màn hình, 3 lỗi bản đồ (lề 300 + tường biên + dãy tường nối liền). Test Tốc Kiếm không đụng `reach` — PASS ngay, logic vốn đã đúng.
 - **Spec v4.0 — ĐÃ XONG CẢ 3 VIỆC LỚN (22/10/2026)**: lá chắn vòng kế ngoài cùng §5.2 (xem Q15 về mâu thuẫn công thức), Tiên khí + 5 Đài §3.4/§8.5, mapgen viết lại theo 9 bước §8.1 (`cmd/mapgen/gen.go`, có `--seed N --png out.png` xem trước).
+- **Bản đồ sinh động (28/10/2026, spec v4.9 §8.6, CHANGES_v4 mục 43–47)**: vùng bùn/ao là **đa giác méo theo nhiễu** (`r(θ) = r0 × (1 + 0.25·nhiễu(θ))`, Chaikin ×2, 56 đỉnh) — `Shape` thêm `Poly`, **server xét đúng đa giác client vẽ**. 3 ao mỗi bản đồ có mặt nước gợn sóng. Decal rải Poisson-disk theo biome, bóng đổ + vụn dưới chân vật cản, vật cản xoay ±6°/lật theo id. Sự sống: mây trôi, lá rơi, đom đóm, sương, bướm, bóng chim — trần 150/60/0 hạt theo chất lượng. 80 job art mới vào `assets:report` (nền biome, decal, viền vùng, ambient, bảng tên, chân dung HUD).
+  **Ba lần đo, ba lần sửa hiệu năng** (bản đầu làm 58 → 36 fps, draw call 237 → 611): (1) decal và hạt là `Graphics` riêng từng cái → nướng thành texture dùng chung; (2) ~2 000 decal rải khắp bản đồ bị duyệt hết mỗi khung → gom ô 2048 và tắt `renderable` ô ngoài khung nhìn; (3) bóng đổ vật cản vẫn là Graphics, 286 vật cản = 286 lượt vẽ → nướng nốt. Kết quả **draw call 611 → 118**, vẽ 0,9 ms.
+- **Spec v4.6 VFX (28/10/2026)**: `vfxLayer` riêng gắn `AdvancedBloomFilter` một lần cho cả lớp; hào quang Tiên 4 lớp blend cộng; đột phá có `ShockwaveFilter` + khựng hình 80ms + chớp trắng + chữ cảnh giới bật ra. Cài `pixi-filters`, `revolt-fx`.
+- **Spec v4.7 thần thú (28/10/2026)**: bay quanh chủ liên tục, động tác ngẫu nhiên mỗi 8–15s, Đạo Tổ 2 con lệch pha 180°, phản ứng lóe sáng khi nhặt Tiên khí / khiên đỡ đòn, bay sát + vệt đỏ khi Thiêu Đốt. Phím **V** đổi chất lượng Cao/Vừa/Thấp; máy yếu thì **tự hạ** (FPS < 45 suốt 3s hạ một bậc, > 55 suốt 10s nâng lại), nhưng người chơi đã tự chọn thì khoá.
+- **Spec v4.8 bảng tên + v4.9 ảnh đại diện (28/10/2026)**: xem commit `c840446` và `eca03d2`.
+- **Thần thú luôn lượn lờ (28/10/2026, spec v4.7 §3.5, CHANGES_v4 mục 34 + 36)**: bỏ kiểu "mỗi 20s bay 1 vòng" và bỏ luôn nút tắt. Sau đột phá, thần thú thu nhỏ 60% và **ở lại bay quanh chủ suốt thời gian còn ở Tiên giới**: quỹ đạo elip 1.3–1.8 × chiều cao nhân vật, 1 vòng/4s, ép dẹt 0.35, độ cao nhấp nhô chu kỳ 3s, tâm bám chủ lerp 0.1 nên lúc chạy bị kéo dài ra sau. Mỗi 8–15s làm một động tác 1.5–3s (xoắn ốc vút lên · số 8 · đổi chiều · lao ra rồi về · cuộn quanh đầu), vào/ra bằng bao hình sin nên không giật. Đạo Tổ có **2 con lệch pha 180°**, một trắng một đen. Đốt sau đi theo vị trí đầu các khung trước, lưu trong `Float64Array` cấp phát một lần (spec cấm tạo object mỗi frame). Chất lượng Cao/Vừa/Thấp = 16/10/6 đốt, vệt hạt 100/50/0%, chủ nhỏ hơn 40 px chỉ vẽ đầu + 4 đốt, vệt hạt chỉ bật cho 6 con gần nhất. Ẩn Thân/trong bụi thì mờ 20% theo chủ. **Phím V giờ đổi mức chất lượng** (§3.6) thay cho bật/tắt thần thú. Đo tại chỗ: Đạo Tổ song long, 9 người, 1 912 entity trong AOI → **60 fps, vẽ 1,0 ms, 245 draw call**.
+- **Đo hiệu năng TRƯỚC tối ưu (28/10/2026, CHANGES_v4 mục 24)** — `cd server && go run ./cmd/loadtest -secs 15`, đúng kịch bản §13.6 (40 nhân vật, 10 người Đạo Tổ đủ 1 050 kiếm đứng chụm giữa bản đồ):
+
+  | Chỉ số | Đo được | Ngân sách §13.6 | |
+  |---|---|---|---|
+  | Tick server (trung bình) | **11,45 ms** | < 4 ms | VƯỢT ~3× |
+  | Tick server (p95) | **19,89 ms** | < 4 ms | VƯỢT ~5× |
+  | Snapshot lớn nhất / client | **38,3 KB** | < 8 KB | VƯỢT ~5× |
+  | Băng thông xuống / client | **43,1 KB/s** | < 40 KB/s | VƯỢT nhẹ |
+  | Ping p95 | 0,00 ms | < 20 ms | ĐẠT |
+
+  Ping 0 ms vì loadtest chạy trong cùng tiến trình, không qua mạng thật — con số này chỉ
+  chứng minh đường trả Pong **không phải chờ vòng lặp game**, không nói gì về mạng thật.
+  Snapshot 38,3 KB là đỉnh lúc một loạt vật phẩm cùng lọt vào tầm nhìn khổng lồ của người
+  Đạo Tổ (`ItemsAdded` dồn vào một gói) — đúng chỗ mục 27 (delta + chỉ gửi sự kiện) nhắm tới.
+- **Mục 27 — gói snapshot gọn lại (28/10/2026)**: cùng lệnh `go run ./cmd/loadtest`, cùng kịch bản:
+
+  | Chỉ số | TRƯỚC | SAU | Ngân sách §13.6 | |
+  |---|---|---|---|---|
+  | Tick server (trung bình) | 11,45 ms | **14,04 ms** | < 4 ms | VƯỢT ~3,5× |
+  | Tick server (p95) | 19,89 ms | **25,09 ms** | < 4 ms | VƯỢT ~6× |
+  | Snapshot lớn nhất / client | 38,3 KB | **8,3 KB** (−78%) | < 8 KB | sát mép |
+  | Băng thông xuống / client | 43,1 KB/s | **21,4 KB/s** (−50%) | < 40 KB/s | ĐẠT |
+  | Ping p95 | 0,00 ms | 0,00 ms | < 20 ms | ĐẠT |
+
+  Làm những gì: `ItemsAdded` cắt theo ngân sách 2 KB/gói ưu tiên vật phẩm gần người chơi ·
+  bỏ viên EXP nhỏ ngoài 1 500 khi camera đã lùi xa · người/quái ngoài nửa tầm nhìn chỉ gửi
+  10 Hz thay vì 20 Hz · trần 150 entity mỗi gói · client nghẽn thì **bỏ gói cũ** chứ không
+  xếp hàng (`SendLossy`) · quái chỉ gửi loại / máu tối đa / bán kính **lần đầu** client thấy
+  nó (46 → 27 byte/con) · người chơi bỏ `omega` (client tự tính từ config), `mood` thành chỉ
+  số thay cho chuỗi, `exp` chỉ gửi cho chính chủ (102 → 88 byte/người).
+
+  Tick server **xấu đi** chứ không tốt lên — việc xếp vật phẩm theo khoảng cách tốn thêm CPU.
+  Đó là mục 26, xem pprof bên dưới.
+- **pprof: 88% CPU server nằm trong `diffItems` (28/10/2026, mục 26)** — `go run ./cmd/loadtest -secs 30 -cpuprofile cpu.prof`, 10 hàm tốn nhất:
+
+  | | Hàm | flat | cum |
+  |---|---|---|---|
+  | 1 | `math.archExp` | 19,2% | 19,2% |
+  | 2 | `math.archHypot` | 8,1% | 8,1% |
+  | 3 | `maps.(*Iter).Next` (duyệt map) | 7,0% | 8,6% |
+  | 4 | `room.(*Room).diffItems` | 6,0% | **87,9%** |
+  | 5 | `game.(*Game).ViewHalfExtents` | 6,0% | **44,0%** |
+  | 6 | `math.archLog` | 4,9% | 4,9% |
+  | 7 | `maps.ctrlGroup.matchH2` | 3,9% | 3,9% |
+  | 8 | `runtime.mapaccess1_fast32` | 3,9% | 15,5% |
+  | 9 | `math.pow` | 3,5% | 35,1% |
+  | 10 | `math.ldexp` | 3,3% | 3,7% |
+  |  | `game.(*Game).InViewRadius` | 3,0% | 48,1% |
+  |  | `room.(*Room).wantItem` | 1,4% | 47,9% |
+
+  Đọc bảng: gần như toàn bộ CPU đi vào vòng lặp lọc vật phẩm theo tầm nhìn, và bên trong nó
+  `ViewHalfExtents` gọi `math.Pow(Scale, CameraExp)` — tức `exp(log())` — **cho từng vật phẩm,
+  từng client, từng tick**, trong khi giá trị đó chỉ phụ thuộc người xem. `archHypot` là do
+  xếp vật phẩm theo khoảng cách dùng `math.Hypot` thay vì so bình phương. Nhóm `maps.*`
+  (≈15%) là tra `knownItems` và duyệt toàn bộ vật phẩm của bản đồ cho mỗi client.
+- **Mục 26 — sửa xong, tick 14,04 → 2,55 ms (28/10/2026)**:
+
+  | Chỉ số | TRƯỚC mục 27 | SAU mục 27 | SAU mục 26 | Ngân sách |
+  |---|---|---|---|---|
+  | Tick server (trung bình) | 11,45 ms | 14,04 ms | **2,55 ms** | < 4 ms ✅ |
+  | Tick server (p95) | 19,89 ms | 25,09 ms | **5,00 ms** | < 4 ms ❌ |
+  | Snapshot lớn nhất / client | 38,3 KB | 8,3 KB | **8,0 KB** | < 8 KB ✅ |
+  | Băng thông xuống / client | 43,1 KB/s | 21,4 KB/s | **20,0 KB/s** | < 40 KB/s ✅ |
+  | CPU server | 42% | 42% | **8%** | |
+
+  Bốn việc, theo đúng thứ tự pprof chỉ ra:
+  1. `ViewHalfExtents` gọi `math.Pow(Scale, CameraExp)` — tức `exp(log())` — cho **từng vật
+     phẩm, từng client, từng tick**, trong khi nó chỉ phụ thuộc người xem. Giờ tính sẵn
+     trong `refreshDerived` (`Player.ViewHW/ViewHH`) và lấy một lần trước vòng lặp.
+  2. Xếp vật phẩm theo khoảng cách dùng `math.Hypot` → so **bình phương** khoảng cách.
+  3. `diffItems` duyệt **toàn bộ** `g.Items` cho mỗi client → dùng `itemGrid` vốn đã có sẵn,
+     chỉ quét những ô chạm khung nhìn. Ô lưới đổi từ `map[uint32]*Item` sang slice, xoá O(1)
+     bằng hoán đổi với phần tử cuối (có `itemgrid_test.go` riêng vì kiểu xoá này dễ làm mất
+     phần tử khác).
+  4. `knownItems` của client đổi từ `map[uint32]bool` sang **slice theo chỉ số dày đặc**
+     (`Item.Slot()`), lưu id để nhận ra slot đã được viên khác dùng lại. Hết hẳn băm trong
+     vòng nóng.
+
+  Rồi phần tối ưu đó **phơi ra một lỗi hình học thật** (xem mục dưới); sửa lỗi xong thì CPU
+  tăng lại, nên phải tối ưu tiếp vòng so kiếm. Số cuối cùng, ba lần chạy liên tiếp:
+  **tick 4,88 / 5,01 / 5,04 ms · p95 6,2–6,7 ms · snapshot 8,1–8,5 KB · 22 KB/s**.
+- **LỖI: `SegSegDist2` sai dấu — kiếm va nhau ở vị trí ma (28/10/2026)**: công thức giao
+  điểm hai đoạn thẳng viết `cross(d2, r.Mul(-1))` thay vì `cross(d2, r)`, tức **đảo dấu cả
+  hai tham số** t và u. Hệ quả: hàm báo "hai đoạn cắt nhau" đúng vào lúc phần **kéo dài
+  ngược** của chúng cắt nhau. Đo được một trường hợp thật: hai thanh kiếm cách nhau 207 đơn
+  vị (xa hơn tổng chiều dài hai lưỡi) vẫn bị tính là va vào nhau. Bắt được nhờ bản tối ưu
+  lọc đúng theo hình học lại "lệch" so với bản cũ. Đã sửa, có `internal/geom/segseg_test.go`
+  khoá cả hai chiều.
+
+  **Ảnh hưởng cân bằng — cần người chủ dự án xem lại**: `go run ./cmd/sim --bots 40
+  --minutes 5` cho **84 lượt chết** (2,10 lượt/bot). Con số cũ ghi trong tài liệu là 608
+  lượt trong 10 phút (≈ 304 trong 5 phút) — nhưng con số cũ đo khi va kiếm còn lỗi, tức là
+  có rất nhiều cú va ảo. Nay va kiếm chỉ tính khi hai lưỡi thật sự chạm nhau nên bể kiếm
+  chậm hơn nhiều. Đây là **đổi nhịp trận đấu**, không phải chỉnh số — nên ghi vào
+  `docs/QUESTIONS.md` chờ quyết định, chưa đụng vào `config/game.json`.
+- **Vòng so kiếm (`sparseRingsTouch`) — 83% CPU server (28/10/2026)**: pprof trên **server
+  thật** (có bot, bản đồ thật, 10 tab trình duyệt thật) cho hình ảnh khác hẳn `cmd/loadtest`:
+  ở đó 88% CPU nằm ở lọc vật phẩm, còn ở đây 83% nằm ở so kiếm. Ba việc đã làm:
+  1. Kiếm của b tính sẵn một lần mỗi bước quét — bản cũ gọi `swordAt(b…)` đúng
+     `a.Count × b.Count` lần thay vì `b.Count` lần.
+  2. Bỏ sớm lưỡi nằm ở phía đối diện (cách tâm đối phương quá `bán kính ngoài + nửa lưỡi +
+     bề rộng`), và so khoảng cách hai **tâm** lưỡi trước khi gọi `SegSegDist2`.
+  3. `swordAtRot`: hướng lưỡi suy từ hướng chuôi bằng một phép quay thay vì cos/sin lần hai;
+     `RingOf` tính một lần thay vì hai; trả luôn chiều dài lưỡi để khỏi đo lại bằng `Hypot`.
+
+  **Hai hướng đã thử và BỎ** (đo ra tệ hơn, ghi lại để khỏi thử lại):
+  - Nhớ vị trí kiếm theo từng người mỗi tick → **12,01 ms**. Số bước quét `n` phụ thuộc
+    *cặp* người chơi nên bộ nhớ đệm bị huỷ liên tục.
+  - Dựng sẵn bảng hướng kiếm trong `ComputeRingGeom` → **9,53 ms**; chuyển sang dựng lười
+    trên Player → **9,61 ms**. Lý do: bể kiếm xảy ra mỗi tick nên bảng 1 050 phần tử phải
+    dựng lại liên tục, tốn hơn phần tiết kiệm được.
+- **Bài test 10 tab, TRƯỚC/SAU mục 26 (28/10/2026)** — cùng kịch bản, 5 tab Đạo Tổ 1 050
+  kiếm chụm giữa bản đồ, ~5 300 kiếm trên màn hình, ~1 400 entity trong AOI:
+
+  | Chỉ số (nhóm Đạo Tổ, TB) | TRƯỚC | SAU |
+  |---|---|---|
+  | Tick server | 269 ms | **8,2 ms** |
+  | Ping | 101 ms | 339 ms* |
+  | Kích thước snapshot | 1,2 KB | 1,7 KB |
+  | FPS (tab 1) | 16,2 | 4,2 |
+  | Thời gian vẽ (tab 1) | 2,2 ms | 16,1 ms |
+
+  *Ping và FPS xấu đi vì nay **nút thắt chuyển sang client**: trước đây server nghẽn nên
+  client nhận ít gói và vẽ ít; giờ server trả đủ 20 Hz, mười tab cùng vẽ 5 000 sprite trên
+  một card RX 570 và chính việc vẽ trở thành chỗ tắc (draw call 431). Đây chính là điều
+  kiện mà kế hoạch đặt ra cho **mục 25.1 (gộp vòng kiếm thành một RenderTexture)** và
+  **mục 25.6 (giải mã msgpack trong Web Worker)** — hai mục này nay có bằng chứng để làm.
+- **Bài test 10 tab dùng GPU thật (28/10/2026)**: máy có AMD RX 570; đo được
+  `--use-gl=angle --use-angle=vulkan` → RADV, `--use-angle=gl` → radeonsi, còn
+  `--use-gl=swiftshader` và `--use-gl=egl` đều rơi về SwiftShader (CPU). Đổi sang Vulkan
+  nên cả 10 tab chạy khổ 960×540 với chất lượng mặc định. Server chạy riêng trên lõi CPU
+  tách khỏi trình duyệt bằng `taskset`, vì không tách thì tick 2,55 ms bị thổi lên 269 ms
+  do goroutine bị hệ điều hành gạt ra liên tục.
+- **`cmd/loadtest` và `cmd/stress` (28/10/2026)**: `loadtest` đo đúng một kịch bản §13.6 và in bảng đối chiếu ngân sách; `stress` quét 10 → 320 người tìm trần của máy (đo được: **160 người vẫn mượt**, 200 người lag). Cả hai chạy nguyên đường thật (ghép phòng, bot, snapshot theo tầm nhìn, mã hoá msgpack), khác `cmd/sim` vốn chỉ chạy `game.Tick` thuần.
+- **Overlay F3 (28/10/2026, §13.6)**: `?debug=true` → phím **F3** bật/tắt bảng đo: fps · ms/khung · thời gian vẽ · tick server (server gửi kèm trong snapshot) · ping · KB/s · cỡ snapshot · số sprite · số draw call (bọc hàm vẽ WebGL) · số entity trong AOI · số kiếm · mức giãn kiếm.
+- **Spec v4.3–v4.5 (28/10/2026)**: bỏ hẳn **Trường Kiếm** — tầm chém chỉ tăng theo số vòng và cảnh giới, `ComputeRingGeom`/`ringGeom` bỏ tham số `longMult`. Thêm **Cương Kiếm** (`hard`): độ bền va kiếm × 1.5, sát thương quái/vật cản × 2, 10s, weight 7. Bể kiếm giờ so theo **độ bền D = 1.2^r × hệ số buff** chứ không so cảnh giới, nên Luyện Khí có Cương Kiếm cứng hơn Trúc Cơ tay không; đổi chiều quay vẫn chỉ xét cảnh giới. `shield_ring` → `body_hit_max_rings: 1`; bỏ `tien_khi_to_exp_base`.
+- **Thần thú Tiên giới (28/10/2026, spec v4.2 §3.5)**: VFX chuỗi đốt ở client (`render/beast.ts`) — 1 đầu + 14 đốt + 1 đuôi, đốt sau đi theo vị trí đầu lúc trước như con rắn, quỹ đạo xoắn ốc từ chân lên, đốt ở nửa sau vòng xoắn vẽ dưới nhân vật nửa trước vẽ trên. 3 kiểu: đột phá 2.5s · thường trực mỗi 20s 1.5s (phím **V** tắt/bật) · gãy vụn khi rớt cảnh giới 0.8s. Trần 6 con cùng lúc, Ẩn Thân/trong bụi không phát. Placeholder tam giác+tròn; 15 job art đã vào `assets:report` nhóm "Thần thú Tiên giới" theo ART_PROMPTS §10.1.
+- **Linh khí và Tiên khí tách hẳn (28/10/2026)**: từ Đại Thừa tầng 10 trở lên chỉ hấp thụ Tiên khí, dưới đó chỉ hấp thụ Linh khí — viên không dùng được đi xuyên qua và client làm mờ 30%. Lệch §3.4 (spec còn ghi đổi 50×2^r) → **Q18**. Phím test **R** giờ cấp thẳng Tiên khí khi đã qua Đại Thừa 10, nếu không sẽ tắc không thử được Tiên giới.
+- **Bể kiếm nhanh gấp 9 lần (28/10/2026)**: tách `clash_cooldown` (mới, = 0 → tính mỗi tick) khỏi `flip_cooldown` (giữ 0.3s, chỉ giới hạn đổi chiều quay). Hai vòng ngoài 30 kiếm ngang cảnh giới mài sạch nhau trong đúng 1 giây. Lệch câu "cooldown 0.3s" của §5.2 → **Q19**.
+- **Người chơi không chặn đường nhau (28/10/2026)**: lá chắn §5.2 chuyển từ luật DI CHUYỂN sang luật CHÉM — đi xuyên qua nhau thoải mái, nhưng còn ≥ 2 vòng thì kiếm địch không chạm tới thân. Giả lập 40 bot/10 phút: 148 → 608 lượt chết. Hệ quả: Bó Kiếm khi rớt cảnh giới gần như không còn xảy ra → **Q17**.
+- **Không ai lọt ra ngoài tường biên (28/10/2026)**: `resolveBlocking` kẹp vào vùng chơi chứ không phải cả bản đồ (trước kẹp `[r, size-r]` tức cả dải lề ngoài tường). Quái vật cũng vậy. `internal/game/bounds_test.go` giữ luật này.
+- **Vành mờ vòng kiếm (28/10/2026)**: chỉ vẽ cho vòng thật sự quét kín (≥ 30 kiếm, hoặc ≥ 19 khi có Tốc Kiếm) — vòng thưa không còn tô vành mờ làm phạm vi nhìn rộng hơn thực tế.
+- **Cửa sau debug (28/10/2026)**: mở `?debug=true` thì có `window.kx = { scene, world }` để soi bằng console (ví dụ `kx.scene.beastCount()`).
 - **⚠ Nhịp farm đang lệch spec (22/10/2026)**: `--farm` đo được Luyện Khí → Trúc Cơ **165s**, §6.1 vẫn ghi 30–60s. Do ba thay đổi cộng lại: tốc độ chạy một nửa + EXP gấp đôi mỗi cảnh giới + mật độ giảm 50%. Đại Thừa giờ cần ≈7.7 giờ farm → bảng Thần Tốc sẽ trống. Phương án: **Q13 trong `docs/QUESTIONS.md`** — chờ chốt, chưa đổi gì.
 - **EXP mỗi cảnh giới gấp đôi cảnh giới trước (22/10/2026)**: `realm_mult` 1.2 → **2.0**. Tổng tới Đại Thừa 10: 28 288 → **694 960**.
 - **Mật độ giảm 50% (22/10/2026)**: `exp_orbs.cell` 160 → **226** (≈160×√2, số viên giảm một nửa), `items.count_per_room` 400 → **200**.

@@ -4,10 +4,17 @@ import { sound } from './audio/sound';
 import { type GameConfig, levelThresholds, loadConfig } from './config';
 import { Input } from './input';
 import { Conn } from './net/conn';
+/** Chữ tên khu hiện bao lâu khi vào khu mới (spec §8.0). */
+const ZONE_BANNER_SECS = 1.5;
+
+import { PROTOCOL_VERSION } from './net/protocol';
+import { pendingRejoin, watchContextLoss } from './render/glrecover';
 import type { DeadMsg, GameMap, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
+import { loadFonts } from './render/fonts';
 import { GameScene } from './render/scene';
+import { cycleQuality, QUALITY_NAME } from './render/quality';
 import { h, Screens } from './ui/dom';
 import { guestId, homeScreen, type Profile } from './ui/home';
 import { Hud } from './ui/hud';
@@ -55,6 +62,7 @@ class App {
     this.hud = new Hud(cfg, Input.isTouchDevice());
     this.input = new Input(stage);
     this.bindBurnButton();
+    this.bindSkillButton();
     this.conn = new Conn((m) => this.onMessage(m));
     this.thresholds = levelThresholds(cfg);
   }
@@ -64,8 +72,24 @@ class App {
     this.scene.app.ticker.add((t) => this.frame(t.deltaMS / 1000));
     window.setInterval(() => this.sendInput(), 1000 / this.cfg.net.tick_hz);
     window.addEventListener('keydown', (e) => {
+      if (this.playing && e.code === 'Space' && !e.repeat) {
+        this.skillPressed = true; // kỹ năng nhân vật (spec §6.3)
+        e.preventDefault();
+        return;
+      }
       if (this.playing && e.code === 'KeyM' && !e.repeat) {
         this.hud.minimap.toggle(); // spec §12.1
+        return;
+      }
+      if (this.playing && e.code === 'F3' && !e.repeat) {
+        this.hud.togglePerf(); // spec §13.6: bảng đo bật/tắt bằng F3
+        e.preventDefault();
+        return;
+      }
+      if (this.playing && e.code === 'KeyV' && !e.repeat) {
+        // Spec §3.6: đổi mức chất lượng Cao / Vừa / Thấp. Thần thú không còn tắt được nữa
+        // (v4.7), nhưng số đốt và vệt hạt co theo mức này.
+        this.hud.showBanner(STR.qualitySet(QUALITY_NAME[cycleQuality()]), 2.5);
         return;
       }
       this.debugKey(e);
@@ -82,7 +106,25 @@ class App {
         }
       },
     );
-    this.showHome();
+    // Mất ngữ cảnh WebGL (trình điều khiển card reset, máy ngủ dậy): canvas sẽ đen vĩnh
+    // viễn nếu không làm gì. Nhớ lại tên + nhân vật rồi tải lại trang và tự vào lại phòng.
+    watchContextLoss(
+      this.scene.app.canvas as HTMLCanvasElement,
+      () => this.profile,
+      (canRecover) => {
+        this.playing = false;
+        this.input.enabled = false;
+        this.hud.root.remove();
+        this.screens.show(h('div', 'screen center', h('div', 'panel', canRecover ? STR.glLost : STR.glLostManual)));
+      },
+    );
+    // Vừa tải lại vì mất đồ hoạ thì vào thẳng phòng, đừng bắt bấm lại "Vào chơi".
+    const again = pendingRejoin();
+    if (again) {
+      this.join(again);
+    } else {
+      this.showHome();
+    }
   }
 
   private showHome(): void {
@@ -139,13 +181,32 @@ class App {
     }
   }
 
+  private srvMs = 0;
+
   private applySnapshot(m: Snapshot): void {
+    this.srvMs = m.sv ?? this.srvMs;
     const events = this.world.applySnapshot(m);
     this.scene.handleEvents(events);
     this.hud.onEvents(events, this.world.myId);
+    // Nút kỹ năng đọc số lượt từ chính snapshot của mình (spec §6.3).
+    const me = this.world.me();
+    if (me) {
+      this.hud.setSkill(this.profile?.char ?? '', me.skc ?? 0);
+    }
   }
 
   private async onWelcome(w: Welcome): Promise<void> {
+    if ((w.pv ?? 0) !== PROTOCOL_VERSION) {
+      // Server và client nói hai thứ tiếng khác nhau. Dừng hẳn ở đây và nói rõ, thay vì
+      // đọc rác rồi treo máy — chính là chuyện đã xảy ra một lần.
+      this.conn.stop();
+      this.screens.show(h('div', 'screen center', h('div', 'panel', STR.versionMismatch)));
+      return;
+    }
+    // Welcome đến GIỮA TRẬN nghĩa là vừa qua cổng sang khu khác (spec §8.0, §8.4): sang
+    // khu là đổi hẳn bản đồ nên phải tải lại từ đầu, nhưng KHÔNG phải vào trận lại — giữ
+    // nguyên hồ sơ, không phát lại âm thanh hồi sinh, không hiện lại hướng dẫn.
+    const changedZone = this.playing;
     this.joining = true;
     this.early = [];
     const res = await fetch(`/api/map/${w.map}`);
@@ -155,6 +216,25 @@ class App {
     this.hud.minimap.setMap(map);
     this.debug = w.debug;
     this.hud.setDebug(w.debug);
+    this.hud.setChar(this.profile?.char ?? '');
+    this.hud.setSkill(this.profile?.char ?? '', 0);
+    if (w.debug) {
+      // ?debug=true: mở cửa sau cho console của trình duyệt (xem VFX, đếm thần thú...).
+      const g = window as unknown as { kx?: unknown; __stats?: unknown };
+      // `playing` phải hỏi qua hàm: `world.me()` vẫn trả về dữ liệu CŨ sau khi chết và rời
+      // phòng, nên công cụ đo tưởng nhân vật còn sống và không bấm "Chơi tiếp" (mất mấy
+      // lượt đo vì chuyện này).
+      g.kx = { scene: this.scene, world: this.world, conn: this.conn, playing: () => this.playing };
+      // __stats là cùng bộ số của overlay F3 nhưng ở dạng object, cho tools/browsertest
+      // đọc mỗi giây. Giữ tên cố định để script không phải bám vào nội bộ renderer.
+      g.__stats = (): Record<string, number> => ({
+        ...this.scene.perfStats(),
+        ping: this.conn.rttMs,
+        kbPerSec: this.conn.kbPerSec,
+        snapKB: this.conn.lastSnapBytes / 1024,
+        srvMs: this.srvMs,
+      });
+    }
     this.screens.show(null);
     this.overlay.appendChild(this.hud.root);
     this.playing = true;
@@ -164,6 +244,12 @@ class App {
     }
     this.early = [];
     this.input.enabled = true;
+    this.hud.setZone(w.znm ?? '', w.zn ?? 0);
+    if (changedZone) {
+      // Chữ lớn mờ dần giữa màn hình khi vào khu mới (spec §8.0).
+      this.hud.showBanner(STR.zoneEntered(w.znm ?? ''), ZONE_BANNER_SECS);
+      return;
+    }
     this.hud.showGuide(); // hướng dẫn mờ trong lúc còn bất tử (spec §18.1)
     sound.play('respawn');
   }
@@ -180,6 +266,20 @@ class App {
         changeCharacter: () => this.showHome(),
       }),
     );
+  }
+
+  /** skillPressed: nút kỹ năng vừa được bấm, chờ gói input kế tiếp mang đi (spec §6.3). */
+  private skillPressed = false;
+
+  /** bindSkillButton: nút kỹ năng trên điện thoại — bấm một phát, không phải giữ. */
+  private bindSkillButton(): void {
+    const b = this.hud.skillBtn;
+    const press = (e: Event): void => {
+      this.skillPressed = true;
+      e.preventDefault();
+    };
+    b.addEventListener('touchstart', press, { passive: false });
+    b.addEventListener('mousedown', press);
   }
 
   /** bindBurnButton makes the on-screen 🔥 a hold button (spec §4.1c). */
@@ -201,7 +301,10 @@ class App {
       return;
     }
     const { angle, moving, burn } = this.input.read();
-    this.conn.send(this.world.makeInput(angle, moving, burn));
+    // Nút kỹ năng gom lại từ lúc gửi gói trước: bấm giữa hai nhịp mạng cũng không mất.
+    const skill = this.skillPressed;
+    this.skillPressed = false;
+    this.conn.send(this.world.makeInput(angle, moving, burn, skill));
   }
 
   private debugKey(e: KeyboardEvent): void {
@@ -230,6 +333,14 @@ class App {
     this.scene.render(dt);
     const me = this.world.me();
     this.hud.update(me, this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
+    if (this.debug) {
+      this.hud.setPerf(this.scene.perfLine(dt, {
+        rttMs: this.conn.rttMs,
+        kbPerSec: this.conn.kbPerSec,
+        snapBytes: this.conn.lastSnapBytes,
+        srvMs: this.srvMs,
+      }));
+    }
     if (me) {
       const view = this.scene.viewSize();
       this.hud.minimap.render(me.x, me.y, me.f, view.w, view.h, performance.now() / 1000);
@@ -245,6 +356,7 @@ async function boot(): Promise<void> {
   try {
     const cfg = await loadConfig();
     await assets.init();
+await loadFonts(); // BitmapFont đủ dấu tiếng Việt cho bảng tên (spec §12.3)
     await assets.preload();
     sound.init();
     loading.remove();

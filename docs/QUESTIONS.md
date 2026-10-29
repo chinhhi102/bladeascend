@@ -5,26 +5,44 @@ Câu đã xong ở `docs/QUESTIONS_DONE.md`.
 
 ---
 
-## Q15. Công thức lá chắn §5.2 làm không ai chém chết được ai
+*(Chưa có câu nào đang chờ. Q15–Q19 anh đã trả lời trong `docs/_raw/ANSWERS.md` ngày
+2026-10-28, đã chuyển sang QUESTIONS_DONE.md và code đã làm theo.)*
 
-**Bối cảnh:** §5.2 ghi ràng buộc đối xứng:
+Việc đang chờ anh **quyết**, không phải câu hỏi về luật chơi:
 
-> `dist(A, B) ≥ max(reachA + shield_rB, reachB + shield_rA)`
+- **CHANGES_v4 mục 25–27 (tối ưu)**: chính anh ghi *"Gửi tôi bảng số đo trước khi tối ưu"*.
+  Bảng đo đã có ở `docs/PROGRESS.md` mục "Đo hiệu năng trước tối ưu" — chờ anh xem rồi cho
+  đi tiếp.
+- **CHANGES_v4 mục 29–33 (v4.6 nâng cấp VFX)**: cần cài **hai thư viện mới** —
+  `pixi-filters` và `revolt-fx` — mà CLAUDE.md ghi "không thêm thư viện khi chưa hỏi".
+  Spec có ghi tên cụ thể nên coi như anh đã duyệt; em hỏi lại một câu cho chắc trước khi
+  thêm vào `package.json`.
 
-Code đúng y công thức này thì **không ai hạ được ai**. Lý do: người có từ 2 vòng trở lên có
-`shield_r` (mũi kiếm vòng kế ngoài) **lớn hơn chính tầm với của mình trừ đi 1 lớp**, nên vế
-`reachB + shield_rA` đẩy nạn nhân ra xa hơn tầm kiếm của A.
+## Q20 — Sửa lỗi va kiếm làm trận đấu chậm hẳn lại, có cần chỉnh cân bằng không?
 
-Ví dụ đo thật (Kim Đan, 20 kiếm = 2 vòng): `reachA` ≈ 245, `shield_rA` ≈ 222. Nạn nhân 1 vòng
-(`reach` ≈ 117, không còn lá chắn) bị giữ ở `117 + 222 = 339` — xa hơn 245 nên A vĩnh viễn
-không chạm tới thân B. Trận đấu không bao giờ kết thúc được bằng §5.1.
+**Bối cảnh**: tối ưu CPU server (CHANGES_v4 mục 26) phát hiện `geom.SegSegDist2` viết sai
+dấu, khiến hai thanh kiếm cách nhau cả trăm đơn vị vẫn bị tính là va vào nhau (chi tiết
+trong `docs/PROGRESS.md`). Lỗi đã sửa, có test khoá lại.
 
-**Tạm dùng — hai điều chỉnh, đã ghi chú trong `shield.go`:**
-1. **Chỉ áp theo hướng người đang đi**: `dist ≥ reach(người đi) + shield(người kia)`. Giữ đúng
-   ý "chỉ người đang đi bị chặn như va tường", và vẫn bịt kín các vòng trong.
-2. **Còn 1 vòng thì `shield_r` = 0** (spec ghi `BODY_R × scale`). Với `BODY_R × scale`, mũi
-   kiếm chỉ chạm **tiếp tuyến** mặt ngoài thân nên §5.1 bắn được hay không tuỳ sai số số học.
-   Để 0 thì "còn 1 vòng mới chạm được tới thân" xảy ra dứt khoát.
+**Vấn đề**: mọi con số cân bằng đo trước đây đều đo trên luật va kiếm sai.
+`go run ./cmd/sim --bots 40 --minutes 5` giờ cho **84 lượt chết** (2,10 lượt/bot), trong khi
+con số ghi trong PROGRESS là 608 lượt trong 10 phút (≈ 304 trong 5 phút). Tức là trận đấu
+chậm lại khoảng **3,5 lần**.
 
-Nếu anh muốn giữ nguyên công thức đối xứng, cần nói rõ **làm sao kết thúc được trận** — ví dụ
-lá chắn chỉ chặn thân chứ không chặn kiếm, hoặc `shield_r` nhỏ hơn `reach` một lớp.
+**Các phương án**:
+1. Giữ nguyên — nhịp chậm lại là nhịp ĐÚNG theo spec, trước đây nhanh là vì lỗi.
+2. Tăng tốc bể kiếm để quay lại nhịp cũ (ví dụ giảm `sword.durability_base`, hoặc tăng số
+   kiếm rụng mỗi lần va).
+3. Tăng tầm chém / bề rộng lưỡi để hai vòng kiếm dễ chạm nhau hơn.
+
+**Claude không tự chọn**: đây là đổi luật chơi, không phải sửa lỗi. Cần chủ dự án quyết.
+
+## Q22 — `tien_overflow_score`: spec ghi 1.0, anh nhắn 10:1 (0.1)
+
+`docs/_raw/CHANGES_v5.md` mục "Trả lời Q21" ghi giữ `tien_overflow_score` **1.0**, nhưng
+ngay trước đó anh nhắn *"tỉ lệ tiên khí và uy danh là 10-1, tức 10 tiên khí chỉ được 1 uy
+danh"* tức **0.1**.
+
+Tôi đang để **0.1** theo lời nhắn, vì nó mới hơn và nói rõ tỉ lệ. Nếu spec mới đúng thì đổi
+`config/game.json` → `cultivation.tien_overflow_score: 1.0` và sửa con số khoá trong
+`server/internal/game/newrules_test.go`.

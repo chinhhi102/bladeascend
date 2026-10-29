@@ -4,6 +4,30 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v5.3:** Tiên khí dư của Đạo Tổ đổi Uy Danh 10:1; va kiếm giữ nhịp đúng sau khi sửa lỗi SegSegDist2 (§3.4, §5.2).
+
+**Thay đổi v5.2:** thêm Thiên Môn ở tâm mỗi khu (trừ Thiên Đình) — cổng một chiều đích cố định tới Thiên Đình (§8.4a).
+
+**Thay đổi v5.1:** giữ 20 người/phòng (bot lấp theo phòng, sinh vào khu ít người nhất); kỹ năng chỉ dùng được khi nhặt vật phẩm Bí Kíp (tối đa 2 lượt); Thằng Mập đổi thành Phun Trân Châu bịt mắt (§6.3, §9).
+
+**Thay đổi v5.0:** thế giới 5 khu vực tách biệt (mỗi khu = bản đồ cũ, thiết kế riêng), chỉ đi qua bằng cổng dịch chuyển đích ngẫu nhiên; sửa giật khi chạm vật cản (dùng chung mã va chạm, trượt dọc, gộp collider, hiệu chỉnh mượt); kỹ năng riêng cho 10 nhân vật; Đạo Tổ Tiên khí dư → Uy Danh (§3.4, §6.3, §8.0, §8.2a, §8.4, §9).
+
+**Thay đổi v4.9:** ảnh đại diện nhân vật ở HUD thay số cấp (§12.4); bản đồ sinh động — trộn texture theo nhiễu, vùng hình hữu cơ (server dùng chung đa giác), decal, nước, ambient; cấm khối chữ nhật/tròn lộ ra (§8.6).
+
+**Thay đổi v4.8:** thiết kế lại bảng tên trên đầu: ruy băng danh hiệu theo hạng, huy hiệu cảnh giới màu theo cảnh giới + chỉ báo nguy hiểm, tên to có viền, nền chung, kích thước cố định trên màn hình (§12.3).
+
+**Thay đổi v4.7:** thần thú Tiên giới luôn lượn lờ quanh người (quỹ đạo nền + động tác ngẫu nhiên + bám theo có độ trễ) thay cho bay 1 vòng mỗi 20s (§3.5).
+
+**Thay đổi v4.6:** bộ công cụ VFX — blend cộng, hào quang nhiều lớp, bloom cho lớp VFX, pixi-filters, particle editor (revolt-fx), texture CC0 (§3.6).
+
+**Thay đổi v4.5:** Linh khí / Tiên khí tách hẳn, không quy đổi; bỏ lá chắn chặn đường, chém thân chỉ khi còn 1 vòng; bể kiếm tính mỗi tick, đổi chiều cooldown 0.3s (§3.4, §5.2). Xác nhận đã bỏ Trường Kiếm (v4.3).
+
+**Thay đổi v4.4:** thêm vật phẩm Cương Kiếm (độ cứng: bền ×1.5 khi va kiếm, sát thương quái/vật cản ×2); mục tối ưu hiệu năng bắt buộc §13.6 (vẽ mỗi vòng kiếm thành 1 texture, delta snapshot, LOD, đo ping đúng).
+
+**Thay đổi v4.3:** bỏ vật phẩm Trường Kiếm; tầm chém chỉ tăng theo số vòng và cảnh giới (§4.1a, §6.2).
+
+**Thay đổi v4.2:** VFX thần thú bay lên từ chân cho cảnh giới Tiên (§3.5).
+
 **Thay đổi v4.1:** độ bền kiếm mỗi cảnh giới +20% (Trúc Cơ vs Luyện Khí đổi 10 : 12), thay cho tỉ lệ 1 : (d+1) (§5.2).
 
 **Thay đổi v4.0:** gộp toàn bộ thay đổi đã nhắn trực tiếp cho agent (tốc chạy, bất tử 5s, realm_mult 2.0, Thiêu Đốt Tinh Huyết, bảng phòng theo Uy Danh, danh hiệu Top 1–10, tin loan toàn server, bot ngang hạng 11, debug, thanh máu quái); không đẩy văng khi va kiếm + lá chắn vòng kế ngoài cùng; Tiên khí từ Đài Tiên Khí thay cho sát mạng; thuật toán sinh bản đồ tu tiên; sửa lỗi Tốc Kiếm.
@@ -119,14 +143,22 @@ Sau Đại Thừa tầng 10 có thêm 5 cảnh giới. **Không dùng Linh khí 
 | 13 | Đạo Tổ | 500 | 1 500 | 1 050 | 14 | 6.0 |
 
 **Ai nhặt được Tiên khí**
-- Từ **Đại Thừa tầng 10** trở lên: cộng thẳng vào thanh Tiên khí.
-- Dưới mức đó: vẫn nhặt được, mỗi điểm Tiên khí **đổi thành `50 × 2^r` Linh khí** (r = cảnh giới người nhặt). Ví dụ Luyện Khí nhặt viên 2 điểm = +100 Linh khí (đủ 1 tầng); Đại Thừa nhặt viên 2 điểm = +25 600 (≈ 1 tầng). → Đài Tiên Khí hấp dẫn với mọi người, ai cũng kéo tới tranh.
+**Linh khí và Tiên khí tách hẳn nhau** (ranh giới: Đại Thừa tầng 10):
+- Từ **Đại Thừa tầng 10** trở lên: chỉ hấp thụ **Tiên khí**. Viên Linh khí đi xuyên qua, không nhặt được.
+- Dưới mức đó: chỉ hấp thụ **Linh khí**. Viên Tiên khí đi xuyên qua, không nhặt được.
+- Viên không hấp thụ được vẫn nằm đó cho người dùng được tới nhặt; client vẽ mờ 30% với người không nhặt được để họ không chạy theo vô ích.
+- Không có quy đổi qua lại giữa hai loại.
 
 **Bị chém khi đang ở Tiên giới (cướp đoạt Tiên khí)**
 - Rớt 1 cảnh giới như thường (§5.1): Đạo Tổ → Đại La Kim Tiên ... Chân Tiên → Đại Thừa tầng 10.
 - Tiên khí **về mức khởi điểm của cảnh giới mới**: `loss = tien_khi − mốc_khởi_điểm_mới`. Ví dụ Kim Tiên đang 450 (đã 150/300 tới Thái Ất) bị chém → Chân Tiên, Tiên khí về 100, `loss = 350`.
-- Người chém nhận **50% loss** (nếu người chém chưa tới Đại Thừa 10 thì đổi sang Linh khí theo công thức trên); **30% loss** rơi thành viên Tiên khí quanh nạn nhân.
+- Người chém (nếu đang ở Đại Thừa 10 trở lên) nhận **50% loss** Tiên khí; **30% loss** rơi thành viên Tiên khí quanh nạn nhân.
+- Người chém còn ở phàm giới (dưới Đại Thừa 10): **không nhận Tiên khí**, phần thưởng là Uy Danh (§11.1 — chém trúng Đạo Tổ = 1 400 × lật kèo). Tương tự, người Tiên giới chém người phàm không nhận Linh khí, chỉ nhận Uy Danh; phần Linh khí rơi ra vẫn rơi bình thường.
 - Kiếm thừa so với max mới rơi ra thành Bó Kiếm như thường.
+
+**Đạo Tổ: Tiên khí dư thành Uy Danh**
+- Thanh Tiên khí của Đạo Tổ **dừng ở mốc Đạo Tổ (1 500)**, không phình thêm (giữ luật cướp đoạt công bằng — Đạo Tổ ngồi lâu không thành "cục mồi" khổng lồ).
+- Tiên khí nhặt thêm khi đã là Đạo Tổ → Uy Danh theo tỉ lệ **10 Tiên khí = 1 Uy Danh** (`tien_overflow_score` = 0.1).
 
 **Hiển thị & tấu hài**
 - HUD: **giữ nguyên thanh tiến độ**, chỉ đổi tên: dưới Tiên giới gọi là **Linh khí**, từ Đại Thừa tầng 10 trở lên gọi là **Tiên khí** (màu vàng kim). Ví dụ: `Kim Tiên — Tiên khí 150/300`.
@@ -147,9 +179,73 @@ Sau Đại Thừa tầng 10 có thêm 5 cảnh giới. **Không dùng Linh khí 
   - Rớt cảnh giới → hào quang đổi màu ngay (về Đại Thừa thì tắt), kèm hiệu ứng vỡ vụn.
   - Màu nằm trong config `tien_aura_colors`.
 - Đạo Tổ hiện trên minimap của cả phòng (giống Top 1) → cả phòng hợp sức săn.
+- **Thần thú bay lên từ chân** (VFX riêng mỗi cảnh giới Tiên, xem §3.5).
 - Uy Danh (§11.1) dùng nguyên công thức với `r` tới 13 (chém trúng Đạo Tổ = 1 400 × lật kèo). Đột phá Tiên giới vẫn `20 × r`.
 
 **Lưu ý cân bằng**: Đạo Tổ có 14 vòng / 1 050 kiếm, tầm chém ≈ 1 900 đơn vị. Nếu thấy quá lớn, giảm `tien_scale_step` trong config.
+
+### 3.5 VFX Thần thú Tiên giới
+
+Mỗi cảnh giới Tiên có một thần thú, màu khớp với hào quang:
+
+| Cảnh giới | Thần thú | Màu | Vệt theo sau |
+|---|---|---|---|
+| Chân Tiên | Tiên hạc | Trắng bạc | Mây trắng nhỏ |
+| Kim Tiên | Kim long (rồng vàng) | Vàng kim | Tia lửa vàng |
+| Thái Ất Ngọc Tiên | Ngọc long (rồng ngọc) | Xanh ngọc | Hạt sáng xanh |
+| Đại La Kim Tiên | Tử phượng (phượng hoàng tím) | Tím | Lông vũ sáng |
+| Đạo Tổ | **Song long âm dương** (1 trắng, 1 đen, quấn nhau) | Đen trắng + viền cầu vồng | Mây âm dương |
+
+**Khi nào xuất hiện**
+1. **Đột phá vào cảnh giới Tiên** (đi cùng Thiên Kiếp): thần thú to, chui lên từ dưới chân, **xoắn ốc quanh người 1.5 vòng** đi lên, bay vút lên trời rồi tan thành vệt sáng. Dài 2.5s. Camera rung nhẹ, mọi người trong tầm nhìn đều thấy.
+2. **Luôn lượn lờ quanh người** (thường trực, liên tục, không tắt): sau màn đột phá, thần thú thu nhỏ còn 60% và **ở lại bay quanh chủ nhân suốt thời gian còn ở Tiên giới**:
+   - **Quỹ đạo nền**: vòng elip quanh thân (bán kính 1.3–1.8 × chiều cao nhân vật, ép dẹt 0.35 theo góc nhìn), tốc độ chậm ~1 vòng / 4s; độ cao nhấp nhô lên xuống nhẹ (sóng sin chu kỳ 3s) → lúc vòng sau lưng, lúc lượn ra trước mặt.
+   - **Đi theo chủ**: tâm quỹ đạo bám theo nhân vật có độ trễ (lerp 0.1/frame) → khi chạy, thần thú bị kéo dài ra phía sau như dải lụa rồi đuổi kịp.
+   - **Động tác ngẫu nhiên** mỗi 8–15s, chọn 1: xoắn ốc vút lên rồi bổ nhào xuống · lượn hình số 8 quanh người · đổi chiều bay · lao ra xa 1 nhịp rồi vòng về · cuộn tròn quanh đầu chủ. Mỗi động tác 1.5–3s rồi về quỹ đạo nền (chuyển mượt, không giật).
+   - **Phản ứng**: chủ bị chém trúng khi có khiên / nhặt Tiên khí → thần thú lóe sáng và lượn nhanh 1 vòng; chủ Thiêu Đốt Tinh Huyết → bay sát người, vệt đỏ.
+   - Chiều sâu như cũ: nửa sau quỹ đạo vẽ dưới nhân vật, nửa trước vẽ trên.
+   - Đạo Tổ: 2 con (trắng, đen) bay lệch pha nhau 180°, thỉnh thoảng quấn vào nhau.
+3. **Bị chém rớt cảnh giới**: thần thú hiện ra gãy vụn thành mảnh sáng rơi xuống (0.8s).
+
+**Cách làm: chuỗi đốt (procedural), không vẽ từng frame**
+- Thần thú = **1 sprite đầu + 12–20 sprite thân (đốt) + 1 sprite đuôi** (hạc/phượng thì: thân + 2 cánh vỗ 4 frame + đuôi lông). Code cho đầu chạy theo quỹ đạo, các đốt sau đi theo vị trí đầu ở các thời điểm trước đó (như con rắn) → uốn lượn mượt, không cần sinh hàng chục frame, đổi màu bằng tint.
+- **Quỹ đạo xoắn ốc**: `x = cx + R(t)·cos(θ(t))`, `y = feet_y − H(t) + R(t)·sin(θ(t))·0.35` (ép dẹt theo góc nhìn 3/4); `θ` tăng 1.5 vòng, `H` từ 0 lên `3 × chiều cao nhân vật`, `R` từ 0.6 → 1.0 × bán kính thân rồi bung ra khi bay vút lên.
+- **Chiều sâu**: đốt nào đang ở nửa sau vòng xoắn (`sin θ < 0`) vẽ **dưới** sprite nhân vật, nửa trước vẽ **trên** → trông như rồng quấn quanh người thật.
+- Mỗi đốt nhỏ dần về đuôi; đầu hơi lắc theo hướng bay; độ trong suốt tăng dần ở 0.4s cuối.
+- Vệt theo sau: hạt particle sinh từ các đốt, tồn tại 0.5s.
+- Tất cả kích thước nhân `scale` của nhân vật.
+- Chỉ chạy ở client, kích hoạt bởi event `Breakthrough` / `RealmDrop` và đồng hồ client (bản thường trực) → không tốn băng thông.
+- Ẩn Thân: thần thú mờ theo chủ (20%). Trong bụi: ẩn theo chủ.
+- **Hiệu năng (vì giờ luôn bật)**: số đốt theo chất lượng — Cao 16 đốt + vệt hạt; Vừa 10 đốt, vệt hạt 50%; Thấp 6 đốt, không vệt. Thần thú của người ở xa (chủ nhỏ hơn 40 px trên màn hình) chỉ vẽ đầu + 4 đốt. Không giới hạn số con, nhưng vệt hạt chỉ bật cho tối đa 6 con gần mình nhất. Cập nhật quỹ đạo bằng toán thuần (không tạo object mới mỗi frame).
+- Placeholder khi chưa có art: đầu = tam giác, đốt = hình tròn, tô màu theo bảng trên.
+
+### 3.6 Bộ công cụ VFX (nâng chất lượng hiệu ứng Tiên giới)
+
+**Vì sao đang xấu**: hào quang hiện là 1 đĩa phẳng + 1 vòng viền, blend thường, không phát sáng, không chuyển động nhiều lớp → nhìn như hình dán.
+
+**Nguyên tắc** (áp cho mọi hiệu ứng ánh sáng: hào quang, thần thú, Thiên Kiếp, Đài Tiên Khí, viên Tiên khí):
+1. **Blend cộng (`blendMode = 'add'`)** cho mọi phần phát sáng — màu chồng lên nhau sẽ sáng lên thay vì che nhau. Không tốn hiệu năng.
+2. **Nhiều lớp, mỗi lớp chuyển động riêng** — không bao giờ dùng 1 hình tĩnh:
+   - Lớp 1: quầng sáng mềm (radial gradient, blend cộng), thở ±8% chu kỳ 2s.
+   - Lớp 2: vòng phù văn / bát quái quay chậm (1 vòng / 12s).
+   - Lớp 3: tia sáng tỏa ra quay ngược chiều (1 vòng / 20s), độ trong 40%.
+   - Lớp 4: hạt sáng bay lên từ chân (particle), tốc độ ngẫu nhiên, mờ dần.
+   - Đạo Tổ: lớp âm dương quay + viền cầu vồng đổi màu theo thời gian (hue shift).
+3. **Bloom chỉ cho lớp VFX**: đặt mọi hiệu ứng sáng vào 1 container riêng `vfxLayer`, gắn `AdvancedBloomFilter` (thư viện `pixi-filters`) **cho container đó thôi**, không gắn cho cả màn hình.
+4. **Hiệu ứng khoảnh khắc** (`pixi-filters`): `ShockwaveFilter` (sóng xung kích khi đột phá Tiên / Thiên Tiên Đài phun), `GlowFilter` (viền sáng nhân vật Tiên giới), `GodrayFilter` (tia sáng trên Thiên Tiên Đài khi sắp phun).
+5. **"Juice"**: đột phá có khựng hình 80ms (hit-stop), rung camera, chớp trắng 1 frame, chữ cảnh giới to bật ra (scale 0 → 1.3 → 1.0, easing back-out).
+
+**Particle**: dùng thư viện particle có trình chỉnh sửa trực quan để thiết kế bằng mắt rồi xuất config JSON (không chỉnh số trong code):
+- Ưu tiên **`revolt-fx`** (hỗ trợ PixiJS 8, có editor online, làm được chuỗi hiệu ứng theo thời gian).
+- Phương án 2: `@spd789562/particle-emitter` (bản port `@pixi/particle-emitter` cho PixiJS 8, dùng ParticleContainer).
+- Config hiệu ứng lưu ở `client/src/vfx/presets/*.json`.
+
+**Texture hạt miễn phí (CC0, dùng thương mại được)**: Kenney Particle Pack, Brackeys VFX Bundle (itch.io, gồm flipbook). Ghi vào `assets/CREDITS.md`. Dùng các texture này cho tia lửa, khói, ánh sáng, vì chúng đẹp và ổn định hơn ảnh AI sinh cho hạt nhỏ; art AI giữ cho phần có "nhân vật" (đầu rồng, phượng, phù văn).
+
+**Hiệu năng (gắn với §13.6)**:
+- Chất lượng **Cao**: đủ bloom + filter + particle. **Vừa**: bloom chất lượng thấp, particle 50%. **Thấp**: tắt bloom/filter, chỉ blend cộng + particle 25%.
+- Chỉ người trong khung nhìn mới có VFX; người ở xa (nhỏ hơn 40 px trên màn hình) chỉ còn lớp quầng sáng.
+- Bloom filter chỉ 1 lần cho cả `vfxLayer`, không gắn filter riêng từng nhân vật.
 
 ## 4. Kiếm, vòng quay, tầm đánh
 
@@ -159,7 +255,7 @@ Mục tiêu hình ảnh: nhiều vòng kiếm **so le, nghiêng, mỗi vòng m�
 
 **Quy tắc cố định bán kính (BẮT BUỘC)**
 - Bán kính và chiều dài của một vòng **chỉ phụ thuộc vào thứ tự vòng `k` và `scale`**, **KHÔNG phụ thuộc vào số kiếm `n`**. Thêm kiếm vào vòng đang có → chỉ lấp kín khe, vòng **không rộng ra**.
-- Tầm chém chỉ tăng khi (a) mở **vòng mới** (kiếm thứ 11, 31, 61, 101...), (b) nhân vật **lên tầng/cảnh giới** (scale tăng), hoặc (c) có buff Trường Kiếm.
+- Tầm chém chỉ tăng khi (a) mở **vòng mới** (kiếm thứ 11, 31, 61, 101...), hoặc (b) nhân vật **lên tầng/cảnh giới** (scale tăng). Không có vật phẩm nào tăng tầm chém.
 - Xóa mọi công thức cũ kiểu `ring_radius = max(..., n * spacing / 2π)` (từ spec v1) khỏi code.
 - Chuôi kiếm vòng 1 luôn sát người (`inner_r = (BODY_R + 6) * scale`), không có khoảng trống lớn giữa thân và kiếm.
 
@@ -170,7 +266,7 @@ Ví dụ ở cùng 1 tầng (scale không đổi): 1 kiếm, 5 kiếm, 10 kiếm
 - Số vòng đang hiện = số vòng cần để chứa n kiếm (`R` nhỏ nhất sao cho `5R(R+1) ≥ n`), không vượt quá `r + 1` của cảnh giới.
 - Trong 1 vòng, các kiếm chia đều 360°: vòng đầy có khoảng cách `36° / (k+1)`; vòng ngoài cùng chưa đầy (m kiếm) thì chia đều `360° / m`.
 
-**Hình học từng vòng** (`R` = tổng số vòng hiện có, `base = SWORD_LEN * scale * buff_long`, SWORD_LEN = 80)
+**Hình học từng vòng** (`R` = tổng số vòng hiện có, `base = SWORD_LEN * scale`, SWORD_LEN = 80)
 
 ```
 inner_r           = (BODY_R + 6) * scale                     // bán kính chuôi vòng 1
@@ -236,14 +332,15 @@ Thứ tự xử lý mỗi tick server:
 
 ### 5.2 Kiếm A chạm kiếm B — bể kiếm
 
-**Không đẩy văng** (`clash_knockback = 0`): hai bên mài kiếm vào nhau tới khi một bên hết lớp. VFX tia lửa + SFX "keng" tại điểm va. Cooldown tính bể kiếm mỗi cặp (A, B) 0.3s.
+**Không đẩy văng** (`clash_knockback = 0`): hai bên mài kiếm vào nhau tới khi một bên hết lớp. VFX tia lửa + SFX "keng" tại điểm va.
+- **Bể kiếm tính mỗi tick** (`clash_cooldown = 0`): ở 30 tick/s, hai người ngang nhau mài 1 giây là rụng ~30 kiếm mỗi bên (vd Kim Đan 60 kiếm → còn 30 sau 1s).
+- **Đổi chiều quay** có cooldown riêng `flip_cooldown = 0.3s` (để vòng không giật 30 lần/giây).
 
-**Lá chắn vòng kế ngoài cùng** (chống lao xuyên vào thân):
-- Mỗi người có `shield_r` = bán kính mũi kiếm của **vòng kế ngoài cùng** (vòng thứ R−1 khi đang có R vòng còn kiếm). Nếu chỉ còn 1 vòng → `shield_r = BODY_R × scale` (chỉ còn thân).
-- **Vòng ngoài cùng có thể bị xuyên qua**: kiếm đối thủ đi vào vùng giữa `shield_r` và `reach` của mình được — đây là vùng mài kiếm.
-- **Không gì vượt qua được `shield_r`** khi vòng ngoài cùng còn kiếm: server giữ khoảng cách hai người `dist(A, B) ≥ max(reachA + shield_rB, reachB + shield_rA)`. Đi tiếp vào bị chặn lại như va tường (trượt dọc, không bật ngược).
-- Kiếm bị bể luôn trừ từ **vòng ngoài cùng** trước. Vòng ngoài cùng hết kiếm → số vòng R giảm 1 → `shield_r` lùi vào vòng trong → đối thủ tiến sâu thêm được 1 lớp.
-- Chỉ khi người đó còn **1 vòng** thì kiếm đối thủ mới chạm được tới thân (§5.1).
+**Luật chém thân theo số vòng** (thay cho lá chắn chặn đường đi ở bản trước):
+- Hai người **đi xuyên qua vòng kiếm của nhau tự do**, không bị chặn, không bật ngược.
+- Kiếm đối thủ **chỉ gây chém thân (§5.1) khi nạn nhân còn đúng 1 vòng** (≤ 10 kiếm). Còn từ 2 vòng trở lên thì thân "được che", kiếm chạm thân không tính.
+- Kiếm bị bể luôn trừ từ **vòng ngoài cùng** trước. Vòng ngoài cùng hết kiếm → số vòng giảm 1.
+- Hệ quả: Bó Kiếm khi rớt cảnh giới gần như không xảy ra (nạn nhân đã ≤ 10 kiếm lúc bị chém); Bó Kiếm đến chủ yếu từ xác người chết và vật phẩm trên bản đồ.
 
 **Đổi chiều quay chỉ khi cùng cảnh giới**: `rA == rB` → cả hai vòng đổi chiều (`dir *= -1`). Khác cảnh giới → **không ai đổi chiều**, cả hai giữ nguyên chiều quay.
 
@@ -251,8 +348,13 @@ Sau đó tính bể kiếm theo **độ bền kiếm**: mỗi cảnh giới ki�
 
 ```
 durability(r) = 1.2^r                      // Luyện Khí 1.0 · Trúc Cơ 1.2 · Kim Đan 1.44 · Nguyên Anh 1.73 ...
-k = durability(r_cao) / durability(r_thấp) = 1.2^d     // d = chênh lệch cảnh giới
+D(người) = durability(r) × (1.5 nếu có buff Cương Kiếm)
+k = D(bên cứng hơn) / D(bên mềm hơn) ≥ 1      // không buff: k = 1.2^d
 ```
+
+- "Bên cao" / "bên thấp" trong bảng dưới nghĩa là bên có **D lớn hơn / nhỏ hơn**. Ví dụ Luyện Khí có Cương Kiếm (D = 1.5) va Trúc Cơ không buff (D = 1.2) → Luyện Khí là bên cứng hơn.
+- D bằng nhau → mỗi bên mất 1.
+- **Đổi chiều quay vẫn chỉ xét cảnh giới** (cùng cảnh giới mới đổi), không xét buff.
 
 | Trường hợp | Kết quả mỗi lần va (u = `clash_unit` = 1) |
 |---|---|
@@ -282,9 +384,9 @@ Bảng tỉ lệ đổi kiếm (bên thấp mất : bên cao mất):
 Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Chủ nhân hiện emote "Kiếm của taaa!".
 
 ### 5.3 Kiếm chạm quái / vật cản
-- Quái: 1 damage mỗi lần chạm, cooldown mỗi cặp (kiếm, quái) 0.25s. Quái chết → **toàn bộ EXP rơi thành viên EXP** tại chỗ. Trong `orb_owner_secs` (1.5s) đầu, chỉ người chém hạ quái được nhặt; sau đó ai cũng nhặt được.
+- Quái: 1 damage mỗi lần chạm (2 nếu có Cương Kiếm), cooldown mỗi cặp (kiếm, quái) 0.25s. Quái chết → **toàn bộ EXP rơi thành viên EXP** tại chỗ. Trong `orb_owner_secs` (1.5s) đầu, chỉ người chém hạ quái được nhặt; sau đó ai cũng nhặt được.
 - Vật cản: tính damage **theo người, không theo từng thanh kiếm** (trước đây mỗi thanh kiếm gây damage riêng → 60–400 kiếm xay nát vật cản trong chớp mắt). Mỗi người chỉ gây damage lên 1 vật cản tối đa 1 lần / 0.5s, khi có ít nhất 1 kiếm của họ chạm vật cản:
-  `damage = (r + 1) × (1 + 0.5 × (số_vòng − 1))` → mỗi vòng thêm +50% sức phá. Nhiều người cùng chém thì cộng dồn.
+  `damage = (r + 1) × (1 + 0.5 × (số_vòng − 1)) × (2 nếu có Cương Kiếm)` → mỗi vòng thêm +50% sức phá. Nhiều người cùng chém thì cộng dồn.
   **Kiếm xuyên qua vật cản và không bị mất/bể** khi chém vật cản.
 - Kiếm không tương tác với chính chủ.
 
@@ -304,11 +406,12 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 |---|---|---|---|
 | Kiếm | +3 kiếm. Nếu đã max → +20 EXP | – | 40 |
 | Bó Kiếm | +15 kiếm (cũng là dạng rơi ra khi rớt cảnh giới/chết, khi đó chứa đúng số kiếm rơi) | – | 6 |
-| Tốc Kiếm | **Chỉ** tăng tốc độ quay: ω × 1.6. **Không** đổi chiều dài/bán kính/tầm chém (đó là Trường Kiếm) | 12s | 12 |
+| Tốc Kiếm | **Chỉ** tăng tốc độ quay: ω × 1.6. **Không** đổi chiều dài/bán kính/tầm chém | 12s | 12 |
 | Thần Hành | Tốc chạy × 1.4 | 10s | 12 |
 | Nam Châm | Bán kính hút đồ × 3 | 15s | 8 |
-| Trường Kiếm | Chiều dài mọi vòng kiếm × 1.3 | 12s | 7 |
+| **Cương Kiếm** (độ cứng) | Kiếm cứng hơn: độ bền khi va kiếm × 1.5 (§5.2), sát thương lên quái và vật cản × 2 | 10s | 7 |
 | Kim Cang (khiên) | Chặn 1 lần bị chém vào thân | 8s hoặc tới khi vỡ | 7 |
+| **Bí Kíp** | +1 lượt dùng kỹ năng của nhân vật mình (tối đa 2), xem §6.3 | – | 10 |
 | Song Bội Đan | EXP nhận × 2 | 20s | 5 |
 | Ẩn Thân Phù | Tàng hình **80%**: người khác thấy mình và vòng kiếm mờ (độ đậm 20%), không thấy tên, không hiện trên minimap. Ở rất gần (120 × scale của người nhìn) thì hiện rõ 100%. Hết hiệu lực ngay khi kiếm mình chém trúng người | **5s** (tối đa, nhặt lại chỉ làm mới về 5s) | 3 |
 | **Rương Báu** (hiếm) | Người đầu tiên **chạm vào** → nổ ra 8 item ngẫu nhiên văng xung quanh | – | 1 rương mỗi 60s, báo trước toàn phòng 10s |
@@ -317,6 +420,41 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 - Nhặt lại buff đang có → làm mới thời gian (không cộng dồn).
 - HUD hiển thị icon buff + vòng đếm ngược. Mỗi buff có aura màu riêng (trừ Ẩn Thân).
 - Item spawn cách người chơi ≥ 300 đơn vị.
+
+### 6.3 Kỹ năng nhân vật — mở bằng vật phẩm **Bí Kíp**
+
+Mỗi nhân vật có **1 kỹ năng riêng**, nhưng **không tự dùng được**: phải nhặt vật phẩm **Bí Kíp** để có lượt dùng.
+- **Bí Kíp** là vật phẩm chung (cuộn sách cổ), không gắn với nhân vật nào. Ai nhặt cũng được **+1 lượt dùng kỹ năng của chính nhân vật mình**. Tối đa giữ **2 lượt**; đã đủ 2 mà nhặt thêm → +20 Linh khí (Tiên giới: +2 Tiên khí).
+- Phím **Space** (PC) / nút kỹ năng cạnh nút 🔥 (điện thoại). Nút hiện icon kỹ năng của nhân vật + **số lượt đang có**; 0 lượt thì nút xám. Giữa 2 lần dùng khóa 3s.
+- Mất hết lượt khi chết. Không mất khi rớt cảnh giới hay qua cổng.
+- Bán kính/khoảng cách hiệu ứng **nhân theo scale** người dùng; thời gian hiệu ứng không đổi.
+- Luật cân bằng chung: kỹ năng **không** trực tiếp đổi cảnh giới/EXP, **không** chém thân thay kiếm, **không** xuyên luật "còn 1 vòng mới chém được thân" (§5.2).
+- Không dùng được khi đang dịch chuyển; đang Ẩn Thân mà dùng thì lộ (hết Ẩn Thân).
+
+| Nhân vật | Kỹ năng | Hiệu ứng |
+|---|---|---|
+| A Hớn Bánh Bao | **Bánh Bao Thần** | Ăn 1 cái bánh bao: hồi lại 30% số kiếm đã bị bể trong 10s gần nhất (về vòng ngoài cùng), ợ một tiếng to |
+| Bà Tám Loa | **Loa Phường** | Hét vào loa: sóng âm hình nón 60° dài 500 phía trước, **đẩy lùi** địch 300 và làm vòng kiếm của họ **đổi chiều** |
+| Ông Ba Võng | **Ru Ngủ** | Đung đưa võng hát ru: địch trong bán kính 350 **chậm 40%**, vòng kiếm quay **chậm 50%** trong 3s (hiện "zzz" trên đầu) |
+| Đại Ca Dép Tổ Ong | **Gọi Đàn Em** | Huýt sáo gọi 2 đàn em (NPC nhỏ, 1 vòng 10 kiếm cùng cảnh giới với đại ca, không chém thân được) chạy theo 8s, lao vào mài kiếm đối thủ gần nhất |
+| Thằng Mập Trà Sữa | **Phun Trân Châu (bịt mắt)** | Phun 1 loạt trân châu hình nón 45° dài 700 phía trước. Người trúng bị **trân châu dính đầy màn hình** 3.5s (xem dưới) |
+| Cô Ba Gánh Hàng | **Gánh Lướt** | Lướt nhanh 600 theo hướng đi (0.3s), rơi trái cây dọc đường tạo vệt trơn 4s: địch đi vào bị **trượt** theo quán tính 1s |
+| Sư Phụ Mì Gói | **Lưới Mì** | Ném lưới mì vào điểm cách 400 phía trước, bán kính 250: địch dính bị **trói 1.5s** (không di chuyển, kiếm vẫn quay) |
+| Bé Tí Cơ Bắp | **Gồng Cơ** | Gồng 4s: độ bền kiếm **× 2** (cộng dồn với Cương Kiếm), không bị đẩy lùi/chậm/trói |
+| Anh Shipper Tia Chớp | **Giao Hỏa Tốc** | Tốc chạy **× 2** trong 3s và **đi xuyên vật cản phá được** (không xuyên vách/tường không phá được) |
+| Cụ Rùa Thiền | **Rụt Cổ** | Rụt vào mai 2.5s: đứng yên, **không bị bể kiếm, không bị chém thân**; ra khỏi mai bật sóng đẩy địch xung quanh 200 |
+
+**Trân châu dính màn hình** (hiệu ứng của Thằng Mập):
+- Chỉ hiện trên màn hình **người bị trúng** (lớp overlay phía client, server gửi event `Blinded {secs}`).
+- 25–40 viên trân châu đen bóng kèm vệt trà sữa **bắn "bẹp" lên màn hình** ở vị trí ngẫu nhiên, phủ khoảng **55–65%** diện tích, dày hơn ở giữa; mỗi viên **trượt chậm xuống** để lại vệt, rồi rơi/tan dần trong 3.5s. Có tiếng "bẹp bẹp" + "rột rột".
+- Không che HUD (thanh tiến độ, nút, minimap) để người chơi vẫn biết mình đang ở đâu.
+- Bot bị trúng: tầm nhìn còn 40% trong 3.5s.
+- Trúng lần nữa khi đang bị: làm mới thời gian, thêm 10 viên.
+
+- Mỗi kỹ năng có câu thoại tấu hài khi dùng (bong bóng thoại) + SFX riêng.
+- Bot nhặt Bí Kíp như vật phẩm thường và dùng kỹ năng theo luật đơn giản (vd Cụ Rùa dùng Rụt Cổ khi còn 1 vòng và có địch gần; Bà Tám dùng Loa khi địch trong nón).
+- Server tính mọi hiệu ứng; client nhận event `SkillCast {id, skill, pos, dir}`, `SkillEffect`, `Blinded`.
+- Cân bằng ban đầu là đoán — dùng `cmd/sim --duel` cho bot đấu từng cặp (mỗi bên có 2 lượt kỹ năng), ghi tỉ lệ thắng mài kiếm; nhân vật nào > 60% thì giảm.
 
 ## 7. Chết & màn hình chờ
 
@@ -331,7 +469,29 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 
 ## 8. Bản đồ & địa hình
 
-### 8.1 Tổng quan & thuật toán sinh bản đồ "Tu Tiên Giới"
+### 8.0 Thế giới 5 khu vực
+
+Mỗi phòng là **1 thế giới gồm 5 khu vực tách biệt**. Mỗi khu vực to bằng toàn bộ bản đồ cũ (12 000 × 12 000) → tổng diện tích gấp 5 lần, giảm cảnh vừa vào đã bị dí.
+
+- Các khu vực **không nối nhau bằng đường đi** (tường biên mỗi khu không qua được). **Chỉ đi qua khu khác bằng cổng dịch chuyển** (§8.4).
+- Mỗi khu vực có thiết kế, bố cục và luật địa hình riêng:
+
+| # | Khu vực | Bố cục | Điểm đặc biệt | Đài Tiên Khí |
+|---|---|---|---|---|
+| 1 | **Thiên Đình** | Bố cục hiện tại (§8.1): Thiên Tiên Đài giữa, 4 sân môn phái, đường chính + vành đai, 4 biome nhỏ | Khu "trung tâm", nơi duy nhất có Thiên Tiên Đài → điểm nóng giao tranh | 4 nhỏ + Thiên Tiên Đài |
+| 2 | **Linh Sơn Cốc** | Các dãy vách đá (không phá được) chạy dài chia khu thành nhiều **hẻm núi**, nối bằng **đèo hẹp** và **cầu treo** (đoạn đường hẹp 200–300) | Đánh nhau ở đèo/cầu, người to khó qua đèo hẹp | 2 đài trên 2 "đỉnh núi" (cao nguyên nhỏ có 2 lối lên) |
+| 3 | **Trúc Lâm Mê Cung** | Rặng tre dày (không phá được) tạo **mê cung** với nhiều ngõ cụt, bụi rậm khắp nơi, vài ao | Phục kích, tầm nhìn ngắn: trong khu này bụi rậm nhiều gấp 3 | 2 đài ở 2 khoảng trống giữa mê cung |
+| 4 | **Phàm Trấn** | **Lưới phố** kiểu thị trấn: nhà (khung tường gạch có cửa), chợ đêm (sạp hàng tạo hẻm 150/250/350), quảng trường nhỏ | Nhiều vật cản phá được nhất → thay đổi địa hình liên tục | 2 đài ở 2 quảng trường |
+| 5 | **Băng Nguyệt Hồ** | Hồ băng lớn ở giữa + đảo băng, bờ tuyết xung quanh, ít vật cản | **Mặt băng trơn**: trên băng di chuyển có quán tính (trượt, khó dừng/đổi hướng); bờ tuyết làm chậm 0.8 | 2 đài trên 2 đảo băng |
+
+- Mỗi khu dùng thuật toán sinh riêng (`mapgen` nhận `zone_type`), vẫn tuân thủ: đường/quảng trường chính không vật cản, kiểm tra liên thông **trong khu**, §8.6 (không khối hình học lộ ra). Khu 1 giữ nguyên thuật toán §8.1.
+- **Băng trơn**: vận tốc mới = vận tốc cũ × 0.92 + hướng input × gia tốc nhỏ mỗi tick (tức là trượt dài); thiết kế art cần mặt băng bóng, vết trượt.
+- **Vào trận** (lần đầu hoặc "Chơi tiếp"): spawn ở **khu ít người thật nhất** (hòa → ngẫu nhiên), chỗ an toàn trong khu đó.
+- HUD: tên khu vực hiện cạnh minimap; vào khu mới hiện chữ lớn mờ dần giữa màn hình ("— Trúc Lâm Mê Cung —", 1.5s).
+- Minimap chỉ vẽ khu đang đứng. Nhấn **M** (phóng to): thêm cột bên cạnh liệt kê 5 khu + số người đang ở mỗi khu (không hiện vị trí).
+- Kill feed: tin từ khu khác có tiền tố tên khu `[Linh Sơn Cốc]`. Bảng xếp hạng phòng, danh hiệu: tính chung cả thế giới.
+
+### 8.1 Khu 1 — Thiên Đình: thuật toán sinh bản đồ "Tu Tiên Giới"
 
 Bản đồ 12 000 × 12 000, tường biên không phá được. Mỗi phòng sinh 1 bản đồ từ `seed` (lưu lại để debug/tái hiện). Bản đồ Tiled vẽ tay (nếu có) được ưu tiên hơn bản đồ sinh.
 
@@ -368,7 +528,7 @@ Bản đồ 12 000 × 12 000, tường biên không phá được. Mỗi phòng 
 3. **Đối xứng xoay 4 phía**: sinh nội dung 1 góc phần tư, xoay 90° cho 3 góc còn lại (công bằng cho mọi hướng), rồi mỗi góc áp **biome riêng** (đổi loại vật cản/decor) và xê dịch ngẫu nhiên nhỏ (±150) để không lộ là bản sao.
 4. **Vật cản theo biome**: dùng **Poisson-disk sampling** (khoảng cách tối thiểu theo loại) + **cụm** (mỗi cụm 3–7 vật cản). Tường gạch xếp thành khung nhà có lỗ cửa; rào tre xếp thành dãy liền dọc mép đường; sạp hàng xếp lưới tạo hẻm.
 5. **Vùng địa hình**: bụi rậm thành cụm ở mép rừng và cạnh đường (chỗ phục kích); bùn ở chỗ trũng giữa vùng; đường gió chạy dọc vài đoạn đường chính hướng về tâm.
-6. **Cổng dịch chuyển**: 4 cặp — mỗi sân môn phái có 1 cổng nối sang sân **đối diện chéo**; thêm 1 mạng 4 cổng trên đường vành đai. Cổng chỉ đặt ở chỗ trống, cách vật cản ≥ 300.
+6. **Cổng dịch chuyển**: 4 cổng mỗi khu (khu 1: 1 cổng trong mỗi sân môn phái; khu khác: rải đều 4 phía), thuộc mạng cổng chung của cả thế giới (§8.4). Cổng chỉ đặt ở chỗ trống, cách vật cản ≥ 300.
 7. **Decor**: Poisson-disk thưa (≤ 1 món / 600×600), không đặt trên đường, không đè vật cản.
 8. **Kiểm tra hợp lệ** (sai thì sinh lại với seed+1, tối đa 10 lần):
    - Lưới đi bộ 100×100: mọi ô trống phải **liên thông** (flood fill) — không có khu bị nhốt.
@@ -415,6 +575,18 @@ Thời gian 1 người (đủ kiếm tối đa của cảnh giới) phá vỡ, t
   - Nếu có nhân vật/quái đứng trong vùng lúc mọc → chờ tới khi trống rồi mới mọc (không kẹt người).
   - Mọc lại với HP đầy.
 
+### 8.2a Di chuyển mượt khi chạm vật cản (sửa lỗi giật)
+
+Nguyên nhân thường gặp của giật/khựng khi đi sát vật cản: (1) client dự đoán va chạm khác server (khác hình footprint, quên góc xoay ±6°/lật) → server kéo nhân vật về → giật; (2) đẩy ra khỏi vật cản bằng cách "bật" theo pháp tuyến → rung qua lại giữa 2 vật cản sát nhau; (3) khe giữa các đoạn rào/tường liền nhau làm vướng như bậc thềm; (4) sửa sai vị trí bằng cách nhảy thẳng tới vị trí server.
+
+Bắt buộc:
+- **Dùng chung 1 mã va chạm** cho server và client dự đoán (port cùng thuật toán, cùng dữ liệu footprint đã tính sẵn **sau khi** xoay/lật, cùng số thực). Có test so khớp: 1 000 lần di chuyển ngẫu nhiên sát vật cản → vị trí client và server lệch < 0.5 đơn vị.
+- **Trượt dọc** (slide): khi chạm, bỏ thành phần vận tốc đi vào vật cản, giữ thành phần song song bề mặt. Lặp tối đa 3 lần trong 1 tick để xử lý góc hai vật cản. Không bao giờ bật ngược.
+- Footprint trơn: hình tròn / capsule / đa giác lồi có bo góc; các đoạn rào/tường liền nhau **gộp thành 1 collider** dài, không để khe/bậc giữa các đoạn.
+- Vật cản vỡ/mọc lại: khi mọc lại trùng người, đẩy người ra mượt trong 0.2s (không dịch tức thời).
+- **Hiệu chỉnh dự đoán mượt**: lệch < 30 đơn vị → kéo dần về trong 100ms; lệch lớn hơn mới nhảy thẳng.
+- Debug `H`: vẽ footprint client (xanh) và server (đỏ) chồng lên nhau, có bộ đếm "số lần hiệu chỉnh/giây" trong F3.
+
 ### 8.3 Vùng địa hình (không chặn)
 
 | Vùng | Hiệu ứng | Dùng để lật kèo |
@@ -424,20 +596,39 @@ Thời gian 1 người (đủ kiếm tối đa của cảnh giới) phá vỡ, t
 | Đường gió | Lệch so với hướng gió < 60° → × 1.5 (theo gió); > 120° → × 0.8 (ngược gió); còn lại × 1.0 (ngang gió) | Đường thoát nhanh |
 | Hẻm hẹp | Các lối đi rộng 150 / 250 / 350 giữa vật cản không phá được | Người to (thân rộng) không chui lọt, người nhỏ trốn vào được |
 
-### 8.4 Cổng dịch chuyển
-- Cổng đi theo cặp (A ↔ B) hoặc mạng 3–4 cổng (vào 1 cổng → ra ngẫu nhiên 1 cổng khác trong mạng).
+### 8.4 Cổng dịch chuyển (đích ngẫu nhiên, nối 5 khu)
+- Mỗi khu có **4 cổng** → cả thế giới 20 cổng, cùng 1 mạng. **Không còn ghép cặp cố định.**
+- Bước vào 1 cổng → ra ở **1 cổng ngẫu nhiên khác trong cả thế giới** (có thể cùng khu hoặc khu khác; không bao giờ ra lại chính cổng vừa vào). Với 20 cổng, ~80% lần dịch chuyển sẽ sang khu khác. Config `gates.exit_pool`: `"all"` (mặc định) | `"other_zone"` (luôn sang khu khác). Tắt ngẫu nhiên: `gates.random_exit: false` (khi đó ra cổng kế tiếp theo vòng).
 - Kích hoạt khi tâm nhân vật đi vào bán kính cổng (150). Anim `teleport_out` 0.4s → xuất hiện ở cổng đích với anim `teleport_in` 0.4s.
 - Cổng đích **lóe sáng 0.5s trước** khi người xuất hiện (cảnh báo nhẹ cho người đứng gần — vẫn dễ bị bất ngờ).
 - **Không bất tử khi vừa ra cổng.** Trong lúc đang dịch chuyển (0.8s) không bị chém và không chém được.
 - Cooldown mỗi người: 8s mới dùng cổng tiếp được.
 - Người to cỡ nào cũng dùng được.
+- Mỗi cổng có màu theo khu nó đang đứng (để biết mình đang ở khu nào), nhưng **không cho biết** sẽ ra ở đâu.
+- Chuyển khu: server chuyển nhân vật sang mô phỏng của khu đích ở ranh giới tick (mọi trạng thái — kiếm, buff, crack, Tiên khí — giữ nguyên).
+
+### 8.4a Thiên Môn — cổng thẳng tới Thiên Đình
+
+Mỗi khu **trừ Thiên Đình** có thêm **1 Thiên Môn ở chính giữa khu** (tổng 4). Đây là lối đi **chắc chắn** tới Thiên Đình cho người muốn leo cao (Thiên Tiên Đài, 4 Đài Tiên Khí nhỏ), khác với 4 cổng thường đi ngẫu nhiên.
+
+- **Một chiều, đích cố định**: bước vào Thiên Môn → luôn ra ở Thiên Đình. Từ Thiên Đình muốn rời đi thì dùng cổng thường (ngẫu nhiên).
+- **Điểm ra ở Thiên Đình**: 4 **Bến Thiên Môn** nằm ngoài rìa quảng trường Thiên Tiên Đài (cách tâm ~1 400, mỗi bến ở đầu 1 con đường chính). Mỗi khu nối cố định với 1 bến (Linh Sơn Cốc → bến Bắc, Trúc Lâm → Đông, Phàm Trấn → Nam, Băng Nguyệt Hồ → Tây). Bến là bục đá nhỏ có cột sáng, không vật cản trong bán kính 400.
+- Cùng luật cổng thường: kích hoạt khi tâm nhân vật vào bán kính (200), dịch chuyển 0.8s không chém/không bị chém, **không bất tử khi ra**, bến đích lóe sáng 0.5s trước. Cooldown chung với cổng thường (8s).
+- **Vị trí trong từng khu** (mapgen phải chừa quảng trường bán kính 500 ở tâm khu, có ít nhất 2 đường dẫn tới, kiểm tra liên thông):
+  - Linh Sơn Cốc: trên một bình nguyên giữa các hẻm núi, 2–3 đèo dẫn vào.
+  - Trúc Lâm Mê Cung: khoảng trống trung tâm mê cung (đường vào ngoằn ngoèo — muốn lên Thiên Đình phải tìm đường).
+  - Phàm Trấn: quảng trường chính giữa thị trấn.
+  - Băng Nguyệt Hồ: đảo băng giữa hồ (phải trượt băng mới tới).
+- **Nhận diện**: to gấp đôi cổng thường, cổng đá trắng – mái vàng, cột sáng vàng bắn lên trời (thấy từ xa), biển "Thiên Đình ↑". Minimap: icon vàng riêng, luôn hiện. Khi đứng trong khu, góc minimap có mũi tên nhỏ chỉ hướng tới Thiên Môn.
+- Bot: dùng Thiên Môn khi đã ở Đại Thừa trở lên hoặc khi Thiên Tiên Đài sắp phun (xác suất cao), còn lại hiếm khi dùng.
+- Kill feed khi người trong Top 3 bước qua Thiên Môn: `"{A} ({danh hiệu}) vừa bước qua Thiên Môn — Thiên Đình dậy sóng!"`.
 
 ### 8.5 Đài Tiên Khí
 
 | Đài | Vị trí | Phun thường | Phun lớn |
 |---|---|---|---|
-| **Đài Tiên Khí nhỏ** (×4) | Giữa 4 sân môn phái gần 4 góc | Mỗi **5s**: 2–3 viên nhỏ (2 điểm) | Mỗi **30s**: 15 viên nhỏ + 2 viên vừa (10 điểm) |
-| **Thiên Tiên Đài** (×1) | Trung tâm bản đồ | – | Mỗi **150s**: 1 viên **khổng lồ** (150 điểm) |
+| **Đài Tiên Khí nhỏ** (khu 1: ×4, mỗi khu khác: ×2 — tổng 12) | Khu 1: giữa 4 sân môn phái; khu khác: theo bảng §8.0 | Mỗi **5s**: 2–3 viên nhỏ (2 điểm) | Mỗi **30s**: 15 viên nhỏ + 2 viên vừa (10 điểm) |
+| **Thiên Tiên Đài** (×1, chỉ khu 1) | Trung tâm khu Thiên Đình | – | Mỗi **150s**: 1 viên **khổng lồ** (150 điểm) |
 
 - Viên văng ra ngẫu nhiên trong bán kính 300–700 quanh đài (theo cung, như đài phun nước).
 - **Báo trước**: đài nhỏ rung + sáng dần 3s trước đợt phun lớn; Thiên Tiên Đài thông báo toàn phòng **10s trước** (`"Thiên Tiên Đài sắp giáng Tiên khí!"`) + đếm ngược trên đỉnh đài + icon trên minimap.
@@ -446,10 +637,42 @@ Thời gian 1 người (đủ kiếm tối đa của cảnh giới) phá vỡ, t
 - Đài là địa hình không phá được, kiếm đi xuyên. Không vật cản quanh đài 300 đơn vị.
 - Minimap: hiện 5 đài; đài sắp phun lớn thì nhấp nháy.
 
+### 8.6 Hình ảnh bản đồ sinh động (không dùng khối hình học)
+
+**Quy tắc cứng**: bản đồ hiển thị **không được có hình chữ nhật thẳng cạnh hay hình tròn hoàn hảo** nào lộ ra (vùng nền, bùn, bụi, đường, sân...). Hình học đơn giản chỉ được dùng cho va chạm và chế độ debug (`H`).
+
+**1. Mặt đất: trộn texture theo nhiễu (texture splatting)**
+- Mỗi biome có 2–3 texture nền (vd Linh Sơn: đá xám, sỏi, rêu; Trúc Lâm: cỏ, lá khô, đất ẩm). Trộn bằng **mặt nạ nhiễu** (Perlin/Simplex, 2 tầng tần số) → mảng màu loang tự nhiên thay vì ô vuông.
+- Ranh giới giữa 2 biome: dải chuyển tiếp rộng 400–600, trộn theo nhiễu (không phải đường thẳng hay đường cong trơn).
+- **Bake sẵn** lúc vào phòng thành các tấm `RenderTexture` 2048×2048 (chunk), chỉ vẽ chunk trong khung nhìn. Không trộn lại mỗi frame.
+
+**2. Vùng địa hình có hình dạng hữu cơ**
+- Bùn, ao, bụi, sân, vùng gió... sinh dạng **đa giác méo theo nhiễu**: `r(θ) = r0 × (1 + 0.25 × noise(θ))`, làm mượt (Chaikin 2 lần), 24–40 đỉnh.
+- **Server dùng đúng đa giác này** cho logic (điểm-trong-đa-giác) → hình thấy và vùng tác dụng khớp nhau. `mapgen` xuất đỉnh đa giác trong file bản đồ.
+- Mép vùng: viền mềm (feather 24–48 px bake sẵn) + 1 dải viền texture riêng (mép bùn có vệt nứt, mép ao có cỏ lau, mép đường có sỏi vụn).
+- Đường đá: vẽ theo đường cong với mép răng cưa nhẹ, thỉnh thoảng có viên đá lát lệch, rêu mọc kẽ.
+
+**3. Decal & trang trí rải theo biome** (bake vào chunk, không có va chạm)
+- Mỗi chunk 30–60 decal ngẫu nhiên (Poisson-disk), **xoay / lật / co giãn 0.7–1.3 / đổi sắc nhẹ** để không lặp: vết nứt, khóm cỏ, lá rụng, sỏi, vũng nước nhỏ, rễ cây, hoa dại nhỏ màu nhạt, vết bánh xe, mảnh ngói vỡ...
+- Quanh vật cản: bóng đổ mềm + vụn nhỏ dưới chân (tường gạch có gạch vỡ, đá tảng có sỏi, sạp hàng có rác) → vật cản "cắm" vào đất thay vì nổi lên.
+- Vật cản cùng loại: xoay nhẹ ±6°, lật ngang ngẫu nhiên, 2–3 biến thể sprite.
+
+**4. Nước & điểm nhấn**
+- Mỗi bản đồ 2–4 **ao / suối nhỏ** (đa giác hữu cơ, chỉ là vùng làm chậm như bùn hoặc trang trí không va chạm), mặt nước có shader gợn sóng nhẹ + phản chiếu lấp lánh.
+- Biome Linh Sơn có **vách đá / vực** dọc biên (thay tường biên thẳng), Trúc Lâm có hàng tre dày làm biên.
+
+**5. Sự sống (ambient, chỉ client, không ảnh hưởng gameplay)**
+- **Bóng mây** trôi chậm trên mặt đất (2–4 bóng mờ cỡ lớn).
+- Theo biome: Trúc Lâm lá tre rơi + đom đóm; Linh Sơn sương mù mỏng trôi; Phàm Trấn gà chạy, bướm; Hắc Thị đèn lồng đung đưa; Thiên Tiên Đài hạt sáng bay lên.
+- Chim bay ngang màn hình thỉnh thoảng (bóng chim dưới đất).
+- Giới hạn tổng số hạt ambient theo chất lượng (Cao 150 / Vừa 60 / Thấp 0).
+
+**6. Màu sắc** vẫn tuân thủ ART_PROMPTS §9.0: nền nhạt, tương phản thấp; vật chơi được (EXP, item, quái, nhân vật) luôn nổi bật hơn nền.
+
 ## 9. Phòng, matchmaking, bot
 
 ### 9.1 Phòng
-- Tối đa **20 người thật**/phòng; bot không tính → tối đa ~40 nhân vật.
+- Tối đa **20 người thật**/phòng (giữ như cũ, chưa tăng cho tới khi tối ưu server xong). 1 phòng = 1 thế giới 5 khu. Mỗi khu mô phỏng ở 1 goroutine riêng, chỉ trao đổi khi có người qua cổng.
 - Phòng tự hủy khi 0 người thật trong 60s.
 
 ### 9.2 Matchmaking
@@ -462,16 +685,17 @@ on_join(player):
 
 ### 9.3 Bot
 ```
-every 2s per room:
+every 2s per room:                         // tổng cả thế giới, như cũ
   if humans < 20 and humans + bots < 20:
-      spawn min(20 - humans - bots, 2) bots
+      spawn min(20 - humans - bots, 2) bots vào KHU ĐANG ÍT NHÂN VẬT NHẤT
 on human join/leave:  KHÔNG xóa bot
 on bot death:
   if humans + (bots - 1) >= 20: remove bot
-  else: respawn bot sau 3s
+  else: respawn bot sau 3s ở khu đang ít nhân vật nhất
 ```
 - Bot spawn **ngang hạng 11 của phòng** (`bots.spawn_rank = 11`): lấy cảnh giới + tầng của người đang đứng hạng 11 bảng phòng (theo Uy Danh); phòng chưa đủ 11 người thì lấy người cuối bảng. Không có trần cảnh giới. Số kiếm ngẫu nhiên [1, max].
 - Bot dùng tên + nhân vật ngẫu nhiên, **không vào leaderboard toàn cục**.
+- Bot cũng dùng cổng: khi bỏ chạy (Flee) gần cổng, hoặc khu đang có quá ít mục tiêu/vật phẩm (xác suất thấp, cooldown 60s).
 
 ## 10. Bot AI
 
@@ -558,6 +782,88 @@ Server tính `mood` và gửi xuống (mọi người thấy giống nhau). Gi�
 - Emote bubble khi: mất kiếm, khiên vỡ, nhặt Rương Báu, bị lộ khỏi bụi. Mỗi loại có cooldown.
 - Client tự lật sprite trái/phải theo hướng chạy.
 
+### 12.3 Bảng tên trên đầu (nameplate): Danh hiệu · Cảnh giới · Tên
+
+**Vấn đề hiện tại**: 3 dòng chữ trơn nằm đè lên vòng kiếm nhiều màu → khó đọc, không có cấp bậc thị giác.
+
+**Bố cục** (từ trên xuống, căn giữa trên đầu nhân vật):
+
+```
+      ╭──────────────────────────────╮
+      │ 👑  Bần tăng chưa ngán ai bao giờ │   ← Ruy băng danh hiệu (chỉ Top 1–10)
+      ╰──────────────────────────────╯
+          ╭───────────────╮
+          │ ☯ ĐẠO TỔ   ▲ │                ← Huy hiệu cảnh giới (dạng viên thuốc)
+          ╰───────────────╯
+          TestThThuTianThu                ← Tên (to nhất, đậm nhất)
+```
+
+Cả cụm có **1 tấm nền chung** bo góc, đen 45%, viền mảnh sáng 1px → chữ luôn nổi trên mọi nền (kiếm, cỏ, đá). Khoảng cách các dòng 2–4px, cụm cách đỉnh đầu 8px.
+
+**1. Ruy băng danh hiệu** (chỉ Top 1–10)
+
+| Hạng | Nền ruy băng | Chữ | Hiệu ứng |
+|---|---|---|---|
+| Top 1 | Ruy băng hai đuôi xẻ, đỏ son viền vàng | Vàng kim chuyển sắc (sáng → đậm), viền nâu đậm 2px | Vương miện nhỏ bên trái; **vệt sáng lướt qua chữ mỗi 3s**; 2–3 đốm lấp lánh quanh ruy băng |
+| Top 2 | Ruy băng xanh đen viền bạc | Bạc chuyển sắc | Vệt sáng lướt qua mỗi 5s |
+| Top 3 | Ruy băng nâu viền đồng | Đồng chuyển sắc | Không |
+| Top 4–10 | Dải mảnh trong suốt 60% | Trắng ngà, chữ nhỏ hơn | Không |
+
+- Lên hạng: ruy băng **bật ra** (scale 0 → 1.2 → 1.0, 0.35s) + đốm sáng tung ra. Mất hạng: ruy băng rách đôi rơi xuống (0.4s).
+
+**2. Huy hiệu cảnh giới** (dạng viên thuốc bo tròn)
+- Bên trái: biểu tượng nhỏ của cảnh giới (dùng lại 14 huy hiệu cảnh giới, thu nhỏ). Giữa: tên cảnh giới **in hoa**, chữ đậm; phàm giới thêm số tầng nhỏ phía sau dạng chỉ số (`KIM ĐAN ⁵`).
+- Màu nền theo cảnh giới (chữ là tông đậm cùng màu hoặc trắng nếu nền tối):
+
+| Cảnh giới | Màu | | Cảnh giới | Màu |
+|---|---|---|---|---|
+| Luyện Khí | Xám xanh `#8D99AE` | | Hợp Thể | Cam `#F77F00` |
+| Trúc Cơ | Xanh lá `#57CC99` | | Độ Kiếp | Đỏ sấm `#E63946` |
+| Kim Đan | Vàng đồng `#E9C46A` | | Đại Thừa | Đen, viền & chữ vàng `#FFD60A` |
+| Nguyên Anh | Xanh lam `#4EA8DE` | | Tiên giới (5 cấp) | Màu hào quang tương ứng (§3.4) |
+| Hóa Thần | Tím `#9D4EDD` | | | |
+| Luyện Hư | Xanh ngọc `#2EC4B6` | | | |
+
+- **Tiên giới**: viền huy hiệu là dải màu chảy vòng quanh (gradient xoay), chữ phát sáng nhẹ; Đạo Tổ viền cầu vồng đổi màu liên tục.
+- **Chỉ báo nguy hiểm** (chỉ hiện trên người khác, bên phải huy hiệu): ▲ đỏ = cao cảnh giới hơn bạn · ● vàng = ngang · ▼ xanh = thấp hơn. Giúp quyết định né hay săn trong nửa giây.
+- Lên tầng: số tầng lăn lên (0.3s). Đột phá: huy hiệu chớp trắng + phình to 1.3 rồi về.
+
+**3. Tên người chơi**
+- Dòng **to nhất**: chữ đậm, trắng, viền đen 3px + bóng đổ nhẹ phía dưới.
+- **Tên của chính bạn**: vàng ấm + mũi tên nhỏ ▼ phía trên cụm (dễ tìm mình giữa đám đông).
+- Bot hiển thị giống người (không lộ là bot).
+
+**Kích thước cố định trên màn hình** (không phóng to theo scale nhân vật, không co theo camera):
+
+| | PC | Điện thoại |
+|---|---|---|
+| Tên | 18 px | 15 px |
+| Cảnh giới | 13 px | 11 px |
+| Danh hiệu | 13 px (Top 1: 15 px) | 11 px (Top 1: 13 px) |
+
+**Font**: phải hỗ trợ đầy đủ dấu tiếng Việt. Tên + cảnh giới: **Be Vietnam Pro** (ExtraBold / Bold). Danh hiệu: 1 font trang trí có bộ ký tự Vietnamese trên Google Fonts (lọc theo ngôn ngữ Vietnamese; agent tự kiểm tra hiển thị đủ dấu, ví dụ thử chuỗi "Bần tăng chưa ngán ai bao giờ"), nếu không có thì dùng Be Vietnam Pro Italic.
+
+**Gọn màn hình (declutter)**
+- Nhân vật nhỏ hơn 40 px trên màn hình: chỉ hiện **tên** (+ vương miện nếu Top 1).
+- Hơn 12 bảng tên trên màn hình: ẩn ruy băng Top 4–10 của người ở xa.
+- 2 bảng tên chồng nhau: bảng của người ở xa mờ 50%.
+- Ẩn Thân / trong bụi: ẩn cả cụm (như cũ).
+
+**Hiệu năng**
+- Dựng mỗi bảng tên thành **1 texture cache** (vẽ lại chỉ khi nội dung đổi: hạng, cảnh giới, tầng). Hiệu ứng động (vệt sáng, viền chảy, đốm lấp lánh) là sprite riêng chồng lên, không vẽ lại texture.
+- Chữ dùng BitmapFont sinh sẵn (gồm đủ ký tự tiếng Việt), không dùng `Text` thường.
+- Chất lượng Thấp: tắt vệt sáng, đốm lấp lánh, viền chảy (giữ màu tĩnh).
+
+### 12.4 Ảnh đại diện ở góc thông tin (thay số cấp)
+
+Thay vòng tròn số "14" ở góc trên trái bằng **ảnh đại diện nhân vật**:
+- **Chân dung** nhân vật đang chơi (cắt từ đầu tới vai), trong khung tròn 64 px (PC) / 52 px (điện thoại). Biểu cảm đổi theo trạng thái: bình thường · cười nham hiểm khi đang đuổi · hoảng khi bị chém / còn 1 vòng kiếm · khóc khi rớt cảnh giới (dùng 4 chân dung).
+- **Viền khung = màu cảnh giới** (bảng §12.3). Tiên giới: viền là hào quang động theo màu §3.4; Đạo Tổ viền âm dương xoay.
+- **Huy hiệu nhỏ** góc dưới phải khung: biểu tượng cảnh giới + số tầng (phàm giới) — thay cho con số to cũ.
+- Vương miện nhỏ trên khung nếu đang Top 1; ruy băng hạng nhỏ nếu Top 2–10.
+- Bị chém: khung rung + chớp đỏ. Đột phá: khung phát sáng + phình ra.
+- Chưa có art: dùng frame `idle_00` của nhân vật, tự cắt phần đầu (vùng trên 45% sprite) làm chân dung tạm.
+
 ### 12.2 Máu quái
 - **Thanh máu nhỏ** trên đầu quái (không còn số to đè lên mặt quái). Chỉ hiện khi quái đã mất máu; đổi màu xanh → vàng → đỏ theo % máu.
 - Art quái không cần chừa vùng trống giữa bụng nữa.
@@ -625,17 +931,53 @@ kiem-xoay/
 - Tick server 30 Hz, mỗi phòng 1 goroutine. Snapshot gửi client 20 Hz.
 - Client → Server: `Join{name, character, guest_id}`, `Input{seq, angle_u8, moving}` (30 Hz), `Ping`.
 - Server → Client: `Welcome`, `Snapshot`, `Event`, `Leaderboard` (1 Hz).
-- **Không gửi vị trí từng thanh kiếm**: gửi `phase, dir, n, ω, scale, buff_long, phase_tick` (client tự tính số vòng, chiều dài từng vòng); client tự tính góc. Đổi chiều → event `RingFlip`.
+- **Không gửi vị trí từng thanh kiếm**: gửi `phase, dir, n, ω, scale, phase_tick` (client tự tính số vòng, chiều dài từng vòng); client tự tính góc. Đổi chiều → event `RingFlip`.
 - Event: `Hit, SwordBreak, Death, LevelUp, Breakthrough, RealmDrop, RingFlip, ObstacleDamaged, ObstacleBroken, ObstacleRegrow, TeleportOut, TeleportIn, ItemPicked, BuffStart, BuffEnd, ChestIncoming, KillFeed`.
 - AOI: chỉ gửi những gì nằm trong vùng nhìn của người đó (+ lề). Người **trong bụi** không được gửi cho người không được thấy (chống hack nhìn xuyên). Người **Ẩn Thân** vẫn được gửi (vì vẫn hiện mờ 20%), kèm cờ `stealth`.
 - Client: nội suy người khác (trễ 100ms); tự dự đoán chuyển động của mình + hiệu chỉnh theo server.
 
-### 13.4 Va chạm & hiệu năng
-- Lưới không gian (spatial hash) cho thân, quái, item, vật cản.
-- Kiếm–thân: kiểm tra thân B có nằm trong vành khăn của vòng A không, rồi chỉ xét những kiếm có góc gần hướng tới B.
-- Kiếm–kiếm: chỉ xét cặp vòng chồng nhau; tìm kiếm gần 2 giao điểm của 2 vòng tròn, kiểm tra capsule–capsule.
-- Vật cản tĩnh index sẵn theo lưới.
-- Mục tiêu: 1 phòng đầy (40 nhân vật × 45 kiếm, 120 quái, ~300 vật cản) < 3ms/tick.
+### 13.4 Va chạm (server)
+- Lưới không gian (spatial hash) cho thân, quái, item, viên EXP, vật cản. Vật cản tĩnh index sẵn.
+- **Không bao giờ duyệt từng thanh kiếm** để tìm va chạm. Mỗi vòng là 1 vật thể cứng (cùng tốc độ, cùng pha) → tính theo **vòng**: kiểm tra mục tiêu có nằm trong vành khăn của vòng không, rồi tính thẳng chỉ số kiếm gần nhất theo góc (O(1)), cộng cung quét trong tick.
+- Kiếm–kiếm: luật chơi chỉ tính va chạm giữa **vòng ngoài cùng** của mỗi bên (kiếm bể luôn trừ từ vòng ngoài cùng, §5.2) → chỉ xét cặp vòng ngoài cùng của 2 người có vành khăn chồng nhau. Các vòng trong bỏ qua hoàn toàn, kể cả khi hai người đi xuyên vào nhau.
+- Kiếm–quái / vật cản / viên EXP: chỉ dùng vòng tròn `reach` để lọc qua lưới, rồi kiểm tra vành khăn.
+- Không cấp phát bộ nhớ mỗi tick (dùng lại slice, `sync.Pool` cho buffer gói tin).
+
+### 13.6 Ngân sách hiệu năng & tối ưu (bắt buộc)
+
+**Mục tiêu** (phòng đầy 40 nhân vật, trong đó 10 ở Tiên giới đủ kiếm ~1 000 thanh):
+
+| Chỉ số | Mục tiêu |
+|---|---|
+| Server: thời gian 1 tick / phòng | < 4 ms (tick 33 ms) |
+| Gói snapshot / client | < 8 KB, tổng < 40 KB/s |
+| Client: FPS máy tầm trung / điện thoại tầm trung | ≥ 60 / ≥ 40 |
+| Ping hiển thị (không tính địa lý) | tăng < 20 ms so với phòng trống |
+
+**Đo trước khi sửa**
+- Phím `F3` (chỉ với `?debug=true`): FPS, ms/frame, số sprite đang vẽ, số draw call, KB/s nhận, kích thước snapshot, tick server ms (server gửi kèm), số entity trong AOI.
+- **Ping phải đo đúng**: server gắn timestamp vào `Pong`, client trả lời ngay trong handler WebSocket (hoặc Web Worker), không chờ vòng lặp vẽ. Nếu ping chỉ tăng khi FPS tụt → nghẽn ở client, không phải mạng.
+- `cmd/loadtest`: mở N client giả (headless) vào 1 phòng, ép M người lên Đạo Tổ đủ kiếm, in tick ms, KB/s, p95 ping.
+
+**Client (thường là thủ phạm chính)**
+1. **Mỗi vòng kiếm vẽ thành 1 texture, rồi chỉ xoay texture đó.** Vòng kiếm quay như 1 khối cứng → vẽ toàn bộ kiếm của vòng (kể cả nghiêng, so le, màu, spin blur) vào 1 `RenderTexture` **một lần**, mỗi frame chỉ đổi `rotation` của 1 sprite. 1 050 kiếm → 14 sprite. Chỉ vẽ lại texture khi số kiếm của vòng đổi (giới hạn tối đa 5 lần/giây/người), khi đổi chiều (lật tilt), khi đổi skin/màu.
+2. **LOD theo kích thước trên màn hình**: kích thước texture vòng theo đường kính thực trên màn hình (tối đa 2048). Vật nhỏ hơn 3 px trên màn hình (viên EXP khi camera lùi xa) → không vẽ; thay bằng lớp "bụi sáng" chung.
+3. **Cull**: không vẽ gì ngoài màn hình (+ lề).
+4. Chữ (tên, danh hiệu, số điểm bay lên) dùng `BitmapText`, không dùng `Text` (Text tạo texture mới mỗi lần đổi chữ). Bảng xếp hạng/HUD cập nhật tối đa 1–2 lần/giây.
+5. Viên EXP, item, hạt VFX dùng `ParticleContainer` + 1 atlas → ít draw call.
+6. Giải mã MessagePack trong **Web Worker**, luồng chính chỉ nhận dữ liệu đã giải mã.
+7. Không tạo object mới mỗi frame (pool cho sprite, particle, vector).
+8. **Tự hạ chất lượng**: FPS < 45 trong 3s → tắt spin blur, tắt thần thú thường trực, giảm particle 50%, hạ độ phân giải texture vòng; FPS ổn lại 10s → bật dần. Có tùy chọn Chất lượng: Cao / Vừa / Thấp.
+
+**Server & mạng**
+9. Lượng tử hóa: vị trí `u16` (bản đồ 12 000 → bước ~0.2), góc `u8`/`u16`, scale `u8`. Không gửi float64.
+10. **Delta snapshot**: chỉ gửi trường thay đổi so với snapshot client đã xác nhận; entity đứng yên không gửi lại.
+11. Viên EXP/Tiên khí/item: chỉ gửi sự kiện xuất hiện/biến mất, không nằm trong snapshot định kỳ. Camera lùi xa (Tiên giới) → **không gửi viên EXP nhỏ** ngoài bán kính 1 500 quanh người chơi (dù nằm trong khung nhìn), chỉ gửi viên vừa/lớn, Tiên khí, item.
+12. Tần suất theo khoảng cách: entity gần (trong 1/2 khung nhìn) 20 Hz, xa 10 Hz.
+13. Giới hạn tối đa 150 entity động mỗi snapshot, ưu tiên gần và to.
+14. Kiểm tra nghẽn ghi: nếu bộ đệm gửi của 1 client đầy (mạng yếu) → bỏ snapshot cũ, chỉ gửi bản mới nhất (không xếp hàng làm trễ dồn).
+
+**Ghi chú**: nếu mọi người đều ping ~200 ms kể cả phòng trống thì nguyên nhân là **khoảng cách địa lý** tới server (ví dụ người chơi ở Việt Nam, server ở Mỹ/Âu) → cần đặt server gần người chơi (Singapore / Việt Nam), không phải tối ưu code.
 
 ### 13.5 An toàn cơ bản
 - Kiểm tra & giới hạn mọi input từ client; rate limit tin nhắn và số kết nối mỗi IP.
@@ -678,9 +1020,9 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "cultivation": {
     "realms": ["Luyện Khí","Trúc Cơ","Kim Đan","Nguyên Anh","Hóa Thần","Luyện Hư","Hợp Thể","Độ Kiếp","Đại Thừa"],
     "tien_realms": ["Chân Tiên","Kim Tiên","Thái Ất Ngọc Tiên","Đại La Kim Tiên","Đạo Tổ"],
-    "tien_khi_per_step": [100, 200, 300, 400, 500], "tien_khi_to_exp_base": 50,
+    "tien_khi_per_step": [100, 200, 300, 400, 500],
     "tien_rob_share": 0.5, "tien_drop_share": 0.3,
-    "tien_scale_step": 0.2,
+    "tien_scale_step": 0.2, "tien_overflow_score": 0.1,
     "tien_aura_colors": ["#E8F1FF", "#FFD60A", "#4CE0B3", "#B15CFF", "yin_yang"],
     "tiers_per_realm": 10,
     "exp_base": 100, "realm_mult": 2.0, "tier_step": 0.08,
@@ -693,7 +1035,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "ring_growth": 0.2, "ring_growth_mode": "linear", "hilt_step": 0.1, "tilt_deg": 35,
     "ring_tints": ["#FFFFFF", "#C77DFF", "#7CFC6A", "#FF6B6B", "#4CC9F0", "#FFD60A"],
     "rev_secs": 1.0, "flip_cooldown": 0.3,
-    "clash_unit": 1, "flip_only_same_realm": true, "clash_knockback": 0, "shield_ring": "second_outermost", "drop_bundle_max": 10,
+    "clash_unit": 1, "flip_only_same_realm": true, "clash_knockback": 0, "clash_cooldown": 0, "body_hit_max_rings": 1, "drop_bundle_max": 10,
     "durability_per_realm": 1.2, "durability_mode": "compound"
   },
   "player": {
@@ -709,13 +1051,13 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "spin":   { "mult": 1.6, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },
     "magnet": { "mult": 3.0, "secs": 15 },
-    "long":   { "mult": 1.3, "secs": 12 },
+    "hard":   { "durability_mult": 1.5, "damage_mult": 2.0, "secs": 10 },
     "shield": { "secs": 8 },
     "exp2":   { "mult": 2.0, "secs": 20 },
     "stealth":{ "secs": 5, "max_secs": 5, "visible_alpha": 0.2, "reveal_r": 120, "bot_detect_mult": 0.5 }
   },
   "items": {
-    "weights": { "sword": 40, "bundle": 6, "spin": 12, "haste": 12, "magnet": 8, "long": 7, "shield": 7, "exp2": 5, "stealth": 3 },
+    "weights": { "sword": 40, "bundle": 6, "spin": 12, "haste": 12, "magnet": 8, "hard": 7, "shield": 7, "skill_scroll": 10, "exp2": 5, "stealth": 3 },
     "sword_item_amount": 3, "bundle_amount": 15,
     "count_per_room": 200, "respawn_secs": 3, "overcap_exp": 20, "chest_every_secs": 60, "chest_items": 8
   },
@@ -731,7 +1073,8 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "stall_item_drop": 0.3
   },
   "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
-  "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8 },
+  "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8, "per_zone": 4, "random_exit": true, "exit_pool": "all",
+    "heaven_gate": { "enabled": true, "radius": 200, "landing_r_from_center": 1400, "landing_clear_r": 400, "zone_center_plaza_r": 500, "map": { "linh_son_coc": "north", "truc_lam_me_cung": "east", "pham_tran": "south", "bang_nguyet_ho": "west" } } },
   "titles": ["Bần tăng chưa ngán ai bao giờ", "Ngon thì nhào vô", "Chỗ này nhiều máu nè"],
   "title_hold_secs": 3,
   "minimap": { "size_pc": 180, "size_mobile": 120, "show_top1": true, "show_chest": true, "show_others": false },
@@ -750,8 +1093,12 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "symmetry": "rot4", "jitter": 150, "min_open_ratio": 0.65, "max_retries": 10
   },
   "bots": { "spawn_rank": 11 },
+  "zones_def": ["thien_dinh", "linh_son_coc", "truc_lam_me_cung", "pham_tran", "bang_nguyet_ho"],
+  "ice": { "friction": 0.92, "accel": 0.25, "snow_mult": 0.8 },
+  "skills": { "key": "Space", "max_charges": 2, "lockout_secs": 3, "overcap_exp": 20, "overcap_tien_khi": 2, "blind": { "secs": 3.5, "pearls": [25, 40], "cover": [0.55, 0.65], "bot_vision_mult": 0.4 } },
+  "movement": { "slide_iterations": 3, "smooth_correct_max": 30, "smooth_correct_ms": 100 },
   "room": {
-    "max_humans": 20, "bot_fill_target": 20, "map_size": 12000,
+    "max_humans": 20, "bot_fill_target": 20, "zones": 5, "map_size": 12000,
     "monster_count": 150, "empty_close_secs": 60, "safe_spawn_r": 800
   },
   "net": { "tick_hz": 30, "snapshot_hz": 20, "interp_ms": 100 }
@@ -770,8 +1117,20 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 
 ## 17. Checklist test chấp nhận
 
-- [ ] Hai người cùng 3 vòng mài nhau: chỉ vòng ngoài cùng chồng lên nhau, không ai tiến sâu hơn vòng kế ngoài cùng của đối phương; hết vòng ngoài thì tiến thêm được 1 lớp; không bị bật ngược.
+- [ ] Thế giới 5 khu, mỗi khu 12 000²; không đi bộ sang khu khác được; 200 lượt qua cổng: ra đều các cổng còn lại, không bao giờ ra lại cổng vừa vào, ~80% sang khu khác.
+- [ ] Người mới vào spawn ở khu ít người nhất; tổng người + bot mỗi phòng vẫn 20, bot sinh vào khu ít nhân vật nhất.
+- [ ] Băng Nguyệt Hồ: trên băng trượt có quán tính.
+- [ ] 4 khu (trừ Thiên Đình) có Thiên Môn ở tâm, đường tới thông; bước vào luôn ra ở đúng Bến Thiên Môn của khu đó ở Thiên Đình; minimap có icon + mũi tên chỉ hướng.
+- [ ] Đi sát/đi dọc tường, rào, đá tảng: không giật, không rung; F3 'hiệu chỉnh/giây' ≈ 0 khi chỉ đi sát vật cản.
+- [ ] Không có Bí Kíp thì nút kỹ năng xám; nhặt Bí Kíp → +1 lượt (tối đa 2), dùng đúng kỹ năng của nhân vật mình; chết thì mất lượt; kỹ năng không làm chém thân người còn ≥ 2 vòng.
+- [ ] Trúng Phun Trân Châu: màn hình bị trân châu che ~60% trong 3.5s, trượt xuống rồi tan; HUD và minimap không bị che.
+- [ ] Đạo Tổ nạp 500 Tiên khí → Uy Danh +50 (10:1), thanh Tiên khí đứng ở 1 500.
+
+- [ ] Hai Kim Đan 60 kiếm mài nhau 1 giây → mỗi bên còn ~30 kiếm; đi xuyên qua nhau được; chỉ người còn 1 vòng mới bị chém thân.
 - [ ] Tốc Kiếm chỉ làm kiếm quay nhanh hơn, tầm chém không đổi.
+- [ ] Luyện Khí có Cương Kiếm va Trúc Cơ không buff → Trúc Cơ mất 1 mỗi lần va, Luyện Khí nứt 1/1.25; phá rào tre nhanh gấp đôi.
+- [ ] `cmd/loadtest` 40 nhân vật, 10 người Đạo Tổ đủ kiếm: tick < 4 ms, snapshot < 8 KB, FPS ≥ 60 trên PC tầm trung, ping tăng < 20 ms.
+- [ ] Không còn vật phẩm Trường Kiếm trên bản đồ, HUD, config, debug (phím 1–7 bỏ buff này).
 - [ ] Giữ Shift: chạy ×1.8, mất 8% EXP tầng/giây, không bao giờ rớt cảnh giới.
 - [ ] Đài nhỏ phun mỗi 5s, đợt lớn mỗi 30s; Thiên Tiên Đài báo trước 10s và phun viên 150 điểm mỗi 150s.
 - [ ] mapgen: 10 seed liên tiếp đều qua kiểm tra liên thông, có Thiên Tiên Đài, 4 sân môn phái, đường chính không vật cản.
@@ -802,9 +1161,13 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Ẩn Thân: người khác thấy mờ 20%, không tên; tối đa 5s; chém trúng người là hiện ngay.
 - [ ] Trúc Cơ chém trúng Nguyên Anh → +800 Uy Danh; chém lại cùng người trong 60s → +0.
 - [ ] Bảng Thần Tốc chỉ có những mạng đã đạt Đại Thừa.
-- [ ] Đại Thừa tầng 10 nhặt Linh khí không lên được; nhặt đủ 100 Tiên khí → Chân Tiên. Luyện Khí nhặt viên Tiên khí 2 điểm → +100 Linh khí.
+- [ ] Đại Thừa tầng 10 nhặt Linh khí không lên được; nhặt đủ 100 Tiên khí → Chân Tiên. Người dưới Đại Thừa 10 đi qua viên Tiên khí không nhặt được (viên mờ 30%); người Tiên giới đi qua viên Linh khí không nhặt được.
+- [ ] Đột phá Kim Tiên: rồng vàng chui lên từ chân, quấn quanh người 1.5 vòng (nửa sau khuất sau nhân vật), bay vút lên, 2.5s; sau đó rồng nhỏ (60%) luôn lượn lờ quanh người, mỗi 8–15s làm 1 động tác ngẫu nhiên, khi chạy thì bị kéo dài phía sau.
 - [ ] Lên Chân Tiên thấy hào quang trắng bạc sau lưng; mỗi cảnh giới Tiên một màu; rớt về Đại Thừa thì tắt hào quang.
 - [ ] Kim Tiên đang 450 Tiên khí bị chém → Chân Tiên, Tiên khí 100; người chém (Tiên giới) +175, rơi 105 điểm viên Tiên khí.
+- [ ] Không còn vùng nền/bùn/bụi/đường nào là hình chữ nhật thẳng cạnh hay hình tròn hoàn hảo; ranh giới biome loang tự nhiên; đứng sát mép bùn thì hiệu ứng chậm khớp đúng mép đa giác.
+- [ ] HUD góc trên trái là chân dung nhân vật, viền màu cảnh giới, biểu cảm đổi theo trạng thái.
+- [ ] Bảng tên đọc rõ trên nền vòng kiếm nhiều màu; tên mình màu vàng có ▼; người cao cảnh giới hơn mình có ▲ đỏ; Top 1 có ruy băng đỏ-vàng + vương miện + vệt sáng lướt.
 - [ ] Top 1/2/3 phòng hiện đúng danh hiệu trên đầu và trong bảng; đổi hạng phải giữ 3s mới đổi danh hiệu.
 - [ ] Minimap thấy mình, khung camera, cổng, Top 1, Rương Báu; không thấy người khác; Top 1 vào bụi thì biến khỏi minimap.
 - [ ] Phòng 5 người → 15 bot; thêm người không xóa bot; người thứ 21 sang phòng mới.

@@ -11,7 +11,11 @@ const (
 	tagMonster uint8 = iota + 1
 	tagObstacle
 	tagClash
+	tagFlip
 )
+
+// swordBreakFlushSecs: nhịp báo kiếm bể cho client, 6 lần/giây là đủ mượt mắt.
+const swordBreakFlushSecs = 1.0 / 6
 
 // canFight is true when a player can deal and receive sword interactions this tick.
 func (g *Game) canFight(p *Player) bool { return !p.Dead && !p.InTransit(g.Time) }
@@ -27,15 +31,22 @@ func (g *Game) swordTouchesCircle(owner *Player, c Vec, r float64) (int, bool) {
 }
 
 // resolveSwordBody applies spec §5.1: at most one hit per victim per tick.
+//
+// Lá chắn (§5.2) được kiểm ở đây chứ không chặn đường đi nữa: còn vòng kế ngoài cùng thì
+// kiếm địch dù quét trùm lên thân cũng không ăn — phải mài cho rụng hết vòng ngoài đã.
 func (g *Game) resolveSwordBody() {
 	players := g.PlayerList()
 	for _, b := range players {
-		if !g.canFight(b) || b.Invulnerable(g.Time) {
+		// Rụt trong mai thì không bị chém thân (spec §6.3).
+		if !g.canFight(b) || b.Invulnerable(g.Time) || g.Shielded(b) || b.HasStatus(StShell, g.Time) {
 			continue
 		}
 		for _, a := range players {
 			if a == b || !g.canFight(a) {
 				continue
+			}
+			if a.IsMinion || sameSide(a, b) {
+				continue // đàn em chỉ mài kiếm, và không đụng tới phe mình (spec §6.3)
 			}
 			if _, hit := g.swordTouchesCircle(a, b.Pos, g.BodyR(b)); hit {
 				g.applyBodyHit(a, b)
@@ -113,6 +124,7 @@ func (g *Game) kill(a, b *Player) {
 	a.Kills++
 	victimRank := g.RankOf(b)
 	b.Dead, b.DiedAt, b.KilledBy = true, g.Time, a.ID
+	g.onDeathClear(b)
 	b.KillerName, b.KillerChar = a.Name, a.Char
 	b.Moving = false
 	g.setMood(b, MoodDeath, pc.DeathAnimSecs)
@@ -130,12 +142,31 @@ func (g *Game) kill(a, b *Player) {
 func (g *Game) DebugKill(b *Player) {
 	g.dropDeathSwords(b)
 	b.Dead, b.DiedAt, b.KilledBy, b.Moving = true, g.Time, 0, false
+	g.onDeathClear(b)
 	b.KillerName, b.KillerChar = "", ""
 	g.setMood(b, MoodDeath, g.Cfg.Player.DeathAnimSecs)
 	g.emit(Event{Kind: "Death", B: b.ID, X: float32(b.Pos.X), Y: float32(b.Pos.Y)})
 }
 
 // resolveSwordSword applies spec §5.2 to every pair of overlapping rings.
+// sameSide: hai người này cùng phe không — đại ca với đàn em của mình, hoặc hai đàn em
+// cùng chủ.
+//
+// Thiếu phép kiểm này thì Gọi Đàn Em thành kỹ năng TỰ SÁT: hai đàn em đứng sát đại ca sẽ
+// mài chính vòng kiếm của anh ta. Bài đấu từng cặp cho Đại Ca Dép đúng 1,4% tỉ lệ thắng —
+// thấp nhất bảng — và đó là lý do.
+func sameSide(a, b *Player) bool {
+	switch {
+	case a.IsMinion && b.IsMinion:
+		return a.MinionOf == b.MinionOf
+	case a.IsMinion:
+		return a.MinionOf == b.ID
+	case b.IsMinion:
+		return b.MinionOf == a.ID
+	}
+	return false
+}
+
 func (g *Game) resolveSwordSword() {
 	players := g.PlayerList()
 	for i, a := range players {
@@ -147,7 +178,13 @@ func (g *Game) resolveSwordSword() {
 			if !g.canFight(b) || b.Ring.Count == 0 {
 				continue
 			}
-			if at, ok := g.ringsTouch(a, b); ok && g.cooldownReady(pairKey(tagClash, a.ID, b.ID, 0), g.Cfg.Sword.FlipCooldown) {
+			if sameSide(a, b) {
+				continue // đàn em không mài kiếm với đại ca và với nhau (spec §6.3)
+			}
+			// Bể kiếm tính mỗi tick khi hai vòng còn chạm nhau (clash_cooldown = 0), nên
+			// hai vòng ngoài 30 kiếm ngang cảnh giới mài sạch nhau trong đúng 1 giây.
+			// Đổi chiều quay vẫn giữ cooldown riêng để vòng kiếm không giật liên hồi.
+			if at, ok := g.ringsTouch(a, b); ok && g.cooldownReady(pairKey(tagClash, a.ID, b.ID, 0), g.Cfg.Sword.ClashCooldown) {
 				g.clash(a, b, at)
 			}
 		}
@@ -174,7 +211,7 @@ func (g *Game) ringsTouch(a, b *Player) (Vec, bool) {
 	case denseB:
 		return swordEntersDisc(a, b.Pos, b.Geom.Reach)
 	default:
-		return sparseRingsTouch(a, b)
+		return g.sparseRingsTouch(a, b)
 	}
 }
 
@@ -182,10 +219,11 @@ func (g *Game) ringsTouch(a, b *Player) (Vec, bool) {
 func swordEntersDisc(p *Player, c Vec, r float64) (Vec, bool) {
 	n := sweepSteps(p.Ring)
 	lim := (r + p.Geom.Width/2) * (r + p.Geom.Width/2)
+	ct, st := math.Cos(p.Ring.Tilt), math.Sin(p.Ring.Tilt)
 	for s := 0; s <= n; s++ {
 		ph := sweepPhase(p.Ring, s, n)
 		for i := 0; i < p.Ring.Count; i++ {
-			h, t := swordAt(p.Pos, ph, p.Ring, p.Geom, i)
+			h, t, _ := swordAtRot(p.Pos, ph, p.Ring, p.Geom, i, ct, st)
 			if geom.PointSegDist2(c, h, t) <= lim {
 				return h.Add(t).Mul(0.5), true
 			}
@@ -194,23 +232,89 @@ func swordEntersDisc(p *Player, c Vec, r float64) (Vec, bool) {
 	return Vec{}, false
 }
 
+// blade là một thanh kiếm đã tính sẵn vị trí, kèm tâm và nửa chiều dài để lọc thô.
+type blade struct {
+	hilt, tip Vec
+	mid       Vec
+	half      float64
+}
+
 // sparseRingsTouch tests sword pairs at matching sub-steps of both sweeps (few swords only).
-func sparseRingsTouch(a, b *Player) (Vec, bool) {
+//
+// Ba điều quan trọng về tốc độ ở đây — pprof trên server thật với 10 người chơi cho thấy
+// riêng hàm này ăn **83% CPU server**, nên nó đáng được viết kỹ:
+//
+//  1. Kiếm của b tính SẴN một lần mỗi bước quét, không tính lại trong vòng lặp của a. Bản
+//     cũ gọi `swordAt(b…)` đúng `a.Count × b.Count` lần thay vì `b.Count` lần.
+//  2. Bỏ sớm những lưỡi nằm ở phía ĐỐI DIỆN. Hai người đứng cạnh nhau thì chỉ một cung nhỏ
+//     của mỗi vòng có cơ hội chạm; lưỡi nào cách tâm đối phương xa hơn `bán kính ngoài +
+//     nửa lưỡi + bề rộng` thì không thanh nào với tới.
+//  3. So khoảng cách giữa hai TÂM lưỡi trước khi gọi `SegSegDist2`: một phép trừ và hai
+//     phép nhân, rẻ hơn hàng chục lần.
+func (g *Game) sparseRingsTouch(a, b *Player) (Vec, bool) {
 	n := max(sweepSteps(a.Ring), sweepSteps(b.Ring))
 	reach := (a.Geom.Width + b.Geom.Width) / 2
+	reach2 := reach * reach
+	outerA, outerB := a.Geom.Outer(), b.Geom.Outer()
+	ctA, stA := math.Cos(a.Ring.Tilt), math.Sin(a.Ring.Tilt)
+	ctB, stB := math.Cos(b.Ring.Tilt), math.Sin(b.Ring.Tilt)
 	for s := 0; s <= n; s++ {
 		pa, pb := sweepPhase(a.Ring, s, n), sweepPhase(b.Ring, s, n)
+		bb := g.bladeBuf[:0]
+		for j := 0; j < b.Ring.Count; j++ {
+			// `length` lấy thẳng từ hình học, không đo lại bằng Hypot: cùng một con số mà
+			// Hypot một mình ăn 11% CPU server.
+			h, t, length := swordAtRot(b.Pos, pb, b.Ring, b.Geom, j, ctB, stB)
+			mid, half := h.Add(t).Mul(0.5), length/2
+			if lim := outerA + half + reach; mid.Dist2(a.Pos) > lim*lim {
+				continue
+			}
+			bb = append(bb, blade{hilt: h, tip: t, mid: mid, half: half})
+		}
+		g.bladeBuf = bb
+		if len(bb) == 0 {
+			continue
+		}
 		for i := 0; i < a.Ring.Count; i++ {
-			p1, q1 := swordAt(a.Pos, pa, a.Ring, a.Geom, i)
-			for j := 0; j < b.Ring.Count; j++ {
-				p2, q2 := swordAt(b.Pos, pb, b.Ring, b.Geom, j)
-				if geom.SegSegDist2(p1, q1, p2, q2) <= reach*reach {
-					return p1.Add(q1).Add(p2).Add(q2).Mul(0.25), true
+			p1, q1, lenA := swordAtRot(a.Pos, pa, a.Ring, a.Geom, i, ctA, stA)
+			m1, half1 := p1.Add(q1).Mul(0.5), lenA/2
+			if lim := outerB + half1 + reach; m1.Dist2(b.Pos) > lim*lim {
+				continue
+			}
+			for k := range bb {
+				gap := half1 + bb[k].half + reach
+				if m1.Dist2(bb[k].mid) > gap*gap {
+					continue
+				}
+				if geom.SegSegDist2(p1, q1, bb[k].hilt, bb[k].tip) <= reach2 {
+					return p1.Add(q1).Add(bb[k].hilt).Add(bb[k].tip).Mul(0.25), true
 				}
 			}
 		}
 	}
 	return Vec{}, false
+}
+
+// hardMult is the Cương Kiếm multiplier for p right now (spec v4.4 §6.2): "durability" cho
+// va kiếm, "damage" cho chém quái và vật cản. 1 khi không có buff.
+func (g *Game) hardMult(p *Player, which string) float64 {
+	// Gồng Cơ cộng dồn với Cương Kiếm (spec §6.3) — hai nguồn độ bền nhân vào nhau.
+	brace := 1.0
+	if which == "durability" && p.HasStatus(StBrace, g.Time) {
+		brace = g.Cfg.Skills.BraceDurability
+	}
+	if !p.HasBuff(BuffHard, g.Time) {
+		return brace
+	}
+	b := g.Cfg.Buffs["hard"]
+	m := b.DurabilityMult
+	if which == "damage" {
+		m = b.DamageMult
+	}
+	if m <= 0 {
+		return brace
+	}
+	return m * brace
 }
 
 func (g *Game) clash(a, b *Player, at Vec) {
@@ -223,15 +327,15 @@ func (g *Game) clash(a, b *Player, at Vec) {
 	}
 	// Spec §5.2 (v3.5): only an even match sends both rings spinning the other way; against a
 	// different realm nobody flips, so the stronger ring keeps grinding in the same direction.
-	if !g.Cfg.Sword.FlipOnlySameRealm || ra == rb {
+	if (!g.Cfg.Sword.FlipOnlySameRealm || ra == rb) && g.cooldownReady(pairKey(tagFlip, a.ID, b.ID, 0), g.Cfg.Sword.FlipCooldown) {
 		a.Ring.Dir, b.Ring.Dir = -a.Ring.Dir, -b.Ring.Dir
 		for _, p := range []*Player{a, b} {
 			g.emit(Event{Kind: "RingFlip", A: p.ID, N: int(p.Ring.Dir), X: float32(at.X), Y: float32(at.Y)})
 		}
 	}
 	out := ResolveClash(g.Cfg.Sword,
-		ClashSide{Realm: ra, Count: a.Ring.Count, Crack: a.Ring.Crack},
-		ClashSide{Realm: rb, Count: b.Ring.Count, Crack: b.Ring.Crack})
+		ClashSide{Realm: ra, Count: a.Ring.Count, Crack: a.Ring.Crack, DurMult: g.hardMult(a, "durability")},
+		ClashSide{Realm: rb, Count: b.Ring.Count, Crack: b.Ring.Crack, DurMult: g.hardMult(b, "durability")})
 	a.Ring.Crack, b.Ring.Crack = out.CrackA, out.CrackB
 	g.breakSwords(a, out.LostA)
 	g.breakSwords(b, out.LostB)
@@ -253,14 +357,35 @@ func (g *Game) breakSwords(p *Player, n int) {
 	if n <= 0 {
 		return
 	}
+	if p.HasStatus(StShell, g.Time) {
+		return // đang rụt trong mai: không bị bể kiếm (spec §6.3)
+	}
 	lost := g.LoseSwords(p, n)
 	if lost > 0 {
-		g.emit(Event{Kind: "SwordBreak", A: p.ID, N: lost, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+		p.breakPending += lost
+		g.noteSwordLoss(p, lost) // sổ cho Bánh Bao Thần (§6.3)
 		if p.Ring.Count == 0 {
 			g.emote(p, "no_swords") // spec §5.2: bị tước sạch kiếm → hoảng loạn
 		} else {
 			g.emote(p, "sword_lost")
 		}
+	}
+}
+
+// flushSwordBreaks gộp số kiếm bể của mỗi người thành MỘT sự kiện mỗi swordBreakFlushSecs,
+// kèm tổng số cây đã gãy. Client vẽ một vụ nổ to theo N thay vì N vụ nổ nhỏ.
+func (g *Game) flushSwordBreaks() {
+	for _, p := range g.PlayerList() {
+		if p.breakPending <= 0 {
+			continue
+		}
+		// Rụng sạch kiếm thì báo ngay, đó là khoảnh khắc đáng xem.
+		if g.Time < p.breakFlushAt && p.Ring.Count > 0 {
+			continue
+		}
+		g.emit(Event{Kind: "SwordBreak", A: p.ID, N: p.breakPending, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+		p.breakPending = 0
+		p.breakFlushAt = g.Time + swordBreakFlushSecs
 	}
 }
 
@@ -291,6 +416,8 @@ func (g *Game) hitMonsters(a *Player) {
 		if hits == 0 {
 			continue
 		}
+		// Cương Kiếm: mỗi lần chạm gây 2 damage thay vì 1 (spec v4.4 §5.3).
+		hits = int(float64(hits) * g.hardMult(a, "damage"))
 		m.HP -= hits
 		m.FleeUntil, m.FleeFrom = g.Time+g.Cfg.Monsters.FleeSecs, a.Pos
 		if m.HP <= 0 {
@@ -325,7 +452,8 @@ func (g *Game) ObstacleDamage(a *Player) float64 {
 	if a.Ring.Count == 0 {
 		return 0
 	}
-	return float64(g.Prog.Realm(a.Level)+1) * (1 + g.Cfg.Obstacles.DmgPerExtraRng*float64(rings-1))
+	// Cương Kiếm nhân đôi sức phá vật cản (spec v4.4 §5.3).
+	return float64(g.Prog.Realm(a.Level)+1) * (1 + g.Cfg.Obstacles.DmgPerExtraRng*float64(rings-1)) * g.hardMult(a, "damage")
 }
 
 func (g *Game) hitObstacles(a *Player) {

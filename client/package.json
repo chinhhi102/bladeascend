@@ -7,12 +7,15 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "assets:report": "node --no-warnings scripts/assets-report.ts"
+    "assets:report": "node --no-warnings scripts/assets-report.ts",
+    "check:collision": "node --no-warnings --experimental-strip-types scripts/collision-check.ts"
   },
   "dependencies": {
     "@msgpack/msgpack": "3.1.3",
     "howler": "2.2.4",
-    "pixi.js": "8.22.0"
+    "pixi-filters": "^6.1.5",
+    "pixi.js": "8.22.0",
+    "revolt-fx": "^1.3.6"
   },
   "devDependencies": {
     "@types/howler": "2.2.13",

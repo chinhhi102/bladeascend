@@ -38,6 +38,8 @@ type Input struct {
 	Angle  uint8  `msgpack:"a"`
 	Moving bool   `msgpack:"m"`
 	Burn   bool   `msgpack:"b"` // đang giữ Thiêu Đốt Tinh Huyết (spec §4.1c)
+	// Skill: người chơi vừa bấm nút kỹ năng (Space / nút trên điện thoại), spec §6.3.
+	Skill bool `msgpack:"sk,omitempty"`
 }
 
 type Ping struct {
@@ -59,6 +61,14 @@ type ObstacleState struct {
 	Broken bool `msgpack:"b"`
 }
 
+// ProtocolVersion: tăng số này MỖI KHI đổi hình dạng gói tin (thêm/bớt/đổi kiểu một
+// trường). Client so với số của chính nó và báo "tải lại trang" nếu lệch.
+//
+// Không có nó thì client mới gặp server cũ sẽ đọc rác rồi **đứng hình không báo gì** — đã
+// dính đúng một lần: client build 16:40 nói `mood` là chỉ số, server chạy từ 14:56 vẫn gửi
+// chuỗi, và người chơi chỉ thấy game treo.
+const ProtocolVersion = 3
+
 type Welcome struct {
 	T         string          `msgpack:"t"`
 	ID        uint32          `msgpack:"id"`
@@ -68,6 +78,11 @@ type Welcome struct {
 	Time      float64         `msgpack:"time"`
 	Obstacles []ObstacleState `msgpack:"obs"`
 	Debug     bool            `msgpack:"debug"`
+	Proto     int             `msgpack:"pv"`
+	// Zone / ZoneName: khu đang ở (spec §8.0). Gửi lại mỗi lần sang khu khác, vì sang khu
+	// là đổi hẳn bản đồ.
+	Zone     int    `msgpack:"zn"`
+	ZoneName string `msgpack:"znm,omitempty"`
 }
 
 // Player flags.
@@ -91,14 +106,27 @@ type PlayerState struct {
 	Count  int     `msgpack:"n"`
 	Phase  float32 `msgpack:"ph"`
 	Dir    int8    `msgpack:"d"`
-	Omega  float32 `msgpack:"w"`
 	Tilt   float32 `msgpack:"tl"` // blade lean (rad); ring geometry is derived from scale, count and buffs (spec §13.3)
 	Scale  float32 `msgpack:"sc"`
-	Mood   string  `msgpack:"md"`
-	Buffs  uint8   `msgpack:"bf"`
-	Flags  uint8   `msgpack:"fl"`
-	Crack  float32 `msgpack:"ck,omitempty"`
-	Exp    float32 `msgpack:"xp"`
+	// Mood gửi dạng CHỈ SỐ thay vì chuỗi (spec mục 27). Chuỗi "breakthrough" tốn 13 byte mỗi
+	// người mỗi gói, 20 lần/giây — mà nó hầu như không đổi.
+	Mood  uint8 `msgpack:"md"`
+	Buffs uint8 `msgpack:"bf"`
+	Flags uint8 `msgpack:"fl"`
+	// St: trạng thái do kỹ năng gây ra, mỗi bit một trạng thái (spec §6.3, game.StatusNames).
+	// Gửi cho mọi người vì client phải vẽ "zzz", mai rùa, vệt lướt… của người khác.
+	St uint16 `msgpack:"st,omitempty"`
+	Crack float32 `msgpack:"ck,omitempty"`
+	// Exp chỉ gửi cho CHÍNH người đó: không ai cần biết EXP của người khác, HUD chỉ vẽ của
+	// mình. Trước đây gửi cho tất cả, tốn 7 byte × (số người thấy được) mỗi gói.
+	Exp float32 `msgpack:"xp,omitempty"`
+	// Vx/Vy: vận tốc, chỉ gửi cho CHÍNH người đó và chỉ khi đang trượt trên băng (§8.0).
+	// Client cần nó để phát lại dự đoán từ đúng vận tốc server đang giữ; thiếu thì mỗi lần
+	// nhận snapshot là dự đoán lại từ vận tốc 0 và nhân vật giật trên cả mặt hồ.
+	Vx float32 `msgpack:"vx,omitempty"`
+	Vy float32 `msgpack:"vy,omitempty"`
+	// Charges: số lượt kỹ năng đang giữ, chỉ gửi cho chính chủ (spec §6.3).
+	Charges int `msgpack:"skc,omitempty"`
 	Title  int     `msgpack:"ti,omitempty"` // room rank badge 1..3 (spec §11.3), 0 = none
 	// Tiên giới (spec §3.4): sát mạng đã có / cần, để HUD vẽ thanh Tiên khí. Chỉ gửi cho
 	// chính người đó; người khác chỉ cần Level để biết cảnh giới và màu hào quang.
@@ -108,14 +136,17 @@ type PlayerState struct {
 	Char   string  `msgpack:"ch,omitempty"`
 }
 
+// MonsterState: `k`, `mx`, `r` KHÔNG BAO GIỜ đổi trong đời một con quái, nên chỉ gửi lần đầu
+// client thấy nó (spec mục 27). Trước đây gửi lại 20 lần/giây: riêng chuỗi `kind` đã 10 byte
+// mỗi con mỗi gói.
 type MonsterState struct {
 	ID   uint32  `msgpack:"id"`
 	X    float32 `msgpack:"x"`
 	Y    float32 `msgpack:"y"`
-	Kind string  `msgpack:"k"`
 	HP   int     `msgpack:"hp"`
-	Max  int     `msgpack:"mx"`
-	R    float32 `msgpack:"r"`
+	Kind string  `msgpack:"k,omitempty"`
+	Max  int     `msgpack:"mx,omitempty"`
+	R    float32 `msgpack:"r,omitempty"`
 }
 
 type ItemState struct {
@@ -137,6 +168,9 @@ type Snapshot struct {
 	ItemsAdded   []ItemState    `msgpack:"ia,omitempty"`
 	ItemsRemoved []uint32       `msgpack:"ir,omitempty"`
 	Events       []game.Event   `msgpack:"ev,omitempty"`
+	// SrvMs: thời gian server xử lý một tick của phòng, mili-giây. Chỉ để đo (spec §13.6),
+	// client hiện lên overlay F3 để biết nghẽn nằm ở server hay ở máy mình.
+	SrvMs float32 `msgpack:"sv,omitempty"`
 }
 
 type LeaderEntry struct {
@@ -151,6 +185,8 @@ type LeaderEntry struct {
 // Leaderboard goes out once a second. It also carries the minimap's live markers, which are
 // the only positions a client is allowed to know outside its own view (spec §12.1).
 type Leaderboard struct {
+	// ZoneCounts: số nhân vật ở mỗi khu, cho bảng phóng to bằng phím M (spec §8.0).
+	ZoneCounts []int `msgpack:"zc,omitempty"`
 	T       string        `msgpack:"t"`
 	Top     []LeaderEntry `msgpack:"top"`
 	Rank    int           `msgpack:"rank"`
@@ -187,6 +223,10 @@ type Feed struct {
 	Realm int    `msgpack:"r"`
 	Top   int    `msgpack:"tp,omitempty"`
 	Room  string `msgpack:"rm,omitempty"` // phòng xảy ra, chỉ gửi khi loan toàn server
+	// Zone: khu xảy ra chuyện (spec §8.0). Client thêm tiền tố "[tên khu]" khi tin đến từ
+	// khu khác — không có nó thì người chơi tưởng vừa có người chết ngay cạnh mình.
+	Zone     int    `msgpack:"zn"`
+	ZoneName string `msgpack:"znm,omitempty"`
 }
 
 // Dead is the Tổng kết screen payload (spec §7, §11.1).

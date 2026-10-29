@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"testing"
+
+	"kiemxoay/server/internal/config"
 )
 
 // Spec §8.1: KHÔNG vật cản / vùng / decor nào được nằm ngoài bản đồ. Mọi object phải nằm
@@ -95,4 +97,104 @@ func TestEveryMapHasFiveAltars(t *testing.T) {
 			t.Errorf("%s: %d đài trung tâm + %d đài nhỏ, muốn 1 + 4", name, center, small)
 		}
 	}
+}
+
+// Cả 5 khu đều phải sinh được và tuân thủ cùng một bộ luật (spec §8.0, CHANGES_v5 mục 6):
+// đúng 4 cổng, đủ đài, không vật cản ra ngoài bản đồ, mọi chỗ trống đi tới được nhau.
+func TestEveryZoneGenerates(t *testing.T) {
+	cfg := config.MustLoadDefault()
+	for zi, zd := range zoneDefs {
+		b, _, err := buildZoneWithRetries(cfg.Room.MapSize, int64(1000+zi), cfg.Mapgen, zi)
+		if err != nil {
+			t.Fatalf("khu %d (%s) không sinh được: %v", zi, zd.name, err)
+		}
+		// Đếm riêng ba loại: 4 cổng thường mỗi khu (§8.4), 1 Thiên Môn ở mỗi khu TRỪ Thiên
+		// Đình, và 4 Bến Thiên Môn chỉ ở Thiên Đình (§8.4a).
+		normal, heaven, dock := 0, 0, 0
+		for _, o := range b.layers["gates"] {
+			switch {
+			case propOf(o, "heaven") == "1":
+				heaven++
+			case propOf(o, "dock") == "1":
+				dock++
+			default:
+				normal++
+			}
+		}
+		if normal != 4 {
+			t.Errorf("khu %d (%s) có %d cổng thường, spec §8.4 nói mỗi khu 4", zi, zd.name, normal)
+		}
+		wantHeaven, wantDock := 1, 0
+		if zi == 0 {
+			wantHeaven, wantDock = 0, 4 // Thiên Đình không có Thiên Môn, nhưng có 4 bến
+		}
+		if heaven != wantHeaven || dock != wantDock {
+			t.Errorf("khu %d (%s) có %d Thiên Môn và %d bến, muốn %d và %d",
+				zi, zd.name, heaven, dock, wantHeaven, wantDock)
+		}
+		wantAltars := 2
+		if zi == 0 {
+			wantAltars = 5 // Thiên Đình: 4 đài nhỏ + Thiên Tiên Đài (§8.0)
+		}
+		if got := len(b.layers["altars"]); got != wantAltars {
+			t.Errorf("khu %d (%s) có %d đài, muốn %d", zi, zd.name, got, wantAltars)
+		}
+		if len(b.layers["obstacles"]) < 20 {
+			t.Errorf("khu %d (%s) chỉ có %d vật cản — trống trơn", zi, zd.name, len(b.layers["obstacles"]))
+		}
+	}
+}
+
+// Mê cung tre phải LIÊN THÔNG theo đúng cách nó được dựng: thuật toán đào đường lùi dần
+// thăm mọi ô, nên không ô nào bị nhốt. Khoá lại vì đây là điểm cốt tử của khu đó.
+func TestCarveMazeReachesEveryCell(t *testing.T) {
+	const n = 9
+	walls := carveMaze(n, func(k int) int { return k / 2 })
+	blocked := map[[3]int]bool{}
+	for _, w := range walls {
+		blocked[[3]int{w.cx, w.cy, boolInt(w.vertical)}] = true
+	}
+	seen := map[[2]int]bool{{0, 0}: true}
+	stack := [][2]int{{0, 0}}
+	for len(stack) > 0 {
+		c := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		for _, d := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+			nx, ny := c[0]+d[0], c[1]+d[1]
+			if nx < 0 || ny < 0 || nx >= n || ny >= n || seen[[2]int{nx, ny}] {
+				continue
+			}
+			wall := [3]int{max(nx, c[0]), c[1], 1}
+			if d[0] == 0 {
+				wall = [3]int{c[0], max(ny, c[1]), 0}
+			}
+			if blocked[wall] {
+				continue
+			}
+			seen[[2]int{nx, ny}] = true
+			stack = append(stack, [2]int{nx, ny})
+		}
+	}
+	if len(seen) != n*n {
+		t.Fatalf("mê cung chỉ đi tới được %d/%d ô — có ngõ bị nhốt", len(seen), n*n)
+	}
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// propOf đọc một thuộc tính chuỗi của object trong bản đồ.
+func propOf(o object, name string) string {
+	for _, p := range o.Properties {
+		if p.Name == name {
+			if v, ok := p.Value.(string); ok {
+				return v
+			}
+		}
+	}
+	return ""
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/draw"
@@ -28,6 +29,7 @@ func prepAll(jobs []Job, assets string) {
 			log.Printf("prep %s: %v", j.Name, err)
 			continue
 		}
+		prepped[j.Name] = true
 		log.Printf("prep %s", j.Name)
 	}
 	if err := buildAtlases(assets); err != nil {
@@ -36,6 +38,95 @@ func prepAll(jobs []Job, assets string) {
 	if err := writeManifest(assets); err != nil {
 		log.Printf("manifest: %v", err)
 	}
+	if err := writeMiscut(assets); err != nil {
+		log.Printf("danh sách cắt sai: %v", err)
+	}
+}
+
+// magentaTolerance: vài điểm ảnh lẻ sau khi co ảnh là bình thường; quá ngưỡng này mới coi
+// là bộ sinh ảnh hỏng.
+const magentaTolerance = 0.005
+
+// patchMagenta thay mọi điểm ảnh magenta bằng màu trung bình của phần còn lại và trả về tỉ
+// lệ đã phải vá.
+func patchMagenta(im *image.NRGBA) float64 {
+	b := im.Bounds()
+	total := b.Dx() * b.Dy()
+	if total == 0 {
+		return 0
+	}
+	var sr, sg, sb, n int
+	var bad []int
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			i := im.PixOffset(x, y)
+			r, g, bl := int(im.Pix[i]), int(im.Pix[i+1]), int(im.Pix[i+2])
+			if r > 170 && bl > 170 && g < 100 {
+				bad = append(bad, i)
+				continue
+			}
+			sr, sg, sb, n = sr+r, sg+g, sb+bl, n+1
+		}
+	}
+	if len(bad) == 0 {
+		return 0
+	}
+	// Không còn điểm nào lành thì lấy một màu đất xỉn, còn hơn để nguyên màu hồng chói.
+	cr, cg, cb := uint8(110), uint8(100), uint8(85)
+	if n > 0 {
+		cr, cg, cb = uint8(sr/n), uint8(sg/n), uint8(sb/n)
+	}
+	for _, i := range bad {
+		im.Pix[i], im.Pix[i+1], im.Pix[i+2], im.Pix[i+3] = cr, cg, cb, 255
+	}
+	return float64(len(bad)) / float64(total)
+}
+
+// miscutPath là nơi lưu danh sách sheet bị cắt sai, để `prompts` và `run` đọc lại.
+func miscutPath(assets string) string { return filepath.Join(assets, "_raw", "miscut.json") }
+
+// writeMiscut ghi danh sách sheet bị cắt sai của lượt prep này.
+//
+// Chỉ ghi khi có prep thật sự: chạy `prep` lúc chưa có ảnh thô nào mà xoá sạch danh sách
+// thì những sheet hỏng sẽ lặng lẽ biến mất khỏi ART_JOBS.md.
+func writeMiscut(assets string) error {
+	if len(prepped) == 0 {
+		return nil // không cắt lại cái nào thì không có thông tin mới để ghi
+	}
+	keep := map[string]bool{}
+	for _, n := range readMiscut(assets) {
+		keep[n] = true
+	}
+	for n := range prepped {
+		delete(keep, n) // cắt lại sạch sẽ thì gỡ khỏi danh sách...
+	}
+	for n := range miscut {
+		keep[n] = true // ...còn cái vừa cắt sai thì thêm vào
+	}
+	names := make([]string, 0, len(keep))
+	for n := range keep {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	b, err := json.MarshalIndent(names, "", "  ")
+	if err != nil {
+		return err
+	}
+	log.Printf("%d sheet cắt sai, đã ghi vào %s", len(names), miscutPath(assets))
+	return os.WriteFile(miscutPath(assets), append(b, '\n'), 0o644)
+}
+
+// readMiscut đọc lại danh sách đó. Thiếu file thì coi như không có sheet nào hỏng.
+func readMiscut(assets string) []string {
+	b, err := os.ReadFile(miscutPath(assets))
+	if err != nil {
+		return nil
+	}
+	var names []string
+	if json.Unmarshal(b, &names) != nil {
+		return nil
+	}
+	return names
 }
 
 func prepJob(j Job, raw, assets string) error {
@@ -49,7 +140,19 @@ func prepJob(j Job, raw, assets string) error {
 		b := img.Bounds()
 		return savePNG(out, resize(img, b, 1024, 1024*b.Dy()/b.Dx()))
 	case modeTile:
-		return savePNG(out, resize(img, centerSquare(img.Bounds()), j.W, j.H))
+		tile := resize(img, centerSquare(img.Bounds()), j.W, j.H)
+		// Tile nền là ảnh ĐẶC, không có nền để khoá — nên magenta trong đó không phải nền
+		// mà là lỗi: bộ sinh ảnh đã không phủ kín khung. Đã dính thật, 7 tile lọt vào game
+		// và người chơi thấy những vệt hồng chói chạy ngang bản đồ.
+		//
+		// Vá bằng màu trung bình của phần lành rồi BÁO để sinh lại: vá xong nhìn tạm được
+		// ngay, nhưng vẫn phải có ảnh thật.
+		if r := patchMagenta(tile); r > magentaTolerance {
+			miscut[j.Name] = true
+			log.Printf("  HỎNG %s: %.0f%% diện tích là nền magenta (bộ sinh không phủ kín khung) — đã vá tạm bằng màu trung bình, cần sinh lại",
+				j.Name, r*100)
+		}
+		return savePNG(out, tile)
 	case modeWide:
 		return savePNG(out, resize(img, coverRect(img.Bounds(), j.W, j.H), j.W, j.H))
 	case modeSprite:
@@ -123,6 +226,7 @@ func prepSheet(img *image.NRGBA, j Job, assets string) error {
 		frames = assignInOrder(j, rows)
 	}
 	scales := sharedScales(j, frames)
+	warnFrameCount(j, frames)
 	for si, sg := range j.Segs {
 		clearStaleFrames(filepath.Join(assets, sg.Out), sg)
 		for f, fr := range frames[si] {
@@ -263,6 +367,49 @@ func bandsBetweenLines(img *image.NRGBA, ys []int) [][2]int {
 		}
 	}
 	return out
+}
+
+// warnFrameCount kêu to khi số khung cắt được lệch xa số khung khai báo.
+//
+// Bộ cắt tìm khung bằng vùng pixel LIỀN NHAU, nên nhân vật nào có tay/chân/đồ vật tách rời
+// khỏi thân là bị đếm thành nhiều khung. Thực tế đã xảy ra: `dai_ca_dep` idle ra **22 khung**
+// thay vì 4 — trong game nhân vật thành một cái áo tím nhấp nháy, mà không ai biết cho tới
+// lúc người chơi báo. Lệch thế này thì ảnh coi như hỏng, phải sinh lại.
+// miscut: tên những job bị cắt sai trong lần prep này. Ghi ra đĩa cuối lượt prep để
+// `prompts` và `run -redo` tự biết phải sinh lại cái nào — trước đây danh sách này phải gõ
+// tay vào mã nguồn, nên cứ có sheet hỏng mới là lại quên.
+var miscut = map[string]bool{}
+
+// prepped: job nào đã được cắt lại trong lượt này. Chỉ những job này mới được phép XOÁ khỏi
+// danh sách cắt sai — ảnh thô của job cũ có thể đã bị dọn đi, prep bỏ qua chúng, và nếu coi
+// "không cảnh báo" là "đã lành" thì sheet hỏng sẽ lặng lẽ rơi khỏi ART_JOBS.md trong khi
+// atlas vẫn giữ 22 khung sai. Đã dính đúng lỗi này một lần.
+var prepped = map[string]bool{}
+
+func warnFrameCount(j Job, frames [][]*image.NRGBA) {
+	for si, sg := range j.Segs {
+		if sg.Frames <= 0 || si >= len(frames) {
+			continue
+		}
+		got := len(frames[si])
+		if got == sg.Frames {
+			continue
+		}
+		// Ngưỡng này phải KHỚP với `miscut()` bên client (render/assets.ts): client chỉ bỏ
+		// animation khi lệch quá 1,5× hoặc dưới 0,5× số khung khai báo. Lệch nhẹ thì vẫn
+		// chạy được, không cần sinh lại.
+		level := "lệch"
+		if got > sg.Frames*3/2 || got*2 < sg.Frames {
+			level = "HỎNG"
+			// Chỉ cái HỎNG mới vào danh sách sinh lại. Trước đây đánh dấu cả cái lệch nhẹ,
+			// và `teleport_out` của MỌI nhân vật đều cắt được 3/4 khung — khung cuối là lúc
+			// nhân vật đã biến mất nên không còn pixel nào để cắt. Sinh lại bao nhiêu lần
+			// cũng vẫn thế, chỉ tốn quota.
+			miscut[j.Name] = true
+		}
+		log.Printf("  %s %s/%s: cắt được %d khung, khai báo %d — %s",
+			level, j.Name, sg.Anim, got, sg.Frames, "sinh lại bằng `artgen run -only "+j.Name+" -redo`")
+	}
 }
 
 // clearStaleFrames removes old {anim}_NN.png files so a re-generated animation with fewer
