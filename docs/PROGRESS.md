@@ -209,6 +209,23 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Lỗi / hạn chế đã biết
 
+- **Spec v5.6 — Tiên giới đốt Tiên khí (30/10/2026, §4.1c)**. Đây là câu trả lời cho Q24:
+  trước đó lên Tiên giới là mất hẳn khả năng chạy nhanh, vì nhánh duy nhất của Thiêu Đốt
+  tiêu EXP mà người Tiên giới đứng đúng ở đáy cảnh giới. Giờ hai đường tu có hai loại nhiên
+  liệu: người phàm đốt EXP, người Tiên giới đốt **8% Tiên khí của bước hiện tại mỗi giây**
+  (`burn.tien_frac_per_sec`), không xuống dưới mốc khởi điểm của cảnh giới đang đứng.
+  "Bước hiện tại" là `tien_khi_per_step[idx]` — bước đã ĐƯA họ tới cảnh giới đang đứng, chứ
+  không phải bước đi tiếp; chính ví dụ của spec chốt cách đọc này ("Đạo Tổ: 8% × 500"), vì
+  Đạo Tổ không còn bước đi tiếp nào. Đại Thừa tầng 10 chưa nhặt Tiên khí thì chưa đốt được.
+  Đo trong game thật (Chân Tiên): Tiên khí **60 → 48 trong 1,5 giây = 8/giây** = 8% × 100,
+  đúng con số spec; không rớt cảnh giới; nhả tay là tắt.
+- **⚠ Đạo Tổ vẫn không Thiêu Đốt được — chờ chốt (Q26)**. Hai luật đều đúng theo câu chữ
+  nhưng cộng lại thì chặn nhau: v5.6 nói không xuống dưới mốc khởi điểm của cảnh giới đang
+  đứng, còn `overflowToScore` (Q22) ghim Tiên khí của Đạo Tổ **đúng** ở mốc 1 500 và đổi mọi
+  phần dư sang Uy Danh. Nên Tiên khí của Đạo Tổ luôn bằng đáy → không còn gì để đốt, và
+  người ở đỉnh lại là người duy nhất không chạy nhanh được. Đã khoá hiện trạng bằng
+  `TestDaoToHasNoTienKhiHeadroom`; test ghi rõ là khoá hiện trạng, không khẳng định ý đồ.
+
 - **Spec v5.4 + v5.5 — chỉnh 10 kỹ năng (29/10/2026, §6.3)**. Mọi con số vào `config/game.json`,
   có `TestSkillDurationsMatchSpec` khoá lại để lần sau spec đổi mà quên sửa config thì test đỏ.
   - **Bánh Bao Thần đổi hẳn luật**: trước hồi 30% số kiếm bể trong 10 giây, giờ hồi thẳng

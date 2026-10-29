@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v5.6:** Thiêu Đốt bật thêm bằng nháy đúp giữ / chạm 2 lần giữ; Tiên giới đốt Tiên khí (§4.1c); bảng hướng dẫn có dòng Kỹ năng (§18.1).
+
 **Thay đổi v5.5:** chỉnh kỹ năng — A Hớn hồi 20% kiếm tối đa; Bà Tám đẩy 500; Ông Ba Võng bán kính 500; Thằng Mập bịt mắt 5s + không nhặt đồ; Cô Ba trượt = choáng 1s; Shipper ×3 trong 5s, xuyên mọi vật cản trừ biên (§6.3).
 
 **Thay đổi v5.4:** chỉnh kỹ năng — Gọi Đàn Em 10s, mỗi đàn em 50% số kiếm của đại ca; Lưới Mì trói 5s; Gồng Cơ 5s; Rụt Cổ 5s (§6.3).
@@ -315,9 +317,9 @@ camera: chiều cao vùng nhìn thấy (đơn vị thế giới) = max(900 * sca
 - Camera lùi theo cảnh giới nên trên màn hình người to trông đi chậm hơn người nhỏ → người nhỏ né được.
 
 ### 4.1c Thiêu Đốt Tinh Huyết (chạy nước rút)
-- Giữ **Shift** (PC) hoặc giữ nút **🔥** (điện thoại): tốc chạy × 1.8.
+- Giữ **Shift**, hoặc **nháy đúp rồi giữ** chuột (PC); giữ nút **🔥**, hoặc **chạm 2 lần rồi giữ** (điện thoại): tốc chạy × 1.8.
 - Trong lúc giữ: mỗi giây đốt **8% EXP của tầng hiện tại** (`exp_needed(r, s) × 0.08`). Có thể rớt tầng nhưng **không bao giờ rớt cảnh giới**: tiến độ chạm đáy cảnh giới hiện tại (tầng 1, 0%) thì tự tắt.
-- Ở Tiên giới: đốt 8% Tiên khí của bước hiện tại mỗi giây, cũng không làm rớt cảnh giới.
+- **Ở Tiên giới** (từ Đại Thừa tầng 10 trở lên): đốt **Tiên khí** thay cho EXP — mỗi giây 8% Tiên khí cần cho bước hiện tại (Đạo Tổ: 8% × 500 = 40/giây), không bao giờ xuống dưới mốc khởi điểm của cảnh giới đang đứng. Đại Thừa tầng 10 chưa có Tiên khí → chưa đốt được cho tới khi nhặt Tiên khí đầu tiên.
 - Hiệu ứng: người bốc khói đỏ, mặt đỏ gay, vệt lửa sau chân, emote "Liều mạng!".
 
 ## 5. Chiến đấu
@@ -1046,7 +1048,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "player": {
     "body_r": 30, "move_base": 195, "move_scale_sqrt": false, "pickup_r": 90,
     "invuln_on_hit": 1.0, "invuln_on_spawn": 5.0,
-    "burn_speed_mult": 1.8, "burn_exp_per_sec": 0.08,
+    "burn_speed_mult": 1.8, "burn_exp_per_sec": 0.08, "burn_tien_frac_per_sec": 0.08,
     "attacker_share": 0.5, "drop_share": 0.3, "kill_bonus_exp": 30,
     "death_sword_drop": 0.5, "orb_owner_secs": 1.5,
     "camera_view_h": 900, "camera_exp": 0.85, "camera_reach_mult": 2.6,
@@ -1118,7 +1120,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - Có thể tắt hẳn debug trên server production bằng biến môi trường.
 
 ### 18.1 Bảng hướng dẫn điều khiển lúc vào trận
-- Vừa vào trận: hiện bảng mờ (nền 50%) giữa-dưới màn hình liệt kê điều khiển (di chuyển, Shift/🔥 Thiêu Đốt, M minimap...). Tự mờ dần sau 5s (trùng thời gian bất tử) hoặc biến mất khi người chơi bắt đầu di chuyển.
+- Vừa vào trận: hiện bảng mờ (nền 50%) giữa-dưới màn hình liệt kê điều khiển (di chuyển; Thiêu Đốt: Shift / nháy đúp giữ / 🔥; **Kỹ năng: Space / nút kỹ năng** (cần Bí Kíp); M minimap...). Tự mờ dần sau 5s (trùng thời gian bất tử) hoặc biến mất khi người chơi bắt đầu di chuyển.
 
 ## 17. Checklist test chấp nhận
 

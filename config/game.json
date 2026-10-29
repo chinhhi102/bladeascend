@@ -116,6 +116,7 @@
   "burn": {
     "mult": 1.8,
     "exp_frac_per_sec": 0.08,
+    "tien_frac_per_sec": 0.08,
     "keep_realm": true
   },
   "buffs": {

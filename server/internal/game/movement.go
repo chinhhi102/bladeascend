@@ -41,8 +41,46 @@ func (g *Game) burnFloor(p *Player) float64 {
 	return g.Prog.Threshold(g.Prog.Realm(p.Level) * g.Prog.Tiers())
 }
 
+// tienFloor is the burn floor on the Tiên khí path: the entry mark of the realm they are
+// standing in, so burning never drops a Tiên giới player a whole cảnh giới (spec v5.6 §4.1c).
+//
+// Đại Thừa tầng 10 chưa vào Tiên giới nên đáy là 0 — tức là chưa nhặt được viên Tiên khí
+// nào thì chưa đốt được, đúng như spec nói.
+func (g *Game) tienFloor(p *Player) float64 {
+	idx := g.TienRealmOf(p)
+	if idx < 0 {
+		return 0
+	}
+	return g.Prog.TienEntry(idx)
+}
+
+// tienStepCost là lượng Tiên khí của BƯỚC hiện tại — mốc để tính 8% mỗi giây.
+//
+// Lấy `tien_khi_per_step[idx]`, tức bước đã ĐƯA họ tới cảnh giới đang đứng, không phải bước
+// đi tiếp. Spec chốt cách đọc này bằng chính ví dụ của nó: "Đạo Tổ: 8% × 500 = 40/giây", mà
+// 500 là bước thứ 5 — Đạo Tổ không còn bước đi tiếp nào nữa.
+func (g *Game) tienStepCost(p *Player) float64 {
+	steps := g.Cfg.Cultivation.TienKhiPerStep
+	if len(steps) == 0 {
+		return 0
+	}
+	idx := g.TienRealmOf(p)
+	if idx < 0 {
+		idx = 0 // Đại Thừa tầng 10 đang đi bước đầu tiên (lên Chân Tiên)
+	}
+	if idx >= len(steps) {
+		idx = len(steps) - 1
+	}
+	return steps[idx]
+}
+
 // Burning reports whether the player is actually burning essence right now: they asked for
-// it, they are moving, and they still have EXP left to spend (spec §4.1c).
+// it, they are moving, and they still have cultivation left to spend (spec §4.1c).
+//
+// **Hai đường tu, hai loại nhiên liệu** (spec v5.6): người phàm đốt EXP, người đã sang Tiên
+// khí đốt Tiên khí. Trước v5.6 chỉ có nhánh EXP, mà người Tiên giới đứng đúng ở đáy cảnh
+// giới nên `TotalExp > burnFloor` luôn sai — lên Tiên giới là mất hẳn khả năng chạy nhanh
+// (xem Q24, đã được trả lời bằng chính v5.6).
 func (g *Game) Burning(p *Player) bool {
 	if !p.Burning || !p.Moving || p.Dead || p.InTransit(g.Time) || g.Cfg.Burn.Mult <= 1 {
 		return false
@@ -50,12 +88,24 @@ func (g *Game) Burning(p *Player) bool {
 	if p.HasStatus(StStun, g.Time) {
 		return false // đang choáng thì không Thiêu Đốt được (spec v5.5 §6.3)
 	}
+	if g.BanksTienKhi(p) {
+		return p.TienKhi > g.tienFloor(p)
+	}
 	return p.TotalExp > g.burnFloor(p)
 }
 
-// burnExp charges the EXP cost of this tick's sprint (spec §4.1c).
+// burnExp charges the cost of this tick's sprint (spec §4.1c).
 func (g *Game) burnExp(p *Player, dt float64) {
 	if !g.Burning(p) {
+		return
+	}
+	if g.BanksTienKhi(p) {
+		cost := g.Cfg.Burn.TienFracPerSec * g.tienStepCost(p) * dt
+		after := math.Max(g.tienFloor(p), p.TienKhi-cost)
+		// Dùng chung `BurnedExp` cho cả hai đường tu: màn Tổng kết hỏi "đã thiêu đốt bao
+		// nhiêu tu vi", và với người Tiên giới thì tu vi của họ chính là Tiên khí.
+		p.BurnedExp += p.TienKhi - after
+		p.TienKhi = after
 		return
 	}
 	cost := g.Cfg.Burn.ExpFracPerSec * g.Prog.ExpNeeded(p.Level) * dt
