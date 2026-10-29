@@ -70,9 +70,13 @@ func TestBotFillToTarget(t *testing.T) {
 		p.InvulnUntil = 1e9 // v3 swords are lethal to Luyện Khí: keep everyone alive for this check
 	}
 	stepSecs(r, 5)
-	// Người vào thêm KHÔNG được đuổi bot đang có; chỉ dừng sinh thêm khi chạm trần phòng.
-	if r.Bots() != wantBots {
-		t.Fatalf("người vào thêm mà bot bị bớt: %d bot, muốn giữ nguyên %d", r.Bots(), wantBots)
+	// Người thật được ƯU TIÊN trong trần phòng: thêm người thì bot phải nhường chỗ dần
+	// (bot chết thì không hồi sinh nữa), nhưng tổng số nhân vật không bao giờ vượt trần.
+	if total := r.Humans() + r.Bots(); total > cfg.Room.BotFillTarget {
+		t.Fatalf("phòng có %d nhân vật, vượt trần %d", total, cfg.Room.BotFillTarget)
+	}
+	if r.Humans() != 8 {
+		t.Fatalf("có %d người thật, muốn 8", r.Humans())
 	}
 }
 
