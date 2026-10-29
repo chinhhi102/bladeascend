@@ -209,6 +209,21 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Lỗi / hạn chế đã biết
 
+- **HUD trái tự đè lên nhau — đã sửa (29/10/2026)**. Ba khối bên trái (chỉ số · hàng buff ·
+  minimap) trước đây mỗi khối một `top:` cố định (12 / 84 / 136 px). Hễ khối chỉ số cao thêm
+  một dòng — thanh Tiên khí ở Tiên giới, rồi nhãn tên khu mới thêm — là nó tràn xuống đè
+  khối dưới. Đây là loại lỗi tự sinh lại: mỗi lần thêm một dòng vào HUD lại phải nhớ dời tay
+  cả ba con số, và quên là chuyện chắc chắn xảy ra. Giờ gom vào `.hud-left` xếp dọc bằng
+  flex nên khối sau tự đẩy xuống, thêm bao nhiêu dòng cũng không hỏng. Bảng hướng dẫn lúc
+  mới vào (`.guide`) cũng đang nằm đè minimap → chuyển xuống **giữa-dưới**. Đo ở trường hợp
+  xấu nhất (Đạo Tổ, có thanh Tiên khí, 1 050 kiếm, 5 buff): 12 → 119 → 171 → 205, không
+  khối nào chồng nhau.
+- **Nền bản đồ có vệt hồng — đã sửa (29/10/2026)**. 7 ảnh nền (`soft_grass` 17,3%,
+  `bamboo_litter` 15,7%, `mossy_stone` 10,3%, …) vẫn còn magenta nguyên bản. `modeTile` cố ý
+  **không** lọc magenta cho ảnh nền vì nền phải đặc — nhưng magenta *trong* ảnh nền nghĩa là
+  bên sinh ảnh không vẽ kín khung, chứ không phải nền cần giữ. `patchMagenta` (`cmd/artgen/prep.go`)
+  vá các pixel đó bằng màu trung bình vùng lành **và** ghi job vào `miscut.json` để lần sau
+  vẽ lại. Quét lại: 0 asset còn magenta, chụp màn hình đo 0,000% magenta.
 - **Giật khi chạm vật cản — đã sửa 3 nguyên nhân, còn sót ít (29/10/2026, spec v5 §8.2a)**.
   Thêm vào F3 dòng `hiệu chỉnh N/giây · lệch nhất X` (đếm số lần server kéo nhân vật về).
   Đo trước khi sửa: đi tới rìa bản đồ ra **20,2 lần/giây**, nhân vật ghim cứng ở y = 11 549.

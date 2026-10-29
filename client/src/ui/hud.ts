@@ -146,12 +146,19 @@ export class Hud {
     const mute = button('🔊', 'mute', () => {
       mute.textContent = sound.toggleMute() ? '🔇' : '🔊';
     });
+    // Cột trái xếp theo LUỒNG DỌC, không ghim toạ độ cứng cho từng khối.
+    //
+    // Trước đây mỗi khối có `top` riêng (status 12, buffs 84, minimap 136). Chỉ cần khối
+    // trạng thái cao thêm một dòng — lên Tiên giới có thêm thanh Tiên khí, hoặc tên khu
+    // mới thêm vào — là nó đè lên hàng buff. Đã dính thật: ảnh chụp của chủ dự án cho thấy
+    // chữ "Kiếm 25/30" nằm sau ba cái icon buff.
     this.root.append(
-      this.minimap.root,
-      this.zoneBox,
-      h('div', 'status', this.badge, h('div', 'status-text', this.realm, this.expBar, this.expLabel, this.swords, this.scoreBox)),
+      h('div', 'hud-left',
+        h('div', 'status', this.badge, h('div', 'status-text', this.realm, this.expBar, this.expLabel, this.swords, this.scoreBox)),
+        this.buffs,
+        this.zoneBox,
+        this.minimap.root),
       this.pops,
-      this.buffs,
       this.board,
       this.feed,
       this.serverFeed,
