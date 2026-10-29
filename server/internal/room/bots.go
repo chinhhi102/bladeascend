@@ -20,6 +20,14 @@ func (r *Room) updateBots(dt float64) {
 		return
 	}
 	r.botTimer = 0
+	// Người thật được ưu tiên trong trần phòng: họ vào bất cứ lúc nào, nên nếu tổng vượt
+	// trần thì phải bớt bot NGAY, không đợi bot chết. Chờ chết thì một phòng đông người có
+	// thể vượt trần suốt mấy phút.
+	r.trimOverCap()
+	// Bot đi lại giữa các khu (qua cổng, hồi sinh) nên một khu có thể tụt xuống dưới sàn
+	// trong khi phòng đã chạm trần — lúc đó không sinh thêm được, phải ĐIỀU bot từ khu đông
+	// sang. Không làm thế thì sàn mỗi khu chỉ đúng lúc mới mở phòng.
+	r.rebalanceZones()
 	room := r.Humans() + r.Bots()
 	target := r.cfg.Room.BotFillTarget
 	// Chỉ `bot_fill_target` mới chặn việc sinh bot. `max_humans` là trần NGƯỜI THẬT, hai
@@ -37,6 +45,56 @@ func (r *Room) updateBots(dt float64) {
 		}
 		level, swords := r.randomBotLevel()
 		r.spawnBotIn(z, level, swords)
+	}
+}
+
+// trimOverCap bớt bot cho tới khi tổng nhân vật về đúng trần phòng. Bỏ bot ở khu ĐÔNG
+// nhất trước, để việc cắt giảm không tạo ra khu trống.
+func (r *Room) trimOverCap() {
+	for r.Humans()+r.Bots() > r.cfg.Room.BotFillTarget {
+		var fat *Zone
+		for _, z := range r.zones {
+			if len(z.brains) > 0 && (fat == nil || z.Count() > fat.Count()) {
+				fat = z
+			}
+		}
+		if fat == nil {
+			return // không còn bot nào để bớt
+		}
+		for id := range fat.brains {
+			fat.G.RemovePlayer(id)
+			delete(fat.brains, id)
+			break
+		}
+	}
+}
+
+// rebalanceZones điều một bot từ khu đông nhất sang khu đang dưới sàn.
+func (r *Room) rebalanceZones() {
+	for i := 0; i < len(r.zones); i++ {
+		thin := r.zoneBelowFloor()
+		if thin == nil {
+			return
+		}
+		var fat *Zone
+		for _, z := range r.zones {
+			if z == thin || len(z.brains) == 0 {
+				continue
+			}
+			if fat == nil || z.Count() > fat.Count() {
+				fat = z
+			}
+		}
+		// Chỉ điều khi khu kia thật sự dư: điều qua điều lại giữa hai khu cùng thiếu thì
+		// chỉ làm bot nhấp nháy giữa hai bản đồ.
+		if fat == nil || fat.Count() <= thin.Count()+1 {
+			return
+		}
+		for id := range fat.brains {
+			r.queueTransfer(transfer{playerID: id, from: fat, to: thin,
+				at: game.Vec{X: thin.G.Map.Size / 2, Y: thin.G.Map.Size / 2}})
+			break
+		}
 	}
 }
 
@@ -124,11 +182,12 @@ func (r *Room) onBotDeath(z *Zone, p *game.Player) {
 		delete(z.brains, p.ID)
 		return
 	}
-	r.respawns = append(r.respawns, pendingRespawn{id: p.ID, at: z.G.Time + r.cfg.Bots.RespawnSecs})
+	z.respawns = append(z.respawns, pendingRespawn{id: p.ID, at: z.G.Time + r.cfg.Bots.RespawnSecs})
 }
 
-func (r *Room) respawnQueued(id uint32) bool {
-	for _, q := range r.respawns {
+// respawnQueued chỉ hỏi hàng chờ CỦA KHU đó — gọi từ goroutine của chính khu ấy.
+func (z *Zone) respawnQueued(id uint32) bool {
+	for _, q := range z.respawns {
 		if q.id == id {
 			return true
 		}
@@ -139,28 +198,26 @@ func (r *Room) respawnQueued(id uint32) bool {
 // processRespawns hồi sinh bot tới hạn. Bot hồi sinh **chuyển sang khu ít nhân vật nhất**
 // (spec v5 mục 8), không ở lại chỗ cũ — nếu không thì khu đông sẽ tự nuôi lại chính nó.
 func (r *Room) processRespawns() {
-	keep := r.respawns[:0]
-	for _, q := range r.respawns {
-		z := r.zoneOf(q.id)
-		if z == nil {
-			continue // bot đã bị dọn đi
+	for _, z := range r.zones {
+		keep := z.respawns[:0]
+		for _, q := range z.respawns {
+			if z.G.Time < q.at {
+				keep = append(keep, q)
+				continue
+			}
+			p, ok := z.G.Players[q.id]
+			if !ok {
+				continue
+			}
+			level, swords := r.randomBotLevel()
+			if to := r.thinnestByCount(); to != nil && to != z {
+				z.G.RemovePlayer(p.ID)
+				delete(z.brains, p.ID)
+				r.spawnBotIn(to, level, swords)
+				continue
+			}
+			z.G.Respawn(p, level, swords)
 		}
-		if z.G.Time < q.at {
-			keep = append(keep, q)
-			continue
-		}
-		p, ok := z.G.Players[q.id]
-		if !ok {
-			continue
-		}
-		level, swords := r.randomBotLevel()
-		if to := r.thinnestByCount(); to != nil && to != z {
-			z.G.RemovePlayer(p.ID)
-			delete(z.brains, p.ID)
-			r.spawnBotIn(to, level, swords)
-			continue
-		}
-		z.G.Respawn(p, level, swords)
+		z.respawns = keep
 	}
-	r.respawns = keep
 }

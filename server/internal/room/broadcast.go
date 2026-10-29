@@ -235,7 +235,7 @@ func (r *Room) sendFeeds(z *Zone, events []game.Event) {
 		if e.Kind != "KillFeed" {
 			continue
 		}
-		f := netproto.Feed{T: "feed", Kind: e.S, A: r.nameOf(e.A), B: r.nameOf(e.B), Realm: e.N,
+		f := netproto.Feed{T: "feed", Kind: e.S, A: z.nameOf(e.A), B: z.nameOf(e.B), Realm: e.N,
 			Zone: z.Index, ZoneName: z.Name}
 		// Với dòng chém chết, e.N là hạng của nạn nhân chứ không phải cảnh giới.
 		kill := e.S == "kill" || e.S == "gate_kill"
@@ -269,11 +269,13 @@ func (r *Room) flushFeeds() {
 	}
 }
 
-func (r *Room) nameOf(id uint32) string {
-	for _, z := range r.zones {
-		if p, ok := z.G.Players[id]; ok {
-			return p.Name
-		}
+// nameOf tra tên trong ĐÚNG KHU sinh ra sự kiện, không quét cả phòng.
+//
+// Quét cả phòng là đọc dữ liệu của khu khác giữa lúc nó đang chạy — `-race` bắt được ngay.
+// Mà cũng không cần: kill feed nói về hai người vừa đánh nhau, họ chắc chắn cùng một khu.
+func (z *Zone) nameOf(id uint32) string {
+	if p, ok := z.G.Players[id]; ok {
+		return p.Name
 	}
 	return ""
 }

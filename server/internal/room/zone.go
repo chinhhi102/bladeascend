@@ -41,6 +41,9 @@ type Zone struct {
 	// số ngẫu nhiên hay chung một slice là đua dữ liệu ngay. Gom lại sau khi mọi khu xong.
 	rng       *rand.Rand
 	transfers []transfer
+	// respawns: bot của KHU NÀY đang chờ hồi sinh. Để ở phòng thì năm goroutine cùng ghi
+	// một slice — `-race` bắt được ngay khi phòng đông bot.
+	respawns []pendingRespawn
 	// namesAt/namesDue: lần cuối gửi lại tên người chơi. Thuộc về KHU, không phải phòng —
 	// năm khu chạy song song nên để ở phòng là hai goroutine cùng ghi một ô nhớ.
 	namesAt  float64
