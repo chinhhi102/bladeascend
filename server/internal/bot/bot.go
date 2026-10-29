@@ -47,6 +47,8 @@ type Brain struct {
 	// gateUntil: đang trên đường ra cổng tới khi nào. Không có mốc này thì bot đổi ý ngay
 	// ở tick sau và đứng rung trước cổng mãi.
 	gateUntil float64
+	// fearless: không bao giờ bỏ chạy (chỉ dùng trong cmd/sim --duel).
+	fearless bool
 }
 
 // trySkill: bot dùng kỹ năng của nhân vật mình theo luật đơn giản (spec §6.3).
@@ -77,12 +79,12 @@ func (b *Brain) trySkill(g *game.Game, me *game.Player, threat, prey *game.Playe
 		if me.Ring.Count*2 < g.Prog.MaxSwords(g.Prog.Realm(me.Level)) {
 			g.CastSkill(me)
 		}
-	case "be_ti", "cu_rua_x": // Gồng: khi đang bị dí
-		if threat != nil && threat.Pos.Dist(me.Pos) < reach*2 {
+	case "be_ti": // Gồng: khi có ai đó sát bên, dù mình đang đuổi hay đang bị đuổi
+		if near != nil && near.Pos.Dist(me.Pos) < reach*2 {
 			g.CastSkill(me)
 		}
-	case "shipper", "co_ba_ganh": // chạy/lướt: khi đang bỏ chạy
-		if threat != nil {
+	case "shipper", "co_ba_ganh": // chạy/lướt: khi cần rút ngắn hoặc kéo giãn khoảng cách
+		if near != nil {
 			g.CastSkill(me)
 		}
 	default: // Ru Ngủ, Lưới Mì, Gọi Đàn Em: cứ có địch gần là dùng
@@ -113,6 +115,18 @@ func New(id uint32, seed int64, g *game.Game) *Brain {
 	}
 }
 
+// NewFighter là bot LUÔN lao vào đánh, không bao giờ bỏ chạy — dùng cho `cmd/sim --duel`.
+//
+// Bot thường cân nhắc sức mạnh rồi bỏ chạy khi thấy đối thủ ngang cơ. Trong bài đấu từng
+// cặp thì hai bên luôn ngang cơ, nên cả hai cùng chạy và 83% số trận kết thúc hoà — bảng
+// số đẹp mà chẳng nói lên điều gì về kỹ năng. Bot hiếu chiến buộc trận đấu phải xảy ra.
+func NewFighter(id uint32, seed int64, g *game.Game) *Brain {
+	b := New(id, seed, g)
+	b.aggression = 1
+	b.fearless = true
+	return b
+}
+
 // Update chooses an input for this tick and applies it to the game.
 func (b *Brain) Update(g *game.Game) {
 	me, ok := g.Players[b.ID]
@@ -137,6 +151,9 @@ func (b *Brain) decide(g *game.Game, me *game.Player) {
 	bc := g.Cfg.Bots
 	myPow := g.Power(me)
 	threat, prey := b.scanPlayers(g, me, myPow)
+	if b.fearless {
+		threat = nil // không bao giờ bỏ chạy
+	}
 	b.trySkill(g, me, threat, prey)
 	switch {
 	case b.gateUntil > g.Time && b.headToGate(g, me):
@@ -215,17 +232,33 @@ func (b *Brain) scanPlayers(g *game.Game, me *game.Player, myPow float64) (*game
 	bc := g.Cfg.Bots
 	var threat, prey *game.Player
 	bestT, bestP := math.Inf(1), math.Inf(1)
+	// Bị Phun Trân Châu thì nhìn gần hẳn lại (spec §6.3).
+	mySight := g.BlindSightMult(me)
 	for _, o := range g.Players {
 		if o == me || !g.CanSee(me, o) {
 			continue
 		}
 		d := o.Pos.Dist(me.Pos)
+		if b.fearless {
+			if d > bc.HuntR*me.Scale*mySight {
+				continue // bị bịt mắt thì cũng không thấy xa được
+			}
+			// Bot đấu tay đôi: ai gần nhất là mồi, bất kể mạnh yếu.
+			//
+			// Luật thường đòi đối thủ phải YẾU HƠN mới coi là mồi — mà trong bài đấu từng
+			// cặp hai bên luôn ngang sức, nên không ai coi ai là mồi và 91% số trận kết
+			// thúc hoà vì hai bot chưa từng gặp nhau.
+			if d < bestP && !o.Invulnerable(g.Time) {
+				prey, bestP = o, d
+			}
+			continue
+		}
 		pow := g.Power(o)
 		sight := g.BotSightMult(o) // Ẩn Thân: bot chỉ phát hiện trong 50% tầm (spec §10)
-		if pow > myPow*bc.FleeRatio && d < bc.FleeR*me.Scale*sight && d < bestT {
+		if pow > myPow*bc.FleeRatio && d < bc.FleeR*me.Scale*sight*mySight && d < bestT {
 			threat, bestT = o, d
 		}
-		if pow < myPow*bc.HuntRatio && d < bc.HuntR*me.Scale*sight && d < bestP && !o.Invulnerable(g.Time) {
+		if pow < myPow*bc.HuntRatio && d < bc.HuntR*me.Scale*sight*mySight && d < bestP && !o.Invulnerable(g.Time) {
 			prey, bestP = o, d
 		}
 	}

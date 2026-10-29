@@ -45,8 +45,8 @@ func (g *Game) resolveSwordBody() {
 			if a == b || !g.canFight(a) {
 				continue
 			}
-			if a.IsMinion {
-				continue // đàn em chỉ mài kiếm, không chém thân được (spec §6.3)
+			if a.IsMinion || sameSide(a, b) {
+				continue // đàn em chỉ mài kiếm, và không đụng tới phe mình (spec §6.3)
 			}
 			if _, hit := g.swordTouchesCircle(a, b.Pos, g.BodyR(b)); hit {
 				g.applyBodyHit(a, b)
@@ -149,6 +149,24 @@ func (g *Game) DebugKill(b *Player) {
 }
 
 // resolveSwordSword applies spec §5.2 to every pair of overlapping rings.
+// sameSide: hai người này cùng phe không — đại ca với đàn em của mình, hoặc hai đàn em
+// cùng chủ.
+//
+// Thiếu phép kiểm này thì Gọi Đàn Em thành kỹ năng TỰ SÁT: hai đàn em đứng sát đại ca sẽ
+// mài chính vòng kiếm của anh ta. Bài đấu từng cặp cho Đại Ca Dép đúng 1,4% tỉ lệ thắng —
+// thấp nhất bảng — và đó là lý do.
+func sameSide(a, b *Player) bool {
+	switch {
+	case a.IsMinion && b.IsMinion:
+		return a.MinionOf == b.MinionOf
+	case a.IsMinion:
+		return a.MinionOf == b.ID
+	case b.IsMinion:
+		return b.MinionOf == a.ID
+	}
+	return false
+}
+
 func (g *Game) resolveSwordSword() {
 	players := g.PlayerList()
 	for i, a := range players {
@@ -159,6 +177,9 @@ func (g *Game) resolveSwordSword() {
 		for _, b := range players[i+1:] {
 			if !g.canFight(b) || b.Ring.Count == 0 {
 				continue
+			}
+			if sameSide(a, b) {
+				continue // đàn em không mài kiếm với đại ca và với nhau (spec §6.3)
 			}
 			// Bể kiếm tính mỗi tick khi hai vòng còn chạm nhau (clash_cooldown = 0), nên
 			// hai vòng ngoài 30 kiếm ngang cảnh giới mài sạch nhau trong đúng 1 giây.

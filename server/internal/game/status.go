@@ -88,6 +88,19 @@ func (g *Game) onDeathClear(p *Player) {
 	g.ClearStatuses(p)
 }
 
+// BlindSightMult: người đang bị bịt mắt nhìn xa được bao nhiêu phần (spec §6.3 — "bot bị
+// trúng: tầm nhìn còn 40%").
+//
+// Với người thật, cái che tầm nhìn là lớp trân châu trên màn hình. Với bot thì không có
+// màn hình nào cả — nếu không rút tầm nhìn của chúng thì kỹ năng này **không làm gì** với
+// bot, và bài đấu từng cặp cho Thằng Mập đúng 0 đối thủ bị khắc.
+func (g *Game) BlindSightMult(p *Player) float64 {
+	if p.HasStatus(StBlind, g.Time) {
+		return g.Cfg.Skills.TranChauBotVision
+	}
+	return 1
+}
+
 // StatusBits gói trạng thái đang bật thành một số để nhét vào snapshot.
 func (p *Player) StatusBits(now float64) uint16 {
 	var bits uint16
