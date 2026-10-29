@@ -344,11 +344,18 @@ func warnFrameCount(j Job, frames [][]*image.NRGBA) {
 		if got == sg.Frames {
 			continue
 		}
+		// Ngưỡng này phải KHỚP với `miscut()` bên client (render/assets.ts): client chỉ bỏ
+		// animation khi lệch quá 1,5× hoặc dưới 0,5× số khung khai báo. Lệch nhẹ thì vẫn
+		// chạy được, không cần sinh lại.
 		level := "lệch"
 		if got > sg.Frames*3/2 || got*2 < sg.Frames {
 			level = "HỎNG"
+			// Chỉ cái HỎNG mới vào danh sách sinh lại. Trước đây đánh dấu cả cái lệch nhẹ,
+			// và `teleport_out` của MỌI nhân vật đều cắt được 3/4 khung — khung cuối là lúc
+			// nhân vật đã biến mất nên không còn pixel nào để cắt. Sinh lại bao nhiêu lần
+			// cũng vẫn thế, chỉ tốn quota.
+			miscut[j.Name] = true
 		}
-		miscut[j.Name] = true
 		log.Printf("  %s %s/%s: cắt được %d khung, khai báo %d — %s",
 			level, j.Name, sg.Anim, got, sg.Frames, "sinh lại bằng `artgen run -only "+j.Name+" -redo`")
 	}
