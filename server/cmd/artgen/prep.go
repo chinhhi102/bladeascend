@@ -43,6 +43,45 @@ func prepAll(jobs []Job, assets string) {
 	}
 }
 
+// magentaTolerance: vài điểm ảnh lẻ sau khi co ảnh là bình thường; quá ngưỡng này mới coi
+// là bộ sinh ảnh hỏng.
+const magentaTolerance = 0.005
+
+// patchMagenta thay mọi điểm ảnh magenta bằng màu trung bình của phần còn lại và trả về tỉ
+// lệ đã phải vá.
+func patchMagenta(im *image.NRGBA) float64 {
+	b := im.Bounds()
+	total := b.Dx() * b.Dy()
+	if total == 0 {
+		return 0
+	}
+	var sr, sg, sb, n int
+	var bad []int
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			i := im.PixOffset(x, y)
+			r, g, bl := int(im.Pix[i]), int(im.Pix[i+1]), int(im.Pix[i+2])
+			if r > 170 && bl > 170 && g < 100 {
+				bad = append(bad, i)
+				continue
+			}
+			sr, sg, sb, n = sr+r, sg+g, sb+bl, n+1
+		}
+	}
+	if len(bad) == 0 {
+		return 0
+	}
+	// Không còn điểm nào lành thì lấy một màu đất xỉn, còn hơn để nguyên màu hồng chói.
+	cr, cg, cb := uint8(110), uint8(100), uint8(85)
+	if n > 0 {
+		cr, cg, cb = uint8(sr/n), uint8(sg/n), uint8(sb/n)
+	}
+	for _, i := range bad {
+		im.Pix[i], im.Pix[i+1], im.Pix[i+2], im.Pix[i+3] = cr, cg, cb, 255
+	}
+	return float64(len(bad)) / float64(total)
+}
+
 // miscutPath là nơi lưu danh sách sheet bị cắt sai, để `prompts` và `run` đọc lại.
 func miscutPath(assets string) string { return filepath.Join(assets, "_raw", "miscut.json") }
 
@@ -101,7 +140,19 @@ func prepJob(j Job, raw, assets string) error {
 		b := img.Bounds()
 		return savePNG(out, resize(img, b, 1024, 1024*b.Dy()/b.Dx()))
 	case modeTile:
-		return savePNG(out, resize(img, centerSquare(img.Bounds()), j.W, j.H))
+		tile := resize(img, centerSquare(img.Bounds()), j.W, j.H)
+		// Tile nền là ảnh ĐẶC, không có nền để khoá — nên magenta trong đó không phải nền
+		// mà là lỗi: bộ sinh ảnh đã không phủ kín khung. Đã dính thật, 7 tile lọt vào game
+		// và người chơi thấy những vệt hồng chói chạy ngang bản đồ.
+		//
+		// Vá bằng màu trung bình của phần lành rồi BÁO để sinh lại: vá xong nhìn tạm được
+		// ngay, nhưng vẫn phải có ảnh thật.
+		if r := patchMagenta(tile); r > magentaTolerance {
+			miscut[j.Name] = true
+			log.Printf("  HỎNG %s: %.0f%% diện tích là nền magenta (bộ sinh không phủ kín khung) — đã vá tạm bằng màu trung bình, cần sinh lại",
+				j.Name, r*100)
+		}
+		return savePNG(out, tile)
 	case modeWide:
 		return savePNG(out, resize(img, coverRect(img.Bounds(), j.W, j.H), j.W, j.H))
 	case modeSprite:
