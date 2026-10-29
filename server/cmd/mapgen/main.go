@@ -211,6 +211,33 @@ func (b *builder) gate(x, y float64, network, color string) bool {
 	return true
 }
 
+// heavenGate đặt **Thiên Môn** (spec §8.4a): to gấp đôi cổng thường, chừa trống bán kính
+// 500 quanh nó — spec đòi một quảng trường ở tâm khu, có ít nhất 2 đường dẫn vào.
+func (b *builder) heavenGate(x, y float64) bool {
+	const r = 200.0
+	if !b.inBounds(rect{x - r, y - r, x + r, y + r}) {
+		return false
+	}
+	b.keep = append(b.keep, rect{x - 500, y - 500, x + 500, y + 500})
+	b.add("gates", object{Type: "gate", X: x - r, Y: y - r, Width: 2 * r, Height: 2 * r, Ellipse: true,
+		Properties: []prop{{"network", "string", gateNet}, {"color", "string", "gold"}, {"heaven", "string", "1"}}})
+	return true
+}
+
+// heavenDock đặt **Bến Thiên Môn** ở Thiên Đình — điểm ra cố định của Thiên Môn khu `zone`.
+// Spec §8.4a: cách tâm ~1 400, trống bán kính 400.
+func (b *builder) heavenDock(x, y float64, zone int) bool {
+	const r = 150.0
+	if !b.inBounds(rect{x - r, y - r, x + r, y + r}) {
+		return false
+	}
+	b.keep = append(b.keep, rect{x - 400, y - 400, x + 400, y + 400})
+	b.add("gates", object{Type: "gate", X: x - r, Y: y - r, Width: 2 * r, Height: 2 * r, Ellipse: true,
+		Properties: []prop{{"network", "string", gateNet}, {"color", "string", "gold"},
+			{"dock", "string", "1"}, {"dock_for", "float", float64(zone)}}})
+	return true
+}
+
 // altar places a Đài Tiên Khí and keeps a clear_r radius around it free of obstacles
 // (spec §8.5). Kind is "small" or "center".
 func (b *builder) altar(kind string, cx, cy, r, clear float64) bool {

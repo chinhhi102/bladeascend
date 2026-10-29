@@ -121,6 +121,18 @@ func (r *Room) Ranking() []*game.Player {
 // Với 20 cổng chia đều 5 khu, khoảng 80% lần dịch chuyển sẽ sang khu khác, đúng như spec
 // mong muốn: cổng là đường duy nhất đi giữa các khu.
 func (r *Room) routeGate(fromZone int, gate world.Gate) (game.GateDest, bool) {
+	// **Thiên Môn** (spec §8.4a): một chiều, luôn ra ở Bến Thiên Môn cố định của khu mình
+	// tại Thiên Đình. Đây là lối đi CHẮC CHẮN cho người muốn leo cao, ngược hẳn với 4 cổng
+	// thường vốn cố tình giấu đích đến.
+	if gate.Heaven && len(r.zones) > 1 {
+		heaven := r.zones[0]
+		if dock := heaven.G.Map.DockFor(fromZone); dock != nil {
+			return game.GateDest{Zone: heaven.Index, GateID: dock.ID, At: game.Vec{X: dock.X, Y: dock.Y}}, true
+		}
+		// Khu Thiên Đình chưa có bến cho khu này: thả vào giữa khu còn hơn nuốt mất người.
+		return game.GateDest{Zone: heaven.Index, GateID: -1,
+			At: game.Vec{X: heaven.G.Map.Size / 2, Y: heaven.G.Map.Size / 2}}, true
+	}
 	if !r.cfg.Gates.RandomExit || len(r.zones) <= 1 {
 		return game.GateDest{}, false // để khu tự xử theo luật cũ
 	}
@@ -133,6 +145,9 @@ func (r *Room) routeGate(fromZone int, gate world.Gate) (game.GateDest, bool) {
 		for _, o := range z.G.Map.Gates {
 			if z.Index == fromZone && o.ID == gate.ID {
 				continue // không ra lại chính cổng vừa bước vào
+			}
+			if o.Heaven || o.Dock {
+				continue // Thiên Môn và Bến Thiên Môn không nằm trong bể ngẫu nhiên (§8.4a)
 			}
 			if r.cfg.Gates.ExitPool == "other_zone" && z.Index == fromZone {
 				continue

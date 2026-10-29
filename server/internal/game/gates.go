@@ -21,7 +21,16 @@ func (g *Game) checkGate(p *Player) {
 	}
 	gc := g.Cfg.Gates
 	for _, gate := range g.Map.Gates {
-		if p.Pos.Dist(Vec{X: gate.X, Y: gate.Y}) > gc.Radius {
+		// Bến Thiên Môn chỉ là chỗ ĐẶT CHÂN, không phải cổng đi: đứng lên bến mà bị hút đi
+		// thì người vừa lên Thiên Đình sẽ bị bắn ngược về khu khác ngay lập tức.
+		if gate.Dock {
+			continue
+		}
+		radius := gc.Radius
+		if gate.Heaven {
+			radius = gc.HeavenRadius // Thiên Môn to gấp đôi (spec §8.4a)
+		}
+		if p.Pos.Dist(Vec{X: gate.X, Y: gate.Y}) > radius {
 			continue
 		}
 		d, ok := g.gateExit(gate)
@@ -32,6 +41,11 @@ func (g *Game) checkGate(p *Player) {
 		p.Transit = &Transit{Dest: d.At, DestGate: d.GateID, DestZone: d.Zone, OutAt: g.Time + half, DoneAt: g.Time + gc.TransitSecs}
 		g.setMood(p, MoodTeleportOut, half)
 		g.emit(Event{Kind: "TeleportOut", A: p.ID, B: uint32(d.GateID), N: gate.ID, X: float32(gate.X), Y: float32(gate.Y)})
+		// Người trong Top 3 bước qua Thiên Môn thì cả phòng biết (spec §8.4a) — đó là tin
+		// đáng loan: khu trung tâm sắp có biến.
+		if gate.Heaven && p.Title >= 1 && p.Title <= 3 {
+			g.emit(Event{Kind: "KillFeed", Global: true, S: "heaven_gate", A: p.ID, N: p.Title})
+		}
 		return
 	}
 }

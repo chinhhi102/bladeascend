@@ -208,12 +208,23 @@ func (b *Brain) wantsGate(g *game.Game, me *game.Player) bool {
 }
 
 // headToGate đặt đích là cổng gần nhất. Trả về false khi không có cổng nào để đi.
+//
+// Ưu tiên **Thiên Môn** khi bot đã Đại Thừa trở lên (spec §8.4a): ở cảnh giới đó thứ đáng
+// giá nhất là Thiên Tiên Đài, mà nó chỉ có ở Thiên Đình. Dưới cảnh giới ấy thì Thiên Môn
+// chỉ ném chúng vào giữa ổ kiến lửa.
 func (b *Brain) headToGate(g *game.Game, me *game.Player) bool {
 	if me.InTransit(g.Time) {
 		return true // đang dịch chuyển, cứ đứng yên chờ
 	}
+	wantHeaven := g.Prog.Realm(me.Level) >= g.Prog.Realm(g.Prog.TopMortalLevel())
 	best, bd := Vec{}, math.MaxFloat64
 	for _, gate := range g.Map.Gates {
+		if gate.Dock {
+			continue // bến chỉ là chỗ đặt chân, đi tới đó không dịch chuyển được
+		}
+		if wantHeaven != gate.Heaven && g.Map.HeavenGate() != nil {
+			continue // đã Đại Thừa thì chỉ nhắm Thiên Môn; chưa thì tránh nó ra
+		}
 		at := Vec{X: gate.X, Y: gate.Y}
 		if d := me.Pos.Dist(at); d < bd {
 			best, bd = at, d

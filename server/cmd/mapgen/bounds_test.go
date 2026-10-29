@@ -108,8 +108,29 @@ func TestEveryZoneGenerates(t *testing.T) {
 		if err != nil {
 			t.Fatalf("khu %d (%s) không sinh được: %v", zi, zd.name, err)
 		}
-		if got := len(b.layers["gates"]); got != 4 {
-			t.Errorf("khu %d (%s) có %d cổng, spec §8.4 nói mỗi khu 4", zi, zd.name, got)
+		// Đếm riêng ba loại: 4 cổng thường mỗi khu (§8.4), 1 Thiên Môn ở mỗi khu TRỪ Thiên
+		// Đình, và 4 Bến Thiên Môn chỉ ở Thiên Đình (§8.4a).
+		normal, heaven, dock := 0, 0, 0
+		for _, o := range b.layers["gates"] {
+			switch {
+			case propOf(o, "heaven") == "1":
+				heaven++
+			case propOf(o, "dock") == "1":
+				dock++
+			default:
+				normal++
+			}
+		}
+		if normal != 4 {
+			t.Errorf("khu %d (%s) có %d cổng thường, spec §8.4 nói mỗi khu 4", zi, zd.name, normal)
+		}
+		wantHeaven, wantDock := 1, 0
+		if zi == 0 {
+			wantHeaven, wantDock = 0, 4 // Thiên Đình không có Thiên Môn, nhưng có 4 bến
+		}
+		if heaven != wantHeaven || dock != wantDock {
+			t.Errorf("khu %d (%s) có %d Thiên Môn và %d bến, muốn %d và %d",
+				zi, zd.name, heaven, dock, wantHeaven, wantDock)
 		}
 		wantAltars := 2
 		if zi == 0 {
@@ -164,4 +185,16 @@ func boolInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// propOf đọc một thuộc tính chuỗi của object trong bản đồ.
+func propOf(o object, name string) string {
+	for _, p := range o.Properties {
+		if p.Name == name {
+			if v, ok := p.Value.(string); ok {
+				return v
+			}
+		}
+	}
+	return ""
 }
