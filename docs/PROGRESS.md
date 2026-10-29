@@ -209,6 +209,30 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Lỗi / hạn chế đã biết
 
+- **Data race thứ 6 — `moveToZone` đọc map của khu khác (sửa 29/10/2026)**. Lúc chia năm khu
+  ra năm goroutine tôi tìm và sửa 5 race; con thứ 6 lọt vì nó nấp sau một hàm trông vô hại.
+  `MoveToZone` (cổng dịch chuyển gọi, chạy TRONG goroutine của một khu) gọi `zoneOf(p.ID)`,
+  mà `zoneOf` quét map `Players` của **cả 5 khu** — trong khi bốn khu kia đang tick và có thể
+  đang xoá người. Ngoài đời đây không phải lỗi nhỏ: Go gặp đọc-ghi map song song thì
+  `fatal error: concurrent map read and map write`, **sập cả server**. Sửa bằng cách gắn cứng
+  hàm chuyển khu với khu cài nó (`moveFromZone(z)`) — khu nguồn vốn đã biết, không cần đi tìm.
+  Đã ghi cảnh báo lên `zoneOf`. Kiểm: 30 lượt `-race` → 0 race (trước đó 3/20 lượt dính).
+- **Phòng đủ 60 người mà vẫn có khu 8–9 (sửa 29/10/2026)**. Hai lỗi chồng nhau:
+  1. `rebalanceZones` lặp 5 lượt nhưng việc chuyển khu chỉ xảy ra ở **ranh giới tick**, nên
+     `z.Count()` không nhúc nhích trong lúc lặp. Cả năm lượt đều thấy tình trạng cũ → xếp
+     năm lệnh cùng chiều → khu cho đi bị rút quá tay thành khu thiếu mới → lượt sau kéo
+     ngược về, qua lại mãi. Giờ tự cộng sổ phần đã xếp hàng (`delta`) và quyết theo con số
+     **dự kiến**, thêm điều kiện cho đi xong không được tụt dưới sàn, và `spareBot()` không
+     bốc trúng con đã nằm trong hàng chờ.
+  2. Vá sàn trước đây chạy theo **nhịp sinh bot 2 giây**, mà bot đi qua cổng bất cứ lúc nào
+     → khu có thể nằm dưới sàn gần 2 giây. Giờ `rebalanceZones` chạy **mỗi tick** (rẻ: 5 khu,
+     vài phép so), nên người vừa bước qua cổng không rơi vào khu gần như trống.
+  `processRespawns` cũng dính cùng kiểu sai: bot hồi sinh rời khu đang **đúng sàn** thì chỗ
+  thiếu chỉ chạy sang khu khác chứ không mất — đã chặn.
+  `TestZoneFloorAndRoomCap` sửa lại cho đúng điều server hứa: sàn là *"tụt xuống thì được vá
+  lại ngay"*, không phải *"không khoảnh khắc nào dưới sàn"* (bot có thể rời khu ở đúng tick
+  cuối, lệnh bù chỉ chạy được ở tick sau). Kiểm: 40 lượt `-race` xanh; và vẫn đỏ khi cố tình
+  tắt `rebalanceZones`, nên không phải nới lỏng cho qua.
 - **Điều khiển gọn lại (29/10/2026)**. Thiêu Đốt Tinh Huyết thêm cách **nháy đúp rồi giữ**
   (300 ms, lệch dưới 40 px) bên cạnh Shift và nút 🔥 — hai cách cũ đều đòi tay thứ hai, còn
   nháy đúp giữ nguyên ngón/tay đang lái. Luật nhận nháy đúp (`tapDown`) viết một lần dùng
