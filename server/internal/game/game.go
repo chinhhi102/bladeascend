@@ -129,6 +129,12 @@ func (g *Game) AddPlayer(o SpawnOptions) *Player {
 func (g *Game) ForceState(p *Player, level, swords int, at Vec) {
 	p.Level = level
 	p.PeakLevel = max(p.PeakLevel, level)
+	// Nhảy thẳng vào Tiên giới thì phải đặt Tiên khí đúng mốc khởi điểm của cảnh giới đó.
+	// Thiếu bước này, phím test cho ra trạng thái không bao giờ có thật: Đạo Tổ mà Tiên khí
+	// bằng 0, nên luật "Tiên khí dư đổi thành Uy Danh" và luật cướp đoạt §3.4 đều đo sai.
+	if r := g.Prog.Realm(level); g.Prog.IsTien(r) {
+		p.TienKhi = math.Max(p.TienKhi, g.Prog.TienEntry(g.Prog.TienIndex(r)))
+	}
 	p.Ring.Count = swords
 	p.Pos = at
 	p.InvulnUntil = g.Time + 1e9 // không để họ chém nhau chết giữa lúc đang đo

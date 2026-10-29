@@ -45,6 +45,9 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// n = 1 → giữ bất tử. Công cụ đo cần giữ nguyên cảnh NẶNG NHẤT suốt pha đo;
 			// để chúng chém chết nhau thì sau vài giây cả phòng về Luyện Khí 1 kiếm và số
 			// đo thành vô nghĩa (đã dính đúng lỗi này một lần).
+		case "tien":
+			// Nạp Tiên khí để thử luật Tiên giới (đổi dư sang Uy Danh, cướp đoạt §3.4).
+			r.G.GainTienKhi(p, float64(max(1, d.N)))
 		case "sword":
 			r.G.AddSwords(p, max(1, d.N))
 		case "die":
