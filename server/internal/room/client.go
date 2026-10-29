@@ -54,6 +54,13 @@ func NewClient(c Conn, debug bool) *Client {
 }
 
 // SetInput is called from the connection goroutine; the room applies it on its next tick.
+// resetKnown xoá trí nhớ "đã gửi gì cho client này" — gọi khi vào phòng và khi sang khu
+// khác, vì sang khu là đổi hẳn bản đồ, mọi id cũ không còn nghĩa gì.
+func (c *Client) resetKnown() {
+	c.knownPlayers, c.knownMonsters = map[uint32]bool{}, map[uint32]bool{}
+	c.knownItems = c.knownItems[:0]
+}
+
 func (c *Client) SetInput(in netproto.Input) {
 	c.inMu.Lock()
 	defer c.inMu.Unlock()

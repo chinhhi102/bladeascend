@@ -35,6 +35,12 @@ type Game struct {
 	Players   map[uint32]*Player
 	Monsters  map[uint32]*Monster
 	Items     map[uint32]*Item
+	// ZoneIndex: khu này là khu thứ mấy của phòng (spec §8.0). Phòng đặt lúc dựng.
+	ZoneIndex int
+	// GateRouter / MoveToZone: do phòng cài, để cổng dịch chuyển đi được sang khu khác.
+	// Khu không biết gì về khu khác — mọi việc qua ranh giới đều đi qua hai hàm này.
+	GateRouter func(fromZone int, gate world.Gate) (GateDest, bool)
+	MoveToZone func(p *Player, zone int, at Vec)
 	// itemSlots: vật phẩm theo chỉ số dày đặc; freeSlots là các ô trống để cấp lại.
 	itemSlots []*Item
 	freeSlots []int
@@ -175,6 +181,27 @@ func (g *Game) RemovePlayer(id uint32) {
 			break
 		}
 	}
+}
+
+// Detach gỡ nhân vật khỏi thế giới này mà KHÔNG xoá trạng thái của họ — dùng khi chuyển
+// sang khu khác (spec §8.0). Khác `RemovePlayer` ở chỗ người gọi giữ lại con trỏ Player và
+// gắn nó vào khu mới, nên kiếm, buff, nứt, Tiên khí, Uy Danh đều nguyên vẹn.
+func (g *Game) Detach(id uint32) *Player {
+	p, ok := g.Players[id]
+	if !ok {
+		return nil
+	}
+	g.RemovePlayer(id)
+	return p
+}
+
+// Attach nhận một nhân vật từ khu khác sang. Hình học vòng kiếm và khung nhìn tính lại theo
+// bản đồ mới; vị trí do người gọi đặt trước.
+func (g *Game) Attach(p *Player) {
+	g.Players[p.ID] = p
+	g.order = append(g.order, p.ID)
+	p.Pos = g.resolveBlocking(p.Pos, g.BodyR(p))
+	g.refreshDerived(p)
 }
 
 // SetInput applies a client input (already validated by the caller).

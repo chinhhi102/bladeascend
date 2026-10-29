@@ -65,6 +65,8 @@ func MoodIndex(name string) uint8 {
 type Transit struct {
 	Dest     Vec
 	DestGate int
+	// DestZone: khu đích (spec §8.4 — 20 cổng của cả thế giới nằm chung một mạng).
+	DestZone int
 	OutAt    float64 // time the player reappears at Dest
 	DoneAt   float64 // time transit (immunity from combat) ends
 	Arrived  bool

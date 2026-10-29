@@ -101,21 +101,21 @@ func main() {
 	}
 
 	// Ép M người lên Đạo Tổ đủ kiếm và đứng chụm lại — đây là cảnh nặng nhất của game.
-	top := r.G.Prog.TienLevel(len(cfg.Cultivation.TienRealms) - 1)
-	maxSwords := r.G.Prog.MaxSwords(r.G.Prog.Realm(top))
+	top := r.Zone(0).G.Prog.TienLevel(len(cfg.Cultivation.TienRealms) - 1)
+	maxSwords := r.Zone(0).G.Prog.MaxSwords(r.Zone(0).G.Prog.Realm(top))
 	i := 0
 	var forced []*game.Player
 	center := game.Vec{X: cfg.Room.MapSize / 2, Y: cfg.Room.MapSize / 2}
-	for _, p := range r.G.Players {
+	for _, p := range r.Zone(0).G.Players {
 		if i >= *tien {
 			break
 		}
-		r.G.ForceState(p, top, maxSwords, center.Add(game.Vec{X: float64(i%4) * 300, Y: float64(i/4) * 300}))
+		r.Zone(0).G.ForceState(p, top, maxSwords, center.Add(game.Vec{X: float64(i%4) * 300, Y: float64(i/4) * 300}))
 		forced = append(forced, p)
 		i++
 	}
 	fmt.Printf("Phòng: %d nhân vật (%d bot), %d người Đạo Tổ %d kiếm, %d phòng\n",
-		len(r.G.Players), len(r.G.Players)-*players, i, maxSwords, len(rooms))
+		len(r.Zone(0).G.Players), len(r.Zone(0).G.Players)-*players, i, maxSwords, len(rooms))
 
 	for k := 0; k < int(3/dt); k++ { // 3 giây cho vật phẩm mọc đầy rồi mới bấm giờ
 		r.Step(dt)
@@ -143,14 +143,14 @@ func main() {
 		// Giữ nhóm Đạo Tổ ở nguyên chỗ và nguyên số kiếm: ta đang đo cảnh nặng nhất, không
 		// phải đo xem họ mài nhau bao lâu thì hết kiếm.
 		for idx, p := range forced {
-			r.G.ForceState(p, top, maxSwords, center.Add(game.Vec{X: float64(idx%4) * 300, Y: float64(idx/4) * 300}))
+			r.Zone(0).G.ForceState(p, top, maxSwords, center.Add(game.Vec{X: float64(idx%4) * 300, Y: float64(idx/4) * 300}))
 		}
 		t0 := time.Now()
 		r.Step(dt)
 		durs = append(durs, float64(time.Since(t0).Microseconds())/1000)
 	}
 	wall := time.Since(start).Seconds()
-	report(cs, durs, wall, *secs, len(r.G.Players))
+	report(cs, durs, wall, *secs, len(r.Zone(0).G.Players))
 }
 
 func report(cs []*client, durs []float64, wall, secs float64, n int) {

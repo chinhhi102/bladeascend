@@ -3,10 +3,10 @@ package room
 
 import (
 	"log"
+	"sort"
 	"math/rand"
 	"time"
 
-	"kiemxoay/server/internal/bot"
 	"kiemxoay/server/internal/config"
 	"kiemxoay/server/internal/game"
 	"kiemxoay/server/internal/netproto"
@@ -24,42 +24,199 @@ type pendingRespawn struct {
 	at float64
 }
 
+// Room là MỘT thế giới gồm nhiều khu vực (spec §8.0). Mỗi khu có bản đồ riêng, mô phỏng
+// riêng, người chơi riêng; đi giữa các khu chỉ bằng cổng dịch chuyển (§8.4).
+//
+// Những gì tính chung cả thế giới nằm ở đây: bảng xếp hạng phòng, danh hiệu, số bot cần
+// giữ, hàng chờ hồi sinh. Những gì thuộc về một khu nằm trong Zone.
 type Room struct {
-	ID        string
-	Created   time.Time
-	// stepMs: thời gian xử lý một tick, gửi kèm snapshot cho overlay đo (spec §13.6).
-	stepMs    float32
-	// itemBuf dùng lại giữa các lần dựng snapshot — spec §13.4 cấm cấp phát mỗi tick.
-	itemBuf   []itemCand
-	cfg       *config.Config
-	G         *game.Game
-	mgr       *Manager
-	inbox     chan func()
-	clients   map[uint32]*Client
-	brains    map[uint32]*bot.Brain
+	ID      string
+	Created time.Time
+	cfg     *config.Config
+	zones   []*Zone
+	mgr     *Manager
+	inbox   chan func()
+	// transfers: người chờ sang khu khác, gom lại rồi chuyển một lượt ở RANH GIỚI TICK —
+	// lúc không khu nào đang chạy, nên không cần khoá (xem Zone).
+	transfers []transfer
 	respawns  []pendingRespawn
-	pending   []game.Event
 	recorder  Recorder
 	rng       *rand.Rand
-	tick      uint32
 	botTimer  float64
 	lbTimer   float64
 	emptyFor  float64
 	reserved  int // humans counted by the manager (guarded by Manager.mu)
 	closed    bool
 	snapEvery float64
-	snapAcc   float64
 	namesAt   float64
 	namesDue  bool
 }
 
-func newRoom(id string, cfg *config.Config, m *world.Map, mgr *Manager, rec Recorder, seed int64) *Room {
-	return &Room{
-		ID: id, Created: time.Now(), cfg: cfg, G: game.New(cfg, m, seed), mgr: mgr,
-		inbox: make(chan func(), 1024), clients: map[uint32]*Client{}, brains: map[uint32]*bot.Brain{},
+// transfer: chuyển một nhân vật sang khu khác ở ranh giới tick, giữ nguyên mọi trạng thái.
+type transfer struct {
+	playerID uint32
+	from     *Zone
+	to       *Zone
+	at       game.Vec
+	destGate int
+}
+
+func newRoom(id string, cfg *config.Config, maps []*world.Map, mgr *Manager, rec Recorder, seed int64) *Room {
+	r := &Room{
+		ID: id, Created: time.Now(), cfg: cfg, mgr: mgr,
+		inbox: make(chan func(), 1024),
 		recorder: rec, rng: rand.New(rand.NewSource(seed + 1)),
 		snapEvery: 1 / float64(cfg.Net.SnapshotHz),
 	}
+	for i, m := range maps {
+		r.zones = append(r.zones, newZone(i, cfg, m, seed+int64(i)*7919))
+	}
+	// Nối 20 cổng của cả thế giới thành MỘT mạng chung (spec §8.4). Khu không biết gì về
+	// khu khác; phòng là nơi duy nhất nhìn thấy toàn bộ, nên nó làm người chỉ đường.
+	for _, z := range r.zones {
+		z.G.ZoneIndex = z.Index
+		z.G.GateRouter = r.routeGate
+		z.G.MoveToZone = r.moveToZone
+	}
+	return r
+}
+
+// Zones là danh sách khu của phòng (chỉ đọc, dùng cho HUD và công cụ đo).
+func (r *Room) Zones() []*Zone { return r.zones }
+
+// Zone trả khu thứ i (test và công cụ đo dùng).
+func (r *Room) Zone(i int) *Zone { return r.zones[i] }
+
+// ZoneOf trả khu mà nhân vật này đang ở — test và công cụ đo dùng, vì người chơi được thả
+// vào khu ít người nhất nên không đoán trước được họ ở đâu.
+func (r *Room) ZoneOf(id uint32) *Zone { return r.zoneOf(id) }
+
+// Ranking xếp hạng CHUNG CẢ THẾ GIỚI (spec §8.0: bảng xếp hạng phòng và danh hiệu tính
+// chung, không theo khu) — gộp người của mọi khu rồi xếp theo Uy Danh, hoà thì theo EXP.
+func (r *Room) Ranking() []*game.Player {
+	if len(r.zones) == 1 {
+		return r.zones[0].G.Ranking()
+	}
+	var out []*game.Player
+	for _, z := range r.zones {
+		out = append(out, z.G.Ranking()...)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Score != out[j].Score {
+			return out[i].Score > out[j].Score
+		}
+		return out[i].TotalExp > out[j].TotalExp
+	})
+	return out
+}
+
+// routeGate chọn cổng ra trong MẠNG CHUNG của cả thế giới (spec §8.4): bước vào một cổng
+// thì ra ở một cổng bất kỳ khác — có thể cùng khu, có thể khu khác — nhưng không bao giờ
+// ra lại chính cổng vừa vào.
+//
+// Với 20 cổng chia đều 5 khu, khoảng 80% lần dịch chuyển sẽ sang khu khác, đúng như spec
+// mong muốn: cổng là đường duy nhất đi giữa các khu.
+func (r *Room) routeGate(fromZone int, gate world.Gate) (game.GateDest, bool) {
+	if !r.cfg.Gates.RandomExit || len(r.zones) <= 1 {
+		return game.GateDest{}, false // để khu tự xử theo luật cũ
+	}
+	type cand struct {
+		zone int
+		g    world.Gate
+	}
+	pool := make([]cand, 0, len(r.zones)*4)
+	for _, z := range r.zones {
+		for _, o := range z.G.Map.Gates {
+			if z.Index == fromZone && o.ID == gate.ID {
+				continue // không ra lại chính cổng vừa bước vào
+			}
+			if r.cfg.Gates.ExitPool == "other_zone" && z.Index == fromZone {
+				continue
+			}
+			pool = append(pool, cand{z.Index, o})
+		}
+	}
+	if len(pool) == 0 {
+		return game.GateDest{}, false
+	}
+	c := pool[r.rng.Intn(len(pool))]
+	return game.GateDest{Zone: c.zone, GateID: c.g.ID, At: game.Vec{X: c.g.X, Y: c.g.Y}}, true
+}
+
+// moveToZone xếp hàng chuyển nhân vật sang khu khác; việc bê thật làm ở ranh giới tick.
+func (r *Room) moveToZone(p *game.Player, zone int, at game.Vec) {
+	if zone < 0 || zone >= len(r.zones) {
+		return
+	}
+	from := r.zoneOf(p.ID)
+	if from == nil || from.Index == zone {
+		return
+	}
+	r.queueTransfer(transfer{playerID: p.ID, from: from, to: r.zones[zone], at: at})
+}
+
+// Send chuyển một nhân vật sang khu khác ở ranh giới tick (spec §8.0, §8.4). Mọi trạng thái
+// — kiếm, buff, nứt, Tiên khí, Uy Danh — giữ nguyên; chỉ đổi bản đồ và vị trí.
+func (r *Room) queueTransfer(t transfer) { r.transfers = append(r.transfers, t) }
+
+// applyTransfers chạy SAU khi mọi khu đã tick xong, nên không khu nào đang đọc dữ liệu của
+// mình lúc nhân vật bị bê đi.
+func (r *Room) applyTransfers() {
+	if len(r.transfers) == 0 {
+		return
+	}
+	for _, t := range r.transfers {
+		p, ok := t.from.G.Players[t.playerID]
+		if !ok {
+			continue
+		}
+		c := t.from.clients[t.playerID]
+		b := t.from.brains[t.playerID]
+		t.from.G.Detach(t.playerID)
+		delete(t.from.clients, t.playerID)
+		delete(t.from.brains, t.playerID)
+
+		p.Pos = t.at
+		t.to.G.Attach(p)
+		if c != nil {
+			t.to.clients[t.playerID] = c
+			c.resetKnown()
+			c.send(r.welcomeFor(t.to, p, c))
+		}
+		if b != nil {
+			t.to.brains[t.playerID] = b
+		}
+	}
+	r.transfers = r.transfers[:0]
+}
+
+// zoneOf trả về khu mà nhân vật này đang ở, nil nếu không còn trong phòng.
+func (r *Room) zoneOf(id uint32) *Zone {
+	for _, z := range r.zones {
+		if _, ok := z.G.Players[id]; ok {
+			return z
+		}
+	}
+	return nil
+}
+
+// thinnestZone chọn khu ÍT NGƯỜI THẬT nhất để thả người mới vào (spec §8.0); hoà thì bốc
+// ngẫu nhiên để hai người vào cùng lúc không dồn hết vào một khu.
+func (r *Room) thinnestZone() *Zone {
+	best := []*Zone{}
+	low := 1 << 30
+	for _, z := range r.zones {
+		switch n := z.Humans(); {
+		case n < low:
+			low, best = n, []*Zone{z}
+		case n == low:
+			best = append(best, z)
+		}
+	}
+	if len(best) == 0 {
+		return nil
+	}
+	return best[r.rng.Intn(len(best))]
 }
 
 // Do runs fn on the room goroutine.
@@ -93,11 +250,13 @@ func (r *Room) Pong(c *Client, stamp float64) {
 	}
 }
 
-// Clients là danh sách người đang trong phòng; cmd/stress dùng để bơm input giả.
+// Clients là danh sách người đang trong phòng (gộp mọi khu); cmd/stress dùng để bơm input.
 func (r *Room) Clients() []*Client {
-	out := make([]*Client, 0, len(r.clients))
-	for _, c := range r.clients {
-		out = append(out, c)
+	out := []*Client{}
+	for _, z := range r.zones {
+		for _, c := range z.clients {
+			out = append(out, c)
+		}
 	}
 	return out
 }
@@ -109,41 +268,55 @@ const slowStepMs = 25.0
 func (r *Room) Step(dt float64) {
 	stepStart := time.Now()
 	r.drainInbox()
-	r.applyInputs()
-	tIn := time.Now()
-	for _, b := range r.brains {
-		b.Update(r.G)
+	// Mỗi khu chạy độc lập: không khu nào đọc dữ liệu của khu khác trong một tick. Việc duy
+	// nhất đi qua ranh giới là chuyển người, và nó làm SAU khi mọi khu đã chạy xong.
+	for _, z := range r.zones {
+		r.stepZone(z, dt)
 	}
-	tBrains := time.Now()
-	r.G.Tick(dt)
-	tGame := time.Now()
-	r.tick++
-	r.pending = append(r.pending, r.G.DrainEvents()...)
-	r.handleDeaths()
+	r.applyTransfers()
 	r.updateBots(dt)
-	tDeaths := time.Now()
-	r.snapAcc += dt
-	if r.snapAcc >= r.snapEvery-1e-9 {
-		r.snapAcc -= r.snapEvery
-		r.broadcast()
-	}
-	tCast := time.Now()
-	if ms := float64(tCast.Sub(stepStart).Microseconds()) / 1000; ms > slowStepMs {
-		log.Printf("tick chậm %.1f ms: input %.1f · bot %.1f (%d) · game %.1f · chết %.1f · gửi %.1f (%d người)",
-			ms, float64(tIn.Sub(stepStart).Microseconds())/1000,
-			float64(tBrains.Sub(tIn).Microseconds())/1000, len(r.brains),
-			float64(tGame.Sub(tBrains).Microseconds())/1000,
-			float64(tDeaths.Sub(tGame).Microseconds())/1000,
-			float64(tCast.Sub(tDeaths).Microseconds())/1000, len(r.clients))
-	}
 	r.lbTimer += dt
 	if r.lbTimer >= 1/float64(r.cfg.Net.LeaderboardHz) {
 		r.lbTimer = 0
 		r.sendLeaderboards()
 	}
 	r.checkEmpty(dt)
+	if ms := float64(time.Since(stepStart).Microseconds()) / 1000; ms > slowStepMs {
+		log.Printf("tick chậm %.1f ms cả phòng (%d khu, %d người, %d bot)", ms, len(r.zones), r.Humans(), r.Bots())
+	}
+}
+
+// stepZone chạy một tick cho MỘT khu.
+func (r *Room) stepZone(z *Zone, dt float64) {
+	stepStart := time.Now()
+	r.applyInputs(z)
+	tIn := time.Now()
+	for _, b := range z.brains {
+		b.Update(z.G)
+	}
+	tBrains := time.Now()
+	z.G.Tick(dt)
+	tGame := time.Now()
+	z.tick++
+	z.pending = append(z.pending, z.G.DrainEvents()...)
+	r.handleDeaths(z)
+	tDeaths := time.Now()
+	z.snapAcc += dt
+	if z.snapAcc >= r.snapEvery-1e-9 {
+		z.snapAcc -= r.snapEvery
+		r.broadcast(z)
+	}
+	tCast := time.Now()
+	if ms := float64(tCast.Sub(stepStart).Microseconds()) / 1000; ms > slowStepMs {
+		log.Printf("tick chậm %.1f ms ở khu %s: input %.1f · bot %.1f (%d) · game %.1f · chết %.1f · gửi %.1f (%d người)",
+			ms, z.Name, float64(tIn.Sub(stepStart).Microseconds())/1000,
+			float64(tBrains.Sub(tIn).Microseconds())/1000, len(z.brains),
+			float64(tGame.Sub(tBrains).Microseconds())/1000,
+			float64(tDeaths.Sub(tGame).Microseconds())/1000,
+			float64(tCast.Sub(tDeaths).Microseconds())/1000, len(z.clients))
+	}
 	// Trung bình trượt để con số trên overlay không nhảy loạn (spec §13.6).
-	r.stepMs = r.stepMs*0.9 + float32(time.Since(stepStart).Microseconds())/1000*0.1
+	z.stepMs = z.stepMs*0.9 + float32(time.Since(stepStart).Microseconds())/1000*0.1
 }
 
 func (r *Room) drainInbox() {
@@ -157,10 +330,10 @@ func (r *Room) drainInbox() {
 	}
 }
 
-func (r *Room) applyInputs() {
-	for id, c := range r.clients {
+func (r *Room) applyInputs(z *Zone) {
+	for id, c := range z.clients {
 		if seq, ang, mov, burn, ok := c.takeInput(); ok {
-			r.G.SetInput(id, seq, ang, mov, burn)
+			z.G.SetInput(id, seq, ang, mov, burn)
 		}
 	}
 }
@@ -169,86 +342,110 @@ func (r *Room) applyInputs() {
 func (r *Room) addHuman(c *Client, j netproto.Join) {
 	// Bảng phím test chỉ hiện cho người tự mở bằng ?debug=true (và server phải cho phép).
 	c.Debug = c.Debug || (r.mgr != nil && r.mgr.AllowDebug && j.Debug)
-	p := r.G.AddPlayer(game.SpawnOptions{Name: j.Name, Char: j.Char, GuestID: j.GuestID, Swords: r.cfg.Sword.StartCount})
+	// Vào trận ở khu ÍT NGƯỜI THẬT NHẤT (spec §8.0) — cả điểm của việc có 5 khu là để
+	// người mới không vừa vào đã bị dí.
+	z := r.thinnestZone()
+	p := z.G.AddPlayer(game.SpawnOptions{Name: j.Name, Char: j.Char, GuestID: j.GuestID, Swords: r.cfg.Sword.StartCount})
 	c.PlayerID = p.ID
-	c.knownPlayers, c.knownMonsters = map[uint32]bool{}, map[uint32]bool{}
-	c.knownItems = c.knownItems[:0]
-	r.clients[p.ID] = c
+	c.resetKnown()
+	z.clients[p.ID] = c
 	c.setRoom(r)
-	w := netproto.Welcome{T: "welcome", ID: p.ID, Room: r.ID, Map: r.G.Map.ID, TickHz: r.cfg.Net.TickHz, Time: r.G.Time, Debug: c.Debug, Proto: netproto.ProtocolVersion}
-	for id, st := range r.G.Obstacles {
-		if st.Broken || st.HP != r.G.Map.Obstacles[id].MaxHP {
+	c.send(r.welcomeFor(z, p, c))
+}
+
+// welcomeFor dựng gói welcome cho một nhân vật ở một khu. Gọi cả lúc vào trận lẫn lúc
+// chuyển khu — sang khu khác là đổi hẳn bản đồ, client phải tải lại từ đầu.
+func (r *Room) welcomeFor(z *Zone, p *game.Player, c *Client) netproto.Welcome {
+	w := netproto.Welcome{T: "welcome", ID: p.ID, Room: r.ID, Map: z.G.Map.ID,
+		TickHz: r.cfg.Net.TickHz, Time: z.G.Time, Debug: c.Debug, Proto: netproto.ProtocolVersion,
+		Zone: z.Index, ZoneName: z.Name}
+	for id, st := range z.G.Obstacles {
+		if st.Broken || st.HP != z.G.Map.Obstacles[id].MaxHP {
 			w.Obstacles = append(w.Obstacles, netproto.ObstacleState{ID: id, HP: st.HP, Broken: st.Broken})
 		}
 	}
-	c.send(w)
+	return w
 }
 
 // RemoveClient is called when a connection closes.
 func (r *Room) RemoveClient(c *Client) {
 	r.Do(func() {
-		if _, ok := r.clients[c.PlayerID]; !ok {
+		z := r.zoneOf(c.PlayerID)
+		if z == nil {
 			return
 		}
-		if p, ok := r.G.Players[c.PlayerID]; ok && !p.Dead {
-			r.record(p)
+		if _, ok := z.clients[c.PlayerID]; !ok {
+			return
 		}
-		r.detach(c)
+		if p, ok := z.G.Players[c.PlayerID]; ok && !p.Dead {
+			r.record(z, p)
+		}
+		r.detach(z, c)
 	})
 }
 
-func (r *Room) detach(c *Client) {
-	r.G.RemovePlayer(c.PlayerID)
-	delete(r.clients, c.PlayerID)
+func (r *Room) detach(z *Zone, c *Client) {
+	z.G.RemovePlayer(c.PlayerID)
+	delete(z.clients, c.PlayerID)
 	c.PlayerID = 0
 	c.setRoom(nil)
 	r.mgr.release(r)
 }
 
 // handleDeaths sends the Tổng kết screen after the death animation and records the life.
-func (r *Room) handleDeaths() {
-	for _, p := range r.G.PlayerList() {
-		if !p.Dead || r.G.Time-p.DiedAt < r.cfg.Player.DeathAnimSecs {
+func (r *Room) handleDeaths(z *Zone) {
+	for _, p := range z.G.PlayerList() {
+		if !p.Dead || z.G.Time-p.DiedAt < r.cfg.Player.DeathAnimSecs {
 			continue
 		}
-		if c, ok := r.clients[p.ID]; ok {
+		if c, ok := z.clients[p.ID]; ok {
 			rank := r.rankOf(p)
-			r.record(p)
+			r.record(z, p)
 			c.send(netproto.Dead{T: "dead", KillerName: p.KillerName, KillerChar: p.KillerChar, PeakLevel: p.PeakLevel,
 				PeakExp: p.PeakExp, Kills: p.Kills, SurviveSec: p.DiedAt - p.SpawnedAt, Rank: rank,
 				Score: p.Score, Hits: p.Hits, ScoreBy: p.ScoreBy, BurnedExp: p.BurnedExp,
 				DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs})
-			r.detach(c)
+			r.detach(z, c)
 			continue
 		}
-		if b, ok := r.brains[p.ID]; ok && !r.respawnQueued(b.ID) {
-			r.onBotDeath(p)
+		if b, ok := z.brains[p.ID]; ok && !r.respawnQueued(b.ID) {
+			r.onBotDeath(z, p)
 		}
 	}
 }
 
-func (r *Room) record(p *game.Player) {
+func (r *Room) record(z *Zone, p *game.Player) {
 	if p.IsBot || r.recorder == nil {
 		return
 	}
 	end := p.DiedAt
 	if !p.Dead {
-		end = r.G.Time
+		end = z.G.Time
 	}
 	err := r.recorder.Record(store.Life{GuestID: p.GuestID, Name: p.Name, Character: p.Char,
 		Score: p.Score, Hits: p.Hits, PeakExp: p.PeakExp, PeakLevel: p.PeakLevel, Kills: p.Kills,
 		DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs,
-		SurviveSecs: end - p.SpawnedAt, Map: r.G.Map.ID, EndedAt: time.Now().Unix()})
+		SurviveSecs: end - p.SpawnedAt, Map: z.G.Map.ID, EndedAt: time.Now().Unix()})
 	if err != nil {
 		log.Printf("record life: %v", err)
 	}
 }
 
 // rankOf is the player's 1-based rank in the room board (spec §11.2: Uy Danh, then exp).
-func (r *Room) rankOf(p *game.Player) int { return r.G.RankOf(p) }
+// Xếp hạng tính CHUNG CẢ THẾ GIỚI, không theo khu (spec §8.0).
+func (r *Room) rankOf(p *game.Player) int {
+	rank := 1
+	for _, o := range r.Ranking() {
+		if o.ID == p.ID {
+			return rank
+		}
+		rank++
+	}
+	return rank
+}
 
 func (r *Room) checkEmpty(dt float64) {
-	if len(r.clients) > 0 || r.mgr.humansOf(r) > 0 {
+	if r.Humans() > 0 || r.mgr.humansOf(r) > 0 {
 		r.emptyFor = 0
 		return
 	}
@@ -258,8 +455,20 @@ func (r *Room) checkEmpty(dt float64) {
 	}
 }
 
-// Humans returns connected human players (room goroutine only).
-func (r *Room) Humans() int { return len(r.clients) }
+// Humans returns connected human players across every zone (room goroutine only).
+func (r *Room) Humans() int {
+	n := 0
+	for _, z := range r.zones {
+		n += len(z.clients)
+	}
+	return n
+}
 
-// Bots returns the number of bot brains, including bots waiting to respawn.
-func (r *Room) Bots() int { return len(r.brains) }
+// Bots returns the number of bot brains across every zone, including bots waiting to respawn.
+func (r *Room) Bots() int {
+	n := 0
+	for _, z := range r.zones {
+		n += len(z.brains)
+	}
+	return n
+}
