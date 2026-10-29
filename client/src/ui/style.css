@@ -256,3 +256,15 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
   color: #bfe9ff; background: rgba(0, 0, 0, 0.45); padding: 4px 7px; border-radius: 6px;
   white-space: pre; pointer-events: none;
 }
+
+/* Nút kỹ năng (spec §6.3): icon + số lượt, xám hẳn khi hết lượt. */
+.skill-btn {
+  position: absolute; right: 18px; bottom: 150px;
+  width: 76px; height: 76px; border-radius: 50%;
+  border: 3px solid rgba(0,0,0,.65); background: rgba(40,28,70,.85); color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0; pointer-events: auto; cursor: pointer; user-select: none;
+}
+.skill-btn .skill-icon { font-size: 26px; line-height: 1; }
+.skill-btn .skill-count { font-size: 15px; font-weight: 700; color: #ffe9a8; }
+.skill-btn.empty { opacity: .45; filter: grayscale(1); }

@@ -21,6 +21,10 @@ export interface PlayerState {
   /** vx/vy: vận tốc, chỉ có ở gói gửi cho CHÍNH MÌNH và chỉ khi đang trượt trên băng (§8.0). */
   vx?: number;
   vy?: number;
+  /** skc: số lượt kỹ năng đang giữ, chỉ gửi cho chính mình (spec §6.3). */
+  skc?: number;
+  /** st: bit trạng thái do kỹ năng gây ra (spec §6.3) — xem STATUS. */
+  st?: number;
   ti?: number; // room title badge 1..3 (spec §11.3)
   th?: number; // Tiên khí đang có (spec §3.4), chỉ gửi cho chính mình
   tn?: number; // Tiên khí cần cho cảnh giới sau; 0 = đã Đạo Tổ
@@ -55,6 +59,8 @@ export interface GameEvent {
   y: number;
   n?: number;
   s?: string;
+  /** f: một số thực đi kèm — ví dụ số giây của trạng thái (spec §6.3). */
+  f?: number;
 }
 
 export interface Snapshot {
@@ -78,7 +84,10 @@ export interface Snapshot {
  * Không có nó thì client mới gặp server cũ sẽ đọc rác rồi **đứng hình không báo gì** — đã
  * dính đúng một lần: client nói `mood` là chỉ số, server cũ vẫn gửi chuỗi.
  */
-export const PROTOCOL_VERSION = 2;
+/** Thứ tự phải khớp game.StatusNames bên server (spec §6.3). */
+export const STATUS = ['slow', 'root', 'blind', 'slip', 'brace', 'ghost', 'shell', 'dash'] as const;
+
+export const PROTOCOL_VERSION = 3;
 
 export interface Welcome {
   t: 'welcome';

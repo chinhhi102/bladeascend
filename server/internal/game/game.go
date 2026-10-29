@@ -19,6 +19,8 @@ type Event struct {
 	Y      float32 `msgpack:"y"`
 	N      int     `msgpack:"n,omitempty"`
 	S      string  `msgpack:"s,omitempty"`
+	// F: một số thực đi kèm — ví dụ số giây của một trạng thái (spec §6.3).
+	F      float32 `msgpack:"f,omitempty"`
 	Global bool    `msgpack:"-"` // broadcast to the whole room regardless of AOI
 	To     uint32  `msgpack:"-"` // when set, only this player receives it
 }
@@ -48,6 +50,8 @@ type Game struct {
 	bladeBuf  []blade
 	// obsBuf: danh sách id vật cản gần, dùng lại để khỏi cấp phát mỗi bước di chuyển.
 	obsBuf    []int
+	// slicks: vệt trơn do Gánh Lướt rơi lại (spec §6.3).
+	slicks    []slick
 	Obstacles []ObstacleState
 	Grid      *world.Grid
 	Events    []Event
@@ -171,7 +175,10 @@ func (g *Game) resetPlayer(p *Player, level, swords int) {
 }
 
 // Respawn puts a dead player back at Luyện Khí 1 with 1 sword.
-func (g *Game) Respawn(p *Player, level, swords int) { g.resetPlayer(p, level, swords) }
+func (g *Game) Respawn(p *Player, level, swords int) {
+	g.onDeathClear(p)
+	g.resetPlayer(p, level, swords)
+}
 
 func (g *Game) RemovePlayer(id uint32) {
 	delete(g.Players, id)
@@ -243,6 +250,11 @@ func (g *Game) Omega(p *Player) float64 {
 	if p.HasBuff(BuffSpin, g.Time) {
 		w *= g.Cfg.Buffs["spin"].Mult
 	}
+	// Ru Ngủ làm vòng kiếm quay chậm 50% (spec §6.3) — khác Ru Ngủ làm chậm CHÂN, đây là
+	// chậm KIẾM, nên người bị ru vừa khó chạy vừa mài yếu hẳn.
+	if p.HasStatus(StSlow, g.Time) {
+		w *= g.Cfg.Skills.RuNguSpin
+	}
 	return w
 }
 
@@ -250,6 +262,7 @@ func (g *Game) Omega(p *Player) float64 {
 func (g *Game) Tick(dt float64) {
 	g.Time += dt
 	g.updateTimers()
+	g.moveMinions(dt)
 	g.movePlayers(dt)
 	g.moveMonsters(dt)
 	for _, p := range g.PlayerList() {
@@ -257,6 +270,7 @@ func (g *Game) Tick(dt float64) {
 			g.spinRing(p, dt)
 		}
 	}
+	g.updateSkillState(dt)
 	g.resolveSwordBody()
 	g.resolveSwordSword()
 	g.resolveSwordWorld()

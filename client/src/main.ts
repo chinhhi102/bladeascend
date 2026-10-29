@@ -62,6 +62,7 @@ class App {
     this.hud = new Hud(cfg, Input.isTouchDevice());
     this.input = new Input(stage);
     this.bindBurnButton();
+    this.bindSkillButton();
     this.conn = new Conn((m) => this.onMessage(m));
     this.thresholds = levelThresholds(cfg);
   }
@@ -71,6 +72,11 @@ class App {
     this.scene.app.ticker.add((t) => this.frame(t.deltaMS / 1000));
     window.setInterval(() => this.sendInput(), 1000 / this.cfg.net.tick_hz);
     window.addEventListener('keydown', (e) => {
+      if (this.playing && e.code === 'Space' && !e.repeat) {
+        this.skillPressed = true; // kỹ năng nhân vật (spec §6.3)
+        e.preventDefault();
+        return;
+      }
       if (this.playing && e.code === 'KeyM' && !e.repeat) {
         this.hud.minimap.toggle(); // spec §12.1
         return;
@@ -182,6 +188,11 @@ class App {
     const events = this.world.applySnapshot(m);
     this.scene.handleEvents(events);
     this.hud.onEvents(events, this.world.myId);
+    // Nút kỹ năng đọc số lượt từ chính snapshot của mình (spec §6.3).
+    const me = this.world.me();
+    if (me) {
+      this.hud.setSkill(this.profile?.char ?? '', me.skc ?? 0);
+    }
   }
 
   private async onWelcome(w: Welcome): Promise<void> {
@@ -206,6 +217,7 @@ class App {
     this.debug = w.debug;
     this.hud.setDebug(w.debug);
     this.hud.setChar(this.profile?.char ?? '');
+    this.hud.setSkill(this.profile?.char ?? '', 0);
     if (w.debug) {
       // ?debug=true: mở cửa sau cho console của trình duyệt (xem VFX, đếm thần thú...).
       const g = window as unknown as { kx?: unknown; __stats?: unknown };
@@ -256,6 +268,20 @@ class App {
     );
   }
 
+  /** skillPressed: nút kỹ năng vừa được bấm, chờ gói input kế tiếp mang đi (spec §6.3). */
+  private skillPressed = false;
+
+  /** bindSkillButton: nút kỹ năng trên điện thoại — bấm một phát, không phải giữ. */
+  private bindSkillButton(): void {
+    const b = this.hud.skillBtn;
+    const press = (e: Event): void => {
+      this.skillPressed = true;
+      e.preventDefault();
+    };
+    b.addEventListener('touchstart', press, { passive: false });
+    b.addEventListener('mousedown', press);
+  }
+
   /** bindBurnButton makes the on-screen 🔥 a hold button (spec §4.1c). */
   private bindBurnButton(): void {
     const b = this.hud.burnBtn;
@@ -275,7 +301,10 @@ class App {
       return;
     }
     const { angle, moving, burn } = this.input.read();
-    this.conn.send(this.world.makeInput(angle, moving, burn));
+    // Nút kỹ năng gom lại từ lúc gửi gói trước: bấm giữa hai nhịp mạng cũng không mất.
+    const skill = this.skillPressed;
+    this.skillPressed = false;
+    this.conn.send(this.world.makeInput(angle, moving, burn, skill));
   }
 
   private debugKey(e: KeyboardEvent): void {

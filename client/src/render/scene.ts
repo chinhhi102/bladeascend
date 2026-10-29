@@ -1,4 +1,5 @@
 import { Application, Container } from 'pixi.js';
+import { BobaOverlay } from './boba';
 
 import { sound } from '../audio/sound';
 import { absorbable, banksTienKhi, cameraViewHeight, type GameConfig, realmName, realmOf, tienIndex } from '../config';
@@ -71,6 +72,8 @@ export class GameScene {
   /** Sự sống của bản đồ: mây trôi, lá rơi, đom đóm… chỉ ở client (spec §8.6 mục 5). */
   private readonly ambient = new Ambient();
   /** Màn đột phá Tiên giới: sóng xung kích + khựng hình + chớp trắng + chữ (spec §3.6). */
+  /** Lớp trân châu dính màn hình khi trúng kỹ năng Thằng Mập (spec §6.3). */
+  readonly boba = new BobaOverlay();
   private readonly breakthrough = new Breakthrough();
   private hitstopUntil = 0;
   private readonly auras = new Map<number, TienAura>();
@@ -126,7 +129,11 @@ export class GameScene {
     parent.appendChild(this.app.canvas);
     this.entities.sortableChildren = true;
     this.rings.sortableChildren = true;
-    this.app.stage.addChild(this.camera, this.breakthrough.overlay);
+    // Lớp trân châu nằm TRÊN cảnh nhưng vẫn DƯỚI HUD (HUD là DOM, không phải Pixi), đúng
+    // yêu cầu "không che HUD" của spec §6.3.
+    this.app.stage.addChild(this.camera, this.breakthrough.overlay, this.boba.root);
+    this.boba.resize(this.app.screen.width, this.app.screen.height);
+    this.app.renderer.on('resize', (w: number, h: number) => this.boba.resize(w, h));
   }
 
   setWorld(w: ClientWorld): void {
@@ -191,6 +198,7 @@ export class GameScene {
     const t0 = performance.now();
     const now = t0 / 1000;
     this.breakthrough.update(now, this.app.screen.width, this.app.screen.height);
+    this.boba.update(now, dt);
     if (now < this.hitstopUntil) {
       return; // khựng hình: đóng băng cảnh một nhịp rất ngắn cho cú đột phá "nặng" hơn
     }
@@ -680,6 +688,18 @@ export class GameScene {
         break;
       case 'Breakthrough':
         this.onBreakthrough(e, size, mine, now);
+        break;
+      case 'Blinded':
+        // Server chỉ gửi event này cho ĐÚNG người bị trúng (spec §6.3), nên không cần lọc
+        // thêm; thời gian lấy thẳng từ server để client không tự đoán.
+        this.boba.hit(e.f ?? 3.5, now, this.app.screen.width, this.app.screen.height);
+        sound.play('sword_hit_body');
+        break;
+      case 'SkillCast':
+        // Bong bóng thoại tấu hài khi dùng kỹ năng (spec §6.3).
+        if (e.s && STR.skillLines[e.s]) {
+          this.players.get(e.a ?? 0)?.showBubble(STR.skillLines[e.s], now);
+        }
         break;
       case 'RealmDrop':
         {

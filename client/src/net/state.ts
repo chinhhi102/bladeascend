@@ -191,7 +191,7 @@ export class ClientWorld {
   // ---- input & prediction ------------------------------------------------
 
   /** Records and returns the input message to send this network tick. */
-  makeInput(angle: number, moving: boolean, burn = false): Record<string, unknown> {
+  makeInput(angle: number, moving: boolean, burn = false, skill = false): Record<string, unknown> {
     const inp = { seq: ++this.seq, angle: quantize(angle), moving, burn };
     this.pending.push(inp);
     const me = this.me();
@@ -202,7 +202,12 @@ export class ClientWorld {
     }
     this.lastInput = inp;
     this.lastSendAt = performance.now();
-    return { t: 'in', s: inp.seq, a: Math.round((inp.angle / (2 * Math.PI)) * 256) & 255, m: moving, b: burn };
+    const msg: Record<string, unknown> = { t: 'in', s: inp.seq, a: Math.round((inp.angle / (2 * Math.PI)) * 256) & 255, m: moving, b: burn };
+    if (skill) {
+      // Chỉ gửi khi thật sự bấm: đây là sự kiện một lần, không phải trạng thái giữ phím.
+      msg.sk = true;
+    }
+    return msg;
   }
 
   private reconcile(ack: number): void {

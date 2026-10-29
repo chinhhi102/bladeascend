@@ -7,8 +7,12 @@ import (
 
 // updateBots implements the bot fill rules of spec §9.3.
 //
-// Trần người + bot vẫn tính cho **cả phòng**, không phải cho từng khu (spec v5 mục 8): thế
-// giới 5 khu là để bớt cảnh vừa vào đã bị dí, không phải để nhân năm số nhân vật.
+// Hai con số, hai mục đích khác nhau:
+//   - `room.bot_fill_target` là **trần của cả phòng** (người + bot). Thế giới 5 khu là để
+//     bớt cảnh vừa vào đã bị dí, nhưng tổng số nhân vật vẫn phải có trần, nếu không mỗi
+//     phòng thành năm phòng và tick server tăng gấp năm.
+//   - `room.zone_min_chars` là **sàn của từng khu**. Không có nó thì bot dồn vào vài khu
+//     và vẫn có khu trống trơn — người chơi qua cổng sang đó thấy một thế giới chết.
 func (r *Room) updateBots(dt float64) {
 	r.processRespawns()
 	r.botTimer += dt
@@ -16,14 +20,38 @@ func (r *Room) updateBots(dt float64) {
 		return
 	}
 	r.botTimer = 0
-	humans, bots := r.Humans(), r.Bots()
+	room := r.Humans() + r.Bots()
 	target := r.cfg.Room.BotFillTarget
-	if humans >= r.cfg.Room.MaxHumans || humans+bots >= target {
+	// Chỉ `bot_fill_target` mới chặn việc sinh bot. `max_humans` là trần NGƯỜI THẬT, hai
+	// con số khác nhau: 20 người + 40 bot vẫn đúng ý "tối đa 20 người, tổng 60 nhân vật".
+	// Bản cũ dừng sinh bot ngay khi đủ 20 người, nên phòng đông người lại thành phòng vắng.
+	if room >= target {
 		return
 	}
-	for i := 0; i < min(target-humans-bots, r.cfg.Bots.SpawnBatch); i++ {
-		r.spawnBot()
+	// Ưu tiên khu nào chưa đạt sàn; hết việc đó thì rải đều cho tới khi chạm trần phòng.
+	budget := min(target-room, r.cfg.Bots.SpawnBatch)
+	for i := 0; i < budget; i++ {
+		z := r.zoneBelowFloor()
+		if z == nil {
+			z = r.thinnestByCount()
+		}
+		level, swords := r.randomBotLevel()
+		r.spawnBotIn(z, level, swords)
 	}
+}
+
+// zoneBelowFloor trả về khu thiếu người nhất trong số các khu chưa đạt sàn, nil nếu đủ cả.
+func (r *Room) zoneBelowFloor() *Zone {
+	var worst *Zone
+	for _, z := range r.zones {
+		if z.Count() >= r.cfg.Room.ZoneMinChars {
+			continue
+		}
+		if worst == nil || z.Count() < worst.Count() {
+			worst = z
+		}
+	}
+	return worst
 }
 
 func (r *Room) spawnBot() *game.Player {

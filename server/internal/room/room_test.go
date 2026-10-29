@@ -50,8 +50,8 @@ func stepSecs(r *Room, secs float64) {
 	}
 }
 
-func TestBotFillToTwenty(t *testing.T) {
-	m, _, _ := testManager(t)
+func TestBotFillToTarget(t *testing.T) {
+	m, _, cfg := testManager(t)
 	cs := joinN(m, 5)
 	r := m.AllRooms()[0]
 	r.Step(1.0 / 30)
@@ -59,8 +59,10 @@ func TestBotFillToTwenty(t *testing.T) {
 		r.Zone(0).G.Players[c.PlayerID].InvulnUntil = 1e9 // keep humans alive while bots fill
 	}
 	stepSecs(r, 30)
-	if r.Humans() != 5 || r.Bots() != 15 {
-		t.Fatalf("humans %d bots %d, want 5 and 15", r.Humans(), r.Bots())
+	// Trần cả phòng là `room.bot_fill_target`; bot lấp cho đủ phần còn lại.
+	wantBots := cfg.Room.BotFillTarget - 5
+	if r.Humans() != 5 || r.Bots() != wantBots {
+		t.Fatalf("có %d người %d bot, muốn 5 và %d (trần phòng %d)", r.Humans(), r.Bots(), wantBots, cfg.Room.BotFillTarget)
 	}
 	joinN(m, 3)
 	r.Step(1.0 / 30)
@@ -68,8 +70,9 @@ func TestBotFillToTwenty(t *testing.T) {
 		p.InvulnUntil = 1e9 // v3 swords are lethal to Luyện Khí: keep everyone alive for this check
 	}
 	stepSecs(r, 5)
-	if r.Bots() != 15 {
-		t.Fatalf("joining humans must not remove bots: bots = %d", r.Bots())
+	// Người vào thêm KHÔNG được đuổi bot đang có; chỉ dừng sinh thêm khi chạm trần phòng.
+	if r.Bots() != wantBots {
+		t.Fatalf("người vào thêm mà bot bị bớt: %d bot, muốn giữ nguyên %d", r.Bots(), wantBots)
 	}
 }
 

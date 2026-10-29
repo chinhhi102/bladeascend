@@ -37,12 +37,16 @@ func (g *Game) swordTouchesCircle(owner *Player, c Vec, r float64) (int, bool) {
 func (g *Game) resolveSwordBody() {
 	players := g.PlayerList()
 	for _, b := range players {
-		if !g.canFight(b) || b.Invulnerable(g.Time) || g.Shielded(b) {
+		// Rụt trong mai thì không bị chém thân (spec §6.3).
+		if !g.canFight(b) || b.Invulnerable(g.Time) || g.Shielded(b) || b.HasStatus(StShell, g.Time) {
 			continue
 		}
 		for _, a := range players {
 			if a == b || !g.canFight(a) {
 				continue
+			}
+			if a.IsMinion {
+				continue // đàn em chỉ mài kiếm, không chém thân được (spec §6.3)
 			}
 			if _, hit := g.swordTouchesCircle(a, b.Pos, g.BodyR(b)); hit {
 				g.applyBodyHit(a, b)
@@ -120,6 +124,7 @@ func (g *Game) kill(a, b *Player) {
 	a.Kills++
 	victimRank := g.RankOf(b)
 	b.Dead, b.DiedAt, b.KilledBy = true, g.Time, a.ID
+	g.onDeathClear(b)
 	b.KillerName, b.KillerChar = a.Name, a.Char
 	b.Moving = false
 	g.setMood(b, MoodDeath, pc.DeathAnimSecs)
@@ -137,6 +142,7 @@ func (g *Game) kill(a, b *Player) {
 func (g *Game) DebugKill(b *Player) {
 	g.dropDeathSwords(b)
 	b.Dead, b.DiedAt, b.KilledBy, b.Moving = true, g.Time, 0, false
+	g.onDeathClear(b)
 	b.KillerName, b.KillerChar = "", ""
 	g.setMood(b, MoodDeath, g.Cfg.Player.DeathAnimSecs)
 	g.emit(Event{Kind: "Death", B: b.ID, X: float32(b.Pos.X), Y: float32(b.Pos.Y)})
@@ -271,8 +277,13 @@ func (g *Game) sparseRingsTouch(a, b *Player) (Vec, bool) {
 // hardMult is the Cương Kiếm multiplier for p right now (spec v4.4 §6.2): "durability" cho
 // va kiếm, "damage" cho chém quái và vật cản. 1 khi không có buff.
 func (g *Game) hardMult(p *Player, which string) float64 {
+	// Gồng Cơ cộng dồn với Cương Kiếm (spec §6.3) — hai nguồn độ bền nhân vào nhau.
+	brace := 1.0
+	if which == "durability" && p.HasStatus(StBrace, g.Time) {
+		brace = g.Cfg.Skills.BraceDurability
+	}
 	if !p.HasBuff(BuffHard, g.Time) {
-		return 1
+		return brace
 	}
 	b := g.Cfg.Buffs["hard"]
 	m := b.DurabilityMult
@@ -280,9 +291,9 @@ func (g *Game) hardMult(p *Player, which string) float64 {
 		m = b.DamageMult
 	}
 	if m <= 0 {
-		return 1
+		return brace
 	}
-	return m
+	return m * brace
 }
 
 func (g *Game) clash(a, b *Player, at Vec) {
@@ -325,9 +336,13 @@ func (g *Game) breakSwords(p *Player, n int) {
 	if n <= 0 {
 		return
 	}
+	if p.HasStatus(StShell, g.Time) {
+		return // đang rụt trong mai: không bị bể kiếm (spec §6.3)
+	}
 	lost := g.LoseSwords(p, n)
 	if lost > 0 {
 		p.breakPending += lost
+		g.noteSwordLoss(p, lost) // sổ cho Bánh Bao Thần (§6.3)
 		if p.Ring.Count == 0 {
 			g.emote(p, "no_swords") // spec §5.2: bị tước sạch kiếm → hoảng loạn
 		} else {

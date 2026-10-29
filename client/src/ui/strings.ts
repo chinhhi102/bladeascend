@@ -10,6 +10,32 @@ export const STR = {
   findingRoom: 'Đang tìm phòng...',
   connecting: 'Đang kết nối máy chủ...',
   /** Tên 5 khu, khớp với room.ZoneNames bên server (spec §8.0). */
+  /** Tên 10 kỹ năng (spec §6.3), khớp key nhân vật bên server. */
+  skillNames: {
+    a_hon: 'Bánh Bao Thần',
+    ba_tam_loa: 'Loa Phường',
+    ong_ba_vong: 'Ru Ngủ',
+    dai_ca_dep: 'Gọi Đàn Em',
+    map_tra_sua: 'Phun Trân Châu',
+    co_ba_ganh: 'Gánh Lướt',
+    su_phu_mi: 'Lưới Mì',
+    be_ti: 'Gồng Cơ',
+    shipper: 'Giao Hỏa Tốc',
+    cu_rua: 'Rụt Cổ',
+  } as Record<string, string>,
+  /** Câu thoại tấu hài khi dùng kỹ năng (spec §6.3). */
+  skillLines: {
+    a_hon: 'Ăn miếng bánh bao, kiếm về như mới!',
+    ba_tam_loa: 'A lô a lô, tránh ra cho bà đi!',
+    ong_ba_vong: 'À ơi… ngủ đi con…',
+    dai_ca_dep: 'Tụi bay đâu, lên đây!',
+    map_tra_sua: 'Nếm thử trân châu nhà tao!',
+    co_ba_ganh: 'Tránh đường, hàng nóng!',
+    su_phu_mi: 'Mì gói ba phút, trói mày ba giây!',
+    be_ti: 'Gồng! Không đứa nào đẩy nổi!',
+    shipper: 'Đơn gấp, xin phép đi xuyên!',
+    cu_rua: 'Thiền… các ngươi cứ chém đi.',
+  } as Record<string, string>,
   zoneNames: ['Thiên Đình', 'Linh Sơn Cốc', 'Trúc Lâm Mê Cung', 'Phàm Trấn', 'Băng Nguyệt Hồ'],
   zoneListTitle: 'Khu vực',
   zoneEntered: (name: string): string => `— ${name} —`,

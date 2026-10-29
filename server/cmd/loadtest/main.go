@@ -136,6 +136,24 @@ func main() {
 	fmt.Printf("Phòng: %d nhân vật (%d bot) rải %d khu, %d người Đạo Tổ %d kiếm, %d phòng\n",
 		total, total-*players, len(r.Zones()), i, maxSwords, len(rooms))
 
+	// Chờ phòng lấp đủ bot rồi mới bấm giờ: trần phòng là `room.bot_fill_target` (60), mà
+	// bot sinh theo nhịp `bots.spawn_every_secs` nên cần tới vài chục giây game. Đo lúc
+	// phòng mới có người thật thì con số đẹp mà vô nghĩa.
+	for k := 0; k < int(120/dt); k++ {
+		r.Step(dt)
+		full := true
+		for _, z := range r.Zones() {
+			full = full && z.Count() >= cfg.Room.ZoneMinChars
+		}
+		if full && r.Humans()+r.Bots() >= cfg.Room.BotFillTarget {
+			break
+		}
+	}
+	total = 0
+	for _, z := range r.Zones() {
+		total += len(z.Game().Players)
+	}
+	fmt.Printf("Đã lấp đầy: %d nhân vật (%d người, %d bot)\n", total, r.Humans(), r.Bots())
 	for k := 0; k < int(3/dt); k++ { // 3 giây cho vật phẩm mọc đầy rồi mới bấm giờ
 		r.Step(dt)
 	}
