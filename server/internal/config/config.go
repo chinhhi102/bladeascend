@@ -178,6 +178,8 @@ type Obstacles struct {
 }
 
 type Zones struct {
+	// SnowMult: bờ tuyết ở Băng Nguyệt Hồ làm chậm (spec §8.0). Cùng cơ chế với bùn.
+	SnowMult           float64 `json:"snow_mult"`
 	MudMult             float64 `json:"mud_mult"`
 	WindWith            float64 `json:"wind_with"`
 	WindAgainst         float64 `json:"wind_against"`

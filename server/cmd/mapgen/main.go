@@ -343,38 +343,47 @@ func (b *builder) write(path, name, biome string) error {
 
 func main() {
 	out := flag.String("out", config.FindRepoFile("maps"), "output directory")
-	seed := flag.Int64("seed", 0, "chỉ sinh 1 bản đồ với seed này (0 = sinh cả 3 bản mặc định)")
-	png := flag.String("png", "", "xuất ảnh xem trước ra file này (dùng với --seed)")
+	seed := flag.Int64("seed", 0, "seed; 0 = seed mặc định theo từng khu")
+	zone := flag.Int("zone", -1, "chỉ sinh khu này (0..4); -1 = sinh cả 5 khu")
+	png := flag.String("png", "", "xuất ảnh xem trước ra file này (chỉ dùng với --zone)")
 	flag.Parse()
 	cfg := config.MustLoadDefault()
 	size := cfg.Room.MapSize
 	if err := os.MkdirAll(*out, 0o755); err != nil {
 		log.Fatal(err)
 	}
-	gens := []struct{ id, name, biome string }{
-		{"lang_tre", "Làng Tre", "grass"},
-		{"cho_dem", "Chợ Đêm", "concrete"},
-		{"nui_da", "Núi Đá", "dirt"},
+
+	want := make([]int, 0, len(zoneDefs))
+	if *zone >= 0 {
+		if *zone >= len(zoneDefs) {
+			log.Fatalf("khu %d không có (chỉ có 0..%d)", *zone, len(zoneDefs)-1)
+		}
+		want = append(want, *zone)
+	} else {
+		for i := range zoneDefs {
+			want = append(want, i)
+		}
 	}
-	if *seed != 0 {
-		gens = gens[:1]
-		gens[0] = struct{ id, name, biome string }{"preview", "Xem trước", "grass"}
+	if *png != "" && len(want) != 1 {
+		log.Fatal("--png phải đi kèm --zone (mỗi lần xem trước một khu)")
 	}
-	for i, gdef := range gens {
-		base := int64(1000 + i)
+
+	for _, zi := range want {
+		zd := zoneDefs[zi]
+		base := int64(1000 + zi)
 		if *seed != 0 {
 			base = *seed
 		}
-		b, used, err := buildWithRetries(size, base, cfg.Mapgen)
+		b, used, err := buildZoneWithRetries(size, base, cfg.Mapgen, zi)
 		if err != nil {
+			log.Fatalf("khu %d (%s): %v", zi, zd.name, err)
+		}
+		path := filepath.Join(*out, zd.id+".tmj")
+		if err := b.write(path, zd.name, zd.biome); err != nil {
 			log.Fatal(err)
 		}
-		path := filepath.Join(*out, gdef.id+".tmj")
-		if err := b.write(path, gdef.name, gdef.biome); err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("%s (seed %d): %d obstacles, %d zones, %d gates, %d đài → %s\n",
-			gdef.name, used, len(b.layers["obstacles"]), len(b.layers["zones"]),
+		fmt.Printf("khu %d %s (seed %d): %d vật cản, %d vùng, %d cổng, %d đài → %s\n",
+			zi, zd.name, used, len(b.layers["obstacles"]), len(b.layers["zones"]),
 			len(b.layers["gates"]), len(b.layers["altars"]), path)
 		if *png != "" {
 			if err := writePreview(b, *png); err != nil {
@@ -383,6 +392,24 @@ func main() {
 			fmt.Printf("ảnh xem trước → %s\n", *png)
 		}
 	}
+}
+
+// buildZoneWithRetries sinh một khu, thử lại với seed+1 khi kiểm tra không đạt (§8.1 bước 8).
+func buildZoneWithRetries(size float64, seed int64, mg config.Mapgen, zone int) (*builder, int64, error) {
+	tries := mg.MaxRetries
+	if tries <= 0 {
+		tries = 10
+	}
+	var last error
+	for i := 0; i < tries; i++ {
+		b := newBuilder(size, seed+int64(i))
+		if err := generateZone(b, mg, zone); err != nil {
+			last = err
+			continue
+		}
+		return b, seed + int64(i), nil
+	}
+	return nil, 0, fmt.Errorf("sinh thất bại sau %d lần (lỗi cuối: %w)", tries, last)
 }
 
 // buildWithRetries runs the §8.1 generator, retrying with seed+1 when validation fails

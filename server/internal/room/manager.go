@@ -73,8 +73,18 @@ func (m *Manager) zoneMaps() []*world.Map {
 	if n < 1 {
 		n = 1
 	}
+	byID := map[string]*world.Map{}
+	for _, mp := range m.maps {
+		byID[mp.ID] = mp
+	}
 	out := make([]*world.Map, 0, n)
 	for i := 0; i < n; i++ {
+		if mp, ok := byID[ZoneMapIDs[min(i, len(ZoneMapIDs)-1)]]; ok {
+			out = append(out, mp)
+			continue
+		}
+		// Chưa sinh đủ 5 bản đồ khu thì dùng lại bản có sẵn — thà năm khu giống nhau còn
+		// hơn không vào được game. Sinh đủ bằng `cd server && go run ./cmd/mapgen`.
 		out = append(out, m.maps[i%len(m.maps)])
 	}
 	return out

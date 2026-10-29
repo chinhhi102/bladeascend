@@ -35,6 +35,9 @@ type Zone struct {
 	snapAcc float64
 }
 
+// ZoneMapIDs: id bản đồ của từng khu, do `cmd/mapgen` sinh ra (spec §8.0).
+var ZoneMapIDs = []string{"thien_dinh", "linh_son_coc", "truc_lam", "pham_tran", "bang_nguyet_ho"}
+
 // ZoneNames là tên 5 khu theo đúng thứ tự bảng §8.0.
 var ZoneNames = []string{"Thiên Đình", "Linh Sơn Cốc", "Trúc Lâm Mê Cung", "Phàm Trấn", "Băng Nguyệt Hồ"}
 

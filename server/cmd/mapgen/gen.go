@@ -184,12 +184,25 @@ func (g *gen) bezierRoad(p0, p1, p2 Vec2, w float64) {
 	}
 }
 
+// addRoad ghi một đoạn đường và vẽ nền đá sáng cho nó.
+//
+// Vùng "road" là hình CHỮ NHẬT, nên một đoạn chéo không thể vẽ bằng một hộp bao: hộp bao
+// của đường chéo là cả hình vuông giữa hai đầu. Đã dính thật — một con phố chéo biến gần
+// hết Phàm Trấn thành mặt đường. Vì vậy đoạn chéo được cắt thành nhiều khúc ngắn, mỗi khúc
+// một hộp nhỏ ôm sát đường.
 func (g *gen) addRoad(a, b Vec2, w float64) {
 	g.roads = append(g.roads, seg{a: a, b: b, w: w})
-	// Vẽ đường bằng vùng "road" (nền đá sáng); client tô riêng, không chặn ai.
-	lo := Vec2{math.Min(a.X, b.X), math.Min(a.Y, b.Y)}
-	hi := Vec2{math.Max(a.X, b.X), math.Max(a.Y, b.Y)}
-	g.b.zone("road", lo.X-w/2, lo.Y-w/2, hi.X-lo.X+w, hi.Y-lo.Y+w, false)
+	steps := 1
+	if dx, dy := math.Abs(b.X-a.X), math.Abs(b.Y-a.Y); math.Min(dx, dy) > w/2 {
+		steps = int(math.Max(dx, dy)/(w/2)) + 1
+	}
+	for i := 0; i < steps; i++ {
+		p := Vec2{a.X + (b.X-a.X)*float64(i)/float64(steps), a.Y + (b.Y-a.Y)*float64(i)/float64(steps)}
+		q := Vec2{a.X + (b.X-a.X)*float64(i+1)/float64(steps), a.Y + (b.Y-a.Y)*float64(i+1)/float64(steps)}
+		lo := Vec2{math.Min(p.X, q.X), math.Min(p.Y, q.Y)}
+		hi := Vec2{math.Max(p.X, q.X), math.Max(p.Y, q.Y)}
+		g.b.zone("road", lo.X-w/2, lo.Y-w/2, hi.X-lo.X+w, hi.Y-lo.Y+w, false)
+	}
 }
 
 // ---- bước 3+4: nội dung 1 góc, xoay 4 phía, vật cản theo biome -------------
@@ -329,19 +342,13 @@ func (g *gen) terrainZones() {
 
 // gatesStep links each sect yard to the diagonally opposite one, plus a four-gate network on
 // the ring road (spec §8.1 bước 6).
+// gatesStep đặt **4 cổng** trong Thiên Đình, mỗi cổng ở một sân môn phái (spec §8.1 bước 6).
+//
+// Cả 20 cổng của thế giới thuộc MỘT mạng chung (§8.4), nên không còn chia "mạng sect/ring"
+// như bản cũ — cách cũ còn đặt tới 8 cổng ở khu này, lệch con số 4/khu của spec.
 func (g *gen) gatesStep() {
-	colors := []string{"purple", "blue", "orange"}
-	for q := 0; q < 2; q++ {
-		a := g.sectCentre(q)
-		b := g.sectCentre(q + 2) // đối diện chéo
-		net := fmt.Sprintf("sect%d", q)
-		g.gateNear(a, net, colors[q%len(colors)])
-		g.gateNear(b, net, colors[q%len(colors)])
-	}
-	c := g.size / 2
 	for q := 0; q < 4; q++ {
-		p := g.rot90(Vec2{c, c - g.cfg.RingRoadR}, q)
-		g.gateNear(p, "ring", "orange")
+		g.gateNear(g.sectCentre(q), gateNet, "gold")
 	}
 }
 
@@ -465,16 +472,5 @@ func (g *gen) floodFill(cell float64) (open, total, reachable int) {
 }
 
 // generate runs the whole §8.1 pipeline once.
-func generate(b *builder, cfg config.Mapgen) error {
-	g := &gen{b: b, cfg: cfg, size: b.size}
-	b.border()
-	g.frame()
-	g.roadsStep()
-	// Cổng đặt TRƯỚC vật cản: b.gate() ghi vùng giữ trống 300 quanh cổng, nên vật cản sinh
-	// sau sẽ tự tránh. Đặt sau thì không có cách nào bảo đảm luật "trống 300 quanh cổng".
-	g.gatesStep()
-	g.quadrantContent()
-	g.terrainZones()
-	g.decorStep()
-	return g.check()
-}
+// generate sinh khu 1 (Thiên Đình) theo §8.1; các khu khác xem generateZone trong zones.go.
+func generate(b *builder, cfg config.Mapgen) error { return generateZone(b, cfg, 0) }

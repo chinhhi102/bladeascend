@@ -118,6 +118,8 @@ export function zoneMult(cfg: GameConfig, map: Pick<GameMap, 'zones'>, p: Vec, d
     }
     if (z.k === 'mud' || z.k === 'water') {
       mult *= cfg.zones.mud_mult;
+    } else if (z.k === 'snow') {
+      mult *= cfg.zones.snow_mult;
     } else if (z.k === 'wind') {
       mult *= windMult(cfg, dir, z.wd ?? 0);
     }

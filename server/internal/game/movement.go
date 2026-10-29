@@ -63,6 +63,9 @@ func (g *Game) ZoneMult(pos Vec, dir Vec) float64 {
 		case "mud", "water":
 			// Ao/suối làm chậm như bùn (spec §8.6 mục 4); client vẽ mặt nước gợn sóng.
 			mult *= g.Cfg.Zones.MudMult
+		case "snow":
+			// Bờ tuyết quanh hồ băng (spec §8.0, khu Băng Nguyệt Hồ).
+			mult *= g.Cfg.Zones.SnowMult
 		case "wind":
 			mult *= g.windMult(dir, z.WindDir)
 		default:
