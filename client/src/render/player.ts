@@ -2,7 +2,7 @@ import { AnimatedSprite, Container, Graphics, Sprite, Text, type Texture } from 
 
 import type { GameConfig } from '../config';
 import type { PlayerFrame } from '../net/state';
-import { BUFFS, FLAG } from '../net/protocol';
+import { BUFFS, FLAG, statusOn } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { animShort, initials } from './catalog';
 import { BUFF_COLORS, charColor } from './palette';
@@ -50,6 +50,9 @@ export class PlayerSprite {
   private bubble: Container | null = null;
   private readonly animLabel = new Text({ text: '', style: { fontSize: 40, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x000000, width: 6 } } });
   private bubbleUntil = 0;
+  /** Vòng icon trạng thái quanh nhân vật (🚫 khi không nhặt được đồ — spec v5.5 §6.3). */
+  private readonly statusIcons = new Container();
+  private statusKey = '';
 
   constructor(
     private readonly cfg: GameConfig,
@@ -63,7 +66,7 @@ export class PlayerSprite {
     this.plate = new Nameplate(cfg, name, isMe, Input.isTouchDevice());
     // Hào quang Tiên giới KHÔNG còn nằm ở đây: nó chuyển sang `vfxLayer` dùng chung để ăn
     // một lượt bloom cho cả màn hình thay vì mỗi nhân vật một filter (spec §3.6).
-    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.plate.root);
+    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.statusIcons, this.plate.root);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -113,7 +116,46 @@ export class PlayerSprite {
     const headY = -r * (CHAR_HEIGHT_PER_R - FEET_BELOW_CENTER) - 4 / zoom;
     this.plate.update(s.L, s.ti ?? 0, myRealm, headY, zoom, now, r * 2.6 * zoom >= PLATE_FAR_PX, plateFade);
     this.swordRing.update(f, now, showHitbox, swordDetail);
+    this.updateStatusIcons(s.st ?? 0, r, now);
     this.updateBubble(r, zoom, now);
+  }
+
+  /**
+   * updateStatusIcons vẽ icon trạng thái bay quanh nhân vật.
+   *
+   * Hiện chỉ có 🚫 lúc bị Phun Trân Châu, vì spec v5.5 đòi **người xung quanh cũng thấy**
+   * nạn nhân đang không nhặt được gì — lớp trân châu thì chỉ nạn nhân nhìn thấy, nên nếu
+   * không có icon này thì từ ngoài nhìn vào không ai hiểu vì sao họ đứng cạnh viên Linh khí
+   * mà không nhặt.
+   *
+   * Dựng lại chỉ khi tập icon ĐỔI (so bằng `statusKey`): vẽ lại Text mỗi khung là tạo
+   * texture mới 30 lần/giây cho mỗi nhân vật trên màn hình.
+   */
+  private updateStatusIcons(st: number, r: number, now: number): void {
+    const icons: string[] = [];
+    if (statusOn(st, 'blind')) {
+      icons.push('🚫');
+    }
+    const key = icons.join('');
+    if (key !== this.statusKey) {
+      this.statusKey = key;
+      this.statusIcons.removeChildren().forEach((c) => c.destroy({ children: true }));
+      for (const ch of icons) {
+        this.statusIcons.addChild(new Text({ text: ch, style: { fontSize: 36 }, anchor: 0.5 }));
+      }
+    }
+    this.statusIcons.visible = icons.length > 0;
+    if (!this.statusIcons.visible) {
+      return;
+    }
+    // Bay vòng quanh người: thấy ngay cả khi nhân vật đứng im.
+    const orbit = r * 1.5;
+    const n = this.statusIcons.children.length;
+    this.statusIcons.children.forEach((c, i) => {
+      const a = now * 2 + (i * Math.PI * 2) / n;
+      c.position.set(Math.cos(a) * orbit, Math.sin(a) * orbit * 0.5 - r * 0.6);
+      c.scale.set(r / 40);
+    });
   }
 
   private drawShadow(r: number): void {

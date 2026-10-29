@@ -6,9 +6,14 @@ client/node_modules/
 client/dist/
 server/bin/
 *.exe
-# Binary biên dịch của công cụ art — `go build ./cmd/artgen` mặc định ghi ra đây.
-# Gần 10 MB, đổi mỗi lần build, không ai cần bản của máy người khác.
+# Binary biên dịch của các công cụ trong `server/cmd/` — `go build ./cmd/<x>` mặc định ghi
+# ra đây. Mỗi cái gần 10 MB, đổi mỗi lần build, không ai cần bản của máy người khác.
+# Chạy bằng `go run ./cmd/<x>` thì không sinh ra file nào.
 server/artgen
+server/loadtest
+server/mapgen
+server/sim
+server/stress
 
 # Runtime data
 server/data/

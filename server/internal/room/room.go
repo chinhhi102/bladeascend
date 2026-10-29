@@ -3,9 +3,9 @@ package room
 
 import (
 	"log"
-	"sync"
-	"sort"
 	"math/rand"
+	"sort"
+	"sync"
 	"time"
 
 	"kiemxoay/server/internal/config"
@@ -68,7 +68,7 @@ type transfer struct {
 func newRoom(id string, cfg *config.Config, maps []*world.Map, mgr *Manager, rec Recorder, seed int64) *Room {
 	r := &Room{
 		ID: id, Created: time.Now(), cfg: cfg, mgr: mgr,
-		inbox: make(chan func(), 1024),
+		inbox:    make(chan func(), 1024),
 		recorder: rec, rng: rand.New(rand.NewSource(seed + 1)),
 		snapEvery: 1 / float64(cfg.Net.SnapshotHz),
 	}
@@ -80,7 +80,7 @@ func newRoom(id string, cfg *config.Config, maps []*world.Map, mgr *Manager, rec
 	for _, z := range r.zones {
 		z.G.ZoneIndex = z.Index
 		z.G.GateRouter = r.routeGate
-		z.G.MoveToZone = r.moveToZone
+		z.G.MoveToZone = r.moveFromZone(z)
 	}
 	return r
 }
@@ -163,16 +163,23 @@ func (r *Room) routeGate(fromZone int, gate world.Gate) (game.GateDest, bool) {
 	return game.GateDest{Zone: c.zone, GateID: c.g.ID, At: game.Vec{X: c.g.X, Y: c.g.Y}}, true
 }
 
-// moveToZone xếp hàng chuyển nhân vật sang khu khác; việc bê thật làm ở ranh giới tick.
-func (r *Room) moveToZone(p *game.Player, zone int, at game.Vec) {
-	if zone < 0 || zone >= len(r.zones) {
-		return
+// moveFromZone dựng hàm "chuyển nhân vật sang khu khác" gắn CỨNG với khu gọi nó; việc bê
+// thật làm ở ranh giới tick.
+//
+// Khu nguồn phải là tham số, không được đi tìm. Bản trước gọi `zoneOf(p.ID)` để tìm, mà
+// `zoneOf` quét map `Players` của **mọi khu** — trong khi hàm này chạy từ trong goroutine
+// của một khu, lúc bốn khu kia đang tick và có thể đang xoá người khỏi map của chúng. Đó là
+// đọc map song song với ghi map: `go test -race` bắt được, và ngoài đời là
+// `fatal error: concurrent map read and map write` — sập cả server, không phải một lỗi nhỏ.
+//
+// Mà cũng không cần tìm: hàm này do khu nào cài thì chạy cho đúng người của khu ấy.
+func (r *Room) moveFromZone(from *Zone) func(*game.Player, int, game.Vec) {
+	return func(p *game.Player, zone int, at game.Vec) {
+		if zone < 0 || zone >= len(r.zones) || zone == from.Index {
+			return
+		}
+		r.queueTransfer(transfer{playerID: p.ID, from: from, to: r.zones[zone], at: at})
 	}
-	from := r.zoneOf(p.ID)
-	if from == nil || from.Index == zone {
-		return
-	}
-	r.queueTransfer(transfer{playerID: p.ID, from: from, to: r.zones[zone], at: at})
 }
 
 // Send chuyển một nhân vật sang khu khác ở ranh giới tick (spec §8.0, §8.4). Mọi trạng thái
@@ -216,6 +223,10 @@ func (r *Room) applyTransfers() {
 }
 
 // zoneOf trả về khu mà nhân vật này đang ở, nil nếu không còn trong phòng.
+//
+// ⚠ Quét map `Players` của MỌI khu, nên **chỉ được gọi ngoài lúc các khu đang tick** — tức
+// là từ trong `r.Do(...)` hoặc sau `wg.Wait()`. Gọi nó từ trong goroutine của một khu là
+// đọc map song song với khu khác đang ghi (đã dính đúng lỗi này một lần, xem `moveFromZone`).
 func (r *Room) zoneOf(id uint32) *Zone {
 	for _, z := range r.zones {
 		if _, ok := z.G.Players[id]; ok {

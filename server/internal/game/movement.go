@@ -1,8 +1,8 @@
 package game
 
 import (
-	"sort"
 	"math"
+	"sort"
 
 	"kiemxoay/server/internal/geom"
 )
@@ -25,8 +25,8 @@ func (g *Game) MoveSpeed(p *Player) float64 {
 	if p.HasStatus(StGhost, g.Time) {
 		s *= g.Cfg.Skills.GhostSpeed
 	}
-	if p.HasStatus(StRoot, g.Time) || p.HasStatus(StShell, g.Time) {
-		s = 0 // bị trói, hoặc đang rụt trong mai
+	if p.HasStatus(StRoot, g.Time) || p.HasStatus(StShell, g.Time) || p.HasStatus(StStun, g.Time) {
+		s = 0 // bị trói, đang rụt trong mai, hoặc đang choáng
 	}
 	return s
 }
@@ -46,6 +46,9 @@ func (g *Game) burnFloor(p *Player) float64 {
 func (g *Game) Burning(p *Player) bool {
 	if !p.Burning || !p.Moving || p.Dead || p.InTransit(g.Time) || g.Cfg.Burn.Mult <= 1 {
 		return false
+	}
+	if p.HasStatus(StStun, g.Time) {
+		return false // đang choáng thì không Thiêu Đốt được (spec v5.5 §6.3)
 	}
 	return p.TotalExp > g.burnFloor(p)
 }
@@ -184,32 +187,22 @@ func (g *Game) slideOnIce(p *Player, dt float64) {
 // Trước đây chỗ này chỉ kẹp vào [r, size-r] tức cả dải lề ngoài tường biên, nên một cú
 // knockback hay một lần PushOut chọn nhầm mặt ngoài của tường là người chơi đứng luôn bên
 // ngoài bản đồ và không có gì kéo họ vào lại.
-// resolveBlockingFor là resolveBlocking có xét kỹ năng: Giao Hỏa Tốc đi xuyên vật cản
-// PHÁ ĐƯỢC (spec §6.3), nhưng không xuyên tường/vách không phá được.
+// resolveBlockingFor là resolveBlocking có xét kỹ năng.
+//
+// Giao Hỏa Tốc (spec v5.5 §6.3) đi xuyên **mọi** vật cản — kể cả vách đá, rặng tre, tường
+// không phá được. Thứ duy nhất còn chặn là **biên khu**: cho xuyên luôn biên thì Shipper ra
+// đứng ngoài bản đồ, chỗ không có đất, không có viên, và không gì kéo họ vào lại.
+//
+// Bản v5.0 chỉ cho xuyên vật cản phá được, nên phải lọc theo `MaxHP == 0`; giờ không còn
+// phân biệt nữa.
 func (g *Game) resolveBlockingFor(p *Player, pos Vec, r float64) Vec {
+	if p.unstickUntil > g.Time {
+		// Đang được đẩy mượt ra khỏi vật cản: vị trí do `updateUnstick` quyết, đẩy ra ở đây
+		// nữa là bật ra tức thời — đúng cái giật mà spec bảo tránh.
+		return g.clampToPlay(pos, r)
+	}
 	if !p.HasStatus(StGhost, g.Time) {
 		return g.resolveBlocking(pos, r)
-	}
-	pos = g.clampToPlay(pos, r)
-	for iter := 0; iter < 3; iter++ {
-		ids := g.obsBuf[:0]
-		g.QueryObstacles(pos, r, func(id int) {
-			// Chỉ bị chặn bởi thứ KHÔNG phá được (MaxHP 0); nhà cửa, rào, sạp thì đi xuyên.
-			if g.ObstacleSolid(id) && g.Map.Obstacles[id].MaxHP == 0 {
-				ids = append(ids, id)
-			}
-		})
-		g.obsBuf = ids
-		sort.Ints(ids)
-		moved := false
-		for _, id := range ids {
-			if np, hit := g.Map.Obstacles[id].Block().PushOut(pos, r); hit {
-				pos, moved = np, true
-			}
-		}
-		if !moved {
-			break
-		}
 	}
 	return g.clampToPlay(pos, r)
 }
@@ -250,9 +243,12 @@ func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
 //
 // Phải đi qua cùng đường với movePlayer — tốc độ gốc, nhân theo vùng địa hình, rồi đẩy ra
 // khỏi vật cản — nếu không thì bài đối chiếu sẽ bỏ sót đúng những chỗ hai bên hay lệch.
-func (g *Game) MoveStepForTest(from, vel Vec, angle, scale, dt float64, moving bool) (Vec, Vec) {
+func (g *Game) MoveStepForTest(from, vel Vec, angle, scale, dt float64, moving, ghost bool) (Vec, Vec) {
 	p := &Player{Pos: from, Vel: vel, InputAngle: angle, Moving: moving, Scale: scale}
 	p.Level = 0
+	if ghost {
+		p.Status[StGhost] = g.Time + 1
+	}
 	g.movePlayerForTest(p, dt)
 	return p.Pos, p.Vel
 }
@@ -266,12 +262,18 @@ func (g *Game) movePlayerForTest(p *Player, dt float64) {
 		g.slideOnIce(p, dt)
 	} else if p.Moving {
 		dir := geom.FromAngle(p.InputAngle)
-		p.Pos = p.Pos.Add(dir.Mul(g.Cfg.Player.MoveBase * g.ZoneMult(p.Pos, dir) * dt))
+		// Giao Hỏa Tốc nhân tốc độ — phần này cũng phải có ở bài đối chiếu, nếu không
+		// client dự đoán Shipper chạy ×3 mà bài kiểm vẫn báo "đạt".
+		speed := g.Cfg.Player.MoveBase
+		if p.HasStatus(StGhost, g.Time) {
+			speed *= g.Cfg.Skills.GhostSpeed
+		}
+		p.Pos = p.Pos.Add(dir.Mul(speed * g.ZoneMult(p.Pos, dir) * dt))
 		p.Vel = Vec{}
 	} else {
 		p.Vel = Vec{}
 	}
-	p.Pos = g.resolveBlocking(p.Pos, g.Cfg.Player.BodyR*p.Scale)
+	p.Pos = g.resolveBlockingFor(p, p.Pos, g.Cfg.Player.BodyR*p.Scale)
 }
 
 // clampToPlay keeps a circle of radius r inside the border wall.

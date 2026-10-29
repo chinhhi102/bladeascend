@@ -4,6 +4,10 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v5.5:** chỉnh kỹ năng — A Hớn hồi 20% kiếm tối đa; Bà Tám đẩy 500; Ông Ba Võng bán kính 500; Thằng Mập bịt mắt 5s + không nhặt đồ; Cô Ba trượt = choáng 1s; Shipper ×3 trong 5s, xuyên mọi vật cản trừ biên (§6.3).
+
+**Thay đổi v5.4:** chỉnh kỹ năng — Gọi Đàn Em 10s, mỗi đàn em 50% số kiếm của đại ca; Lưới Mì trói 5s; Gồng Cơ 5s; Rụt Cổ 5s (§6.3).
+
 **Thay đổi v5.3:** Tiên khí dư của Đạo Tổ đổi Uy Danh 10:1; va kiếm giữ nhịp đúng sau khi sửa lỗi SegSegDist2 (§3.4, §5.2).
 
 **Thay đổi v5.2:** thêm Thiên Môn ở tâm mỗi khu (trừ Thiên Đình) — cổng một chiều đích cố định tới Thiên Đình (§8.4a).
@@ -433,22 +437,23 @@ Mỗi nhân vật có **1 kỹ năng riêng**, nhưng **không tự dùng đư�
 
 | Nhân vật | Kỹ năng | Hiệu ứng |
 |---|---|---|
-| A Hớn Bánh Bao | **Bánh Bao Thần** | Ăn 1 cái bánh bao: hồi lại 30% số kiếm đã bị bể trong 10s gần nhất (về vòng ngoài cùng), ợ một tiếng to |
-| Bà Tám Loa | **Loa Phường** | Hét vào loa: sóng âm hình nón 60° dài 500 phía trước, **đẩy lùi** địch 300 và làm vòng kiếm của họ **đổi chiều** |
-| Ông Ba Võng | **Ru Ngủ** | Đung đưa võng hát ru: địch trong bán kính 350 **chậm 40%**, vòng kiếm quay **chậm 50%** trong 3s (hiện "zzz" trên đầu) |
-| Đại Ca Dép Tổ Ong | **Gọi Đàn Em** | Huýt sáo gọi 2 đàn em (NPC nhỏ, 1 vòng 10 kiếm cùng cảnh giới với đại ca, không chém thân được) chạy theo 8s, lao vào mài kiếm đối thủ gần nhất |
-| Thằng Mập Trà Sữa | **Phun Trân Châu (bịt mắt)** | Phun 1 loạt trân châu hình nón 45° dài 700 phía trước. Người trúng bị **trân châu dính đầy màn hình** 3.5s (xem dưới) |
-| Cô Ba Gánh Hàng | **Gánh Lướt** | Lướt nhanh 600 theo hướng đi (0.3s), rơi trái cây dọc đường tạo vệt trơn 4s: địch đi vào bị **trượt** theo quán tính 1s |
-| Sư Phụ Mì Gói | **Lưới Mì** | Ném lưới mì vào điểm cách 400 phía trước, bán kính 250: địch dính bị **trói 1.5s** (không di chuyển, kiếm vẫn quay) |
-| Bé Tí Cơ Bắp | **Gồng Cơ** | Gồng 4s: độ bền kiếm **× 2** (cộng dồn với Cương Kiếm), không bị đẩy lùi/chậm/trói |
-| Anh Shipper Tia Chớp | **Giao Hỏa Tốc** | Tốc chạy **× 2** trong 3s và **đi xuyên vật cản phá được** (không xuyên vách/tường không phá được) |
-| Cụ Rùa Thiền | **Rụt Cổ** | Rụt vào mai 2.5s: đứng yên, **không bị bể kiếm, không bị chém thân**; ra khỏi mai bật sóng đẩy địch xung quanh 200 |
+| A Hớn Bánh Bao | **Bánh Bao Thần** | Ăn 1 cái bánh bao: **hồi ngay 20% số kiếm tối đa** của cảnh giới hiện tại (không vượt tối đa, lấp vào vòng trong trước), ợ một tiếng to |
+| Bà Tám Loa | **Loa Phường** | Hét vào loa: sóng âm hình nón 60° dài 500 phía trước, **đẩy lùi** địch **500** và làm vòng kiếm của họ **đổi chiều** |
+| Ông Ba Võng | **Ru Ngủ** | Đung đưa võng hát ru: địch trong bán kính **500** **chậm 40%**, vòng kiếm quay **chậm 50%** trong 3s (hiện "zzz" trên đầu) |
+| Đại Ca Dép Tổ Ong | **Gọi Đàn Em** | Huýt sáo gọi 2 đàn em (NPC nhỏ hơn đại ca 30%, cùng cảnh giới) chạy theo **10s**. **Mỗi đàn em có số kiếm = 50% số kiếm hiện tại của đại ca** (làm tròn xuống, tối thiểu 1, xếp vòng như người chơi), lao vào mài kiếm đối thủ gần nhất. Đàn em không chém thân được, không nhặt đồ, không qua cổng; hết kiếm hoặc hết giờ thì biến mất (khói + câu "Đại ca ơi em đi đây"). Đại ca không bị trừ kiếm khi gọi |
+| Thằng Mập Trà Sữa | **Phun Trân Châu (bịt mắt)** | Phun 1 loạt trân châu hình nón 45° dài 700 phía trước. Người trúng bị **trân châu dính đầy màn hình 5s** và **không nhặt được gì** trong 5s đó (vật phẩm, Linh khí, Tiên khí, Bí Kíp — đi xuyên qua) (xem dưới) |
+| Cô Ba Gánh Hàng | **Gánh Lướt** | Lướt nhanh 600 theo hướng đi (0.3s), rơi trái cây dọc đường tạo vệt trơn 4s: địch đi vào bị **trượt theo quán tính 1s và choáng (stun)**: không điều khiển được, không dùng kỹ năng/Thiêu Đốt trong 1s (kiếm vẫn quay) |
+| Sư Phụ Mì Gói | **Lưới Mì** | Ném lưới mì vào điểm cách 400 phía trước, bán kính 250: địch dính bị **trói 5s** (không di chuyển, kiếm vẫn quay) |
+| Bé Tí Cơ Bắp | **Gồng Cơ** | Gồng **5s**: độ bền kiếm **× 2** (cộng dồn với Cương Kiếm), không bị đẩy lùi/chậm/trói |
+| Anh Shipper Tia Chớp | **Giao Hỏa Tốc** | Tốc chạy **× 3** trong **5s** và **đi xuyên mọi vật cản** (kể cả vách đá, rặng tre, tường không phá được), **trừ biên khu vực**. Hết 5s mà đang kẹt trong vật cản → được đẩy mượt ra chỗ trống gần nhất trong 0.3s |
+| Cụ Rùa Thiền | **Rụt Cổ** | Rụt vào mai **5s**: đứng yên, **không bị bể kiếm, không bị chém thân**; ra khỏi mai bật sóng đẩy địch xung quanh 200 |
 
 **Trân châu dính màn hình** (hiệu ứng của Thằng Mập):
 - Chỉ hiện trên màn hình **người bị trúng** (lớp overlay phía client, server gửi event `Blinded {secs}`).
-- 25–40 viên trân châu đen bóng kèm vệt trà sữa **bắn "bẹp" lên màn hình** ở vị trí ngẫu nhiên, phủ khoảng **55–65%** diện tích, dày hơn ở giữa; mỗi viên **trượt chậm xuống** để lại vệt, rồi rơi/tan dần trong 3.5s. Có tiếng "bẹp bẹp" + "rột rột".
+- 25–40 viên trân châu đen bóng kèm vệt trà sữa **bắn "bẹp" lên màn hình** ở vị trí ngẫu nhiên, phủ khoảng **55–65%** diện tích, dày hơn ở giữa; mỗi viên **trượt chậm xuống** để lại vệt, rồi rơi/tan dần trong 5s.
+- Trong 5s đó người bị trúng **không nhặt được bất cứ thứ gì** (server bỏ qua nhặt đồ); quanh nhân vật hiện icon 🚫 nhỏ. Có tiếng "bẹp bẹp" + "rột rột".
 - Không che HUD (thanh tiến độ, nút, minimap) để người chơi vẫn biết mình đang ở đâu.
-- Bot bị trúng: tầm nhìn còn 40% trong 3.5s.
+- Bot bị trúng: tầm nhìn còn 40% và không nhặt đồ trong 5s.
 - Trúng lần nữa khi đang bị: làm mới thời gian, thêm 10 viên.
 
 - Mỗi kỹ năng có câu thoại tấu hài khi dùng (bong bóng thoại) + SFX riêng.
@@ -1095,7 +1100,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "bots": { "spawn_rank": 11 },
   "zones_def": ["thien_dinh", "linh_son_coc", "truc_lam_me_cung", "pham_tran", "bang_nguyet_ho"],
   "ice": { "friction": 0.92, "accel": 0.25, "snow_mult": 0.8 },
-  "skills": { "key": "Space", "max_charges": 2, "lockout_secs": 3, "overcap_exp": 20, "overcap_tien_khi": 2, "blind": { "secs": 3.5, "pearls": [25, 40], "cover": [0.55, 0.65], "bot_vision_mult": 0.4 } },
+  "skills": { "key": "Space", "max_charges": 2, "lockout_secs": 3, "overcap_exp": 20, "overcap_tien_khi": 2, "blind": { "secs": 5, "no_pickup": true, "pearls": [25, 40], "cover": [0.55, 0.65], "bot_vision_mult": 0.4 } },
   "movement": { "slide_iterations": 3, "smooth_correct_max": 30, "smooth_correct_ms": 100 },
   "room": {
     "max_humans": 20, "bot_fill_target": 20, "zones": 5, "map_size": 12000,
@@ -1123,7 +1128,8 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] 4 khu (trừ Thiên Đình) có Thiên Môn ở tâm, đường tới thông; bước vào luôn ra ở đúng Bến Thiên Môn của khu đó ở Thiên Đình; minimap có icon + mũi tên chỉ hướng.
 - [ ] Đi sát/đi dọc tường, rào, đá tảng: không giật, không rung; F3 'hiệu chỉnh/giây' ≈ 0 khi chỉ đi sát vật cản.
 - [ ] Không có Bí Kíp thì nút kỹ năng xám; nhặt Bí Kíp → +1 lượt (tối đa 2), dùng đúng kỹ năng của nhân vật mình; chết thì mất lượt; kỹ năng không làm chém thân người còn ≥ 2 vòng.
-- [ ] Trúng Phun Trân Châu: màn hình bị trân châu che ~60% trong 3.5s, trượt xuống rồi tan; HUD và minimap không bị che.
+- [ ] Trúng Phun Trân Châu: màn hình bị che ~60% trong 5s, không nhặt được gì trong 5s; HUD và minimap không bị che.
+- [ ] Shipper dùng Giao Hỏa Tốc đi xuyên vách đá được nhưng không ra khỏi biên khu; hết giờ trong vật cản thì được đẩy ra chỗ trống.
 - [ ] Đạo Tổ nạp 500 Tiên khí → Uy Danh +50 (10:1), thanh Tiên khí đứng ở 1 500.
 
 - [ ] Hai Kim Đan 60 kiếm mài nhau 1 giây → mỗi bên còn ~30 kiếm; đi xuyên qua nhau được; chỉ người còn 1 vòng mới bị chém thân.

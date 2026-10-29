@@ -209,6 +209,79 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Lỗi / hạn chế đã biết
 
+- **Spec v5.4 + v5.5 — chỉnh 10 kỹ năng (29/10/2026, §6.3)**. Mọi con số vào `config/game.json`,
+  có `TestSkillDurationsMatchSpec` khoá lại để lần sau spec đổi mà quên sửa config thì test đỏ.
+  - **Bánh Bao Thần đổi hẳn luật**: trước hồi 30% số kiếm bể trong 10 giây, giờ hồi thẳng
+    **20% số kiếm tối đa của cảnh giới**. Luật cũ có lỗ không chữa được bằng cách chỉnh số:
+    ai chưa bị đánh thì ăn bánh bao chẳng được gì, nên kỹ năng vô dụng đúng lúc muốn dùng
+    nhất. Sổ ghi kiếm bể (`lostSwords`) gỡ bỏ hẳn.
+  - **Gọi Đàn Em**: 2 đàn em, 10s, mỗi con mang **50% số kiếm hiện tại của đại ca** (tối
+    thiểu 1) xếp vòng như người chơi, nhỏ hơn 30%, không nhặt đồ, không qua cổng. Đại ca
+    không bị trừ kiếm.
+  - **Giao Hỏa Tốc**: ×3 trong 5s, xuyên **mọi** vật cản (trước chỉ xuyên thứ phá được),
+    trừ biên khu. Hết giờ mà kẹt trong vật cản → trượt mượt ra chỗ trống trong 0,3s bằng
+    chính `resolveBlocking` — không bật ra tức thời, vì nhảy một phát là client thấy đúng
+    kiểu giật mà §8.2a vừa sửa xong.
+  - **Phun Trân Châu**: 5s, và trong 5s đó **không nhặt được gì** — chặn ở đúng một cửa
+    (`CanPickUp`, ngay đầu `resolvePickups`) chứ không rải vào từng loại vật phẩm, vì spec
+    nói cả vật phẩm/Linh khí/Tiên khí/Bí Kíp đều đi xuyên qua. Người ngoài thấy icon 🚫 bay
+    quanh nạn nhân: lớp trân châu chỉ nạn nhân nhìn thấy, không có icon thì từ ngoài nhìn
+    vào không ai hiểu vì sao họ đứng cạnh viên Linh khí mà không nhặt.
+  - **Gánh Lướt**: vệt trái cây giờ gây **choáng** (`StStun`) cùng lúc với trượt — không đi,
+    không dùng kỹ năng, không Thiêu Đốt, kiếm vẫn quay. Tách khỏi `StSlip` vì trượt là đổi
+    *cách* di chuyển còn choáng là *cấm* di chuyển.
+  - Lưới Mì 5s · Gồng Cơ 5s · Rụt Cổ 5s · Loa Phường đẩy 500 · Ru Ngủ bán kính 500.
+- **Bài đối chiếu va chạm phủ thêm Giao Hỏa Tốc (29/10/2026)**. Kỹ năng này đổi **cả hai**
+  thứ quyết định vị trí — tốc độ ×3 và xuyên vật cản — nên nếu client không biết thì lệch
+  mỗi tick. 1/4 số ca trong `cmd/collisionfixture` giờ đang xuyên. Đo: **0,0000 đơn vị lệch**
+  trên 1 500 bước × 5 bản đồ; và khi cố tình tắt phần xuyên ở client thì bài kiểm báo **46 ca
+  quá ngưỡng, nặng nhất 100,6 đơn vị** — nên đây không phải một dòng chữ xanh vô nghĩa.
+- **⚠ Bài đấu từng cặp trước đây đo sai (sửa 29/10/2026)**. `--duel` cho mỗi bên **một vòng
+  kiếm** (10 kiếm) trong khi trần Kim Đan là **100** — tức 1/10 số kiếm thật của người chơi
+  cùng cảnh giới. Mọi kỹ năng tính theo TRẦN cảnh giới bị thổi phồng gấp mười: Bánh Bao Thần
+  ra **100% thắng (54/54)** với một vòng, **75,9%** với đủ kiếm. Lý do cũ của việc dùng một
+  vòng là "2 vòng trở lên thì 85% trận hoà", nhưng con số ấy đo TRƯỚC khi `clash_cooldown`
+  về 0; đo lại thì đủ kiếm chỉ **9% hoà**, còn ít hơn một vòng (18%). Mặc định đã đổi sang
+  **đủ trần cảnh giới**; `--duel-swords N` để quay lại kiểu cũ.
+
+- **Data race thứ 6 — `moveToZone` đọc map của khu khác (sửa 29/10/2026)**. Lúc chia năm khu
+  ra năm goroutine tôi tìm và sửa 5 race; con thứ 6 lọt vì nó nấp sau một hàm trông vô hại.
+  `MoveToZone` (cổng dịch chuyển gọi, chạy TRONG goroutine của một khu) gọi `zoneOf(p.ID)`,
+  mà `zoneOf` quét map `Players` của **cả 5 khu** — trong khi bốn khu kia đang tick và có thể
+  đang xoá người. Ngoài đời đây không phải lỗi nhỏ: Go gặp đọc-ghi map song song thì
+  `fatal error: concurrent map read and map write`, **sập cả server**. Sửa bằng cách gắn cứng
+  hàm chuyển khu với khu cài nó (`moveFromZone(z)`) — khu nguồn vốn đã biết, không cần đi tìm.
+  Đã ghi cảnh báo lên `zoneOf`. Kiểm: 30 lượt `-race` → 0 race (trước đó 3/20 lượt dính).
+- **Phòng đủ 60 người mà vẫn có khu 8–9 (sửa 29/10/2026)**. Hai lỗi chồng nhau:
+  1. `rebalanceZones` lặp 5 lượt nhưng việc chuyển khu chỉ xảy ra ở **ranh giới tick**, nên
+     `z.Count()` không nhúc nhích trong lúc lặp. Cả năm lượt đều thấy tình trạng cũ → xếp
+     năm lệnh cùng chiều → khu cho đi bị rút quá tay thành khu thiếu mới → lượt sau kéo
+     ngược về, qua lại mãi. Giờ tự cộng sổ phần đã xếp hàng (`delta`) và quyết theo con số
+     **dự kiến**, thêm điều kiện cho đi xong không được tụt dưới sàn, và `spareBot()` không
+     bốc trúng con đã nằm trong hàng chờ.
+  2. Vá sàn trước đây chạy theo **nhịp sinh bot 2 giây**, mà bot đi qua cổng bất cứ lúc nào
+     → khu có thể nằm dưới sàn gần 2 giây. Giờ `rebalanceZones` chạy **mỗi tick** (rẻ: 5 khu,
+     vài phép so), nên người vừa bước qua cổng không rơi vào khu gần như trống.
+  `processRespawns` cũng dính cùng kiểu sai: bot hồi sinh rời khu đang **đúng sàn** thì chỗ
+  thiếu chỉ chạy sang khu khác chứ không mất — đã chặn.
+  `TestZoneFloorAndRoomCap` sửa lại cho đúng điều server hứa: sàn là *"tụt xuống thì được vá
+  lại ngay"*, không phải *"không khoảnh khắc nào dưới sàn"* (bot có thể rời khu ở đúng tick
+  cuối, lệnh bù chỉ chạy được ở tick sau). Kiểm: 40 lượt `-race` xanh; và vẫn đỏ khi cố tình
+  tắt `rebalanceZones`, nên không phải nới lỏng cho qua.
+- **Điều khiển gọn lại (29/10/2026)**. Thiêu Đốt Tinh Huyết thêm cách **nháy đúp rồi giữ**
+  (300 ms, lệch dưới 40 px) bên cạnh Shift và nút 🔥 — hai cách cũ đều đòi tay thứ hai, còn
+  nháy đúp giữ nguyên ngón/tay đang lái. Luật nhận nháy đúp (`tapDown`) viết một lần dùng
+  chung cho chuột và cảm ứng, vì tách làm hai bản là kiểu lỗi chỉ hiện trên đúng một loại
+  thiết bị. Thêm phím test **G** (+1 lượt kỹ năng) — không có nó thì muốn thử kỹ năng phải
+  chạy quanh bản đồ chờ Bí Kíp rơi.
+- **Kỹ năng giữ phím Space, KHÔNG dùng Ctrl (29/10/2026)**. Có thử Ctrl một nhịp rồi bỏ; lý
+  do ghi lại ở đây để đừng ai đổi lại: phím đi là **WASD**, nên vừa giữ Ctrl vừa bấm W là
+  **Ctrl+W — đóng tab**. Chrome xếp Ctrl+W vào nhóm phím tắt dành riêng cho trình duyệt,
+  `preventDefault()` không chặn được. Cách duy nhất chặn thật là Keyboard Lock API, mà nó
+  **chỉ chạy ở chế độ toàn màn hình** (ràng buộc cố ý của trình duyệt, để trang web bất kỳ
+  không giam được người dùng trong tab) và chỉ có trên Chrome/Edge — tức là người chơi cửa
+  sổ thường vẫn mất tab. Space không đụng phím tắt nào. Cùng lý do đó, tránh `Ctrl`, `Alt`
+  và `F`-key cho bất kỳ phím game nào sau này.
 - **HUD trái tự đè lên nhau — đã sửa (29/10/2026)**. Ba khối bên trái (chỉ số · hàng buff ·
   minimap) trước đây mỗi khối một `top:` cố định (12 / 84 / 136 px). Hễ khối chỉ số cao thêm
   một dòng — thanh Tiên khí ở Tiên giới, rồi nhãn tên khu mới thêm — là nó tràn xuống đè

@@ -130,7 +130,7 @@ type Map struct {
 	// PlayMargin: khoảng cách từ mép bản đồ tới vùng chơi được (ngoài đó là tường biên và
 	// vực tối). Mọi thứ sinh ra phải nằm trong [PlayMargin, Size-PlayMargin] (spec §8.1).
 	PlayMargin float64 `json:"play_margin"`
-	Decor     []Decor    `json:"decor"`
+	Decor      []Decor `json:"decor"`
 }
 
 // EmptyMap is used by tests and when no .tmj file is available.
@@ -288,16 +288,16 @@ type tmjProp struct {
 }
 
 type tmjObject struct {
-	ID         int       `json:"id"`
-	Name       string    `json:"name"`
-	Type       string    `json:"type"`
-	Class      string    `json:"class"`
-	X          float64   `json:"x"`
-	Y          float64   `json:"y"`
-	Width      float64   `json:"width"`
-	Height     float64   `json:"height"`
-	Ellipse    bool      `json:"ellipse"`
-	Point      bool      `json:"point"`
+	ID      int     `json:"id"`
+	Name    string  `json:"name"`
+	Type    string  `json:"type"`
+	Class   string  `json:"class"`
+	X       float64 `json:"x"`
+	Y       float64 `json:"y"`
+	Width   float64 `json:"width"`
+	Height  float64 `json:"height"`
+	Ellipse bool    `json:"ellipse"`
+	Point   bool    `json:"point"`
 	// Polygon: đỉnh tương đối so với (X, Y) — vùng địa hình hữu cơ của spec §8.6.
 	Polygon    []tmjPoint `json:"polygon"`
 	Properties []tmjProp  `json:"properties"`

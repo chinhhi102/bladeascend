@@ -32,8 +32,8 @@ type RingGeom struct {
 	// Step: vòng thứ k (đếm từ 1) chứa Step × k kiếm — vòng 1 là 10, vòng 2 là 20… (§4.1a).
 	Step  int
 	Rings int     // R: number of rings currently drawn
-	Reach    float64 // farthest blade tip at rest tilt + half width (camera, AI, display)
-	outer    float64 // farthest any blade point can be at any tilt (broad phase)
+	Reach float64 // farthest blade tip at rest tilt + half width (camera, AI, display)
+	outer float64 // farthest any blade point can be at any tilt (broad phase)
 }
 
 // ComputeRingGeom applies the §4.1a formulas. Spec v4.3 bỏ Trường Kiếm nên không còn hệ số

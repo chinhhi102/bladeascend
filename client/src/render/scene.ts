@@ -692,7 +692,10 @@ export class GameScene {
       case 'Blinded':
         // Server chỉ gửi event này cho ĐÚNG người bị trúng (spec §6.3), nên không cần lọc
         // thêm; thời gian lấy thẳng từ server để client không tự đoán.
-        this.boba.hit(e.f ?? 3.5, now, this.app.screen.width, this.app.screen.height);
+        // Thời gian lấy THẲNG từ server; chỉ khi gói thiếu mới rơi về số trong config.
+        // Tự đoán ở đây là client hết trân châu trong khi server vẫn tính là đang bị bịt
+        // mắt — người chơi nhìn rõ nhưng vẫn không nhặt được gì, không hiểu vì sao.
+        this.boba.hit(e.f ?? this.cfg.skills.tran_chau_secs, now, this.app.screen.width, this.app.screen.height);
         sound.play('sword_hit_body');
         break;
       case 'SkillCast':

@@ -26,6 +26,7 @@ interface Case {
   sc: number;
   dt: number;
   mv: boolean;
+  gh: boolean;
   ex: number;
   ey: number;
   evx: number;
@@ -44,7 +45,8 @@ const fx = JSON.parse(readFileSync(path, 'utf8')) as { map: GameMap; cases: Case
 const cfg = loadConfigFromJSON();
 const never = (): boolean => false;
 const run = (c: Case) =>
-  moveStep(cfg, fx.map, { x: c.x, y: c.y }, c.a, c.sc, c.dt, never, 1, { x: c.vx, y: c.vy }, c.mv);
+  moveStep(cfg, fx.map, { x: c.x, y: c.y }, c.a, c.sc, c.dt, never,
+    c.gh ? cfg.skills.ghost_speed : 1, { x: c.vx, y: c.vy }, c.mv, c.gh);
 
 let worst = 0;
 let worstCase: Case | null = null;
@@ -71,7 +73,7 @@ if (bad > 0 && worstCase) {
   const got = run(worstCase);
   console.error(
     `ca lệch nhất: từ (${worstCase.x.toFixed(1)}, ${worstCase.y.toFixed(1)}) v=(${worstCase.vx.toFixed(1)}, ${worstCase.vy.toFixed(1)}) ` +
-      `góc=${worstCase.a.toFixed(3)} cỡ=${worstCase.sc.toFixed(2)} đi=${worstCase.mv}\n` +
+      `góc=${worstCase.a.toFixed(3)} cỡ=${worstCase.sc.toFixed(2)} đi=${worstCase.mv} xuyên=${worstCase.gh}\n` +
       `  server → vị trí (${worstCase.ex.toFixed(2)}, ${worstCase.ey.toFixed(2)}) vận tốc (${worstCase.evx.toFixed(2)}, ${worstCase.evy.toFixed(2)})\n` +
       `  client → vị trí (${got.pos.x.toFixed(2)}, ${got.pos.y.toFixed(2)}) vận tốc (${got.vel.x.toFixed(2)}, ${got.vel.y.toFixed(2)})`,
   );
