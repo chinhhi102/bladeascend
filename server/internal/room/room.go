@@ -3,9 +3,9 @@ package room
 
 import (
 	"log"
-	"sync"
-	"sort"
 	"math/rand"
+	"sort"
+	"sync"
 	"time"
 
 	"kiemxoay/server/internal/config"
@@ -68,7 +68,7 @@ type transfer struct {
 func newRoom(id string, cfg *config.Config, maps []*world.Map, mgr *Manager, rec Recorder, seed int64) *Room {
 	r := &Room{
 		ID: id, Created: time.Now(), cfg: cfg, mgr: mgr,
-		inbox: make(chan func(), 1024),
+		inbox:    make(chan func(), 1024),
 		recorder: rec, rng: rand.New(rand.NewSource(seed + 1)),
 		snapEvery: 1 / float64(cfg.Net.SnapshotHz),
 	}

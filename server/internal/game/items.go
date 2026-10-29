@@ -87,9 +87,24 @@ func (g *Game) PickupRadius(p *Player) float64 {
 	return r
 }
 
+// CanPickUp: người này có nhặt được gì không.
+//
+// Chặn ở ĐÂY, ngay cửa vào của `resolvePickups`, chứ không rải vào từng loại vật phẩm:
+// spec v5.5 nói trúng Phun Trân Châu thì **vật phẩm, Linh khí, Tiên khí và Bí Kíp đều đi
+// xuyên qua** — một cửa thì không thể sót loại nào, rải ra bốn chỗ thì chắc chắn sẽ sót.
+func (g *Game) CanPickUp(p *Player) bool {
+	if p.IsMinion {
+		return false // đàn em không nhặt đồ (spec v5.4 §6.3)
+	}
+	if g.Cfg.Skills.TranChauNoPickup && p.HasStatus(StBlind, g.Time) {
+		return false
+	}
+	return true
+}
+
 func (g *Game) resolvePickups() {
 	for _, p := range g.PlayerList() {
-		if p.Dead || p.InTransit(g.Time) {
+		if p.Dead || p.InTransit(g.Time) || !g.CanPickUp(p) {
 			continue
 		}
 		r := g.PickupRadius(p) + g.Cfg.Items.ItemR

@@ -29,6 +29,10 @@ import (
 // bấm". Nhìn bảng tỉ lệ thắng thì hai thứ đó giống hệt nhau.
 var castCount map[string]int
 
+// duelSwords là số kiếm mỗi bên khi vào trận; 0 = đầy trần cảnh giới. Xem ghi chú trong
+// `duelOnce` về việc vì sao con số này đổi hẳn kết luận của bảng.
+var duelSwords int
+
 type duelResult struct {
 	char  string
 	wins  int
@@ -66,7 +70,12 @@ func runDuels(cfg *config.Config, seed int64, rounds int, secs float64) {
 	}
 
 	// Bảng chéo 10×10.
-	fmt.Printf("Đấu từng cặp — mỗi cặp %d trận, mỗi bên 2 lượt kỹ năng, tối đa %.0f giây/trận\n", rounds, secs)
+	swDesc := fmt.Sprintf("%d kiếm", duelSwords)
+	if duelSwords <= 0 {
+		swDesc = "đầy trần cảnh giới"
+	}
+	fmt.Printf("Đấu từng cặp — mỗi cặp %d trận, mỗi bên 2 lượt kỹ năng, %s, tối đa %.0f giây/trận\n",
+		rounds, swDesc, secs)
 	// Nói rõ tỉ lệ hoà: hai bên cùng cảnh giới cùng số kiếm thì mài nhau rất đều, và nếu
 	// phần lớn trận hoà thì bảng tỉ lệ thắng bên dưới gần như vô nghĩa — phải thấy điều đó
 	// chứ không được đọc nó như một kết luận.
@@ -189,11 +198,22 @@ func duelOnce(cfg *config.Config, charA, charB string, seed int64, secs float64)
 
 	mid := c.Room.MapSize / 2
 	level := c.Cultivation.TiersPerRealm * 3 // Kim Đan: đủ kiếm để có chuyện xảy ra
-	// Mỗi bên đúng MỘT vòng kiếm. Đây là chỗ quan trọng nhất của bài đo: còn từ 2 vòng trở
-	// lên thì lá chắn §5.2 chặn hết đòn chém thân, hai bên chỉ mài kiếm đều nhau và **85%
-	// số trận hoà** — bảng tỉ lệ thắng khi đó chẳng nói lên điều gì. Một vòng thì có người
-	// chết, và kỹ năng mới quyết định được ai.
-	swords := c.Sword.RingStep
+	// Mặc định **đầy trần cảnh giới**, không phải một vòng.
+	//
+	// Bản trước cho mỗi bên đúng một vòng (10 kiếm) vì lúc ấy đo được 2 vòng trở lên là 85%
+	// trận hoà. Nhưng con số đó đo TRƯỚC khi `clash_cooldown` được sửa về 0 (mài nhanh gấp
+	// 9 lần); đo lại ngày 29/10 thì đầy kiếm chỉ **10% hoà**, còn ÍT hơn một vòng (18%).
+	//
+	// Và một vòng ở Kim Đan là 10 kiếm trên trần 100, tức **1/10 số kiếm thật** của người
+	// chơi cùng cảnh giới — nên nó thổi phồng gấp mười mọi kỹ năng tính theo TRẦN cảnh giới.
+	// Bánh Bao Thần (v5.5: hồi 20% trần = 20 kiếm) ra **100% thắng** với một vòng, và 67%
+	// với đủ kiếm. Con số thứ hai mới là thứ người chơi gặp.
+	//
+	// `--duel-swords N` để quay lại kiểu cũ.
+	swords := duelSwords
+	if swords <= 0 {
+		swords = g.Prog.MaxSwords(g.Prog.Realm(level))
+	}
 
 	mk := func(char string, dx float64) (*game.Player, *bot.Brain) {
 		p := g.AddPlayer(game.SpawnOptions{Name: char, Char: char, IsBot: true, Level: level, Swords: swords})

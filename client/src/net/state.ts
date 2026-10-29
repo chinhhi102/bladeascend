@@ -9,6 +9,7 @@ import {
   type MonsterState,
   type PlayerState,
   type Snapshot,
+  statusOn,
   type Welcome,
 } from './protocol';
 
@@ -268,17 +269,30 @@ export class ClientWorld {
     if (me.fl & 8) {
       return { pos: from, vel: { x: 0, y: 0 } };
     }
+    // Trói / rụt mai / choáng: server đặt tốc độ 0, nên client cũng phải đứng yên — dự đoán
+    // là mình đang chạy trong lúc server giữ tại chỗ thì mỗi tick bị kéo về một lần.
+    const frozen = statusOn(me.st, 'root') || statusOn(me.st, 'shell') || statusOn(me.st, 'stun');
     let mult = 1;
     if (me.bf & (1 << BUFFS.indexOf('haste'))) {
       mult *= this.cfg.buffs.haste.mult;
     }
     // Thiêu Đốt Tinh Huyết (spec §4.1c). Server dừng cộng tốc khi EXP chạm đáy cảnh giới
     // và sẽ sửa lại vị trí; ở đây chỉ cần dự đoán đúng trường hợp thường gặp.
-    if (inp.burn) {
+    if (inp.burn && !frozen) {
       mult *= this.cfg.burn.mult;
     }
+    if (statusOn(me.st, 'slow')) {
+      mult *= this.cfg.skills.ru_ngu_move;
+    }
+    if (statusOn(me.st, 'ghost')) {
+      mult *= this.cfg.skills.ghost_speed;
+    }
+    if (frozen) {
+      mult = 0;
+    }
     return moveStep(this.cfg, map, from, inp.angle, me.sc, dt,
-      (id: number) => this.brokenObstacles.get(id) === true, mult, vel, inp.moving);
+      (id: number) => this.brokenObstacles.get(id) === true, mult, vel, inp.moving,
+      statusOn(me.st, 'ghost'));
   }
 
 

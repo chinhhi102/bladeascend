@@ -363,7 +363,6 @@ func (g *Game) breakSwords(p *Player, n int) {
 	lost := g.LoseSwords(p, n)
 	if lost > 0 {
 		p.breakPending += lost
-		g.noteSwordLoss(p, lost) // sổ cho Bánh Bao Thần (§6.3)
 		if p.Ring.Count == 0 {
 			g.emote(p, "no_swords") // spec §5.2: bị tước sạch kiếm → hoảng loạn
 		} else {
