@@ -41,7 +41,7 @@
     "tier_step": 0.08,
     "scale_min": 1.0,
     "scale_max": 5.0,
-    "tien_overflow_score": 1.0
+    "tien_overflow_score": 0.1
   },
   "sword": {
     "start_count": 1,

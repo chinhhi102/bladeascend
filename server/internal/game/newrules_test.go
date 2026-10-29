@@ -24,6 +24,11 @@ func TestDaoToSurplusBecomesScore(t *testing.T) {
 	p := &Player{Level: g.Prog.TienLevel(top), TienKhi: cap}
 	g.refreshDerived(p)
 
+	// Tỉ lệ chủ dự án chốt: 10 Tiên khí ăn 1 Uy Danh. Khoá lại ở đây vì đây là con số
+	// cân bằng, đổi nhầm một chữ số là người chơi đỉnh bảng giàu lên gấp mười.
+	if r := g.Cfg.Cultivation.TienOverflowScore; math.Abs(r-0.1) > 1e-9 {
+		t.Fatalf("tien_overflow_score = %v, phải là 0,1 (10 Tiên khí = 1 Uy Danh)", r)
+	}
 	before := p.Score
 	g.GainTienKhi(p, 250)
 
