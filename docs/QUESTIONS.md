@@ -53,7 +53,8 @@ việc khác hẳn và tôi làm lại.
 
 **2. Đạo Tổ: Tiên khí dư đổi thành Uy Danh** (spec chưa nói gì về chuyện này). Đã làm: tới
 Đạo Tổ là hết cảnh giới để lên, nên mỗi điểm Tiên khí nhặt thêm đổi thành
-`cultivation.tien_overflow_score` điểm Uy Danh (mặc định 1,0) và thanh Tiên khí **giữ đúng ở
+`cultivation.tien_overflow_score` điểm Uy Danh — chủ dự án chốt tỉ lệ **10 Tiên khí = 1 Uy
+Danh**, tức `0.1` và thanh Tiên khí **giữ đúng ở
 mốc Đạo Tổ** thay vì phình mãi.
 
 Vì sao giữ thanh ở mốc đỉnh: `robTienKhi` tính `loss = tiên_khí − mốc_khởi_điểm_mới`. Nếu

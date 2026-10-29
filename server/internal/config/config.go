@@ -11,6 +11,7 @@ import (
 type Cultivation struct {
 	// TienOverflowScore: đã Đạo Tổ thì không còn cảnh giới để lên, nên mỗi điểm Tiên khí
 	// nhặt thêm đổi thành ngần này điểm Uy Danh thay vì bỏ phí. 0 = tắt.
+	// Hiện là 0,1 — tỉ lệ 10 Tiên khí ăn 1 Uy Danh (chủ dự án quyết 29/10/2026).
 	TienOverflowScore float64 `json:"tien_overflow_score"`
 	Realms        []string `json:"realms"`
 	TiersPerRealm int      `json:"tiers_per_realm"`
