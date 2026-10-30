@@ -144,6 +144,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
   overflow: hidden; pointer-events: auto; cursor: pointer;
 }
 .minimap.big { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 20; border-width: 5px; }
+/* Thu thành nút nhỏ: trên màn hẹp bản đồ góc chiếm chỗ đáng kể, nên mặc định chỉ hiện
+   một nút; bấm mới mở ra (chủ dự án chốt 30/10). */
+.minimap-pin { display: none; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 20px; }
+.minimap.collapsed { width: 36px; height: 36px; border-radius: 10px; border-width: 2px; }
+.minimap.collapsed canvas, .minimap.collapsed .zone-list { display: none; }
+.minimap.collapsed .minimap-pin { display: flex; }
 
 /* Bảng 5 khu + số người, chỉ hiện khi minimap phóng to (spec §8.0). */
 .zone-list {
@@ -306,13 +312,22 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
      là hỏng thật, không phải chuyện thẩm mỹ. */
   /* Chừa đủ chỗ cho cả NÚT bên phải lẫn cụm ping/loa ở góc — cụm góc rộng hơn nút, nên
      lấy nó làm mốc. Chừa theo nút thôi thì dải tin thò sang đè lên ping (đo 13×30px). */
-  .hud-bottom-left { left: 8px; bottom: 8px; gap: 4px; max-width: calc(100vw - 124px); }
-  .feed { font-size: 11px; gap: 3px; }
-  .feed-line { padding: 3px 7px; border-radius: 7px; }
+  /* Khung tin nhỏ hẳn lại: chữ 10px, hộp mỏng, và chỉ giữ 1 tin (cắt trong `hud.ts`).
+     Chủ dự án: *"khung chat điện thoại nhiều quá"* — 2 tin × 2 dòng vẫn ăn một mảng góc
+     dưới trái, mà kill feed là thứ liếc qua chứ không phải thứ để đọc kỹ. */
+  .hud-bottom-left { left: 8px; bottom: 8px; gap: 3px; max-width: calc(100vw - 124px); }
+  .feed { font-size: 10px; gap: 2px; }
+  .feed-line { padding: 2px 6px; border-radius: 6px; line-height: 1.3; }
   /* Màn hẹp: dải tin về CHUNG cột góc dưới trái (`static` = theo luồng), không còn là dải
      giữa-trên — ở trên đó nó che mất bảng phòng, thứ người chơi đang nhìn. */
   .server-feed { position: static; transform: none; width: 100%; gap: 4px; align-items: stretch; }
-  .server-line { font-size: 12px; padding: 5px 8px; border-width: 2px; border-radius: 9px; }
+  /* Cắt còn tối đa 2 dòng: tin loan toàn server có câu dài tới 90 ký tự, trên khung hẹp
+     nó xuống 3–4 dòng và lại thành một mảng chắn góc dưới. Ai cũng đọc được ý chính ở
+     hai dòng đầu. */
+  .server-line {
+    font-size: 12px; padding: 5px 8px; border-width: 2px; border-radius: 9px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
   .burn-btn { width: 58px; height: 58px; font-size: 24px; right: 12px; bottom: 60px; }
   .skill-btn { width: 58px; height: 58px; right: 12px; bottom: 126px; }
   .skill-btn .skill-icon { font-size: 20px; }
