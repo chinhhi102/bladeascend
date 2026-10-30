@@ -268,17 +268,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. dusty packed earth, seamless tileable top-down, desaturated, low contrast, low detail, no objects
 ```
 
-## 24. `plate_shine_streak` · ưu tiên 3
-
-- **Lưu thành**: `assets/_raw/plate_shine_streak.png`
-- **Bố cục**: 1 hình ở giữa, nền magenta #FF00FF
-- **Ra file game**: ui/shine_streak.png
-
-```text
-STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. soft diagonal white light streak Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
-```
-
-## 25. `tile_mountain_rock` · ưu tiên 4
+## 24. `tile_mountain_rock` · ưu tiên 4
 
 - **Sinh lại**: sheet bị cắt sai số khung (xem cảnh báo của `artgen prep`)
 - **Lưu thành**: `assets/_raw/tile_mountain_rock.png`
@@ -289,7 +279,7 @@ STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstic
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Seamless tileable top-down ground texture: grey mountain rock with patches of moss, flat even lighting, no shadows Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 26. `tile_cobblestone` · ưu tiên 4
+## 25. `tile_cobblestone` · ưu tiên 4
 
 - **Sinh lại**: sheet bị cắt sai số khung (xem cảnh báo của `artgen prep`)
 - **Lưu thành**: `assets/_raw/tile_cobblestone.png`
@@ -300,7 +290,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow. Do not use magenta or pink-purple in the subject itself. Seamless tileable top-down ground texture: old cobblestone street, flat even lighting, no shadows Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 27. `char_map_tra_sua_teleport_out` · ưu tiên 4
+## 26. `char_map_tra_sua_teleport_out` · ưu tiên 4
 
 - **Sinh lại**: sheet bị cắt sai số khung (xem cảnh báo của `artgen prep`)
 - **Lưu thành**: `assets/_raw/char_map_tra_sua_teleport_out.png`
@@ -311,7 +301,7 @@ STYLE: 2D game asset, lowbrow slapstick cartoon, thick wobbly black outline, fla
 STYLE: 2D game sprite, grotesque comedic caricature, ugly-funny lowbrow slapstick cartoon, huge head on a small scrawny or saggy body, shamelessly exaggerated facial features: crooked or missing teeth, bulging or droopy mismatched eyes, big pores and oily shiny skin, moles with a single long hair, sweat drops, rosy blotchy cheeks, double chin, over-the-top smug or stupid facial expressions exaggerated 200 percent, cheap mismatched clothes with stains, thick wobbly black outline, flat saturated colors with simple cel shading, Vietnamese street comedy vibe mixed with wuxia cultivation fantasy, pure flat magenta #FF00FF background filling everything around the subject, no text, no watermark, no ground shadow, full body visible. Sprite sheet of a round chubby teen with huge jiggly cheeks and a double chin, tapioca pearls stuck around his mouth, clutching a giant bubble tea cup with a fat straw, oversized hoodie with sweat-soaked armpits, tiny shorts, untied sneakers, color palette #CDB4DB #A47148 #FFC8DD #3D405B with 4 frames in total. Exactly 4 columns and 1 row, equal cell size. Frames are read left-to-right, top-to-bottom: [teleport_out, 4 frames] 1) startled 2) body twisting like being sucked into a vortex 3) only the sobbing head left 4) only a pair of flip-flops left. Identical character in every frame: same outfit, colors, proportions, every frame facing right in 3/4 view, character the same height in every cell, feet on the same baseline. Leave plenty of empty background space between frames and between rows so every frame is clearly separated; no grid lines, no frame numbers. Avoid: cute, kawaii, pretty, handsome, beautiful, elegant, clean, polished, heroic, idealized, realistic, photo, 3d render, blurry, extra limbs, cropped body, text, letters, numbers, logo, watermark, background scenery, multiple different characters, inconsistent outfit, nudity, grid lines, frame borders.
 ```
 
-## 28. `char_be_ti_teleport_in` · ưu tiên 4
+## 27. `char_be_ti_teleport_in` · ưu tiên 4
 
 - **Sinh lại**: sheet bị cắt sai số khung (xem cảnh báo của `artgen prep`)
 - **Lưu thành**: `assets/_raw/char_be_ti_teleport_in.png`
