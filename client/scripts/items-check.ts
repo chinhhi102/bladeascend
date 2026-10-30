@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 import { ITEM_KINDS } from '../src/net/protocol.ts';
 
-const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets');
+const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets', 'src');
 
 /** artFor trả về các đường dẫn ảnh một loại vật phẩm cần; rỗng = cố ý không dùng ảnh. */
 function artFor(kind: string): string[] {

@@ -40,7 +40,9 @@ func main() {
 	limit := fs.Int("n", 60, "max images to generate this run (minigen allows ~60-100 per 5 hours)")
 	_ = fs.Parse(os.Args[2:])
 
-	assets := config.FindRepoFile("assets")
+	// Art NGUỒN nằm ở `assets/src` (GAME_SPEC §13.7 mục 2). `assets/dist` là sản phẩm của
+	// `tools/asset-pipeline` — artgen không bao giờ ghi vào đó.
+	assets := config.FindRepoFile("assets/src")
 	// Sheet bị cắt sai thì phải sinh lại. Danh sách do chính `prep` ghi ra (xem
 	// writeMiscut) chứ không gõ tay vào mã nguồn nữa — gõ tay thì cứ có sheet hỏng mới là
 	// lại quên. Bộ cắt tìm khung bằng vùng pixel liền nhau, nên nhân vật có tay/chân rời bị

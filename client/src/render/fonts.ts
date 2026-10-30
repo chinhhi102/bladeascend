@@ -1,5 +1,7 @@
 import { BitmapFont } from 'pixi.js';
 
+import { assets } from './assets';
+
 /**
  * Font cho bảng tên (spec §12.3): Be Vietnam Pro, **đủ dấu tiếng Việt**.
  *
@@ -34,10 +36,16 @@ export function loadFonts(): Promise<void> {
     return ready;
   }
   ready = (async () => {
-    const faces = [
-      new FontFace('Be Vietnam Pro', 'url(/assets/fonts/BeVietnamPro-700.ttf)', { weight: '700' }),
-      new FontFace('Be Vietnam Pro', 'url(/assets/fonts/BeVietnamPro-800.ttf)', { weight: '800' }),
-    ];
+    // Tên tệp trong `assets/dist` có hash → phải hỏi manifest, không ghép tay.
+    const faces = (
+      [
+        ['fonts/BeVietnamPro-700.ttf', '700'],
+        ['fonts/BeVietnamPro-800.ttf', '800'],
+      ] as const
+    )
+      .map(([rel, weight]) => ({ url: assets.url(rel), weight }))
+      .filter((f) => f.url)
+      .map((f) => new FontFace('Be Vietnam Pro', `url(${f.url})`, { weight: f.weight }));
     try {
       await Promise.all(faces.map(async (f) => document.fonts.add(await f.load())));
     } catch {

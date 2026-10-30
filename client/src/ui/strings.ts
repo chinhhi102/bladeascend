@@ -64,6 +64,36 @@ export const STR = {
   versionMismatch: 'Máy chủ vừa được cập nhật. Hãy tải lại trang (Ctrl+F5) để chơi tiếp.',
   disconnected: 'Mất kết nối với máy chủ. Đang thử lại...',
   badName: 'Tên phải dài 2–16 ký tự.',
+
+  // ——— Màn hình tải (GAME_SPEC §13.7 mục 4) ———
+  // Khung và ba chữ đầu tiên ("Kiếm Xoay Tu Tiên", "Đang khởi động…", "Thử lại") nằm trong
+  // `index.html`, không nằm đây: chúng phải hiện trước khi bundle JS về, nên bắt buộc là
+  // HTML tĩnh. Mọi chữ ĐỔI THEO BƯỚC thì ở đây.
+  loadUi: 'Đang tải giao diện…',
+  loadChar: (name: string): string => `Đang gọi ${name}…`,
+  loadZone: (zone: string): string => `Đang dựng ${zone}…`,
+  loadRoom: 'Đang tìm phòng…',
+  loadMB: (done: number, total: number): string => `${done.toFixed(1)} / ${total.toFixed(1)} MB`,
+  loadCached: 'Đã có sẵn trong máy — vào ngay!',
+  loadFailed: 'Mạng bị ngắt giữa lúc tải. Bấm "Thử lại" để tải tiếp phần còn thiếu.',
+  loadBg: (pct: number): string => `⬇ ${Math.round(pct * 100)}%`,
+  /** Mẹo + câu bựa đổi mỗi 4 giây trong lúc chờ (§13.7 mục 4). */
+  loadTips: [
+    'Không có nút đánh. Kiếm tự xoay — việc của bạn là đi đúng chỗ.',
+    'Bị chém là rớt nguyên một cảnh giới, nhưng giữ tầng. Đừng tham.',
+    'Kiếm thừa rơi ra thành Bó Kiếm. Bó của người khác cũng nhặt được.',
+    'Giữ Shift để Thiêu Đốt Tinh Huyết: chạy nhanh hơn, đổi bằng EXP.',
+    'Nhặt Bí Kíp để dùng kỹ năng riêng của nhân vật mình. Tối đa 2 lượt.',
+    'Cổng đưa bạn tới một khu ngẫu nhiên. Không ai biết trước, kể cả bạn.',
+    'Thiên Môn ở giữa khu đi thẳng lên Thiên Đình. Một chiều, không có đường về.',
+    'Đài Tiên Khí phun Tiên khí theo chu kỳ. Đứng đúng lúc, đừng đứng đúng chỗ.',
+    'Vòng kiếm càng nhiều lớp thì càng dài tay, nhưng người ta cũng thấy bạn từ xa hơn.',
+    'Mặt hồ băng trơn: vẫn chạy được, chỉ là không phanh được.',
+    'Thằng Mập phun trân châu kín màn hình. 5 giây đó bạn cũng không nhặt được gì.',
+    'Đại Ca Dép gọi hai đàn em mang nửa số kiếm của hắn. Đừng xông vào giữa.',
+    'Luyện Khí bị chém là chết luôn, không rớt cảnh giới. Lên Trúc Cơ cho nhanh.',
+    'Vật cản phá được sẽ mọc lại. Chỗ vừa trống không có nghĩa là sẽ còn trống.',
+  ] as string[],
   controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Thiêu Đốt Tinh Huyết: giữ Shift, hoặc nháy đúp chuột rồi giữ. Kỹ năng: Space. Không có nút đánh — kiếm tự xoay!',
   animInfoOn: 'Hiện số liệu hoạt ảnh (J): tên anim · frame · pha · điểm độ giật',
   animInfoOff: 'Tắt số liệu hoạt ảnh',

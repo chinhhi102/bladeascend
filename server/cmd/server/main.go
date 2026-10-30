@@ -28,7 +28,10 @@ func main() {
 	addr := flag.String("addr", ":9999", "địa chỉ nghe; \":9999\" = mở ra mạng LAN, \"127.0.0.1:9999\" = chỉ máy này")
 	cfgPath := flag.String("config", config.FindRepoFile("config/game.json"), "config file")
 	mapsDir := flag.String("maps", config.FindRepoFile("maps"), "Tiled maps directory")
-	assetsDir := flag.String("assets", config.FindRepoFile("assets"), "assets directory")
+	// Phục vụ `assets/dist` — bản đã nén của `tools/asset-pipeline` (§13.7). Trỏ vào
+	// `assets/src` là gửi nguyên ảnh gốc 1024–2048 px cho người chơi: đúng cái lỗi §13.7
+	// sinh ra để sửa. Chưa chạy pipeline thì `routes` tự rơi về `assets/src` và cảnh báo.
+	assetsDir := flag.String("assets", config.FindRepoFile("assets/dist"), "assets directory (bản đã nén của asset-pipeline)")
 	clientDir := flag.String("client", config.FindRepoFile("client/dist"), "built client directory")
 	dbPath := flag.String("db", "", "SQLite file (default: server/data/leaderboard.db)")
 	debug := flag.Bool("debug", true, "cho phép phím test; người chơi vẫn phải tự mở bằng ?debug=true")
@@ -83,6 +86,14 @@ func main() {
 		defer tel.Close()
 		go srv.runServerSampler(stopSampler)
 		go srv.runRollupScheduler(stopSampler)
+	}
+	// Chưa chạy pipeline thì `assets/dist` rỗng và game vào trận với placeholder trắng
+	// trơn. Chuyện đó phải nói ngay ở dòng log đầu tiên: lần trước thiếu hai tệp font,
+	// server vẫn trả HTTP 200 cho mọi thứ, và chủ dự án vào lại 8 lần mới báo.
+	if _, err := os.Stat(filepath.Join(*assetsDir, "manifest.json")); err != nil {
+		log.Printf("⚠ CHƯA CÓ ASSET: %s/manifest.json không tồn tại.\n"+
+			"  Chạy:  node tools/asset-pipeline/index.mjs\n"+
+			"  (hoặc `cd client && npm run build` — nó tự gọi pipeline trước.)", *assetsDir)
 	}
 	mux := srv.routes(*assetsDir, *clientDir)
 	log.Printf("Kiếm Xoay server listening on %s (debug=%v)", *addr, *debug)

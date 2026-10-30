@@ -330,12 +330,12 @@ export class Hud {
     }
     const real = `characters/${this.char}/portrait_${want}.png`;
     if (assets.has(real)) {
-      return `/assets/${real}`;
+      return assets.url(real);
     }
     // Dự phòng là chân dung TRUNG TÍNH, không phải `frames/idle_00.png`: `frames/` là ảnh
     // nguồn, không có trong manifest và không được deploy (xem tools/deploy.sh).
     const neutral = `characters/${this.char}/portrait_neutral.png`;
-    return assets.has(neutral) ? `/assets/${neutral}` : '';
+    return assets.url(neutral);
   }
 
   /**
@@ -374,7 +374,7 @@ export class Hud {
       icon.style.background = `conic-gradient(${color} ${frac * 360}deg, rgba(0,0,0,.45) 0)`;
       const inner = h('div', 'buff-inner');
       if (assets.has(`buffs/${b}.png`)) {
-        inner.style.backgroundImage = `url(/assets/buffs/${b}.png)`;
+        inner.style.backgroundImage = `url(${assets.url(`buffs/${b}.png`)})`;
       } else {
         inner.textContent = (STR.buffs[b] ?? b).slice(0, 2);
       }

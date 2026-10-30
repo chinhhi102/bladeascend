@@ -839,3 +839,103 @@ Phần nền xong, chưa động vào đường truyền thật:
 - Delta theo ack + keyframe 2s.
 - Lượng tử hoá §4.6 (vị trí mình giữ i32 fixed-point, người khác u16).
 - Bật v2 sau cờ `proto=2`, v1 chạy song song.
+
+## Phiên 30/10 (tối) — spec v6.4 phần A: dung lượng tải & màn hình tải (§13.7)
+
+**Kết quả một dòng: gói chặn người chơi vào trận 77,4 MB → 7,02 MB (−91%), vào trận lần đầu
+ở 4G 10 Mbps 8,3 giây. Cả hai ngân sách §13.7 ĐẠT.** Số đầy đủ: PERF_LOG lượt #9.
+
+### Đo trước đã chỉ ra nguyên nhân, và nó không phải "ảnh quá nặng"
+
+`npm run assets:size` (mới viết, §13.7 mục 1) đọc ra **77,4 MB / 547 tệp tải trước khi hiện
+trang chủ** — vì `AssetStore.preload()` tải *mọi* tệp .png trong manifest, gồm cả bộ art của
+cả 10 nhân vật và vật cản của cả 5 khu bản đồ, chỉ để hiện một ô nhập tên.
+
+Con số đó quan trọng vì nó đổi hẳn thứ tự việc. Nén ảnh một mình thì không đủ: 77,4 MB giảm
+84% vẫn là 12 MB chặn người chơi, vẫn vượt ngân sách 8 MB. **Việc lớn nhất là chia nhóm tải,
+nén chỉ là việc thứ hai.** Nếu chỉ đi nén ảnh thì đã làm xong 84% công việc mà vẫn không
+đạt, và sẽ kết luận là "ngân sách spec quá chặt".
+
+### Làm gì
+
+1. **`assets/src` (nguồn) / `assets/dist` (phát hành)** — §13.7 mục 2. artgen ghi vào `src`;
+   server phục vụ `dist`. `dist` đã gitignore: nó là bản nén của thứ đã nằm trong repo.
+2. **`tools/asset-pipeline`** (Node + `sharp`, spec đã duyệt): PNG → WebP q72–82, thu nhỏ về
+   kích thước hiển thị, tên tệp kèm hash nội dung, `manifest.json` v2 có **byte + nhóm tải**
+   từng tệp. Có bộ đệm theo vân tay (nguồn + tham số xử lý): lần đầu 23 s, chạy lại 0,2 s —
+   cần thiết vì `npm run build` gọi nó mỗi lần.
+3. **Nhóm tải** `home / boot / zone_<khu> / char_<nhân vật> / fx_high / audio / debug / legal`.
+   Chỉ `home` chặn trang chủ (0,86 MB); `boot + char_mình + zone_mình` chặn vào trận.
+   Nhóm khu **suy ra từ `maps/*.tmj`** (loại vật cản thật của từng khu) chứ không gõ tay —
+   `type` của đối tượng Tiled đúng bằng tên thư mục `obstacles/<kind>/`, nên không lệch được.
+4. **Server**: tệp có hash → `Cache-Control: immutable` 1 năm, `manifest.json` → `no-cache`,
+   gzip cho JS/JSON/CSS/font (WebP/OGG bỏ qua — nén lại chỉ tốn CPU để tệp to hơn).
+5. **Màn hình tải** nằm trong `index.html` với CSS nội tuyến nên hiện từ byte đầu tiên, trước
+   cả khi bundle JS về. Thanh **theo byte** (`%` + `x,x / y,y MB`), dòng trạng thái theo đúng
+   4 bước của spec, **nhân vật mình chọn chạy trên thanh** (chân dung trước, đổi sang khung
+   `run` thật cắt từ atlas bằng `background-position` khi atlas về), 14 mẹo/câu bựa đổi mỗi
+   4 s, nút "Thử lại" **tải tiếp** phần còn thiếu. Icon `⬇ %` góc dưới cho nhóm tải nền.
+6. **`npm run assets:budget`** chặn build khi vượt (boot ≤ 8 MB, tổng ≤ 80 MB), in 20 tệp
+   nặng nhất *của đúng gói bị vượt*. Đã vào `npm run build` và CI.
+
+### Ba thứ chiếm phần lớn mức giảm — hai trong ba không phải nén ảnh
+
+1. **Bỏ 5 loại tệp không mã nào đọc khỏi bản phát hành (−129 MB nguồn)**: `frames/`,
+   `frames_norm/`, `ref_sheet.png`, và `body/` + `faces/` — art của **hướng A, chưa có mã nào
+   dùng**. Cả 5 đều nằm trong `manifest.json` cũ và người chơi **tải thật**. `ref_sheet` còn
+   bị bộ nạp lọc ra lúc tải nhưng vẫn tính vào manifest — tức là tải xong rồi bỏ.
+2. **Chia nhóm tải (−64 MB khỏi gói chặn)**.
+3. **PNG → WebP + thu nhỏ (72,2 → 11,4 MB, −84%)**.
+
+### Ba chỗ spec áp nguyên văn không ra kết quả, đều có số đo
+
+1. **"Frame nhân vật lưu ở 256 px"** — atlas hiện dùng ô **128 px**, tức đã nhỏ hơn mức spec
+   yêu cầu. Thu nhỏ nữa là làm nhân vật mờ đi mà không đổi lấy được byte nào (WebP đã lấy
+   hết). Nên atlas chỉ đổi định dạng, không thu nhỏ.
+2. **Âm thanh 96/128 kb/s** — nguồn đã là 22–44 kHz mono ở 31–80 kb/s, tức **dưới** mức spec.
+   Ép libvorbis lên 128 kb/s ở 22 050 Hz thì nó báo `encoder setup failed`, và nếu chạy được
+   cũng chỉ làm tệp to hơn. Pipeline **đo bitrate trước rồi mới quyết định nén**.
+3. **Trim viền trong suốt + ghép atlas item/icon** — **chưa làm, cố ý**. Trim một sprite lẻ
+   là dịch điểm neo của nó, mà hơn 300 chỗ gọi `assets.texture()` đặt anchor theo quy ước
+   riêng; với atlas thì phải ghép lại và thêm `trim`/`orig` cho từng khung. Phần thưởng ước
+   tính 5–15% vì WebP đã nén vùng alpha rỗng gần như miễn phí, mà **cả hai ngân sách đã
+   ĐẠT**. Theo quy tắc "đạt thì dừng". Cần tới khi gói chặn tiến sát 8 MB.
+
+### Rủi ro mới sinh ra, và chỗ nó sẽ cắn
+
+Tên tệp giờ có hash → **mọi chỗ ghép tay `/assets/...` là 404 trong im lặng**. Đã chuyển 8
+chỗ sang `assets.url()`: `<img>` chân dung / huy chương / hồn ma, nền trang chủ, icon buff,
+font, âm thanh, và `border-image` của màn Tổng kết (chỗ cuối trước đây nằm trong `style.css`
+và vite vẫn cảnh báo "didn't resolve at build time" — nó chạy được chỉ vì server phục vụ
+thẳng thư mục nguồn). Luật này đã ghi vào `CLAUDE.md`.
+
+### Tự kiểm bằng trình duyệt thật
+
+`go vet` · `go test ./...` 256 test · `npm run build` — pass. Chạy thật trong Chromium:
+trang chủ **11 chân dung thật, 0 placeholder**; trong trận **0 placeholder**, 58 fps, vẽ
+0,6 ms, 36 draw call, **0 request HTTP ≥ 400, 0 lỗi console**; `/assets/.../frames/...` trả
+404 đúng như phải thế. Header kiểm riêng: WebP có hash → `immutable`, font → `immutable` +
+gzip, `manifest.json` → `no-cache`.
+
+## Lỗi đã biết còn mở (thêm trong phiên 30/10 tối)
+
+Hai chỗ **art có trong repo mà game không bao giờ vẽ**. Cả hai có từ trước phiên này, tìm ra
+trong lúc chia nhóm tải (phải trả lời "tệp này của khu nào" mới lộ ra). **Chưa sửa** — nằm
+ngoài phần A, và sửa là đổi hình ảnh trong game nên cần anh xem trước.
+
+1. **Nền 5 khu đều đang là cỏ.** `mapview.buildGround()` tra `BIOME_TILES[map.biome]`, nhưng
+   `BIOME_TILES` đánh khoá bằng **tên khu** (`'Linh Sơn'`, `'Trúc Lâm'`, `'Phàm Trấn'`,
+   `'Hắc Thị'`) còn `map.biome` là **tên biome** (`'grass'`, `'dirt'`, `'concrete'`,
+   `'snow'`). Tra luôn trượt → rơi về `['grass']`. Hậu quả: Băng Nguyệt Hồ, Linh Sơn Cốc,
+   Phàm Trấn đều trải cỏ; **14 trong 19 ảnh nền chưa từng hiện ra** (0,43 MB vẫn nằm trong
+   nhóm `boot`). `tiles/snow.png`, `dirt.png`, `concrete.png` có sẵn và tên khớp đúng giá trị
+   `biome` — nên có thể chỉ cần đổi khoá của `BIOME_TILES`.
+2. **Không vật trang trí nào được vẽ.** `buildDecor()` tìm `decor/<d.sp>.png` với `d.sp` lấy
+   nguyên từ `type` trong Tiled: `rock_small`, `pine`, `lantern`, `well`, `banner`, `bamboo`,
+   `bush_small`. `assets/src/decor/` lại chứa `red_plastic_stool`, `old_bicycle_leaning`,
+   `street_food_cart`, `banana_tree`… — **không tên nào trùng**, nên `continue` ở mọi vật, và
+   299 vật trang trí trong 5 bản đồ không hiện gì cả. `npm run check:assets` không bắt được
+   vì nó chỉ đối chiếu vật cản, không đối chiếu decor.
+
+Hỏi anh (ghi cả vào `docs/QUESTIONS.md`): hai bộ tên decor này là **đổi mapgen cho khớp art
+đã có**, hay **vẽ thêm art theo tên mapgen đang dùng**?

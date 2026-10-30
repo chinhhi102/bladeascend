@@ -1,12 +1,15 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -31,7 +34,7 @@ type server struct {
 	telemetry *telemetry.Store
 }
 
-func (s *server) routes(assetsDir, clientDir string) *http.ServeMux {
+func (s *server) routes(assetsDir, clientDir string) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/config", s.handleConfig)
 	mux.HandleFunc("GET /api/leaderboard", s.handleLeaderboard)
@@ -41,9 +44,75 @@ func (s *server) routes(assetsDir, clientDir string) *http.ServeMux {
 	// Tóm tắt phiên lúc đóng tab: sendBeacon chỉ gửi được POST, và lúc đó WebSocket đã đứt.
 	mux.HandleFunc("POST /telemetry/end", s.handleTelemetryEnd)
 	mux.HandleFunc("GET /admin/perf", s.handleAdminPerf)
-	mux.Handle("GET /assets/", http.StripPrefix("/assets/", noListing(http.FileServer(http.Dir(assetsDir)))))
+	mux.Handle("GET /assets/", http.StripPrefix("/assets/", noListing(assetCache(http.FileServer(http.Dir(assetsDir))))))
 	mux.Handle("GET /", spa(clientDir))
-	return mux
+	return gzipMux(mux)
+}
+
+// hashedName nhận ra tên tệp do `tools/asset-pipeline` sinh ra: `<tên>.<8 chữ hex>.<đuôi>`.
+//
+// Chỉ những tệp này được cache một năm. Phân biệt bằng CHÍNH TÊN chứ không bằng thư mục, vì
+// `manifest.json` nằm cùng chỗ với chúng mà lại là tệp duy nhất KHÔNG được cache lâu: nó là
+// thứ trỏ tới tất cả những tệp kia, nên cache nó là người chơi mắc kẹt với bộ art cũ cho tới
+// khi tự xoá cache — đúng kiểu lỗi không ai báo được vì "máy em vẫn thế".
+var hashedName = regexp.MustCompile(`\.[0-9a-f]{8}\.[a-z0-9]+$`)
+
+func assetCache(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if hashedName.MatchString(r.URL.Path) {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			// manifest.json và mọi thứ chưa có hash: phải hỏi lại server mỗi lần.
+			w.Header().Set("Cache-Control", "no-cache")
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
+// gzipCompressible: chỉ nén thứ nén được. WebP/OGG/PNG đã nén rồi — gzip thêm một lượt là
+// tốn CPU để tệp TO HƠN vài byte.
+var gzipCompressible = map[string]bool{
+	".json": true, ".js": true, ".mjs": true, ".css": true, ".html": true,
+	".ttf": true, ".svg": true, ".txt": true, ".md": true, ".map": true,
+}
+
+type gzipWriter struct {
+	http.ResponseWriter
+	gz *gzip.Writer
+}
+
+func (g gzipWriter) Write(b []byte) (int, error) { return g.gz.Write(b) }
+
+// WriteHeader xoá Content-Length lần cuối trước khi gửi đầu phản hồi.
+//
+// `http.ServeFile` đã tự bỏ Content-Length khi thấy có Content-Encoding, nhưng không có gì
+// bảo đảm mọi handler sau này cũng vậy — và nếu một handler đặt lại nó thì trình duyệt cắt
+// ngang tệp giữa đường. Chốt ở đây là chốt một lần cho mọi đường.
+func (g gzipWriter) WriteHeader(code int) {
+	g.Header().Del("Content-Length")
+	g.ResponseWriter.WriteHeader(code)
+}
+
+// gzipMux nén gzip cho JS/JSON/CSS/font (GAME_SPEC §13.7 mục 2).
+//
+// Nén tại thời điểm gửi chứ không nén sẵn thành `.gz` vì nó phải phủ CẢ `client/dist`
+// (vite sinh ra) lẫn `assets/dist` (pipeline sinh ra) — một chỗ làm là đủ cho hai nguồn.
+// Phần nặng nhất của game là WebP và nó không đi qua nhánh nén này.
+func gzipMux(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") || !gzipCompressible[strings.ToLower(path.Ext(r.URL.Path))] {
+			h.ServeHTTP(w, r)
+			return
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Add("Vary", "Accept-Encoding")
+		// Content-Length của bản CHƯA nén sẽ sai sau khi nén; http.ServeFile đặt nó, nên
+		// phải xoá. Để lại thì trình duyệt cắt ngang tệp và báo lỗi giải mã.
+		w.Header().Del("Content-Length")
+		gz := gzip.NewWriter(w)
+		defer func() { _ = gz.Close() }()
+		h.ServeHTTP(gzipWriter{ResponseWriter: w, gz: gz}, r)
+	})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

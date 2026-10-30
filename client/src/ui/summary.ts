@@ -15,8 +15,14 @@ export interface SummaryActions {
 export function summaryScreen(cfg: GameConfig, d: DeadMsg, myChar: string, act: SummaryActions): HTMLElement {
   const root = h('div', 'screen summary');
   const panel = h('div', 'panel scroll-panel');
-  if (assets.has('ui/scroll.png')) {
+  // Khung giấy cuộn 9-slice. Địa chỉ ảnh đặt bằng JS chứ không nằm trong `style.css`: tệp
+  // trong `assets/dist` mang hash nội dung, nên CSS tĩnh không thể biết tên. Trước đây CSS
+  // trỏ `/assets/ui/scroll.png` và vite còn cảnh báo "didn't resolve at build time" —
+  // chạy được là vì server phục vụ thẳng thư mục nguồn, và sẽ 404 ngay khi hết làm vậy.
+  const scroll = assets.url('ui/scroll.png');
+  if (scroll) {
     panel.classList.add('has-scroll');
+    panel.style.borderImage = `url(${scroll}) 205 199 213 160 fill stretch`;
   }
   // Hồn ma dùng CHÂN DUNG, không dùng `frames/death_07.png`.
   //
@@ -29,7 +35,7 @@ export function summaryScreen(cfg: GameConfig, d: DeadMsg, myChar: string, act: 
     : '';
   const ghost = ghostFile ? h('img', 'ghost') : null;
   if (ghost) {
-    ghost.src = `/assets/characters/${myChar}/${ghostFile}`;
+    ghost.src = assets.url(`characters/${myChar}/${ghostFile}`);
     ghost.onerror = () => ghost.remove();
   }
   const realm = cfg.cultivation.realms[realmOf(cfg, d.peak_level)] ?? '';

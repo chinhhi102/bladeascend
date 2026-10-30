@@ -1,5 +1,6 @@
 import { Application, Container } from 'pixi.js';
 import { AnimViewer } from './animviewer';
+import { assets } from './assets';
 import { FADE_OUT_SECS, ViewPool } from './viewpool';
 import { BobaOverlay } from './boba';
 
@@ -276,8 +277,19 @@ export class GameScene {
     this.camera.position.set(this.app.screen.width / 2 - (x + shake.x) * this.zoom, this.app.screen.height / 2 - (y + shake.y) * this.zoom);
   }
 
+  /**
+   * assetGen: `assets.gen` lần kiểm gần nhất.
+   *
+   * Nhóm `chars` / `zone_*` tải NỀN (§13.7 mục 3), nên atlas có thể về giữa trận. Mốc này
+   * là cách biết "vừa có ảnh mới" mà không phải thử `setCharacter` cho từng nhân vật ở mỗi
+   * khung — 60 lần/giây × 60 nhân vật tra bảng cho một việc gần như không bao giờ xảy ra.
+   */
+  private assetGen = -1;
+
   private syncPlayers(frames: ReturnType<ClientWorld['playerFrames']>, now: number): void {
     const seen = new Set<number>();
+    const newArt = this.assetGen !== assets.gen;
+    this.assetGen = assets.gen;
     const detail = this.swordDetail(frames);
     const me = frames.find((f) => f.view.id === this.world?.myId);
     const myRealm = me ? realmOf(this.cfg, me.s.L) : 0;
@@ -286,7 +298,7 @@ export class GameScene {
       let sp = this.players.get(f.view.id);
       // Đổi nhân vật thì đổi TẠI CHỖ; chỉ dựng view mới khi thật sự chưa có (xem
       // `PlayerSprite.setCharacter`). Bản cũ huỷ rồi dựng lại, thêm một lần nhấp nháy.
-      if (sp && sp.char !== f.view.char && f.view.char) {
+      if (sp && f.view.char && (sp.char !== f.view.char || (newArt && sp.needsArtUpgrade()))) {
         sp.setCharacter(f.view.char);
       }
       if (!sp) {

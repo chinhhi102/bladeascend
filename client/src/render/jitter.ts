@@ -5,6 +5,8 @@
 // tính. Tính ở client nghĩa là mỗi máy người chơi đọc lại ~900 ảnh mỗi lần vào game, và con
 // số thì giống hệt nhau ở mọi máy vì nó chỉ phụ thuộc vào art.
 
+import { assets } from './assets';
+
 /** JITTER_RED: từ điểm này trở lên hiện chữ đỏ. Khớp `jitterRed` bên artgen. */
 export const JITTER_RED = 45;
 
@@ -48,7 +50,7 @@ export async function loadJitter(): Promise<void> {
   }
   loaded = true; // đặt trước: hỏng thì cũng đừng thử lại mỗi lần bấm phím
   try {
-    const res = await fetch('/assets/jitter.json', { cache: 'no-cache' });
+    const res = await fetch(assets.url('jitter.json') || '/assets/jitter.json', { cache: 'no-cache' });
     if (!res.ok) {
       return;
     }

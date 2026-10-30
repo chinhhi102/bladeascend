@@ -5,6 +5,7 @@
 #   - check:items        → Bí Kíp hiện ra vòng tròn trắng vì tra nhầm thư mục art
 #   - check:telemetry-off→ bản release không được đóng gói module telemetry (TELEMETRY §1.6)
 #   - check:wire         → mã hoá nhị phân hai phía phải khớp từng byte (NETCODE §4.9)
+#   - assets:budget      → lần tải đầu từng là 77,4 MB và người chơi bỏ game vì chờ (§13.7)
 #   - go test -race      → 6 lỗi tranh chấp dữ liệu giữa các goroutine khu đã bắt được
 name: CI
 
@@ -74,7 +75,18 @@ jobs:
       - name: client giải mã khớp server
         working-directory: client
         run: npm run check:wire -- /tmp/wire.json
-      - name: build (tsc + vite)
+      # `tools/asset-pipeline` có node_modules riêng (sharp là thư viện nhị phân, GAME_SPEC
+      # §13.7 mục 2 đã duyệt). `npm run build` gọi pipeline, nên phải cài trước.
+      - name: npm ci (asset-pipeline)
+        working-directory: tools/asset-pipeline
+        run: npm ci
+      # ffmpeg để nén lại âm thanh. Thiếu nó pipeline vẫn chạy (tệp âm thanh phát hành
+      # nguyên trạng + một dòng cảnh báo), nhưng CI thì nên đúng như bản deploy.
+      - name: ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      # `npm run build` tự chạy `assets:build` rồi `assets:budget` trước tsc/vite, nên bước
+      # này đã gồm cả cổng ngân sách §13.7 mục 6 (boot ≤ 8 MB, tổng ≤ 80 MB).
+      - name: build (asset-pipeline + ngân sách + tsc + vite)
         working-directory: client
         run: npm run build
       - name: bản release không chứa telemetry

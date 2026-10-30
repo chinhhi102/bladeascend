@@ -23,6 +23,16 @@ const BUBBLE_MAX_TEXT_W = 220;
 /** Mờ dần vào khi nhân vật lọt vào khung hình (NETCODE_SPEC §5 mục 4). */
 const FADE_IN_SECS = 0.12;
 
+/**
+ * ART_SWAP_FADE_SECS: đổi từ placeholder (hoặc nhân vật dự phòng) sang ảnh THẬT thì mờ dần
+ * trong 0,2 s — GAME_SPEC §13.7 mục 3 ("mờ dần 0.2s, không nhấp nháy").
+ *
+ * Dài hơn `FADE_IN_SECS` một chút là có chủ ý: 120 ms kia là "một người vừa lọt vào khung
+ * hình", còn đây là "cùng một người đổi hình". Đổi hình nhanh quá thì đúng là cái nhấp
+ * nháy mà spec muốn tránh.
+ */
+const ART_SWAP_FADE_SECS = 0.2;
+
 // Animations missing from an atlas fall back along this chain.
 const FALLBACK: Record<string, string[]> = {
   // idle có thể bị bỏ nếu sheet cắt sai (xem assets.ts/miscut) — vẫn phải có gì để vẽ.
@@ -59,6 +69,8 @@ export class PlayerSprite {
   private statusKey = '';
   /** bornAt: lúc view bắt đầu được vẽ, để mờ dần vào. */
   private bornAt = 0;
+  /** fadeSecs: độ dài lần mờ-dần-vào đang chạy. Đổi theo nguyên nhân (xuất hiện / đổi art). */
+  private fadeSecs = FADE_IN_SECS;
   /** ctl: bộ điều khiển hoạt ảnh (GAME_SPEC §12.5 C). */
   private readonly ctl = new AnimController();
   /** ghost: lớp animation cũ mờ dần trong lúc crossfade. */
@@ -159,6 +171,17 @@ export class PlayerSprite {
     return this.atlas !== null;
   }
 
+  /**
+   * needsArtUpgrade: đang vẽ bằng placeholder hoặc bằng nhân vật DỰ PHÒNG.
+   *
+   * Với bộ nạp theo nhóm (§13.7), atlas của 9 nhân vật kia về sau khi trận đã bắt đầu. Bộ
+   * vẽ hỏi hàm này để biết có nên thử `setCharacter` lại không — chỉ hỏi khi `assets.gen`
+   * đổi, nên không phải mỗi khung.
+   */
+  needsArtUpgrade(): boolean {
+    return this.atlas === null || this.usingFallback;
+  }
+
   setCharacter(char: string): boolean {
     // `usingFallback` cũng phải xét: nếu đang vẽ bằng nhân vật dự phòng thì dù tên nhân vật
     // không đổi vẫn phải thử lại — atlas thật có thể vừa tải xong.
@@ -174,6 +197,9 @@ export class PlayerSprite {
     this.char = char;
     this.atlas = next;
     this.mood = ''; // ép `updateBody` dựng lại thân theo atlas mới
+    // Mờ dần VÀO 0,2 s thay vì đổi hình đột ngột (§13.7 mục 3).
+    this.bornAt = 0;
+    this.fadeSecs = ART_SWAP_FADE_SECS;
     if (this.body) {
       this.body.destroy({ children: true });
       this.body = null;
@@ -481,9 +507,9 @@ export class PlayerSprite {
     if (this.bornAt === 0) {
       this.bornAt = now;
     }
-    a *= Math.min(1, (now - this.bornAt) / FADE_IN_SECS);
+    a *= Math.min(1, (now - this.bornAt) / this.fadeSecs);
     this.root.alpha = a;
-    this.ring.alpha = (flags & FLAG.stealth ? 0.45 : 1) * Math.min(1, (now - this.bornAt) / FADE_IN_SECS);
+    this.ring.alpha = (flags & FLAG.stealth ? 0.45 : 1) * Math.min(1, (now - this.bornAt) / this.fadeSecs);
     this.swordRing.visible = !(flags & FLAG.dead);
   }
 
@@ -565,6 +591,7 @@ export class PlayerSprite {
     this.root.alpha = 1;
     this.ring.visible = true;
     this.bornAt = 0; // mờ dần VÀO lại từ đầu, như một entity mới xuất hiện
+    this.fadeSecs = FADE_IN_SECS;
     return true;
   }
 

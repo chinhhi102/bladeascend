@@ -46,14 +46,17 @@ export class Screens {
  *
  * Chưa có chân dung thì chấm tròn màu — để màn chọn không bao giờ trống trơn khi art chưa kịp.
  */
-export function portrait(char: string, has: (p: string) => boolean, color: string): HTMLElement {
+export function portrait(char: string, src: (p: string) => string, color: string): HTMLElement {
   // Chỉ dùng chân dung. Mức dự phòng cũ là `frames/idle_00.png`, nhưng `frames/` là ảnh
   // nguồn: không có trong manifest, không được deploy → 404 và ô trống. Thiếu chân dung thì
   // rơi thẳng xuống chấm tròn màu bên dưới, vẫn không bao giờ trống trơn.
-  const file = has(`characters/${char}/portrait_neutral.png`) ? `portrait_neutral.png` : '';
-  if (file) {
+  //
+  // `src` trả về ĐỊA CHỈ chứ không phải "có hay không": tệp trong `assets/dist` mang hash
+  // trong tên nên chỉ manifest biết địa chỉ thật, ghép tay là 404.
+  const url = src(`characters/${char}/portrait_neutral.png`);
+  if (url) {
     const img = h('img', 'portrait');
-    img.src = `/assets/characters/${char}/${file}`;
+    img.src = url;
     img.alt = '';
     return img;
   }

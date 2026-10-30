@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 import { catalog, type CatalogEntry } from '../src/render/catalog.ts';
 
-const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets');
+const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets', 'src');
 const AUDIO_EXTS = ['.ogg', '.mp3', '.wav'];
 
 function exists(rel: string): boolean {

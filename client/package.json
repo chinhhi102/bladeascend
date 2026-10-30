@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "assets:build": "node ../tools/asset-pipeline/index.mjs",
+    "build": "npm run assets:build && npm run assets:budget && tsc --noEmit && vite build",
     "preview": "vite preview",
     "assets:report": "node --no-warnings scripts/assets-report.ts",
+    "assets:size": "node --no-warnings --experimental-strip-types scripts/assets-size.ts",
+    "assets:budget": "node --no-warnings --experimental-strip-types scripts/assets-budget.ts",
     "check:collision": "node --no-warnings --experimental-strip-types scripts/collision-check.ts",
     "check:telemetry-off": "node --no-warnings --experimental-strip-types scripts/telemetry-off.ts",
     "check:items": "node --no-warnings --experimental-strip-types scripts/items-check.ts",

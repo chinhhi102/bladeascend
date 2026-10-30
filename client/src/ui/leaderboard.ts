@@ -66,7 +66,7 @@ function renderRows(cfg: GameConfig, table: HTMLElement, rows: Row[], metric: st
     const rank = h('span', 'rank', String(i + 1));
     if (i < 3 && assets.has(`ui/medal_${MEDALS[i]}.png`)) {
       const img = h('img', 'medal');
-      img.src = `/assets/ui/medal_${MEDALS[i]}.png`;
+      img.src = assets.url(`ui/medal_${MEDALS[i]}.png`);
       rank.replaceChildren(img);
     }
     const realm = cfg.cultivation.realms[realmOf(cfg, r.peak_level)] ?? '';

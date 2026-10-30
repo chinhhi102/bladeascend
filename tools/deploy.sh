@@ -55,19 +55,23 @@ echo "== 4/5 dựng thư mục deploy =="
 rm -rf "$STAGE"
 mkdir -p "$STAGE/client" "$STAGE/assets"
 cp -r client/dist/. "$STAGE/client/"
-# Chép TẤT CẢ `assets/` trừ ba thư mục ảnh nguồn. KHÔNG chép theo `manifest.json`.
+# Chép NGUYÊN `assets/dist` — sản phẩm của `tools/asset-pipeline` (GAME_SPEC §13.7 mục 2).
+# `npm run build` ở bước 2/5 đã dựng nó và đã qua cổng `assets:budget`.
 #
-# Lần đầu tôi chép theo manifest và làm server hỏng hẳn: manifest chỉ liệt kê .png/.json/âm
-# thanh, KHÔNG có font `.ttf`. Thiếu font thì `loadFonts()` chặn ngay trước khi game khởi
-# động — người chơi thấy màn hình đứng mãi ở "đang kết nối". Chủ dự án vào lại 8 lần trong
-# 5 phút mới báo.
+# Trước đây chỗ này chép `assets/` rồi loại trừ ba thư mục ảnh nguồn, và đó là một danh sách
+# loại trừ phải tự nhớ nới ra mỗi lần thêm thư mục nguồn mới. Giờ không cần: `assets/dist`
+# chỉ chứa thứ phát hành, vì đó là định nghĩa của nó.
 #
-# Bài học: "tập tệp game tải về" KHÔNG bằng "manifest". Manifest là danh sách asset mà bộ
-# nạp ảnh quan tâm; còn server phục vụ cả thư mục. Loại trừ theo thư mục thì an toàn, vì
-# thêm loại tệp mới sau này cũng tự được chép.
-rsync -a --delete \
-  --exclude '_raw/' --exclude 'frames/' --exclude 'frames_norm/' \
-  "$REPO/assets/" "$STAGE/assets/"
+# Vẫn KHÔNG chép theo `manifest.json`. Lần đầu tôi chép theo manifest và làm server hỏng
+# hẳn: manifest chỉ liệt kê .png/.json/âm thanh, KHÔNG có font `.ttf`. Thiếu font thì
+# `loadFonts()` chặn ngay trước khi game khởi động — người chơi thấy màn hình đứng mãi ở
+# "đang kết nối". Chủ dự án vào lại 8 lần trong 5 phút mới báo. (Manifest v2 đã có font,
+# nhưng luật "chép cả thư mục" vẫn an toàn hơn và không mất gì.)
+if [ ! -f "$REPO/assets/dist/manifest.json" ]; then
+  echo "LỖI: chưa có assets/dist/manifest.json. Chạy: node tools/asset-pipeline/index.mjs" >&2
+  exit 1
+fi
+rsync -a --delete --exclude '.pipeline-cache.json' "$REPO/assets/dist/" "$STAGE/assets/"
 echo "   chép $(find "$STAGE/assets" -type f | wc -l) tệp asset"
 echo "$BUILD_ID" > "$STAGE/BUILD_ID"
 # Đổi tên NGUYÊN KHỐI: không có khoảnh khắc nào thư mục ở trạng thái nửa vời.
@@ -104,8 +108,19 @@ echo "== 6/6 tự kiểm bản vừa deploy =="
 # font — và chủ dự án phải vào lại 8 lần mới báo. Nên bước cuối phải hỏi: một người chơi
 # thật có vào được không.
 fail=0
-for u in / /api/config /assets/manifest.json \
-         /assets/fonts/BeVietnamPro-700.ttf /assets/fonts/BeVietnamPro-800.ttf; do
+# Địa chỉ font lấy TỪ MANIFEST, không gõ tay: tên tệp trong `assets/dist` mang hash nội
+# dung nên đổi mỗi lần art đổi. Gõ tay là bài tự kiểm sẽ báo đỏ đúng cái nó không nên báo,
+# rồi người ta sẽ bỏ qua nó — và lần thiếu font thật thì cũng bỏ qua luôn.
+FONT_URLS=$(python3 - "$DEPLOY/assets/manifest.json" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1]))
+for rel in ('fonts/BeVietnamPro-700.ttf', 'fonts/BeVietnamPro-800.ttf'):
+    f = m['files'].get(rel)
+    if f:
+        print('/assets/' + f['url'])
+PY
+)
+for u in / /api/config /assets/manifest.json $FONT_URLS; do
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:9999$u" || echo 000)
   if [ "$code" != "200" ]; then
     echo "   LỖI $u → HTTP $code" >&2

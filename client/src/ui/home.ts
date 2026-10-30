@@ -53,7 +53,7 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
   const profile = savedProfile(cfg);
   const root = h('div', 'screen home');
   if (assets.has('ui/home_bg.png')) {
-    root.style.backgroundImage = 'url(/assets/ui/home_bg.png)';
+    root.style.backgroundImage = `url(${assets.url('ui/home_bg.png')})`;
   }
   const panel = h('div', 'panel');
   const input = h('input', 'name-input');
@@ -79,14 +79,14 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     h('div', 'preview-text', previewName, previewSkill, previewDesc));
 
   const showPreview = (c: string): void => {
-    previewArt.replaceChildren(portrait(c, (p) => assets.has(p), toHex(charColor(c)[0])));
+    previewArt.replaceChildren(portrait(c, (p) => assets.url(p), toHex(charColor(c)[0])));
     previewName.textContent = STR.characters[c] ?? c;
     previewSkill.textContent = `${STR.skillLabel}: ${STR.skillNames[c] ?? '—'}`;
     previewDesc.textContent = STR.skillDesc[c] ?? '';
   };
 
   for (const c of cfg.characters) {
-    const card = h('button', 'char-card', portrait(c, (p) => assets.has(p), toHex(charColor(c)[0])), h('span', '', STR.characters[c] ?? c));
+    const card = h('button', 'char-card', portrait(c, (p) => assets.url(p), toHex(charColor(c)[0])), h('span', '', STR.characters[c] ?? c));
     const pick = (): void => {
       selected = c;
       cards.forEach((el, id) => el.classList.toggle('selected', id === c));

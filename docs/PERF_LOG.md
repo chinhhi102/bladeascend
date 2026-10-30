@@ -15,6 +15,7 @@
 | **S4** | Chơi tay 1 tab có giao diện, `?debug=true`, máy chuẩn (ghi cấu hình ở §4) | Đứng giữa trận đông nhất 60s, đọc F3. Đo FPS thật. |
 | **S5** | `go run ./cmd/sim --bots 40 --minutes 5 --seed 7` | Nhịp chơi (không phải hiệu năng): lượt chết, thời gian lên cảnh giới. |
 | **S6** | `go run ./cmd/perfreport --real --since 7d` | Số liệu **người chơi thật** trên server LAN `:9999` (TELEMETRY_SPEC). Ghi cả số phiên N; N < 5 thì tự đánh dấu "ít mẫu, tham khảo". |
+| **S7** | `cd client && npm run assets:size` + `node tools/browsertest/loadtime.mjs <url>` | **Dung lượng tải & thời gian vào trận** (GAME_SPEC §13.7). Hai nửa: dung lượng lấy từ manifest (chính xác tuyệt đối), thời gian đo trong Chrome có bóp mạng 4 Mbps / 10 Mbps / lần 2 có cache. |
 
 Mỗi kịch bản chạy **3 lần**, ghi trung vị. Cùng máy, cùng commit build, đóng ứng dụng nặng khác.
 
@@ -46,6 +47,10 @@ S6 nhìn thấy đúng những máy đó.
 | Hình ảnh | Entity respawn trong 2s | số / phút | **0** | F3 |
 | Hình ảnh | Đổi khu (cache / chưa cache) | ms | < 300 / < 1 500 | browsertest |
 | Nhịp chơi | Lượt chết / bot / 5 phút | số | (theo dõi) | sim (S5) |
+| Tải về | Gói chặn vào trận | MB | **< 8** | `assets:size` (S7) |
+| Tải về | Toàn bộ game | MB | **< 80** | `assets:size` (S7) |
+| Tải về | Vào trận lần đầu, 4G ~10 Mbps | s | **< 10** | `loadtime.mjs` (S7) |
+| Tải về | Vào trận lần 2 (có cache) | s | (gần như 0 byte) | `loadtime.mjs` (S7) |
 
 ## 3. Bảng tổng hợp theo lượt
 
@@ -65,6 +70,8 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 6 | 2026-10-30 | `ab0f706` | **Sửa texture 1 GB** — `filterArea` bám khung nhìn + atlas 128 + boulder 512 | S4\*\* | – | – | – | 58 / – | 0.5 | 112 | 0 | – | Texture GPU **1 076 → 102 MB**; art tĩnh 607 → 378 MB | Vẫn còn placeholder/respawn (xem dòng 7) |
 | 7 | 2026-10-30 | `d34def5` | Mở telemetry trên `:9999` — **lượt chạy kiểm chứng, KHÔNG phải người thật** | S6\*\*\* | 0.35 / 1.54 ✅ | 7.9 / 8.2 ✅ | 0.5 ✅ | 59 / 28 ⚠ | – | 54 ✅ | 12 ❌ | 13.50 ❌ | — | Placeholder và respawn vẫn vượt ngân sách → hướng A bước 2b |
 | 8 | 2026-10-30 | `9bca2c9` | **NETCODE bước 2b** — DescRequest, nhân vật dự phòng, mờ ra 150 ms, View Pool | FLICKER | – | – | – | 60 / – | – | 36 | **0** ✅ | **0.4** ⚠ | Placeholder 252→**0** qua 16 lượt | Respawn chưa về 0 hẳn (2/16 lượt có 1) — cần `Despawn` tường minh ở bước 3 |
+| 9a | 2026-10-30 | `200e5bf` | **Mốc TRƯỚC §13.7** — bộ nạp tải cả manifest trước trang chủ | S7 | – | – | – | – | – | – | – | – | – | Gói chặn **77.4 MB** (vượt 9.7×); tổng 201.5 MB (vượt 2.5×) |
+| **9b** | 2026-10-30 | (phiên này) | **§13.7 A — asset-pipeline + nhóm tải + màn hình tải** | S7 | – | – | – | 58 / – | 0.6 | 36 | **0** ✅ | – | Gói chặn 77.4 → **7.02 MB** ✅ · tổng 201.5 → **11.41 MB** ✅ · vào trận 10 Mbps **8.3 s** ✅ · lần 2 **2.8 s** | Dư ngân sách gói chặn chỉ 0.98 MB; `zone_thien_dinh` 3.24 MB là phần nặng nhất |
 
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
@@ -245,6 +252,93 @@ cả hai là phần dư của NETCODE bước 2a mà bảng #5 trước đó ghi
 Chi phí đo được: **không có mẫu nào vượt 1 KB/s**, và FPS trong lượt có telemetry không khác
 lượt không có (58–59 cả hai) — đạt ràng buộc §1.1 và §1.2.
 
+### Lượt #9 — Dung lượng tải: 77,4 → 7,0 MB (2026-10-30, GAME_SPEC §13.7 phần A)
+
+Mục tiêu: người chơi phàn nàn "chờ tải rất lâu". Ngân sách §13.7 là **gói chặn vào trận
+≤ 8 MB, toàn bộ ≤ 80 MB, vào trận lần đầu ở 4G ~10 Mbps ≤ 10 s**.
+
+**Đo trước đã tìm ra nguyên nhân, và nó không phải "ảnh quá nặng".**
+`AssetStore.preload()` tải **mọi tệp .png trong manifest** rồi mới hiện trang chủ — 547 tệp,
+**77,4 MB**, trong đó có cả bộ art của 10 nhân vật và vật cản của cả 5 khu bản đồ, chỉ để
+hiện một ô nhập tên. Nén ảnh thôi thì không đủ: 77,4 MB giảm 84% vẫn là 12 MB chặn người
+chơi, vẫn vượt ngân sách.
+
+Thay đổi:
+1. `assets/src` (nguồn) / `assets/dist` (phát hành) — §13.7 mục 2.
+2. `tools/asset-pipeline`: PNG → WebP (q72–82), thu nhỏ về kích thước hiển thị, tên tệp kèm
+   hash nội dung, `manifest.json` v2 có byte + nhóm tải. Có bộ đệm (chạy lại: 0,2 s).
+3. **Nhóm tải** `home / boot / zone_<khu> / char_<nhân vật> / fx_high / audio / debug`.
+   Nhóm khu suy ra từ `maps/*.tmj` (loại vật cản thật của từng khu), không gõ tay.
+4. Server: tệp có hash → `Cache-Control: immutable` 1 năm; `manifest.json` → `no-cache`;
+   gzip cho JS/JSON/CSS/font.
+5. Màn hình tải HTML/CSS nội tuyến trong `index.html`, thanh **theo byte**, nhân vật mình
+   chọn chạy trên thanh, mẹo đổi mỗi 4 s, nút "Thử lại" tải tiếp.
+6. `npm run assets:budget` chặn build khi vượt ngân sách; đã vào `npm run build` và CI.
+
+Kết quả:
+
+| Chỉ số | Trước (#9a) | Sau (#9b) | Δ | Ngân sách |
+|---|---|---|---|---|
+| Gói chặn vào trận | **77.4 MB** | **7.02 MB** | −91% | < 8 MB ✅ |
+| Toàn bộ game | 201.5 MB | **11.41 MB** | −94% | < 80 MB ✅ |
+| Số tệp chặn | 547 | 348 | −36% | – |
+| Hiện trang chủ (4 Mbps) | (không hiện tới khi tải xong) | **4.0 s** | – | – |
+| Vào trận, 4G ~10 Mbps | – | **8.3 s** | – | < 10 s ✅ |
+| Vào trận, Fast 4G (4 Mbps) | – | 16.4 s | – | (ngoài ngân sách) |
+| Vào trận lần 2 (cache) | – | **2.8 s**, 0.06 MB qua dây | – | gần như 0 ✅ |
+| Khung có placeholder trong trận | – | **0** | – | 0 ✅ |
+| FPS / vẽ / draw call | – | 58 / 0.6 ms / 36 | – | không xấu đi |
+
+**Ba thứ chiếm phần lớn mức giảm, theo thứ tự — và hai trong ba không phải nén ảnh:**
+1. **Bỏ 7 loại tệp không ai đọc khỏi bản phát hành (−129 MB nguồn)**: `frames/`,
+   `frames_norm/` (ảnh từng khung, nguồn của atlas), `ref_sheet.png` (tờ tham chiếu cho bên
+   vẽ), và `body/` + `faces/` — **art của hướng A chưa có mã nào dùng**. Năm nhóm này đều
+   nằm trong `manifest.json` cũ và người chơi **tải thật**.
+2. **Chia nhóm tải (−64 MB khỏi gói chặn)**: 10 nhân vật → chỉ nhân vật mình; 5 khu → chỉ
+   khu được xếp vào; VFX Tiên giới và âm thanh → tải nền.
+3. **PNG → WebP + thu nhỏ (72,2 → 11,4 MB, −84%)**.
+
+Nút thắt tìm được (có số đo):
+1. `AssetStore.preload()` — tải 547/547 tệp manifest trước trang chủ — `render/assets.ts`
+   (bản cũ, dòng 97–116). Đây là toàn bộ nguyên nhân, không phải dung lượng ảnh.
+2. `zone_thien_dinh` = **3,24 MB** (103 tệp), gần nửa gói chặn. Thiên Đình dùng cả 6 loại
+   vật cản; 4 khu kia dùng 2–4 loại (0,52–2,27 MB). Đây là phần nặng nhất còn lại.
+3. Khung `break`/`regrow` của vật cản = **2,6 MB** trong tổng 4,5 MB của `obstacles/`. Chúng
+   chỉ chạy lúc vật cản bị phá. Chưa chuyển sang tải nền vì vẫn vừa ngân sách, và hoãn chúng
+   nghĩa là lần phá vật cản đầu tiên rơi về placeholder.
+
+Bị chặn / chưa làm được:
+- **Trim viền trong suốt + ghi offset** (§13.7 mục 2, gạch đầu dòng 2) — **chưa làm**.
+  Trim một sprite lẻ là dịch điểm neo của nó, mà hơn 300 chỗ gọi `assets.texture()` đặt
+  anchor theo quy ước riêng; với atlas thì phải ghép lại và thêm `trim`/`orig` cho từng
+  khung. Đo trước cho thấy phần thưởng nhỏ: WebP đã nén vùng alpha rỗng gần như miễn phí,
+  ước tính còn 5–15%. Cả hai ngân sách đã ĐẠT mà không cần nó, nên theo quy tắc "đạt thì
+  dừng" tôi để lại. Cần khi nào gói chặn tiến sát 8 MB.
+- **Ghép atlas cho item/icon/decal** (cùng gạch đầu dòng) — chưa làm. Lý do giống trên: nhóm
+  đó đã xuống 0,25 MB sau WebP, ghép atlas chỉ tiết kiệm số **request**, không tiết kiệm
+  byte; và vẫn còn 1 MB dư ngân sách.
+- **Âm thanh**: nguồn đã là 22–44 kHz mono, 31–80 kb/s — tức đã DƯỚI mức 96/128 kb/s spec
+  yêu cầu. Pipeline đo trước rồi quyết định, và quyết định là giữ nguyên (nén lên sẽ làm
+  tệp to hơn). libvorbis còn báo lỗi khi bị ép 128 kb/s ở 22 050 Hz.
+
+Tác dụng phụ / rủi ro:
+- Mọi đường dẫn asset giờ đi qua `assets.url()` vì tên tệp có hash. Chỗ nào còn ghép tay
+  `/assets/...` sẽ **404 trong im lặng**. Đã sửa 8 chỗ (DOM `<img>`, nền CSS, font, âm
+  thanh, `border-image` của màn Tổng kết — chỗ cuối này vite vẫn đang cảnh báo
+  "didn't resolve at build time" từ trước).
+- Chạy server mà chưa dựng `assets/dist` thì game vẽ placeholder toàn bộ. Server in cảnh
+  báo kèm đúng lệnh cần chạy ngay ở dòng log đầu; `tools/deploy.sh` thì dừng hẳn.
+- `assets/dist/` đã gitignore (sản phẩm dựng lại được). CI tự dựng trước khi build.
+
+Việc tiếp theo đề xuất:
+1. Fast 4G (4 Mbps) vào trận **16,4 s**. Dòng ngân sách §13.7 nói 10 Mbps nên đây không phải
+   ô ❌, nhưng nếu muốn 4 Mbps cũng dưới 10 s thì chỗ cắt rẻ nhất là chuyển khung
+   `break`/`regrow` (2,6 MB) sang tải nền.
+2. `zone_thien_dinh` 3,24 MB — chia nhỏ theo loại vật cản hay giảm `maxPx` của `obstacles`
+   từ 512 xuống 384 (đo trước rồi quyết).
+3. Đo trên **điện thoại thật** — bảng §4 vẫn trống dòng điện thoại, và đó mới là máy có
+   đường mạng mà §13.7 nhắm tới.
+
 ### Mẫu — copy cho mỗi lượt
 
 ```
@@ -280,6 +374,9 @@ Việc tiếp theo đề xuất: <1–3 việc, xếp theo lợi ích / công s�
 | B4 | Băng thông game thật 61.7 KB/s | Mạng yếu | Lượt #0b | Mở — S2 còn **45.5 KB/s đỉnh** ở tab Đạo Tổ (ngân sách 40) | – |
 | B5 | Gói snapshot 6.8 KB vs ngân sách mới 6 KB | Mạng yếu | Lượt #4 | Mở — cần Protocol v2 nhị phân (NETCODE bước 3) | – |
 | **B6** | **Bài đo S3 không nâng được Đạo Tổ**; draw call đọc ra 0 | Không đánh giá được kịch bản nặng trên mạng yếu | Lượt #4 | Mở — **phải sửa trước khi tin số S3** | – |
+| B7 | Lần tải đầu 77,4 MB / 547 tệp trước khi hiện trang chủ | Người chơi chờ rất lâu rồi bỏ | Lượt #9a (`assets:size`) | **Đóng** — gói chặn 7,02 MB, vào trận 8,3 s ở 10 Mbps | #9 |
+| **B8** | Dư ngân sách gói chặn chỉ còn **0,98 MB**; `zone_thien_dinh` chiếm 3,24 MB | Thêm một khu hoặc một bộ vật cản mới là vượt 8 MB | Lượt #9b | Mở — `assets:budget` sẽ chặn build khi vượt, nên không lọt ra người chơi được. Cắt tiếp: khung `break`/`regrow` 2,6 MB sang tải nền, hoặc `obstacles` `maxPx` 512 → 384 | – |
+| **B9** | Fast 4G (4 Mbps) vào trận **16,4 s** | Người chơi mạng yếu | Lượt #9b | Mở — **ngoài** ngân sách §13.7 (dòng ngân sách ghi 10 Mbps), ghi lại để không ai tưởng đã xong | – |
 
 ## 7. Quy tắc cho agent
 1. **Đo trước, rồi mới sửa.** Mỗi lượt tối ưu bắt đầu bằng 1 dòng "Trước" (hoặc dùng dòng mốc gần nhất cùng kịch bản nếu chưa đổi code).
@@ -290,7 +387,7 @@ Việc tiếp theo đề xuất: <1–3 việc, xếp theo lợi ích / công s�
 
 ## 8. Định dạng CSV (`docs/perf_log.csv`)
 ```
-run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_peak,pkt_max_kb,ping_p95_ms,fps_avg,fps_low1,draw_ms,draw_calls,sprites,tex_mb,placeholder_frames,respawn_per_min,zone_switch_cached_ms,zone_switch_cold_ms,deaths_per_bot_5min,notes,n_sessions
+run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_peak,pkt_max_kb,ping_p95_ms,fps_avg,fps_low1,draw_ms,draw_calls,sprites,tex_mb,placeholder_frames,respawn_per_min,zone_switch_cached_ms,zone_switch_cold_ms,deaths_per_bot_5min,blocking_mb,total_dl_mb,ttp_10mbps_s,ttp_4mbps_s,ttp_cached_s,notes,n_sessions
 ```
 
 `n_sessions` chỉ có nghĩa với S6 (số phiên người thật gộp vào dòng đó); các kịch bản khác để TRỐNG, không điền 0 — "không áp dụng" và "0 phiên" là hai chuyện khác nhau.

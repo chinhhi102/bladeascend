@@ -22,12 +22,20 @@ server/data/
 *.db-journal
 
 # Art pipeline scratch (raw downloads before post-processing)
-assets/_raw/
+assets/src/_raw/
+
+# Sản phẩm của `tools/asset-pipeline` (GAME_SPEC §13.7 mục 2). Dựng lại được từ
+# `assets/src/` bằng một lệnh, và chính nó là bản ĐÃ NÉN của thứ đã nằm trong repo —
+# commit vào là lưu hai lần cùng một bộ art.
+assets/dist/
 
 .DS_Store
 
 # tools/browsertest: Playwright tải trình duyệt riêng, không đưa vào repo
 tools/browsertest/node_modules
+# tools/asset-pipeline: `sharp` là thư viện nhị phân theo nền tảng (~30 MB), cài bằng
+# `npm ci` ở đó. `package-lock.json` thì CÓ commit, để CI cài đúng phiên bản.
+tools/asset-pipeline/node_modules
 docs/perf/*.png
 deploy/.build/
 

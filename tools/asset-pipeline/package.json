@@ -1,0 +1,13 @@
+{
+  "name": "kx-asset-pipeline",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "assets/src → assets/dist: thu nhỏ, WebP, hash, nhóm tải (GAME_SPEC §13.7)",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "sharp": "^0.35.5"
+  }
+}

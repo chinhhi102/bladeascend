@@ -7,10 +7,88 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Kiếm Xoay Tu Tiên</title>
+    <!--
+      Màn hình tải nằm NGAY TRONG index.html với CSS nội tuyến (GAME_SPEC §13.7 mục 4).
+
+      Không đặt trong `style.css` hay dựng bằng TypeScript: cả hai đều phải chờ tải bundle
+      JS/CSS xong mới hiện được, mà đó đúng là quãng im lặng người chơi phàn nàn. Ở đây nó
+      hiện ngay từ byte đầu tiên của HTML — trước cả khi PixiJS được tải về.
+    -->
+    <style>
+      :root { color-scheme: dark; }
+      html, body { margin: 0; height: 100%; background: #14110e; }
+      #boot {
+        position: fixed; inset: 0; z-index: 9000;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 18px; padding: 24px;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #f2e6cf; text-align: center;
+        background: radial-gradient(circle at 50% 35%, #2c2418 0%, #14110e 70%);
+        transition: opacity .25s ease;
+      }
+      #boot.gone { opacity: 0; pointer-events: none; }
+      #boot h1 {
+        margin: 0; font-size: clamp(28px, 7vw, 54px); font-weight: 900; letter-spacing: .04em;
+        color: #ffd66b; text-shadow: 0 3px 0 #6b4a12, 0 0 28px rgba(255, 196, 70, .35);
+      }
+      #boot .step { font-size: clamp(14px, 3.6vw, 18px); min-height: 1.4em; color: #e8dcc2; }
+      /* Thanh tiến độ: khung cố định để nhân vật có đường chạy, không nhảy theo độ rộng chữ. */
+      #boot .track {
+        position: relative; width: min(520px, 86vw); height: 16px;
+        background: #0d0b08; border: 2px solid #4a3a1e; border-radius: 10px; overflow: visible;
+      }
+      #boot .fill {
+        position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+        background: linear-gradient(90deg, #c98a24, #ffd66b);
+        border-radius: 8px; transition: width .18s linear;
+      }
+      /* Nhân vật chạy trên thanh. `--p` là % tiến độ; `left` bám theo nó. */
+      #boot .runner {
+        position: absolute; bottom: 12px; left: 0; width: 56px; height: 56px;
+        margin-left: -28px; transform-origin: 50% 100%;
+        background-repeat: no-repeat; background-size: contain; background-position: center bottom;
+        image-rendering: auto; transition: left .18s linear;
+        animation: bob .42s steps(2, end) infinite;
+      }
+      #boot .runner.frames { animation: none; }
+      @keyframes bob { 0% { transform: translateY(0) } 50% { transform: translateY(-5px) } 100% { transform: translateY(0) } }
+      #boot .bytes { font-variant-numeric: tabular-nums; font-size: clamp(12px, 3vw, 15px); color: #b9a98a; }
+      #boot .tip {
+        max-width: min(560px, 88vw); min-height: 2.8em; font-size: clamp(13px, 3.3vw, 16px);
+        color: #cbbf9f; font-style: italic; transition: opacity .3s ease;
+      }
+      #boot .retry {
+        display: none; padding: 10px 22px; font-size: 16px; font-weight: 800; cursor: pointer;
+        color: #14110e; background: #ffd66b; border: 0; border-radius: 8px;
+        font-family: inherit;
+      }
+      #boot.failed .retry { display: block; }
+      #boot.failed .step { color: #ff9b7a; }
+      /* Icon % tải nền trong trận (§13.7 mục 4, dòng cuối). */
+      #bgload {
+        position: fixed; right: 10px; bottom: 10px; z-index: 50; display: none;
+        padding: 4px 9px; border-radius: 999px;
+        font-family: system-ui, sans-serif; font-size: 12px; font-variant-numeric: tabular-nums;
+        color: #e8dcc2; background: rgba(13, 11, 8, .62); border: 1px solid #4a3a1e;
+        pointer-events: none;
+      }
+    </style>
   </head>
   <body>
     <div id="stage"></div>
     <div id="overlay"></div>
+    <div id="bgload"></div>
+    <div id="boot">
+      <h1>Kiếm Xoay Tu Tiên</h1>
+      <div class="step" id="boot-step">Đang khởi động…</div>
+      <div class="track">
+        <div class="fill" id="boot-fill"></div>
+        <div class="runner" id="boot-runner"></div>
+      </div>
+      <div class="bytes" id="boot-bytes"></div>
+      <div class="tip" id="boot-tip"></div>
+      <button class="retry" id="boot-retry" type="button">Thử lại</button>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

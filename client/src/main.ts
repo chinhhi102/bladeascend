@@ -7,6 +7,12 @@ import { Conn } from './net/conn';
 /** Chữ tên khu hiện bao lâu khi vào khu mới (spec §8.0). */
 const ZONE_BANNER_SECS = 1.5;
 
+/**
+ * ZONE_ART_WAIT_MS: qua cổng sang khu chưa tải xong thì giữ màn hình dịch chuyển tối đa
+ * ngần này rồi vào với placeholder (GAME_SPEC §13.7 mục 3, dòng cuối).
+ */
+const ZONE_ART_WAIT_MS = 2000;
+
 import { FLAG, PROTOCOL_VERSION } from './net/protocol';
 import { pendingRejoin, watchContextLoss } from './render/glrecover';
 import type { DeadMsg, GameMap, ServerMsg, Snapshot, Welcome } from './net/protocol';
@@ -19,6 +25,7 @@ import { cycleQuality, quality, QUALITY_NAME } from './render/quality';
 import { ringGeom } from './render/ringgeom';
 import type { Telemetry, TelemetryContext } from './telemetry';
 import { h, Screens } from './ui/dom';
+import { LoadingScreen, startBgLoadIndicator } from './ui/loading';
 import { guestId, homeScreen, type Profile } from './ui/home';
 import { Hud } from './ui/hud';
 import { leaderboardScreen } from './ui/leaderboard';
@@ -75,7 +82,12 @@ class App {
   /** animInfo: phím J đang bật hay tắt (GAME_SPEC §12.5 C). */
   private animInfo = false;
 
-  constructor(private readonly cfg: GameConfig, private readonly overlay: HTMLElement, stage: HTMLElement) {
+  constructor(
+    private readonly cfg: GameConfig,
+    private readonly overlay: HTMLElement,
+    stage: HTMLElement,
+    private readonly loading: LoadingScreen,
+  ) {
     this.screens = new Screens(overlay);
     this.scene = new GameScene(cfg);
     this.world = new ClientWorld(cfg);
@@ -169,20 +181,45 @@ class App {
     this.screens.show(leaderboardScreen(this.cfg, back));
   }
 
+  /**
+   * join: tải phần còn thiếu của gói chặn rồi mới vào phòng (GAME_SPEC §13.7 mục 3).
+   *
+   * Thứ tự ĐÚNG như bảng nhóm của spec: `boot` (nền, vật cản chung, cổng, quái, vật phẩm)
+   * + `char_<nhân vật mình>`. Nhóm `zone_*` chờ tới `onWelcome`, vì chỉ lúc đó server mới
+   * nói mình được xếp vào khu nào — xếp khu là việc của server (khu ít người nhất, §8.0),
+   * client không đoán được, và đoán sai là tải 3,2 MB vật cản của khu không dùng tới.
+   */
   private join(p: Profile): void {
     this.profile = p;
     sound.startMusic();
-    this.screens.show(h('div', 'screen center', h('div', 'panel', this.conn.isOpen ? STR.findingRoom : STR.connecting)));
-    const send = (): void => {
-      if (!this.conn.isOpen) {
-        window.setTimeout(send, 300);
+    this.screens.show(null);
+    this.loading.show();
+    this.loading.setRunner(p.char);
+    this.loading.step(STR.loadChar(STR.characters[p.char] ?? p.char));
+    void (async () => {
+      try {
+        await assets.load(['boot', `char_${p.char}`], (pr) => this.loading.bytes(pr));
+      } catch (err) {
+        // Mạng ngắt giữa lúc tải: hiện "Thử lại" và tải TIẾP phần còn thiếu — `assets.load`
+        // bỏ qua tệp đã xong, nên bấm lại không tải lại từ đầu (§13.7 mục 4).
+        console.warn('tải gói vào trận lỗi', err);
+        this.loading.fail(() => this.join(p));
         return;
       }
-      // Mở game bằng ?debug=true để bật bảng phím test cho riêng mình.
-      const wantDebug = new URLSearchParams(location.search).get('debug') === 'true';
-      this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId(), debug: wantDebug });
-    };
-    send();
+      // Nhóm tải nền: 9 nhân vật còn lại, VFX Tiên giới, âm thanh. Không chặn ai.
+      assets.loadBackground([...assets.chars.map((c) => `char_${c}`), 'fx_high', 'audio']);
+      this.loading.step(STR.loadRoom);
+      const send = (): void => {
+        if (!this.conn.isOpen) {
+          window.setTimeout(send, 300);
+          return;
+        }
+        // Mở game bằng ?debug=true để bật bảng phím test cho riêng mình.
+        const wantDebug = new URLSearchParams(location.search).get('debug') === 'true';
+        this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId(), debug: wantDebug });
+      };
+      send();
+    })();
   }
 
   private onMessage(m: ServerMsg): void {
@@ -245,6 +282,12 @@ class App {
     this.early = [];
     const res = await fetch(`/api/map/${w.map}`);
     const map = (await res.json()) as GameMap;
+    // Vật cản của khu này (§13.7 mục 3). Lần đầu vào trận thì CHỜ cho xong — nó nằm trong
+    // ngân sách 8 MB và vào trận mà bản đồ toàn ô vuông placeholder thì không chơi được.
+    // Qua cổng giữa trận thì chỉ chờ **tối đa 2 giây** rồi vào với placeholder, đúng câu
+    // chữ của spec: người chơi đang bị dí, giữ họ ở màn hình dịch chuyển lâu hơn thế là
+    // tệ hơn hẳn so với vài vật cản hiện muộn.
+    await this.loadZoneArt(`zone_${w.map}`, w.znm ?? '', changedZone ? ZONE_ART_WAIT_MS : 0);
     this.world.reset(w, map);
     this.scene.setWorld(this.world);
     this.hud.minimap.setMap(map);
@@ -270,6 +313,7 @@ class App {
       });
     }
     this.screens.show(null);
+    this.loading.done();
     this.overlay.appendChild(this.hud.root);
     this.playing = true;
     this.joining = false;
@@ -293,6 +337,27 @@ class App {
     }
     this.hud.showGuide(); // hướng dẫn mờ trong lúc còn bất tử (spec §18.1)
     sound.play('respawn');
+  }
+
+  /**
+   * loadZoneArt tải nhóm art của một khu. `capMs > 0` thì chờ tối đa ngần đó rồi đi tiếp
+   * (phần còn lại vẫn tải nền và tự hiện ra khi xong).
+   */
+  private async loadZoneArt(group: string, zoneName: string, capMs: number): Promise<void> {
+    if (!assets.pending([group]).length) {
+      return;
+    }
+    this.loading.show();
+    this.loading.step(STR.loadZone(zoneName || group));
+    const job = assets.load([group], (pr) => this.loading.bytes(pr));
+    if (capMs > 0) {
+      // Hết hạn thì thả ra chứ KHÔNG huỷ: `job` cứ chạy tiếp ở nền, và `assets.gen` tăng
+      // khi xong nên bộ vẽ tự đổi placeholder sang ảnh thật.
+      await Promise.race([job, new Promise((r) => window.setTimeout(r, capMs))]);
+    } else {
+      await job.catch((err: unknown) => console.warn('tải art khu lỗi', err));
+    }
+    this.loading.done();
   }
 
   private onDead(d: DeadMsg): void {
@@ -492,27 +557,47 @@ class App {
   }
 }
 
+/**
+ * boot: chỉ tải nhóm `home` rồi mở trang chủ (GAME_SPEC §13.7 mục 3).
+ *
+ * Bản trước gọi `assets.preload()` — tải **toàn bộ** manifest, 547 tệp / 77,4 MB, trước khi
+ * người chơi thấy bất cứ thứ gì. Đó là nguyên nhân "chờ tải rất lâu": không phải mạng chậm,
+ * mà là tải cả bộ art của 10 nhân vật và 5 khu bản đồ để hiện một cái ô nhập tên.
+ *
+ * Giờ trang chủ cần 0,86 MB (font + giao diện + 10 chân dung). Phần còn lại chờ tới lúc
+ * bấm "Vào chơi" (`App.join`) và tải nền trong trận.
+ */
 async function boot(): Promise<void> {
   const overlay = document.getElementById('overlay') as HTMLElement;
   const stage = document.getElementById('stage') as HTMLElement;
-  const loading = h('div', 'screen center', h('div', 'panel', h('div', 'logo', STR.title), h('div', 'muted', STR.connecting)));
-  overlay.appendChild(loading);
-  try {
+  const screen = new LoadingScreen();
+  const run = async (): Promise<void> => {
     const cfg = await loadConfig();
     await assets.init();
     // Thứ tự nhân vật dự phòng = thứ tự trong config (NETCODE_SPEC §5 Hiển thị mục 1).
     // Thiếu atlas của một nhân vật thì vẽ bằng nhân vật đầu tiên CÓ atlas, không vẽ
     // placeholder — build thật cấm placeholder.
     assets.setFallbackChars(cfg.characters);
-await loadFonts(); // BitmapFont đủ dấu tiếng Việt cho bảng tên (spec §12.3)
-    await assets.preload();
+    screen.step(STR.loadUi);
+    await assets.load(['home'], (p) => screen.bytes(p));
+    await loadFonts(); // BitmapFont đủ dấu tiếng Việt cho bảng tên (spec §12.3)
     sound.init();
-    loading.remove();
-    await new App(cfg, overlay, stage).start(stage);
+    startBgLoadIndicator();
+    screen.done();
+    await new App(cfg, overlay, stage, screen).start(stage);
+  };
+  try {
+    await run();
   } catch (err) {
     console.error(err);
-    loading.replaceChildren(h('div', 'panel', `${STR.disconnected} (${String(err)})`));
-    window.setTimeout(() => location.reload(), 3000);
+    // Lỗi mạng ở bước này: cho bấm "Thử lại" và tải TIẾP, thay vì tự tải lại trang sau 3
+    // giây như bản cũ — tải lại trang là mất sạch phần đã tải xong.
+    screen.fail(() => {
+      void run().catch((e: unknown) => {
+        console.error(e);
+        screen.fail(() => location.reload());
+      });
+    });
   }
 }
 

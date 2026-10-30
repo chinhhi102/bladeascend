@@ -23,9 +23,21 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
 - Chạy client dev: `cd client && npm run dev`
 - Test luật chơi: `cd server && go test ./...`
 - Giả lập cân bằng: `cd server && go run ./cmd/sim --bots 40 --minutes 10`
-- Build client: `cd client && npm run build`
+- Build client: `cd client && npm run build` (tự chạy asset-pipeline + kiểm ngân sách trước)
+- Dựng asset phát hành: `node tools/asset-pipeline/index.mjs` (`assets/src` → `assets/dist`,
+  spec §13.7). Lần đầu phải `cd tools/asset-pipeline && npm install`.
+- Đo dung lượng tải: `cd client && npm run assets:size` · ngân sách: `npm run assets:budget`
+- Đo thời gian vào trận (bóp mạng 4G): `node tools/browsertest/loadtime.mjs http://localhost:9999`
 - Đối chiếu va chạm client↔server (spec §8.2a):
   `cd server && go run ./cmd/collisionfixture -o /tmp/fx.json && cd ../client && npm run check:collision -- /tmp/fx.json`
+
+## Asset: nguồn và bản phát hành (spec §13.7)
+- `assets/src/` — **art gốc**. artgen ghi vào đây; chỉ chỗ này mới có `frames/`, `_raw/`.
+- `assets/dist/` — bản **đã nén** do `tools/asset-pipeline` dựng (WebP, tên có hash,
+  `manifest.json` v2 kèm nhóm tải). Đã gitignore; server phục vụ đúng thư mục này.
+- Trong code, đường dẫn asset luôn là đường dẫn **logic** (`ui/medal_gold.png`); lấy địa chỉ
+  thật bằng `assets.url(...)`. **Không bao giờ ghép tay `/assets/...`** — tên tệp có hash nên
+  ghép tay là 404 trong im lặng.
 
 ## Quy tắc bắt buộc
 1. Server authoritative: mọi luật chơi chạy trên server (`server/internal/game`). Client chỉ gửi input và vẽ.

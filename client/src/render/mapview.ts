@@ -145,7 +145,14 @@ interface ObstacleNode {
   hpDrawn: number;
   warnUntil: number;
   box: { x: number; y: number; w: number; h: number }; // drawn bounds, for see-through
+  /** drawnWithArt: lần vẽ gần nhất dùng ảnh thật hay placeholder (§13.7 mục 3). */
+  drawnWithArt: boolean;
+  /** fadeFrom: mốc bắt đầu mờ dần khi ảnh thật vừa thay placeholder. 0 = không mờ. */
+  fadeFrom: number;
 }
+
+/** ART_FADE_SECS: ảnh thật thay placeholder thì mờ dần vào, không nhấp nháy (§13.7 mục 3). */
+const ART_FADE_SECS = 0.2;
 
 /** Viewer is the local character's drawn box, used to fade obstacles standing in front of it. */
 export interface Viewer {
@@ -206,7 +213,7 @@ export class MapView {
     this.buildGates();
     this.buildDecor();
     for (const o of map.obstacles) {
-      const n: ObstacleNode = { o, node: new Container(), look: '', hpDrawn: -1, warnUntil: 0, box: bounds(o.s) };
+      const n: ObstacleNode = { o, node: new Container(), look: '', hpDrawn: -1, warnUntil: 0, box: bounds(o.s), drawnWithArt: false, fadeFrom: 0 };
       this.obstacleNodes.set(o.id, n);
     }
     const filter = backgroundFilter();
@@ -537,9 +544,17 @@ export class MapView {
       look = 'cracked';
     }
     const hasArt = assets.texture(`obstacles/${n.o.k}/${look}.png`) !== null;
-    if (look !== n.look || (!hasArt && hp !== n.hpDrawn)) {
+    // Ảnh thật vừa tải xong (nhóm `zone_*` về sau khi vào trận, §13.7 mục 3): dựng lại
+    // bằng ảnh thật và MỜ DẦN vào. Điều kiện phải là "lần trước vẽ placeholder" chứ không
+    // phải "có ảnh": thiếu nó thì mỗi lần `assets.gen` tăng là dựng lại cả 300 vật cản.
+    const upgraded = hasArt && !n.drawnWithArt && n.look !== '';
+    if (upgraded) {
+      n.fadeFrom = now;
+    }
+    if (look !== n.look || upgraded || (!hasArt && hp !== n.hpDrawn)) {
       n.look = look;
       n.hpDrawn = hp;
+      n.drawnWithArt = hasArt;
       n.node.removeChildren().forEach((c) => c.destroy());
       const art = this.obstacleArt(n.o, look, frac);
       if (look !== 'rubble') {
@@ -557,6 +572,14 @@ export class MapView {
     }
     // Blink 3s before regrowing (spec §8.2).
     n.node.alpha = broken && now < n.warnUntil ? 0.5 + 0.5 * Math.sin(now * 20) : 1;
+    if (n.fadeFrom > 0) {
+      const k = (now - n.fadeFrom) / ART_FADE_SECS;
+      if (k >= 1) {
+        n.fadeFrom = 0;
+      } else {
+        n.node.alpha *= Math.max(0, k);
+      }
+    }
   }
 
   /**

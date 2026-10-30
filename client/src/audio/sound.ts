@@ -24,15 +24,17 @@ class Sound {
   muted = false;
 
   init(): void {
+    // Địa chỉ lấy qua `assets.url`: tệp trong `assets/dist` có hash trong tên, nên ghép
+    // tay `/assets/audio/sfx/<tên>.ogg` là 404 im lặng — âm thanh không phát và không báo gì.
     for (const name of SFX) {
-      const src = EXTS.map((e) => `audio/sfx/${name}.${e}`).filter((f) => assets.has(f));
+      const src = EXTS.map((e) => assets.url(`audio/sfx/${name}.${e}`)).filter(Boolean);
       if (src.length) {
-        this.sfx.set(name, new Howl({ src: src.map((s) => `/assets/${s}`), volume: 0.5 }));
+        this.sfx.set(name, new Howl({ src, volume: 0.5 }));
       }
     }
-    const bgm = EXTS.map((e) => `audio/bgm/main.${e}`).filter((f) => assets.has(f));
+    const bgm = EXTS.map((e) => assets.url(`audio/bgm/main.${e}`)).filter(Boolean);
     if (bgm.length) {
-      this.bgm = new Howl({ src: bgm.map((s) => `/assets/${s}`), loop: true, volume: 0.25, html5: true });
+      this.bgm = new Howl({ src: bgm, loop: true, volume: 0.25, html5: true });
     }
   }
 

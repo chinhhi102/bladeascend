@@ -66,11 +66,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .summary .panel { position: relative; }
 /* 9-slice: the rollers and torn edges keep their size, only the paper stretches, and the
    border widths equal the slice sizes so text always sits on the paper (ui/scroll.png 1024×768,
-   paper ≈ x 160–825, y 205–555). */
+   paper ≈ x 160–825, y 205–555).
+   `border-image` đặt bằng JS trong `summary.ts`: tên tệp có hash nội dung nên CSS tĩnh
+   không biết được địa chỉ. */
 .scroll-panel.has-scroll {
   background: none; box-shadow: none;
   border-style: solid; border-width: 78px 76px 81px 61px;
-  border-image: url(/assets/ui/scroll.png) 205 199 213 160 fill stretch;
   padding: 4px 18px;
   width: min(680px, 100%);
 }
