@@ -297,7 +297,7 @@
   "title_hold_secs": 3,
   "minimap": {
     "size_pc": 180,
-    "size_mobile": 120,
+    "size_mobile": 96,
     "show_top1": true,
     "show_chest": true,
     "show_others": false

@@ -31,8 +31,27 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .char-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .char-card { font: inherit; font-size: 11px; font-weight: 700; border: 3px solid transparent; border-radius: 12px; background: rgba(0,0,0,.05); padding: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .char-card.selected { border-color: var(--accent); background: #fff; }
-.portrait { width: 64px; height: 64px; object-fit: contain; }
-.portrait.placeholder { border-radius: 50%; width: 52px; height: 52px; margin: 6px; border: 3px solid var(--ink); }
+/* Ảnh nhân vật ở MÀN CHỌN. Phải khoanh theo thẻ cha, không để `.portrait` trần:
+   ô đại diện trên HUD cũng dùng class `.portrait`, và luật rộng 64px ở đây từng rò sang
+   đó — ô HUD chỉ 40px nên ảnh tràn hẳn ra ngoài khung tròn và đè lên chữ "Kiếm x/y"
+   (ảnh chụp 30/10). `.badge` không có `overflow:hidden` nên không có gì chặn lại. */
+.char-card .portrait, .preview-art .portrait { width: 64px; height: 64px; object-fit: contain; }
+.char-card .portrait.placeholder, .preview-art .portrait.placeholder { border-radius: 50%; width: 52px; height: 52px; margin: 6px; border: 3px solid var(--ink); }
+
+/* Khung xem trước nhân vật đang chọn: ảnh to + tên + kỹ năng (người chơi cần biết mình
+   chọn gì — mười nhân vật chỉ khác nhau ở kỹ năng). */
+.char-preview {
+  display: flex; gap: 12px; align-items: center; text-align: left;
+  margin-top: 10px; padding: 10px 12px;
+  border: 3px solid var(--ink); border-radius: 14px; background: rgba(0,0,0,.05);
+}
+.preview-art { flex: none; width: 84px; height: 84px; display: flex; align-items: center; justify-content: center; }
+.preview-art .portrait { width: 84px; height: 84px; }
+.preview-art .portrait.placeholder { width: 68px; height: 68px; margin: 0; }
+.preview-text { flex: 1; min-width: 0; }
+.preview-name { font-size: 18px; font-weight: 900; }
+.preview-skill { font-size: 15px; font-weight: 800; color: #9a3412; margin-top: 2px; }
+.preview-desc { font-size: 13px; line-height: 1.4; color: #4a4036; margin-top: 3px; }
 
 .tabs { display: flex; gap: 6px; justify-content: center; margin: 8px 0; flex-wrap: wrap; }
 .tab { font: inherit; font-weight: 700; padding: 6px 12px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; cursor: pointer; }
@@ -77,8 +96,15 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .status { display: flex; gap: 10px; align-items: center; }
 /* Ô đại diện góc trên trái (spec §12.4): chân dung trong khung tròn, viền màu cảnh giới,
    huy hiệu tầng ở góc dưới phải, vương miện nếu Top 1. */
-.badge { width: 64px; height: 64px; border-radius: 50%; border: 3px solid #8d99ae; position: relative; background: #2a2622; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
-.portrait { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: center top / 180% no-repeat; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #e8e2d6; }
+/* `overflow: hidden` là chốt chặn cuối: dù ảnh bên trong có cỡ nào thì cũng không bao giờ
+   tràn ra ngoài khung tròn và đè lên chữ bên cạnh. Huy hiệu tầng và vương miện nằm ngoài
+   khung nên để riêng ở `.badge-wrap`. */
+.badge-wrap { position: relative; flex: none; }
+.badge { width: 64px; height: 64px; border-radius: 50%; border: 3px solid #8d99ae; position: relative; overflow: hidden; background: #2a2622; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+/* Khoanh theo `.badge`: luật này là của ô đại diện trên HUD. Để `.portrait` trần thì nó
+   áp luôn cho ảnh ở màn chọn nhân vật — `position:absolute` kéo ảnh ra khỏi luồng, thẻ
+   nhân vật tụt về chỉ còn chữ và mười thẻ trông như thiếu ảnh (ảnh chụp 30/10). */
+.badge .portrait { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: center top / 180% no-repeat; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #e8e2d6; }
 .badge-tag { position: absolute; right: -3px; bottom: -3px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; border: 2px solid rgba(0,0,0,.6); font-size: 12px; font-weight: 800; line-height: 16px; text-align: center; }
 .badge-crown { position: absolute; left: 50%; top: -15px; transform: translateX(-50%); font-size: 17px; color: #ffd60a; text-shadow: 0 1px 2px #000; display: none; }
 /* Tiên giới: viền là hào quang động (spec §12.4). */
@@ -172,7 +198,14 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .my-rank { font-size: .9em; }
 .my-rank { margin-top: 4px; color: #cde; }
 /* Kill feed góc dưới trái — to hơn 50% so với bản trước để đọc được khi đang chạy. */
-.feed { position: absolute; left: 12px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 15px; max-width: min(60vw, calc(100vw - 140px)); }
+/* Góc dưới trái: kill feed, và trên màn hẹp có thêm dải tin toàn server. Xếp dọc theo
+   luồng nên khối nào dài ra thì khối kia tự tránh. */
+.hud-bottom-left {
+  position: absolute; left: 12px; bottom: 16px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  max-width: min(60vw, calc(100vw - 140px));
+}
+.feed { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 15px; max-width: 100%; }
 .feed-line { background: rgba(0,0,0,.45); padding: 4px 9px; border-radius: 9px; }
 /* Mỗi vai một màu để đọc lướt: ai làm · làm gì · với ai. */
 .f-actor { color: #ffd700; }
@@ -181,7 +214,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .feed-tag { color: #fff6c9; }
 
 /* Tin loan toàn server: hạ một người trong Top 5 → dải giữa-trên màn hình (spec §11.4). */
-.server-feed { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(70vw, 900px); }
+/* Màn rộng: dải giữa-trên màn hình (spec §11.4). `fixed` chứ không `absolute` vì nó đang
+   nằm trong cột góc dưới trái — `absolute` sẽ neo theo cột đó thay vì theo màn hình. */
+.server-feed { position: fixed; top: 88px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(70vw, 900px); }
 .server-line { width: 100%; text-align: center; font-size: 20px; padding: 10px 18px; border-radius: 12px; background: linear-gradient(90deg, rgba(192,41,15,.94), rgba(230,80,30,.94), rgba(192,41,15,.94)); border: 3px solid var(--gold); color: #fff6c9; animation: serverFeedIn .35s ease-out, feedPulse 1.2s ease-out 2; }
 @keyframes serverFeedIn { from { opacity: 0; transform: translateY(-18px) scale(.94); } to { opacity: 1; transform: none; } }
 @keyframes feedPulse { 0%, 100% { box-shadow: 0 0 0 rgba(255,215,0,0); } 50% { box-shadow: 0 0 18px rgba(255,215,0,.85); } }
@@ -220,37 +255,88 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .joy-base { display: none; position: fixed; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.18); border: 3px solid rgba(255,255,255,.5); pointer-events: none; z-index: 10; }
 .joy-knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.7); border: 3px solid rgba(0,0,0,.4); }
 
-/* Phones: compact HUD; portrait mode gets a rotate hint (M7). */
-@media (max-width: 720px) {
-  .char-grid { grid-template-columns: repeat(5, 1fr); }
-  .portrait { width: 48px; height: 48px; }
-  .room-board { font-size: clamp(10px, 3.1vw, 13px); width: clamp(150px, 46vw, 190px); padding: 7px 9px; }
-  .board-title { font-size: 1.05em; }
-  .lb-title { font-size: .8em; }
-  .lb-score { min-width: 2.8em; }
-  .my-rank { font-size: .88em; }
-  .status-text { min-width: 120px; }
-  .realm { font-size: 14px; }
-  .badge { width: 52px; height: 52px; }
-  .badge-tag { min-width: 17px; height: 17px; font-size: 10px; line-height: 13px; }
-  .buffs { top: 64px; }
-  .minimap { top: 112px; }
-  .score-pops { left: 70px; top: 56px; }
-  .score-pop { font-size: 16px; }
+/* Màn hẹp (điện thoại, hoặc cửa sổ hẹp trên PC): HUD phải CO LẠI, không chỉ nhỏ chữ.
+   Số dòng do `hud.ts` cắt (Top 3, 2 tin feed); ở đây lo kích thước và những thứ bỏ hẳn.
+   Mục tiêu: HUD chiếm càng ít màn hình càng tốt — người chơi vào để xem trận đấu, không
+   phải để đọc bảng biểu. */
+@media (max-width: 720px), (max-height: 480px) {
+  .char-grid { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .char-card { font-size: 9px; padding: 3px; }
+  .char-grid .portrait { width: 40px; height: 40px; }
+  .char-grid .portrait.placeholder { width: 34px; height: 34px; margin: 3px; }
+  .char-preview { gap: 9px; padding: 8px; border-width: 2px; }
+  .preview-art, .preview-art .portrait { width: 62px; height: 62px; }
+  .preview-art .portrait.placeholder { width: 52px; height: 52px; }
+  .preview-name { font-size: 15px; }
+  .preview-skill { font-size: 13px; }
+  .preview-desc { font-size: 11.5px; }
+  .room-board { font-size: clamp(10px, 2.9vw, 12px); width: clamp(124px, 34vw, 160px); padding: 5px 7px; border-radius: 9px; }
+  .board-title { font-size: 1em; margin-bottom: 3px; }
+  /* Danh hiệu làm MỖI DÒNG CAO GẤP ĐÔI, mà cảnh giới+danh hiệu đã hiện trên đầu nhân vật
+     rồi — trên màn hẹp thì bỏ, giữ lại thứ tự hạng và điểm. */
+  .lb-title { display: none; }
+  .lb-line { margin-bottom: 3px; }
+  .lb-score { min-width: 2.6em; }
+  .my-rank { font-size: .9em; margin-top: 3px; }
+  .hud-left { left: 8px; top: 8px; gap: 5px; }
+  .status { gap: 7px; }
+  .status-text { min-width: 104px; }
+  .realm { font-size: 13px; }
+  .exp-bar { height: 8px; border-width: 1px; margin: 3px 0; }
+  /* Nhãn "Linh khí"/"Tiên khí" bỏ hẳn: màu thanh đã phân biệt hai loại (xanh vs vàng kim),
+     nên dòng chữ đó chỉ tốn một dòng mà không nói thêm gì. */
+  .exp-label { display: none; }
+  /* Kiếm và Uy Danh về CHUNG MỘT DÒNG. Hai dòng riêng làm khối trạng thái cao 77px, chen
+     sát ảnh đại diện 40px — đo thì không đè nhau nhưng nhìn thì dính vào nhau. */
+  .swords { display: inline; font-size: 11px; }
+  .swords + .score { display: inline; font-size: 11px; margin-left: 8px; }
+  .badge { width: 40px; height: 40px; border-width: 2px; }
+  .badge-tag { min-width: 15px; height: 15px; font-size: 9px; line-height: 11px; }
+  .badge-crown { top: -12px; font-size: 13px; }
+  .buff { width: 30px; height: 30px; padding: 2px; }
+  .buff-inner { font-size: 9px; }
+  .buff-left { font-size: 9px; right: -2px; bottom: -2px; }
+  .zone-name { padding: 1px 7px; font-size: 11px; }
+  .score-pops { left: 54px; top: 44px; }
+  .score-pop { font-size: 14px; }
   .debug-help { display: none !important; }
-  .feed { font-size: 12px; bottom: 60px; }
-  .server-feed { width: 94vw; top: 70px; }
-  .server-line { font-size: 14px; padding: 7px 10px; border-width: 2px; }
-}
-@media (max-width: 720px) and (orientation: portrait) {
-  .room-board .lb-line:nth-child(n+7) { display: none; }
+  /* Kill feed và tin loan toàn server XẾP CHỒNG Ở CỘT TRÁI, cùng chừa cột nút bên phải.
+     Trước đây tin toàn server căng gần hết bề ngang và neo ở bottom:86px — đo trên máy
+     320×568 thì nó đè lên kill feed (212×27px) và lên cả NÚT LỬA (58×32px). Nút bị che
+     là hỏng thật, không phải chuyện thẩm mỹ. */
+  /* Chừa đủ chỗ cho cả NÚT bên phải lẫn cụm ping/loa ở góc — cụm góc rộng hơn nút, nên
+     lấy nó làm mốc. Chừa theo nút thôi thì dải tin thò sang đè lên ping (đo 13×30px). */
+  .hud-bottom-left { left: 8px; bottom: 8px; gap: 4px; max-width: calc(100vw - 124px); }
+  .feed { font-size: 11px; gap: 3px; }
+  .feed-line { padding: 3px 7px; border-radius: 7px; }
+  /* Màn hẹp: dải tin về CHUNG cột góc dưới trái (`static` = theo luồng), không còn là dải
+     giữa-trên — ở trên đó nó che mất bảng phòng, thứ người chơi đang nhìn. */
+  .server-feed { position: static; transform: none; width: 100%; gap: 4px; align-items: stretch; }
+  .server-line { font-size: 12px; padding: 5px 8px; border-width: 2px; border-radius: 9px; }
+  .burn-btn { width: 58px; height: 58px; font-size: 24px; right: 12px; bottom: 60px; }
+  .skill-btn { width: 58px; height: 58px; right: 12px; bottom: 126px; }
+  .skill-btn .skill-icon { font-size: 20px; }
+  .skill-btn .skill-count { font-size: 12px; }
+  .corner { right: 8px; bottom: 8px; font-size: 10px; }
+  .mute { width: 30px; height: 30px; font-size: 14px; }
+  /* Dải báo "Rương Báu sắp xuất hiện": trên màn hẹp nó căng giữa màn hình và đè lên
+     minimap. Cho xuống ngay dưới bảng phòng, cùng cột bên phải — chỗ đó trống. */
+  .banner {
+    top: 112px; left: auto; right: 8px; transform: none;
+    font-size: 13px; padding: 6px 10px; border-width: 2px; border-radius: 9px;
+    max-width: calc(100vw - 120px);
+  }
 }
 /* Tổng kết: Uy Danh tổng + bảng điểm theo nguồn (spec §11.1). */
 .score-total { display: flex; justify-content: space-between; align-items: baseline; font-size: 22px; color: var(--gold); margin: 6px 0 2px; }
 .score-by { margin-bottom: 8px; opacity: .9; }
 .score-line { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
 
-.rotate-hint { display: none; position: absolute; top: 175px; white-space: nowrap; left: 50%; transform: translateX(-50%); font-size: 12px; background: rgba(0,0,0,.4); padding: 4px 10px; border-radius: 8px; animation: fadeHint 6s forwards; }
+/* Gợi ý xoay máy: nằm GIỮA màn hình theo chiều dọc, chỗ duy nhất chắc chắn trống.
+   Trước đây ghim ở top:175px — đúng chỗ minimap, nên khổ dọc nào cũng đè (đo được 30×25
+   tới 56×19 px trên cả ba khổ điện thoại). Nó chỉ sống 6 giây rồi tự mờ, nên nằm trên
+   vùng chơi là chấp nhận được; đè vĩnh viễn lên minimap thì không. */
+.rotate-hint { display: none; position: absolute; top: 42%; white-space: nowrap; left: 50%; transform: translateX(-50%); font-size: 12px; background: rgba(0,0,0,.4); padding: 4px 10px; border-radius: 8px; animation: fadeHint 6s forwards; pointer-events: none; }
 @keyframes fadeHint { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 @media (max-width: 720px) and (orientation: portrait) { .rotate-hint { display: block; } }
 
