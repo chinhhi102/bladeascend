@@ -25,7 +25,7 @@ for (const s of sizes) {
   await p.evaluate(() => {
     const feed = document.querySelector('.feed');
     const sf = document.querySelector('.server-feed');
-    for (let i = feed.children.length; i < 2; i++) {
+    for (let i = feed.children.length; i < 5; i++) {
       const d = document.createElement('div');
       d.className = 'feed-line';
       d.textContent = '[Băng Nguyệt Hồ] Thím Ba Bầu nằm xuống, Cô Út Mắm phủi tay đi tiếp';
@@ -39,7 +39,11 @@ for (const s of sizes) {
     bn.textContent = 'Rương Báu sắp xuất hiện trong 10s!';
     bn.style.display = 'block';
   });
-  await sleep(200);
+  // Nhét dư rồi bắt HUD tự cắt theo LUẬT THẬT (`trimLists` gắn vào sự kiện resize), thay vì
+  // tự chọn số tin trong bài đo. Có thế thì con số "feed N tin" ở dưới mới kiểm được luật
+  // chứ không phải kiểm chính cái mình vừa nhét vào.
+  await p.evaluate(() => window.dispatchEvent(new Event('resize')));
+  await sleep(300);
 
   const res = await p.evaluate(() => {
     const SEL = ['.status', '.buffs', '.zone-name', '.minimap', '.room-board', '.feed',
