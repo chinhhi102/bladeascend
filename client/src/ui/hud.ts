@@ -10,11 +10,41 @@ import { button, h } from './dom';
 import { Minimap } from './minimap';
 import { STR } from './strings';
 
-const FEED_KEEP = 5;
 const FEED_SECS = 6;
-// Tin loan toàn server: ít dòng hơn nhưng ở lại lâu hơn vì nó là chuyện lớn (spec §11.4).
-const SERVER_FEED_KEEP = 3;
 const SERVER_FEED_SECS = 9;
+
+/**
+ * Màn hình điện thoại dọc: HUD phải CO LẠI, không chỉ nhỏ chữ.
+ *
+ * Trên điện thoại, bảng xếp hạng 10 dòng + kill feed 5 tin + minimap cỡ PC ăn gần hết màn
+ * hình — người chơi nhìn vào thấy toàn bảng biểu, không thấy trận đấu. Nhỏ chữ lại không
+ * cứu được: vấn đề là SỐ DÒNG, nên phải cắt bớt dòng.
+ *
+ * Lấy mốc theo KÍCH THƯỚC THẬT chứ không theo "có cảm ứng không": máy tính bảng ngang vẫn
+ * rộng rãi, còn cửa sổ trình duyệt hẹp trên PC thì chật y như điện thoại (xem ảnh chụp
+ * 30/10 — cửa sổ hẹp bị đè y hệt máy điện thoại).
+ *
+ * Và phải xét **cả hai chiều**, không chỉ bề ngang. Điện thoại xoay ngang là 800×360: rộng
+ * hơn mốc 720 nên bản đầu coi nó là "màn rộng" và vẫn vẽ 10 dòng xếp hạng + 5 tin feed —
+ * đo được **70% màn hình bị HUD phủ** và 6 cặp khối đè nhau. Chỗ chật ở đó là CHIỀU CAO.
+ */
+const NARROW_W = 720;
+const SHORT_H = 480;
+function narrow(): boolean {
+  return window.innerWidth <= NARROW_W || window.innerHeight <= SHORT_H;
+}
+/** Số tin kill feed giữ lại: màn hẹp 2 tin (chủ dự án chốt 30/10), màn rộng 5. */
+function feedKeep(): number {
+  return narrow() ? 2 : 5;
+}
+/** Số dòng bảng xếp hạng phòng: màn hẹp Top 3, màn rộng Top 10. */
+function boardRows(): number {
+  return narrow() ? 3 : 10;
+}
+/** Tin loan toàn server: ít dòng hơn nhưng ở lại lâu hơn vì nó là chuyện lớn (spec §11.4). */
+function serverFeedKeep(): number {
+  return narrow() ? 1 : 3;
+}
 
 /**
  * colorizeFeed splits a kill-feed sentence into coloured pieces so it can be read at a glance:
@@ -83,6 +113,7 @@ const SKILL_ICONS: Record<string, string> = {
 
 export class Hud {
   readonly root = h('div', 'hud');
+  private readonly badgeWrap = h('div', 'badge-wrap');
   private readonly badge = h('div', 'badge');
   private readonly portrait = h('div', 'portrait');
   private readonly badgeTag = h('div', 'badge-tag');
@@ -138,7 +169,10 @@ export class Hud {
 
   constructor(private readonly cfg: GameConfig, isTouch = false) {
     this.isTouch = isTouch;
-    this.badge.append(this.portrait, this.badgeTag, this.crown);
+    // Ảnh nằm TRONG khung tròn (khung cắt mọi thứ tràn ra), còn huy hiệu tầng và vương miện
+    // nằm NGOÀI khung — chúng cố tình thò ra mép nên không được để khung cắt mất.
+    this.badge.append(this.portrait);
+    this.badgeWrap.append(this.badge, this.badgeTag, this.crown);
     this.expBar = h('div', 'exp-bar', this.expFill);
     this.minimap = new Minimap(cfg, isTouch);
     this.burnBtn.title = STR.burnName;
@@ -155,14 +189,17 @@ export class Hud {
     // chữ "Kiếm 25/30" nằm sau ba cái icon buff.
     this.root.append(
       h('div', 'hud-left',
-        h('div', 'status', this.badge, h('div', 'status-text', this.realm, this.expBar, this.expLabel, this.swords, this.scoreBox)),
+        h('div', 'status', this.badgeWrap, h('div', 'status-text', this.realm, this.expBar, this.expLabel, this.swords, this.scoreBox)),
         this.buffs,
         this.zoneBox,
         this.minimap.root),
       this.pops,
       this.board,
-      this.feed,
-      this.serverFeed,
+      // Kill feed và tin loan toàn server vào CHUNG một cột dọc. Trên màn hẹp cả hai đều
+      // nằm góc dưới trái, và ghim `bottom` riêng cho từng cái thì cái nào dài ra là đè
+      // cái kia — đã đo được đúng vậy (212×21px trên máy 320, 312×56px trên cửa sổ hẹp).
+      // Xếp dọc thì không thể chồng nhau, giống hệt cách đã chữa cột trái.
+      h('div', 'hud-bottom-left', this.feed, this.serverFeed),
       this.banner,
       this.burnBtn,
       this.skillBtn,
@@ -174,6 +211,20 @@ export class Hud {
     );
     this.debugHelp.style.display = 'none';
     this.perf.style.display = 'none';
+    // Xoay ngang điện thoại là đổi hẳn mốc hẹp/rộng. Bảng xếp hạng chờ gói sau mới vẽ lại
+    // (1 giây), còn kill feed thì chỉ đổi khi có tin mới — xoay xong mà vẫn thấy 5 tin cũ
+    // chiếm nửa màn hình thì người chơi tưởng cài đặt không ăn.
+    window.addEventListener('resize', () => this.trimLists());
+  }
+
+  /** trimLists cắt lại kill feed cho khớp bề ngang màn hình hiện tại. */
+  private trimLists(): void {
+    while (this.feed.children.length > feedKeep()) {
+      this.feed.lastElementChild?.remove();
+    }
+    while (this.serverFeed.children.length > serverFeedKeep()) {
+      this.serverFeed.lastElementChild?.remove();
+    }
   }
 
   /**
@@ -373,7 +424,7 @@ export class Hud {
     this.scoreBox.textContent = STR.scoreHud(lb.ms ?? 0);
     // Xếp theo Uy Danh; mỗi dòng ghi danh hiệu thay cho cảnh giới (cảnh giới đã hiện
     // trên đầu nhân vật trong trận — spec §11.2).
-    const rows = lb.top.map((e, i) => {
+    const rows = lb.top.slice(0, boardRows()).map((e, i) => {
       const line = h('div', `lb-line${e.id === myId ? ' me' : ''}`);
       const who = h('span', 'lb-who', `${i + 1}. ${e.nm}`);
       if (e.ti === 1) {
@@ -419,7 +470,7 @@ export class Hud {
       const big = h('div', 'server-line');
       big.append(h('span', 'feed-tag', STR.feed.serverTag(f.tp ?? 0)), ...colorizeFeed(text, f.a, f.b ?? ''));
       this.serverFeed.prepend(big);
-      while (this.serverFeed.children.length > SERVER_FEED_KEEP) {
+      while (this.serverFeed.children.length > serverFeedKeep()) {
         this.serverFeed.lastElementChild?.remove();
       }
       window.setTimeout(() => big.remove(), SERVER_FEED_SECS * 1000);
@@ -433,7 +484,7 @@ export class Hud {
     }
     line.append(...colorizeFeed(text, f.a, f.b ?? ''));
     this.feed.prepend(line);
-    while (this.feed.children.length > FEED_KEEP) {
+    while (this.feed.children.length > feedKeep()) {
       this.feed.lastElementChild?.remove();
     }
     window.setTimeout(() => line.remove(), FEED_SECS * 1000);

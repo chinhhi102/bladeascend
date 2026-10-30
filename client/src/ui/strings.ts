@@ -23,6 +23,26 @@ export const STR = {
     shipper: 'Giao Hỏa Tốc',
     cu_rua: 'Rụt Cổ',
   } as Record<string, string>,
+  /**
+   * Mô tả kỹ năng ở màn chọn nhân vật — người chơi phải biết mình chọn gì trước khi vào trận.
+   *
+   * Viết theo LỢI ÍCH chứ không theo cơ chế: "chạy xuyên tường" dễ hiểu hơn "StGhost 5s".
+   * Con số lấy đúng spec v5.4/v5.5 §6.3; đổi spec thì sửa ở đây luôn, nếu không người chơi
+   * chọn theo một bảng mô tả đã cũ.
+   */
+  skillDesc: {
+    a_hon: 'Ăn bánh bao, hồi ngay 20% số kiếm tối đa của cảnh giới.',
+    ba_tam_loa: 'Hét một tiếng: đẩy văng địch phía trước 500 và làm vòng kiếm của họ quay ngược.',
+    ong_ba_vong: 'Hát ru: mọi địch quanh 500 chậm 40%, vòng kiếm quay chậm một nửa trong 3 giây.',
+    dai_ca_dep: 'Gọi 2 đàn em trong 10 giây, mỗi đứa mang nửa số kiếm của mình — mình không mất kiếm nào.',
+    map_tra_sua: 'Phun trân châu bịt mắt địch 5 giây; trong 5 giây đó họ không nhặt được gì.',
+    co_ba_ganh: 'Lướt 600 và rơi trái cây: ai giẫm phải thì trượt và choáng 1 giây.',
+    su_phu_mi: 'Ném lưới mì trói chặt địch 5 giây — chúng đứng yên, chỉ còn kiếm quay.',
+    be_ti: 'Gồng 5 giây: kiếm cứng gấp đôi, miễn mọi đòn đẩy, chậm, trói và choáng.',
+    shipper: 'Chạy nhanh gấp 3 trong 5 giây và đi xuyên qua mọi vật cản.',
+    cu_rua: 'Rụt vào mai 5 giây: không bể kiếm, không bị chém; ra khỏi mai thì bật sóng đẩy.',
+  } as Record<string, string>,
+  skillLabel: 'Kỹ năng',
   /** Câu thoại tấu hài khi dùng kỹ năng (spec §6.3). */
   skillLines: {
     a_hon: 'Ăn miếng bánh bao, kiếm về như mới!',

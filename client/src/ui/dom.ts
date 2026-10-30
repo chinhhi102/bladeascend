@@ -36,10 +36,25 @@ export class Screens {
 }
 
 /** portrait shows the character's first idle frame, or a coloured circle placeholder. */
+/**
+ * portrait dựng ảnh nhân vật cho màn chọn.
+ *
+ * Ưu tiên `portrait_neutral.png` — ảnh CHÂN DUNG vẽ riêng cho việc này, mặt chiếm gần hết
+ * khung. Bản trước dùng `frames/idle_00.png`, là một khung hình toàn thân trên canvas 512
+ * với nhân vật chỉ chiếm 72% và chân ghim ở y=460: thu về ô 40px thì người bé bằng hạt gạo
+ * giữa một vùng trong suốt, nhìn như thẻ trống (ảnh chụp 30/10 — mười thẻ đều trắng trơn).
+ *
+ * Còn hai mức dự phòng: chưa có chân dung thì lấy khung hình toàn thân, chưa có gì cả thì
+ * chấm tròn màu — để màn chọn không bao giờ trống trơn khi art chưa kịp.
+ */
 export function portrait(char: string, has: (p: string) => boolean, color: string): HTMLElement {
-  if (has(`characters/${char}/atlas.png`)) {
+  const file =
+    has(`characters/${char}/portrait_neutral.png`) ? `portrait_neutral.png`
+    : has(`characters/${char}/atlas.png`) ? `frames/idle_00.png`
+    : '';
+  if (file) {
     const img = h('img', 'portrait');
-    img.src = `/assets/characters/${char}/frames/idle_00.png`;
+    img.src = `/assets/characters/${char}/${file}`;
     img.alt = '';
     return img;
   }
