@@ -209,6 +209,23 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Lỗi / hạn chế đã biết
 
+- **Minimap bấm mới mở, kill feed còn 1 tin (30/10/2026)**. Chủ dự án: *"khung chat điện
+  thoại nhiều quá… mini map đang che mất phần trung tâm, làm nhỏ lại, hoặc cho phép bấm mới
+  mở ra"*.
+  - Trên **màn hẹp** minimap mặc định thu thành **nút 36px**, bấm mới mở. Ba nấc quay vòng:
+    nút nhỏ → bản đồ góc (86px) → bản đồ to (252px) → nút nhỏ. Nấc giữa quan trọng: trước
+    đây một cú chạm nhầm là nhảy thẳng sang bản đồ to phủ 70% màn hình, đúng cái "che mất
+    phần trung tâm". Trên PC giữ nguyên hai nấc (góc ↔ to) — ở đó bản đồ góc không vướng gì
+    mà bắt bấm thêm một lần chỉ làm chậm tay.
+  - Kill feed **1 tin** (trước 2), chữ 10px, hộp mỏng. Tin loan toàn server cắt tối đa 2 dòng.
+  - Mốc hẹp/rộng gom về `client/src/ui/layout.ts` để `hud.ts`, `minimap.ts` và CSS dùng chung
+    một con số — ba nơi ba số thì sẽ có khổ màn hình rơi vào khe giữa chúng (bảng đã co lại
+    nhưng minimap vẫn mở to).
+  - Đo lại: HUD phủ **18–25%** màn hình (320×568 là 36%), không khối nào chồng nhau.
+  - `uioverlap.mjs` sửa lại cho đúng: trước nó **tự nhét 2 tin** rồi đếm 2 — tức là kiểm
+    chính cái mình vừa nhét. Giờ nhét dư 5 tin rồi bắn sự kiện `resize` để HUD tự cắt theo
+    luật thật, nên con số "feed N tin" mới kiểm được luật.
+
 - **HUD trên điện thoại chiếm gần hết màn hình — đã gọn lại (30/10/2026)**. Chủ dự án gửi ảnh
   chụp: *"chơi game mà không thấy gì"*. Đo lại bằng Chrome ở 4 khổ màn hình, worst case có
   đủ mọi loại thông báo cùng bật:

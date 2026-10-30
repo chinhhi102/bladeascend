@@ -7,6 +7,7 @@ import { assets } from '../render/assets';
 import { REALM_BADGE } from '../render/palette';
 import { BUFF_COLORS } from '../render/palette';
 import { button, h } from './dom';
+import { narrowScreen } from './layout';
 import { Minimap } from './minimap';
 import { STR } from './strings';
 
@@ -24,18 +25,12 @@ const SERVER_FEED_SECS = 9;
  * rộng rãi, còn cửa sổ trình duyệt hẹp trên PC thì chật y như điện thoại (xem ảnh chụp
  * 30/10 — cửa sổ hẹp bị đè y hệt máy điện thoại).
  *
- * Và phải xét **cả hai chiều**, không chỉ bề ngang. Điện thoại xoay ngang là 800×360: rộng
- * hơn mốc 720 nên bản đầu coi nó là "màn rộng" và vẫn vẽ 10 dòng xếp hạng + 5 tin feed —
- * đo được **70% màn hình bị HUD phủ** và 6 cặp khối đè nhau. Chỗ chật ở đó là CHIỀU CAO.
+ * Mốc hẹp/rộng nằm ở `layout.ts` để `minimap.ts` và CSS dùng chung một con số.
  */
-const NARROW_W = 720;
-const SHORT_H = 480;
-function narrow(): boolean {
-  return window.innerWidth <= NARROW_W || window.innerHeight <= SHORT_H;
-}
-/** Số tin kill feed giữ lại: màn hẹp 2 tin (chủ dự án chốt 30/10), màn rộng 5. */
+const narrow = narrowScreen;
+/** Số tin kill feed giữ lại: màn hẹp **1 tin** (chủ dự án chốt 30/10), màn rộng 5. */
 function feedKeep(): number {
-  return narrow() ? 2 : 5;
+  return narrow() ? 1 : 5;
 }
 /** Số dòng bảng xếp hạng phòng: màn hẹp Top 3, màn rộng Top 10. */
 function boardRows(): number {

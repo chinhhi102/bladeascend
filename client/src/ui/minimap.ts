@@ -2,6 +2,7 @@ import type { GameConfig } from '../config';
 import type { GameMap, LeaderboardMsg, Shape } from '../net/protocol';
 import { GATE_COLORS } from '../render/palette';
 import { h } from './dom';
+import { narrowScreen } from './layout';
 import { STR } from './strings';
 
 /** Màu vàng kim riêng của Thiên Môn trên minimap (spec §8.4a). */
@@ -48,6 +49,16 @@ export class Minimap {
   private map: GameMap | null = null;
   private size: number;
   private big = false;
+  /**
+   * collapsed: minimap đang thu thành nút nhỏ, bấm mới mở (chủ dự án chốt 30/10 —
+   * *"mini map đang che mất phần trung tâm, làm nhỏ lại, hoặc cho phép bấm mới mở ra"*).
+   *
+   * Chỉ thu trên màn hẹp. Trên PC màn rộng, bản đồ góc không vướng gì và việc phải bấm
+   * một lần nữa mới xem được chỉ làm chậm tay.
+   *
+   * Ba trạng thái quay vòng khi bấm: **nút nhỏ → bản đồ góc → bản đồ to → nút nhỏ**.
+   */
+  private collapsed = false;
   private lb: LeaderboardMsg | null = null;
   /**
    * Cột liệt kê 5 khu + số người mỗi khu, chỉ hiện khi phóng to (spec §8.0).
@@ -56,22 +67,48 @@ export class Minimap {
    * chọn đi hay tránh; biết chính xác ai đứng chỗ nào thì cổng dịch chuyển hết bất ngờ.
    */
   private readonly zoneList = h('div', 'zone-list');
+  /** Icon hiện thay cho bản đồ khi đang thu nhỏ. */
+  private readonly pin = h('div', 'minimap-pin', '🗺');
   private myZone = 0;
 
   constructor(cfg: GameConfig, isTouch: boolean) {
     this.size = isTouch ? cfg.minimap.size_mobile : cfg.minimap.size_pc;
     this.ctx = this.canvas.getContext('2d');
-    this.root.append(this.canvas, this.zoneList);
+    this.root.append(this.canvas, this.zoneList, this.pin);
     this.root.addEventListener('click', () => this.toggle());
     // Cửa sổ đổi kích thước → tính lại, nếu không bản phóng to sẽ tràn ra ngoài.
-    window.addEventListener('resize', () => this.resize());
-    this.resize();
+    window.addEventListener('resize', () => this.applyState());
+    this.collapsed = narrowScreen();
+    this.applyState();
   }
 
-  /** toggle switches between the corner map and the big centred one (tap or key M). */
+  /**
+   * toggle quay vòng trạng thái. Trên màn hẹp có ba nấc (nút nhỏ → góc → to → nút nhỏ);
+   * trên màn rộng chỉ hai nấc như cũ (góc ↔ to).
+   */
   toggle(): void {
-    this.big = !this.big;
+    if (!narrowScreen()) {
+      this.collapsed = false;
+      this.big = !this.big;
+    } else if (this.collapsed) {
+      this.collapsed = false;
+    } else if (!this.big) {
+      this.big = true;
+    } else {
+      this.big = false;
+      this.collapsed = true;
+    }
+    this.applyState();
+  }
+
+  private applyState(): void {
+    // Màn rộng thì không bao giờ ở trạng thái thu nhỏ, kể cả khi người chơi thu lại rồi
+    // mới phóng to cửa sổ — nếu không họ sẽ thấy một cái nút lạ giữa HUD mà không hiểu.
+    if (!narrowScreen()) {
+      this.collapsed = false;
+    }
     this.root.classList.toggle('big', this.big);
+    this.root.classList.toggle('collapsed', this.collapsed);
     this.drawZoneList();
     this.resize();
   }
@@ -135,6 +172,11 @@ export class Minimap {
   }
 
   private resize(): void {
+    if (this.collapsed) {
+      // Nút nhỏ: cỡ do CSS quyết, canvas không cần vẽ gì.
+      this.root.style.width = this.root.style.height = '';
+      return;
+    }
     // Không bao giờ rộng hơn chỗ trống thực tế: chừa 12px mép và phần trên đã có HUD.
     const roomW = window.innerWidth - 24;
     const roomH = window.innerHeight - 148;
@@ -201,8 +243,8 @@ export class Minimap {
   /** render draws one frame. me is the camera centre in world units. */
   render(meX: number, meY: number, facing: number, viewW: number, viewH: number, now: number): void {
     const g = this.ctx;
-    if (!g || !this.map || !this.terrain) {
-      return;
+    if (!g || !this.map || !this.terrain || this.collapsed) {
+      return; // đang thu thành nút: vẽ vào canvas ẩn chỉ tốn CPU mỗi khung
     }
     const px = this.canvas.width;
     const k = px / this.map.size;
