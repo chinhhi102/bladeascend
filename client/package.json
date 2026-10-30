@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "predev": "npm run assets:build",
     "dev": "vite",
     "assets:build": "node ../tools/asset-pipeline/index.mjs",
     "build": "npm run assets:build && npm run assets:budget && tsc --noEmit && vite build",
