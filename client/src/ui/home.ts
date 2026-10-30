@@ -64,16 +64,44 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
   const grid = h('div', 'char-grid');
   let selected = profile.char;
   const cards = new Map<string, HTMLElement>();
+
+  // Khung xem trước: ảnh to + tên + KỸ NĂNG của nhân vật đang chọn.
+  //
+  // Mười nhân vật chỉ khác nhau ở kỹ năng (tốc độ, máu, kiếm đều như nhau — spec §6.3), nên
+  // lưới chỉ có ảnh nhỏ + tên thì người chơi chọn mù hoàn toàn. Đưa kỹ năng ra đây là chỗ
+  // DUY NHẤT họ đọc được trước khi vào trận.
+  const previewArt = h('div', 'preview-art');
+  const previewName = h('div', 'preview-name');
+  const previewSkill = h('div', 'preview-skill');
+  const previewDesc = h('div', 'preview-desc');
+  const preview = h('div', 'char-preview',
+    previewArt,
+    h('div', 'preview-text', previewName, previewSkill, previewDesc));
+
+  const showPreview = (c: string): void => {
+    previewArt.replaceChildren(portrait(c, (p) => assets.has(p), toHex(charColor(c)[0])));
+    previewName.textContent = STR.characters[c] ?? c;
+    previewSkill.textContent = `${STR.skillLabel}: ${STR.skillNames[c] ?? '—'}`;
+    previewDesc.textContent = STR.skillDesc[c] ?? '';
+  };
+
   for (const c of cfg.characters) {
     const card = h('button', 'char-card', portrait(c, (p) => assets.has(p), toHex(charColor(c)[0])), h('span', '', STR.characters[c] ?? c));
-    card.addEventListener('click', () => {
+    const pick = (): void => {
       selected = c;
       cards.forEach((el, id) => el.classList.toggle('selected', id === c));
-    });
+      showPreview(c);
+    };
+    card.addEventListener('click', pick);
+    // Rê chuột cũng xem được: trên PC người ta muốn so kỹ năng của mấy nhân vật rồi mới
+    // chốt, bắt bấm từng cái thì mỗi lần so là một lần đổi lựa chọn đang giữ.
+    card.addEventListener('mouseenter', () => showPreview(c));
+    card.addEventListener('mouseleave', () => showPreview(selected));
     card.classList.toggle('selected', c === selected);
     cards.set(c, card);
     grid.append(card);
   }
+  showPreview(selected);
   const play = (): void => {
     const name = input.value.trim();
     if ([...name].length < cfg.player.name_min || [...name].length > cfg.player.name_max) {
@@ -96,6 +124,7 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     err,
     h('div', 'label', STR.pickCharacter),
     grid,
+    preview,
     h('div', 'row', button(STR.play, 'btn primary', play), button(STR.leaderboard, 'btn', onLeaderboard)),
     h('div', 'hint', 'ontouchstart' in window ? STR.controlsMobile : STR.controlsPc),
   );

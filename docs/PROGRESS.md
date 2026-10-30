@@ -209,6 +209,40 @@ Hiệu năng: 40 bot, bản đồ thật → ~0.16 ms/tick (mục tiêu < 3 ms).
 
 ## Lỗi / hạn chế đã biết
 
+- **HUD trên điện thoại chiếm gần hết màn hình — đã gọn lại (30/10/2026)**. Chủ dự án gửi ảnh
+  chụp: *"chơi game mà không thấy gì"*. Đo lại bằng Chrome ở 4 khổ màn hình, worst case có
+  đủ mọi loại thông báo cùng bật:
+  - Bảng xếp hạng **Top 3** (trước 10 dòng), bỏ dòng danh hiệu — danh hiệu làm mỗi dòng cao
+    gấp đôi mà cảnh giới+danh hiệu đã hiện trên đầu nhân vật rồi.
+  - Kill feed **2 tin** (trước 5). Tin loan toàn server 1 dòng.
+  - Minimap kẹp thêm theo **tỉ lệ màn hình** (≤ 24% cạnh ngắn): `size_mobile` là số px cố
+    định, mà 120px trên máy rộng 360px là một phần ba bề ngang.
+  - Khối trạng thái 77 → **54px**: bỏ nhãn "Linh khí" (màu thanh đã phân biệt), gộp
+    "Kiếm x/y" và "Uy Danh n" về một dòng.
+  - **Mốc "màn hẹp" xét CẢ HAI CHIỀU**, không chỉ bề ngang. Điện thoại xoay ngang là 800×360
+    — rộng hơn mốc 720 nên bản đầu coi là "màn rộng" và vẫn vẽ 10 dòng + 5 tin: đo được
+    **70% màn hình bị HUD phủ** và 6 cặp khối đè nhau. Chỗ chật ở đó là chiều cao.
+  - Kill feed và tin toàn server vào **chung một cột flex** — ghim `bottom` riêng cho từng
+    cái thì cái nào dài ra là đè cái kia (đo 212×21px trên máy 320). Cùng bài học với cột
+    trái hôm 29/10.
+  - Gợi ý xoay máy và dải báo Rương Báu dời khỏi chỗ đè minimap.
+  Kết quả: **không khối nào chồng nhau** ở 360×800, 800×360, 320×568 và cửa sổ hẹp 420×900.
+- **Hai lỗi CSS rò luật — đã sửa (30/10/2026)**. Cả hai cùng một kiểu: luật viết cho `.portrait`
+  trần nên áp cho MỌI chỗ dùng class đó.
+  1. `.portrait { width: 64px }` của màn chọn rò sang ô đại diện HUD (40px) → ảnh tràn hẳn
+     ra ngoài khung tròn và đè lên chữ "Kiếm x/y". `.badge` không có `overflow:hidden` nên
+     không có gì chặn.
+  2. `.portrait { position: absolute }` của HUD rò ngược sang màn chọn → ảnh bị kéo ra khỏi
+     luồng, **mười thẻ nhân vật trông như không có ảnh**.
+  Giờ cả hai khoanh theo thẻ cha (`.badge .portrait`, `.char-card .portrait`), và `.badge`
+  có `overflow:hidden` làm chốt chặn; huy hiệu tầng + vương miện chuyển ra `.badge-wrap` vì
+  chúng cố tình thò ra ngoài khung.
+- **Màn chọn nhân vật có ảnh + kỹ năng (30/10/2026)**. Mười nhân vật chỉ khác nhau ở kỹ năng,
+  mà lưới cũ chỉ có tên nên người chơi chọn mù. Thêm khung xem trước: ảnh to, tên, tên kỹ
+  năng và mô tả một dòng (`STR.skillDesc`, số lấy đúng spec v5.4/v5.5). Rê chuột để so, bấm
+  để chọn. Ảnh lấy `portrait_neutral.png` thay vì `frames/idle_00.png` — khung hình toàn
+  thân trên canvas 512 thu về ô 40px thì nhân vật bé bằng hạt gạo.
+
 - **Spec v5.6 — Tiên giới đốt Tiên khí (30/10/2026, §4.1c)**. Đây là câu trả lời cho Q24:
   trước đó lên Tiên giới là mất hẳn khả năng chạy nhanh, vì nhánh duy nhất của Thiêu Đốt
   tiêu EXP mà người Tiên giới đứng đúng ở đáy cảnh giới. Giờ hai đường tu có hai loại nhiên

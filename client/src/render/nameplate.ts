@@ -50,6 +50,26 @@ function inkOn(bg: number): number {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? 0x14110c : 0xffffff;
 }
 
+/**
+ * shortTitle cắt danh hiệu dài trên màn hẹp.
+ *
+ * Dải danh hiệu nở ra theo ĐỘ DÀI CHỮ, mà danh hiệu dài nhất là "Bản tăng chưa ngán ai bao
+ * giờ" — 29 ký tự. Trên điện thoại dải ấy rộng gần nửa màn hình và che cả minimap (ảnh chụp
+ * 30/10). Nhỏ cỡ chữ không cứu được vì nhỏ nữa thì không đọc nổi; phải cắt bớt chữ.
+ *
+ * Cắt theo TỪ chứ không cắt giữa từ: "Bản tăng chưa…" đọc vẫn ra nghĩa, còn "Bản tăng chư…"
+ * thì chỉ như lỗi hiển thị.
+ */
+const TITLE_MAX_MOBILE = 14;
+function shortTitle(s: string, mobile: boolean): string {
+  if (!mobile || s.length <= TITLE_MAX_MOBILE) {
+    return s;
+  }
+  const cut = s.slice(0, TITLE_MAX_MOBILE);
+  const sp = cut.lastIndexOf(' ');
+  return (sp > 6 ? cut.slice(0, sp) : cut.trimEnd()) + '…';
+}
+
 /** fit co chữ về đúng cỡ pixel mong muốn (BitmapFont sinh ở cỡ lớn cho nét). */
 function fit(t: BitmapText, px: number): void {
   const base = t.style.fontSize as number;
@@ -138,7 +158,7 @@ export class Nameplate {
     this.titleText.visible = hasRibbon;
     this.ribbon.visible = hasRibbon;
     if (hasRibbon) {
-      this.titleText.text = (rank === 1 ? '♚ ' : '') + (STR.titles[rank - 1] ?? '');
+      this.titleText.text = (rank === 1 ? '♚ ' : '') + shortTitle(STR.titles[rank - 1] ?? '', this.mobile);
       fit(this.titleText, titlePx);
     }
 
