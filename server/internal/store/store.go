@@ -56,7 +56,24 @@ CREATE TABLE IF NOT EXISTS lives (
 );
 CREATE INDEX IF NOT EXISTS lives_ended ON lives(ended_at);
 CREATE INDEX IF NOT EXISTS lives_exp ON lives(peak_exp);
-CREATE INDEX IF NOT EXISTS lives_kills ON lives(kills);`
+CREATE INDEX IF NOT EXISTS lives_kills ON lives(kills);
+
+-- hidden_lives: mạng chơi bị ẨN khỏi bảng xếp hạng (ADMIN_SPEC §6.2).
+--
+-- Ẩn, KHÔNG xoá. Hai lý do. Một: ẩn sai thì bỏ ẩn là xong, còn xoá sai thì mất hẳn — và
+-- người bị gắn cờ oan có quyền được phục hồi. Hai: danh sách này chính là bằng chứng, nên
+-- nó phải còn lại để đối chiếu (docs/LEADERBOARD_AUDIT.md).
+--
+-- Khoá (guest_id, ended_at): lives.id tự tăng nên nó đổi khi nhập lại DB từ sao lưu, còn
+-- cặp (ai, kết thúc lúc nào) thì không.
+CREATE TABLE IF NOT EXISTS hidden_lives (
+	guest_id TEXT NOT NULL,
+	ended_at INTEGER NOT NULL,
+	reason   TEXT NOT NULL,
+	at       INTEGER NOT NULL,
+	by_ip    TEXT NOT NULL,
+	PRIMARY KEY (guest_id, ended_at)
+);`
 
 // migrations add the v3.3 leaderboard columns to databases created before them (spec §11.2).
 // Re-running them on an up-to-date database is a no-op.
@@ -170,8 +187,13 @@ func (s *Store) Top(period, name string, now time.Time) ([]Life, error) {
 
 func (s *Store) query(b board, since int64) ([]Life, error) {
 	// Every piece of SQL below comes from the fixed `boards` table, never from user input.
+	//
+	// NOT EXISTS, không LEFT JOIN: một mạng chơi bị ẩn hai lần (ẩn, bỏ ẩn, ẩn lại) vẫn chỉ là
+	// một dòng trong `lives`, còn LEFT JOIN sẽ nhân nó lên và LIMIT 50 trả về ít hơn 50 người.
 	rs, err := s.db.Query(`SELECT name,character,score,hits,peak_exp,peak_level,kills,dai_thua_secs,top1_secs,survive_secs,map,ended_at
 		FROM lives WHERE ended_at >= ? `+b.where+`
+		AND NOT EXISTS (SELECT 1 FROM hidden_lives h
+			WHERE h.guest_id = lives.guest_id AND h.ended_at = lives.ended_at)
 		ORDER BY `+b.col+` `+b.order+`, ended_at ASC LIMIT 50`, since)
 	if err != nil {
 		return nil, err

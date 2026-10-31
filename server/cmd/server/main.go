@@ -35,7 +35,12 @@ func main() {
 	assetsDir := flag.String("assets", config.FindRepoFile("assets/dist"), "assets directory (bản đã nén của asset-pipeline)")
 	clientDir := flag.String("client", config.FindRepoFile("client/dist"), "built client directory")
 	dbPath := flag.String("db", "", "SQLite file (default: server/data/leaderboard.db)")
-	debug := flag.Bool("debug", true, "cho phép phím test; người chơi vẫn phải tự mở bằng ?debug=true")
+	// Từ ADMIN_SPEC §1.1, cờ này KHÔNG còn là thứ quyết định ai được debug — `admin.DebugGate`
+	// quyết, và nó chỉ mở cho phiên đăng nhập quản trị (hoặc dev + localhost + DEBUG_TOKEN).
+	// Cờ này chỉ còn là công tắc tổng để tắt hẳn. `?debug=true` từ client là một lời xin,
+	// server không nghe. Mô tả cũ ("người chơi tự mở bằng ?debug=true") đã sai và nó từng
+	// là nguyên nhân thật: xem docs/LEADERBOARD_AUDIT.md §1.
+	debug := flag.Bool("debug", true, "công tắc tổng cho lệnh test; ai được dùng thì do phiên admin quyết (§1.1)")
 	// Trần kết nối mỗi IP là để chống lạm dụng (§13.5). Chạy tools/browsertest thì 10 tab
 	// cùng đến từ 127.0.0.1 nên phải nới, nếu không tab thứ 9 trở đi ăn HTTP 429.
 	maxConns := flag.Int("max-conns-per-ip", 0, "ghi đè net.max_conns_per_ip (0 = theo config)")

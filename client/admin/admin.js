@@ -239,6 +239,108 @@ document.getElementById('fbq').addEventListener('input', () => {
   window.__fbT = setTimeout(() => loadFeedback().catch(() => {}), 300);
 });
 
+// ── Bảng xếp hạng: rà soát và ẩn (§6.2) ──────────────────────────────────────────────────
+//
+// Nút duy nhất ở đây là "Ẩn". Không có nút xoá, và sẽ không có — xem `internal/store/hidden.go`.
+
+/**
+ * SIM_SECS: thời gian chơi THẬT để đạt mốc, đo bằng `cmd/sim` (40 bot, 20 phút mô phỏng).
+ * Đây là mốc duy nhất đáng tin: nó đo trên chính luật chơi đang chạy, nên khi cân bằng đổi
+ * thì chỉ cần chạy lại sim rồi sửa hai con số này.
+ */
+const SIM_SECS = { 80: 429, 90: 479 };
+
+/** suspectWhy trả về lý do ngờ một mạng chơi, hoặc '' nếu không có gì bất thường. */
+function suspectWhy(r) {
+  const s = Math.max(r.survive_secs, 0.1);
+  if (r.peak_level >= 90 && s < SIM_SECS[90] / 2) {
+    return `Tiên giới (tầng ${r.peak_level}) trong ${Math.round(s)}s — chơi thật cần ~${SIM_SECS[90]}s`;
+  }
+  if (r.peak_level >= 80 && s < SIM_SECS[80] / 2) {
+    return `Đại Thừa (tầng ${r.peak_level}) trong ${Math.round(s)}s — chơi thật cần ~${SIM_SECS[80]}s`;
+  }
+  return '';
+}
+
+let bdRows = [];
+
+function bdRow(r) {
+  const why = suspectWhy(r);
+  const tr = el('tr', [r.hidden ? 'hid' : '', why ? 'sus' : ''].filter(Boolean).join(' '));
+  const name = el('td');
+  name.append(el('span', '', r.name || '(không tên)'), el('small', '', ' ' + r.guest_id.slice(0, 8)));
+  tr.append(
+    el('td', '', new Date(r.ended_at * 1000).toLocaleString('vi-VN')),
+    name,
+    el('td', '', Math.round(r.score)),
+    el('td', '', r.peak_level),
+    el('td', '', f1(r.survive_secs) + 's'),
+    el('td', '', r.hidden ? 'ĐANG ẨN — ' + r.hide_reason : why),
+  );
+
+  const cell = el('td');
+  const b = el('button', '', r.hidden ? 'Bỏ ẩn' : 'Ẩn khỏi bảng');
+  b.addEventListener('click', async () => {
+    let reason = '';
+    if (!r.hidden) {
+      // Lý do là BẮT BUỘC, và gợi ý sẵn bằng chứng đã tính được — ba tháng sau đọc lại
+      // "nghi hack" thì chẳng còn nghĩa gì, còn "Đạo Tổ trong 63 giây" thì vẫn kiểm được.
+      reason = prompt('Lý do ẩn (bắt buộc, sẽ lưu vào nhật ký):', why || '');
+      if (reason === null) return;
+      if (!reason.trim()) { alert('Phải nêu lý do.'); return; }
+    } else if (!confirm(`Bỏ ẩn mạng chơi của "${r.name}"? Nó sẽ hiện lại trên bảng.`)) {
+      return;
+    }
+    b.disabled = true;
+    try {
+      await api('/api/admin/hide', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guest_id: r.guest_id, ended_at: r.ended_at, reason, unhide: !!r.hidden,
+        }),
+      });
+    } catch (e) { alert('Không xong: ' + e.message); }
+    b.disabled = false;
+    loadBoard().catch(() => {});
+  });
+  cell.append(b);
+  tr.append(cell);
+  return tr;
+}
+
+function renderBoard() {
+  const onlySus = document.getElementById('bdsus').checked;
+  const onlyHid = document.getElementById('bdhid').checked;
+  const q = document.getElementById('bdq').value.trim().toLowerCase();
+  const rows = bdRows.filter((r) => {
+    if (onlySus && !suspectWhy(r) && !r.hidden) return false;
+    if (onlyHid && !r.hidden) return false;
+    if (q && !(r.name.toLowerCase().includes(q) || r.guest_id.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const tb = document.querySelector('#bdtbl tbody');
+  tb.replaceChildren(...(rows.length
+    ? rows.map(bdRow)
+    : [(() => { const tr = el('tr'); const td = el('td', '', 'Không có dòng nào khớp.'); td.colSpan = 7; tr.append(td); return tr; })()]));
+  const nSus = bdRows.filter((r) => suspectWhy(r)).length;
+  const nHid = bdRows.filter((r) => r.hidden).length;
+  document.getElementById('bdcount').textContent =
+    `${bdRows.length} mạng gần nhất · ${nSus} đáng ngờ · ${nHid} đang ẩn · hiện ${rows.length}`;
+}
+
+async function loadBoard() {
+  bdRows = await api('/api/admin/lives?limit=500');
+  renderBoard();
+}
+
+for (const id of ['bdsus', 'bdhid']) {
+  document.getElementById(id).addEventListener('change', renderBoard);
+}
+document.getElementById('bdq').addEventListener('input', () => {
+  clearTimeout(window.__bdT);
+  window.__bdT = setTimeout(renderBoard, 200);
+});
+
 // ── Khung trang ──────────────────────────────────────────────────────────────────────────
 
 function show(id) {
@@ -246,6 +348,7 @@ function show(id) {
   for (const a of document.querySelectorAll('#side a')) a.classList.toggle('on', a.hash === '#' + id);
   if (id === 'audit') loadAudit().catch(() => {});
   if (id === 'feedback') loadFeedback().catch(() => {});
+  if (id === 'board') loadBoard().catch(() => {});
 }
 
 window.addEventListener('hashchange', () => show(location.hash.slice(1) || 'dashboard'));

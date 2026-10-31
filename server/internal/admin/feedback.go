@@ -48,18 +48,6 @@ CREATE TABLE IF NOT EXISTS bans (
 );
 CREATE INDEX IF NOT EXISTS idx_bans_guest ON bans(guest_id);
 CREATE INDEX IF NOT EXISTS idx_bans_ip ON bans(ip);
-
--- hidden_lives: mạng chơi bị ẨN khỏi bảng xếp hạng (không xoá — xem §6.2 và
--- docs/LEADERBOARD_AUDIT.md). Khoá là (guest_id, ended_at) vì đó là thứ duy nhất xác định
--- một mạng chơi trong bảng lives.
-CREATE TABLE IF NOT EXISTS hidden_lives (
-  guest_id TEXT NOT NULL,
-  ended_at INTEGER NOT NULL,
-  reason   TEXT NOT NULL,
-  at       INTEGER NOT NULL,
-  by_ip    TEXT NOT NULL,
-  PRIMARY KEY (guest_id, ended_at)
-);
 `
 
 // Giới hạn nội dung — §7.1.
