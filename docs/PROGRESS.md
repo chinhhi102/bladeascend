@@ -1447,3 +1447,68 @@ khi gọi `deploy.sh | grep` thì fd đó là cái ống và server giữ nó m�
 - Đo lại bộ nhớ trên **iPhone thật** sau Q30 (nút thắt B13b): giả lập cho 95,8 MB
   (từ 113,5) nhưng nó chỉ có 2–3 nhân vật, còn máy thật ghi `chars:7`.
 - `ir` 62% gói — việc tối ưu tiếp theo nếu cần.
+
+## Phiên 31/10 (tiếp 8) — chốt việc đổi tên: remote, push, và máy dev mất Go
+
+Phiên này không sửa luật chơi. Việc là đóng nốt checklist đổi tên BladeAscend
+(phần ngoài repo) và dựng lại máy dev để chạy được bộ kiểm.
+
+| Việc | Trạng thái |
+|---|---|
+| Repo GitHub → `chinhhi102/bladeascend` | ✅ chủ dự án đổi |
+| Thư mục `~/git/kiemxoaytutien` → `bladeascend` | ✅ chủ dự án đổi |
+| `git remote set-url origin` → tên mới | ✅ |
+| Push 57 commit tồn (local đi trước `origin/main` 57, sau 0) | ✅ tới `cd777f8` |
+
+### Remote vẫn trỏ tên cũ — redirect là thứ đi mượn
+
+Sau khi đổi tên trên GitHub, `origin` vẫn là `.../kiemxoaytutien` và `git fetch`
+vẫn chạy, nhờ redirect GitHub giữ hộ. Nhưng redirect tắt ngay khi có ai tạo repo
+mới trùng tên cũ — lúc đó `git push` đẩy vào repo lạ mà không báo gì. Đã đổi
+`set-url`. Kiểm trước khi push: `0` commit phía sau → fast-forward thuần.
+
+Đáng ghi: trong lúc đó repo trên GitHub **tên** đã là bladeascend nhưng **code**
+bên trong vẫn là Kiếm Xoay, vì 57 commit chưa push. Đổi tên ở vỏ không đổi ruột.
+
+### Máy dev không còn Go — và cache module bị root chiếm 1/4
+
+`go test` / `go vet` không chạy được: máy không có Go (không phải sandbox che —
+đã thử login shell, không có `/usr/local/go`, snap, hay `~/go/bin`). Lạ, vì các
+phiên trước có sửa Go. Đã cài bản chính thức **go1.27.3** vào `~/.local/go`
+(đối chiếu sha256), PATH thêm vào `~/.bashrc` kèm ghi chú cách gỡ.
+
+Cài xong lộ ra một chỗ hỏng **đã nằm sẵn từ trước**: `36.797 / 147.810` mục trong
+`~/go/pkg/mod` thuộc `root:root` — có lần Go bị chạy qua `sudo`. Nên Go báo
+`permission denied` khi ghi cache, dù `touch` vào cùng thư mục thì được (rtk lược
+cột quyền trong `ls -l`, phải dùng `stat -c '%A %U:%G'` mới thấy chủ sở hữu).
+
+Chạy test ngay bằng cách trỏ `GOMODCACHE` sang `~/.cache/go-mod` (tải mới 411 MB).
+Sau đó chủ dự án chạy `sudo chown -R chinhdc:chinhdc ~/go` rồi xoá cache tạm →
+kiểm lại bằng cache mặc định: sạch. **Cố ý không** ghi `GOMODCACHE` vào `.bashrc`:
+làm vậy là để máy mang hai cache song song vĩnh viễn, lỗi sẽ quay lại sau nhiều
+tháng mà không ai nhớ tại sao.
+
+### Bộ kiểm (quy tắc 7) — đủ cả hai nửa
+
+| Bài | Kết quả |
+|---|---|
+| `go vet ./...` | No issues (cache mặc định, sau chown) |
+| `go test ./...` | **336 pass / 23 gói** |
+| `npm run build` | pass — ngân sách đạt, 0 art chết, `check:brand` sạch |
+
+`check:brand` còn miễn trừ đúng 2 dòng ở `deploy/staging.sh`, đúng như đã thiết kế.
+
+### Còn lại — chờ chủ dự án quyết
+
+Ba việc, hai trong đó cùng một cái bẫy: **đổi tài liệu/script mà không đổi hạ
+tầng thì người làm theo sẽ gặp thư mục rỗng hoặc `service not found`.**
+
+- `deploy/staging.sh` dòng 18–19 vẫn rsync vào `~/kiemxoaytutien` trên máy staging.
+- `docs/DEPLOY.md`: 20 dòng còn `/opt/kiemxoay` và tên service `kiemxoay`. Khác
+  `PROGRESS.md` (kể chuyện cũ, miễn đúng) — đây là hướng dẫn đang dùng.
+- Mua `bladeascend.io`. Code đã trỏ sẵn (`config.brand.domain` → `%BRAND_DOMAIN%`
+  trong `client/index.html`), mua xong ảnh share Facebook/Zalo chạy, không sửa gì.
+
+**Câu cần chốt**: đổi tên thư mục/service trên VPS + staging, hay giữ tên cũ ở
+tầng hạ tầng? Giữ nguyên cũng được (người chơi không thấy), chỉ là `brand-check`
+mang hai món nợ miễn trừ dài hạn.
