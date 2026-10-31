@@ -21,11 +21,11 @@ import (
 	"sort"
 	"time"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/wire"
-	"kiemxoay/server/internal/room"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/wire"
+	"bladeascend/server/internal/room"
 )
 
 // client đóng vai một người chơi: đếm byte nhận và đo ping đúng cách — gửi `ping` rồi tính

@@ -3,8 +3,8 @@ package game
 import (
 	"math"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/geom"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/geom"
 )
 
 // Ring is a player's orbiting sword ring (spec §4.1a).

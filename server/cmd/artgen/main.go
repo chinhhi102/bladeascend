@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 const pollEvery = 6 * time.Second

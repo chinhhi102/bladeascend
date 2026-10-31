@@ -8,12 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/wire"
-	"kiemxoay/server/internal/store"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/wire"
+	"bladeascend/server/internal/store"
+	"bladeascend/server/internal/world"
 )
 
 // Recorder persists finished human lives (implemented by store.Store).

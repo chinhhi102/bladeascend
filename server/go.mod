@@ -1,4 +1,4 @@
-module kiemxoay/server
+module bladeascend/server
 
 go 1.26.0
 

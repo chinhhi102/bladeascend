@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"kiemxoay/server/internal/admin"
+	"bladeascend/server/internal/admin"
 )
 
 // Hòm thư góp ý — ADMIN_SPEC §7, §9.

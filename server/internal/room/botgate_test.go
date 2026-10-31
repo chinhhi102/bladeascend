@@ -3,7 +3,7 @@ package room
 import (
 	"testing"
 
-	"kiemxoay/server/internal/game"
+	"bladeascend/server/internal/game"
 )
 
 // Bot phải biết dùng cổng (spec v5 mục 8). Không có luật này thì bot nào rơi vào khu vắng

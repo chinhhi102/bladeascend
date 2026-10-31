@@ -1,5 +1,5 @@
 {
-  "name": "kiem-xoay-client",
+  "name": "bladeascend-client",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -7,7 +7,7 @@
     "predev": "npm run assets:build",
     "dev": "vite",
     "assets:build": "node ../tools/asset-pipeline/index.mjs",
-    "build": "npm run assets:build && npm run assets:budget && npm run check:dead && tsc --noEmit && vite build",
+    "build": "npm run assets:build && npm run assets:budget && npm run check:dead && npm run check:brand && tsc --noEmit && vite build",
     "preview": "vite preview",
     "assets:report": "node --no-warnings scripts/assets-report.ts",
     "assets:size": "node --no-warnings --experimental-strip-types scripts/assets-size.ts",
@@ -17,7 +17,8 @@
     "check:items": "node --no-warnings --experimental-strip-types scripts/items-check.ts",
     "check:assets": "node --no-warnings --experimental-strip-types scripts/assets-check.ts",
     "check:wire": "node --no-warnings --experimental-strip-types scripts/wire-check.ts",
-    "check:dead": "node --no-warnings --experimental-strip-types scripts/assets-dead.ts"
+    "check:dead": "node --no-warnings --experimental-strip-types scripts/assets-dead.ts",
+    "check:brand": "node --no-warnings --experimental-strip-types scripts/brand-check.ts"
   },
   "dependencies": {
     "@msgpack/msgpack": "3.1.3",

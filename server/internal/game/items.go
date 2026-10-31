@@ -4,7 +4,7 @@ import (
 	"math"
 	"sort"
 
-	"kiemxoay/server/internal/geom"
+	"bladeascend/server/internal/geom"
 )
 
 const spawnsPerTick = 20

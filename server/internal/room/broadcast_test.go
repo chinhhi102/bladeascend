@@ -3,7 +3,7 @@ package room
 import (
 	"testing"
 
-	"kiemxoay/server/internal/game"
+	"bladeascend/server/internal/game"
 )
 
 // Trần sự kiện va kiếm: giữ cái GẦN NGƯỜI XEM nhất, bỏ phần còn lại (ngân sách gói §13.6).

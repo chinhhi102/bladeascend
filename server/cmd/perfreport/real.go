@@ -10,8 +10,8 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/telemetry"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/telemetry"
 )
 
 // Chế độ `--real`: in báo cáo số liệu NGƯỜI CHƠI THẬT (TELEMETRY_SPEC §4.1).

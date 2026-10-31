@@ -1,6 +1,6 @@
 package game
 
-import "kiemxoay/server/internal/geom"
+import "bladeascend/server/internal/geom"
 
 type Vec = geom.Vec
 

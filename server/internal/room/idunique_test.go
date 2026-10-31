@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/world"
 )
 
 // Id entity phải duy nhất trong CẢ PHÒNG, và giữ nguyên khi đi qua cổng.

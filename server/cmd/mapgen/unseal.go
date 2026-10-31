@@ -3,8 +3,8 @@ package main
 import (
 	"math"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/game"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
 )
 
 // Đục lối cho những "túi" bị nhốt — §8.1b "Toàn bộ chỗ trống phải liên thông".

@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"sort"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/world"
 )
 
 // Event is sent to clients (spec §13.3). Kind names match the spec's event list.

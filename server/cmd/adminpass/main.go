@@ -14,7 +14,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"kiemxoay/server/internal/admin"
+	"bladeascend/server/internal/admin"
 )
 
 func main() {

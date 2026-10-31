@@ -1,7 +1,7 @@
 package room
 
 import (
-	"kiemxoay/server/internal/netproto"
+	"bladeascend/server/internal/netproto"
 )
 
 // Kick — ADMIN_SPEC §6.2.

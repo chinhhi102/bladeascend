@@ -3,9 +3,9 @@ package room
 import (
 	"math"
 
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/wire"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/wire"
 )
 
 // Mã hoá snapshot nhị phân — Protocol v2 (NETCODE_SPEC §4.1, §4.3, §4.6).

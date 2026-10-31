@@ -757,9 +757,33 @@ func mapArtJobs() []Job {
 	return jobs
 }
 
+// brandArtJobs: logo VẼ và icon VẼ — GAME_SPEC §20.
+//
+// Bốn tệp này đang có sẵn bản render bằng FONT do `tools/make_brandart.py` dựng, nên game
+// không chờ gì cả (CLAUDE.md quy tắc 11). Job ở đây là để sau này thay bằng bản vẽ tay.
+//
+// Ưu tiên 3: tên game đã đọc được, khẩu hiệu đã có, ảnh chia sẻ đã hiện đúng trên Facebook
+// và Discord. Đẹp hơn thì tốt, nhưng không chặn ai chơi.
+//
+// **Không sinh `logo_vi.png` bằng mô hình.** Chữ "Đạo Hữu Xin Dừng Bước" có năm dấu; mô
+// hình sinh ảnh viết sai dấu gần như chắc chắn, và một cái logo sai chính tả thì tệ hơn
+// hẳn một cái logo render bằng font. Job logo dưới đây chỉ sinh phần KHUNG trang trí,
+// chữ vẫn do `make_brandart.py` đặt lên.
+func brandArtJobs() []Job {
+	return []Job{
+		{Name: "brand_logo_frame", Priority: 3, Mode: modeSprite, Out: "ui/logo_frame.png", W: 1024, H: 384, Pivot: "center",
+			Prompt: styleObject + " An ornate empty horizontal cartouche frame for a game logo: two crossed jian swords at each end, swirling cloud motifs, gold on transparent, wide empty center with NO text" + negative},
+		// Ghi ra art NGUỒN, không ghi đè `client/public/brand/icon_512.png`: tệp kia là bản
+		// phát hành do `make_brandart.py` dựng và phải giữ nguyên địa chỉ. Khi art vẽ xong,
+		// sửa `make_brandart.py` để nó ghép từ đây.
+		{Name: "brand_icon", Priority: 3, Mode: modeSprite, Out: "ui/brand_icon_src.png", W: 512, H: 512, Pivot: "center",
+			Prompt: styleObject + " App icon: a ring of ten small golden jian swords orbiting a single cultivator seen from above, dark ink background, bold simple silhouette readable at 48 pixels, no text" + negative},
+	}
+}
+
 func allJobs() []Job {
 	var jobs []Job
-	for _, f := range []func() []Job{skillArtJobs, swordJobs, itemJobs, characterJobs, bodyFaceJobs, monsterJobs, ambientJobs, mapJobs, obstacleJobs, gateJobs, vfxJobs, beastJobs, mapArtJobs, uiJobs} {
+	for _, f := range []func() []Job{brandArtJobs, skillArtJobs, swordJobs, itemJobs, characterJobs, bodyFaceJobs, monsterJobs, ambientJobs, mapJobs, obstacleJobs, gateJobs, vfxJobs, beastJobs, mapArtJobs, uiJobs} {
 		jobs = append(jobs, f()...)
 	}
 	return jobs

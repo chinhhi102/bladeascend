@@ -3,7 +3,7 @@ package world
 import (
 	"math"
 
-	"kiemxoay/server/internal/geom"
+	"bladeascend/server/internal/geom"
 )
 
 // Shape là hình chữ nhật thẳng trục (X,Y góc trên trái, W,H), hình tròn (tâm X,Y bán kính

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/telemetry"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/telemetry"
 )
 
 // Tổng hợp tự động 2 lần/ngày và trang xem nhanh (TELEMETRY_SPEC §4.0, §4.2).
@@ -140,13 +140,17 @@ func (s *server) handleAdminPerf(w http.ResponseWriter, r *http.Request) {
 	}
 	written, dropped := s.telemetry.Stats()
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><title>Kiếm Xoay — số liệu thật</title>
+	// Tên game qua `%s`, KHÔNG qua token `%BRAND_NAME%` như hai trang kia: đây là một chuỗi
+	// định dạng của `Fprintf`, nên `%B` là một động từ không hợp lệ và trang sẽ in ra
+	// `%!B(MISSING)` ngay chỗ tên game.
+	fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><title>%s — số liệu thật</title>
 <style>body{font:14px/1.5 system-ui,sans-serif;margin:2rem auto;max-width:70rem;padding:0 1rem}
 pre{background:#f4f4f4;padding:.75rem;overflow-x:auto;white-space:pre-wrap}
 table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:.2rem .5rem}
 @media(prefers-color-scheme:dark){body{background:#1a1a1a;color:#eee}pre{background:#262626}td,th{border-color:#444}}</style>
 <p><a href="?since=1h">1h</a> · <a href="?since=24h">24h</a> · <a href="?since=7d">7d</a>
- — đã ghi %d bản ghi, vứt %d (hàng đợi đầy)</p><pre>%s</pre>`, written, dropped, html.EscapeString(md))
+ — đã ghi %d bản ghi, vứt %d (hàng đợi đầy)</p><pre>%s</pre>`,
+		s.cfg.Brand.Name, written, dropped, html.EscapeString(md))
 }
 
 // isLANAddr: chỉ mạng nội bộ mới xem được trang quản trị (§4.2).

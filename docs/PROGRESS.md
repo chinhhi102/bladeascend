@@ -1,4 +1,4 @@
-# Tiến độ — Kiếm Xoay Tu Tiên
+# Tiến độ — BladeAscend (Đạo Hữu Xin Dừng Bước)
 
 _Cập nhật: 2026-10-22_
 

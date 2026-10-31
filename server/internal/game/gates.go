@@ -3,8 +3,8 @@ package game
 import (
 	"math"
 
-	"kiemxoay/server/internal/geom"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/geom"
+	"bladeascend/server/internal/world"
 )
 
 // GateDest là đích của một lần dịch chuyển: khu nào, cổng nào, ở toạ độ nào.

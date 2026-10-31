@@ -3,7 +3,7 @@ package world
 import (
 	"testing"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 func TestLoadStarterMaps(t *testing.T) {

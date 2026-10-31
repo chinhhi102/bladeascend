@@ -22,7 +22,7 @@ import (
 	"math/rand"
 	"os"
 
-	"kiemxoay/server/internal/wire"
+	"bladeascend/server/internal/wire"
 )
 
 // Case là một gói mẫu: giá trị từng trường + chuỗi byte server mã hoá ra.

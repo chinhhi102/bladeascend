@@ -4,7 +4,7 @@ import (
 	"sort"
 	"testing"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 // TestDecorPlacedAlwaysHasArt — 5 khu × 10 seed, MỌI vật trang trí đặt ra đều phải có ảnh.

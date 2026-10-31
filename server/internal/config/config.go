@@ -525,7 +525,20 @@ type Net struct {
 }
 
 // Config mirrors config/game.json.
+// Brand — GAME_SPEC §20. Mọi chỗ HIỂN THỊ tên game lấy từ đây.
+//
+// Để trong config thay vì hằng số trong code vì tên game xuất hiện ở bảy chỗ khác nhau
+// (tiêu đề tab, màn hình tải, OG, manifest PWA, trang quản trị, trang số liệu, log server)
+// và lần đổi tên vừa rồi cho thấy bỏ sót là chuyện bình thường. Một nguồn thì không bỏ sót.
+type Brand struct {
+	Name      string `json:"name"`
+	Domain    string `json:"domain"`
+	NameVI    string `json:"name_vi"`
+	TaglineVI string `json:"tagline_vi"`
+}
+
 type Config struct {
+	Brand       Brand           `json:"brand"`
 	Skills      Skills          `json:"skills"`
 	Ice         Ice             `json:"ice"`
 	Cultivation Cultivation     `json:"cultivation"`

@@ -3,8 +3,8 @@ package game
 import (
 	"math"
 
-	"kiemxoay/server/internal/geom"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/geom"
+	"bladeascend/server/internal/world"
 )
 
 // Đài Tiên Khí (spec §8.5): five fountains that spray Tiên khí orbs. Four small ones sit by

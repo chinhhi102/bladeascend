@@ -4,7 +4,7 @@ import (
 	"math"
 	"sort"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 // Progression holds the precomputed cultivation tables (spec §3).

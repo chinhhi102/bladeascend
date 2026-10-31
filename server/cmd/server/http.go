@@ -14,12 +14,12 @@ import (
 	"sync"
 	"time"
 
-	"kiemxoay/server/internal/admin"
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/room"
-	"kiemxoay/server/internal/store"
-	"kiemxoay/server/internal/telemetry"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/admin"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/room"
+	"bladeascend/server/internal/store"
+	"bladeascend/server/internal/telemetry"
+	"bladeascend/server/internal/world"
 )
 
 type server struct {
@@ -206,6 +206,13 @@ func spa(dir string) http.Handler {
 		}
 		if strings.HasPrefix(r.URL.Path, "/static/") {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		}
+		// Go không biết đuôi `.webmanifest`, nên `http.FileServer` đoán ra `text/plain` và
+		// Chrome bỏ qua manifest — không báo lỗi, chỉ lặng lẽ không cho "Thêm vào màn hình
+		// chính". `mime.AddExtensionType` ở `init()` là cách đúng nhưng nó sửa biến toàn
+		// cục của tiến trình; một dòng ở đây chỉ ảnh hưởng đường phục vụ tệp tĩnh.
+		if strings.HasSuffix(r.URL.Path, ".webmanifest") {
+			w.Header().Set("Content-Type", "application/manifest+json; charset=utf-8")
 		}
 		fs.ServeHTTP(w, r)
 	})

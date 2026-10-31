@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/world"
 )
 
 const dt = 1.0 / 30

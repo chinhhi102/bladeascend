@@ -1,8 +1,13 @@
 // Every piece of text shown to players lives here (CLAUDE.md rule 5).
 
+/** Thương hiệu do Vite cắm vào lúc build từ `config/game.json` — GAME_SPEC §20. */
+declare const __BRAND__: { name: string; domain: string; name_vi: string; tagline_vi: string };
+
+export const BRAND = __BRAND__;
+
 export const STR = {
-  title: 'Kiếm Xoay Tu Tiên',
-  subtitle: 'Dân phố tấu hài tu tiên bằng kiếm bay',
+  title: BRAND.name_vi,
+  subtitle: BRAND.tagline_vi,
   namePlaceholder: 'Nhập tên (2–16 ký tự)',
   pickCharacter: 'Chọn nhân vật',
   play: 'Vào chơi',
@@ -99,9 +104,11 @@ export const STR = {
   badName: 'Tên phải dài 2–16 ký tự.',
 
   // ——— Màn hình tải (GAME_SPEC §13.7 mục 4) ———
-  // Khung và ba chữ đầu tiên ("Kiếm Xoay Tu Tiên", "Đang khởi động…", "Thử lại") nằm trong
-  // `index.html`, không nằm đây: chúng phải hiện trước khi bundle JS về, nên bắt buộc là
-  // HTML tĩnh. Mọi chữ ĐỔI THEO BƯỚC thì ở đây.
+  // Khung, tên game, khẩu hiệu và hai chữ đầu tiên ("Đang khởi động…", "Thử lại") nằm
+  // trong `index.html`, không nằm đây: chúng phải hiện trước khi bundle JS về, nên bắt
+  // buộc là HTML tĩnh. Tên game ở đó là token `%BRAND_NAME_VI%`, plugin `kx-brand` thay
+  // lúc build từ cùng `config.brand` mà `BRAND` phía trên đọc. Mọi chữ ĐỔI THEO BƯỚC thì
+  // ở đây.
   loadUi: 'Đang tải giao diện…',
   loadChar: (name: string): string => `Đang gọi ${name}…`,
   loadZone: (zone: string): string => `Đang dựng ${zone}…`,

@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/world"
 )
 
 // playMap is an empty map that declares a border margin, like the ones mapgen writes.

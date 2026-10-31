@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/world"
 )
 
 // zoneManager dựng một phòng 5 khu (spec §8.0). Khác `testManager` ở chỗ đó: các test luật

@@ -6,7 +6,26 @@
     <meta name="theme-color" content="#1d1a16" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <title>Kiếm Xoay Tu Tiên</title>
+    <!--
+      Tên game, mô tả, khẩu hiệu — GAME_SPEC §20. Các token BRAND bên dưới do plugin
+      `kx-brand` trong `vite.config.ts` thay bằng `config.brand` lúc build. Sửa tên game ở
+      `config/game.json`, KHÔNG sửa ở đây.
+
+      `og:image` phải là địa chỉ TUYỆT ĐỐI: con bọ của Facebook và Zalo đọc thẻ này ngoài
+      ngữ cảnh trang, đường dẫn tương đối với chúng là vô nghĩa.
+    -->
+    <title>%BRAND_NAME_VI% — Game tu tiên .io chơi ngay trên trình duyệt</title>
+    <meta name="description" content="Tu tiên bằng cả trăm thanh kiếm bay. Chém người cướp tu vi, phi thăng tới Đạo Tổ — nếu chạy kịp. Chơi miễn phí ngay trên trình duyệt." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="%BRAND_NAME%" />
+    <meta property="og:title" content="%BRAND_NAME_VI% — Game tu tiên .io chơi ngay trên trình duyệt" />
+    <meta property="og:description" content="%BRAND_TAGLINE_VI%" />
+    <meta property="og:url" content="https://%BRAND_DOMAIN%/" />
+    <meta property="og:image" content="https://%BRAND_DOMAIN%/brand/share_card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
     <!--
       Màn hình tải nằm NGAY TRONG index.html với CSS nội tuyến (GAME_SPEC §13.7 mục 4).
 
@@ -36,6 +55,11 @@
       #boot h1 {
         margin: 0; font-size: clamp(28px, 7vw, 54px); font-weight: 900; letter-spacing: .04em;
         color: #ffd66b; text-shadow: 0 3px 0 #6b4a12, 0 0 28px rgba(255, 196, 70, .35);
+      }
+      /* Khẩu hiệu dưới logo — §20. Nhỏ hơn tên game, không bao giờ xuống quá 2 dòng. */
+      #boot .tagline {
+        margin: -8px 0 0; font-size: clamp(13px, 3.4vw, 18px); color: #cbb68a;
+        text-align: center; max-width: 24em;
       }
       #boot .step { font-size: clamp(14px, 3.6vw, 18px); min-height: 1.4em; color: #e8dcc2; }
       /* Thanh tiến độ: khung cố định để nhân vật có đường chạy, không nhảy theo độ rộng chữ. */
@@ -98,7 +122,8 @@
     <div id="overlay"></div>
     <div id="bgload"></div>
     <div id="boot">
-      <h1>Kiếm Xoay Tu Tiên</h1>
+      <h1>%BRAND_NAME_VI%</h1>
+      <div class="tagline">%BRAND_TAGLINE_VI%</div>
       <div class="step" id="boot-step">Đang khởi động…</div>
       <div class="track">
         <div class="fill" id="boot-fill"></div>
@@ -137,6 +162,26 @@
         });
       })();
     </script>
+    <!--
+      Đoạn giới thiệu — GAME_SPEC §20, nguyên văn.
+      HTML TĨNH: máy tìm kiếm đọc được mà không cần chạy JavaScript, và người vào bằng mạng
+      chậm vẫn đọc được game này là gì trong lúc art đang tải. `aria-hidden` khi đang chơi
+      do `main.ts` đặt — xem `#intro` trong style.css.
+    -->
+    <section id="intro">
+      <h2>%BRAND_NAME_VI% — <span lang="en">%BRAND_NAME%</span></h2>
+      <p>
+        Ngươi là một tu sĩ mới nhập môn, trong tay chỉ có một thanh kiếm. Nhặt linh khí, gom
+        thêm kiếm, xếp thành vòng vòng quanh người — càng nhiều vòng càng chém xa. Gặp đạo hữu
+        yếu hơn thì đuổi theo cướp tu vi; gặp đạo hữu mạnh hơn thì… chạy, kèm một câu thật
+        lịch sự: <em>"Đạo hữu xin dừng bước!"</em>.
+      </p>
+      <p>
+        Chín đại cảnh giới từ Luyện Khí tới Đại Thừa, năm tầng Tiên giới tới Đạo Tổ. Năm khu
+        vực, cổng dịch chuyển ngẫu nhiên, mười nhân vật dở hơi với mười bí kíp riêng. Không
+        cần tải, không cần đăng ký — nhập tên là vào.
+      </p>
+    </section>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -3,7 +3,7 @@ package game
 import (
 	"math"
 
-	"kiemxoay/server/internal/geom"
+	"bladeascend/server/internal/geom"
 )
 
 // Trạng thái phụ trợ cho kỹ năng (spec §6.3): vệt trơn của Cô Ba, đàn em của Đại Ca, và

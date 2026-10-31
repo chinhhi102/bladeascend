@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"kiemxoay/server/internal/netproto"
+	"bladeascend/server/internal/netproto"
 )
 
 // Trang quản trị đọc song song với người vào/ra — ADMIN_SPEC §6, xem query.go.

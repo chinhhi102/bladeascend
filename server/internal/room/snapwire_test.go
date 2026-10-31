@@ -3,8 +3,8 @@ package room
 import (
 	"testing"
 
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/wire"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/wire"
 )
 
 // Bộ giải mã gói nhị phân DÙNG CHO TEST — Protocol v2.

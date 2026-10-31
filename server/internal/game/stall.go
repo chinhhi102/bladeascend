@@ -3,8 +3,8 @@ package game
 import (
 	"math"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/world"
 )
 
 // Bày Hàng Chặn Lối — dãy sạp tạm của Cô Ba Gánh Hàng (spec v6.10/v6.11 §6.3).

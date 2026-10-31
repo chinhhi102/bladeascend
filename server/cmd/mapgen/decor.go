@@ -22,7 +22,7 @@ import (
 	"sort"
 	"strings"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 // decorZones gắn mỗi vật trang trí với các khu nó hợp chủ đề.

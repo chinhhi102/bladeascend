@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 // Checklist §17: "Cô Ba Kim Đan bày sạp (bậc 3): người Kim Đan và thấp hơn không chém được,

@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 func testProg(t *testing.T) *Progression {

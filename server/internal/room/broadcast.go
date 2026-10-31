@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/netproto"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/netproto"
 )
 
 const (

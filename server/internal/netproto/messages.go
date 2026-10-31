@@ -5,8 +5,8 @@ package netproto
 import (
 	"github.com/vmihailenco/msgpack/v5"
 
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/telemetry"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/telemetry"
 )
 
 // Client → server message types.

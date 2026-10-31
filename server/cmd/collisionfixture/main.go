@@ -20,9 +20,9 @@ import (
 	"math/rand"
 	"os"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/world"
 )
 
 type oneCase struct {

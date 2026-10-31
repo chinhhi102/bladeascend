@@ -3,7 +3,7 @@ package room
 import (
 	"testing"
 
-	"kiemxoay/server/internal/game"
+	"bladeascend/server/internal/game"
 )
 
 // Thiên Môn là cổng MỘT CHIỀU luôn ra ở Thiên Đình (spec §8.4a), khác hẳn 4 cổng thường

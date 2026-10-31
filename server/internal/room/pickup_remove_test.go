@@ -3,7 +3,7 @@ package room
 import (
 	"testing"
 
-	"kiemxoay/server/internal/netproto"
+	"bladeascend/server/internal/netproto"
 )
 
 // recConn giữ lại từng gói đã gửi để test đọc đúng cái client nhận được. Không dùng

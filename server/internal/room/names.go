@@ -7,7 +7,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 // NameFilter validates player names: 2–16 characters, Vietnamese allowed, profanity masked (spec §2).

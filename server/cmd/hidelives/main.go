@@ -24,9 +24,9 @@ import (
 	"regexp"
 	"time"
 
-	"kiemxoay/server/internal/admin"
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/store"
+	"bladeascend/server/internal/admin"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/store"
 )
 
 // Ngưỡng — lấy từ `cmd/sim --bots 40 --minutes 20` trên đúng luật đang chạy:

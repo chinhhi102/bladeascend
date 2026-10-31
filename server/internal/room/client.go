@@ -6,9 +6,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/wire"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/wire"
 )
 
 // Conn is the transport for one browser tab; implemented by the WebSocket handler.

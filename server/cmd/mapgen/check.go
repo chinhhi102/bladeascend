@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/geom"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/geom"
+	"bladeascend/server/internal/world"
 )
 
 // Bộ kiểm bố cục bản đồ — spec §8.1b "Kiểm tra bắt buộc".

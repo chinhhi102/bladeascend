@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 const tile = 100 // Tiled grid cell in world units

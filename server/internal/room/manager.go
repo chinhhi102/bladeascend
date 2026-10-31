@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/world"
 )
 
 // Manager does matchmaking across rooms (spec §9.2).

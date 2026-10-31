@@ -1,8 +1,8 @@
 package room
 
 import (
-	"kiemxoay/server/internal/bot"
-	"kiemxoay/server/internal/game"
+	"bladeascend/server/internal/bot"
+	"bladeascend/server/internal/game"
 )
 
 // updateBots implements the bot fill rules of spec §9.3.

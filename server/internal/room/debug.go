@@ -3,8 +3,8 @@ package room
 import (
 	"log"
 
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/netproto"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/netproto"
 )
 
 // Debug applies a test shortcut (M1 requirement); only reachable when the server runs with -debug.

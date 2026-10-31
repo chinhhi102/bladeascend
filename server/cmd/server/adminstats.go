@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"time"
 
-	"kiemxoay/server/internal/room"
+	"bladeascend/server/internal/room"
 )
 
 // Dashboard live — ADMIN_SPEC §3 và §4.

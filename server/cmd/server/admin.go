@@ -2,15 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"kiemxoay/server/internal/admin"
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/room"
+	"bladeascend/server/internal/admin"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/room"
 )
 
 // Trang quản trị — ADMIN_SPEC §1, §9.
@@ -88,7 +89,15 @@ func (s *server) adminPageGuard(dir string) http.Handler {
 		// trong cache trình duyệt vẫn đọc được sau khi đăng xuất.
 		w.Header().Set("Cache-Control", "no-store")
 		if r.URL.Path == "/admin/" || r.URL.Path == "/admin" {
-			http.ServeFile(w, r, filepath.Join(dir, "index.html"))
+			// Đọc rồi thay `%BRAND_*%`, không `ServeFile` thẳng: trang này hiện tên game ở
+			// tiêu đề tab và ở thanh bên, và §20 yêu cầu tên game chỉ có MỘT nguồn.
+			raw, err := os.ReadFile(filepath.Join(dir, "index.html"))
+			if err != nil {
+				http.Error(w, "không đọc được trang quản trị", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = io.WriteString(w, s.brandHTML(string(raw)))
 			return
 		}
 		fs.ServeHTTP(w, r)
@@ -114,7 +123,7 @@ func (s *server) handleAdminLoginPage(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(adminLoginHTML)
+	_, _ = io.WriteString(w, s.brandHTML(adminLoginHTML))
 }
 
 func (s *server) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
@@ -182,10 +191,10 @@ func adminDirOf(clientDir string) string {
 // Nhúng chứ không lấy từ `client/dist`: trang này phải phục vụ được NGAY cả khi thư mục
 // client chưa build xong, và nó là thứ duy nhất của khu quản trị được phép công khai — giữ
 // nó ở đây thì không bao giờ có chuyện một tệp admin khác vô tình nằm cạnh và lộ theo.
-var adminLoginHTML = []byte(`<!doctype html>
+const adminLoginHTML = `<!doctype html>
 <html lang="vi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Quản trị — Kiếm Xoay Tu Tiên</title>
+<title>Quản trị — %BRAND_NAME_VI%</title>
 <style>
  :root{color-scheme:dark}
  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#15171c;
@@ -226,7 +235,7 @@ f.addEventListener('submit',async e=>{
   go.disabled=false; pw.select();
 });
 </script></body></html>
-`)
+`
 
 // adminEnabledNote in ra lúc khởi động để chủ dự án biết trang quản trị bật hay tắt.
 func adminEnabledNote(a *admin.Auth) string {

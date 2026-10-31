@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"kiemxoay/server/internal/admin"
-	"kiemxoay/server/internal/store"
+	"bladeascend/server/internal/admin"
+	"bladeascend/server/internal/store"
 )
 
 // Ẩn mạng chơi khỏi bảng xếp hạng — ADMIN_SPEC §6.2.

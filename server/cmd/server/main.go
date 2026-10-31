@@ -15,12 +15,12 @@ import (
 	"syscall"
 	"time"
 
-	"kiemxoay/server/internal/admin"
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/room"
-	"kiemxoay/server/internal/store"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/admin"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/room"
+	"bladeascend/server/internal/store"
+	"bladeascend/server/internal/world"
 )
 
 func main() {
@@ -131,7 +131,7 @@ func main() {
 			"  (hoặc `cd client && npm run build` — nó tự gọi pipeline trước.)", *assetsDir)
 	}
 	mux := srv.routes(*assetsDir, *clientDir)
-	log.Printf("Kiếm Xoay server listening on %s (debug=%v)", *addr, *debug)
+	log.Printf("%s server listening on %s (debug=%v)", cfg.Brand.Name, *addr, *debug)
 	httpSrv := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	// Tắt êm khi nhận SIGINT/SIGTERM: cần thế thì hồ sơ CPU mới được ghi xuống đĩa. Bị
 	// SIGKILL thì file hồ sơ rỗng.

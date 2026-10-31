@@ -5,8 +5,8 @@ import (
 	"math"
 	"math/rand"
 
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/geom"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/geom"
 )
 
 type Vec = geom.Vec

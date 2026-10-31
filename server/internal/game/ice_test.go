@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/world"
 )
 
 // iceGame dựng một thế giới có đúng một hồ băng to ở giữa.

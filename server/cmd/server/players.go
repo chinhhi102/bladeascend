@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"kiemxoay/server/internal/admin"
-	"kiemxoay/server/internal/room"
+	"bladeascend/server/internal/admin"
+	"bladeascend/server/internal/room"
 )
 
 // Bảng người chơi, cờ nghi hack, kick và cấm — ADMIN_SPEC §6.

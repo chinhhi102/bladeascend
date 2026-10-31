@@ -1,6 +1,21 @@
 import { chromium } from 'playwright';
+import { dimText } from './contrast.mjs';
+import { mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const OUT = '/tmp/claude-1000/-home-chinhdc-git-kiemxoaytutien/c75d6ed2-ce95-4f53-af5f-f49ca5b2db8c/scratchpad';
+
+// Nơi ghi ảnh chụp. `OUT=/đường/dẫn node tools/browsertest/uioverlap.mjs` để đổi.
+//
+// Trước đây chỗ này là một đường dẫn cứng tới thư mục nháp của MỘT phiên làm việc đã
+// kết thúc. Phiên đó không còn, nên tool ghi ảnh vào một thư mục không ai mở ra xem —
+// và không báo lỗi, vì `mkdirSync` vẫn tạo được.
+// Địa chỉ server. `node tools/browsertest/uioverlap.mjs http://127.0.0.1:9999` để đổi.
+// Mặc định là :9999 — cổng deploy thật. Trước đây nó cứng là :9998, cổng của một server
+// test tự dựng ở phiên khác; chạy lại ở phiên sau thì chỉ ra ERR_CONNECTION_REFUSED.
+const TARGET = process.argv[2] ?? 'http://127.0.0.1:9999';
+const OUT = process.env.OUT ?? join(tmpdir(), 'bladeascend-uioverlap');
+mkdirSync(OUT, { recursive: true });
 const sizes = [
   { name: 'dien thoai doc 360x800', w: 360, h: 800, dpr: 3, mobile: true },
   { name: 'dien thoai ngang 800x360', w: 800, h: 360, dpr: 3, mobile: true },
@@ -20,7 +35,7 @@ for (const s of sizes) {
   const ctx = await b.newContext({ viewport: { width: s.w, height: s.h }, deviceScaleFactor: s.dpr, isMobile: s.mobile, hasTouch: s.mobile });
   const p = await ctx.newPage();
   // KHÔNG bật ?debug=true: bảng đo F3 che nửa màn hình và không phải thứ người chơi thấy.
-  await p.goto('http://127.0.0.1:9998/', { waitUntil: 'domcontentloaded' });
+  await p.goto(TARGET, { waitUntil: 'domcontentloaded' });
   await p.waitForSelector('input', { timeout: 60000 });
   await p.fill('input', 'UiTest');
   await p.getByText('Vào chơi', { exact: true }).click();
@@ -124,6 +139,18 @@ for (const s of sizes) {
   // Giữ đúng 50% mà cắt ngang một dòng thì vẫn là hỏng: người chơi thấy nửa chữ.
   kiem(res.bangBiCat <= 1, `bang xep hang khong bi cat ngang (thua ${res.bangBiCat}px)`);
   await p.screenshot({ path: `${OUT}/ui_${s.w}x${s.h}.png` });
+
+  // Doan gioi thieu §20: phai DOC DUOC o trang chu.
+  //
+  // No nam duoi khung game tren nen trang mau toi, va lan dau toi viet `color: var(--ink)`
+  // — tuc chu #1d1a16 tren nen #2b2b2b, 1,1:1. Anh chup trong y nhu mot khoang trong.
+  await p.evaluate(() => {
+    document.body.classList.remove('in-game');
+    document.getElementById('intro')?.scrollIntoView();
+  });
+  const mo = await dimText(p, '#intro', 4.5);
+  kiem(mo.length === 0, `doan gioi thieu doc duoc (tuong phan >= 4,5:1)${mo.length ? ' — mo: ' + mo.join(', ') : ''}`);
+
   await ctx.close();
 }
 await b.close();

@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/world"
 )
 
 // altarGame builds a game whose map has one small altar and one centre altar.

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 // Mọi loại vật phẩm game sinh ra đều phải có trong `ItemKinds`.

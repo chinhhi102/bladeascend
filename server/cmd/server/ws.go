@@ -9,10 +9,10 @@ import (
 
 	"github.com/coder/websocket"
 
-	"kiemxoay/server/internal/admin"
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/room"
-	"kiemxoay/server/internal/telemetry"
+	"bladeascend/server/internal/admin"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/room"
+	"bladeascend/server/internal/telemetry"
 )
 
 const (

@@ -3,9 +3,9 @@ package game
 import (
 	"math"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/geom"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/geom"
+	"bladeascend/server/internal/world"
 )
 
 const (

@@ -5,9 +5,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/geom"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/geom"
+	"bladeascend/server/internal/world"
 )
 
 // sparseRingsTouchNaive là bản gốc, chậm nhưng hiển nhiên đúng: không tính sẵn kiếm của b,

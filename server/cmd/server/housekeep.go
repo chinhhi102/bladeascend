@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"kiemxoay/server/internal/admin"
+	"bladeascend/server/internal/admin"
 	"time"
 )
 

@@ -3,11 +3,11 @@ package room
 import (
 	"math/rand"
 
-	"kiemxoay/server/internal/bot"
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/bot"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/world"
 )
 
 // Zone là MỘT khu vực của phòng (spec §8.0): một thế giới 12 000 × 12 000 riêng, mô phỏng

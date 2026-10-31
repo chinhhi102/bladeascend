@@ -3,7 +3,7 @@ package game
 import (
 	"math"
 
-	"kiemxoay/server/internal/geom"
+	"bladeascend/server/internal/geom"
 )
 
 // Kỹ năng nhân vật, mở bằng vật phẩm Bí Kíp (spec §6.3).

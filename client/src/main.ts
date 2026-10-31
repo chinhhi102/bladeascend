@@ -75,7 +75,22 @@ class App {
   private profile: Profile | null = null;
   /** lastFps: FPS gần nhất, để đính kèm vào góp ý (ADMIN_SPEC §7.1). */
   private lastFps = 0;
-  private playing = false;
+  /**
+   * playing — đang trong trận, hay đang ở trang chủ.
+   *
+   * Dùng cặp get/set thay vì một trường trơn vì đoạn giới thiệu HTML tĩnh (§20) phải TẮT
+   * khi đang chơi: để nó lại thì trang cuộn được, và một cú quét ngón tay giữa trận kéo
+   * màn hình game đi mất. Cờ này đổi ở năm chỗ trong tệp này — nối vào setter thì không
+   * chỗ nào quên được.
+   */
+  private playingFlag = false;
+  private get playing(): boolean {
+    return this.playingFlag;
+  }
+  private set playing(v: boolean) {
+    this.playingFlag = v;
+    document.body.classList.toggle('in-game', v);
+  }
   // Snapshots that arrive while the map is still loading: the first ones carry names and
   // characters (sent only once per player), so they must not be dropped.
   private joining = false;

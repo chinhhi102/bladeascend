@@ -1,11 +1,11 @@
 package game
 
 import (
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 	"math"
 	"sort"
 
-	"kiemxoay/server/internal/geom"
+	"bladeascend/server/internal/geom"
 )
 
 // MoveSpeed implements spec §4.1 without the zone factor.

@@ -4,7 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 	"os"
 )
 

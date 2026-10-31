@@ -1,4 +1,10 @@
 {
+  "brand": {
+    "name": "BladeAscend",
+    "domain": "bladeascend.io",
+    "name_vi": "Đạo Hữu Xin Dừng Bước",
+    "tagline_vi": "Kiếm bay vòng vòng, đạo hữu chạy vòng vòng."
+  },
   "cultivation": {
     "realms": [
       "Luyện Khí",

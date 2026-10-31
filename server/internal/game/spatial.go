@@ -3,8 +3,8 @@ package game
 import (
 	"math"
 
-	"kiemxoay/server/internal/geom"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/geom"
+	"bladeascend/server/internal/world"
 )
 
 // staticIndex buckets obstacles and zones into a coarse grid (spec §13.4).

@@ -12,10 +12,10 @@ import (
 	"sort"
 	"time"
 
-	"kiemxoay/server/internal/bot"
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/bot"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/world"
 )
 
 type botStats struct {

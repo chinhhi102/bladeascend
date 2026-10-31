@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 // Sinh bản đồ "Tu Tiên Giới" theo 9 bước của spec §8.1.

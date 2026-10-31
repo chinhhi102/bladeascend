@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 // Thuật toán sinh cho 4 khu mới của thế giới 5 khu (spec §8.0, CHANGES_v5 mục 6).

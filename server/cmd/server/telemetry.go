@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"time"
 
-	"kiemxoay/server/internal/netproto"
-	"kiemxoay/server/internal/room"
-	"kiemxoay/server/internal/telemetry"
+	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/room"
+	"bladeascend/server/internal/telemetry"
 )
 
 // Nhận và ghi số liệu người chơi thật (TELEMETRY_SPEC).

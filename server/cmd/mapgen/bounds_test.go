@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 // Spec §8.1: KHÔNG vật cản / vùng / decor nào được nằm ngoài bản đồ. Mọi object phải nằm

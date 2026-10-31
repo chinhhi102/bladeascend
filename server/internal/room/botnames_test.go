@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"kiemxoay/server/internal/netproto"
+	"bladeascend/server/internal/netproto"
 )
 
 // Luật đặt tên bot (spec v6.1 §9.4). Mục đích của cả nhóm test này chỉ có một: **không

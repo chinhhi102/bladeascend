@@ -3,10 +3,10 @@ package main
 import (
 	"testing"
 
-	"kiemxoay/server/internal/config"
-	"kiemxoay/server/internal/game"
-	"kiemxoay/server/internal/geom"
-	"kiemxoay/server/internal/world"
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/geom"
+	"bladeascend/server/internal/world"
 )
 
 // Bộ kiểm §8.1b phải BẮT ĐƯỢC lỗi, không chỉ chạy xanh.

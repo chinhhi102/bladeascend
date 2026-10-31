@@ -4,7 +4,7 @@ import (
 	"container/heap"
 	"math"
 
-	"kiemxoay/server/internal/geom"
+	"bladeascend/server/internal/geom"
 )
 
 // Grid is the A* path grid (spec §10). Cells overlapping an intact obstacle are blocked.

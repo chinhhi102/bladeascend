@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 func main() {

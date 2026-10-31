@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"kiemxoay/server/internal/config"
+	"bladeascend/server/internal/config"
 )
 
 // Every row of spec §5.2 (loss unit clash_unit = 5).
