@@ -397,6 +397,7 @@
       8.0
     ],
     "spawn_rank": 11,
+    "max_spawn_realm": 6,
     "decide_min": 0.3,
     "decide_max": 0.6,
     "reaction_min": 0.2,
@@ -463,6 +464,7 @@
     "near_r": 700
   },
   "net": {
+    "max_ring_flips": 12,
     "tick_hz": 30,
     "snapshot_hz": 20,
     "interp_ms": 100,

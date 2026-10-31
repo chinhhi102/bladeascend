@@ -255,6 +255,58 @@ func (r *Room) eventsFor(z *Zone, viewer *game.Player, events []game.Event, seen
 		}
 		out = append(out, e)
 	}
+	return capRingFlips(out, viewer, r.cfg.Net.MaxRingFlips)
+}
+
+// capRingFlips giữ lại tối đa `maxFlips` sự kiện va kiếm GẦN NGƯỜI XEM NHẤT, bỏ phần còn lại.
+//
+// Va kiếm là sự kiện ĐÔNG NHẤT của gói: đo trên bản đồ mới, một gói đỉnh có 42 `RingFlip`
+// trong tổng 60 sự kiện — **1,8 KB, 27% cả gói**. Một đám đánh nhau sinh ra một va cho mỗi
+// cặp vòng chạm nhau mỗi tick, nên con số này nở theo bình phương số người đứng chung chỗ.
+//
+// Bỏ bớt được vì `RingFlip` **không mang luật chơi**: chiều quay mới nằm sẵn ở trường `d`
+// của mỗi người trong MỌI gói snapshot (xem `Game.clash`), nên sự kiện này chỉ để vẽ tia
+// lửa và kêu tiếng "keng". Người chơi không phân biệt nổi 12 với 42 tia lửa trong một
+// khung hình 50 ms — nhưng 30 tia lửa thừa thì tốn 1,3 KB thật.
+//
+// Giữ theo KHOẢNG CÁCH chứ không theo thứ tự xuất hiện: tia lửa ngay trước mặt mình là thứ
+// phải thấy, còn trận va ở rìa tầm nhìn thì không. Cắt theo thứ tự mảng là ngẫu nhiên —
+// người chơi sẽ thấy trận đánh của CHÍNH MÌNH chớp tắt tuỳ tick.
+func capRingFlips(events []game.Event, viewer *game.Player, maxFlips int) []game.Event {
+	if maxFlips <= 0 {
+		return events
+	}
+	n := 0
+	for _, e := range events {
+		if e.Kind == "RingFlip" {
+			n++
+		}
+	}
+	if n <= maxFlips {
+		return events
+	}
+	// Ngưỡng = khoảng cách của cái thứ `maxFlips` khi xếp theo gần→xa.
+	d2 := make([]float64, 0, n)
+	for _, e := range events {
+		if e.Kind == "RingFlip" {
+			d2 = append(d2, viewer.Pos.Dist2(game.Vec{X: float64(e.X), Y: float64(e.Y)}))
+		}
+	}
+	sort.Float64s(d2)
+	cutoff := d2[maxFlips-1]
+	out := events[:0]
+	kept := 0
+	for _, e := range events {
+		if e.Kind == "RingFlip" {
+			// `<= cutoff` cộng thêm bộ đếm: nhiều va cùng khoảng cách (hai người đứng đối
+			// xứng quanh mình) thì vẫn chỉ lấy đủ số, không lọt thêm.
+			if kept >= maxFlips || viewer.Pos.Dist2(game.Vec{X: float64(e.X), Y: float64(e.Y)}) > cutoff {
+				continue
+			}
+			kept++
+		}
+		out = append(out, e)
+	}
 	return out
 }
 

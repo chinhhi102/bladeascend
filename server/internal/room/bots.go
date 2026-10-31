@@ -230,6 +230,16 @@ func (r *Room) randomBotLevel() (int, int) {
 			level = ranking[n-1].Level
 		}
 	}
+	// Trần cảnh giới lúc SINH (§9.4, chủ dự án chốt 31/10/2026): bot mới không bao giờ vượt
+	// `max_spawn_realm`. Chúng vẫn tu lên cao được trong lúc chơi — đây chỉ là điểm xuất phát.
+	//
+	// Không chặn thì `SpawnRank` chép thẳng cảnh giới của người hạng N: một người lên Chân
+	// Tiên là mọi bot mới cũng sinh thẳng ở Chân Tiên.
+	if maxR := r.cfg.Bots.MaxSpawnRealm; maxR >= 0 {
+		if top := (maxR+1)*prog.Tiers() - 1; level > top {
+			level = top
+		}
+	}
 	realm := prog.Realm(level)
 	return level, 1 + r.rng.Intn(prog.MaxSwords(realm))
 }

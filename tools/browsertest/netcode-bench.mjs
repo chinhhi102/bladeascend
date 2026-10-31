@@ -30,8 +30,16 @@ import { fileURLToPath } from 'node:url';
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PORT = 9996; // KHÔNG phải 9999: bài đo không bao giờ được đụng tới server người chơi
 const ROUNDS = Number(process.argv[2] ?? 5);
-/** Mỗi lượt đo bao lâu. */
-const WATCH_MS = 60000;
+/**
+ * Mỗi lượt đo bao lâu.
+ *
+ * Phải chứa trọn MỘT VÒNG đi-đứng-về, nếu không bài đo chỉ ghi được nửa đầu. Trần mỗi chiều
+ * là `LEG_LIMIT_MS` = 40 s, cộng `DWELL_MS` = 3 s, nên một vòng xấu nhất mất 83 s. Để 60 s
+ * thì người đi ra tới nơi, đứng chờ, rồi HẾT GIỜ ngay trước lúc quay lại: bài đo in
+ * "rời=1 · quay lại=0" và cảnh báo "chưa chạm tới thứ nó định đo" — đúng chuyện đã xảy ra
+ * khi bản đồ v6.12 dày lên và mỗi chiều đi lâu hơn hẳn.
+ */
+const WATCH_MS = 150000;
 /**
  * Người đi: mỗi chiều bao lâu rồi quay đầu, và đứng ngoài tầm bao lâu.
  *
@@ -58,7 +66,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const dir = mkdtempSync(join(tmpdir(), 'kx-bench-'));
 const cfg = JSON.parse(readFileSync(join(REPO, 'config', 'game.json'), 'utf8'));
 // ĐÚNG MỘT bot. Zero thì không có gì để đo; 60 thì phương sai nuốt mất tín hiệu.
-cfg.room.bot_fill_target = 1;
+// KHÔNG bot. Thứ bài đo theo dõi là tab `walker` — nó đứng YÊN một chỗ suốt lượt, nên khi
+// người quan sát đi xa rồi quay về thì nó chắc chắn rời khung rồi vào lại khung.
+//
+// Bản trước để 1 bot và đếm được "rời 1 lần, quay lại 0 lần": bot đi lang thang, và tệ hơn,
+// nó **chém chết tab đứng yên** — người chết hồi sinh với id mới, nên với người quan sát đó
+// là một entity khác, không phải "quay lại". Bài đo vì thế báo `respawn=0` mà kèm cảnh báo
+// "chưa chạm tới thứ nó định đo": con số 0 đẹp đẽ nhưng không chứng minh gì.
+cfg.room.bot_fill_target = 0;
+// KHÔNG quái. Quái giết chết mấy con bot mà bài đo đang theo dõi, và người chết **hồi sinh
+// với id mới** — với người quan sát đó là một entity khác, nên lần quay lại không bao giờ
+// được đếm. Triệu chứng: "rời khung 2 lần · quay lại 0 lần" kèm cảnh báo cuối bài.
+//
+// Bài này đo VÒNG ĐỜI ENTITY theo AOI (NETCODE_SPEC §4.3), không đo chiến đấu; quái chỉ
+// thêm nhiễu.
+cfg.room.monster_count = 0;
 cfg.room.zone_min_chars = 0;
 cfg.room.zones = 1; // một khu: bỏ luôn yếu tố chuyển khu
 const cfgPath = join(dir, 'game.json');
@@ -196,10 +218,24 @@ async function round(browser) {
   if (!home) {
     throw new Error('không đọc được vị trí người quan sát');
   }
-  /** walkUntil giữ phím tới khi `ok(khoảng cách tới mốc)` đúng, hoặc hết hạn. */
+  /**
+   * walkUntil đi theo hướng `key` cho tới khi `ok(khoảng cách tới mốc)` đúng, hoặc hết hạn.
+   *
+   * **Biết lách vật cản.** Bản trước chỉ giữ đúng một phím: trên bản đồ cũ (mật độ chân đế
+   * 1–6%) đi thẳng 2 400 đơn vị gần như lúc nào cũng lọt. Trên bản đồ v6.12 (5–7%, vật cản
+   * xếp thành đảo) thì người đi đâm vào một cái đảo rồi **đứng ì tại đó cho hết giờ** — bài
+   * đo in ra `quay lại=0` kèm cảnh báo "chưa chạm tới thứ nó định đo", tức là không đo gì cả.
+   *
+   * Cách lách: cứ 400 ms xem đã nhích được chưa. Kẹt hai nhịp liền thì giữ thêm phím dọc
+   * (W hoặc S, đổi bên mỗi lần kẹt) trong một nhịp để trượt dọc mặt đảo rồi đi tiếp. Không
+   * cần tìm đường gì cả — đảo rộng nhiều nhất 800, trượt vài nhịp là qua.
+   */
   const walkUntil = async (key, ok, limitMs) => {
     const start = Date.now();
     await watcher.keyboard.down(key);
+    let last = await posOfPage(watcher);
+    let stuck = 0;
+    let side = 'KeyW';
     try {
       while (Date.now() - start < limitMs) {
         await sleep(400);
@@ -207,8 +243,26 @@ async function round(browser) {
         if (!a2) {
           return false;
         }
-        if (ok(Math.hypot(a2.x - home.x, a2.y - home.y))) {
+        const dnow = Math.hypot(a2.x - home.x, a2.y - home.y);
+        if (process.env.KX_BENCH_DEBUG) {
+          console.log(`    [] d=${dnow.toFixed(0)} pos=(${a2.x.toFixed(0)},${a2.y.toFixed(0)})`);
+        }
+        if (ok(dnow)) {
           return true;
+        }
+        // Nhích dưới 30 đơn vị trong 400 ms ở tốc độ ~195/s nghĩa là đang bị chặn.
+        if (last && Math.hypot(a2.x - last.x, a2.y - last.y) < 30) {
+          stuck++;
+        } else {
+          stuck = 0;
+        }
+        last = a2;
+        if (stuck >= 2) {
+          stuck = 0;
+          await watcher.keyboard.down(side);
+          await sleep(700);
+          await watcher.keyboard.up(side);
+          side = side === 'KeyW' ? 'KeyS' : 'KeyW'; // lần sau lách bên kia
         }
       }
     } finally {
