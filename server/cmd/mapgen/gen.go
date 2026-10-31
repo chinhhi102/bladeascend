@@ -423,6 +423,15 @@ func (g *gen) check() error {
 			return err
 		}
 	}
+	// Khoảng thở là LUẬT SINH, không phải số đo hậu kiểm (§8.1b mục 6, spec v6.13).
+	//
+	// Bộ sinh đã có sàn `breathFloorOf` lúc đặt cụm, nhưng nội dung riêng của khu đặt sau đó
+	// ăn thêm một phần không đoán trước được — tuỳ seed mà 7 tới 13 điểm. Chốt ở đây để seed
+	// nào rơi xuống dưới ngưỡng thì SINH LẠI với seed+1, thay vì chỉnh tay một con số rồi
+	// seed khác lại trượt.
+	if want := breathFloorFor(g.zoneID); g.b.breathing() < want {
+		return fmt.Errorf("khoảng thở %.0f%%, cần ≥ %.0f%%", g.b.breathing()*100, want*100)
+	}
 	return nil
 }
 
