@@ -110,7 +110,21 @@ const HAS_TASKSET = (() => {
 
 async function startServer() {
   const db = join(tmpdir(), `kx-browsertest-${process.pid}.db`);
+  // Phục vụ từ THƯ MỤC DEPLOY, không từ `client/dist`.
+  //
+  // `client/dist` bị `tools/deploy.sh` và `npm run build` ghi đè bất cứ lúc nào. Bài đo này
+  // chạy 10–15 phút, nên xác suất có ai đó build trong lúc nó chạy là cao — và khi đó tab
+  // thứ 10 nhận `index.html` trỏ tới một bundle vừa biến mất:
+  //   "Failed to load module script ... Failed to fetch dynamically imported module"
+  // Bài đo không chết; nó treo ở giữa chừng. Đã mất ba lượt đo vì đúng chuyện này hôm nay.
+  //
+  // `server/data/deploy/` chỉ do `deploy.sh` ghi, và ghi bằng cách đổi tên nguyên khối —
+  // không bao giờ ở trạng thái nửa vời. Đó là cả lý do thư mục đó tồn tại.
+  const deployDir = resolve(REPO, 'server', 'data', 'deploy');
   const srvArgs = ['run', './cmd/server', '-addr', `127.0.0.1:${PORT}`, '-db', db, '-max-conns-per-ip', '40'];
+  if (existsSync(join(deployDir, 'client', 'index.html'))) {
+    srvArgs.push('-client', join(deployDir, 'client'), '-assets', join(deployDir, 'assets'));
+  }
   // --cpuprofile <file>: lấy hồ sơ CPU của SERVER THẬT trong lúc 10 tab đang chơi. Khác
   // cmd/loadtest ở chỗ có bot, bản đồ thật và client thật — hai nơi cho hình ảnh khác nhau.
   if (args.cpuprofile) {

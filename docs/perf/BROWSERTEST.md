@@ -18,22 +18,22 @@ cổng 8099 với database tạm** rồi tắt khi xong, không đụng tới se
 > Lượt B bóp băng thông **sau khi đã vào game**: ta đo lưu lượng lúc chơi, không đo lúc
 > tải trang.
 
-**Lượt B — giả lập 4G yếu (trễ 100 ms, 1.6 Mbps xuống, 750 Kbps lên)** — 67 mẫu trong giai đoạn đánh nhau
+**Lượt A — mạng bình thường (LAN nội bộ)** — 615 mẫu trong giai đoạn đánh nhau
 
 | Chỉ số | 5 tab Đạo Tổ (TB / p95 / tệ nhất) | 5 tab thường (TB / p95 / tệ nhất) |
 |---|---|---|
-| FPS *(TB / p5 / thấp nhất — xem ghi chú)* | — | — |
-| Cảnh giới (cấp) | — | 5.9 / 10.0 / 10.0 |
-| Kiếm của chính tab | — | 1.0 / 4.0 / 4.0 |
-| Thời gian vẽ | — | — |
-| Ping | — | 14.0 / 22.0 / 26.0 ms |
-| Băng thông xuống | — | 7.7 / 9.4 / 13.6 KB/s |
-| Kích thước snapshot | — | 0.3 / 0.4 / 0.6 KB |
-| Tick server | — | 0.3 / 0.5 / 0.5 ms |
-| Số sprite | — | — |
-| Draw call | — | — |
-| Entity trong AOI | — | 311.7 / 375.0 / 382.0 |
-| Tổng kiếm thấy trên màn hình | — | 2.4 / 14.0 / 14.0 |
+| FPS *(TB / p5 / thấp nhất — xem ghi chú)* | 11.7 / 5.8 / 1.4 | *(chỉ đo ở tab 1)* |
+| Cảnh giới (cấp) | 130.0 / 130.0 / 130.0 | 4.3 / 16.0 / 17.0 |
+| Kiếm của chính tab | 1026.7 / 1050.0 / 1050.0 | 2.6 / 10.0 / 10.0 |
+| Thời gian vẽ | 0.6 / 0.9 / 1.0 ms | *(chỉ đo ở tab 1)* |
+| Ping | 88.2 / 307.0 / 980.0 ms | 25.7 / 109.0 / 323.0 ms |
+| Băng thông xuống | 6.8 / 14.3 / 23.4 KB/s | 3.6 / 5.5 / 9.2 KB/s |
+| Kích thước snapshot | 0.3 / 0.8 / 2.0 KB | 0.1 / 0.2 / 1.1 KB |
+| Tick server | 1.3 / 3.0 / 6.8 ms | 1.1 / 2.4 / 6.6 ms |
+| Số sprite | 2723.7 / 2752.0 / 2759.0 | *(chỉ đo ở tab 1)* |
+| Draw call | 340.6 / 355.9 / 361.2 | *(chỉ đo ở tab 1)* |
+| Entity trong AOI | 497.2 / 908.0 / 1248.0 | 235.9 / 327.0 / 417.0 |
+| Tổng kiếm thấy trên màn hình | 1344.5 / 2114.0 / 2212.0 | 45.1 / 86.0 / 1095.0 |
 
 Ảnh chụp lúc đông nhất: `docs/perf/browsertest-mang-binh-thuong.png` và
 `docs/perf/browsertest-4g-yeu.png`.
