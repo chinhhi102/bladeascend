@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"kiemxoay/server/internal/admin"
 	"kiemxoay/server/internal/config"
 	"kiemxoay/server/internal/room"
 	"kiemxoay/server/internal/store"
@@ -32,6 +33,11 @@ type server struct {
 	limiter *ipLimiter
 	// telemetry là nil khi chạy với -telemetry=false; mọi chỗ dùng phải kiểm nil.
 	telemetry *telemetry.Store
+	// adminAuth không bao giờ nil, nhưng `Enabled()` là false khi chưa đặt
+	// ADMIN_PASSWORD_HASH — lúc đó mọi đường dẫn /admin đều đóng (ADMIN_SPEC §1).
+	adminAuth *admin.Auth
+	buildID   string
+	startedAt time.Time
 }
 
 func (s *server) routes(assetsDir, clientDir string) http.Handler {
@@ -44,6 +50,7 @@ func (s *server) routes(assetsDir, clientDir string) http.Handler {
 	// Tóm tắt phiên lúc đóng tab: sendBeacon chỉ gửi được POST, và lúc đó WebSocket đã đứt.
 	mux.HandleFunc("POST /telemetry/end", s.handleTelemetryEnd)
 	mux.HandleFunc("GET /admin/perf", s.handleAdminPerf)
+	s.adminRoutes(mux, adminDirOf(clientDir))
 	mux.Handle("GET /assets/", http.StripPrefix("/assets/", noListing(assetCache(http.FileServer(http.Dir(assetsDir))))))
 	mux.Handle("GET /", spa(clientDir))
 	return gzipMux(mux)

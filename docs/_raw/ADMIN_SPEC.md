@@ -1,4 +1,6 @@
-# ADMIN CONSOLE — Spec v1.0
+# ADMIN CONSOLE — Spec v1.1
+
+**v1.1:** `?debug=true` chỉ hoạt động khi đã đăng nhập admin (§1.1).
 
 > Đặt tại `docs/_raw/ADMIN_SPEC.md`. Dùng chung stack hiện tại (Go server + Vite/TypeScript client), không thêm framework UI. Mọi con số cấu hình nằm trong `config/game.json` → khối `admin`.
 
@@ -25,9 +27,18 @@ Một trang quản trị chỉ chủ dự án vào được, để:
 | HTTPS | Bắt buộc khi deploy (đã có Caddy). Trên HTTP thường thì không cho đăng nhập (trừ `localhost` để phát triển). |
 | Nhật ký thao tác | Mọi hành động admin (đăng nhập, kick, cấm, gỡ cấm, đổi trạng thái góp ý) ghi vào bảng `admin_audit`: thời gian, hành động, đối tượng, lý do, IP admin. Có trang xem nhật ký (§7). |
 | XSS | Nội dung góp ý và tên người chơi là dữ liệu do người chơi nhập → **luôn hiển thị dạng text** (`textContent`), không bao giờ `innerHTML`. Có test chèn `<script>` vào góp ý và tên → không chạy. |
-| Chế độ debug | Trang admin không phụ thuộc `?debug=true`; phím debug trong game vẫn tắt ở production. |
+| **Cờ debug trong game** | `?debug=true` **chỉ có tác dụng khi trình duyệt đang có phiên admin hợp lệ** (đã đăng nhập ở `/admin/login`). Xem §1.1. |
 
 Về sau có thể thêm 2 lớp (TOTP 2FA) — chưa cần ở v1.
+
+### 1.1 Cờ debug gắn với đăng nhập admin
+- Người chơi mở game với `?debug=true` mà **không có phiên admin** → game chạy như bình thường, **không** bật phím debug, F3, H, B…; không báo lỗi gì (không lộ là có chế độ debug).
+- Có phiên admin (cùng tên miền, cookie gửi kèm khi mở WebSocket game) → server đánh dấu kết nối đó là `debug_allowed` và báo cho client; client **chỉ bật** phím debug khi server xác nhận. Tham số trên URL một mình không bao giờ đủ.
+- Server **từ chối mọi lệnh debug** (+EXP, lên cảnh giới, +kiếm, buff, tự chết, thả bot, nạp Tiên khí…) từ kết nối không có `debug_allowed` — kể cả khi client bị sửa để gửi lệnh. Lệnh bị từ chối tính vào cờ nghi hack "Hành động bị từ chối" (§6.1).
+- Mỗi lệnh debug được dùng → ghi `admin_audit` (lệnh, phòng/khu, nhân vật).
+- Mạng chơi có dùng lệnh debug → gắn nhãn `debug`, **không ghi vào bảng xếp hạng toàn cục** và không tính vào telemetry cân bằng.
+- Phiên admin hết hạn giữa trận → tắt quyền debug ngay ở lần kiểm tiếp theo (kiểm lại mỗi 60s).
+- **Môi trường phát triển**: khi server chạy với `APP_ENV=dev` trên `localhost`, cho phép debug không cần đăng nhập (để làm việc nhanh). Công cụ tự động (`loadtest`, `browsertest`, `netcode-bench`) dùng biến môi trường `DEBUG_TOKEN` chỉ hợp lệ khi `APP_ENV=dev` hoặc chạy trên server cục bộ; **production không bao giờ nhận `DEBUG_TOKEN`**.
 
 ---
 
@@ -179,7 +190,7 @@ Cờ hiện ở dashboard và danh sách; mỗi cờ lưu bằng chứng (số l
 
 | Bước | Nội dung | Xong khi |
 |---|---|---|
-| A1 | Đăng nhập + phiên + chặn dò + audit + khung trang + Dashboard | Vào `/admin` bị đẩy về login; đăng nhập xong thấy dashboard số nhảy mỗi 2s |
+| A1 | Đăng nhập + phiên + chặn dò + audit + khung trang + Dashboard + **khoá cờ debug theo phiên admin (§1.1)** | Vào `/admin` bị đẩy về login; đăng nhập xong thấy dashboard số nhảy mỗi 2s |
 | A2 | Phòng & Khu + Người chơi + cờ nghi hack + kick/cấm/gỡ cấm | Kick được 1 tab thử; tab đó thấy thông báo; nhật ký ghi lại |
 | A3 | Hòm thư góp ý (nút trong game + trang admin) | Gửi góp ý kèm ảnh từ điện thoại, thấy ở admin |
 | A4 | Bản đồ: xem theo seed + xem trực tiếp | Bám theo 1 người chơi trên bản đồ live |
@@ -190,4 +201,6 @@ Cờ hiện ở dashboard và danh sách; mỗi cờ lưu bằng chứng (số l
 - [ ] Góp ý chứa `<script>alert(1)</script>` và tên người chơi chứa HTML → hiển thị nguyên văn, không chạy.
 - [ ] Admin xem bản đồ live không làm tăng tick ms người chơi quá 0,3 ms.
 - [ ] Không có đoạn code nào tự kick theo cờ.
+- [ ] Production, chưa đăng nhập admin: mở `?debug=true` → không có phím debug, F3 không hiện; gửi lệnh debug thủ công qua WebSocket → bị từ chối + gắn cờ.
+- [ ] Đã đăng nhập admin: `?debug=true` bật đủ phím debug; dùng lệnh → có trong nhật ký; mạng đó không lên bảng xếp hạng toàn cục.
 - [ ] Người bị cấm 1 giờ: vào trang thấy thông báo + giờ hết hạn; sau 1 giờ vào lại được.

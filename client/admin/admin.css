@@ -1,0 +1,40 @@
+/* Trang quản trị — ADMIN_SPEC §2: tối giản, chữ rõ, chạy được trên điện thoại. */
+:root { color-scheme: dark; --bg:#15171c; --panel:#1e2129; --line:#2d323c;
+        --ink:#e8eaed; --dim:#9aa0a6; --ok:#5bd38a; --warn:#ffcc66; --bad:#ff7b7b; }
+* { box-sizing: border-box }
+body { margin:0; display:flex; min-height:100vh; background:var(--bg); color:var(--ink);
+       font:15px/1.5 system-ui,sans-serif }
+#side { width:190px; flex:none; background:var(--panel); border-right:1px solid var(--line);
+        padding:16px 12px; display:flex; flex-direction:column; gap:4px }
+#side h1 { font-size:16px; margin:0 0 14px; color:var(--dim); font-weight:600 }
+#side a { color:var(--ink); text-decoration:none; padding:9px 11px; border-radius:7px; font-size:14px }
+#side a:hover { background:#272b35 }
+#side a.on { background:#31384a; font-weight:600 }
+#side button { margin-top:auto; padding:9px; border:1px solid var(--line); border-radius:7px;
+               background:transparent; color:var(--dim); cursor:pointer; font-size:13px }
+#build { margin-top:10px; font-size:11px; color:var(--dim); word-break:break-all }
+main { flex:1; padding:22px 24px; overflow:auto }
+h2 { margin:0 0 16px; font-size:20px } h2 small { color:var(--dim); font-size:12px; font-weight:400 }
+h3 { margin:26px 0 10px; font-size:15px; color:var(--dim) }
+.cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:12px }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:13px 15px }
+.card .k { font-size:12px; color:var(--dim) }
+.card .v { font-size:25px; font-weight:650; margin-top:3px; font-variant-numeric:tabular-nums }
+.card.ok .v { color:var(--ok) } .card.warn .v { color:var(--warn) } .card.bad .v { color:var(--bad) }
+.realms { display:flex; flex-wrap:wrap; gap:8px }
+.realms span { background:var(--panel); border:1px solid var(--line); border-radius:999px;
+               padding:5px 12px; font-size:13px }
+table { width:100%; border-collapse:collapse; font-size:13px }
+th,td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--line); vertical-align:top }
+th { color:var(--dim); font-weight:600; white-space:nowrap }
+td.num { text-align:right; font-variant-numeric:tabular-nums }
+.room { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+        margin-bottom:14px; overflow:hidden }
+.room > h4 { margin:0; padding:11px 15px; font-size:14px; background:#232732 }
+@media (max-width:700px) {
+  body { flex-direction:column }
+  #side { width:auto; flex-direction:row; flex-wrap:wrap; align-items:center;
+          border-right:0; border-bottom:1px solid var(--line); padding:10px }
+  #side h1,#build { display:none } #side button { margin:0 0 0 auto }
+  main { padding:16px 14px }
+}

@@ -71,6 +71,12 @@ var migrations = []string{
 }
 
 // Open opens (or creates) the database at path. Use ":memory:" for tests.
+// DB trả về kết nối SQLite bên dưới.
+//
+// Mở ra cho package `admin` dùng CHUNG một file (ADMIN_SPEC §8), thay vì mở file thứ hai:
+// hai kết nối tới cùng một file SQLite là nguồn của "database is locked" dưới tải ghi.
+func (s *Store) DB() *sql.DB { return s.db }
+
 func Open(path string, cacheTTL time.Duration) (*Store, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {

@@ -116,6 +116,9 @@ func (g *Game) CanPickUp(p *Player) bool {
 	return true
 }
 
+// ItemCount là số vật phẩm đang nằm trên đất (ADMIN_SPEC §4).
+func (g *Game) ItemCount() int { return len(g.Items) }
+
 func (g *Game) resolvePickups() {
 	for _, p := range g.PlayerList() {
 		if p.Dead || p.InTransit(g.Time) || !g.CanPickUp(p) {

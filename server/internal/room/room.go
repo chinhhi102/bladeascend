@@ -93,6 +93,9 @@ func (r *Room) Zones() []*Zone { return r.zones }
 // Zone trả khu thứ i (test và công cụ đo dùng).
 func (r *Room) Zone(i int) *Zone { return r.zones[i] }
 
+// ZoneCount là số khu của phòng (ADMIN_SPEC §4 duyệt qua từng khu).
+func (r *Room) ZoneCount() int { return len(r.zones) }
+
 // ZoneOf trả khu mà nhân vật này đang ở — test và công cụ đo dùng, vì người chơi được thả
 // vào khu ít người nhất nên không đoán trước được họ ở đâu.
 func (r *Room) ZoneOf(id uint32) *Zone { return r.zoneOf(id) }

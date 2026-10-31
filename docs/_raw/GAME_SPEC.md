@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.15:** `?debug=true` chỉ hoạt động sau khi đăng nhập admin (§18, ADMIN_SPEC §1.1).
+
 **Thay đổi v6.14:** duyệt bố cục lượt 3; mật độ hình vẽ chốt 8–14% (Băng Nguyệt 4–10%) (§8.1b).
 
 **Thay đổi v6.13:** chốt mục tiêu bố cục theo lượt 2 (mật độ hình vẽ 12–20%, khoảng thở ≥ 20%, Băng Nguyệt ≥ 40%), mẫu cụm riêng từng khu, luật túi kín ≥ 4 ô (§8.1b).
@@ -1325,7 +1327,8 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 
 ## 18. Chế độ debug
 
-- Mở game với `?debug=true` trên URL → bật phím debug: `E` +100 EXP, `R` lên cảnh giới, `K` +1 kiếm, `1–7` bật buff, `X` tự chết, **`B` thả 1 bot ngay cạnh mình**, phím vẽ hitbox capsule. Không có `?debug=true` thì mọi phím debug bị tắt (cả client lẫn server từ chối).
+- **Cần đăng nhập admin trước** (ADMIN_SPEC §1.1): `?debug=true` chỉ có tác dụng khi trình duyệt có phiên admin hợp lệ; server mới là bên cấp quyền debug, mọi lệnh debug từ kết nối không có quyền bị từ chối. Mạng chơi dùng debug không lên bảng xếp hạng toàn cục.
+- Mở game với `?debug=true` trên URL → bật phím debug: `E` +100 EXP, `R` lên cảnh giới, `K` +1 kiếm, `1–7` bật buff, `X` tự chết, **`B` thả 1 bot ngay cạnh mình**, phím vẽ hitbox capsule. Không có `?debug=true` **hoặc không có phiên admin** thì mọi phím debug bị tắt (cả client lẫn server từ chối). Ngoại lệ duy nhất: `APP_ENV=dev` trên localhost.
 - Có thể tắt hẳn debug trên server production bằng biến môi trường.
 
 ### 18.1 Bảng hướng dẫn điều khiển lúc vào trận

@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"kiemxoay/server/internal/admin"
 	"kiemxoay/server/internal/config"
 	"kiemxoay/server/internal/room"
 	"kiemxoay/server/internal/store"
@@ -78,7 +79,21 @@ func main() {
 	mgr := room.NewManager(cfg, maps, st)
 	mgr.AllowDebug = *debug // người chơi vẫn phải tự mở bằng ?debug=true mới thấy bảng
 	tel := startTelemetry(telemetryPath(*telemetryDB), buildIDOrNow(*buildID), *telemetryOn)
+	// Trang quản trị (ADMIN_SPEC §1). Dùng CHUNG file SQLite với bảng xếp hạng, như spec §8
+	// nói — tên bảng đều có tiền tố `admin_` nên không đụng dữ liệu đã có.
+	adminStore, err := admin.New(st.DB())
+	if err != nil {
+		log.Fatal(err)
+	}
+	adminAuth, err := admin.NewAuth(adminStore)
+	if err != nil {
+		log.Fatal(err) // hash sai định dạng hoặc cost quá thấp: dừng hẳn, không chạy nửa vời
+	}
+	adminStore.PurgeExpired()
+	log.Print(adminEnabledNote(adminAuth))
+
 	srv := &server{cfg: cfg, rawCfg: raw, mgr: mgr, store: st, maps: maps, debug: *debug,
+		adminAuth: adminAuth, buildID: buildIDOrNow(*buildID), startedAt: time.Now(),
 		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words.txt")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP),
 		telemetry: tel}
 	stopSampler := make(chan struct{})
