@@ -1267,3 +1267,59 @@ bộ nhớ **tụt** 149 → 138 MB ở phút 1.4 khi người chơi đi khỏi 
   tự động chặn atlas tương lai vượt 2 048.
 - **Draw call lên 266** ở chỗ đông (ngân sách < 200) vì mỗi ô nền là một lượt vẽ — nút thắt
   B11 mới, đổi bộ nhớ lấy lệnh vẽ. Trên điện thoại đây là cái giá phải theo dõi.
+
+## Phiên 31/10 (tiếp 4) — Protocol v2 bước nhỏ 1: Entity Store
+
+Mục tiêu dừng anh chốt: **respawn = 0 với bài đo có bộ đếm "quay lại" > 0 thật**, gói < 6 KB.
+Lượt này đóng vế thứ nhất. Số đầy đủ: PERF_LOG lượt #12.
+
+### Vế khó không phải code — là bài đo
+
+`netcode-bench` từ bước 2b luôn in respawn = 0 kèm một cảnh báo ở cuối: *"không entity nào
+QUAY LẠI khung nhìn"*. Số 0 đó **vô nghĩa**: không ai quay lại thì hiển nhiên không ai nhấp
+nháy. Ba lần sửa, ba nguyên nhân khác nhau, cùng một gốc là **đoán quãng đường bằng đồng hồ**:
+
+1. Đi 4,5 giây mỗi chiều. Đo ra **798 đơn vị trong 11 giây** (≈72/giây, không phải 195 như
+   `move_base` — vật cản và va chạm ăn phần lớn), trong khi bán kính RA = nửa khung nhìn 830
+   + lề 900 = **1 730**. Chưa bao giờ ra khỏi tầm.
+2. Cho tab "người đi" đi: ra được, nhưng ngoài kia **bị bot chém chết, hồi sinh với id mới**
+   — với tab quan sát đó là người khác, không phải "quay lại".
+3. Đo khoảng cách tới tab kia: phụ thuộc chỗ hai tab ngẫu nhiên sinh ra. Một lượt chúng cách
+   nhau **3 900 đơn vị** và không bao giờ nhìn thấy nhau. 4 lượt ra 0 lần quay lại, 2 lượt
+   khác ra 2 — **cùng một bản build**. Đúng loại dao động mà bài đo này sinh ra để xoá.
+
+Bản chạy được: người quan sát **tự đi**, và đi theo **khoảng cách tới chỗ mình đứng lúc đầu**
+— không theo đồng hồ, không theo tab kia. Ra xa 2 400 → đứng 3 giây (qua hạn trễ 2 giây) →
+về trong 700.
+
+### Entity Store (§4.3)
+
+Client giờ **hành động theo `Despawn`**, và giữ lại mô tả (tên + nhân vật) 30 giây sau khi xoá.
+
+Đây đúng là chỗ lượt trước làm hỏng và đã ghi lại trong `state.ts`: bật client xoá theo `ds`
+làm nhấp nháy **tệ đi** (8 lần/15 lượt so với 2/13), vì server xoá đúng luật nhưng người đó
+quay lại đủ nhanh để mắt thấy. Giữ mô tả thì ranh giới despawn→spawn không còn là "dựng lại
+từ đầu": `ViewPool` trả lại sprite cũ, không ai thấy gì.
+
+**Kết quả: 4 lần quay lại thật / 4 lượt · respawn 0 · placeholder 0 trên 4 744 khung ·
+nhấp nháy do `Despawn` = 0.** Cảnh báo cuối bài đo đã hết.
+
+### Chưa làm — vế thứ hai của mục tiêu dừng
+
+**Gói vẫn 6,9 KB**, chưa dưới 6. Cần đường nóng **nhị phân** v2 (§4.1): schema + generator đã
+xong từ bước trước (10 015 gói đối chiếu), nhưng `Spawn/Desc/Update` vẫn đi bằng msgpack v1 —
+mới chỉ `Despawn` là tường minh.
+
+Mổ gói lớn nhất ra thì thấy chỗ cần nhắm **không phải state người chơi**:
+
+| Phần | KB | % |
+|---|---|---|
+| `ev` (sự kiện) | 2.5 | 37% |
+| `ia` (vật phẩm vào tầm) | 1.7 | 25% |
+| còn lại | 2.7 | 38% |
+
+Nên bước sau nên chuyển `ev` + `ia` sang nhị phân trước — hai phần đó chiếm 62% gói.
+
+**Cờ `proto=1|2` và thoả thuận lúc handshake cũng chưa làm, và cố ý chưa làm**: chưa có
+message v2 nào chạy trên dây để mà chọn. Làm cờ trước khi có thứ để bật là làm một công tắc
+không nối vào đâu.

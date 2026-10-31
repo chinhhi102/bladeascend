@@ -74,6 +74,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 9a | 2026-10-30 | `200e5bf` | **Mốc TRƯỚC §13.7** — bộ nạp tải cả manifest trước trang chủ | S7 | – | – | – | – | – | – | – | – | – | Gói chặn **77.4 MB** (vượt 9.7×); tổng 201.5 MB (vượt 2.5×) |
 | **9b** | 2026-10-30 | `b55c14f` | **§13.7 A — asset-pipeline + nhóm tải + màn hình tải** | S7 | – | – | – | 58 / – | 0.6 | 36 | **0** ✅ | – | Gói chặn 77.4 → **7.02 MB** ✅ · tổng 201.5 → **11.41 MB** ✅ · vào trận 10 Mbps **8.3 s** ✅ · lần 2 **2.8 s** | Dư ngân sách gói chặn chỉ 0.98 MB; `zone_thien_dinh` 3.24 MB là phần nặng nhất |
 | **10** | 2026-10-31 | (phiên này) | **Trang chủ hiện ngay + tải gói lúc gõ tên** (chủ dự án chốt 31/10) | S7 | – | – | – | 60 / – | 0.32 | 40 | **0** ✅ | – | **Chờ thực** (bấm Vào chơi → trong trận) 10 Mbps 6.0 → **2.2 s**, Fast 4G 12.4 → **6.0 s**, có cache → **0.3 s** · trang chủ hiện 4.0 → **2.4 s** | Fast 4G dao động 2.4–9.4 s: 6 giây gõ tên chỉ phủ được ~40% gói 7 MB ở 4 Mbps |
+| **12** | 2026-10-31 | (phiên này) | **Protocol v2 bước nhỏ 1** — Entity Store: client hành động theo `Despawn`, giữ mô tả qua ranh giới | NETBENCH | – | – | 6.9 (v1) | – | – | – | **0** ✅ | **0** ✅ | respawn **0/4 lượt** với **4 lần quay lại THẬT** · placeholder 0/4 744 khung | Gói vẫn 6.9 KB — cần đường nhị phân v2, chưa làm |
 | **11** | 2026-10-31 | (phiên này) | **Bộ nhớ GPU 1 426 → 150 MB** — chia ô nền 1 024 + huỷ ô xa (iPhone) | S4\*\* | – | – | – | 44 / – | – | 266 | 0 ✅ | – | Texture **1 426 → 150 MB đỉnh** (−89%) trên giả lập iPhone 2 phút chỗ đông | Chạy bằng Chromium giả lập, **chưa phải WebKit** (thiếu `libavif16`) |
 | 11b | 2026-10-31 | (phiên này) | Như trên, máy bàn 1280×720 | S4\*\* | – | – | – | 58 / – | 0.81 | 118 | 0 ✅ | – | Texture **1 416 → 98 MB** (−93%) | – |
 | 10b | 2026-10-31 | `494d517` | Q27 — nền đúng biome + trang trí bản đồ **vẽ ra thật** (543 vật trước đây vô hình) | S4\*\* | – | – | – | 60 / – | 0.32 | 40 | 0 ✅ | – | Băng Nguyệt Hồ (+91 vật): draw call 36 → 40, vẽ 0.6 → 0.32 ms | – |
@@ -411,6 +412,60 @@ Việc tiếp theo đề xuất:
 2. Muốn Fast 4G cũng dưới ~3 giây: chuyển khung `break`/`regrow` của vật cản (2,6 MB) sang
    nhóm tải nền.
 
+### Lượt #12 — Protocol v2 bước nhỏ 1: Entity Store (2026-10-31)
+
+Mục tiêu dừng chủ dự án chốt: **respawn = 0 với bài đo có bộ đếm "quay lại" > 0 thật**, và
+gói < 6 KB. Lượt này đóng vế thứ nhất.
+
+**Vế khó không phải code, mà là bài đo.** `netcode-bench` từ lượt #8 luôn in ra respawn = 0
+kèm một cảnh báo ở cuối: *"không entity nào QUAY LẠI khung nhìn"*. Số 0 đó vô nghĩa — không
+ai quay lại thì hiển nhiên không ai nhấp nháy. Ba lần sửa bài đo, ba nguyên nhân khác nhau,
+tất cả đều là **đoán quãng đường bằng đồng hồ**:
+
+1. Đi 4,5 giây mỗi chiều. Đo ra **798 đơn vị trong 11 giây** (≈72/giây, không phải 195 như
+   `move_base` — vật cản và va chạm ăn phần lớn), trong khi bán kính RA là nửa khung nhìn
+   830 + lề 900 = **1 730**. Chưa bao giờ ra khỏi tầm.
+2. Cho tab "người đi" đi: nó ra được, nhưng ngoài kia **bị bot chém chết, hồi sinh với id
+   mới** — với tab quan sát đó là người khác, không phải "quay lại".
+3. Đo khoảng cách tới tab kia: phụ thuộc chỗ hai tab ngẫu nhiên sinh ra. Đo được một lượt
+   chúng cách nhau **3 900 đơn vị** và không bao giờ nhìn thấy nhau. 4 lượt ra 0 lần quay
+   lại, 2 lượt khác ra 2 — **cùng một bản build**.
+
+Bản chạy được: người quan sát tự đi, và đi theo **khoảng cách tới chỗ mình đứng lúc đầu**,
+không theo đồng hồ và không theo tab kia. Ra xa 2 400 → đứng 3 giây (qua hạn trễ 2 giây) →
+về trong 700. Mọi entity trong khung nhìn lúc đầu đều bị kéo ra rồi kéo vào.
+
+Thay đổi phía game: **Entity Store** (§4.3) — client giờ **hành động theo `Despawn`**, và
+giữ lại mô tả (tên + nhân vật) trong 30 giây sau khi xoá.
+
+Đây đúng là chỗ lượt trước làm hỏng và đã ghi lại: bật client xoá theo `ds` làm nhấp nháy
+**tệ đi** (8 lần/15 lượt so với 2/13), vì server xoá đúng luật nhưng người đó quay lại đủ
+nhanh để mắt thấy. Giữ mô tả thì ranh giới despawn→spawn không còn là "dựng lại từ đầu":
+`ViewPool` trả lại sprite cũ, không ai thấy gì.
+
+Kết quả (`node tools/browsertest/netcode-bench.mjs 4`):
+
+| Chỉ số | Trước (#8) | Sau (#12) | Ngân sách |
+|---|---|---|---|
+| Lần entity **quay lại** khung nhìn | **0** (bài đo không chạm tới) | **4** | > 0 để số respawn có nghĩa |
+| Respawn trong 2 giây | 2/16 lượt có 1 | **0 / 4 lượt** | **0** ✅ |
+| Khung có placeholder | 0 | **0 / 4 744** | **0** ✅ |
+| Nhấp nháy do `Despawn` | – | **0** | – |
+| Gói snapshot lớn nhất | 6.8 KB | **6.9 KB** | < 6 KB ❌ |
+
+Bị chặn / chưa làm được:
+- **Gói vẫn 6,9 KB**, chưa dưới 6. Vế này cần **đường nóng nhị phân v2** (§4.1): schema và
+  generator đã xong từ bước trước (`proto/schema.txt`, 10 015 gói đối chiếu), nhưng
+  `Spawn/Desc/Update` vẫn đi bằng msgpack v1 — chỉ `Despawn` đã tường minh. Mổ gói cho thấy
+  phần lớn nằm ở `ev` (2,5 KB, 37%) và `ia` (1,7 KB, 25%), tức **sự kiện và vật phẩm**,
+  không phải state người chơi — nên bước tiếp theo nên nhắm vào đó trước.
+- **Cờ `proto=1|2` và thoả thuận lúc handshake chưa làm.** Chưa cần: chưa có message v2 nào
+  chạy trên dây để mà chọn. Làm cờ trước khi có thứ để bật là làm một công tắc không nối vào đâu.
+
+Việc tiếp theo đề xuất:
+1. Chuyển `ev` + `ia` sang đường nhị phân (hai phần chiếm 62% gói).
+2. Rồi mới tới `Spawn/Desc/Update`, kèm cờ `proto`.
+
 ### Lượt #11 — Bộ nhớ GPU 1,4 GB → 150 MB (2026-10-31)
 
 Mục tiêu: người chơi báo **"trên iPhone luôn bị lỗi"**. iOS không báo lỗi khi hết bộ nhớ
@@ -517,7 +572,7 @@ Việc tiếp theo đề xuất: <1–3 việc, xếp theo lợi ích / công s�
 |---|---|---|---|---|---|
 | B1 | ItemsAdded dồn 1 gói khi camera lùi xa | Gói 38 KB, nghẽn mạng yếu | Lượt #0 | **Đóng** — gói 38.3 → 6.8 KB | #4 |
 | B2 | Server tick vượt ngân sách khi 10 Đạo Tổ chụm | Lag server | Lượt #0 | **Đóng** — tick 11.45 → 1.56 ms | #4 |
-| B3b | **Chỉ số respawn DAO ĐỘNG MẠNH giữa các lượt** | Phương pháp đo | Cùng một bản build, 8 lượt `flicker.mjs` liên tiếp ra 0,0,0,2,3,1,0,0. Số `gone` dao động 1–22 tuỳ bao nhiêu bot đi ngang. Các con số "2/13 lượt", "0/8 lượt" ghi ở dòng trước **không đủ mẫu để kết luận** — tôi đã dùng chúng so hai cấu hình và kết luận sai. | **Đang làm**: `tools/browsertest/netcode-bench.mjs` — server riêng cổng 9996, 1 khu, bot tối thiểu, đường đi cố định. Phương sai đã giảm hẳn (`rời` = 3 y hệt mọi lượt thay vì 1–22) nhưng **chưa ép được entity QUAY LẠI khung nhìn**, nên `respawn = 0` nó báo vẫn là con số hiển nhiên. Bài đo tự phát hiện điều đó và thoát mã 2 kèm cảnh báo, KHÔNG báo "đạt". | #8, #9 |
+| B3b | **Chỉ số respawn DAO ĐỘNG MẠNH giữa các lượt** | Phương pháp đo | Cùng một bản build, 8 lượt `flicker.mjs` ra 0,0,0,2,3,1,0,0. Và `netcode-bench` cũ **không bao giờ ép được entity quay lại khung nhìn**, nên số respawn = 0 của nó là con số hiển nhiên, không chứng minh gì. | **Đóng (#12)** — bài đo giờ đi theo KHOẢNG CÁCH tới chỗ đứng ban đầu, không theo đồng hồ và không theo tab kia: 4 lần quay lại thật trên 4 lượt, respawn 0. | #8, #9, #12 |
 | B3 | Nhấp nháy + placeholder khi entity vào khung | Hình ảnh | Trên `:9999` THẬT, 16 lượt `flicker.mjs` sau bước 2b: **placeholder 0/16 lượt** (trước 2b: 252/0/24/4/0), **respawn 2/16 lượt có đúng 1** (trước 2b ~1.0/30s, trước 2a 38/30s) | **Placeholder: đóng.** Respawn: còn hở, cần `Despawn` tường minh từ server (bước 3) — client không phân biệt được "vắng mặt do AOI" với "đã rời đi thật" | #5, #7, #8 |
 | B4 | Băng thông game thật 61.7 KB/s | Mạng yếu | Lượt #0b | Mở — S2 còn **45.5 KB/s đỉnh** ở tab Đạo Tổ (ngân sách 40) | – |
 | B5 | Gói snapshot 6.8 KB vs ngân sách mới 6 KB | Mạng yếu | Lượt #4 | Mở — cần Protocol v2 nhị phân (NETCODE bước 3) | – |

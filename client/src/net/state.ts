@@ -45,6 +45,14 @@ export interface PlayerFrame {
 /** Lệch dưới ngần này là sai số dấu phẩy động, không phải hiệu chỉnh thật. */
 const CORRECTION_EPS = 0.5;
 
+/**
+ * DESC_KEEP_SECS: giữ mô tả entity bao lâu sau khi `Despawn` (Entity Store, §4.3).
+ *
+ * 30 giây: đủ dài để bao trọn mọi lần đi vòng quanh mép khung nhìn, đủ ngắn để một trận dài
+ * không tích thành chỗ rò bộ nhớ. Người rời phòng hẳn thì id không bao giờ quay lại.
+ */
+const DESC_KEEP_SECS = 30;
+
 const SNAP_KEEP = 30;
 /**
  * Giữ entity thêm ngần này giây sau khi vắng mặt khỏi snapshot (NETCODE_SPEC §4.3).
@@ -80,8 +88,25 @@ export class ClientWorld {
   readonly whyGone = new Map<number, string>();
   /** respawnBy: đếm nhấp nháy theo nguyên nhân, cho bài đo đọc. */
   readonly respawnBy = { ds: 0, hethan: 0 };
-  /** despawnTold: số lần server báo `Despawn`. Chỉ để đo — client chưa hành động theo. */
+  /** despawnTold: số lần server báo `Despawn` (§4.3). */
   despawnTold = 0;
+  /**
+   * descCache — **Entity Store** của Protocol v2 (NETCODE_SPEC §4.3, §5 L0).
+   *
+   * Giữ mô tả (tên + nhân vật) của entity **sau khi đã `Despawn`**, theo `(id, desc_ver)`.
+   * Quay lại trong `DESC_KEEP_SECS` thì dựng lại được NGAY, không phải chờ server gửi lại
+   * tên và không rơi về placeholder.
+   *
+   * Vì sao đây mới là chỗ chữa thật, chứ không phải "client xoá theo Despawn":
+   * lượt trước bật client xoá ngay theo `ds` làm nhấp nháy **tệ đi** — 8 lần/15 lượt so với
+   * 2 lần/13 lượt — và đo ra **toàn bộ** số nhấp nháy đến từ chính `Despawn`. Server xoá
+   * đúng luật (ra ngoài lề 900 quá 2 giây), nhưng người đó quay lại đủ nhanh để mắt thấy
+   * một lần biến mất rồi hiện lại. Xoá đúng luật vẫn là nhấp nháy.
+   *
+   * Có Entity Store thì ranh giới despawn→spawn không còn là "dựng lại từ đầu": mô tả còn
+   * nguyên, `ViewPool` trả lại đúng sprite cũ, và người chơi không thấy gì cả.
+   */
+  private readonly descCache = new Map<number, { name: string; char: string; at: number }>();
   /** missingDesc: entity chưa biết vẽ nhân vật nào — xem takeMissingDesc. */
   private readonly missingDesc = new Set<number>();
   private offset: number | null = null;
@@ -146,27 +171,43 @@ export class ClientWorld {
     for (const id of s.ir ?? []) {
       this.items.delete(id);
     }
-    // `Despawn` tường minh (NETCODE_SPEC §4.3) — server GỬI rồi, nhưng client CHƯA xoá
-    // theo nó. Lý do là số đo, không phải e ngại:
-    //
-    // Bật client xoá ngay theo `ds` làm nhấp nháy TỆ ĐI chứ không tốt lên: 8 lần / 15 lượt,
-    // trong khi trước đó 2 lần / 13 lượt. Đo tiếp theo nguyên nhân thì thấy **toàn bộ** số
-    // nhấp nháy đếm được đến từ chính `Despawn` (cột "do Despawn" khớp đúng tổng ở từng lượt).
-    //
-    // Nghĩa là server xoá ĐÚNG LUẬT — người đó thật sự ra ngoài lề 900 quá 2 giây — nhưng
-    // họ quay lại đủ nhanh để mắt người chơi thấy một lần biến mất rồi hiện lại. Xoá đúng
-    // luật vẫn là nhấp nháy.
-    //
-    // Chỗ chữa thật nằm ở Entity Store của Protocol v2 (§4.3): giữ view qua ranh giới
-    // despawn/spawn để lần quay lại không phải dựng lại từ đầu. Làm nửa vời bây giờ — server
-    // xoá, client dựng lại — chỉ đổi một kiểu nhấp nháy lấy một kiểu khác.
-    //
-    // Server vẫn gửi `ds` vì nó đúng và bước sau cần; client đếm để đo, chưa hành động.
-    this.despawnTold += (s.ds ?? []).length;
+    // `Despawn` tường minh (NETCODE_SPEC §4.3): giờ client HÀNH ĐỘNG theo — xem `applyDespawn`.
+    this.applyDespawn(s.ds ?? [], s.tm);
     const events = s.ev ?? [];
     this.applyObstacleEvents(events);
     this.reconcile(s.ack);
     return events;
+  }
+
+  /**
+   * applyDespawn xử lý `Despawn` tường minh từ server (NETCODE_SPEC §4.3).
+   *
+   * Xoá entity khỏi thế giới, nhưng **giữ lại mô tả** trong Entity Store. Đó là cả điểm
+   * khác biệt: xoá mà vứt luôn mô tả thì lần quay lại phải chờ server gửi lại tên + nhân
+   * vật, và trong lúc chờ người chơi thấy placeholder — tức là đổi một kiểu nhấp nháy lấy
+   * một kiểu khác, đúng cái lượt đo trước đã bắt được.
+   */
+  private applyDespawn(ids: number[], now: number): void {
+    this.despawnTold += ids.length;
+    for (const id of ids) {
+      const v = this.players.get(id);
+      if (v) {
+        if (v.char) {
+          this.descCache.set(id, { name: v.name, char: v.char, at: now });
+        }
+        this.players.delete(id);
+        this.deletedAt.set(id, now);
+        this.whyGone.set(id, 'ds');
+      }
+      this.goneAt.delete(id);
+      this.missingDesc.delete(id);
+    }
+    // Dọn mô tả quá hạn: giữ mãi thì bản đồ đông người biến Entity Store thành chỗ rò bộ nhớ.
+    for (const [id, d] of this.descCache) {
+      if (now - d.at > DESC_KEEP_SECS) {
+        this.descCache.delete(id);
+      }
+    }
   }
 
   private updatePlayers(s: Snapshot): void {
@@ -175,7 +216,11 @@ export class ClientWorld {
       seen.add(p.id);
       let v = this.players.get(p.id);
       if (!v) {
-        v = { id: p.id, name: p.nm ?? '?', char: p.ch ?? '', snaps: [] };
+        // Quay lại sau `Despawn`: lấy mô tả từ Entity Store (§4.3). Server chỉ gửi tên +
+        // nhân vật LẦN ĐẦU, nên không có bộ nhớ này thì mỗi lần quay lại là một lần
+        // placeholder cho tới nhịp gửi lại tên.
+        const cached = this.descCache.get(p.id);
+        v = { id: p.id, name: p.nm ?? cached?.name ?? '?', char: p.ch ?? cached?.char ?? '', snaps: [] };
         this.players.set(p.id, v);
       }
       if (p.nm) {

@@ -31,9 +31,26 @@ const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PORT = 9996; // KHÔNG phải 9999: bài đo không bao giờ được đụng tới server người chơi
 const ROUNDS = Number(process.argv[2] ?? 5);
 /** Mỗi lượt đo bao lâu. */
-const WATCH_MS = 20000;
-/** Người đi: mỗi chiều bao lâu rồi quay đầu. Cố định để hai lượt giống hệt nhau. */
-const LEG_MS = 4500;
+const WATCH_MS = 60000;
+/**
+ * Người đi: mỗi chiều bao lâu rồi quay đầu, và đứng ngoài tầm bao lâu.
+ *
+ * **Phải đủ XA và đủ LÂU**, nếu không bài đo không chạm tới thứ nó định đo. Bản trước đi
+ * 4,5 giây mỗi chiều ≈ 880 đơn vị, trong khi bán kính RA của AOI là nửa khung nhìn (~800)
+ * cộng lề 900 ≈ **1 700**. Người đi chưa bao giờ ra khỏi tầm, nên không có `Despawn` nào,
+ * không có lần quay lại nào — và bài đo in ra toàn số 0 đẹp đẽ mà chẳng chứng minh gì.
+ * Chính cảnh báo "không entity nào QUAY LẠI" ở cuối bài là thứ lộ ra điều đó.
+ *
+ * 11 giây ≈ 2 145 đơn vị ở `move_base` 195 → vượt hẳn bán kính ra. Đứng ngoài 3 giây để
+ * qua hạn trễ `aoiLingerSecs` = 2 giây, rồi mới quay lại.
+ */
+const DWELL_MS = 3000;
+/** OUT_DIST: đi xa hơn ngần này thì chắc chắn vượt bán kính ra (830 + 900 = 1 730). */
+const OUT_DIST = 2400;
+/** BACK_DIST: về gần mốc hơn ngần này thì chắc chắn mọi entity cũ đã vào lại khung nhìn. */
+const BACK_DIST = 700;
+/** LEG_LIMIT_MS: trần thời gian mỗi chiều, phòng khi vướng vật cản không đi nổi. */
+const LEG_LIMIT_MS = 40000;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -149,16 +166,72 @@ async function round(browser) {
     };
   }, WATCH_MS);
 
-  // Người đi: ra xa rồi quay lại, nhịp CỐ ĐỊNH, cắt qua ranh giới AOI cả hai chiều.
+  // **NGƯỜI QUAN SÁT là người đi**, và đi theo KHOẢNG CÁCH chứ không theo đồng hồ.
+  //
+  // Hai lần sửa trước đều hỏng vì đoán quãng đường bằng thời gian:
+  //  - Bản đầu đi 4,5 giây mỗi chiều. Đo ra chỉ **798 đơn vị trong 11 giây** (≈72/giây,
+  //    không phải 195 như `move_base` — vật cản và va chạm ăn mất phần lớn), trong khi bán
+  //    kính RA là nửa khung nhìn 830 + lề 900 = **1 730**. Chưa bao giờ ra khỏi tầm.
+  //  - Bản sau cho `walker` đi: nó ra được, nhưng ngoài kia **bị bot chém chết và hồi sinh
+  //    với id mới**, nên với tab quan sát đó là người khác, không phải "quay lại".
+  //
+  // Đi theo khoảng cách thì không phải đoán gì: cứ đi tới khi vượt hẳn bán kính ra, đứng
+  // chờ qua hạn trễ, rồi quay lại tới khi gần. Chậm hay nhanh, vướng hay không, bài đo vẫn
+  // chạm đúng thứ nó định đo.
+  const posOfPage = async (page) =>
+    page.evaluate(() => {
+      const m = window.kx.world.me();
+      return m ? { x: m.x, y: m.y } : null;
+    });
+  // Mốc đo là **chỗ người quan sát đứng lúc bắt đầu**, không phải khoảng cách tới tab kia.
+  //
+  // Đo theo tab kia thì bài đo phụ thuộc chỗ hai tab ngẫu nhiên sinh ra: một lượt chúng
+  // cách nhau 3 900 đơn vị và không bao giờ nhìn thấy nhau, lượt khác lại sát nhau. Chạy 4
+  // lượt ra 0 lần quay lại, chạy 2 lượt khác ra 2 — cùng một bản build. Đó là đúng loại
+  // dao động mà cả bài đo này sinh ra để xoá.
+  //
+  // Đo theo chỗ mình đứng thì **mọi** entity đang trong khung nhìn lúc bắt đầu (3 con bot
+  // thả sát bên + tab kia nếu có) đều bị kéo ra rồi kéo vào — không phụ thuộc may rủi.
+  const home = await posOfPage(watcher);
+  if (!home) {
+    throw new Error('không đọc được vị trí người quan sát');
+  }
+  /** walkUntil giữ phím tới khi `ok(khoảng cách tới mốc)` đúng, hoặc hết hạn. */
+  const walkUntil = async (key, ok, limitMs) => {
+    const start = Date.now();
+    await watcher.keyboard.down(key);
+    try {
+      while (Date.now() - start < limitMs) {
+        await sleep(400);
+        const a2 = await posOfPage(watcher);
+        if (!a2) {
+          return false;
+        }
+        if (ok(Math.hypot(a2.x - home.x, a2.y - home.y))) {
+          return true;
+        }
+      }
+    } finally {
+      await watcher.keyboard.up(key);
+    }
+    return false;
+  };
+
   const t0 = Date.now();
   while (Date.now() - t0 < WATCH_MS) {
-    for (const key of ['KeyD', 'KeyA']) {
-      await walker.keyboard.down(key);
-      await sleep(LEG_MS);
-      await walker.keyboard.up(key);
-      await sleep(300);
-      if (Date.now() - t0 >= WATCH_MS) { break; }
+    // Ra xa hẳn bán kính ra (nửa khung nhìn + lề 900), cộng biên an toàn.
+    if (!(await walkUntil('KeyD', (d) => d > OUT_DIST, LEG_LIMIT_MS))) {
+      break;
     }
+    await sleep(DWELL_MS); // qua hạn trễ `aoiLingerSecs` = 2 giây → server bắn `Despawn`
+    if (Date.now() - t0 >= WATCH_MS) {
+      break;
+    }
+    // Quay lại cho tới khi vào hẳn trong khung nhìn.
+    if (!(await walkUntil('KeyA', (d) => d < BACK_DIST, LEG_LIMIT_MS))) {
+      break;
+    }
+    await sleep(1200);
   }
   const out = await watch;
   await ctx.close();
