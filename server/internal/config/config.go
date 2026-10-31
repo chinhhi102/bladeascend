@@ -209,11 +209,32 @@ type Ice struct {
 // Skills: mọi con số của 10 kỹ năng nhân vật (spec §6.3). Bán kính và tầm xa còn được
 // nhân theo scale người dùng lúc thi hành.
 type Skills struct {
-	MaxCharges  int     `json:"max_charges"`
-	LockSecs    float64 `json:"lock_secs"`
-	OvercapExp  float64 `json:"overcap_exp"`
-	OvercapTien float64 `json:"overcap_tien"`
-	KnockSecs   float64 `json:"knock_secs"`
+	MaxCharges int `json:"max_charges"`
+	// MaxChargesTien: ở Tiên giới (Chân Tiên trở lên) giữ được 3 lượt thay vì 2 (spec v6.5
+	// §6.3). Rớt về Đại Thừa đang có 3 thì cắt còn 2.
+	MaxChargesTien int     `json:"max_charges_tien"`
+	LockSecs       float64 `json:"lock_secs"`
+	OvercapExp     float64 `json:"overcap_exp"`
+	OvercapTien    float64 `json:"overcap_tien"`
+	KnockSecs      float64 `json:"knock_secs"`
+
+	// ——— Phạm vi kỹ năng theo đơn vị U (spec v6.5 §6.3) ———
+	//
+	// `U = pickup_r × scale_NGƯỜI_DÙNG` — đúng bán kính vòng hút Linh khí của họ. Mọi chiều
+	// dài, bán kính và khoảng đẩy của kỹ năng là `ranges_u[...] × U`.
+	//
+	// Vì sao U chứ không phải tầm chém: vòng hút chỉ phụ thuộc cảnh giới (scale), không đổi
+	// khi mất hay thêm kiếm — nên kỹ năng ổn định và người chơi đoán được. Tầm chém thì co
+	// giãn theo số kiếm đang có, dùng nó thì cùng một kỹ năng lúc xa lúc gần.
+	//
+	// RangeUnit chỉ để GHI lại U lấy từ đâu; `config.Validate` từ chối giá trị lạ, nên
+	// không ai đổi được nó thành thứ code không hiểu mà vẫn chạy.
+	RangeUnit string `json:"range_unit"`
+	// PushSecs: mọi đòn đẩy của kỹ năng diễn ra trong ngần này giây (spec: 0.3s), trượt dọc
+	// vật cản, không xuyên. Khác `KnockSecs` (0.25) của đòn đẩy khi bể kiếm — hai thứ khác
+	// nhau nên để hai khoá, đừng gộp.
+	PushSecs float64            `json:"push_secs"`
+	RangesU  map[string]float64 `json:"ranges_u"`
 
 	// BanhBaoMaxShare: hồi ngay ngần này phần của số kiếm TỐI ĐA ở cảnh giới hiện tại
 	// (spec v5.5 §6.3). Bản v5.0 hồi theo số kiếm vừa bể trong 10s — đổi rồi, không còn
@@ -221,13 +242,10 @@ type Skills struct {
 	BanhBaoMaxShare float64 `json:"banh_bao_max_share"`
 
 	LoaConeDeg float64 `json:"loa_cone_deg"`
-	LoaReach   float64 `json:"loa_reach"`
-	LoaPush    float64 `json:"loa_push"`
 
-	RuNguRadius float64 `json:"ru_ngu_radius"`
-	RuNguSecs   float64 `json:"ru_ngu_secs"`
-	RuNguMove   float64 `json:"ru_ngu_move"`
-	RuNguSpin   float64 `json:"ru_ngu_spin"`
+	RuNguSecs float64 `json:"ru_ngu_secs"`
+	RuNguMove float64 `json:"ru_ngu_move"`
+	RuNguSpin float64 `json:"ru_ngu_spin"`
 
 	DanEmCount int     `json:"dan_em_count"`
 	DanEmSecs  float64 `json:"dan_em_secs"`
@@ -238,22 +256,17 @@ type Skills struct {
 	DanEmScale float64 `json:"dan_em_scale"`
 
 	TranChauConeDeg float64 `json:"tran_chau_cone_deg"`
-	TranChauReach   float64 `json:"tran_chau_reach"`
 	TranChauSecs    float64 `json:"tran_chau_secs"`
 	// TranChauNoPickup: người đang bị bịt mắt không nhặt được gì (spec v5.5 §6.3).
 	TranChauNoPickup  bool    `json:"tran_chau_no_pickup"`
 	TranChauBotVision float64 `json:"tran_chau_bot_vision"`
 
-	DashDist    float64 `json:"dash_dist"`
-	DashSecs    float64 `json:"dash_secs"`
-	SlickCount  int     `json:"slick_count"`
-	SlickSecs   float64 `json:"slick_secs"`
-	SlickRadius float64 `json:"slick_radius"`
-	SlipSecs    float64 `json:"slip_secs"`
+	DashSecs   float64 `json:"dash_secs"`
+	SlickCount int     `json:"slick_count"`
+	SlickSecs  float64 `json:"slick_secs"`
+	SlipSecs   float64 `json:"slip_secs"`
 
-	LuoiMiRange  float64 `json:"luoi_mi_range"`
-	LuoiMiRadius float64 `json:"luoi_mi_radius"`
-	LuoiMiSecs   float64 `json:"luoi_mi_secs"`
+	LuoiMiSecs float64 `json:"luoi_mi_secs"`
 
 	BraceSecs       float64 `json:"brace_secs"`
 	BraceDurability float64 `json:"brace_durability"`
@@ -265,9 +278,7 @@ type Skills struct {
 	// nhảy một phát là client thấy giật y như lỗi §8.2a vừa sửa xong.
 	GhostUnstickSecs float64 `json:"ghost_unstick_secs"`
 
-	ShellSecs       float64 `json:"shell_secs"`
-	ShellPushRadius float64 `json:"shell_push_radius"`
-	ShellPush       float64 `json:"shell_push"`
+	ShellSecs float64 `json:"shell_secs"`
 }
 
 type Zones struct {

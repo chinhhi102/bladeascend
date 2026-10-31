@@ -437,3 +437,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
   .screen.home .char-preview { margin-top: 4px; padding: 4px 8px; }
   .screen.home .btn { padding: 8px 14px; font-size: 15px; }
 }
+
+/* Chấm số lượt Bí Kíp trên nút kỹ năng (spec v6.5 §6.3 mục 4).
+   Ba chấm ở Tiên giới, hai ở phàm giới. Con số bên cạnh icon nói ĐANG CÓ mấy lượt; dãy chấm
+   nói thêm thứ con số không nói: còn chỗ trống hay đã đầy. */
+.skill-dots { position: absolute; left: 0; right: 0; bottom: 5px; display: flex; gap: 4px; justify-content: center; pointer-events: none; }
+.skill-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(0, 0, 0, .35); border: 1px solid rgba(255, 255, 255, .5); }
+.skill-dot.on { background: var(--gold); border-color: #fff; box-shadow: 0 0 5px var(--gold); }

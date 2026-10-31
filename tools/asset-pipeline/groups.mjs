@@ -172,6 +172,12 @@ export function plan(rel, ctx) {
       // Nền trang chủ phủ toàn màn hình: 1920 là đủ cho mọi màn hình chơi game .io.
       return { groups: ['home'], kind: 'image', maxPx: 1920, quality: 72 };
     }
+    // Khung giấy cuộn màn Tổng kết là ảnh **9 ô** (`border-image`): nó bị kéo giãn tới cỡ
+    // cả panel, không phải một icon nhỏ. Thu về 256 như icon thì viền mờ nhoè — và nếu chỗ
+    // nào còn cắt theo pixel thì hỏng hẳn khung (xem `ui/summary.ts`). Giữ 1024.
+    if (rel === 'ui/scroll.png') {
+      return { groups: ['home'], kind: 'image', maxPx: 1024, quality: 78 };
+    }
     // Huy hiệu, ruy băng, vương miện, icon kỹ năng: ô 24–128 px trên HUD.
     return { groups: ['home'], kind: 'image', maxPx: 256, quality: 80 };
   }

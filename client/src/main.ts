@@ -1,7 +1,7 @@
 import './ui/style.css';
 
 import { sound } from './audio/sound';
-import { type GameConfig, levelThresholds, loadConfig } from './config';
+import { type GameConfig, levelThresholds, loadConfig, realmOf, tienIndex } from './config';
 import { Input } from './input';
 import { Conn } from './net/conn';
 /** Chữ tên khu hiện bao lâu khi vào khu mới (spec §8.0). */
@@ -167,7 +167,23 @@ class App {
         this.hud.root.remove();
         this.screens.show(h('div', 'screen center', h('div', 'panel', canRecover ? STR.glLost : STR.glLostManual)));
       },
+      // Trình duyệt cấp lại ngữ cảnh (chuyện thường trên điện thoại khi quay lại app): về
+      // trang chủ thay vì nằm mãi ở màn hình "đang khôi phục". Không tự vào lại phòng —
+      // phòng cũ đã đá mình ra từ lâu, và tự nhảy vào một trận mới là đúng cái cảm giác
+      // "game tự chơi lại từ đầu" mà ta đang sửa.
+      () => {
+        this.telemetry?.event('gl_restored');
+        this.showHome();
+      },
     );
+    // Bắt đầu thu số liệu NGAY khi game khởi động xong, không đợi vào trận.
+    //
+    // Trước đây telemetry chỉ bật trong `onWelcome`, nên **máy nào không vào nổi trận thì
+    // không để lại dấu vết nào cả** — đúng tình huống đang phải tìm: nhật ký server ngày
+    // 31/10 cho thấy một người vào lại phòng 8 lần trong 40 giây, mà bảng `sessions` không
+    // có lấy một phiên điện thoại nào. Thiết bị hỏng nặng nhất lại là thiết bị im lặng nhất.
+    void this.startTelemetry();
+
     // Vừa tải lại vì mất đồ hoạ thì vào thẳng phòng, đừng bắt bấm lại "Vào chơi".
     const again = pendingRejoin();
     if (again) {
@@ -283,7 +299,11 @@ class App {
     // Nút kỹ năng đọc số lượt từ chính snapshot của mình (spec §6.3).
     const me = this.world.me();
     if (me) {
-      this.hud.setSkill(this.profile?.char ?? '', me.skc ?? 0);
+      // Trần lượt theo cảnh giới: Tiên giới 3, phàm giới 2 (spec v6.5 §6.3). Tính ở client
+      // chỉ để VẼ đủ số chấm — server vẫn là bên chặn khi nhặt thêm.
+      const sk = this.cfg.skills;
+      const maxC = tienIndex(this.cfg, realmOf(this.cfg, me.L)) >= 0 ? sk.max_charges_tien : sk.max_charges;
+      this.hud.setSkill(this.profile?.char ?? '', me.skc ?? 0, maxC);
     }
   }
 

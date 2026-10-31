@@ -22,7 +22,20 @@ export function summaryScreen(cfg: GameConfig, d: DeadMsg, myChar: string, act: 
   const scroll = assets.url('ui/scroll.png');
   if (scroll) {
     panel.classList.add('has-scroll');
-    panel.style.borderImage = `url(${scroll}) 205 199 213 160 fill stretch`;
+    // Cắt theo PHẦN TRĂM, không theo pixel — và đây là bài học đắt của ngày 31/10.
+    //
+    // Khung giấy cuộn là ảnh 9 ô: `border-image-slice` nói cắt ở đâu. Bản cũ ghi
+    // `205 199 213 160`, tức **pixel của ảnh gốc 1024×768**. Rồi `tools/asset-pipeline`
+    // thu `ui/scroll.png` về 256×192 theo luật chung của nhóm `ui` — và 160 + 199 = 359 đã
+    // rộng hơn cả tấm ảnh 256. Trình duyệt bỏ phép cắt, mỗi góc khung lĩnh trọn cả tấm
+    // cuộn giấy tí hon, giữa khung trống trơn (ảnh chụp màn Tổng kết).
+    //
+    // Phần trăm thì không phụ thuộc ảnh to hay nhỏ: 205/768 = 26.7% trên, 199/1024 = 19.4%
+    // phải, 213/768 = 27.7% dưới, 160/1024 = 15.6% trái. Đổi kích thước ảnh bao nhiêu lần
+    // nữa cũng không hỏng lại.
+    panel.style.borderImageSource = `url(${scroll})`;
+    panel.style.borderImageSlice = '26.7% 19.4% 27.7% 15.6% fill';
+    panel.style.borderImageRepeat = 'stretch';
   }
   // Hồn ma dùng CHÂN DUNG, không dùng `frames/death_07.png`.
   //

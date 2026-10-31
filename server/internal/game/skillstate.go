@@ -14,6 +14,11 @@ type slick struct {
 	at    Vec
 	until float64
 	owner uint32
+	// r: bán kính vũng, = `ranges_u.slick_width × U` của người ĐÃ TẠO ra nó, chốt ngay lúc
+	// lướt (spec v6.5 §6.3). Lưu vào vũng chứ không tính lại mỗi tick: vũng sống 4 giây và
+	// trong 4 giây đó Cô Ba có thể lên cảnh giới, rớt cảnh giới, hoặc rời phòng — tính lại
+	// theo người thì vũng tự phình ra hoặc biến mất mà không có lý do nào nhìn thấy được.
+	r float64
 }
 
 // spawnMinion thả một đàn em của Đại Ca Dép Tổ Ong (spec v5.4 §6.3).
@@ -63,7 +68,7 @@ func (g *Game) updateSkillState(dt float64) {
 			if p.Dead || p.ID == s.owner || p.InTransit(g.Time) {
 				continue
 			}
-			if p.Pos.Dist(s.at) <= g.Cfg.Skills.SlickRadius {
+			if p.Pos.Dist(s.at) <= s.r {
 				// Trượt VÀ choáng cùng lúc (spec v5.5): trượt theo quán tính, đồng thời
 				// mất quyền điều khiển trong đúng khoảng đó.
 				g.ApplyStatus(p, StSlip, g.Cfg.Skills.SlipSecs)
@@ -125,19 +130,28 @@ func (g *Game) updateUnstick(p *Player, dt float64) {
 	}
 }
 
-// minionTarget: đàn em lao vào đối thủ gần đại ca nhất (spec §6.3).
+// minionTarget: đàn em lao vào đối thủ gần đại ca nhất **trong tầm tìm 8 U** (spec v6.5 §6.3).
+//
+// Giới hạn tầm tìm là phần mới của v6.5. Bản trước lấy đối thủ gần nhất trong CẢ KHU, nên
+// hai đàn em có thể bỏ đại ca mà chạy nửa bản đồ đuổi một người chẳng liên quan — trong khi
+// kỹ năng chỉ sống 10 giây.
 func (g *Game) minionTarget(m *Player) *Player {
 	boss, ok := g.Players[m.MinionOf]
 	if !ok {
 		return nil
 	}
+	seek := g.skillRange(boss, "dan_em_seek")
 	var best *Player
 	bd := 0.0
 	for _, o := range g.PlayerList() {
 		if o.ID == boss.ID || o.ID == m.ID || o.Dead || o.IsMinion && o.MinionOf == boss.ID {
 			continue
 		}
-		if d := o.Pos.Dist(boss.Pos); best == nil || d < bd {
+		d := o.Pos.Dist(boss.Pos)
+		if d > seek {
+			continue
+		}
+		if best == nil || d < bd {
 			best, bd = o, d
 		}
 	}
@@ -145,16 +159,24 @@ func (g *Game) minionTarget(m *Player) *Player {
 }
 
 // moveMinions lái đàn em: bám theo mục tiêu của đại ca, không thì bám đại ca.
+//
+// **Vòng bám 3 U quanh đại ca là ràng buộc mạnh hơn mục tiêu** (spec v6.5 §6.3): ra ngoài
+// vòng đó thì quay về, dù đang đuổi ai. Không có luật này thì đàn em bị kéo đi theo mục
+// tiêu đang chạy và đại ca mất sạch lớp bảo vệ mà mình vừa gọi ra.
 func (g *Game) moveMinions(dt float64) {
 	for _, m := range g.PlayerList() {
 		if !m.IsMinion || m.Dead {
 			continue
 		}
+		boss, hasBoss := g.Players[m.MinionOf]
 		goal := g.minionTarget(m)
 		at := m.Pos
-		if goal != nil {
+		switch {
+		case hasBoss && m.Pos.Dist(boss.Pos) > g.skillRange(boss, "dan_em_follow"):
+			at = boss.Pos
+		case goal != nil:
 			at = goal.Pos
-		} else if boss, ok := g.Players[m.MinionOf]; ok {
+		case hasBoss:
 			at = boss.Pos
 		}
 		if d := at.Sub(m.Pos); d.Len() > 40 {

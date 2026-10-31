@@ -39,6 +39,8 @@ export interface GameConfig {
   player: {
     body_r: number;
     move_base: number;
+    /** pickup_r: bán kính hút Linh khí — cũng là đơn vị **U** của phạm vi kỹ năng (§6.3). */
+    pickup_r: number;
     camera_view_h: number;
     camera_exp: number;
     camera_reach_mult: number;
@@ -54,7 +56,23 @@ export interface GameConfig {
    * trí**: dự đoán sai tốc độ là bị server kéo về mỗi tick (§8.2a). Phần còn lại của bảng
    * kỹ năng là việc của server.
    */
-  skills: { ru_ngu_move: number; ghost_speed: number; tran_chau_secs: number };
+  skills: {
+    ru_ngu_move: number;
+    ghost_speed: number;
+    tran_chau_secs: number;
+    /** Trần lượt Bí Kíp: thường 2, Tiên giới 3 (spec v6.5 §6.3). Nút kỹ năng vẽ theo đây. */
+    max_charges: number;
+    max_charges_tien: number;
+    /** Góc nón của hai kỹ năng hình nón — chỉ báo phạm vi phải vẽ đúng góc server xét. */
+    loa_cone_deg: number;
+    tran_chau_cone_deg: number;
+    /**
+     * ranges_u: hệ số phạm vi theo U (spec v6.5 §6.3). Client vẽ chỉ báo bằng **đúng bộ số
+     * server dùng để xét trúng** — lấy từ đây chứ không gõ lại, nếu không thì vòng tròn
+     * người chơi thấy và vùng thật sự ăn đòn là hai thứ khác nhau.
+     */
+    ranges_u: Record<string, number>;
+  };
   zones: { mud_mult: number; snow_mult: number; wind_with: number; wind_against: number; wind_with_max_deg: number; wind_against_min_deg: number };
   gates: { radius: number };
   items: { item_r: number; chest_warn_secs: number };
@@ -80,6 +98,23 @@ export async function loadConfig(): Promise<GameConfig> {
     throw new Error(`config: HTTP ${res.status}`);
   }
   return (await res.json()) as GameConfig;
+}
+
+/**
+ * skillU: đơn vị phạm vi kỹ năng của một người (GAME_SPEC §6.3) — **khớp từng chữ với
+ * `Game.SkillU` bên server**: `pickup_r × scale`.
+ *
+ * Client chỉ dùng nó để VẼ chỉ báo (nón, vòng tròn). Server mới là bên xét trúng. Nhưng hai
+ * bên phải ra cùng một con số, nếu không người chơi ngắm theo một vòng tròn rồi ăn đòn ở
+ * ngoài vòng đó — kiểu sai không ai chứng minh được bằng mắt, chỉ thấy "game ăn gian".
+ */
+export function skillU(cfg: GameConfig, scale: number): number {
+  return cfg.player.pickup_r * scale;
+}
+
+/** skillRange: `ranges_u[key] × U`. Thiếu khoá thì 0 — không vẽ gì còn hơn vẽ sai vùng. */
+export function skillRange(cfg: GameConfig, scale: number, key: string): number {
+  return (cfg.skills.ranges_u?.[key] ?? 0) * skillU(cfg, scale);
 }
 
 export function realmOf(cfg: GameConfig, level: number): number {

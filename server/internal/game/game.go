@@ -232,6 +232,10 @@ func (g *Game) refreshDerived(p *Player) {
 	// Spec v4.3 bỏ Trường Kiếm: tầm chém chỉ tăng theo số vòng và cảnh giới (§4.1a).
 	p.Geom = ComputeRingGeom(g.Cfg.Sword, g.Cfg.Player.BodyR, p.Scale, p.Ring.Count)
 	g.refreshView(p)
+	// Trần lượt Bí Kíp tụt khi rớt khỏi Tiên giới (spec v6.5 §6.3). Đặt ở ĐÂY vì đây là
+	// chỗ duy nhất mọi đường đổi cảnh giới đều đi qua — nhặt EXP, bị chém, Thiêu Đốt,
+	// `ForceState` của phím test. Cắt ở từng chỗ gọi thì chắc chắn sót một đường.
+	g.clampSkillCharges(p)
 }
 
 // refreshView tính sẵn nửa khung nhìn. Nó chỉ phụ thuộc Scale và tầm kiếm — hai thứ vừa

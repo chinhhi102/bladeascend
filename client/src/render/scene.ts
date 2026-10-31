@@ -1,6 +1,7 @@
 import { Application, Container } from 'pixi.js';
 import { AnimViewer } from './animviewer';
 import { assets } from './assets';
+import { SkillFx } from './skillfx';
 import { FADE_OUT_SECS, ViewPool } from './viewpool';
 import { BobaOverlay } from './boba';
 
@@ -82,6 +83,8 @@ export class GameScene {
   private readonly auras = new Map<number, TienAura>();
   private readonly rings = new Container();
   private readonly vfx = new Vfx();
+  /** skillFx: chỉ báo phạm vi kỹ năng (nón / vòng tròn) — spec §6.3, CHANGES_v6_5 mục 3. */
+  private readonly skillFx: SkillFx;
   private mapView: MapView | null = null;
   private readonly players = new Map<number, PlayerSprite>();
   private readonly monsters = new Map<number, MonsterSprite>();
@@ -109,7 +112,9 @@ export class GameScene {
   /** Cảnh giới Tiên của từng người ở khung hình trước — RealmDrop cần biết họ VỪA là gì. */
   private lastTien = new Map<number, number>();
 
-  constructor(private readonly cfg: GameConfig) {}
+  constructor(private readonly cfg: GameConfig) {
+    this.skillFx = new SkillFx(cfg);
+  }
 
   /** viewSize is the world-space rectangle currently on screen (used by the minimap, §12.1). */
   viewSize(): { w: number; h: number } {
@@ -155,11 +160,12 @@ export class GameScene {
     // Viên EXP luôn nằm dưới mọi thứ khác nên xếp ngay trên mặt đất, không cần y-sort.
     // Lớp phát sáng nằm dưới nhân vật (hào quang ở sau lưng) nhưng trên vòng kiếm, để
     // hàng trăm thanh kiếm không che mất hào quang.
-    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.glow.root, this.entities, this.mapView.over, this.ambient.root, this.vfx.layer);
+    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.glow.root, this.entities, this.mapView.over, this.ambient.root, this.skillFx.layer, this.vfx.layer);
     this.ambient.setBiome(w.map.id);
   }
 
   clear(): void {
+    this.skillFx.clear();
     this.camera.removeChildren();
     // Pool phải dọn theo: view trong pool thuộc về khu CŨ, giữ lại là giữ texture của một
     // bản đồ không còn dùng — đúng kiểu rò rỉ bộ nhớ mang tên "tối ưu".
@@ -233,6 +239,7 @@ export class GameScene {
     this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha,
       me ? { x: me.x, y: me.y, w: vs.w, h: vs.h } : undefined);
     this.vfx.update(now);
+    this.skillFx.update(now);
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
     this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;
     drawCalls.frames += 1;
@@ -797,6 +804,9 @@ export class GameScene {
           this.players.get(e.a ?? 0)?.showBubble(STR.skillLines[e.s], now);
         }
         break;
+      case 'SkillEffect':
+        this.onSkillEffect(e, now);
+        break;
       case 'RealmDrop':
         {
           const was = this.lastTien.get(e.a ?? 0) ?? -1;
@@ -812,6 +822,82 @@ export class GameScene {
         this.handleWorldEvent(e, now, mine, size);
     }
   }
+
+  /**
+   * onSkillEffect vẽ CHỈ BÁO PHẠM VI của kỹ năng (spec §6.3, CHANGES_v6_5 mục 3).
+   *
+   * Vùng vẽ ra phải trùng vùng server xét trúng, nên bán kính lấy từ `skills.ranges_u` ×
+   * U của **người dùng** — U suy từ `scale` của chính người đó trong snapshot. Không có
+   * người dùng trong khung nhìn thì bỏ qua: không biết scale thì thà không vẽ còn hơn vẽ
+   * một vòng tròn sai cỡ.
+   */
+  private onSkillEffect(e: GameEvent, now: number): void {
+    const sc = this.casterScale(e.a ?? 0);
+    if (sc <= 0) {
+      return;
+    }
+    const sk = this.cfg.skills;
+    switch (e.s) {
+      case 'loa': {
+        // Server gửi một event cho MỖI nạn nhân; nón thì chỉ cần vẽ một lần.
+        const key = `loa:${e.a}:${Math.round(now * 1000)}`;
+        if (this.lastCone !== key) {
+          this.lastCone = key;
+          const at = this.casterAt(e.a ?? 0);
+          if (at) {
+            this.skillFx.cone(at.x, at.y, at.f, sc, 'loa_cone', sk.loa_cone_deg, 0xffd23f, now);
+          }
+        }
+        break;
+      }
+      case 'tran_chau':
+        this.skillFx.cone(e.x, e.y, e.f ?? 0, sc, 'tran_chau_cone', sk.tran_chau_cone_deg, 0x6b4a2f, now);
+        break;
+      case 'ru_ngu': {
+        const key = `ru:${e.a}:${Math.round(now * 1000)}`;
+        if (this.lastCone !== key) {
+          this.lastCone = key;
+          const at = this.casterAt(e.a ?? 0);
+          if (at) {
+            this.skillFx.circle(at.x, at.y, sc, 'ru_ngu_radius', 0x8ea9ff, now);
+          }
+        }
+        break;
+      }
+      case 'luoi_mi':
+        // `e.x/e.y` là TÂM LƯỚI (server gửi điểm ném), không phải chỗ người ném đứng.
+        this.skillFx.circle(e.x, e.y, sc, 'luoi_mi_radius', 0xf2c14e, now);
+        break;
+      case 'rut_co_burst':
+        this.skillFx.circle(e.x, e.y, sc, 'shell_wave', 0x7ad7b0, now);
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** casterScale lấy `scale` của người dùng kỹ năng từ snapshot; 0 nếu không thấy họ. */
+  private casterScale(id: number): number {
+    return this.casterAt(id)?.sc ?? 0;
+  }
+
+  /**
+   * casterAt lấy vị trí + hướng mặt + scale của người dùng kỹ năng, từ SNAPSHOT.
+   *
+   * Lấy từ snapshot chứ không hỏi `PlayerSprite`: sprite chỉ giữ trạng thái vẽ (lật
+   * trái/phải), không giữ góc mặt thật — mà nón kỹ năng cần đúng góc server đã xét.
+   */
+  private casterAt(id: number): { x: number; y: number; f: number; sc: number } | null {
+    for (const fr of this.lastFrames) {
+      if (fr.view.id === id) {
+        return { x: fr.x, y: fr.y, f: fr.s.f, sc: fr.s.sc };
+      }
+    }
+    return null;
+  }
+
+  /** lastCone gộp nhiều event cùng một lần cast (server gửi mỗi nạn nhân một event). */
+  private lastCone = '';
 
   private onBreakthrough(e: GameEvent, size: number, mine: boolean, now: number): void {
     if (e.s === 'tien') {

@@ -138,7 +138,8 @@ func TestLuoiMiRootsButRingKeepsSpinning(t *testing.T) {
 	g := skillGame(t)
 	a := put(g, "su_phu_mi", Vec{X: 3000, Y: 3000}, 10, 20)
 	a.Facing = 0
-	b := put(g, "cu_rua", Vec{X: 3000 + g.Cfg.Skills.LuoiMiRange, Y: 3000}, 10, 20)
+	// Đặt nạn nhân đúng TÂM lưới: tầm ném giờ là 4,5 U của người ném (spec v6.5 §6.3).
+	b := put(g, "cu_rua", Vec{X: 3000 + g.skillRange(a, "luoi_mi_range"), Y: 3000}, 10, 20)
 	spin := g.Omega(b)
 
 	g.AddSkillCharge(a)

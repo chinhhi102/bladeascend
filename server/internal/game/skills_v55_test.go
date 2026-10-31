@@ -146,8 +146,6 @@ func TestSkillDurationsMatchSpec(t *testing.T) {
 		{"Phun Trân Châu bịt mắt", sc.TranChauSecs, 5},
 		{"Giao Hỏa Tốc", sc.GhostSecs, 5},
 		{"Giao Hỏa Tốc tốc độ", sc.GhostSpeed, 3},
-		{"Loa Phường đẩy", sc.LoaPush, 500},
-		{"Ru Ngủ bán kính", sc.RuNguRadius, 500},
 	} {
 		if c.got != c.want {
 			t.Errorf("%s = %g, spec nói %g", c.name, c.got, c.want)
@@ -156,4 +154,6 @@ func TestSkillDurationsMatchSpec(t *testing.T) {
 	if sc.DanEmCount != 2 {
 		t.Errorf("số đàn em = %d, spec nói 2", sc.DanEmCount)
 	}
+	// Phạm vi KHÔNG còn là số tuyệt đối từ v6.5 — chúng là hệ số × U của người dùng, và
+	// `TestSkillRangesMatchSpec` khoá từng hệ số một.
 }

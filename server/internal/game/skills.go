@@ -46,16 +46,39 @@ var Skills = map[string]*Skill{
 // SkillOf trả về kỹ năng của nhân vật này, nil nếu nhân vật chưa có kỹ năng.
 func SkillOf(char string) *Skill { return Skills[char] }
 
+// MaxSkillCharges là trần số lượt Bí Kíp của người này (spec v6.5 §6.3).
+//
+// Người phàm giữ 2; **Tiên giới (Chân Tiên trở lên) giữ 3**.
+func (g *Game) MaxSkillCharges(p *Player) int {
+	if g.TienRealmOf(p) >= 0 && g.Cfg.Skills.MaxChargesTien > 0 {
+		return g.Cfg.Skills.MaxChargesTien
+	}
+	return g.Cfg.Skills.MaxCharges
+}
+
 // AddSkillCharge cộng một lượt dùng kỹ năng khi nhặt Bí Kíp (spec §6.3).
 //
-// Đã đủ 2 lượt mà nhặt thêm thì đổi sang tu vi, không bỏ phí: +20 Linh khí, hoặc +2 Tiên khí
+// Đã đủ trần mà nhặt thêm thì đổi sang tu vi, không bỏ phí: +20 Linh khí, hoặc +2 Tiên khí
 // với người đã lên Tiên giới. Trả về false khi đã đầy (người gọi lo phần quy đổi).
 func (g *Game) AddSkillCharge(p *Player) bool {
-	if p.SkillCharges >= g.Cfg.Skills.MaxCharges {
+	if p.SkillCharges >= g.MaxSkillCharges(p) {
 		return false
 	}
 	p.SkillCharges++
 	return true
+}
+
+// clampSkillCharges cắt lượt thừa khi trần tụt xuống — tức khi rớt từ Tiên giới về Đại Thừa
+// đang cầm 3 lượt (spec v6.5 §6.3: "còn 2, lượt thứ 3 mất, hiệu ứng cuộn sách tan").
+//
+// Gọi ở MỌI chỗ cảnh giới có thể tụt, không chỉ lúc bị chém: Thiêu Đốt cũng kéo Tiên khí
+// xuống, và cắt sót một đường là người chơi giữ được 3 lượt ở Đại Thừa mà không ai biết tại sao.
+func (g *Game) clampSkillCharges(p *Player) {
+	if maxC := g.MaxSkillCharges(p); p.SkillCharges > maxC {
+		p.SkillCharges = maxC
+		g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "charge_lost", N: maxC,
+			X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+	}
 }
 
 // CanCastSkill: đủ điều kiện bấm kỹ năng chưa (spec §6.3).
@@ -132,28 +155,28 @@ func castBanhBao(g *Game, p *Player, _ Vec) {
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "banh_bao", N: back, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 
-// Loa Phường — nón 60° dài 500: đẩy lùi 300 và làm vòng kiếm địch đổi chiều.
+// Loa Phường — nón 60° dài 6 U: đẩy lùi 6 U và làm vòng kiếm địch đổi chiều (§6.3).
 func castLoaPhuong(g *Game, p *Player, dir Vec) {
 	sc := g.Cfg.Skills
-	for _, o := range g.targetsNear(p, sc.LoaReach) {
-		if !inCone(p, o.Pos, dir, sc.LoaConeDeg, sc.LoaReach) {
+	reach := g.skillRange(p, "loa_cone")
+	push := g.skillRange(p, "loa_push")
+	for _, o := range g.targetsNear(p, reach) {
+		if !inCone(p, o.Pos, dir, sc.LoaConeDeg, reach) {
 			continue
 		}
 		if o.HasStatus(StBrace, g.Time) || o.HasStatus(StShell, g.Time) {
 			continue // đang gồng hoặc rụt mai thì không đẩy được
 		}
-		away := o.Pos.Sub(p.Pos).Norm()
-		o.KnockVel = away.Mul(sc.LoaPush / math.Max(sc.KnockSecs, 1e-6))
-		o.KnockUntil = g.Time + sc.KnockSecs
+		g.pushAway(p, o, push)
 		o.Ring.Dir = -o.Ring.Dir
 		g.emit(Event{Kind: "SkillEffect", A: p.ID, B: o.ID, S: "loa", X: float32(o.Pos.X), Y: float32(o.Pos.Y)})
 	}
 }
 
-// Ru Ngủ — địch trong bán kính 350 chậm 40% và vòng kiếm chậm 50% trong 3 giây.
+// Ru Ngủ — địch trong bán kính 5 U chậm 40% và vòng kiếm chậm 50% trong 3 giây (§6.3).
 func castRuNgu(g *Game, p *Player, _ Vec) {
 	sc := g.Cfg.Skills
-	for _, o := range g.targetsNear(p, sc.RuNguRadius) {
+	for _, o := range g.targetsNear(p, g.skillRange(p, "ru_ngu_radius")) {
 		g.ApplyStatus(o, StSlow, sc.RuNguSecs)
 		g.emit(Event{Kind: "SkillEffect", A: p.ID, B: o.ID, S: "ru_ngu", X: float32(o.Pos.X), Y: float32(o.Pos.Y)})
 	}
@@ -173,40 +196,44 @@ func castGoiDanEm(g *Game, p *Player, _ Vec) {
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "dan_em", N: sc.DanEmCount, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 
-// Phun Trân Châu — nón 45° dài 700, người trúng bị bịt mắt 3,5 giây.
+// Phun Trân Châu — nón 45° dài 8 U, người trúng bị bịt mắt 5 giây (§6.3).
 func castTranChau(g *Game, p *Player, dir Vec) {
 	sc := g.Cfg.Skills
-	for _, o := range g.targetsNear(p, sc.TranChauReach) {
-		if inCone(p, o.Pos, dir, sc.TranChauConeDeg, sc.TranChauReach) {
+	reach := g.skillRange(p, "tran_chau_cone")
+	for _, o := range g.targetsNear(p, reach) {
+		if inCone(p, o.Pos, dir, sc.TranChauConeDeg, reach) {
 			g.ApplyStatus(o, StBlind, sc.TranChauSecs)
 		}
 	}
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "tran_chau", X: float32(p.Pos.X), Y: float32(p.Pos.Y), F: float32(p.Facing)})
 }
 
-// Gánh Lướt — lướt 600 theo hướng đi trong 0,3 giây, rơi trái cây tạo vệt trơn 4 giây.
+// Gánh Lướt — lướt 7 U theo hướng đi trong 0,3 giây, rơi trái cây tạo vệt trơn 4 giây (§6.3).
 func castGanhLuot(g *Game, p *Player, dir Vec) {
 	sc := g.Cfg.Skills
-	p.KnockVel = dir.Mul(sc.DashDist * p.Scale / math.Max(sc.DashSecs, 1e-6))
+	dash := g.skillRange(p, "dash")
+	slickR := g.skillRange(p, "slick_width")
+	p.KnockVel = dir.Mul(dash / math.Max(sc.DashSecs, 1e-6))
 	p.KnockUntil = g.Time + sc.DashSecs
 	g.ApplyStatus(p, StDash, sc.DashSecs)
 	// Vệt trơn: một dãy vũng nhỏ dọc đường lướt.
 	for i := 1; i <= sc.SlickCount; i++ {
-		at := p.Pos.Add(dir.Mul(sc.DashDist * p.Scale * float64(i) / float64(sc.SlickCount)))
-		g.slicks = append(g.slicks, slick{at: at, until: g.Time + sc.SlickSecs, owner: p.ID})
+		at := p.Pos.Add(dir.Mul(dash * float64(i) / float64(sc.SlickCount)))
+		g.slicks = append(g.slicks, slick{at: at, until: g.Time + sc.SlickSecs, owner: p.ID, r: slickR})
 	}
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "ganh_luot", X: float32(p.Pos.X), Y: float32(p.Pos.Y), F: float32(p.Facing)})
 }
 
-// Lưới Mì — ném lưới tới điểm cách 400 phía trước, bán kính 250, trói 1,5 giây.
+// Lưới Mì — ném lưới tới điểm cách 4,5 U phía trước, bán kính 3 U, trói 5 giây (§6.3).
 func castLuoiMi(g *Game, p *Player, dir Vec) {
 	sc := g.Cfg.Skills
-	at := p.Pos.Add(dir.Mul(sc.LuoiMiRange * p.Scale))
+	at := p.Pos.Add(dir.Mul(g.skillRange(p, "luoi_mi_range")))
+	radius := g.skillRange(p, "luoi_mi_radius")
 	for _, o := range g.PlayerList() {
 		if o.ID == p.ID || o.Dead || o.InTransit(g.Time) {
 			continue
 		}
-		if o.Pos.Dist(at) <= sc.LuoiMiRadius*p.Scale {
+		if o.Pos.Dist(at) <= radius {
 			g.ApplyStatus(o, StRoot, sc.LuoiMiSecs)
 		}
 	}
@@ -245,16 +272,15 @@ func castRutCo(g *Game, p *Player, _ Vec) {
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "rut_co", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 
-// shellBurst là sóng đẩy khi Cụ Rùa ra khỏi mai, gọi lúc StShell vừa hết hạn.
+// shellBurst là sóng đẩy khi Cụ Rùa ra khỏi mai (sóng 2 U, đẩy 3 U — §6.3), gọi lúc
+// StShell vừa hết hạn.
 func (g *Game) shellBurst(p *Player) {
-	sc := g.Cfg.Skills
-	for _, o := range g.targetsNear(p, sc.ShellPushRadius) {
+	push := g.skillRange(p, "shell_push")
+	for _, o := range g.targetsNear(p, g.skillRange(p, "shell_wave")) {
 		if o.HasStatus(StBrace, g.Time) {
 			continue
 		}
-		away := o.Pos.Sub(p.Pos).Norm()
-		o.KnockVel = away.Mul(sc.ShellPush / math.Max(sc.KnockSecs, 1e-6))
-		o.KnockUntil = g.Time + sc.KnockSecs
+		g.pushAway(p, o, push)
 	}
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "rut_co_burst", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }

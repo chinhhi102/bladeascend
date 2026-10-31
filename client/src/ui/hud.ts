@@ -150,6 +150,8 @@ export class Hud {
    */
   readonly skillBtn = h('button', 'skill-btn');
   private readonly skillCount = h('span', 'skill-count', '0');
+  /** skillDots: dãy chấm số lượt Bí Kíp — 2 chấm phàm giới, 3 chấm Tiên giới (§6.3). */
+  private readonly skillDots = h('div', 'skill-dots');
   private readonly skillIcon = h('span', 'skill-icon', '✦');
   private readonly guide = h('div', 'guide');
   private readonly isTouch: boolean;
@@ -404,14 +406,25 @@ export class Hud {
   /**
    * setSkill cập nhật nút kỹ năng: icon theo nhân vật, số lượt, và xám khi hết lượt.
    */
-  setSkill(char: string, charges: number): void {
+  setSkill(char: string, charges: number, maxCharges = this.cfg.skills.max_charges): void {
     this.skillIcon.textContent = SKILL_ICONS[char] ?? '✦';
     this.skillCount.textContent = String(charges);
     this.skillBtn.classList.toggle('empty', charges <= 0);
     this.skillBtn.title = STR.skillNames[char] ?? '';
     if (!this.skillBtn.firstChild) {
-      this.skillBtn.append(this.skillIcon, this.skillCount);
+      this.skillBtn.append(this.skillIcon, this.skillCount, this.skillDots);
     }
+    // Chấm lượt: **3 chấm ở Tiên giới**, 2 ở phàm giới (spec v6.5 §6.3 mục 4).
+    //
+    // Con số bên cạnh icon đã nói số lượt rồi, nhưng chấm nói thêm một thứ con số không
+    // nói: còn CHỖ TRỐNG hay đã đầy. Người Tiên giới cầm 2 lượt mà không thấy ô thứ ba thì
+    // tưởng đã đầy và bỏ qua Bí Kíp đang nằm dưới chân.
+    if (this.skillDots.childElementCount !== maxCharges) {
+      this.skillDots.replaceChildren(...Array.from({ length: maxCharges }, () => h('i', 'skill-dot')));
+    }
+    this.skillDots.childNodes.forEach((n, i) => {
+      (n as HTMLElement).classList.toggle('on', i < charges);
+    });
   }
 
   /** setZone đổi tên khu cạnh minimap; chuỗi rỗng thì ẩn hẳn (phòng 1 khu như trước). */

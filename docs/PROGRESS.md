@@ -1109,3 +1109,89 @@ không có gì để cắt sai.
 Sinh lại bản đồ: giờ mỗi khu có bộ trang trí đúng chất của nó — Linh Sơn Cốc đá + thông,
 Trúc Lâm tre + bụi, Phàm Trấn cả bộ phố + giếng + băng-rôn, Băng Nguyệt Hồ thông + đá + đèn
 đá. Tổng số vật giữ nguyên (81/107/131/139/90) vì mật độ là **tổng của khu**.
+
+## Phiên 31/10 (tiếp 2) — v6.5 kỹ năng theo U, và ba lỗi hình ảnh/di động
+
+### CHANGES_v6_5 ✅ — phạm vi kỹ năng theo U
+
+`U = player.pickup_r × scale_người_dùng` — đúng bán kính vòng hút Linh khí của họ (Luyện Khí
+1 = 90 · Đại Thừa 10 = 450 · Đạo Tổ = 540). **Một hàm dùng chung hai phía**: `Game.SkillU`
+(server) và `skillU()` (client, `config.ts`), cùng công thức, cùng bảng hệ số.
+
+- Mọi hệ số vào `config/game.json → skills.ranges_u`; **mười khoá phạm vi tuyệt đối cũ bị
+  xoá khỏi config và khỏi struct Go**. Xoá thay vì để lại là có chủ ý: trình biên dịch chỉ
+  ra đủ 10 chỗ phải sửa, không sót chỗ nào.
+- Đẩy lùi tính theo U của **người dùng**, trong `skills.push_secs` (0,3s) — tách hẳn khỏi
+  `knock_secs` (0,25s) của đòn bể kiếm. Dùng chung một khoá thì chỉnh cái này lệch cái kia.
+- Đàn Em có **tầm tìm 8 U** và **vòng bám 3 U** quanh đại ca. Bản trước đàn em lấy đối thủ
+  gần nhất trong CẢ KHU, nên hai đứa bỏ đại ca chạy nửa bản đồ trong khi kỹ năng chỉ sống
+  10 giây. Vòng bám mạnh hơn mục tiêu: ra ngoài 3 U thì quay về, dù đang đuổi ai.
+- Vệt trơn của Cô Ba lưu bán kính **vào từng vũng** lúc tạo. Vũng sống 4 giây, trong 4 giây
+  đó Cô Ba có thể lên cảnh giới, rớt cảnh giới hoặc rời phòng — tính lại theo người thì vũng
+  tự phình ra hay biến mất mà không có lý do nhìn thấy được.
+- **Bí Kíp: Tiên giới giữ 3 lượt**, phàm giới 2. Cắt lượt thừa đặt trong `refreshDerived` —
+  chỗ duy nhất MỌI đường đổi cảnh giới đều đi qua (nhặt EXP, bị chém, Thiêu Đốt, phím test).
+- **Chỉ báo phạm vi** (`render/skillfx.ts`): nón cho Loa Phường / Phun Trân Châu, vòng tròn
+  cho Ru Ngủ / Lưới Mì / sóng Rụt Cổ, vẽ bằng **đúng bộ số server xét trúng**. Trước đây
+  client không xử lý `SkillEffect` một dòng nào — không có chỉ báo nào cả. Giờ phạm vi co
+  giãn theo cảnh giới (540 ở Luyện Khí → 3 240 ở Đạo Tổ) nên không vẽ ra thì người chơi
+  không có cách nào biết mình đứng trong hay ngoài tầm.
+- Nút kỹ năng hiện **dãy chấm lượt**: 3 chấm ở Tiên giới, 2 ở phàm giới.
+
+**Sáu test mới** (`skillrange_test.go`), trong đó hai cái canh loại lỗi không nhìn thấy được:
+- `TestPushDistanceUsesCasterU` — lấy nhầm `o.Scale` (người bị đẩy) thay vì `p.Scale` vẫn
+  chạy, vẫn đẩy, chỉ là người to bị đẩy xa hơn. Trong game không ai phân biệt nổi.
+- `TestNoHardcodedSkillRanges` — đọc chính `skills.go` / `skillstate.go` / `skillrange.go`,
+  cấm mọi số ≥ 3 chữ số ngoài chú thích. Một con số 500 sót lại không làm test nào khác đỏ;
+  nó chỉ làm kỹ năng của Đạo Tổ ngắn bằng của Luyện Khí.
+
+### Ba lỗi hình ảnh — cả ba đều do tôi gây ra trong hai ngày qua
+
+**1. Nút "Bảng xếp hạng" mất chữ** — `:root { color-scheme: dark }` tôi thêm cho màn hình
+tải làm thẻ `<button>` lấy màu chữ TRẮNG từ bảng mặc định chế độ tối, mà mọi nút đều nền
+trắng. Thu `color-scheme` về `#boot`, **và** đặt `color: var(--ink)` tường minh cho `.btn` /
+`.tab` / `.char-card` — lớp sau mới là lớp chống tái phát.
+
+**2. Trang chủ cắt mất ô nhập tên trên cửa sổ thấp** — nội dung 630 px trong panel 529 px,
+phần thừa trôi vào thanh cuộn bên trong panel. Thêm hai mức `max-height` 720/560 px. Đo lại
+650×561 · 650×480 · 1280×800 · 390×640: vừa khít. Còn 844×390 (điện thoại ngang) thừa 78 px.
+
+**3. Khung giấy cuộn màn Tổng kết vỡ thành bốn mẩu ở bốn góc** — và đây là lỗi dây chuyền
+đáng ghi nhất. `border-image-slice: 205 199 213 160` là **pixel của ảnh gốc 1024×768**. Hôm
+qua `tools/asset-pipeline` thu `ui/scroll.png` về 256×192 theo luật chung của nhóm `ui` — và
+160 + 199 = 359 đã rộng hơn cả tấm ảnh. Trình duyệt bỏ phép cắt, mỗi góc lĩnh trọn tấm cuộn
+giấy tí hon.
+
+Sửa hai lớp: **cắt theo phần trăm** (26.7% / 19.4% / 27.7% / 15.6%) nên đổi cỡ ảnh bao nhiêu
+lần nữa cũng không hỏng lại, **và** pipeline giữ `ui/scroll.png` ở 1024 cho nét. Bài học rộng
+hơn: *thu nhỏ ảnh làm hỏng mọi thứ đo bằng pixel của ảnh đó* — 9-slice, atlas, pivot. Chỗ nào
+còn con số pixel trỏ vào một tấm ảnh thì chỗ đó là một quả mìn chờ pipeline giẫm phải.
+
+### "Trên điện thoại lúc nào cũng chơi lại từ đầu" — tìm được cơ chế, chưa xác nhận trên máy thật
+
+Bằng chứng có thật: nhật ký server 31/10 cho thấy một người **vào lại phòng 8 lần trong 40
+giây** (`join "Thái đâu" (shipper)` lúc 09:23:32 · :38 · :43 · :47 · :52 · :55 · 09:24:02 ·
+:05). Đồng thời bảng `sessions` của telemetry **không có lấy một phiên điện thoại nào** —
+76 phiên đều là máy bàn Linux.
+
+Cơ chế khớp với cả hai điều trên: `glrecover` hẹn `location.reload()` **1,2 giây sau khi
+mất ngữ cảnh WebGL**. Trên điện thoại, chuyển sang app khác / khoá màn hình / kéo thông báo
+là đủ để trình duyệt thu hồi ngữ cảnh. Lệnh tải lại chạy **trong lúc người chơi đang ở app
+khác**; lúc quay lại thì trang đã tải lại và `pendingRejoin` tự nhảy vào một phòng mới. Nhìn
+từ phía người chơi: "bật game lên là nó chơi lại từ đầu". Chốt chống lặp 30 giây lại nằm
+trong `sessionStorage` — chế độ ẩn danh chặn ghi là mất chốt, và vòng lặp chạy vô tận.
+
+Đã sửa ba chỗ:
+1. **Không bao giờ tải lại khi tab đang ẩn.** Chờ tới lúc người chơi quay lại rồi mới quyết.
+2. Bắt `webglcontextrestored` — trình duyệt cấp lại ngữ cảnh (chuyện thường trên điện thoại)
+   thì **huỷ lệnh tải lại**, về trang chủ, không tự nhảy vào phòng mới.
+3. Chốt chống lặp có bản dự phòng trong bộ nhớ, không phụ thuộc `sessionStorage`.
+
+Và để lần sau có bằng chứng thay vì suy luận: **telemetry bắt đầu thu từ lúc vào trang chủ**,
+không đợi vào trận nữa. Trước đây nó chỉ bật trong `onWelcome`, nên máy nào không vào nổi
+trận thì không để lại dấu vết nào — thiết bị hỏng nặng nhất lại là thiết bị im lặng nhất.
+
+**Chưa khẳng định đã hết**: tôi không có máy thật để thử, và bản giả lập Pixel 7 trong
+Playwright chạy tốt (44,5 fps, 0 lỗi). Nhờ anh thử lại trên đúng cái điện thoại đó rồi báo:
+máy gì, trình duyệt gì, và nó chơi lại từ đầu **trước hay sau** khi vào được trận. Lần này
+telemetry sẽ ghi lại phiên đó kể cả khi game không vào nổi.
