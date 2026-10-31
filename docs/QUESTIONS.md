@@ -54,3 +54,36 @@ anh dặn mục lớn chưa làm thì ghi vào bảng chứ không tự làm. Ng
 
 **Việc đã làm trong lượt này:** sửa `perfStats().fps` (trước luôn bằng 0 với người chơi
 thường, nên mọi bằng chứng gửi về đều thiếu đúng con số cần nhất — nút thắt B14, đã đóng).
+
+## Q31 — 34 tệp art không nơi nào nạp: xoá, hay nối vào code?
+
+**Bối cảnh.** `npm run check:dead` (mới, bước 6) soi 462 tệp trong `assets/dist` và thấy
+**34 tệp / 0,58 MB** không có đường nào trong client xin tới. Dưới ngưỡng chặn build (1 MB)
+nên nó chỉ cảnh báo. Tôi **không xoá gì** — vì ít nhất một mục trông giống *thiếu dây nối*
+chứ không phải *art thừa*.
+
+**Chia làm ba nhóm.**
+
+1. **Gần chắc là rác, xoá được:**
+   - `buffs/long.png` — buff Trường Kiếm đã bỏ từ spec v4.3.
+   - `obstacles/{bamboo_wall,brick,fence}/states_04.png` — v6.7 rút còn một trạng thái
+     (`OBSTACLE_STATES = ['intact']`), 04 là đồ cũ.
+   - `vfx/boba_1..6.png` — `boba.ts` vẽ viên trân châu bằng canvas, không dùng ảnh.
+   - `obstacles/stall/regrow/*` — art mọc lại, client không nạp.
+
+2. **Art có sẵn nhưng chưa khu nào dùng** (giữ hay xoá là việc thiết kế bản đồ):
+   `obstacles/{rope_bridge,village_roof,cliff_wall,lantern_string,ice_island_edge,bamboo_corner}.png`,
+   `tiles/{cobblestone,mountain_rock,mossy_stone,damp_earth}.png`,
+   `decals/{frozen_reeds,ice_skid,snow_pile}.png`,
+   `characters/dan_em/atlas.png` (không nằm trong 10 nhân vật chơi được).
+
+3. **Nghi THIẾU DÂY NỐI, không phải thừa art:**
+   - `ui/icon_skill_scroll.png` — vật phẩm `skill_scroll` có thật trong `config/game.json`
+     (trọng số 10) nhưng không chỗ nào trong client gọi icon này. Nếu đúng là quên nối thì
+     xoá ảnh là xoá nhầm, và lỗi hiển thị vẫn còn.
+   - `gates/{blue,orange,purple}/burst_06.png` — khung 06 của hiệu ứng cổng; danh mục chỉ
+     khai tới 05. Có thể artgen vẽ dư một khung, cũng có thể danh mục khai thiếu.
+
+**Tạm dùng: giữ nguyên tất cả, chỉ cảnh báo.** Xoá art là việc một chiều, và nhóm 3 cho
+thấy "không ai nạp" đôi khi có nghĩa là *code thiếu*, không phải *art thừa*. Anh xem nhóm 3
+trước: nếu `icon_skill_scroll` đúng là quên nối thì đó là một lỗi hiển thị đang sống.
