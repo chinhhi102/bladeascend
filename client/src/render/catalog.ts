@@ -93,8 +93,23 @@ export const AMBIENT_IDS = ['falling_leaf', 'firefly', 'butterfly', 'chicken', '
 // ART_PROMPTS §11.1 / §11.2 — bảng tên và chân dung HUD (GAME_SPEC §12.3, §12.4).
 export const PLATE_IDS = ['ribbon_top1', 'ribbon_top2', 'ribbon_top3', 'crown_small', 'realm_pill', 'shine_streak'];
 export const PORTRAIT_MOODS = ['neutral', 'evil', 'panic', 'cry'];
-export const OBSTACLE_IDS = ['fence', 'stall', 'cart', 'brick', 'boulder', 'stone_wall'];
-export const OBSTACLE_STATES = ['intact', 'cracked', 'nearly_broken', 'rubble'];
+/**
+ * OBSTACLE_IDS: đủ 15 loại của bảng bậc §8.2 + `border`.
+ *
+ * Bản cũ chỉ có 6 loại vì bản đồ chỉ dùng 6; v6.7 chia bậc trải đủ 14 cảnh giới nên mapgen
+ * đặt thêm tre cổ thụ, vách núi, đá khổng lồ, băng vạn năm, cột ngọc, thạch bi — thiếu
+ * tên ở đây là `assets:report` không liệt kê và không ai biết là thiếu art.
+ */
+export const OBSTACLE_IDS = ['fence', 'stall', 'cart', 'bamboo_thin', 'brick', 'bamboo_wall',
+  'boulder', 'bamboo_ancient', 'stone_wall', 'sect_wall', 'cliff',
+  'boulder_huge', 'ice_eternal', 'jade_pillar', 'seal_stele', 'border'];
+/**
+ * OBSTACLE_STATES: từ v6.7 chỉ còn MỘT trạng thái.
+ *
+ * Vật cản không còn máu nên không có nứt, không có đống đổ nát — đủ bậc thì chạm là biến
+ * mất (§8.2). Giữ mảng chứ không xoá hẳn vì `assets:report` và pipeline đều lặp qua nó.
+ */
+export const OBSTACLE_STATES = ['intact'];
 export const GATE_COLORS = ['purple', 'blue', 'orange'];
 export const GATE_ANIMS: AnimSpec[] = [
   { name: 'idle', frames: 6, loop: true, short: 'idle' },
@@ -222,10 +237,10 @@ function mapEntries(): CatalogEntry[] {
     out.push({ group: 'Vật cản', label: `${o} states`, files: OBSTACLE_STATES.map((s) => `obstacles/${o}/${s}.png`), job: `obs_${o}_states` });
     // Đoạn tường/rào dựng dọc cần ảnh riêng — xoay ảnh ngang 90° trông sai bóng đổ (§8.2).
     out.push({ group: 'Vật cản', label: `${o} states (đoạn dọc)`, files: OBSTACLE_STATES.map((s) => `obstacles/${o}/${s}_vertical.png`), job: `obs_${o}_states_vertical` });
-    if (o !== 'stone_wall') {
-      for (const a of ['break', 'regrow']) {
-        out.push({ group: 'Vật cản', label: `${o} ${a}`, files: frames(`obstacles/${o}/${a}`, { name: a, frames: 6, loop: false, short: '' }), job: `obs_${o}_${a}` });
-      }
+    if (o !== 'border') {
+      // Chỉ còn hoạt ảnh MỌC LẠI. Hoạt ảnh `break` bỏ đi theo §8.2: "biến mất ngay lập
+      // tức, không hoạt ảnh vỡ" — chỉ một tia lửa + tiếng "bụp".
+      out.push({ group: 'Vật cản', label: `${o} regrow`, files: frames(`obstacles/${o}/regrow`, { name: 'regrow', frames: 6, loop: false, short: '' }), job: `obs_${o}_regrow` });
     }
   }
   for (const c of GATE_COLORS) {

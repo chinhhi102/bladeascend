@@ -1,3 +1,4 @@
+import { TIER_BORDER } from '../net/protocol';
 import type { GameConfig } from '../config';
 import type { GameMap, LeaderboardMsg, Shape } from '../net/protocol';
 import { GATE_COLORS } from '../render/palette';
@@ -11,7 +12,7 @@ const HEAVEN = '#ffd60a';
 // Colours of the static layer. Kept muted so the live markers stand out (spec §12.1).
 const BG = '#13170f';
 const TERRAIN: Record<string, string> = {
-  stone_wall: '#6a7466', // không phá được
+  border: '#6a7466', // biên khu — không ai chém được
   boulder: '#7b7b7b',
   bush: '#2f6b3a',
   mud: '#6b5433',
@@ -228,8 +229,12 @@ export class Minimap {
       g.globalAlpha = 1;
     }
     for (const o of map.obstacles) {
-      // Chỉ vẽ thứ không đổi trạng thái: tường không phá được và đá tảng (spec §12.1).
-      const color = o.hp === 0 ? TERRAIN.stone_wall : o.k === 'boulder' ? TERRAIN.boulder : '';
+      // Chỉ vẽ thứ không đổi trạng thái: biên khu và đá tảng (spec §12.1).
+      //
+      // Trước v6.7 điều kiện là `hp === 0` ("không phá được"). Giờ mọi vật cản trong khu đều
+      // phá được bởi một ai đó, nên thứ duy nhất vẽ lên minimap mà không bao giờ sai là
+      // biên khu — vẽ tường bậc 11 rồi để Đạo Tổ chém mất thì minimap nói dối.
+      const color = o.t >= TIER_BORDER ? TERRAIN.border : o.k === 'boulder' ? TERRAIN.boulder : '';
       if (!color) {
         continue;
       }

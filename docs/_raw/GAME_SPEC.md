@@ -4,6 +4,14 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.11:** sạp của Cô Ba có bậc = cảnh giới Cô Ba + 1, Cô Ba đi xuyên sạp của mình (§6.3).
+
+**Thay đổi v6.10:** Cô Ba đổi sang Bày Hàng Chặn Lối (dựng dãy sạp làm vật cản tạm + vỏ chuối) để không trùng vai trò cơ động với Shipper (§6.3).
+
+**Thay đổi v6.9:** làm lại 3 kỹ năng yếu — Ông Ba Võng: Ru Ngủ Trưa (ngủ gục, kiếm ngủ không đánh trả); Sư Phụ Mì: Hút Mì Đoạt Kiếm (cướp 25% kiếm); Shipper: Gom Đơn Hỏa Tốc (×3, xuyên vật cản, miễn khống chế, hút đồ 3 U) (§6.3).
+
+**Thay đổi v6.8:** chia lại bậc vật cản trải đủ 14 cảnh giới (0–13), Tiên giới vẫn có vật cản không chém được, chỉ Đạo Tổ chém mọi thứ; thêm tảng băng vạn năm, cột ngọc, thạch bi cấm chế (§8.2).
+
 **Thay đổi v6.7:** vật cản bỏ HP — chém được theo bậc cảnh giới, chém là biến mất ngay; không còn vật cản không phá được trong khu; luật sắp xếp bản đồ + kiểm tra liên thông theo từng cảnh giới (§5.3, §8.0, §8.1b, §8.2).
 
 **Thay đổi v6.6:** Tiên khí giảm từ ×20 xuống **×10** bản gốc (Chân Tiên 1 000 … Đạo Tổ 15 000); Thiêu Đốt Tiên khí vẫn 8–40/giây (frac 0.008) (§3.4, §4.1c).
@@ -481,13 +489,13 @@ Mỗi nhân vật có **1 kỹ năng riêng**, nhưng **không tự dùng đư�
 |---|---|---|
 | A Hớn Bánh Bao | **Bánh Bao Thần** | Ăn 1 cái bánh bao: **hồi ngay 20% số kiếm tối đa** của cảnh giới hiện tại (không vượt tối đa, lấp vào vòng trong trước), ợ một tiếng to |
 | Bà Tám Loa | **Loa Phường** | Hét vào loa: sóng âm hình nón 60° dài **6 U** phía trước, **đẩy lùi** địch **6 U** (U của Bà Tám) và làm vòng kiếm của họ **đổi chiều** |
-| Ông Ba Võng | **Ru Ngủ** | Đung đưa võng hát ru: địch trong bán kính **5 U** **chậm 40%**, vòng kiếm quay **chậm 50%** trong 3s (hiện "zzz" trên đầu) |
+| Ông Ba Võng | **Ru Ngủ Trưa** | Hát ru 1 câu (đứng yên 0.5s, bị chém thì mất chiêu): mọi địch trong bán kính **4 U** **ngủ gục 2.5s** — đứng im, **vòng kiếm ngừng quay**, và **kiếm đang ngủ không đánh trả**: khi va kiếm, chỉ người ngủ bị bể kiếm, người thức không mất gì. Bị chém trúng thân thì tỉnh ngay. Ông Ba Võng tự nằm võng đung đưa trong lúc đó (vẫn di chuyển được) |
 | Đại Ca Dép Tổ Ong | **Gọi Đàn Em** | Huýt sáo gọi 2 đàn em (NPC nhỏ hơn đại ca 30%, cùng cảnh giới) chạy theo **10s**, bám quanh đại ca trong **3 U**, tìm đối thủ trong **8 U**. **Mỗi đàn em có số kiếm = 50% số kiếm hiện tại của đại ca** (làm tròn xuống, tối thiểu 1, xếp vòng như người chơi), lao vào mài kiếm đối thủ gần nhất. Đàn em không chém thân được, không nhặt đồ, không qua cổng; hết kiếm hoặc hết giờ thì biến mất (khói + câu "Đại ca ơi em đi đây"). Đại ca không bị trừ kiếm khi gọi |
 | Thằng Mập Trà Sữa | **Phun Trân Châu (bịt mắt)** | Phun 1 loạt trân châu hình nón 45° dài **8 U** phía trước. Người trúng bị **trân châu dính đầy màn hình 5s** và **không nhặt được gì** trong 5s đó (vật phẩm, Linh khí, Tiên khí, Bí Kíp — đi xuyên qua) (xem dưới) |
-| Cô Ba Gánh Hàng | **Gánh Lướt** | Lướt nhanh **7 U** theo hướng đi (0.3s), rơi trái cây dọc đường tạo vệt trơn rộng **1 U**, tồn tại 4s: địch đi vào bị **trượt theo quán tính 1s và choáng (stun)**: không điều khiển được, không dùng kỹ năng/Thiêu Đốt trong 1s (kiếm vẫn quay) |
-| Sư Phụ Mì Gói | **Lưới Mì** | Ném lưới mì vào điểm cách **4.5 U** phía trước, bán kính **3 U**: địch dính bị **trói 5s** (không di chuyển, kiếm vẫn quay) |
+| Cô Ba Gánh Hàng | **Bày Hàng Chặn Lối** | Quăng gánh bày ra **1 dãy 5 sạp hàng** hình vòng cung, cách **3 U** theo hướng đang nhắm (chuột / hướng joystick), dài **6 U**, tồn tại **6s**. Sạp là **vật cản tạm** có bậc = **cảnh giới Cô Ba + 1** (tối đa 13): người **cùng cảnh giới hoặc thấp hơn** không chém được, phải đi vòng; Cô Ba **tự đi xuyên** sạp của mình → bỏ chạy chắc chắn trước người ngang cấp. Dọc chân dãy sạp rải **vỏ chuối** rộng **1 U**: địch dẫm phải → **trượt theo quán tính 1s và choáng**. Sạp không đặt đè lên người (đoạn nào trùng người thì bỏ trống đoạn đó). Dùng để chặn đường chạy của con mồi, chắn lối vào Đài, hoặc đặt sau lưng khi bỏ chạy |
+| Sư Phụ Mì Gói | **Hút Mì Đoạt Kiếm** | Ném sợi mì vào **1 địch gần nhất** trong nón 60° dài **5 U**, rồi húp "sùn sụt": **cướp 25% số kiếm hiện có** của họ (lấy từ vòng ngoài cùng), kiếm bay dọc sợi mì về **nhập vào vòng của Sư Phụ** (không vượt tối đa; tối đa cướp = 20% kiếm tối đa của Sư Phụ). Phần cướp vượt trần thì rơi xuống đất thành Bó Kiếm. Không có ai trong nón → sợi mì hụt, vẫn mất lượt |
 | Bé Tí Cơ Bắp | **Gồng Cơ** | Gồng **5s**: độ bền kiếm **× 2** (cộng dồn với Cương Kiếm), không bị đẩy lùi/chậm/trói |
-| Anh Shipper Tia Chớp | **Giao Hỏa Tốc** | Tốc chạy **× 3** trong **5s** (hệ số nhân tốc độ, không theo U) và **đi xuyên mọi vật cản** (kể cả vách đá, rặng tre, tường không phá được), **trừ biên khu vực**. Hết 5s mà đang kẹt trong vật cản → được đẩy mượt ra chỗ trống gần nhất trong 0.3s |
+| Anh Shipper Tia Chớp | **Gom Đơn Hỏa Tốc** | 4s: tốc chạy **× 3**, **đi xuyên mọi vật cản** (trừ biên), **miễn mọi khống chế** (chậm, trói, choáng, ngủ, đẩy lùi), và **hút sạch** mọi viên Linh khí / Tiên khí / vật phẩm / Bó Kiếm trong bán kính **3 U** dọc đường chạy (kể cả lúc đang bị bịt mắt). Hết giờ mà kẹt trong vật cản → đẩy mượt ra chỗ trống gần nhất 0.3s. Điểm mạnh: lao qua Đài Tiên Khí đúng lúc phun để gom, hoặc hớt xác vừa nổ Tiên khí |
 | Cụ Rùa Thiền | **Rụt Cổ** | Rụt vào mai **5s**: đứng yên, **không bị bể kiếm, không bị chém thân**; ra khỏi mai bật sóng bán kính **2 U**, đẩy địch ra **3 U** |
 
 Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ hệ số:
@@ -495,11 +503,20 @@ Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ h�
 | Kỹ năng (hệ số) | Luyện Khí 1 (U=90) | Kim Đan 1 (U≈171) | Đại Thừa 10 (U=450) | Đạo Tổ (U=540) |
 |---|---|---|---|---|
 | Loa Phường: nón & đẩy (6 U) | 540 | 1 026 | 2 700 | 3 240 |
-| Ru Ngủ: bán kính (5 U) | 450 | 855 | 2 250 | 2 700 |
+| Ru Ngủ Trưa: bán kính (4 U) | 360 | 684 | 1 800 | 2 160 |
 | Phun Trân Châu: nón (8 U) | 720 | 1 368 | 3 600 | 4 320 |
-| Gánh Lướt: quãng lướt (7 U) | 630 | 1 197 | 3 150 | 3 780 |
-| Lưới Mì: tầm ném / bán kính (4.5 U / 3 U) | 405 / 270 | 770 / 513 | 2 025 / 1 350 | 2 430 / 1 620 |
+| Bày Hàng: khoảng cách / độ dài dãy sạp (3 U / 6 U) | 270 / 540 | 513 / 1 026 | 1 350 / 2 700 | 1 620 / 3 240 |
+| Hút Mì: nón (5 U) | 450 | 855 | 2 250 | 2 700 |
+| Gom Đơn: bán kính hút (3 U) | 270 | 513 | 1 350 | 1 620 |
 | Rụt Cổ: sóng / đẩy (2 U / 3 U) | 180 / 270 | 342 / 513 | 900 / 1 350 | 1 080 / 1 620 |
+
+
+**Nguyên tắc thiết kế kỹ năng (dùng khi chỉnh tiếp)** — một kỹ năng được người chơi chọn khi nó:
+1. **Gắn vào vòng lặp chính** (kiếm, mài kiếm, cướp Linh/Tiên khí, Đài, cổng) — không chỉ là hiệu ứng phụ. Ví dụ bản cũ của Ông Ba Võng/Sư Phụ Mì chỉ làm chậm/trói nhưng địch vẫn mài kiếm bình thường → không đổi kết quả trận.
+2. **Có khoảnh khắc dùng rõ ràng** ("đang mài kiếm thì ru ngủ", "Đài sắp phun thì gom đơn").
+3. **Có cách chống lại**: Ru Ngủ phải đứng 0.5s và bị chém là mất chiêu; Hút Mì chỉ 1 mục tiêu, hụt vẫn mất lượt; Gom Đơn không gây sát thương.
+4. **Tạo vai trò riêng, không trùng nhau**: Ông Ba Võng = mở giao tranh, Sư Phụ Mì = đoạt kiếm từ xa, Shipper = cơ động / cướp tài nguyên (nhân vật **duy nhất** có kỹ năng di chuyển nhanh), Cô Ba = **dựng địa hình** chặn đường / bẫy. Shipper đi xuyên được dãy sạp của Cô Ba → hai người khắc nhau.
+5. **Đã mắt, tấu hài**: khoảnh khắc thắng phải nhìn thấy được (kiếm bay theo sợi mì, cả đám ngủ gục ngáy, Shipper hút đồ như máy hút bụi).
 
 **Trân châu dính màn hình** (hiệu ứng của Thằng Mập):
 - Chỉ hiện trên màn hình **người bị trúng** (lớp overlay phía client, server gửi event `Blinded {secs}`).
@@ -510,7 +527,7 @@ Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ h�
 - Trúng lần nữa khi đang bị: làm mới thời gian, thêm 10 viên.
 
 - Mỗi kỹ năng có câu thoại tấu hài khi dùng (bong bóng thoại) + SFX riêng.
-- Bot nhặt Bí Kíp như vật phẩm thường và dùng kỹ năng theo luật đơn giản (vd Cụ Rùa dùng Rụt Cổ khi còn 1 vòng và có địch gần; Bà Tám dùng Loa khi địch trong nón).
+- Bot nhặt Bí Kíp như vật phẩm thường và dùng kỹ năng theo luật đơn giản (vd Cụ Rùa dùng Rụt Cổ khi còn 1 vòng và có địch gần; Bà Tám dùng Loa khi địch trong nón; Ông Ba Võng dùng Ru Ngủ khi ≥ 1 địch trong 4 U đang va kiếm với mình; Sư Phụ Mì dùng khi có địch nhiều kiếm trong nón; Shipper dùng khi Đài sắp phun / có Tiên khí rơi trong 8 U / bị khống chế; Cô Ba dùng khi con mồi yếu hơn đang chạy (đặt chặn phía trước nó) hoặc khi chính mình bỏ chạy (đặt sau lưng)).
 - Server tính mọi hiệu ứng; client nhận event `SkillCast {id, skill, pos, dir}`, `SkillEffect`, `Blinded`.
 - **Không cân bằng theo tỉ lệ thắng 1-đấu-1.** Kỹ năng có loại tăng sức mạnh, có loại để khắc chế/gây khó chịu, nên tỉ lệ thắng tay đôi không phản ánh giá trị thật. Cân bằng dựa trên **phản hồi người chơi** và số liệu trận thật (tỉ lệ nhặt Bí Kíp rồi dùng, hiệu quả trong giao tranh đông người).
 
@@ -543,11 +560,11 @@ Mỗi phòng là **1 thế giới gồm 5 khu vực tách biệt**. Mỗi khu v�
 | 5 | **Băng Nguyệt Hồ** | Hồ băng lớn ở giữa + đảo băng, bờ tuyết xung quanh, ít vật cản | **Mặt băng trơn**: trên băng di chuyển có quán tính (trượt, khó dừng/đổi hướng); bờ tuyết làm chậm 0.8 | 2 đài trên 2 đảo băng |
 
 - **Hướng sửa từng khu theo bản kiểm tra 31/10** (người Đại Thừa, scale 5):
-  - *Thiên Đình*: 2 sân môn phái bên phải bị **nhốt kín** (Đài bên trong không tới được), góc trên trái có túi kín; còn 51% chỗ trống. → Mở 3–4 cổng sân rộng ≥ 400, tường sân bậc 4; bỏ 30–40% tường gạch lẻ giữa sân trung tâm và sân môn phái, gom phần còn lại thành đảo.
-  - *Linh Sơn Cốc*: các dải vách chạy ngang cắt khu thành tầng, đèo quá hẹp → **cả nửa dưới (có 1 cổng, 1 Đài) bị cô lập**. → Mỗi dải vách ≥ 3 đèo rộng ≥ 300, vách bậc 5, đá tảng bậc 3.
-  - *Trúc Lâm Mê Cung*: hành lang ~150 → người to gần như kẹt khắp nơi (trống còn 46%). → Hành lang ≥ 220; tre chia bậc theo vòng: ngoài bậc 1, giữa bậc 2, lõi quanh Thiên Môn bậc 3 (muốn đi tắt vào tâm phải đủ Nguyên Anh, không thì tìm đường).
+  - *Thiên Đình*: 2 sân môn phái bên phải bị **nhốt kín** (Đài bên trong không tới được), góc trên trái có túi kín; còn 51% chỗ trống. → Mở 3–4 cổng sân rộng ≥ 400, tường sân bậc 7; cột ngọc bậc 11 quanh Thiên Tiên Đài, 4–6 thạch bi bậc 13; bỏ 30–40% tường gạch lẻ giữa sân trung tâm và sân môn phái, gom phần còn lại thành đảo.
+  - *Linh Sơn Cốc*: các dải vách chạy ngang cắt khu thành tầng, đèo quá hẹp → **cả nửa dưới (có 1 cổng, 1 Đài) bị cô lập**. → Mỗi dải vách ≥ 3 đèo rộng ≥ 300, vách bậc 7, đá tảng bậc 3, đá khổng lồ bậc 9 ở miệng đèo (khe ≥ 340).
+  - *Trúc Lâm Mê Cung*: hành lang ~150 → người to gần như kẹt khắp nơi (trống còn 46%). → Hành lang ≥ 220; tre chia bậc theo vòng: ngoài bậc 1, giữa bậc 2, lõi quanh Thiên Môn bậc 5 (muốn đi tắt vào tâm phải đủ Luyện Hư, không thì tìm đường); vài thạch bi bậc 13 quanh Thiên Môn.
   - *Phàm Trấn*: ổn nhất; nới ngõ giữa các khối nhà ≥ 160 (nhà = gạch bậc 2), giữ đường phố chính trống.
-  - *Băng Nguyệt Hồ*: ngược lại — **quá trống** (85%), chỉ có đá tảng lẻ. → Thêm 4–6 đảo băng nhỏ có đá tảng bậc 3 + tảng băng bậc 1 quanh 2 Đài làm chỗ nấp, vẫn giữ mặt hồ rộng.
+  - *Băng Nguyệt Hồ*: ngược lại — **quá trống** (85%), chỉ có đá tảng lẻ. → Thêm 4–6 đảo băng nhỏ: đá tảng bậc 3 + tảng băng vạn năm bậc 9 quanh 2 Đài làm chỗ nấp, vẫn giữ mặt hồ rộng.
 - Mỗi khu dùng thuật toán sinh riêng (`mapgen` nhận `zone_type`), vẫn tuân thủ: đường/quảng trường chính không vật cản, kiểm tra liên thông **trong khu**, §8.6 (không khối hình học lộ ra). Khu 1 giữ nguyên thuật toán §8.1.
 - **Băng trơn**: vận tốc mới = vận tốc cũ × 0.92 + hướng input × gia tốc nhỏ mỗi tick (tức là trượt dài); thiết kế art cần mặt băng bóng, vết trượt.
 - **Vào trận** (lần đầu hoặc "Chơi tiếp"): spawn ở **khu ít người thật nhất** (hòa → ngẫu nhiên), chỗ an toàn trong khu đó.
@@ -605,22 +622,30 @@ Thêm lệnh `go run ./cmd/mapgen --seed N --png out.png` xuất ảnh xem trư�
 
 ### 8.2 Vật cản — chém được theo cảnh giới (không còn độ cứng)
 
-**Bỏ hẳn HP / độ cứng.** Mỗi vật cản có 1 **bậc** = cảnh giới tối thiểu để chém được. Kiếm của người **đủ cảnh giới** chạm vào → vật cản **biến mất ngay lập tức**, không hoạt ảnh vỡ, không đống đổ nát (chỉ 1 tiếng "bụp" ngắn). Người chưa đủ cảnh giới: kiếm đi xuyên như cũ, không có tác dụng.
+**Bỏ hẳn HP / độ cứng.** Mỗi vật cản có 1 **bậc** = cảnh giới tối thiểu để chém được. Kiếm của người **đủ cảnh giới** (chỉ số cảnh giới ≥ bậc) chạm vào → vật cản **biến mất ngay lập tức**, không hoạt ảnh vỡ, không đống đổ nát (chỉ 1 tiếng "bụp" ngắn). Người chưa đủ cảnh giới: kiếm đi xuyên như cũ, không có tác dụng.
 **Không còn vật cản nào không phá được** trong khu — chỉ **biên khu vực** là không qua được.
 
-| Bậc | Vật cản | Chém được từ | Hành lang tối thiểu giữa 2 vật cản cùng bậc (§8.1b) |
+Bậc = **chỉ số cảnh giới tối thiểu** (0 = Luyện Khí … 8 = Đại Thừa, 9 = Chân Tiên … 13 = Đạo Tổ). Có vật cản ở cả Tiên giới; **chỉ Đạo Tổ mới chém được mọi thứ**.
+
+| Bậc | Vật cản | Chém được từ | Hành lang tối thiểu (§8.1b) |
 |---|---|---|---|
-| 0 | Hàng rào tre, rào gỗ | Luyện Khí | – (ai cũng chém được) |
-| 1 | Sạp hàng, xe đẩy, tre mỏng (vòng ngoài Trúc Lâm) | Trúc Cơ | 150 |
-| 2 | Tường gạch (nhà Phàm Trấn, tường lẻ Thiên Đình), tre dày (vòng giữa Trúc Lâm) | Kim Đan | 160 |
-| 3 | Đá tảng, tre cổ thụ (lõi Trúc Lâm) | Nguyên Anh | 180 |
-| 4 | Tường đá (tường sân môn phái Thiên Đình, tường đá trong khu) | Hóa Thần | 220 |
-| 5 | Vách núi (Linh Sơn Cốc), đá tảng khổng lồ | Luyện Hư | 240 |
+| 0 | Hàng rào tre, rào gỗ | Luyện Khí | – |
+| 1 | Sạp hàng, xe đẩy, tre mỏng | Trúc Cơ | 150 |
+| 2 | Tường gạch, tre dày | Kim Đan | 160 |
+| 3 | Đá tảng | Nguyên Anh | 180 |
+| 5 | Tre cổ thụ, tường đá thường | Luyện Hư | 240 |
+| 7 | Tường sân môn phái, vách núi | Độ Kiếp | 290 |
+| 9 | Đá khổng lồ, **tảng băng vạn năm** | Chân Tiên | 340 |
+| 11 | **Cột ngọc Thiên Đình** (quanh Thiên Tiên Đài, bến Thiên Môn) | Thái Ất Ngọc Tiên | 370 |
+| 13 | **Thạch bi cấm chế** (bia đá phù văn phát sáng) | Đạo Tổ | 390 |
 | ∞ | Biên khu vực | Không bao giờ | – |
 
+- **Mỗi khu phải có vật cản bậc Tiên** (9, 11 hoặc 13) để kỹ năng dựa trên vật cản (Shipper xuyên vật cản, đẩy lùi ép vào tường, Gánh Lướt, Rụt Cổ…) vẫn có tác dụng với người Tiên giới. Gợi ý: Thiên Đình — cột ngọc quanh Thiên Tiên Đài + 4–6 thạch bi cấm chế; Linh Sơn Cốc — đá khổng lồ ở các đèo; Băng Nguyệt Hồ — tảng băng vạn năm trên đảo; Trúc Lâm — thạch bi quanh Thiên Môn ở tâm; Phàm Trấn — 2–4 thạch bi ở quảng trường.
+- Vật cản bậc cao là **điểm tựa chiến thuật**, không phải tường chắn đường: luôn xếp lẻ hoặc cụm nhỏ, khe giữa chúng ≥ hành lang tối thiểu → không ai bị kẹt.
+
 - Bậc gán theo **loại vật cản** (config `obstacles.min_realm`), mapgen có thể ghi đè từng vật bằng thuộc tính Tiled `min_realm` (vd tre trong Trúc Lâm theo vòng).
-- **Cương Kiếm** (§6.2): trong thời gian buff, chém được vật cản **cao hơn 1 bậc** so với cảnh giới.
-- Tiên giới chém được mọi vật cản (trừ biên).
+- **Cương Kiếm** (§6.2): trong thời gian buff, chém được vật cản có bậc ≤ cảnh giới + 1 (vd Kim Đan chém được bậc 3).
+- **Đạo Tổ** chém được mọi vật cản (trừ biên). Các cảnh giới Tiên khác vẫn có vật cản không chém được.
 - **Nhận biết bậc**: vật cản cao hơn cảnh giới của mình hiện **viền tối mờ** khi nằm trong tầm kiếm; kiếm chạm vào → tia lửa nhỏ + chữ nổi "Cần {cảnh giới}" (tối đa 1 lần / 3s / vật cản). Vật cản mình chém được trông bình thường.
 - **Mọc lại** sau **30s** ở đúng chỗ cũ: 3s trước khi mọc nhấp nháy mờ cảnh báo; có người/quái đứng trong vùng → chờ trống rồi mới mọc (đẩy mượt ra như §8.2a).
 - Sạp hàng / xe đẩy bị chém: vẫn 30% rơi 1 item.
@@ -637,7 +662,7 @@ Thêm lệnh `go run ./cmd/mapgen --seed N --png out.png` xuất ảnh xem trư�
 
 **Nguyên tắc "không chém được thì phải đi lọt"**: người cảnh giới r chưa chém được vật cản bậc > r, nên mọi khe giữa hai vật cản phải đủ rộng cho người **to nhất** trong số những người không chém được chúng:
 - Khe giữa vật cản bậc A và bậc B ≥ `corridor_min[min(A, B)]` (bảng §8.2). Vật cản bậc 0 không cần (ai cũng chém được).
-- Lý do con số: bậc T chặn người cảnh giới < T, người to nhất trong nhóm đó là cảnh giới T−1 tầng 10 → đường kính thân `60 × scale` + 40 dư.
+- Lý do con số: bậc T chặn người cảnh giới < T, người to nhất trong nhóm đó là cảnh giới T−1 (tầng 10 nếu là phàm giới) → đường kính thân `60 × scale` + 40 dư, làm tròn lên.
 
 **Khung bản đồ** (thay cho kiểu rải tường dài xuyên khu):
 1. **3 cấp đường**: đường chính rộng ≥ 600, **không bao giờ có vật cản**; đường phụ ≥ 300; ngõ hẹp chỉ nằm bên trong cụm.
@@ -1248,8 +1273,8 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "obstacles": {
     "footprint_w": 0.9, "footprint_h": 0.3, "occlusion_alpha": 0.5,
     "regrow_secs": 30, "regrow_warn_secs": 3, "hard_buff_extra_tier": 1, "cut_hint_cooldown_secs": 3,
-    "corridor_min": { "1": 150, "2": 160, "3": 180, "4": 220, "5": 240 },
-    "min_realm": { "fence": 0, "stall": 1, "cart": 1, "bamboo_wall": 1, "brick": 2, "boulder": 3, "stone_wall": 4, "cliff": 5, "boulder_huge": 5 },
+    "corridor_min": { "1": 150, "2": 160, "3": 180, "5": 240, "7": 290, "9": 340, "11": 370, "13": 390 },
+    "min_realm": { "fence": 0, "stall": 1, "cart": 1, "bamboo_thin": 1, "brick": 2, "bamboo_wall": 2, "boulder": 3, "bamboo_ancient": 5, "stone_wall": 5, "sect_wall": 7, "cliff": 7, "boulder_huge": 9, "ice_eternal": 9, "jade_pillar": 11, "seal_stele": 13 },
     "stall_item_drop": 0.3
   },
   "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
@@ -1276,7 +1301,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "zones_def": ["thien_dinh", "linh_son_coc", "truc_lam_me_cung", "pham_tran", "bang_nguyet_ho"],
   "ice": { "friction": 0.92, "accel": 0.25, "snow_mult": 0.8 },
   "skills": { "key": "Space", "max_charges": 2, "max_charges_tien": 3, "range_unit": "pickup_r_x_caster_scale",
-    "ranges_u": { "loa_cone": 6, "loa_push": 6, "ru_ngu_r": 5, "dan_em_follow": 3, "dan_em_seek": 8, "tran_chau_cone": 8, "ganh_dash": 7, "ganh_trail_w": 1, "luoi_mi_throw": 4.5, "luoi_mi_r": 3, "rut_co_wave": 2, "rut_co_push": 3 },
+    "ranges_u": { "loa_cone": 6, "loa_push": 6, "ru_ngu_r": 4, "ru_ngu_secs": 2.5, "ru_ngu_channel": 0.5, "dan_em_follow": 3, "dan_em_seek": 8, "tran_chau_cone": 8, "bay_sap_dist": 3, "bay_sap_len": 6, "bay_sap_count": 5, "bay_sap_secs": 6, "bay_sap_tier_bonus": 1, "bay_sap_owner_passes": true, "vo_chuoi_w": 1, "hut_mi_cone": 5, "hut_mi_steal": 0.25, "hut_mi_cap_of_own_max": 0.2, "gom_don_r": 3, "gom_don_secs": 4, "rut_co_wave": 2, "rut_co_push": 3 },
     "push_secs": 0.3, "lockout_secs": 3, "overcap_exp": 20, "overcap_tien_khi": 2, "blind": { "secs": 5, "no_pickup": true, "pearls": [25, 40], "cover": [0.55, 0.65], "bot_vision_mult": 0.4 } },
   "movement": { "slide_iterations": 3, "smooth_correct_max": 30, "smooth_correct_ms": 100 },
   "room": {
@@ -1299,9 +1324,15 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 
 ## 17. Checklist test chấp nhận
 
+- [ ] Cô Ba Kim Đan bày sạp (bậc 3): người Kim Đan và thấp hơn không chém được, phải đi vòng; người Nguyên Anh chém được; Cô Ba đi xuyên sạp của mình; dẫm vỏ chuối → trượt + choáng 1s; sau 6s sạp biến mất; Shipper đang Gom Đơn đi xuyên qua.
+
+- [ ] Ru Ngủ Trưa: 2 người đang mài kiếm, Ông Ba Võng ru → trong 2.5s chỉ người ngủ bị bể kiếm; chém thân người ngủ → tỉnh; Ông Ba Võng bị chém trong 0.5s hát → mất chiêu.
+- [ ] Hút Mì: địch 100 kiếm → Sư Phụ cướp 25 (không vượt 20% tối đa của mình, dư rơi Bó Kiếm); không ai trong nón → hụt, mất lượt.
+- [ ] Gom Đơn: chạy qua Đài đang phun → hút mọi viên trong 3 U; đang bị trói/ngủ/choáng dùng được và thoát ngay.
+
 - [ ] Luyện Khí chém rào tre → biến mất ngay, không hoạt ảnh; chém tường gạch → không có tác dụng + chữ "Cần Kim Đan"; 30s sau rào mọc lại đúng chỗ.
 - [ ] `mapgen --check` pass cả 5 khu × 14 cảnh giới: không túi kín, mọi cổng/Đài/Thiên Môn tới được, trống ≥ 60%.
-- [ ] Không còn vật cản nào trong khu có bậc ∞ (chỉ biên khu).
+- [ ] Không còn vật cản nào trong khu có bậc ∞ (chỉ biên khu). Mỗi khu có ít nhất 1 vật cản bậc ≥ 9. Kim Tiên chém cột ngọc → không tác dụng; Đạo Tổ chém thạch bi → biến mất.
 
 - [ ] Loa Phường của Bà Tám Luyện Khí 1 đẩy người Đạo Tổ đúng 540; Bà Tám Đạo Tổ đẩy người Luyện Khí đúng 3 240 (theo U người dùng, không theo người bị đẩy); đẩy không xuyên tường.
 - [ ] Không còn số phạm vi cố định nào trong code kỹ năng — mọi phạm vi đọc từ `skills.ranges_u` × U.

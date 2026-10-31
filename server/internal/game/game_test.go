@@ -306,104 +306,149 @@ func TestNoBuffExtendsTheBlade(t *testing.T) {
 	}
 }
 
-// Spec v4.4 §5.3: Cương Kiếm nhân đôi sức phá vật cản.
-func TestHardBuffDoublesObstacleDamage(t *testing.T) {
-	g := quietGame(t, nil)
-	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 20, Swords: 30})
-	before := g.ObstacleDamage(p)
-	g.ApplyBuff(p, "hard")
-	if after := g.ObstacleDamage(p); math.Abs(after-before*g.Cfg.Buffs["hard"].DamageMult) > 1e-9 {
-		t.Fatalf("sức phá vật cản %v → %v, muốn ×%v", before, after, g.Cfg.Buffs["hard"].DamageMult)
-	}
-}
+// Vật cản theo BẬC CẢNH GIỚI (spec v6.7/v6.8 §8.2) — không còn máu, không còn sát thương.
+//
+// Con số lấy thẳng từ checklist §17: Luyện Khí chém rào tre → biến mất ngay; chém tường
+// gạch → không tác dụng + chữ "Cần Kim Đan"; 30 giây sau rào mọc lại đúng chỗ.
 
-func obstacleMap(kind string, hp int) *world.Map {
+// obstacleMap dựng bản đồ một vật cản duy nhất. Bậc lấy theo LOẠI từ config, đúng như
+// `world.LoadDir` làm — test phải đi qua cùng một bảng mà game đọc, không gán tay.
+func obstacleMap(kind string) *world.Map {
 	m := world.EmptyMap(12000)
-	m.Obstacles = []world.Obstacle{{ID: 0, Kind: kind, MaxHP: hp, Shape: world.Shape{X: 6000, Y: 6000, W: 200, H: 40}}}
+	tier := config.MustLoadDefault().Obstacles.ObstacleTier(kind)
+	m.Obstacles = []world.Obstacle{{ID: 0, Kind: kind, Tier: tier, Shape: world.Shape{X: 6000, Y: 6000, W: 200, H: 40}}}
 	return m
 }
 
-func TestObstacleBreaksAndRegrowsWhenClear(t *testing.T) {
-	g := quietGame(t, obstacleMap("fence", 30))
-	g.DamageObstacle(0, 30)
+// swingAt đặt người chơi sao cho kiếm quét trúng vật cản rồi gọi một nhịp chém.
+func swingAt(t *testing.T, g *Game, p *Player) {
+	t.Helper()
+	place(g, p, Vec{}, -math.Pi/2)
+	place(g, p, Vec{X: 6100, Y: 6020}.Sub(bladeMid(p).Sub(p.Pos)), -math.Pi/2)
+	g.hitObstacles(p)
+}
+
+// Checklist §17: đủ bậc → vật cản biến mất NGAY, một nhịp chém là xong.
+func TestCutObstacleWhenRealmEnough(t *testing.T) {
+	g := quietGame(t, obstacleMap("fence")) // bậc 0: ai cũng chém được
+	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 0, Swords: 10})
+	swingAt(t, g, p)
+	if !g.Obstacles[0].Broken {
+		t.Fatal("Luyện Khí chém rào tre (bậc 0) phải biến mất ngay trong một nhịp")
+	}
+	if p.Ring.Count != 10 {
+		t.Error("chém vật cản không được làm mất kiếm")
+	}
+}
+
+// Checklist §17: chưa đủ bậc → không tác dụng, và có gợi ý "Cần {cảnh giới}".
+func TestCannotCutObstacleBelowTier(t *testing.T) {
+	g := quietGame(t, obstacleMap("brick")) // bậc 2 = Kim Đan
+	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 0, Swords: 10})
+	swingAt(t, g, p)
+	if g.Obstacles[0].Broken {
+		t.Fatal("Luyện Khí không được chém thủng tường gạch (bậc 2)")
+	}
+	hint := 0
+	for _, e := range g.DrainEvents() {
+		if e.Kind == "ObstacleTooHard" {
+			hint++
+			if e.N != 2 {
+				t.Errorf("gợi ý ghi bậc %d, muốn 2 (Kim Đan)", e.N)
+			}
+		}
+	}
+	if hint != 1 {
+		t.Fatalf("có %d gợi ý \"Cần {cảnh giới}\", muốn đúng 1", hint)
+	}
+	// Mài tiếp trong hạn `cut_hint_cooldown_secs` thì KHÔNG được spam thêm chữ: một người
+	// kẹt ở tường gạch quét kiếm 20 nhịp/giây, mỗi nhịp một gói chữ nổi là 20 gói/giây chỉ
+	// để nói đúng một câu.
+	swingAt(t, g, p)
+	for _, e := range g.DrainEvents() {
+		if e.Kind == "ObstacleTooHard" {
+			t.Error("mài liên tục vẫn ra thêm gợi ý — hạn mức cut_hint_cooldown_secs không chạy")
+		}
+	}
+}
+
+// Cương Kiếm cho chém cao hơn ĐÚNG MỘT bậc (spec v6.8 mục 11, §6.2).
+func TestHardBuffCutsOneTierHigher(t *testing.T) {
+	g := quietGame(t, obstacleMap("boulder"))                        // bậc 3 = Nguyên Anh
+	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 20, Swords: 10}) // Kim Đan (r=2)
+	if g.CanCutObstacle(p, 3) {
+		t.Fatal("Kim Đan chưa buff mà đã chém được bậc 3")
+	}
+	g.ApplyBuff(p, "hard")
+	if !g.CanCutObstacle(p, 3) {
+		t.Fatal("Kim Đan + Cương Kiếm phải chém được bậc 3")
+	}
+	if g.CanCutObstacle(p, 4) {
+		t.Error("Cương Kiếm chỉ cho thêm 1 bậc, không phải 2")
+	}
+}
+
+// Checklist §17: Kim Tiên chém cột ngọc → không tác dụng; Đạo Tổ chém thạch bi → biến mất.
+//
+// Đây là luật v6.8 thay cho "Tiên giới chém được mọi thứ" của v6.7: nếu Tiên giới phá được
+// tất cả thì từ Chân Tiên trở lên bản đồ không còn địa hình nào, và mọi kỹ năng dựa vào vật
+// cản (Shipper xuyên tường, đẩy lùi ép vào tường, sạp Cô Ba) mất tác dụng với đúng nhóm
+// người chơi mạnh nhất.
+func TestTienRealmsStillBlockedByHighTiers(t *testing.T) {
+	g := quietGame(t, obstacleMap("jade_pillar")) // bậc 11 = Thái Ất
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 10})
+	g.ForceState(p, g.Prog.TienLevel(1), 1, p.Pos) // Kim Tiên = chỉ số 10
+	if g.CanCutObstacle(p, 11) {
+		t.Error("Kim Tiên không được chém cột ngọc (bậc 11)")
+	}
+	g.ForceState(p, g.Prog.TienLevel(4), 1, p.Pos) // Đạo Tổ = 13
+	if !g.CanCutObstacle(p, 13) {
+		t.Error("Đạo Tổ phải chém được thạch bi (bậc 13)")
+	}
+}
+
+// Biên khu không bao giờ chém được — kể cả Đạo Tổ (spec §8.2).
+//
+// Trước v6.7 biên khu là `stone_wall` dài 11 400, mà `stone_wall` có bậc 5: tức từ Luyện Hư
+// trở lên là **chém thủng biên khu và đi ra ngoài bản đồ**.
+func TestBorderNeverCuttable(t *testing.T) {
+	g := quietGame(t, obstacleMap(config.BorderKind))
+	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 10})
+	g.ForceState(p, g.Prog.TienLevel(4), 1, p.Pos) // Đạo Tổ
+	if g.CanCutObstacle(p, g.Map.Obstacles[0].Tier) {
+		t.Fatal("Đạo Tổ chém thủng được biên khu — biên phải là tuyệt đối")
+	}
+	swingAt(t, g, p)
+	if g.Obstacles[0].Broken {
+		t.Fatal("biên khu bị chém mất")
+	}
+}
+
+// Mọc lại sau 30s, và CHỜ chỗ trống nếu có người đứng đó (spec §8.2).
+func TestObstacleRegrowsWhenClear(t *testing.T) {
+	g := quietGame(t, obstacleMap("fence"))
+	g.CutObstacle(0)
 	if !g.Obstacles[0].Broken || g.ObstacleSolid(0) {
-		t.Fatal("fence should be broken and passable")
+		t.Fatal("chém xong phải biến mất và đi qua được")
 	}
 	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
-	place(g, p, Vec{X: 6100, Y: 6020}, 0) // standing on the rubble
+	place(g, p, Vec{X: 6100, Y: 6020}, 0) // đứng đúng chỗ nó sẽ mọc lại
 	for g.Time < 31 {
 		g.Tick(dt)
 		p.Pos = Vec{X: 6100, Y: 6020}
 	}
 	if !g.Obstacles[0].Broken {
-		t.Fatal("obstacle regrew on top of a player")
+		t.Fatal("vật cản mọc đè lên người")
 	}
 	p.Pos = Vec{X: 3000, Y: 3000}
 	g.Tick(dt)
-	if g.Obstacles[0].Broken || g.Obstacles[0].HP != 30 {
-		t.Fatalf("obstacle should regrow with full HP: %+v", g.Obstacles[0])
-	}
-}
-
-func TestSwordDamagesObstacleAndSurvives(t *testing.T) {
-	g := quietGame(t, obstacleMap("brick", 250))
-	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 20, Swords: 1})
-	place(g, p, Vec{}, -math.Pi/2)
-	place(g, p, Vec{X: 6100, Y: 6020}.Sub(bladeMid(p).Sub(p.Pos)), -math.Pi/2)
-	g.hitObstacles(p)
-	// Kim Đan (r=2), 1 kiếm → 1 vòng: damage = (2+1) × 1 = 3 (spec §5.3).
-	if g.Obstacles[0].HP != 250-3 {
-		t.Fatalf("brick HP = %d, want 247", g.Obstacles[0].HP)
-	}
-	if p.Ring.Count != 1 {
-		t.Fatal("sword lost on obstacle")
-	}
-}
-
-// Spec §5.3 (v3.6): damage tính theo người, không theo từng kiếm. Thêm kiếm trong cùng một
-// vòng không làm phá nhanh hơn; chỉ thêm VÒNG mới tăng sức phá (+50%/vòng).
-func TestObstacleDamagePerPlayerNotPerSword(t *testing.T) {
-	hitOnceAt := func(swords int) float64 {
-		g := quietGame(t, obstacleMap("boulder", 800))
-		p := g.AddPlayer(SpawnOptions{Name: "P", Level: 0, Swords: swords})
-		place(g, p, Vec{}, -math.Pi/2)
-		place(g, p, Vec{X: 6100, Y: 6020}.Sub(bladeMid(p).Sub(p.Pos)), -math.Pi/2)
-		g.hitObstacles(p)
-		return float64(800-g.Obstacles[0].HP) + g.Obstacles[0].Partial
-	}
-	// Vòng 1 chứa 10 kiếm: 1 kiếm và 10 kiếm đều là 1 vòng nên sức phá phải bằng nhau.
-	one, ten := hitOnceAt(1), hitOnceAt(10)
-	if one != ten {
-		t.Fatalf("1 kiếm gây %v, 10 kiếm (vẫn 1 vòng) gây %v — phải bằng nhau", one, ten)
-	}
-	thirty := hitOnceAt(30) // đủ 2 vòng → ×1.5
-	if math.Abs(thirty-one*1.5) > 1e-9 {
-		t.Fatalf("2 vòng gây %v, muốn %v (gấp 1.5 lần 1 vòng)", thirty, one*1.5)
-	}
-}
-
-// Spec §8.2: một người Luyện Khí đủ 60 kiếm (3 vòng) phá rào tre ≈ 7.5s.
-func TestObstacleBreakTimeMatchesSpec(t *testing.T) {
-	g := quietGame(t, obstacleMap("fence", 30))
-	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 0, Swords: 60})
-	place(g, p, Vec{}, -math.Pi/2)
-	place(g, p, Vec{X: 6100, Y: 6020}.Sub(bladeMid(p).Sub(p.Pos)), -math.Pi/2)
-	start := g.Time
-	for i := 0; i < 30*20 && !g.Obstacles[0].Broken; i++ {
-		g.hitObstacles(p)
-		g.Time += dt
-	}
-	took := g.Time - start
-	if !g.Obstacles[0].Broken {
-		t.Fatal("Luyện Khí 60 kiếm phải phá được rào tre")
-	}
-	if took < 6.5 || took > 8.5 {
-		t.Fatalf("phá rào tre mất %.1fs, spec ghi ≈7.5s", took)
+	if g.Obstacles[0].Broken {
+		t.Fatalf("chỗ trống rồi mà chưa mọc lại: %+v", g.Obstacles[0])
 	}
 }
 
 func TestBodyBlockedByObstacle(t *testing.T) {
-	g := quietGame(t, obstacleMap("stone_wall", 0))
+	g := quietGame(t, obstacleMap("stone_wall"))
 	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 1})
 	place(g, p, Vec{X: 6100, Y: 5900}, 0)
 	p.Moving, p.InputAngle = true, math.Pi/2
@@ -549,9 +594,11 @@ func TestMonsterOrbsReservedForKiller(t *testing.T) {
 // Spec §17: a scale-5 player cannot squeeze through a 150-wide alley; a small one can.
 func TestNarrowAlleyBlocksBigPlayers(t *testing.T) {
 	m := world.EmptyMap(12000)
+	// Bậc `TierBorder`: bài test này nói về KÍCH THƯỚC THÂN, không về chém. Để bậc 0 là
+	// người cấp 89 chém bay cả hai bức tường trong giây đầu rồi đi thẳng qua "hẻm".
 	m.Obstacles = []world.Obstacle{
-		{ID: 0, Kind: "stone_wall", Shape: world.Shape{X: 5000, Y: 4000, W: 120, H: 2000}},
-		{ID: 1, Kind: "stone_wall", Shape: world.Shape{X: 5270, Y: 4000, W: 120, H: 2000}},
+		{ID: 0, Kind: config.BorderKind, Tier: config.TierBorder, Shape: world.Shape{X: 5000, Y: 4000, W: 120, H: 2000}},
+		{ID: 1, Kind: config.BorderKind, Tier: config.TierBorder, Shape: world.Shape{X: 5270, Y: 4000, W: 120, H: 2000}},
 	}
 	g := quietGame(t, m)
 	small := g.AddPlayer(SpawnOptions{Name: "S", Level: 0, Swords: 1})

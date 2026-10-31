@@ -12,13 +12,18 @@ import (
 )
 
 // Obstacle: Shape is what the player sees (swords hit it); Foot is the footprint at the
-// bottom that blocks bodies (spec §8.2). MaxHP == 0 means indestructible.
+// bottom that blocks bodies (spec §8.2).
+//
+// `Tier` = **bậc**: chỉ số cảnh giới tối thiểu để chém được (v6.7/v6.8 §8.2). Thay hẳn cho
+// `MaxHP` của bản cũ — vật cản không còn máu, đủ bậc thì chạm là biến mất.
 type Obstacle struct {
 	ID    int    `json:"id"`
 	Kind  string `json:"k"`
 	Shape Shape  `json:"s"`
 	Foot  Shape  `json:"f"`
-	MaxHP int    `json:"hp"`
+	// Tier: bậc. Gán theo LOẠI từ config, nhưng mapgen ghi đè được bằng thuộc tính Tiled
+	// `min_realm` cho từng vật (vd tre Trúc Lâm chia bậc theo vòng — §8.0).
+	Tier int `json:"t"`
 }
 
 // Block is the shape that stops bodies: the footprint, or the whole shape when none is set.
@@ -31,9 +36,11 @@ func (o Obstacle) Block() Shape {
 
 // LoadOptions are the config values the loader needs.
 type LoadOptions struct {
-	HP         map[string]int // obstacle type → HP (missing = indestructible)
-	FootprintW float64        // default footprint width, fraction of the sprite
-	FootprintH float64        // default footprint height, fraction of the sprite (at the bottom)
+	// Tier: loại vật cản → bậc (chỉ số cảnh giới tối thiểu để chém). Hàm chứ không phải
+	// map, để `world` không phải biết gì về `config` — chỉ cần "cho tôi bậc của loại này".
+	Tier       func(kind string) int
+	FootprintW float64 // default footprint width, fraction of the sprite
+	FootprintH float64 // default footprint height, fraction of the sprite (at the bottom)
 }
 
 // Footprint is a rectangle w×h (fractions of the shape's bounds) sitting on the shape's bottom edge.
@@ -256,8 +263,17 @@ func (m *Map) addLayer(l tmjLayer, opt LoadOptions) {
 		switch strings.ToLower(l.Name) {
 		case "obstacles":
 			sh := o.shape()
+			// Bậc lấy theo LOẠI, nhưng thuộc tính Tiled `min_realm` của từng vật ghi đè
+			// được (§8.2) — Trúc Lâm chia bậc tre theo vòng chứ không theo loại.
+			tier := 0
+			if opt.Tier != nil {
+				tier = opt.Tier(kind)
+			}
+			if v := propFloat(o.Properties, "min_realm", -1); v >= 0 {
+				tier = int(v)
+			}
 			m.Obstacles = append(m.Obstacles, Obstacle{ID: len(m.Obstacles), Kind: kind, Shape: sh,
-				Foot: footprintOf(o, sh, opt), MaxHP: opt.HP[kind]})
+				Foot: footprintOf(o, sh, opt), Tier: tier})
 		case "zones":
 			m.Zones = append(m.Zones, Zone{ID: len(m.Zones), Kind: kind, Shape: o.shape(),
 				WindDir: propFloat(o.Properties, "dir", 0) * math.Pi / 180})

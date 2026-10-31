@@ -69,7 +69,7 @@ func main() {
 }
 
 func pickMap(cfg *config.Config, id string, seed int64) *world.Map {
-	maps, err := world.LoadDir(config.FindRepoFile("maps"), world.LoadOptions{HP: cfg.Obstacles.HP, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH})
+	maps, err := world.LoadDir(config.FindRepoFile("maps"), world.LoadOptions{Tier: cfg.Obstacles.ObstacleTier, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH})
 	if err != nil || len(maps) == 0 {
 		log.Printf("no maps loaded (%v); using empty map", err)
 		return world.EmptyMap(cfg.Room.MapSize)

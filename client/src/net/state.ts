@@ -1,8 +1,9 @@
-import { type GameConfig } from '../config';
+import { realmOf, type GameConfig } from '../config';
 import { lerp, type Vec } from './geom';
 import { moveStep } from './movestep.ts';
 import {
   BUFFS,
+  TIER_BORDER,
   type GameEvent,
   type GameMap,
   type ItemState,
@@ -71,7 +72,6 @@ export class ClientWorld {
   readonly monsters = new Map<number, Timed<MonsterState>[]>();
   readonly items = new Map<number, ItemState>();
   readonly brokenObstacles = new Map<number, boolean>();
-  readonly obstacleHp = new Map<number, number>();
   /** goneAt: lần đầu một entity vắng mặt khỏi snapshot — xem `expire`. */
   private readonly goneAt = new Map<number, number>();
   /** deletedAt: lúc một entity bị xoá hẳn, để nhận ra nó quay lại ngay sau đó (nhấp nháy). */
@@ -139,9 +139,7 @@ export class ClientWorld {
     this.deletedAt.clear();
     this.items.clear();
     this.brokenObstacles.clear();
-    this.obstacleHp.clear();
     for (const o of w.obs ?? []) {
-      this.obstacleHp.set(o.id, o.hp);
       this.brokenObstacles.set(o.id, o.b);
     }
     this.pending = [];
@@ -351,16 +349,31 @@ export class ClientWorld {
   private applyObstacleEvents(events: GameEvent[]): void {
     for (const e of events) {
       const id = e.a ?? -1;
-      if (e.k === 'ObstacleDamaged') {
-        this.obstacleHp.set(id, e.n ?? 0);
-      } else if (e.k === 'ObstacleBroken') {
+      if (e.k === 'ObstacleBroken') {
         this.brokenObstacles.set(id, true);
-        this.obstacleHp.set(id, 0);
       } else if (e.k === 'ObstacleRegrow' && e.s !== 'warn') {
         this.brokenObstacles.set(id, false);
-        this.obstacleHp.delete(id);
       }
     }
+  }
+
+  /**
+   * canCutObstacle: cảnh giới của mình có chém được vật cản bậc `tier` hay không (spec §8.2).
+   *
+   * Phải khớp **từng chữ** với `Game.CanCutObstacle` bên server, vì client dùng nó để quyết
+   * định vẽ viền tối mờ. Lệch một bậc là người chơi thấy viền ở vật cản họ chém được (hoặc
+   * tệ hơn: không thấy viền ở vật cản họ không chém được rồi mài kiếm 5 giây vô ích).
+   */
+  canCutObstacle(tier: number): boolean {
+    const me = this.me();
+    if (!me || tier >= TIER_BORDER) {
+      return false;
+    }
+    let reach = realmOf(this.cfg, me.L);
+    if (me.bf & (1 << BUFFS.indexOf('hard'))) {
+      reach += this.cfg.obstacles.hard_buff_extra_tier;
+    }
+    return reach >= tier;
   }
 
   me(): PlayerState | null {

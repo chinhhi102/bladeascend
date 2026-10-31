@@ -24,7 +24,14 @@ import { GATE_COLORS } from './palette';
  * Hồ thì trượt và ra xanh cỏ. Giờ tra thẳng bằng `map.biome`, và có thêm `snow`.
  */
 const BIOME_COLOR: Record<string, number> = { grass: 0x7cc46a, concrete: 0xa9a49b, dirt: 0xc9a46a, snow: 0xdfe9f2 };
-const OBSTACLE_COLOR: Record<string, number> = { fence: 0xc8a165, stall: 0xe76f51, cart: 0x9c6644, brick: 0xb5523b, boulder: 0x8d8d8d, stone_wall: 0x5b6b5b };
+// Màu placeholder theo LOẠI. Mỗi bậc một sắc rõ ràng để lúc chưa có art vẫn đọc được bản
+// đồ: tre vàng-xanh, gạch đỏ, đá xám, băng xanh nhạt, ngọc lục, thạch bi tím.
+const OBSTACLE_COLOR: Record<string, number> = {
+  fence: 0xc8a165, stall: 0xe76f51, cart: 0x9c6644, bamboo_thin: 0xa8c66c,
+  brick: 0xb5523b, bamboo_wall: 0x7d9b4e, boulder: 0x8d8d8d, bamboo_ancient: 0x5c7a3a,
+  stone_wall: 0x5b6b5b, sect_wall: 0x7a6a52, cliff: 0x6b6256, boulder_huge: 0x6e6e6e,
+  ice_eternal: 0xa8d8e8, jade_pillar: 0x4fae8b, seal_stele: 0x7a5aa8, border: 0x3a4038,
+};
 const TILE_WORLD = 400; // one 512px ground tile covers 400 world units
 /**
  * GROUND_CHUNK: cạnh một ô nền trộn, tính bằng đơn vị thế giới.
@@ -151,13 +158,16 @@ function tiledObstacle(tex: Texture, s: Shape, vertical: boolean): Container {
   return c;
 }
 
-type ObstacleLook = 'intact' | 'cracked' | 'nearly_broken' | 'rubble';
+// Từ v6.7 vật cản chỉ có HAI vẻ: còn đó, hoặc đã biến mất. Không nứt, không đống đổ nát —
+// spec §8.2: "biến mất ngay lập tức, không hoạt ảnh vỡ, không đống đổ nát".
+type ObstacleLook = 'intact' | 'gone';
 
 interface ObstacleNode {
   o: MapObstacle;
   node: Container;
   look: ObstacleLook | '';
-  hpDrawn: number;
+  /** tierDrawn: bậc có chém được hay không ở lần vẽ gần nhất, để biết khi nào phải vẽ lại viền. */
+  tierDrawn: boolean;
   warnUntil: number;
   box: { x: number; y: number; w: number; h: number }; // drawn bounds, for see-through
   /** drawnWithArt: lần vẽ gần nhất dùng ảnh thật hay placeholder (§13.7 mục 3). */
@@ -186,23 +196,24 @@ function backgroundFilter(): ColorMatrixFilter {
   return f;
 }
 
-const HP_FULL = 0x4caf50;
-const HP_MID = 0xffd23f;
-const HP_LOW = 0xe63946;
-
-function mixColor(a: number, b: number, t: number): number {
-  const ch = (shift: number): number => Math.round(((a >> shift) & 255) + (((b >> shift) & 255) - ((a >> shift) & 255)) * t);
-  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
-}
-
-/** hpColor: green at full HP → yellow at half → red when nearly broken (placeholder obstacles). */
-function hpColor(frac: number): number {
-  return frac > 0.5 ? mixColor(HP_MID, HP_FULL, (frac - 0.5) * 2) : mixColor(HP_LOW, HP_MID, frac * 2);
+/**
+ * tooHardOutline vẽ viền tối mờ quanh vật cản mà cảnh giới hiện tại chưa chém được
+ * (spec §8.2 "Nhận biết bậc").
+ *
+ * Viền thay cho bảng máu của bản cũ: không còn máu nên không còn gì để đếm, nhưng người
+ * chơi vẫn cần biết TRƯỚC khi mài kiếm rằng cái này không chém được. Vẽ bằng một nét dày
+ * mờ phía trong, không phải một lớp phủ đen — phủ lên cả vật cản thì mất hết chi tiết art.
+ */
+function tooHardOutline(o: MapObstacle): Graphics {
+  const g = new Graphics();
+  drawShape(g, o.s).stroke({ color: 0x000000, width: 10, alpha: 0.55 });
+  drawShape(g, o.s).fill({ color: 0x101018, alpha: 0.22 });
+  return g;
 }
 
 /**
  * MapView draws the static map. Obstacle nodes are handed to the scene's entity layer so they
- * y-sort with characters; they change look with their HP (spec §8.2).
+ * y-sort with characters; chúng chỉ có hai vẻ — còn đó hoặc biến mất (spec §8.2).
  */
 export class MapView {
   readonly ground = new Container();
@@ -234,7 +245,7 @@ export class MapView {
     this.buildGates();
     this.buildDecor();
     for (const o of map.obstacles) {
-      const n: ObstacleNode = { o, node: new Container(), look: '', hpDrawn: -1, warnUntil: 0, box: bounds(o.s), drawnWithArt: false, fadeFrom: 0 };
+      const n: ObstacleNode = { o, node: new Container(), look: '', tierDrawn: true, warnUntil: 0, box: bounds(o.s), drawnWithArt: false, fadeFrom: 0 };
       this.obstacleNodes.set(o.id, n);
     }
     const filter = backgroundFilter();
@@ -607,7 +618,7 @@ export class MapView {
     }
     for (const n of this.obstacleNodes.values()) {
       this.updateObstacle(n, w, now);
-      if (me && n.look !== 'rubble' && this.covers(n, me)) {
+      if (me && n.look === 'intact' && this.covers(n, me)) {
         n.node.alpha *= occlusionAlpha;
       }
     }
@@ -629,17 +640,11 @@ export class MapView {
 
   private updateObstacle(n: ObstacleNode, w: ClientWorld, now: number): void {
     const broken = w.brokenObstacles.get(n.o.id) ?? false;
-    const hp = w.obstacleHp.get(n.o.id) ?? n.o.hp;
-    const frac = n.o.hp > 0 ? hp / n.o.hp : 1;
-    let look: ObstacleLook = 'intact';
-    if (broken) {
-      look = 'rubble';
-    } else if (frac < 0.33) {
-      look = 'nearly_broken';
-    } else if (frac <= 0.66) {
-      look = 'cracked';
-    }
-    const hasArt = assets.texture(`obstacles/${n.o.k}/${look}.png`) !== null;
+    const look: ObstacleLook = broken ? 'gone' : 'intact';
+    // Bậc quá cao thì vẽ VIỀN TỐI MỜ (spec §8.2): người chơi phải nhìn là biết chém được
+    // hay không, trước khi mất 3 giây mài vào một bức tường không nhúc nhích.
+    const canCut = w.canCutObstacle(n.o.t);
+    const hasArt = assets.texture(`obstacles/${n.o.k}/intact.png`) !== null;
     // Ảnh thật vừa tải xong (nhóm `zone_*` về sau khi vào trận, §13.7 mục 3): dựng lại
     // bằng ảnh thật và MỜ DẦN vào. Điều kiện phải là "lần trước vẽ placeholder" chứ không
     // phải "có ảnh": thiếu nó thì mỗi lần `assets.gen` tăng là dựng lại cả 300 vật cản.
@@ -647,21 +652,23 @@ export class MapView {
     if (upgraded) {
       n.fadeFrom = now;
     }
-    if (look !== n.look || upgraded || (!hasArt && hp !== n.hpDrawn)) {
+    if (look !== n.look || upgraded || canCut !== n.tierDrawn) {
       n.look = look;
-      n.hpDrawn = hp;
+      n.tierDrawn = canCut;
       n.drawnWithArt = hasArt;
       n.node.removeChildren().forEach((c) => c.destroy());
-      const art = this.obstacleArt(n.o, look, frac);
-      if (look !== 'rubble') {
+      if (look === 'intact') {
         // Bóng đổ mềm + vụn dưới chân để vật cản "cắm" vào đất thay vì nổi lên như dán
         // (spec §8.6 mục 3). Vẽ TRƯỚC phần art nên nằm dưới.
         const b = bounds(n.o.s);
         const skirt = obstacleSkirt(b.w, b.h, n.o.k, n.o.id * 2654435761);
         skirt.position.set(b.x + b.w / 2, b.y + b.h / 2);
         n.node.addChild(skirt);
+        n.node.addChild(this.varied(this.obstacleArt(n.o), n.o));
+        if (!canCut) {
+          n.node.addChild(tooHardOutline(n.o));
+        }
       }
-      n.node.addChild(this.varied(art, n.o, look));
       const lb = n.node.getLocalBounds();
       n.box = { x: lb.x, y: lb.y, w: lb.width, h: lb.height };
       n.node.zIndex = broken ? -1e6 : bounds(n.o.s).y + bounds(n.o.s).h;
@@ -690,10 +697,10 @@ export class MapView {
    * Tường dãy và tường biên thì KHÔNG đụng vào: chúng phải nối liền nhau, xoay một đoạn là
    * hở ngay.
    */
-  private varied(art: Container, o: MapObstacle, look: ObstacleLook): Container {
+  private varied(art: Container, o: MapObstacle): Container {
     const b = bounds(o.s);
     const tiled = !o.s.c && (b.w > b.h * 1.6 || b.h > b.w * 1.6);
-    if (look === 'rubble' || tiled || o.k === 'stone_wall' || o.k === 'fence' || o.k === 'brick') {
+    if (tiled || o.k === 'stone_wall' || o.k === 'sect_wall' || o.k === 'cliff' || o.k === 'fence' || o.k === 'brick' || o.k === 'border') {
       return art;
     }
     const cx = b.x + b.w / 2;
@@ -710,31 +717,20 @@ export class MapView {
     return pivot;
   }
 
-  private obstacleArt(o: MapObstacle, look: ObstacleLook, frac: number): Container {
+  private obstacleArt(o: MapObstacle): Container {
     const b = bounds(o.s);
     // Đoạn dọc cần art riêng: xoay sprite ngang 90° trông sai hẳn (bóng đổ, mặt đứng).
     // Chưa có ảnh thì dùng placeholder dọc, và `assets:report` liệt kê để sinh sau.
     const vertical = !o.s.c && b.h > b.w;
-    const tex = assets.texture(`obstacles/${o.k}/${look}${vertical ? '_vertical' : ''}.png`)
-      ?? (vertical ? null : assets.texture(`obstacles/${o.k}/${look}.png`));
+    const tex = assets.texture(`obstacles/${o.k}/intact${vertical ? '_vertical' : ''}.png`)
+      ?? (vertical ? null : assets.texture(`obstacles/${o.k}/intact.png`));
     if (tex) {
       return o.s.c ? fitSprite(tex, o.s) : tiledObstacle(tex, o.s, vertical);
     }
-    // Placeholder: indestructible walls keep their colour; breakable ones show HP as colour.
-    const color = o.hp > 0 ? hpColor(frac) : OBSTACLE_COLOR[o.k] ?? 0x5b6b5b;
+    // Placeholder: màu theo loại vật cản. Bản cũ tô theo % máu còn lại; giờ không còn máu,
+    // nên màu chỉ nói "đây là loại gì".
     const g = new Graphics();
-    if (look === 'rubble') {
-      return drawShape(g, o.s).fill({ color: 0x777777, alpha: 0.3 }).stroke({ color: 0x555555, width: 4, alpha: 0.5 });
-    }
-    drawShape(g, o.s).fill(color).stroke({ color: 0x000000, width: 6 });
-    if (look !== 'intact') {
-      const b = bounds(o.s);
-      g.moveTo(b.x + b.w * 0.2, b.y + b.h * 0.1).lineTo(b.x + b.w * 0.45, b.y + b.h * 0.6).lineTo(b.x + b.w * 0.35, b.y + b.h * 0.9);
-      if (look === 'nearly_broken') {
-        g.moveTo(b.x + b.w * 0.8, b.y + b.h * 0.15).lineTo(b.x + b.w * 0.6, b.y + b.h * 0.55).lineTo(b.x + b.w * 0.75, b.y + b.h * 0.85);
-      }
-      g.stroke({ color: 0x000000, width: 5 });
-    }
+    drawShape(g, o.s).fill(OBSTACLE_COLOR[o.k] ?? 0x5b6b5b).stroke({ color: 0x000000, width: 6 });
     return g;
   }
 }

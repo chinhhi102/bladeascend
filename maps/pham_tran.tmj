@@ -10,7 +10,7 @@
  "tileheight": 100,
  "infinite": false,
  "nextlayerid": 6,
- "nextobjectid": 320,
+ "nextobjectid": 322,
  "properties": [
   {
    "name": "name",
@@ -984,7 +984,7 @@
     {
      "id": 1,
      "name": "",
-     "type": "stone_wall",
+     "type": "border",
      "x": 300,
      "y": 300,
      "width": 11400,
@@ -995,7 +995,7 @@
     {
      "id": 2,
      "name": "",
-     "type": "stone_wall",
+     "type": "border",
      "x": 300,
      "y": 11580,
      "width": 11400,
@@ -1006,7 +1006,7 @@
     {
      "id": 3,
      "name": "",
-     "type": "stone_wall",
+     "type": "border",
      "x": 300,
      "y": 300,
      "width": 120,
@@ -1017,7 +1017,7 @@
     {
      "id": 4,
      "name": "",
-     "type": "stone_wall",
+     "type": "border",
      "x": 11580,
      "y": 300,
      "width": 120,
@@ -2084,7 +2084,7 @@
     {
      "id": 171,
      "name": "",
-     "type": "stone_wall",
+     "type": "brick",
      "x": 2520,
      "y": 8880,
      "width": 1500,
@@ -2095,7 +2095,7 @@
     {
      "id": 172,
      "name": "",
-     "type": "stone_wall",
+     "type": "brick",
      "x": 2520,
      "y": 9150,
      "width": 1500,
@@ -2106,7 +2106,7 @@
     {
      "id": 173,
      "name": "",
-     "type": "stone_wall",
+     "type": "brick",
      "x": 5220,
      "y": 1990,
      "width": 1500,
@@ -2117,7 +2117,7 @@
     {
      "id": 174,
      "name": "",
-     "type": "stone_wall",
+     "type": "brick",
      "x": 4620,
      "y": 8880,
      "width": 120,
@@ -2128,7 +2128,7 @@
     {
      "id": 175,
      "name": "",
-     "type": "stone_wall",
+     "type": "brick",
      "x": 4990,
      "y": 8880,
      "width": 120,
@@ -2139,7 +2139,7 @@
     {
      "id": 176,
      "name": "",
-     "type": "stone_wall",
+     "type": "brick",
      "x": 7620,
      "y": 1620,
      "width": 120,
@@ -2150,7 +2150,7 @@
     {
      "id": 177,
      "name": "",
-     "type": "stone_wall",
+     "type": "brick",
      "x": 8090,
      "y": 1620,
      "width": 120,
@@ -2161,7 +2161,7 @@
     {
      "id": 178,
      "name": "",
-     "type": "stone_wall",
+     "type": "brick",
      "x": 6720,
      "y": 8880,
      "width": 1500,
@@ -2172,11 +2172,33 @@
     {
      "id": 179,
      "name": "",
-     "type": "stone_wall",
+     "type": "brick",
      "x": 6720,
      "y": 9350,
      "width": 1500,
      "height": 120,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 181,
+     "name": "",
+     "type": "seal_stele",
+     "x": 2453.2797722850696,
+     "y": 2950.975606685981,
+     "width": 220,
+     "height": 220,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 182,
+     "name": "",
+     "type": "seal_stele",
+     "x": 9324.172290690703,
+     "y": 8838.392469236036,
+     "width": 220,
+     "height": 220,
      "rotation": 0,
      "visible": true
     }
@@ -2366,30 +2388,6 @@
    "y": 0,
    "objects": [
     {
-     "id": 181,
-     "name": "",
-     "type": "banana_tree",
-     "x": 3503.1791613473297,
-     "y": 7617.981773502382,
-     "width": 0,
-     "height": 0,
-     "rotation": 0,
-     "visible": true,
-     "point": true
-    },
-    {
-     "id": 182,
-     "name": "",
-     "type": "banana_tree",
-     "x": 8000.7727761959095,
-     "y": 4848.694076466795,
-     "width": 0,
-     "height": 0,
-     "rotation": 0,
-     "visible": true,
-     "point": true
-    },
-    {
      "id": 183,
      "name": "",
      "type": "banana_tree",
@@ -2488,7 +2486,7 @@
     {
      "id": 191,
      "name": "",
-     "type": "banner",
+     "type": "banana_tree",
      "x": 5739.35892867699,
      "y": 11294.528593010904,
      "width": 0,
@@ -2500,7 +2498,7 @@
     {
      "id": 192,
      "name": "",
-     "type": "banner",
+     "type": "banana_tree",
      "x": 4750.4365399823955,
      "y": 8103.704859815386,
      "width": 0,
@@ -2632,7 +2630,7 @@
     {
      "id": 203,
      "name": "",
-     "type": "broken_tv",
+     "type": "banner",
      "x": 5201.072517443923,
      "y": 2360.4416286016176,
      "width": 0,
@@ -2644,7 +2642,7 @@
     {
      "id": 204,
      "name": "",
-     "type": "broken_tv",
+     "type": "banner",
      "x": 5069.303677647653,
      "y": 1476.1820175564346,
      "width": 0,
@@ -2812,7 +2810,7 @@
     {
      "id": 218,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "broken_tv",
      "x": 8695.289405485433,
      "y": 1479.066784933581,
      "width": 0,
@@ -3052,7 +3050,7 @@
     {
      "id": 238,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 10196.974555381848,
      "y": 11262.981965872703,
      "width": 0,
@@ -3304,7 +3302,7 @@
     {
      "id": 259,
      "name": "",
-     "type": "pile_of_watermelons",
+     "type": "old_bicycle_leaning",
      "x": 6538.4894541703225,
      "y": 10338.28201093711,
      "width": 0,
@@ -3448,7 +3446,7 @@
     {
      "id": 271,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "pile_of_watermelons",
      "x": 3120.3284542919673,
      "y": 11017.535021924456,
      "width": 0,
@@ -3460,7 +3458,7 @@
     {
      "id": 272,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "pile_of_watermelons",
      "x": 9838.025078160525,
      "y": 714.3567569648969,
      "width": 0,
@@ -3604,7 +3602,7 @@
     {
      "id": 284,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "red_plastic_stool",
      "x": 2239.3574434118977,
      "y": 3105.346061105696,
      "width": 0,
@@ -3616,7 +3614,7 @@
     {
      "id": 285,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "red_plastic_stool",
      "x": 6870.936003369803,
      "y": 9721.27655750638,
      "width": 0,
@@ -3736,7 +3734,7 @@
     {
      "id": 295,
      "name": "",
-     "type": "street_food_cart",
+     "type": "rusty_water_jar",
      "x": 9317.524680883154,
      "y": 11047.667406827466,
      "width": 0,
@@ -3748,7 +3746,7 @@
     {
      "id": 296,
      "name": "",
-     "type": "street_food_cart",
+     "type": "rusty_water_jar",
      "x": 3345.7483658645137,
      "y": 5578.813396948686,
      "width": 0,
@@ -4027,6 +4025,30 @@
      "type": "well",
      "x": 4688.9379060842,
      "y": 1832.7159881766354,
+     "width": 0,
+     "height": 0,
+     "rotation": 0,
+     "visible": true,
+     "point": true
+    },
+    {
+     "id": 320,
+     "name": "",
+     "type": "well",
+     "x": 9785.912102311513,
+     "y": 5354.329191229257,
+     "width": 0,
+     "height": 0,
+     "rotation": 0,
+     "visible": true,
+     "point": true
+    },
+    {
+     "id": 321,
+     "name": "",
+     "type": "well",
+     "x": 9950.364602888449,
+     "y": 8754.32391007561,
      "width": 0,
      "height": 0,
      "rotation": 0,

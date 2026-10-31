@@ -280,8 +280,9 @@ func TestGhostPassesEverythingButBorder(t *testing.T) {
 	cfg.Room.MonsterCount, cfg.Items.CountPerRoom = 0, 0
 	m := world.EmptyMap(cfg.Room.MapSize)
 	m.Obstacles = []world.Obstacle{
-		{ID: 0, Kind: "brick", MaxHP: 250, Shape: world.Shape{X: 3200, Y: 2900, W: 200, H: 200}},
-		{ID: 1, Kind: "stone_wall", MaxHP: 0, Shape: world.Shape{X: 4200, Y: 2900, W: 200, H: 200}},
+		{ID: 0, Kind: "brick", Tier: 2, Shape: world.Shape{X: 3200, Y: 2900, W: 200, H: 200}},
+		{ID: 1, Kind: "jade_pillar", Tier: 11, Shape: world.Shape{X: 4200, Y: 2900, W: 200, H: 200}},
+		{ID: 2, Kind: config.BorderKind, Tier: config.TierBorder, Shape: world.Shape{X: 5200, Y: 2900, W: 200, H: 200}},
 	}
 	g := New(cfg, m, 1)
 	p := put(g, "shipper", Vec{X: 3000, Y: 3000}, 10, 20)
@@ -293,18 +294,22 @@ func TestGhostPassesEverythingButBorder(t *testing.T) {
 		at   Vec
 	}{
 		{"tường gạch (phá được)", Vec{X: 3300, Y: 3000}},
-		{"vách đá (KHÔNG phá được)", Vec{X: 4300, Y: 3000}},
+		{"cột ngọc (bậc 11)", Vec{X: 4300, Y: 3000}},
 	} {
 		if got := g.resolveBlockingFor(p, c.at, g.BodyR(p)); got.Dist(c.at) > 1e-9 {
 			t.Errorf("đang Giao Hỏa Tốc mà vẫn bị %s chặn", c.name)
 		}
 	}
 
-	// Biên khu thì không: spec nói rõ "trừ biên khu vực". Cho xuyên luôn thì Shipper ra
-	// đứng ngoài bản đồ và không gì kéo vào lại.
+	// Biên khu thì không: spec nói rõ "trừ biên khu vực". Hai thứ phải chặn được:
+	// vật cản loại `border` giữa hai khu, và rìa bản đồ.
+	wall := Vec{X: 5300, Y: 3000}
+	if got := g.resolveBlockingFor(p, wall, g.BodyR(p)); got.Dist(wall) < 1e-9 {
+		t.Error("xuyên qua biên khu — spec cấm")
+	}
 	out := Vec{X: -500, Y: 3000}
 	if got := g.resolveBlockingFor(p, out, g.BodyR(p)); got.Dist(out) < 1e-9 {
-		t.Error("xuyên ra ngoài biên khu — spec cấm")
+		t.Error("xuyên ra ngoài bản đồ — không có đất, không gì kéo vào lại")
 	}
 }
 
@@ -314,7 +319,7 @@ func TestGhostUnsticksSmoothly(t *testing.T) {
 	cfg.Room.MonsterCount, cfg.Items.CountPerRoom = 0, 0
 	m := world.EmptyMap(cfg.Room.MapSize)
 	m.Obstacles = []world.Obstacle{
-		{ID: 0, Kind: "stone_wall", MaxHP: 0, Shape: world.Shape{X: 3200, Y: 2900, W: 400, H: 400}},
+		{ID: 0, Kind: "stone_wall", Tier: 5, Shape: world.Shape{X: 3200, Y: 2900, W: 400, H: 400}},
 	}
 	g := New(cfg, m, 1)
 	p := put(g, "shipper", Vec{X: 3000, Y: 3000}, 10, 20)

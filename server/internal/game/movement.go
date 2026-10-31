@@ -1,6 +1,7 @@
 package game
 
 import (
+	"kiemxoay/server/internal/config"
 	"math"
 	"sort"
 
@@ -248,7 +249,41 @@ func (g *Game) resolveBlockingFor(p *Player, pos Vec, r float64) Vec {
 	if !p.HasStatus(StGhost, g.Time) {
 		return g.resolveBlocking(pos, r)
 	}
-	return g.clampToPlay(pos, r)
+	return g.resolveBorders(pos, r)
+}
+
+// resolveBorders chỉ đẩy ra khỏi **biên khu** (`config.TierBorder`), bỏ qua mọi vật cản
+// khác. Dùng cho Giao Hỏa Tốc.
+//
+// Trước v6.7 biên khu không phải một LOẠI riêng mà là `stone_wall` với `MaxHP: 0`, nên
+// "biên" ở đây chỉ còn nghĩa là rìa bản đồ và Shipper xuyên qua được tường giữa hai khu —
+// tức đi tắt sang khu cảnh giới cao hơn mà không qua cổng, bỏ qua cả luật chặn cấp.
+func (g *Game) resolveBorders(pos Vec, r float64) Vec {
+	pos = g.clampToPlay(pos, r)
+	for iter := 0; iter < 3; iter++ {
+		ids := g.obsBuf[:0]
+		g.QueryObstacles(pos, r, func(id int) {
+			if g.Map.Obstacles[id].Tier >= config.TierBorder {
+				ids = append(ids, id)
+			}
+		})
+		if len(ids) == 0 {
+			break
+		}
+		g.obsBuf = ids
+		sort.Ints(ids)
+		moved := false
+		for _, id := range ids {
+			if np, hit := g.Map.Obstacles[id].Block().PushOut(pos, r); hit {
+				pos, moved = np, true
+			}
+		}
+		if !moved {
+			break
+		}
+		pos = g.clampToPlay(pos, r)
+	}
+	return pos
 }
 
 func (g *Game) resolveBlocking(pos Vec, r float64) Vec {

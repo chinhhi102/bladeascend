@@ -106,24 +106,26 @@ func (g *gen) sectCentre(q int) Vec2 {
 func (g *gen) frame() {
 	c := g.size / 2
 	plaza := g.cfg.CenterPlazaR
-	// Quảng trường trung tâm: vòng cột thấp, chừa 4 lối vào theo 4 đường chính.
-	g.ringWall(Vec2{c, c}, plaza, 140, []float64{0, math.Pi / 2, math.Pi, 3 * math.Pi / 2}, 600)
+	// Quảng trường trung tâm: vòng **cột ngọc Thiên Đình** (bậc 11), chừa 4 lối vào theo 4
+	// đường chính. §8.2 muốn mỗi khu có vật cản bậc Tiên giới, và quanh Thiên Tiên Đài là
+	// chỗ spec gọi tên đích danh.
+	g.ringWall("jade_pillar", Vec2{c, c}, plaza, 140, []float64{0, math.Pi / 2, math.Pi, 3 * math.Pi / 2}, 600)
 	g.b.altar("center", c, c, 220, g.cfg.CenterPlazaR*0.6)
 	g.b.zone("road", c-plaza, c-plaza, 2*plaza, 2*plaza, true)
 
 	for q := 0; q < 4; q++ {
 		s := g.sectCentre(q)
 		r := g.cfg.SectR
-		// Sân môn phái: tường bao không phá được, chừa 3 cổng ra vào.
+		// Sân môn phái: tường sân môn phái (bậc 7), chừa 3 cổng ra vào.
 		gaps := []float64{math.Pi/4 + float64(q)*math.Pi/2, math.Pi / 6, -math.Pi / 3}
-		g.ringWall(s, r, 140, gaps, 420)
+		g.ringWall("sect_wall", s, r, 140, gaps, 420)
 		g.b.altar("small", s.X, s.Y, 150, 300)
 		g.b.zone("road", s.X-r*0.7, s.Y-r*0.7, r*1.4, r*1.4, true)
 	}
 }
 
-// ringWall draws a circle of indestructible wall blocks with openings at the given angles.
-func (g *gen) ringWall(c Vec2, r, thick float64, gaps []float64, gapArc float64) {
+// ringWall draws a circle of wall blocks of the given kind with openings at the given angles.
+func (g *gen) ringWall(kind string, c Vec2, r, thick float64, gaps []float64, gapArc float64) {
 	n := int(2 * math.Pi * r / (thick * 0.9))
 	for i := 0; i < n; i++ {
 		a := 2 * math.Pi * float64(i) / float64(n)
@@ -139,7 +141,7 @@ func (g *gen) ringWall(c Vec2, r, thick float64, gaps []float64, gapArc float64)
 			continue
 		}
 		x, y := c.X+math.Cos(a)*r, c.Y+math.Sin(a)*r
-		g.b.wall(x-thick/2, y-thick/2, thick, thick)
+		g.b.wall(kind, x-thick/2, y-thick/2, thick, thick)
 	}
 }
 

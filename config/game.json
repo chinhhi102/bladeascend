@@ -253,15 +253,35 @@
     "occlusion_alpha": 0.5,
     "regrow_secs": 30,
     "regrow_warn_secs": 3,
-    "hp": {
-      "fence": 30,
-      "stall": 80,
-      "cart": 80,
-      "brick": 250,
-      "boulder": 800
+    "min_realm": {
+      "fence": 0,
+      "stall": 1,
+      "cart": 1,
+      "bamboo_thin": 1,
+      "brick": 2,
+      "bamboo_wall": 2,
+      "boulder": 3,
+      "bamboo_ancient": 5,
+      "stone_wall": 5,
+      "sect_wall": 7,
+      "cliff": 7,
+      "boulder_huge": 9,
+      "ice_eternal": 9,
+      "jade_pillar": 11,
+      "seal_stele": 13
     },
-    "dmg_cooldown_secs": 0.5,
-    "dmg_per_extra_ring": 0.5,
+    "corridor_min": {
+      "1": 150,
+      "2": 160,
+      "3": 180,
+      "5": 240,
+      "7": 290,
+      "9": 340,
+      "11": 370,
+      "13": 390
+    },
+    "hard_buff_extra_tier": 1,
+    "cut_hint_cooldown_secs": 3.0,
     "stall_item_drop": 0.3,
     "hit_cooldown": 0.25
   },

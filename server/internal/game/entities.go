@@ -217,9 +217,11 @@ type Item struct {
 }
 
 // ObstacleState is the dynamic state of a destructible obstacle (spec §8.2).
+// ObstacleState: trạng thái CHẠY của một vật cản.
+//
+// Từ v6.7 không còn máu và không còn phần dư sát thương — vật cản chỉ có hai trạng thái:
+// còn đó, hoặc đã bị chém và đang đếm giờ mọc lại (§8.2).
 type ObstacleState struct {
-	HP       int
-	Partial  float64 // leftover fractional damage (spec §5.3 damage is not a whole number)
 	Broken   bool
 	BrokenAt float64
 	Warned   bool

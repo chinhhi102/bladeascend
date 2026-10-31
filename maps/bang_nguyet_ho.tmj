@@ -10,7 +10,7 @@
  "tileheight": 100,
  "infinite": false,
  "nextlayerid": 6,
- "nextobjectid": 134,
+ "nextobjectid": 138,
  "properties": [
   {
    "name": "name",
@@ -1487,7 +1487,7 @@
     {
      "id": 1,
      "name": "",
-     "type": "stone_wall",
+     "type": "border",
      "x": 300,
      "y": 300,
      "width": 11400,
@@ -1498,7 +1498,7 @@
     {
      "id": 2,
      "name": "",
-     "type": "stone_wall",
+     "type": "border",
      "x": 300,
      "y": 11580,
      "width": 11400,
@@ -1509,7 +1509,7 @@
     {
      "id": 3,
      "name": "",
-     "type": "stone_wall",
+     "type": "border",
      "x": 300,
      "y": 300,
      "width": 120,
@@ -1520,7 +1520,7 @@
     {
      "id": 4,
      "name": "",
-     "type": "stone_wall",
+     "type": "border",
      "x": 11580,
      "y": 300,
      "width": 120,
@@ -1827,6 +1827,61 @@
      "rotation": 0,
      "visible": true,
      "ellipse": true
+    },
+    {
+     "id": 44,
+     "name": "",
+     "type": "ice_eternal",
+     "x": 3660.7815156132965,
+     "y": 5954.43566641576,
+     "width": 300,
+     "height": 300,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 45,
+     "name": "",
+     "type": "ice_eternal",
+     "x": 3501.985567144614,
+     "y": 3623.0229395364286,
+     "width": 300,
+     "height": 300,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 46,
+     "name": "",
+     "type": "ice_eternal",
+     "x": 8618.468040139767,
+     "y": 7690.524170571012,
+     "width": 300,
+     "height": 300,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 47,
+     "name": "",
+     "type": "ice_eternal",
+     "x": 6893.2725772652075,
+     "y": 8071.922052652553,
+     "width": 300,
+     "height": 300,
+     "rotation": 0,
+     "visible": true
+    },
+    {
+     "id": 48,
+     "name": "",
+     "type": "ice_eternal",
+     "x": 6890.241554459278,
+     "y": 5829.857690497458,
+     "width": 300,
+     "height": 300,
+     "rotation": 0,
+     "visible": true
     }
    ]
   },
@@ -2014,43 +2069,7 @@
    "y": 0,
    "objects": [
     {
-     "id": 44,
-     "name": "",
-     "type": "pine",
-     "x": 10403.364749194783,
-     "y": 3577.392957220877,
-     "width": 0,
-     "height": 0,
-     "rotation": 0,
-     "visible": true,
-     "point": true
-    },
-    {
-     "id": 45,
-     "name": "",
-     "type": "pine",
-     "x": 7428.651805455428,
-     "y": 3407.2683769938035,
-     "width": 0,
-     "height": 0,
-     "rotation": 0,
-     "visible": true,
-     "point": true
-    },
-    {
-     "id": 46,
-     "name": "",
-     "type": "pine",
-     "x": 645.2104492340625,
-     "y": 7140.1653072408335,
-     "width": 0,
-     "height": 0,
-     "rotation": 0,
-     "visible": true,
-     "point": true
-    },
-    {
-     "id": 47,
+     "id": 49,
      "name": "",
      "type": "pine",
      "x": 6770.96519936532,
@@ -2062,7 +2081,7 @@
      "point": true
     },
     {
-     "id": 48,
+     "id": 50,
      "name": "",
      "type": "pine",
      "x": 4571.72306925992,
@@ -2074,7 +2093,7 @@
      "point": true
     },
     {
-     "id": 49,
+     "id": 51,
      "name": "",
      "type": "pine",
      "x": 10787.161944258247,
@@ -2086,7 +2105,7 @@
      "point": true
     },
     {
-     "id": 50,
+     "id": 52,
      "name": "",
      "type": "pine",
      "x": 759.1087035668927,
@@ -2098,7 +2117,7 @@
      "point": true
     },
     {
-     "id": 51,
+     "id": 53,
      "name": "",
      "type": "pine",
      "x": 6818.816773561986,
@@ -2110,7 +2129,7 @@
      "point": true
     },
     {
-     "id": 52,
+     "id": 54,
      "name": "",
      "type": "pine",
      "x": 2033.3863774091078,
@@ -2122,7 +2141,7 @@
      "point": true
     },
     {
-     "id": 53,
+     "id": 55,
      "name": "",
      "type": "pine",
      "x": 6910.228716903855,
@@ -2134,7 +2153,7 @@
      "point": true
     },
     {
-     "id": 54,
+     "id": 56,
      "name": "",
      "type": "pine",
      "x": 8815.47815869447,
@@ -2146,7 +2165,7 @@
      "point": true
     },
     {
-     "id": 55,
+     "id": 57,
      "name": "",
      "type": "pine",
      "x": 11038.13009276459,
@@ -2158,7 +2177,7 @@
      "point": true
     },
     {
-     "id": 56,
+     "id": 58,
      "name": "",
      "type": "pine",
      "x": 11214.896972075934,
@@ -2170,7 +2189,7 @@
      "point": true
     },
     {
-     "id": 57,
+     "id": 59,
      "name": "",
      "type": "pine",
      "x": 962.4439365967755,
@@ -2182,7 +2201,7 @@
      "point": true
     },
     {
-     "id": 58,
+     "id": 60,
      "name": "",
      "type": "pine",
      "x": 10378.940916296933,
@@ -2194,7 +2213,7 @@
      "point": true
     },
     {
-     "id": 59,
+     "id": 61,
      "name": "",
      "type": "pine",
      "x": 5481.647431621179,
@@ -2206,7 +2225,7 @@
      "point": true
     },
     {
-     "id": 60,
+     "id": 62,
      "name": "",
      "type": "pine",
      "x": 2552.9970895382553,
@@ -2218,7 +2237,7 @@
      "point": true
     },
     {
-     "id": 61,
+     "id": 63,
      "name": "",
      "type": "pine",
      "x": 8334.048737698758,
@@ -2230,7 +2249,7 @@
      "point": true
     },
     {
-     "id": 62,
+     "id": 64,
      "name": "",
      "type": "pine",
      "x": 1722.8543100399918,
@@ -2242,7 +2261,7 @@
      "point": true
     },
     {
-     "id": 63,
+     "id": 65,
      "name": "",
      "type": "pine",
      "x": 2012.1086451779975,
@@ -2254,7 +2273,7 @@
      "point": true
     },
     {
-     "id": 64,
+     "id": 66,
      "name": "",
      "type": "pine",
      "x": 5757.080183009028,
@@ -2266,7 +2285,7 @@
      "point": true
     },
     {
-     "id": 65,
+     "id": 67,
      "name": "",
      "type": "pine",
      "x": 482.6697893332427,
@@ -2278,7 +2297,7 @@
      "point": true
     },
     {
-     "id": 66,
+     "id": 68,
      "name": "",
      "type": "pine",
      "x": 6541.221768284845,
@@ -2290,7 +2309,7 @@
      "point": true
     },
     {
-     "id": 67,
+     "id": 69,
      "name": "",
      "type": "pine",
      "x": 1264.1701545002657,
@@ -2302,7 +2321,7 @@
      "point": true
     },
     {
-     "id": 68,
+     "id": 70,
      "name": "",
      "type": "pine",
      "x": 2179.04778591574,
@@ -2314,7 +2333,7 @@
      "point": true
     },
     {
-     "id": 69,
+     "id": 71,
      "name": "",
      "type": "pine",
      "x": 6264.645119934488,
@@ -2326,7 +2345,7 @@
      "point": true
     },
     {
-     "id": 70,
+     "id": 72,
      "name": "",
      "type": "pine",
      "x": 2611.7036874361997,
@@ -2338,7 +2357,7 @@
      "point": true
     },
     {
-     "id": 71,
+     "id": 73,
      "name": "",
      "type": "pine",
      "x": 11165.706518625984,
@@ -2350,7 +2369,7 @@
      "point": true
     },
     {
-     "id": 72,
+     "id": 74,
      "name": "",
      "type": "pine",
      "x": 3223.7329799464533,
@@ -2362,7 +2381,7 @@
      "point": true
     },
     {
-     "id": 73,
+     "id": 75,
      "name": "",
      "type": "pine",
      "x": 6973.593182397717,
@@ -2374,7 +2393,7 @@
      "point": true
     },
     {
-     "id": 74,
+     "id": 76,
      "name": "",
      "type": "pine",
      "x": 954.2927534654236,
@@ -2386,9 +2405,9 @@
      "point": true
     },
     {
-     "id": 75,
+     "id": 77,
      "name": "",
-     "type": "rock_small",
+     "type": "pine",
      "x": 4453.847482630757,
      "y": 8186.515964970516,
      "width": 0,
@@ -2398,9 +2417,9 @@
      "point": true
     },
     {
-     "id": 76,
+     "id": 78,
      "name": "",
-     "type": "rock_small",
+     "type": "pine",
      "x": 1642.807234681743,
      "y": 7569.793437552134,
      "width": 0,
@@ -2410,7 +2429,7 @@
      "point": true
     },
     {
-     "id": 77,
+     "id": 79,
      "name": "",
      "type": "rock_small",
      "x": 9126.05617996491,
@@ -2422,7 +2441,7 @@
      "point": true
     },
     {
-     "id": 78,
+     "id": 80,
      "name": "",
      "type": "rock_small",
      "x": 3327.3881466642533,
@@ -2434,7 +2453,7 @@
      "point": true
     },
     {
-     "id": 79,
+     "id": 81,
      "name": "",
      "type": "rock_small",
      "x": 499.12637057794575,
@@ -2446,7 +2465,7 @@
      "point": true
     },
     {
-     "id": 80,
+     "id": 82,
      "name": "",
      "type": "rock_small",
      "x": 11103.109181687865,
@@ -2458,7 +2477,7 @@
      "point": true
     },
     {
-     "id": 81,
+     "id": 83,
      "name": "",
      "type": "rock_small",
      "x": 5320.783636633995,
@@ -2470,7 +2489,7 @@
      "point": true
     },
     {
-     "id": 82,
+     "id": 84,
      "name": "",
      "type": "rock_small",
      "x": 5645.6785457365095,
@@ -2482,7 +2501,7 @@
      "point": true
     },
     {
-     "id": 83,
+     "id": 85,
      "name": "",
      "type": "rock_small",
      "x": 10367.101488297683,
@@ -2494,7 +2513,7 @@
      "point": true
     },
     {
-     "id": 84,
+     "id": 86,
      "name": "",
      "type": "rock_small",
      "x": 4245.694886323616,
@@ -2506,7 +2525,7 @@
      "point": true
     },
     {
-     "id": 85,
+     "id": 87,
      "name": "",
      "type": "rock_small",
      "x": 10001.197488725573,
@@ -2518,7 +2537,7 @@
      "point": true
     },
     {
-     "id": 86,
+     "id": 88,
      "name": "",
      "type": "rock_small",
      "x": 11241.993545233316,
@@ -2530,7 +2549,7 @@
      "point": true
     },
     {
-     "id": 87,
+     "id": 89,
      "name": "",
      "type": "rock_small",
      "x": 2776.8794130331516,
@@ -2542,7 +2561,7 @@
      "point": true
     },
     {
-     "id": 88,
+     "id": 90,
      "name": "",
      "type": "rock_small",
      "x": 1414.6385945358963,
@@ -2554,7 +2573,7 @@
      "point": true
     },
     {
-     "id": 89,
+     "id": 91,
      "name": "",
      "type": "rock_small",
      "x": 4190.301202674646,
@@ -2566,19 +2585,7 @@
      "point": true
     },
     {
-     "id": 90,
-     "name": "",
-     "type": "rock_small",
-     "x": 3568.4745186813548,
-     "y": 3762.076584042586,
-     "width": 0,
-     "height": 0,
-     "rotation": 0,
-     "visible": true,
-     "point": true
-    },
-    {
-     "id": 91,
+     "id": 92,
      "name": "",
      "type": "rock_small",
      "x": 7240.162351327983,
@@ -2590,7 +2597,7 @@
      "point": true
     },
     {
-     "id": 92,
+     "id": 93,
      "name": "",
      "type": "rock_small",
      "x": 3643.8538375139055,
@@ -2602,7 +2609,7 @@
      "point": true
     },
     {
-     "id": 93,
+     "id": 94,
      "name": "",
      "type": "rock_small",
      "x": 894.4206184840561,
@@ -2614,7 +2621,7 @@
      "point": true
     },
     {
-     "id": 94,
+     "id": 95,
      "name": "",
      "type": "rock_small",
      "x": 8166.001090693613,
@@ -2626,7 +2633,7 @@
      "point": true
     },
     {
-     "id": 95,
+     "id": 96,
      "name": "",
      "type": "rock_small",
      "x": 7733.634616080531,
@@ -2638,7 +2645,7 @@
      "point": true
     },
     {
-     "id": 96,
+     "id": 97,
      "name": "",
      "type": "rock_small",
      "x": 7505.90632326247,
@@ -2650,7 +2657,7 @@
      "point": true
     },
     {
-     "id": 97,
+     "id": 98,
      "name": "",
      "type": "rock_small",
      "x": 4942.115207162312,
@@ -2662,7 +2669,7 @@
      "point": true
     },
     {
-     "id": 98,
+     "id": 99,
      "name": "",
      "type": "rock_small",
      "x": 3424.3480835215328,
@@ -2674,7 +2681,7 @@
      "point": true
     },
     {
-     "id": 99,
+     "id": 100,
      "name": "",
      "type": "rock_small",
      "x": 9406.528178629485,
@@ -2686,7 +2693,7 @@
      "point": true
     },
     {
-     "id": 100,
+     "id": 101,
      "name": "",
      "type": "rock_small",
      "x": 5624.493549591795,
@@ -2698,7 +2705,7 @@
      "point": true
     },
     {
-     "id": 101,
+     "id": 102,
      "name": "",
      "type": "rock_small",
      "x": 8769.835331414946,
@@ -2710,7 +2717,7 @@
      "point": true
     },
     {
-     "id": 102,
+     "id": 103,
      "name": "",
      "type": "rock_small",
      "x": 9101.861069915412,
@@ -2722,7 +2729,7 @@
      "point": true
     },
     {
-     "id": 103,
+     "id": 104,
      "name": "",
      "type": "rock_small",
      "x": 3475.951570792327,
@@ -2734,9 +2741,9 @@
      "point": true
     },
     {
-     "id": 104,
+     "id": 105,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 10252.287513560801,
      "y": 6882.7817414722695,
      "width": 0,
@@ -2746,9 +2753,9 @@
      "point": true
     },
     {
-     "id": 105,
+     "id": 106,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3993.81515784205,
      "y": 8494.330789893369,
      "width": 0,
@@ -2758,7 +2765,7 @@
      "point": true
     },
     {
-     "id": 106,
+     "id": 107,
      "name": "",
      "type": "stone_lantern",
      "x": 7467.393813990621,
@@ -2770,7 +2777,7 @@
      "point": true
     },
     {
-     "id": 107,
+     "id": 108,
      "name": "",
      "type": "stone_lantern",
      "x": 8740.249435386284,
@@ -2782,7 +2789,7 @@
      "point": true
     },
     {
-     "id": 108,
+     "id": 109,
      "name": "",
      "type": "stone_lantern",
      "x": 5262.551601442627,
@@ -2794,7 +2801,7 @@
      "point": true
     },
     {
-     "id": 109,
+     "id": 110,
      "name": "",
      "type": "stone_lantern",
      "x": 8223.914589884038,
@@ -2806,7 +2813,7 @@
      "point": true
     },
     {
-     "id": 110,
+     "id": 111,
      "name": "",
      "type": "stone_lantern",
      "x": 2291.971448531382,
@@ -2818,7 +2825,7 @@
      "point": true
     },
     {
-     "id": 111,
+     "id": 112,
      "name": "",
      "type": "stone_lantern",
      "x": 10771.122060547483,
@@ -2830,7 +2837,7 @@
      "point": true
     },
     {
-     "id": 112,
+     "id": 113,
      "name": "",
      "type": "stone_lantern",
      "x": 7746.135166365652,
@@ -2842,7 +2849,7 @@
      "point": true
     },
     {
-     "id": 113,
+     "id": 114,
      "name": "",
      "type": "stone_lantern",
      "x": 7042.426269548229,
@@ -2854,7 +2861,7 @@
      "point": true
     },
     {
-     "id": 114,
+     "id": 115,
      "name": "",
      "type": "stone_lantern",
      "x": 4379.424965078938,
@@ -2866,7 +2873,7 @@
      "point": true
     },
     {
-     "id": 115,
+     "id": 116,
      "name": "",
      "type": "stone_lantern",
      "x": 10657.600485581672,
@@ -2878,7 +2885,7 @@
      "point": true
     },
     {
-     "id": 116,
+     "id": 117,
      "name": "",
      "type": "stone_lantern",
      "x": 1578.915310181688,
@@ -2890,7 +2897,7 @@
      "point": true
     },
     {
-     "id": 117,
+     "id": 118,
      "name": "",
      "type": "stone_lantern",
      "x": 11281.453493762836,
@@ -2902,7 +2909,7 @@
      "point": true
     },
     {
-     "id": 118,
+     "id": 119,
      "name": "",
      "type": "stone_lantern",
      "x": 4761.351384350775,
@@ -2914,7 +2921,7 @@
      "point": true
     },
     {
-     "id": 119,
+     "id": 120,
      "name": "",
      "type": "stone_lantern",
      "x": 9306.61068723274,
@@ -2926,7 +2933,7 @@
      "point": true
     },
     {
-     "id": 120,
+     "id": 121,
      "name": "",
      "type": "stone_lantern",
      "x": 7319.463598872184,
@@ -2938,7 +2945,7 @@
      "point": true
     },
     {
-     "id": 121,
+     "id": 122,
      "name": "",
      "type": "stone_lantern",
      "x": 9009.523381609406,
@@ -2950,7 +2957,7 @@
      "point": true
     },
     {
-     "id": 122,
+     "id": 123,
      "name": "",
      "type": "stone_lantern",
      "x": 5463.319611074874,
@@ -2962,7 +2969,7 @@
      "point": true
     },
     {
-     "id": 123,
+     "id": 124,
      "name": "",
      "type": "stone_lantern",
      "x": 10802.388529422069,
@@ -2974,7 +2981,7 @@
      "point": true
     },
     {
-     "id": 124,
+     "id": 125,
      "name": "",
      "type": "stone_lantern",
      "x": 8165.761036194161,
@@ -2986,7 +2993,7 @@
      "point": true
     },
     {
-     "id": 125,
+     "id": 126,
      "name": "",
      "type": "stone_lantern",
      "x": 7694.347014055483,
@@ -2998,7 +3005,7 @@
      "point": true
     },
     {
-     "id": 126,
+     "id": 127,
      "name": "",
      "type": "stone_lantern",
      "x": 5403.397675344164,
@@ -3010,7 +3017,7 @@
      "point": true
     },
     {
-     "id": 127,
+     "id": 128,
      "name": "",
      "type": "stone_lantern",
      "x": 4851.937483780351,
@@ -3022,7 +3029,7 @@
      "point": true
     },
     {
-     "id": 128,
+     "id": 129,
      "name": "",
      "type": "stone_lantern",
      "x": 6514.313395119234,
@@ -3034,7 +3041,7 @@
      "point": true
     },
     {
-     "id": 129,
+     "id": 130,
      "name": "",
      "type": "stone_lantern",
      "x": 5643.793989469743,
@@ -3046,7 +3053,7 @@
      "point": true
     },
     {
-     "id": 130,
+     "id": 131,
      "name": "",
      "type": "stone_lantern",
      "x": 5388.945683968698,
@@ -3058,7 +3065,7 @@
      "point": true
     },
     {
-     "id": 131,
+     "id": 132,
      "name": "",
      "type": "stone_lantern",
      "x": 11136.274048788067,
@@ -3070,7 +3077,7 @@
      "point": true
     },
     {
-     "id": 132,
+     "id": 133,
      "name": "",
      "type": "stone_lantern",
      "x": 2517.7233373978297,
@@ -3082,11 +3089,47 @@
      "point": true
     },
     {
-     "id": 133,
+     "id": 134,
      "name": "",
      "type": "stone_lantern",
      "x": 5456.26806504083,
      "y": 3313.534555331506,
+     "width": 0,
+     "height": 0,
+     "rotation": 0,
+     "visible": true,
+     "point": true
+    },
+    {
+     "id": 135,
+     "name": "",
+     "type": "stone_lantern",
+     "x": 10756.51704933204,
+     "y": 7240.09106983798,
+     "width": 0,
+     "height": 0,
+     "rotation": 0,
+     "visible": true,
+     "point": true
+    },
+    {
+     "id": 136,
+     "name": "",
+     "type": "stone_lantern",
+     "x": 621.2940860257385,
+     "y": 1696.3818634273034,
+     "width": 0,
+     "height": 0,
+     "rotation": 0,
+     "visible": true,
+     "point": true
+    },
+    {
+     "id": 137,
+     "name": "",
+     "type": "stone_lantern",
+     "x": 10887.988060001298,
+     "y": 1545.8361364621958,
      "width": 0,
      "height": 0,
      "rotation": 0,

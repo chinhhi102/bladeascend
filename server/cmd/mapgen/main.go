@@ -166,9 +166,14 @@ func (b *builder) boulder(cx, cy, r, margin float64) bool {
 	return true
 }
 
-// wall forces an indestructible wall segment (used for alleys and the map border; it ignores
-// spacing but still may not leave the map).
-func (b *builder) wall(x, y, w, h float64) bool {
+// wall forces a wall segment through, ignoring the usual spacing rules (it still may not
+// leave the map). Dùng cho biên khu, hẻm, vách núi.
+//
+// `kind` quyết định BẬC chém được (§8.2). Trước v6.7 mọi tường ở đây là `stone_wall` và
+// được coi là "không phá được" vì bản cũ gán `MaxHP: 0` cho loại này. Giờ `stone_wall` có
+// bậc 5, nên để nguyên là từ Luyện Hư trở lên **chém thủng cả biên khu và đi ra ngoài bản
+// đồ**. Mọi chỗ gọi phải nói rõ loại nào.
+func (b *builder) wall(kind string, x, y, w, h float64) bool {
 	r := rect{x, y, x + w, y + h}
 	if !b.inBounds(r) {
 		return false
@@ -181,7 +186,7 @@ func (b *builder) wall(x, y, w, h float64) bool {
 		}
 	}
 	b.solid = append(b.solid, r)
-	b.add("obstacles", object{Type: "stone_wall", X: x, Y: y, Width: w, Height: h})
+	b.add("obstacles", object{Type: kind, X: x, Y: y, Width: w, Height: h})
 	return true
 }
 
@@ -190,10 +195,10 @@ func (b *builder) wall(x, y, w, h float64) bool {
 func (b *builder) border() {
 	lo, hi := mapMargin, b.size-mapMargin
 	span := hi - lo
-	b.wall(lo, lo, span, borderThick)             // trên
-	b.wall(lo, hi-borderThick, span, borderThick) // dưới
-	b.wall(lo, lo, borderThick, span)             // trái
-	b.wall(hi-borderThick, lo, borderThick, span) // phải
+	b.wall(config.BorderKind, lo, lo, span, borderThick)             // trên
+	b.wall(config.BorderKind, lo, hi-borderThick, span, borderThick) // dưới
+	b.wall(config.BorderKind, lo, lo, borderThick, span)             // trái
+	b.wall(config.BorderKind, hi-borderThick, lo, borderThick, span) // phải
 }
 
 func (b *builder) zone(kind string, x, y, w, h float64, ellipse bool, props ...prop) bool {
@@ -286,17 +291,22 @@ func (b *builder) scatter(n int, fn func(x, y float64) bool) {
 	}
 }
 
-// alley builds a corridor of indestructible walls with an opening of the given width
-// (150 / 250 / 350 — spec §8.3 hẻm hẹp). Big players cannot fit through narrow ones.
+// alley builds a corridor between two brick walls with an opening of the given width
+// (spec §8.3 hẻm hẹp). Người to không lọt qua hẻm hẹp.
+//
+// Tường hẻm là **gạch (bậc 2)**, không phải bất khả phá: §8.1b buộc khe giữa hai vật cản
+// bậc A, B phải ≥ `corridor_min[min(A,B)]`, và với bậc 2 con số đó là 160. Bậc cao hơn đòi
+// hành lang rộng hơn, tức "hẻm hẹp" sẽ không còn hẹp. Kim Đan trở lên chém được tường hẻm
+// — đúng ý §8.2: người to không chui được thì chém, đó là lựa chọn, không phải bế tắc.
 func (b *builder) alley(x, y, length float64, gap float64, vertical bool) {
 	thick := 120.0
 	if vertical {
-		b.wall(x, y, thick, length)
-		b.wall(x+thick+gap, y, thick, length)
+		b.wall("brick", x, y, thick, length)
+		b.wall("brick", x+thick+gap, y, thick, length)
 		return
 	}
-	b.wall(x, y, length, thick)
-	b.wall(x, y+thick+gap, length, thick)
+	b.wall("brick", x, y, length, thick)
+	b.wall("brick", x, y+thick+gap, length, thick)
 }
 
 // altars places the five Đài Tiên Khí (spec §8.5): four by the sect yards near the corners
@@ -576,9 +586,9 @@ func nuiDa(b *builder) {
 	b.scatter(45, func(x, y float64) bool { return b.boulder(x, y, b.rnd(250, 600), 300) })
 	b.scatter(14, func(x, y float64) bool { // ridges
 		if b.rng.Intn(2) == 0 {
-			b.wall(x, y, b.rnd(900, 1600), 140)
+			b.wall("cliff", x, y, b.rnd(900, 1600), 140)
 		} else {
-			b.wall(x, y, 140, b.rnd(900, 1600))
+			b.wall("cliff", x, y, 140, b.rnd(900, 1600))
 		}
 		return true
 	})

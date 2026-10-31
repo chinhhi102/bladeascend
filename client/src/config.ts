@@ -76,7 +76,7 @@ export interface GameConfig {
   zones: { mud_mult: number; snow_mult: number; wind_with: number; wind_against: number; wind_with_max_deg: number; wind_against_min_deg: number };
   gates: { radius: number };
   items: { item_r: number; chest_warn_secs: number };
-  obstacles: { occlusion_alpha: number };
+  obstacles: { occlusion_alpha: number; hard_buff_extra_tier: number; cut_hint_cooldown_secs: number };
   net: {
     tick_hz: number;
     snapshot_hz: number;

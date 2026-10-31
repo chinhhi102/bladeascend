@@ -180,19 +180,54 @@ type Monsters struct {
 }
 
 type Obstacles struct {
-	FootprintW     float64        `json:"footprint_w"`
-	FootprintH     float64        `json:"footprint_h"`
-	OcclusionAlpha float64        `json:"occlusion_alpha"`
-	RegrowSecs     float64        `json:"regrow_secs"`
-	RegrowWarnSecs float64        `json:"regrow_warn_secs"`
-	HP             map[string]int `json:"hp"`
-	StallItemDrop  float64        `json:"stall_item_drop"`
-	HitCooldown    float64        `json:"hit_cooldown"`
-	// Spec §5.3 (v3.6): damage is per player, not per sword — one hit per DmgCooldown
-	// per (player, obstacle), scaled by how many rings they have.
-	DmgCooldown    float64 `json:"dmg_cooldown_secs"`
-	DmgPerExtraRng float64 `json:"dmg_per_extra_ring"`
+	FootprintW     float64 `json:"footprint_w"`
+	FootprintH     float64 `json:"footprint_h"`
+	OcclusionAlpha float64 `json:"occlusion_alpha"`
+	RegrowSecs     float64 `json:"regrow_secs"`
+	RegrowWarnSecs float64 `json:"regrow_warn_secs"`
+
+	// MinRealm: **bậc** của từng loại vật cản — chỉ số cảnh giới TỐI THIỂU để chém được
+	// (0 = Luyện Khí … 8 = Đại Thừa, 9 = Chân Tiên … 13 = Đạo Tổ). Spec v6.7/v6.8 §8.2.
+	//
+	// Thay hẳn cho `hp` + `dmg_*` của bản cũ. Vật cản không còn máu: đủ bậc thì chạm là
+	// biến mất, chưa đủ thì kiếm đi xuyên không tác dụng. Bỏ HP không phải để đơn giản hoá
+	// mà vì luật cũ cho người cảnh giới thấp **mài mãi cũng phá được** mọi thứ — tức bậc
+	// không chặn được gì, chỉ làm chậm.
+	MinRealm map[string]int `json:"min_realm"`
+	// CorridorMin: khe hở tối thiểu giữa hai vật cản CÙNG BẬC, khoá là bậc dạng chuỗi.
+	// Người to nhất bị bậc đó chặn phải lọt qua được (§8.1b).
+	CorridorMin map[string]float64 `json:"corridor_min"`
+	// HardBuffExtraTier: Cương Kiếm cho chém thêm ngần này bậc (§6.2, v6.8 = 1).
+	HardBuffExtraTier int `json:"hard_buff_extra_tier"`
+	// CutHintCooldownSecs: chữ "Cần {cảnh giới}" hiện tối đa 1 lần / ngần này giây / vật cản.
+	CutHintCooldownSecs float64 `json:"cut_hint_cooldown_secs"`
+
+	StallItemDrop float64 `json:"stall_item_drop"`
+	HitCooldown   float64 `json:"hit_cooldown"`
 }
+
+// BorderKind là loại vật cản BIÊN KHU — không có bậc, không bao giờ chém được (§8.2).
+//
+// Tách thành loại riêng thay vì để chung `stone_wall`: biên khu hiện là 4 dãy
+// `stone_wall` dài 11 400, mà `stone_wall` có bậc 5 — tức từ Luyện Hư trở lên là **chém
+// thủng được biên khu và đi ra ngoài bản đồ**.
+const BorderKind = "border"
+
+// ObstacleTier trả về bậc của một loại vật cản. Loại không khai báo coi như bậc 0 (ai cũng
+// chém được) — thà để người chơi phá được một thứ lẽ ra không phá được, còn hơn dựng một
+// bức tường vô hình không ai hiểu vì sao không qua nổi.
+func (o Obstacles) ObstacleTier(kind string) int {
+	if kind == BorderKind {
+		return TierBorder
+	}
+	if t, ok := o.MinRealm[kind]; ok {
+		return t
+	}
+	return 0
+}
+
+// TierBorder là bậc của biên khu: cao hơn mọi cảnh giới nên không ai chém được.
+const TierBorder = 99
 
 // Ice: mặt băng ở Băng Nguyệt Hồ (spec §8.0). Di chuyển có quán tính:
 //

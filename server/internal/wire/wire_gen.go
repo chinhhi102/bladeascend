@@ -23,33 +23,33 @@ var ErrShort = errors.New("wire: gói ngắn")
 
 // Loại message — byte đầu của gói.
 const (
-	TypeSpawn = 1
-	TypeDesc = 2
-	TypeUpdate = 3
-	TypeDespawn = 4
+	TypeSpawn     = 1
+	TypeDesc      = 2
+	TypeUpdate    = 3
+	TypeDespawn   = 4
 	TypeSelfState = 5
-	TypeInput = 6
+	TypeInput     = 6
 )
 
 // Entity vào vùng quan tâm lần đầu, hoặc quay lại sau khi đã Despawn (§4.3).
 // Chở ĐỦ descriptor + state nên client dựng được ngay, không phải hỏi thêm.
 type Spawn struct {
-	ID uint32
-	DescVer uint16 // phiên bản descriptor; đổi thì server gửi Desc
-	Name string
-	Char uint8 // chỉ số trong config.characters
-	Title uint8
-	X uint16 // lượng tử theo khu: 12000/65535 ≈ 0.18 đơn vị (§4.6)
-	Y uint16
-	Facing uint8 // góc 0..255 ứng với 0..2π
-	Level uint8
-	Scale uint8 // bước 0.02
-	Swords uint16
+	ID        uint32
+	DescVer   uint16 // phiên bản descriptor; đổi thì server gửi Desc
+	Name      string
+	Char      uint8 // chỉ số trong config.characters
+	Title     uint8
+	X         uint16 // lượng tử theo khu: 12000/65535 ≈ 0.18 đơn vị (§4.6)
+	Y         uint16
+	Facing    uint8 // góc 0..255 ứng với 0..2π
+	Level     uint8
+	Scale     uint8 // bước 0.02
+	Swords    uint16
 	RingPhase uint16
-	RingDir int8
-	Mood uint8
-	Buffs uint16 // bitmask buff
-	Flags uint16 // bitmask cờ trạng thái
+	RingDir   int8
+	Mood      uint8
+	Buffs     uint16 // bitmask buff
+	Flags     uint16 // bitmask cờ trạng thái
 }
 
 // Encode nối Spawn vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
@@ -147,11 +147,11 @@ func DecodeSpawn(src []byte) (Spawn, int, error) {
 
 // Descriptor đổi (danh hiệu, cảnh giới, skin) — đổi TẠI CHỖ, không dựng lại view (§5.5).
 type Desc struct {
-	ID uint32
+	ID      uint32
 	DescVer uint16
-	Name string
-	Char uint8
-	Title uint8
+	Name    string
+	Char    uint8
+	Title   uint8
 }
 
 // Encode nối Desc vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
@@ -195,19 +195,19 @@ func DecodeDesc(src []byte) (Desc, int, error) {
 // Delta mỗi snapshot: chỉ chở trường ĐÃ ĐỔI so với bản client đã ack (§4.3).
 // Đây là chỗ tiết kiệm băng thông lớn nhất — đứng yên thì gói gần như rỗng.
 type Update struct {
-	ID uint32
-	Changed uint16
-	X uint16
-	Y uint16
-	Facing uint8
-	Level uint8
-	Scale uint8
-	Swords uint16
+	ID        uint32
+	Changed   uint16
+	X         uint16
+	Y         uint16
+	Facing    uint8
+	Level     uint8
+	Scale     uint8
+	Swords    uint16
 	RingPhase uint16
-	RingDir int8
-	Mood uint8
-	Buffs uint16
-	Flags uint16
+	RingDir   int8
+	Mood      uint8
+	Buffs     uint16
+	Flags     uint16
 }
 
 // Encode nối Update vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
@@ -337,7 +337,7 @@ func DecodeUpdate(src []byte) (Update, int, error) {
 // giờ phân biệt được "vắng mặt vì AOI" với "đã đi mất".
 // reason: 0 out_of_view · 1 died · 2 teleported · 3 left
 type Despawn struct {
-	ID uint32
+	ID     uint32
 	Reason uint8
 }
 
@@ -369,10 +369,10 @@ func DecodeDespawn(src []byte) (Despawn, int, error) {
 // hiệu chỉnh dự đoán (GAME_SPEC §8.2a) nên sai số lượng tử ở đây biến thành giật.
 type SelfState struct {
 	AckSeq uint32 // input cuối server đã xử lý
-	X int32 // fixed-point 1/256 đơn vị
-	Y int32
-	Vx int32
-	Vy int32
+	X      int32  // fixed-point 1/256 đơn vị
+	Y      int32
+	Vx     int32
+	Vy     int32
 }
 
 // Encode nối SelfState vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
@@ -415,8 +415,8 @@ func DecodeSelfState(src []byte) (SelfState, int, error) {
 
 // Client → server, 30 lần/giây. Không có trường nào thừa.
 type Input struct {
-	Seq uint32
-	Angle uint8
+	Seq     uint32
+	Angle   uint8
 	Buttons uint8 // bit0 moving · bit1 burn · bit2 skill
 }
 
@@ -447,7 +447,6 @@ func DecodeInput(src []byte) (Input, int, error) {
 	}
 	return v, p, nil
 }
-
 
 // ── đọc/ghi nguyên thuỷ ──────────────────────────────────────────────────────────────────
 // Little-endian cho mọi số: JavaScript `DataView` mặc định là big-endian, nên phía

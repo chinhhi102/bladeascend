@@ -8,6 +8,8 @@ export const STR = {
   play: 'Vào chơi',
   leaderboard: 'Bảng xếp hạng',
   findingRoom: 'Đang tìm phòng...',
+  /** Chữ nổi khi kiếm chạm vật cản quá bậc (spec §8.2). */
+  needRealm: (realm: string): string => `Cần ${realm}`,
   connecting: 'Đang kết nối máy chủ...',
   /** Tên 5 khu, khớp với room.ZoneNames bên server (spec §8.0). */
   /** Tên 10 kỹ năng (spec §6.3), khớp key nhân vật bên server. */

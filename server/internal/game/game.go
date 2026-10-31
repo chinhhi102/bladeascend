@@ -83,10 +83,8 @@ func New(cfg *config.Config, m *world.Map, seed int64) *Game {
 		Items:     map[uint32]*Item{},
 		cooldowns: map[uint64]float64{},
 	}
+	// Mọi vật cản bắt đầu ở trạng thái còn nguyên. Không còn máu để khởi tạo (v6.7 §8.2).
 	g.Obstacles = make([]ObstacleState, len(m.Obstacles))
-	for i, o := range m.Obstacles {
-		g.Obstacles[i] = ObstacleState{HP: o.MaxHP}
-	}
 	g.obsIndex = newStaticIndex(m, 500)
 	g.Grid = world.NewGrid(m, cfg.Bots.PathGrid)
 	g.Grid.Rebuild(g.ObstacleSolid)

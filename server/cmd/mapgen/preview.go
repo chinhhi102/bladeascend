@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"kiemxoay/server/internal/config"
 	"os"
 )
 
@@ -81,7 +82,7 @@ func writePreview(b *builder, path string) error {
 	}
 	for _, o := range b.layers["obstacles"] {
 		c := color.RGBA{150, 150, 150, 255}
-		if o.Type == "stone_wall" {
+		if o.Type == config.BorderKind {
 			c = color.RGBA{96, 108, 94, 255}
 		}
 		fill(o.X, o.Y, o.X+o.Width, o.Y+o.Height, c)

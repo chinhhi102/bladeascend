@@ -3,6 +3,7 @@ package game
 import (
 	"math"
 
+	"kiemxoay/server/internal/config"
 	"kiemxoay/server/internal/geom"
 	"kiemxoay/server/internal/world"
 )
@@ -481,44 +482,64 @@ func (g *Game) killMonster(m *Monster, killer *Player) {
 	}
 }
 
-// ObstacleDamage is what one player does to an obstacle per hit (spec §5.3, v3.6): it scales
-// with realm and ring count, NOT with the number of swords — otherwise 400 blades would
-// shred a boulder instantly.
-func (g *Game) ObstacleDamage(a *Player) float64 {
-	rings := max(a.Geom.Rings, 1)
-	if a.Ring.Count == 0 {
-		return 0
+// CanCutObstacle: người này có chém được vật cản bậc `tier` không (spec v6.7/v6.8 §8.2).
+//
+// Cương Kiếm cho thêm `hard_buff_extra_tier` bậc (§6.2). Biên khu có bậc `TierBorder` nên
+// không ai qua được — kể cả Đạo Tổ.
+func (g *Game) CanCutObstacle(a *Player, tier int) bool {
+	if tier >= config.TierBorder {
+		return false
 	}
-	// Cương Kiếm nhân đôi sức phá vật cản (spec v4.4 §5.3).
-	return float64(g.Prog.Realm(a.Level)+1) * (1 + g.Cfg.Obstacles.DmgPerExtraRng*float64(rings-1)) * g.hardMult(a, "damage")
+	reach := g.Prog.Realm(a.Level)
+	if a.HasBuff(BuffHard, g.Time) {
+		reach += g.Cfg.Obstacles.HardBuffExtraTier
+	}
+	return reach >= tier
 }
 
+// hitObstacles: kiếm chạm vật cản → **biến mất ngay** nếu đủ bậc (spec v6.7 §8.2).
+//
+// Không còn máu, không còn hoạt ảnh nứt/vỡ, không còn đống đổ nát. Luật cũ cho người cảnh
+// giới thấp mài mãi cũng phá được mọi thứ — tức bậc không chặn được ai, chỉ làm chậm.
+//
+// Chưa đủ bậc: kiếm đi xuyên không tác dụng, và hiện gợi ý "Cần {cảnh giới}" tối đa
+// 1 lần / `cut_hint_cooldown_secs` / vật cản, để người chơi biết vì sao chém mãi không ăn
+// thay vì tưởng game hỏng.
 func (g *Game) hitObstacles(a *Player) {
 	if a.Ring.Count == 0 {
 		return
 	}
 	outer := a.Geom.Outer()
 	n := sweepSteps(a.Ring)
-	dmg := g.ObstacleDamage(a)
 	g.QueryObstacles(a.Pos, outer, func(id int) {
 		st := &g.Obstacles[id]
 		o := g.Map.Obstacles[id]
-		if o.MaxHP == 0 || st.Broken || !o.Shape.OverlapsCircle(a.Pos, outer) {
+		if st.Broken || !o.Shape.OverlapsCircle(a.Pos, outer) {
 			return
 		}
-		// One damage tick per player per obstacle per dmg_cooldown_secs, however many
-		// swords happen to be sweeping through it this tick.
-		key := pairKey(tagObstacle, a.ID, uint32(id), 0)
-		if g.onCooldown(key) {
+		hit := false
+		for i := 0; i < a.Ring.Count && !hit; i++ {
+			hit = g.sweepHitsShape(a, i, n, o.Shape)
+		}
+		if !hit {
 			return
 		}
-		for i := 0; i < a.Ring.Count; i++ {
-			if g.sweepHitsShape(a, i, n, o.Shape) {
-				g.startCooldown(key, g.Cfg.Obstacles.DmgCooldown)
-				g.damageObstacleBy(id, dmg)
-				return
+		if !g.CanCutObstacle(a, o.Tier) {
+			// Gợi ý có hạn mức RIÊNG cho từng cặp (người, vật cản): không có hạn mức thì
+			// một người đứng mài vào vách núi bắn ra 30 dòng chữ mỗi giây.
+			key := pairKey(tagObstacle, a.ID, uint32(id), 0)
+			if !g.onCooldown(key) {
+				g.startCooldown(key, g.Cfg.Obstacles.CutHintCooldownSecs)
+				c := o.Shape.Center()
+				// `To`: chỉ người vừa quét kiếm thấy chữ "Cần {cảnh giới}". Gửi cả phòng là
+				// mỗi người Luyện Khí mài vào tường gạch lại dán một dòng chữ lên màn hình
+				// của mọi người quanh đó — thông tin của họ, không phải của mình.
+				g.emit(Event{Kind: "ObstacleTooHard", A: uint32(id), N: o.Tier, To: a.ID,
+					X: float32(c.X), Y: float32(c.Y)})
 			}
+			return
 		}
+		g.CutObstacle(id)
 	})
 }
 
@@ -534,37 +555,16 @@ func (g *Game) sweepHitsShape(a *Player, i, n int, sh world.Shape) bool {
 	return false
 }
 
-// damageObstacleBy applies fractional damage (spec §5.3 gives values like 13.5 per hit):
-// the remainder is carried on the obstacle so nothing is silently rounded away.
-func (g *Game) damageObstacleBy(id int, dmg float64) {
-	if dmg <= 0 {
-		return
-	}
-	st := &g.Obstacles[id]
-	st.Partial += dmg
-	whole := int(st.Partial + 1e-9)
-	if whole <= 0 {
-		return
-	}
-	st.Partial -= float64(whole)
-	g.DamageObstacle(id, whole)
-}
-
-// DamageObstacle reduces an obstacle's HP and breaks it at zero (spec §8.2).
-func (g *Game) DamageObstacle(id, dmg int) {
+// CutObstacle xoá một vật cản ngay lập tức (spec v6.7 §8.2) và hẹn giờ mọc lại.
+func (g *Game) CutObstacle(id int) {
 	st := &g.Obstacles[id]
 	o := g.Map.Obstacles[id]
-	if o.MaxHP == 0 || st.Broken {
-		return
-	}
-	st.HP = max(0, st.HP-dmg)
-	c := o.Shape.Center()
-	if st.HP > 0 {
-		g.emit(Event{Kind: "ObstacleDamaged", A: uint32(id), N: st.HP, X: float32(c.X), Y: float32(c.Y)})
+	if st.Broken || o.Tier >= config.TierBorder {
 		return
 	}
 	st.Broken, st.BrokenAt, st.Warned = true, g.Time, false
 	g.gridDirty = true
+	c := o.Shape.Center()
 	g.emit(Event{Kind: "ObstacleBroken", A: uint32(id), X: float32(c.X), Y: float32(c.Y)})
 	if (o.Kind == "stall" || o.Kind == "cart") && g.Rng.Float64() < g.Cfg.Obstacles.StallItemDrop {
 		g.spawnItemNear(g.randomItemKind(), 0, c, 30)
@@ -587,7 +587,7 @@ func (g *Game) updateObstacles() {
 		if g.Time < st.BrokenAt+oc.RegrowSecs || g.obstacleOccupied(id) {
 			continue
 		}
-		st.Broken, st.HP, st.Partial = false, g.Map.Obstacles[id].MaxHP, 0
+		st.Broken = false
 		g.gridDirty = true
 		g.emit(Event{Kind: "ObstacleRegrow", A: uint32(id), X: float32(c.X), Y: float32(c.Y)})
 	}

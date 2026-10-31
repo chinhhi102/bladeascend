@@ -146,7 +146,7 @@ export interface Welcome {
   map: string;
   tick_hz: number;
   time: number;
-  obs: { id: number; hp: number; b: boolean }[] | null;
+  obs: { id: number; b: boolean }[] | null;
   debug: boolean;
   /** pv: phiên bản giao thức của server; thiếu = server quá cũ, chưa có trường này. */
   pv?: number;
@@ -230,6 +230,12 @@ export const FLAG = {
 } as const;
 
 // Buff bit order = server game.BuffNames.
+/**
+ * TIER_BORDER: bậc của biên khu — không ai chém được, kể cả Đạo Tổ (spec §8.2 bảng bậc ∞).
+ * Khớp với `config.TierBorder` bên server.
+ */
+export const TIER_BORDER = 99;
+
 export const BUFFS = ['spin', 'haste', 'magnet', 'hard', 'shield', 'exp2', 'stealth'] as const;
 
 /**
@@ -267,7 +273,8 @@ export interface MapObstacle {
   k: string;
   s: Shape; // what you see; swords hit it
   f: Shape; // footprint at the bottom; blocks bodies (spec §8.2)
-  hp: number;
+  /** t: BẬC = chỉ số cảnh giới tối thiểu chém được (spec §8.2). 99 = biên khu, không bao giờ. */
+  t: number;
 }
 
 export interface MapZone {

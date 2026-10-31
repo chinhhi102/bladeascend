@@ -64,7 +64,7 @@ func main() {
 
 	cfg := config.MustLoadDefault()
 	maps, err := world.LoadDir(*mapsDir, world.LoadOptions{
-		HP: cfg.Obstacles.HP, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH,
+		Tier: cfg.Obstacles.ObstacleTier, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH,
 	})
 	if err != nil || len(maps) == 0 {
 		log.Fatalf("không đọc được bản đồ: %v", err)

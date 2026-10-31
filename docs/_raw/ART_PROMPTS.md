@@ -353,6 +353,19 @@ STATE: "intact and solid" | "with visible cracks" | "heavily damaged, crumbling,
 | Bùn lầy | `seamless tileable top-down muddy brown puddle texture with bubbles` | Tile 512, viền bằng mask mềm trong code |
 | Đường gió | `{STYLE} a white cartoon wind gust arrow with swirl lines` | Anim 4 frame chạy dọc làn gió |
 
+### 9.1b Vật cản bậc Tiên (GAME_SPEC §8.2)
+
+Chỉ cần 1 ảnh nguyên vẹn mỗi loại (chém là biến mất, không cần trạng thái vỡ). Nên có ánh sáng nhẹ để người chơi nhận ra "vật cản cao cấp".
+
+| Loại | Prompt | Kích thước |
+|---|---|---|
+| Tảng băng vạn năm (bậc 9) | `{STYLE} top-down 3/4 view huge ancient ice boulder, deep blue core glowing faintly, frost runes` | 1024×1024 |
+| Đá khổng lồ (bậc 9) | `{STYLE} top-down 3/4 view enormous mossy boulder with faint golden cracks` | 1024×1024 |
+| Cột ngọc Thiên Đình (bậc 11) | `{STYLE} top-down 3/4 view tall white jade pillar with golden cloud carvings and a soft glow` | 512×1024 |
+| Thạch bi cấm chế (bậc 13) | `{STYLE} top-down 3/4 view ancient stone stele covered in glowing purple taoist seal runes, small chains around the base` | 512×1024 |
+| Tre mỏng / tre cổ thụ | biến thể của `bamboo_wall`: `thin young bamboo` / `massive ancient bamboo with thick dark trunks` | 1024×512 |
+| Tường sân môn phái | tách từ `stone_wall`: `sect courtyard wall with grey tiled roof` (đã có ở §9.2b) | |
+
 ### 9.2b Bố cục tu tiên giới (cho thuật toán sinh bản đồ)
 
 Dùng lại art cũ cho vật cản/decor; chỉ cần sinh thêm:
@@ -475,13 +488,13 @@ Mỗi nhân vật thêm anim **`skill`** 6 frame (dùng template §4.3) + 1 icon
 |---|---|---|---|
 | A Hớn | nhét cả cái bánh bao vào miệng, má phồng, ợ ra khói | steamed bun with a bite | hơi nóng bốc lên, kiếm bay ngược về vòng |
 | Bà Tám Loa | ưỡn ngực hét vào loa, tóc bay ngược | megaphone with sound waves | sóng âm hình nón (vòng cung trắng lan ra) |
-| Ông Ba Võng | nằm võng đung đưa, mắt nhắm, bong bóng mũi | hammock with zzz | vòng chữ "zzz" + sóng ru màu tím nhạt |
+| Ông Ba Võng | nằm võng đung đưa hát, nốt nhạc bay ra | hammock with zzz | sóng ru tím nhạt lan ra; địch trúng: bong bóng mũi + "zzz", vòng kiếm phủ lớp mờ xám đứng yên |
 | Đại Ca | huýt sáo bằng 2 ngón tay, chỉ tay | whistle with two fingers | 2 đàn em nhỏ (vest tím rẻ tiền, kính đen) — sinh thêm sprite đàn em `run` 8 frame |
 | Thằng Mập | phồng má phun như súng máy | bubble tea pearls flying | viên trân châu đen bay + vệt; **overlay màn hình**: 6–8 biến thể `glossy black tapioca pearl splattered flat on glass with a milk tea smear, front view, transparent background, 256x256` + `milk tea drip trail, vertical, 128x512` |
-| Cô Ba | lướt ngang, đòn gánh nằm ngang, trái cây văng | fruit basket with speed lines | vệt bụi + vỏ chuối/trái cây trên đất |
-| Sư Phụ Mì | quăng lưới bằng đôi đũa | noodle net | lưới sợi mì vàng chụp xuống |
+| Cô Ba | quăng đòn gánh, hai thúng bay ra bung thành sạp | fruit stall popping up | sạp hàng tạm "bật" lên từ đất (dùng lại art `stall`, thêm biến thể có tấm bạt màu cam để phân biệt) + vỏ chuối rải dọc chân sạp |
+| Sư Phụ Mì | quăng sợi mì bằng đũa rồi húp sùn sụt, má phồng | noodle strand slurp with a sword | sợi mì vàng dài nối 2 người, kiếm bay dọc sợi mì về phía Sư Phụ |
 | Bé Tí | gồng cơ, gân nổi, mặt đỏ, người phát sáng | flexed bicep | hào quang cam, tia gân nổi |
-| Shipper | rồ ga tưởng tượng, thùng hàng phụt khói | lightning bolt on delivery box | vệt tia chớp sau lưng |
+| Shipper | rồ ga tưởng tượng, mở nắp thùng hàng hút đồ như máy hút bụi | delivery box with a vacuum swirl | vệt tia chớp sau lưng + luồng xoáy hút đồ bay vào thùng |
 | Cụ Rùa | rụt đầu tay chân vào mai | turtle shell | mai phát sáng xanh, sóng đẩy khi bật ra |
 
 ### 11.4 Art riêng cho 4 khu mới (GAME_SPEC §8.0)

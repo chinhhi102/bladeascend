@@ -8,7 +8,7 @@ import (
 
 func TestLoadStarterMaps(t *testing.T) {
 	cfg := config.MustLoadDefault()
-	maps, err := LoadDir(config.FindRepoFile("maps"), LoadOptions{HP: cfg.Obstacles.HP, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH})
+	maps, err := LoadDir(config.FindRepoFile("maps"), LoadOptions{Tier: cfg.Obstacles.ObstacleTier, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,19 +20,20 @@ func TestLoadStarterMaps(t *testing.T) {
 		if m.Size != cfg.Room.MapSize || m.Name == "" {
 			t.Errorf("%s: size %v name %q", m.ID, m.Size, m.Name)
 		}
-		walls, breakable := 0, 0
+		// Từ v6.7 vật cản không còn máu: mỗi loại có một BẬC CẢNH GIỚI tối thiểu để chém
+		// được, và bậc phải khớp bảng trong config — loader không được tự đoán.
+		cuttable := 0
 		for _, o := range m.Obstacles {
-			if o.MaxHP == 0 {
-				walls++
-			} else {
-				breakable++
-				if o.MaxHP != cfg.Obstacles.HP[o.Kind] {
-					t.Errorf("%s: %s hp %d", m.ID, o.Kind, o.MaxHP)
-				}
+			want := cfg.Obstacles.ObstacleTier(o.Kind)
+			if o.Tier != want {
+				t.Errorf("%s: %s bậc %d, config ghi %d", m.ID, o.Kind, o.Tier, want)
+			}
+			if o.Tier < config.TierBorder {
+				cuttable++
 			}
 		}
-		if walls == 0 || breakable == 0 || len(m.Gates) < 2 || len(m.Zones) == 0 {
-			t.Errorf("%s: walls %d breakable %d gates %d zones %d", m.ID, walls, breakable, len(m.Gates), len(m.Zones))
+		if cuttable == 0 || len(m.Gates) < 2 || len(m.Zones) == 0 {
+			t.Errorf("%s: chém được %d gates %d zones %d", m.ID, cuttable, len(m.Gates), len(m.Zones))
 		}
 		for _, g := range m.Gates {
 			if len(m.GatesInNetwork(g)) == 0 {
@@ -87,7 +88,7 @@ func TestPolygonZoneUsesTheDrawnShape(t *testing.T) {
 
 // Bản đồ sinh ra phải có vùng hữu cơ thật, không còn chữ nhật/ellipse cho bùn và nước.
 func TestGeneratedMapsHaveOrganicZones(t *testing.T) {
-	maps, err := LoadDir("../../../maps", LoadOptions{HP: map[string]int{}, FootprintW: 1, FootprintH: 0.3})
+	maps, err := LoadDir("../../../maps", LoadOptions{FootprintW: 1, FootprintH: 0.3})
 	if err != nil || len(maps) == 0 {
 		t.Skipf("không nạp được bản đồ: %v", err)
 	}

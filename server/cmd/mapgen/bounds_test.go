@@ -47,7 +47,7 @@ func TestBorderWallEnclosesMap(t *testing.T) {
 	lo, hi := mapMargin, float64(size)-mapMargin
 	var top, bottom, left, right bool
 	for _, o := range b.layers["obstacles"] {
-		if o.Type != "stone_wall" {
+		if o.Type != config.BorderKind {
 			continue
 		}
 		switch {
@@ -197,4 +197,53 @@ func propOf(o object, name string) string {
 		}
 	}
 	return ""
+}
+
+// Checklist §17: "Không còn vật cản nào trong khu có bậc ∞ (chỉ biên khu). Mỗi khu có ít
+// nhất 1 vật cản bậc ≥ 9."
+//
+// Hai luật này là lý do v6.7 bỏ HP. Luật đầu bắt mọi thứ trong khu đều phá được bởi MỘT ai
+// đó, nên không khu nào có tường vĩnh viễn ngoài biên. Luật sau giữ cho vật cản còn nghĩa ở
+// Tiên giới: nếu khu nào cũng chỉ có vật cản bậc ≤ 8, Chân Tiên trở lên quét sạch địa hình
+// và Shipper xuyên vật cản, đẩy lùi ép vào tường, Rụt Cổ đều mất tác dụng.
+func TestEveryZoneHasImmortalTierButNoInfiniteWall(t *testing.T) {
+	cfg := config.MustLoadDefault()
+	lo, hi := mapMargin, float64(cfg.Room.MapSize)-mapMargin
+	for zi, zd := range zoneDefs {
+		for seed := 0; seed < 10; seed++ {
+			b, _, err := buildZoneWithRetries(cfg.Room.MapSize, int64(4000+zi*100+seed), cfg.Mapgen, zi)
+			if err != nil {
+				t.Fatalf("khu %d (%s) seed %d không sinh được: %v", zi, zd.name, seed, err)
+			}
+			checkTiers(t, cfg, b, zi, zd.name, seed, lo, hi)
+		}
+	}
+}
+
+func checkTiers(t *testing.T, cfg *config.Config, b *builder, zi int, name string, seed int, lo, hi float64) {
+	t.Helper()
+	{
+		top := 0
+		for _, o := range b.layers["obstacles"] {
+			tier := cfg.Obstacles.ObstacleTier(o.Type)
+			if tier < config.TierBorder {
+				if tier > top {
+					top = tier
+				}
+				continue
+			}
+			// Bậc ∞ chỉ được nằm trên vành biên. Một khối `border` lọt vào giữa khu là một
+			// bức tường không ai phá được — đúng thứ §8.2 bỏ đi.
+			onRing := o.X <= lo+borderThick || o.Y <= lo+borderThick ||
+				o.X+o.Width >= hi-borderThick || o.Y+o.Height >= hi-borderThick
+			if !onRing {
+				t.Errorf("khu %d (%s) seed %d: vật cản bậc ∞ (%s) ở giữa khu tại (%.0f, %.0f)",
+					zi, name, seed, o.Type, o.X, o.Y)
+			}
+		}
+		if top < 9 {
+			t.Errorf("khu %d (%s) seed %d: bậc cao nhất là %d, §8.2 cần ≥ 9 (đá khổng lồ / cột ngọc / thạch bi)",
+				zi, name, seed, top)
+		}
+	}
 }

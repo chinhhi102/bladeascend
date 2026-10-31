@@ -48,6 +48,8 @@ func (g *gen) thienDinh() error {
 	g.heavenDocks()
 	g.quadrantContent()
 	g.terrainZones()
+	// §8.2: Thiên Đình = cột ngọc quanh Thiên Tiên Đài (xem `frame`) + 4–6 thạch bi cấm chế.
+	g.immortalAnchors("seal_stele", Vec2{g.size / 2, g.size / 2}, g.cfg.CenterPlazaR+1500, 5, 260)
 	g.decorStep()
 	return nil
 }
@@ -120,10 +122,52 @@ func (g *gen) linhSonCoc() error {
 	for _, p := range g.poisson(900, 500) {
 		g.b.boulder(p.X, p.Y, g.b.rnd(90, 170), 160)
 	}
+	// §8.2: Linh Sơn Cốc = đá khổng lồ (bậc 9) ở các đèo.
+	g.immortalAnchors("boulder_huge", Vec2{s / 2, s / 2}, (hi-lo)*0.34, 6, 320)
 	g.b.zone("bush", s*0.45, s*0.1, 900, 700, true)
 	g.b.organicZone("mud", s*0.6, s*0.35, 700, 0.6)
 	g.decorStepFor("linh_son_coc")
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Vật cản bậc Tiên giới (spec §8.2)
+// ---------------------------------------------------------------------------
+
+// immortalAnchors rải `n` vật cản bậc ≥ 9 thành vòng bán kính `r` quanh `c`.
+//
+// Vì sao MỖI khu phải có: từ v6.8 vật cản bậc cao mới là thứ giữ cho các kỹ năng dựa vào
+// địa hình còn nghĩa ở Tiên giới — Shipper xuyên vật cản, đẩy lùi ép vào tường, Rụt Cổ.
+// Nếu khu nào cũng chỉ có vật cản bậc ≤ 8 thì từ Chân Tiên trở lên người chơi quét sạch
+// địa hình trong vài giây và cả nhóm kỹ năng đó mất tác dụng với đúng những người mạnh nhất.
+//
+// §8.2 cũng dặn chúng là "điểm tựa chiến thuật, không phải tường chắn đường": xếp LẺ theo
+// vòng rộng, khe giữa chúng lớn hơn `corridor_min[13]` = 390, không ai bị kẹt.
+// Trả về số vật đặt được. Mỗi vị trí thử lại ở vài bán kính và vài góc lệch: `b.obstacle`
+// từ chối chỗ đã có người chiếm (cổng, đài, vật cản khác), và ở khu chật như Trúc Lâm hay
+// đảo băng thì một vòng cố định trượt sạch — lần đầu tôi để vòng cứng và bộ kiểm báo khu 2
+// với khu 4 có bậc cao nhất lần lượt là 2 và 3.
+func (g *gen) immortalAnchors(kind string, c Vec2, r float64, n int, size float64) int {
+	placed := 0
+	for i := 0; i < n; i++ {
+		base := float64(i)/float64(n)*2*math.Pi + g.b.rnd(0, 0.4)
+	try:
+		for _, dr := range []float64{0, 240, -240, 520, -520, 820} {
+			for _, da := range []float64{0, 0.25, -0.25, 0.5, -0.5} {
+				rr := r + dr
+				if rr < 300 {
+					continue
+				}
+				a := base + da
+				x, y := c.X+math.Cos(a)*rr, c.Y+math.Sin(a)*rr
+				if g.b.obstacle(kind, x-size/2, y-size/2, size, size, 420) {
+					placed++
+					break try
+				}
+			}
+		}
+	}
+	return placed
 }
 
 // cliffRidge dựng một dãy vách đá chạy từ x0 tới x1 ở độ cao y, chừa `passes` đèo hẹp.
@@ -157,7 +201,7 @@ func (g *gen) cliffRun(x, y, length, thick float64) {
 	for cur := x; cur < x+length; {
 		w := math.Min(g.b.rnd(300, 700), x+length-cur)
 		dy := g.b.rnd(-60, 60)
-		g.b.wall(cur, y-thick/2+dy, w, thick)
+		g.b.wall("cliff", cur, y-thick/2+dy, w, thick)
 		cur += w
 	}
 }
@@ -171,7 +215,7 @@ func (g *gen) plateau(c Vec2, r float64, ways int) {
 	// gapArc là ĐỘ DÀI CUNG tính bằng đơn vị, không phải radian — 700 là một lối lên rộng
 	// rãi. Lần đầu tôi truyền 0.5 tưởng là radian, cao nguyên bị bịt kín và bộ kiểm báo
 	// ngay 3,3% ô trống bị nhốt.
-	g.ringWall(c, r, 200, angles, 700)
+	g.ringWall("cliff", c, r, 200, angles, 700)
 }
 
 // ---------------------------------------------------------------------------
@@ -196,6 +240,12 @@ func (g *gen) trucLam() error {
 	// Thiên Môn ở khoảng trống trung tâm mê cung (spec §8.4a) — đường vào ngoằn ngoèo.
 	g.b.heavenGate(s/2, s/2)
 	g.fourGates("green")
+	// §8.2: Trúc Lâm = thạch bi cấm chế (bậc 13) quanh Thiên Môn ở tâm.
+	//
+	// Đặt TRƯỚC khi đào mê cung: rặng tre phủ kín khu nên sau đó không còn chỗ trống nào
+	// rộng 240 với khoảng cách 420, và ở 4/10 seed không đặt được bia nào. Rặng tre dùng
+	// `b.obstacle` nên tự tránh chỗ bia đã chiếm.
+	g.immortalAnchors("seal_stele", Vec2{s / 2, s / 2}, 1500, 5, 240)
 
 	walls := carveMaze(cells, func(n int) int { return g.b.rng.Intn(n) })
 	for _, w := range walls {
@@ -368,6 +418,9 @@ func (g *gen) phamTran() error {
 		g.b.alley(lo+float64(i+1)*2100, hi-2700, 1500, w, i%2 == 1)
 	}
 	g.b.organicZone("mud", s*0.5, s*0.82, 650, 0.6)
+	// §8.2: Phàm Trấn = 2–4 thạch bi (bậc 13) ở quảng trường.
+	g.immortalAnchors("seal_stele", sqA, 700, 2, 220)
+	g.immortalAnchors("seal_stele", sqB, 700, 2, 220)
 	g.decorStepFor("pham_tran")
 	return nil
 }
@@ -475,6 +528,10 @@ func (g *gen) bangNguyetHo() error {
 			continue // trong lòng hồ thì để trống
 		}
 		g.b.boulder(p.X, p.Y, g.b.rnd(80, 150), 220)
+	}
+	// §8.2: Băng Nguyệt Hồ = tảng băng vạn năm (bậc 9) trên đảo băng.
+	for _, is := range []Vec2{islandA, islandB} {
+		g.immortalAnchors("ice_eternal", is, 480, 3, 300)
 	}
 	g.decorStepFor("bang_nguyet_ho")
 	return nil

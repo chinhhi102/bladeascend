@@ -25,6 +25,8 @@ const (
 	pathMaxExpand = 2500
 	repathSecs    = 1.5
 	waypointReach = 60.0
+	// cutDelaySecs: §8.2 — bot tính vật cản mình chém được là mất thêm 0.3 giây.
+	cutDelaySecs = 0.3
 )
 
 // Brain is one bot's AI state and personality.
@@ -346,9 +348,12 @@ func (b *Brain) nearestFarmTarget(g *game.Game, me *game.Player) (Vec, float64, 
 			best, stop, bestD, found = m.Pos, me.Geom.Reach*0.8, d, true
 		}
 	}
+	// Vật cản bot CHÉM ĐƯỢC là mục tiêu đáng đi tới (spec v6.7 §8.2 mục 5): chém xong là
+	// mở ra một lối đi, và sạp/xe còn rơi item. Bậc cao hơn cảnh giới thì bỏ qua — đi tới
+	// đó chỉ để mài vào một bức tường không suy chuyển.
 	for id, o := range g.Map.Obstacles {
 		st := g.Obstacles[id]
-		if o.MaxHP == 0 || st.Broken || o.MaxHP > 60*(1+g.Prog.Realm(me.Level)) {
+		if st.Broken || !g.CanCutObstacle(me, o.Tier) {
 			continue
 		}
 		c := o.Shape.Center()
@@ -380,7 +385,10 @@ func (b *Brain) nextWaypoint(g *game.Game, me *game.Player) Vec {
 		return b.goal
 	}
 	if b.path == nil || b.pathFor.Dist(b.goal) > 200 || g.Time-b.pathAt > repathSecs {
-		b.path = g.Grid.FindPath(me.Pos, b.goal, pathMaxExpand)
+		// §8.2: bot coi vật cản MÌNH chém được là "đi qua được, tốn thêm 0.3s". Nếu không,
+		// một Đạo Tổ đi vòng cả bản đồ để tránh cái rào tre mà họ chạm vào là tan.
+		b.path = g.Grid.FindPathCutting(me.Pos, b.goal, pathMaxExpand, cutPenaltyCells(g, me),
+			func(id int) bool { return g.CanCutObstacle(me, g.Map.Obstacles[id].Tier) })
 		b.pathFor, b.pathAt = b.goal, g.Time
 	}
 	for len(b.path) > 0 && me.Pos.Dist(b.path[0]) < waypointReach*math.Sqrt(me.Scale) {
@@ -390,6 +398,17 @@ func (b *Brain) nextWaypoint(g *game.Game, me *game.Player) Vec {
 		return b.goal
 	}
 	return b.path[0]
+}
+
+// cutPenaltyCells đổi "0.3 giây" của §8.2 thành số ô lưới, theo tốc độ đi của chính bot:
+// A* trong `world.Grid` đo quãng đường theo ô, nên hằng số thời gian phải quy đổi, không
+// nhét thẳng 0.3 vào.
+func cutPenaltyCells(g *game.Game, me *game.Player) float64 {
+	speed := g.MoveSpeed(me)
+	if speed <= 1 {
+		return 0
+	}
+	return cutDelaySecs * speed / g.Grid.Cell
 }
 
 // clearLine samples the path grid between two points.

@@ -421,9 +421,11 @@ func (r *Room) welcomeFor(z *Zone, p *game.Player, c *Client) netproto.Welcome {
 	w := netproto.Welcome{T: "welcome", ID: p.ID, Room: r.ID, Map: z.G.Map.ID,
 		TickHz: r.cfg.Net.TickHz, Time: z.G.Time, Debug: c.Debug, Proto: netproto.ProtocolVersion,
 		Zone: z.Index, ZoneName: z.Name}
+	// Chỉ gửi vật cản ĐANG BỊ CHÉM. Từ v6.7 không còn máu nên không còn trạng thái trung
+	// gian nào để đồng bộ — vật cản hoặc còn đó, hoặc đang đếm giờ mọc lại.
 	for id, st := range z.G.Obstacles {
-		if st.Broken || st.HP != z.G.Map.Obstacles[id].MaxHP {
-			w.Obstacles = append(w.Obstacles, netproto.ObstacleState{ID: id, HP: st.HP, Broken: st.Broken})
+		if st.Broken {
+			w.Obstacles = append(w.Obstacles, netproto.ObstacleState{ID: id, Broken: true})
 		}
 	}
 	return w

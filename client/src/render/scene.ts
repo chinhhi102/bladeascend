@@ -21,6 +21,7 @@ import { Ambient } from './ambient';
 import { Breakthrough, HITSTOP_SECS } from './breakthrough';
 import { autoQuality, autoQualityByMemory, quality } from './quality';
 import { AURA_FAR_PX, TienAura } from './tienaura';
+import { FloatTextLayer } from './floattext';
 import { VfxLayer } from './vfxlayer';
 import { PlayerSprite } from './player';
 import { ringGeom } from './ringgeom';
@@ -89,6 +90,8 @@ export class GameScene {
   private readonly skillFx: SkillFx;
   private mapView: MapView | null = null;
   private readonly players = new Map<number, PlayerSprite>();
+  /** Chữ nổi trong thế giới: "Cần {cảnh giới}" khi chém vật cản quá bậc (§8.2). */
+  private readonly floatText = new FloatTextLayer();
   private readonly monsters = new Map<number, MonsterSprite>();
   private readonly items = new Map<number, ItemSprite>();
   // Items picked up this snapshot: itemId → who grabbed it, so we can fly them in.
@@ -175,12 +178,13 @@ export class GameScene {
     // Viên EXP luôn nằm dưới mọi thứ khác nên xếp ngay trên mặt đất, không cần y-sort.
     // Lớp phát sáng nằm dưới nhân vật (hào quang ở sau lưng) nhưng trên vòng kiếm, để
     // hàng trăm thanh kiếm không che mất hào quang.
-    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.glow.root, this.entities, this.mapView.over, this.ambient.root, this.skillFx.layer, this.vfx.layer);
+    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.glow.root, this.entities, this.mapView.over, this.ambient.root, this.skillFx.layer, this.vfx.layer, this.floatText.layer);
     this.ambient.setBiome(w.map.id);
   }
 
   clear(): void {
     this.skillFx.clear();
+    this.floatText.clear();
     this.camera.removeChildren();
     // Pool phải dọn theo: view trong pool thuộc về khu CŨ, giữ lại là giữ texture của một
     // bản đồ không còn dùng — đúng kiểu rò rỉ bộ nhớ mang tên "tối ưu".
@@ -265,6 +269,7 @@ export class GameScene {
     this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha,
       me ? { x: me.x, y: me.y, w: vs.w, h: vs.h } : undefined);
     this.vfx.update(now);
+    this.floatText.update(now);
     this.skillFx.update(now);
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
     this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;
@@ -993,8 +998,12 @@ export class GameScene {
         this.vfx.play('death_smoke', e.x, e.y, 120, now);
         sound.play('monster_pop', 0.6);
         break;
-      case 'ObstacleDamaged':
+      case 'ObstacleTooHard':
+        // Tia lửa nhỏ + chữ nổi "Cần {cảnh giới}" (spec §8.2). Server đã giới hạn 1 lần /
+        // 3 giây / vật cản, nên ở đây không phải tự đếm lại.
+        this.vfx.play('clash_spark', e.x, e.y, 70, now);
         sound.play('obstacle_hit', 0.4);
+        this.floatText.show(STR.needRealm(realmName(this.cfg, e.n ?? 0)), e.x, e.y, now);
         break;
       case 'ObstacleBroken':
         this.vfx.play('death_smoke', e.x, e.y, 260, now);
