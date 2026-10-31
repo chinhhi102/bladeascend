@@ -1512,3 +1512,75 @@ tầng thì người làm theo sẽ gặp thư mục rỗng hoặc `service not 
 **Câu cần chốt**: đổi tên thư mục/service trên VPS + staging, hay giữ tên cũ ở
 tầng hạ tầng? Giữ nguyên cũng được (người chơi không thấy), chỉ là `brand-check`
 mang hai món nợ miễn trừ dài hạn.
+
+## Phiên 1/11 — trang chủ + ảnh chia sẻ (5 việc chủ dự án chốt)
+
+Commit `54b1bd9`. **Chưa deploy** — chủ dự án yêu cầu xem ảnh trước.
+
+| # | Việc | Kết quả |
+|---|---|---|
+| 1 | Tên game không lẻ chữ · job logo p1 | ✅ |
+| 2 | Thẻ nhân vật tên ngắn, 1 dòng | ✅ |
+| 3 | 1366×768 không chạm mép, hint PC hiện | ✅ + 2 cỡ khác cũng đang hỏng |
+| 4 | Phần dưới trang: ảnh, cách chơi, FAQ, chân trang | ✅ |
+| 5 | Ảnh chia sẻ OG 1200×630 | ✅ chờ duyệt |
+
+### Số đo trước / sau (7 cỡ màn hình)
+
+| Cỡ | Cuộn ngầm trong panel | |
+|---|---|---|
+| | trước | sau |
+| 360×800 | 26 px | **0** |
+| 800×360 | 108 px | **0** |
+| 320×568 | 135 px | **0** |
+| 420×900 | 0 | 0 |
+| 960×540 | 0 | 0 |
+| **1366×768** | **73 px** | **0** |
+| 1920×1080 | 0 | 0 |
+
+Tên game bỏ lẻ chữ "Bước" ở **5/7 cỡ** → nay 0/7. Trang chủ thừa **404 px nền đen**
+dưới chân trang → nay 0 px. Trang có **2 thẻ `h1`** cùng nội dung → nay 1.
+
+### Ba điều học được
+
+**1. `display: block` không có nghĩa là NHÌN THẤY.** Panel trang chủ có
+`overflow-y: auto`; nội dung không vừa thì phần thừa không tràn ra ngoài mà trôi vào
+một thanh cuộn gần như vô hình. `getComputedStyle` vẫn báo dòng hướng dẫn là
+`block` trong khi người ngồi trước máy không thấy dòng nào. Phép đo đúng là
+`scrollHeight - clientHeight` — đã đưa vào `uioverlap.mjs`.
+
+**2. Khoảng trống giữa hai media query cũng là một vùng chưa ai thử.** Hai tầng
+`max-height` cũ chặn ở 720 và 560 px. 768 và 800 — hai chiều cao phổ thông nhất —
+rơi đúng vào giữa, không tầng nào áp, nên giữ nguyên cỡ đầy đủ. Bài kiểm cũ chạy
+6 cỡ nhưng không cỡ nào nằm trong khoảng đó.
+
+**3. Ảnh chụp từ game thật vẫn sai nếu cái "thật" đó là một nhân vật không làm gì.**
+Bản đầu của `shots.mjs` chỉ chờ rồi chụp: nhân vật đứng nguyên chỗ hồi sinh, sau 84
+giây vẫn "Luyện Khí tầng 2 · Kiếm 3/10 · hạng 59/59", ba ảnh gần như trùng nhau và
+không ảnh nào có VÒNG KIẾM — thiếu đúng hình ảnh mà cả cái tên game nói về. Nay tool
+tự kiểm ba thứ: phím dựng cảnh có tới nơi không (đếm kiếm trước/sau), có chụp trúng
+màn tổng kết không, và đáy ảnh có phải vùng ngoài rìa bản đồ không.
+
+### Ghi chú kỹ thuật
+
+- `client/brand-split.ts` — một hàm chia tên game, dùng chung cho `vite.config.ts`
+  (màn hình tải, HTML tĩnh) và `strings.ts` (bảng trang chủ, DOM). Hai runtime khác
+  nhau nhưng phải ngắt ở cùng một chỗ, nếu không tên "nhảy" lúc màn hình tải mờ đi.
+- `?debug=true` trên URL **không còn cấp quyền gì** (ADMIN_SPEC §1.1). Công cụ đo
+  cần `APP_ENV=dev` + gọi từ localhost. Mất hai lượt chạy mới nhận ra vì lệnh bị
+  chặn thì im lặng, không có dòng lỗi nào.
+- `brand-check` nay quét cả `client/public/` — `privacy.html` viết thẳng tên game
+  (Vite chép nguyên xi tệp trong `public/`, không thay token).
+- Job `brand_logo_vi` ghi ra **art nguồn**, không đè bản phát hành. Bản đang dùng
+  vẫn là bản render bằng font cho tới khi chủ dự án duyệt **từng dấu** — dễ sai nhất
+  là "Hữu" (ngã) và "Bước" (sắc trên ơ).
+
+### Còn lại
+
+- **Chờ chủ dự án duyệt ảnh chia sẻ** rồi mới deploy. Chạy lại ảnh chụp:
+  `cd server && APP_ENV=dev go run ./cmd/server -debug=true` rồi
+  `node tools/browsertest/shots.mjs`.
+- Chân trang ghi "English, Português… đang làm" — đúng sự thật, vì `client/src/i18n/`
+  chưa có. Dựng ô chọn ngôn ngữ ở đây lúc này là một cái nút bấm không xảy ra gì.
+- `share_card.png` nặng 1 MB (PNG, vì Twitter không nhận WebP). Không nằm trên
+  đường vào game — chỉ con bọ mạng xã hội tải — nên chưa tối ưu.
