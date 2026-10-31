@@ -48,13 +48,28 @@ function toHex(n: number): string {
   return `#${n.toString(16).padStart(6, '0')}`;
 }
 
-/** homeScreen: name input + character picker + play / leaderboard buttons (spec §2). */
-export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLeaderboard: () => void): HTMLElement {
+/**
+ * homeScreen: name input + character picker + play / leaderboard buttons (spec §2).
+ *
+ * Hiện NGAY, không chờ asset nào (GAME_SPEC §13.7 mục 4 + chủ dự án chốt 31/10). Ảnh chân
+ * dung và nền là thẻ `<img>` / `background-image` của DOM, nên **trình duyệt tự tải lấy** —
+ * chỉ cần manifest để biết địa chỉ, không cần đi qua bộ nạp Pixi. Vì vậy trang chủ chỉ phụ
+ * thuộc hai lời gọi nhỏ: `/api/config` và `manifest.json`.
+ *
+ * `artReady` (không bắt buộc) là lời hứa của nhóm art nền; xong thì vá lại ảnh **tại chỗ**.
+ * Vá tại chỗ chứ không dựng lại cả màn hình: người chơi đang gõ tên, dựng lại là xoá mất
+ * chữ họ vừa gõ.
+ */
+export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLeaderboard: () => void, artReady?: Promise<void>): HTMLElement {
   const profile = savedProfile(cfg);
   const root = h('div', 'screen home');
-  if (assets.has('ui/home_bg.png')) {
-    root.style.backgroundImage = `url(${assets.url('ui/home_bg.png')})`;
-  }
+  const applyBg = (): void => {
+    const bg = assets.url('ui/home_bg.png');
+    if (bg) {
+      root.style.backgroundImage = `url(${bg})`;
+    }
+  };
+  applyBg();
   const panel = h('div', 'panel');
   const input = h('input', 'name-input');
   input.placeholder = STR.namePlaceholder;
@@ -102,6 +117,20 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     grid.append(card);
   }
   showPreview(selected);
+  // Manifest về muộn (hoặc chưa về lúc dựng màn hình) thì vá ảnh tại chỗ khi có.
+  const applyArt = (): void => {
+    applyBg();
+    for (const [c, card] of cards) {
+      const old = card.querySelector('.portrait');
+      if (old) {
+        old.replaceWith(portrait(c, (p) => assets.url(p), toHex(charColor(c)[0])));
+      }
+    }
+    showPreview(selected);
+  };
+  if (artReady) {
+    void artReady.then(applyArt, () => undefined);
+  }
   const play = (): void => {
     const name = input.value.trim();
     if ([...name].length < cfg.player.name_min || [...name].length > cfg.player.name_max) {

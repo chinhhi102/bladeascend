@@ -13,5 +13,8 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 6,2026-10-30,ab0f706,Sửa texture 1 GB (filterArea + atlas 128),S4,,,,,,,,58.0,,0.5,112,,102.0,0,,,,,,,,,,texture GPU 1076 -> 102 MB; art 607 -> 378 MB,
 7,2026-10-30,d34def5,Mở telemetry :9999 - lượt kiểm chứng,S6,0.35,1.54,7.0,7.9,8.2,0.5,1.0,58.6,28.2,,54,3701,,12,13.50,,,,,,,,,"KHÔNG phải người thật: N=1, tab headless của chính agent",1
 8,2026-10-30,9bca2c9,NETCODE 2b - DescRequest + dự phòng + pool,FLICKER,,,,,,,,60.0,,,36,,,0,0.40,,,,,,,,,placeholder 0/16 lượt; respawn 2/16 lượt có 1,
-9a,2026-10-30,200e5bf,"Mốc TRƯỚC §13.7 - preload cả manifest",S7,,,,,,,,,,,,,,,,,,,77.4,201.5,,,,"547 tệp tải trước khi hiện trang chủ; vượt 9.7x ngân sách boot",
-9b,2026-10-30,,"§13.7 A - asset-pipeline + nhóm tải + màn hình tải",S7,,,,,,,,58.0,,0.6,36,3396,,0,,,,,7.02,11.41,8.3,16.4,2.8,"WebP+hash+nhóm tải; lần 2 chỉ 0.06 MB qua dây; chưa làm trim/atlas item (ngân sách đã đạt)",
+0,2026-10-30,,Người thật 30/10 11:30 → 30/10 23:30,S6,0.70,5.30,12.6,16.4,26.7,3.8,1.0,58.6,27.5,,73,3702,0.0,50,4.10,,,,,,,,,dòng S6 tự động đầu tiên; build 20261030_2123_200e5bf; đo TRƯỚC §13.7,68
+9a,2026-10-30,200e5bf,Mốc TRƯỚC §13.7 - preload cả manifest,S7,,,,,,,,,,,,,,,,,,,77.4,201.5,,,,547 tệp tải trước khi hiện trang chủ; vượt 9.7x ngân sách boot,
+9b,2026-10-30,,§13.7 A - asset-pipeline + nhóm tải + màn hình tải,S7,,,,,,,,58.0,,0.6,36,3396,,0,,,,,7.02,11.41,8.3,16.4,2.8,WebP+hash+nhóm tải; lần 2 chỉ 0.06 MB qua dây; chưa làm trim/atlas item (ngân sách đã đạt),
+10,2026-10-31,,"Trang chủ hiện ngay + tải gói lúc gõ tên",S7,,,,,,,,60.0,,0.32,40,2773,,0,,,,,7.02,11.41,10.0,15.2,7.4,"CHỜ THỰC (bấm Vào chơi → trong trận) trung vị 3 lượt: 10Mbps 2.2s, Fast4G 6.0s, cache 0.3s; trang chủ hiện 2.4s/1.8s/1.0s; TYPE_MS=6000 là giả định",
+10b,2026-10-31,,"Q27 nền đúng biome + trang trí vẽ ra thật",S4,,,,,,,,60.0,,0.32,40,2773,,0,,,,,,,,,,"+91 vật trang trí (Băng Nguyệt Hồ): draw call 36→40, vẽ 0.6→0.32ms; 543 vật trước đây vô hình",

@@ -46,12 +46,39 @@ export const BEAST_PARTS: { id: string; parts: string[] }[] = [
 ];
 export const BEAST_MOTES = ['cloud', 'spark', 'glow', 'feather'];
 
-// ART_PROMPTS §9.0b — texture nền và decal cho bản đồ sinh động (GAME_SPEC §8.6).
+/**
+ * BIOME_TILES — texture nền theo biome (ART_PROMPTS §9.0b, GAME_SPEC §8.6).
+ *
+ * **Một bảng duy nhất, khoá là giá trị `biome` THẬT trong `maps/*.tmj`.** `mapview` nhập từ
+ * đây; đừng khai lại ở chỗ khác.
+ *
+ * Trước đây có **hai** bảng cùng tên và chúng đã trôi khỏi nhau:
+ * - `mapview.ts` giữ một bảng đánh khoá bằng biome, nhưng có `grass` `market` `concrete`
+ *   `dirt` `rock` — mà bản đồ chỉ sinh ra `grass` `dirt` `concrete` `snow`. Nên `market` và
+ *   `rock` là khoá chết, còn **`snow` thì thiếu**: Băng Nguyệt Hồ rơi về `['grass']` và trải
+ *   cỏ giữa hồ băng. Hơn nữa bộ dành cho hẻm núi lại nằm dưới khoá `rock`, nên Linh Sơn Cốc
+ *   (biome `dirt`) nhận `dirt_path` + `village_grass` — cỏ làng trong hẻm núi đá.
+ * - `catalog.ts` giữ một bảng khác, đánh khoá bằng **tên khu** (`'Linh Sơn'`, `'Hắc Thị'`…)
+ *   lấy từ cột `name` của `biomes[]` bên `cmd/mapgen/gen.go` — tức tên bốn GÓC của Thiên
+ *   Đình, không phải thuộc tính `biome`. Bảng này chỉ `assets:report` / `check:assets` đọc,
+ *   nên nó đòi sinh những tile mà game không bao giờ tra tới.
+ *
+ * Cả hai sai im lặng: không log, không placeholder, chỉ là nền sai. `npm run check:assets`
+ * giờ canh đúng chỗ đó — mỗi `.tmj` phải tra ra ít nhất một ảnh nền CÓ THẬT.
+ *
+ * Lưu ý còn mở: Thiên Đình và Trúc Lâm **cùng** `biome: "grass"` nên trải cùng bộ nền. Muốn
+ * Trúc Lâm có nền tre riêng (`bamboo_floor`) thì đổi `zoneDefs` bên mapgen cho `truc_lam`
+ * thành một biome riêng rồi sinh lại bản đồ — đó là đổi dữ liệu bản đồ nên chờ chủ dự án.
+ */
 export const BIOME_TILES: Record<string, string[]> = {
-  'Linh Sơn': ['rocky_ground', 'fine_gravel', 'mossy_stone'],
-  'Trúc Lâm': ['soft_grass', 'bamboo_litter', 'damp_earth'],
-  'Phàm Trấn': ['dirt_path', 'village_grass'],
-  'Hắc Thị': ['worn_cobble', 'dusty_earth'],
+  // Thiên Đình + Trúc Lâm. Giữ nguyên bộ `mapview` đang dùng — đây là nền chủ dự án đã xem.
+  grass: ['grass', 'soft_grass', 'bamboo_litter'],
+  // Linh Sơn Cốc — hẻm núi đá. Đây là bộ trước nằm dưới khoá chết `rock`.
+  dirt: ['dirt', 'rocky_ground', 'fine_gravel'],
+  // Phàm Trấn — phố chợ. Bộ trước nằm dưới khoá chết `market`.
+  concrete: ['concrete', 'worn_cobble', 'dusty_earth'],
+  // Băng Nguyệt Hồ — thiếu hẳn trước đây.
+  snow: ['snow', 'ice'],
 };
 export const DECAL_IDS = [
   'ground_cracks', 'grass_tuft', 'fallen_leaves', 'pebbles', 'puddle', 'tree_roots',
@@ -86,6 +113,15 @@ export const VFX: AnimSpec[] = [
 ];
 export const DECOR_IDS = ['red_plastic_stool', 'old_bicycle_leaning', 'pile_of_watermelons', 'street_food_cart', 'banana_tree',
   'rusty_water_jar', 'broken_tv', 'lazy_sleeping_dog', 'bush_with_flowers', 'stone_lantern', 'wall_border'];
+/**
+ * DECOR_NATURE: bộ cây cỏ / đá / giếng mà `cmd/mapgen/decor.go` gắn tag cho Linh Sơn Cốc,
+ * Trúc Lâm, Băng Nguyệt Hồ (job artgen `decor_nature`, Q27-2).
+ *
+ * Tách khỏi `DECOR_IDS` để `assets:report` liệt kê riêng — bộ trên đã có art, bộ này chưa.
+ * Mapgen **không đặt** cái nào chưa có art, nên thiếu là bản đồ trống trải chứ không vẽ
+ * placeholder; vì vậy `check:assets` chỉ cảnh báo, không chặn build.
+ */
+export const DECOR_NATURE = ['rock_small', 'pine', 'bamboo', 'bush_small', 'lantern', 'well', 'banner'];
 export const SFX = ['sword_clash', 'sword_hit_body', 'pickup_sword', 'pickup_buff', 'pickup_exp', 'buff_end', 'sword_break',
   'shield_break', 'chest_incoming', 'chest_open', 'obstacle_hit', 'obstacle_break', 'obstacle_regrow', 'gate_in', 'gate_out',
   'gate_warn', 'monster_hurt', 'monster_pop', 'levelup', 'breakthrough', 'realm_drop', 'death', 'respawn'];
@@ -190,7 +226,8 @@ function mapEntries(): CatalogEntry[] {
   for (const c of GATE_COLORS) {
     out.push({ group: 'Cổng', label: c, files: GATE_ANIMS.flatMap((a) => frames(`gates/${c}`, a)), job: `gate_${c}` });
   }
-  out.push({ group: 'Trang trí', label: 'decor', files: DECOR_IDS.map((d) => `decor/${d}.png`), job: 'decor_sheet' });
+  out.push({ group: 'Trang trí', label: 'decor phố', files: DECOR_IDS.map((d) => `decor/${d}.png`), job: 'decor_sheet' });
+  out.push({ group: 'Trang trí', label: 'decor cây cỏ / đá / giếng', files: DECOR_NATURE.map((d) => `decor/${d}.png`), job: 'decor_nature' });
   return out;
 }
 

@@ -12,7 +12,10 @@
 //   - `vaoTran` : từ lúc mở trang tới lúc nhân vật đã ở trong trận (`home+boot+char+zone`).
 import { chromium } from 'playwright';
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const URL = process.argv[2] ?? 'http://127.0.0.1:9997';
+/** TYPE_MS: người chơi gõ tên + ngắm nhân vật bao lâu. Art nền tải trong khoảng này. */
+const TYPE_MS = Number(process.env.TYPE_MS ?? 6000);
 
 /** Bóp mạng qua CDP. `down`/`up` tính bằng byte/giây, `rtt` milligiây. */
 const PROFILES = [
@@ -58,12 +61,19 @@ async function measure({ name, down, up, rtt, ctx: reuse }) {
   // Trang chủ hiện = ô nhập tên có trong DOM (màn hình tải đã ẩn).
   await p.waitForSelector('input.name-input', { timeout: 180000 });
   const home = Date.now() - t0;
+  // Người chơi gõ tên và ngắm mấy nhân vật — art nền tải trong khoảng này. `TYPE_MS` là
+  // thời gian đó: 6 giây là ước lượng DÈ DẶT cho việc gõ tên + xem 10 thẻ kỹ năng. Đây là
+  // con số giả định duy nhất trong bài đo, nên để lộ ra chứ không giấu trong code.
   await p.fill('input.name-input', 'LoadTime');
+  await sleep(TYPE_MS);
+  // ——— "Thời gian chờ THỰC" của người chơi: bấm Vào chơi → đang ở trong trận ———
+  const tClick = Date.now();
   await p.getByText('Vào chơi', { exact: true }).click();
   await p.waitForFunction(() => window.kx?.playing?.() === true, null, { timeout: 180000 });
+  const waited = Date.now() - tClick;
   const play = Date.now() - t0;
   await p.close();
-  return { name, trangChuMs: home, vaoTranMs: play, wireMB: +(wire / 1e6).toFixed(2), tuCache: fromCache, ctx };
+  return { name, trangChuMs: home, choThucMs: waited, vaoTranMs: play, wireMB: +(wire / 1e6).toFixed(2), tuCache: fromCache, ctx };
 }
 
 for (const prof of PROFILES) {
@@ -79,10 +89,13 @@ const second = await measure({ name: 'Fast 4G — lần 2 (cache)', down: (4 * 1
 rows.push(first, second);
 await warm.close();
 
-console.log('\n| Kịch bản | Trang chủ | Vào trận | Byte luồng chính | Tệp lấy từ cache |');
-console.log('|---|---|---|---|---|');
+console.log(`\n(gõ tên ${TYPE_MS / 1000} s trước khi bấm Vào chơi)`);
+console.log('\n| Kịch bản | Trang chủ hiện | **Chờ thực** (bấm → trong trận) | Mở trang → trong trận | Byte luồng chính | Tệp từ cache |');
+console.log('|---|---|---|---|---|---|');
 for (const r of rows) {
-  console.log(`| ${r.name} | ${(r.trangChuMs / 1000).toFixed(1)} s | ${(r.vaoTranMs / 1000).toFixed(1)} s | ${r.wireMB} MB | ${r.tuCache} |`);
+  console.log(
+    `| ${r.name} | ${(r.trangChuMs / 1000).toFixed(1)} s | **${(r.choThucMs / 1000).toFixed(1)} s** | ${(r.vaoTranMs / 1000).toFixed(1)} s | ${r.wireMB} MB | ${r.tuCache} |`,
+  );
 }
 console.log(
   '\nNgân sách §13.7: vào trận lần đầu ở 4G ~10 Mbps ≤ 10 s.' +

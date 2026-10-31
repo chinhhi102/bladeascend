@@ -100,6 +100,9 @@ type builder struct {
 	layers map[string][]object
 	solid  []rect
 	keep   []rect // areas that must stay clear (spawn plaza)
+	// decorSkipped: vật trang trí bị chốt chặn trong `decor()` từ chối vì không có art.
+	// Giữ lại để in ra; bỏ qua trong im lặng là đúng cái lỗi Q27-2.
+	decorSkipped []string
 }
 
 func newBuilder(size float64, seed int64) *builder {
@@ -249,7 +252,17 @@ func (b *builder) altar(kind string, cx, cy, r, clear float64) bool {
 	return true
 }
 
+// decor rải `n` lần thử một vật trang trí. Chỉ đặt được ở chỗ trống.
+//
+// Chốt chặn cuối: **không đặt vật trang trí không có art** (Q27-2). `decorStepFor` đã lọc
+// rồi, nhưng ba hàm sinh bản đồ cũ (`langTre`, `choDem`, `nuiDa`) gọi thẳng vào đây, và
+// chính kiểu "gọi thẳng, gõ tên tay" là cách 543 vật vô hình lọt vào bản đồ. Chặn ở nơi
+// ĐẶT thì mọi đường gọi đều an toàn, kể cả đường viết sau này.
 func (b *builder) decor(sprite string, n int) {
+	if !haveDecorArt()[sprite] {
+		b.decorSkipped = append(b.decorSkipped, sprite)
+		return
+	}
 	lo, hi := b.playable()
 	for i := 0; i < n; i++ {
 		x, y := b.rnd(lo+60, hi-60), b.rnd(lo+60, hi-60)
@@ -409,9 +422,17 @@ func main() {
 		if err := b.write(path, zd.name, zd.biome); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("khu %d %s (seed %d): %d vật cản, %d vùng, %d cổng, %d đài → %s\n",
+		fmt.Printf("khu %d %s (seed %d): %d vật cản, %d vùng, %d cổng, %d đài, %d trang trí → %s\n",
 			zi, zd.name, used, len(b.layers["obstacles"]), len(b.layers["zones"]),
-			len(b.layers["gates"]), len(b.layers["altars"]), path)
+			len(b.layers["gates"]), len(b.layers["altars"]), len(b.layers["decor"]), path)
+		// Vật trang trí hợp chủ đề khu này mà chưa có art: NÓI RA. Trước đây mapgen cứ đặt
+		// rồi client bỏ qua trong im lặng, và 543 vật vô hình nằm trong bản đồ nhiều tuần.
+		if miss := uniqueSorted(b.decorSkipped); len(miss) > 0 {
+			fmt.Printf("   ⚠ chưa đặt %d loại trang trí vì thiếu art: %s\n", len(miss), strings.Join(miss, ", "))
+			// In ĐÚNG tên job artgen. Ghép `"decor_" + tên` cho ra `decor_bamboo` — một job
+			// không tồn tại, và một lệnh gợi ý sai thì tệ hơn là không gợi ý gì.
+			fmt.Printf("     sinh art: cd server && go run ./cmd/artgen run -only %s\n", strings.Join(decorJobsFor(miss), " -only "))
+		}
 		if *png != "" {
 			if err := writePreview(b, *png); err != nil {
 				log.Fatal(err)

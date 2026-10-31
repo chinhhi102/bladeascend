@@ -711,14 +711,15 @@ bảng không, và thứ tự C→B hay B→C).
   placeholder 252/0/24/4/0 qua 5 lượt `flicker.mjs`; telemetry xác nhận 12 khung placeholder
   và 13.5 respawn/phút. Nút thắt B3 **mở lại** → việc của hướng A bước 2b.
 - Dòng S6 trong PERF_LOG (#7) là **lượt kiểm chứng của agent**, không phải người thật (N=1,
-  tab headless). Dòng S6 tự động đầu tiên sẽ xuất hiện ở `docs/perf/real/` lúc 23:30.
+  tab headless). **Dòng S6 tự động đầu tiên đã có** (`docs/perf/real/2026-10-30_2330.md`,
+  N=68 phiên / 57 người) và đã chép vào PERF_LOG §3 — xem dòng không số, ngay trên 9a.
 
 ## Việc tiếp theo
 
 1. **Hướng A bước 2b** (đã có bằng chứng số thúc đẩy): View Pool, mờ ra 150 ms, `DescRequest`,
    cấm placeholder ở build thật, `check:assets`.
 2. Hướng B hoạt ảnh (mục 6–8) — **chỉ sau khi anh duyệt bảng điểm**.
-3. Chép dòng S6 tự động đầu tiên vào PERF_LOG §3 khi nó xuất hiện.
+3. ~~Chép dòng S6 tự động đầu tiên vào PERF_LOG §3~~ — **xong 31/10**.
 
 ## Phiên 30/10 (chiều, tiếp) — item Bí Kíp, hoạt ảnh B + C
 
@@ -939,3 +940,95 @@ ngoài phần A, và sửa là đổi hình ảnh trong game nên cần anh xem 
 
 Hỏi anh (ghi cả vào `docs/QUESTIONS.md`): hai bộ tên decor này là **đổi mapgen cho khớp art
 đã có**, hay **vẽ thêm art theo tên mapgen đang dùng**?
+
+## Phiên 31/10 — trả lời Q27 + trang chủ hiện ngay
+
+### Q27-1 ✅ nền 5 khu — và chẩn đoán hôm qua của tôi SAI một nửa
+
+Hôm qua tôi báo "cả 5 khu đều trải cỏ". Sai. Có **hai** bảng cùng tên `BIOME_TILES` và chúng
+đã trôi khỏi nhau; chỉ bảng trong `mapview.ts` là bảng game thật sự dùng:
+
+| Bảng | Khoá | Ai đọc | Hậu quả |
+|---|---|---|---|
+| `mapview.ts` | `grass` `market` `concrete` `dirt` `rock` | **bộ vẽ** | `market`/`rock` là khoá chết; **thiếu `snow`** → chỉ Băng Nguyệt Hồ trải cỏ. Và bộ dành cho hẻm núi nằm dưới khoá chết `rock`, nên Linh Sơn Cốc nhận `dirt_path` + `village_grass` — cỏ làng trong hẻm núi đá |
+| `catalog.ts` | `'Linh Sơn'` `'Trúc Lâm'` `'Phàm Trấn'` `'Hắc Thị'` | `assets:report`, `check:assets` | đòi sinh những tile game không bao giờ tra tới |
+
+Hai bảng cùng tên cho cùng một việc là gốc rễ; sửa khoá mà để nguyên hai bảng thì sẽ trôi
+lại. Nên **gộp còn một bảng** ở `catalog.ts` (nơi Node đọc được, không import Pixi), đánh
+khoá bằng giá trị `biome` thật trong `.tmj`, và `mapview` nhập từ đó.
+
+Sửa luôn hai lỗi cùng họ trong chính hàm `buildGround()`:
+- `BIOME_COLOR` (màu nền khi chưa có art) được tra bằng **tên tệp tile** thay vì biome →
+  khớp hay trượt là chuyện tình cờ. Giờ tra thẳng `map.biome`, thêm `snow`.
+- Mặt nạ trộn gieo theo `biome`, mà Thiên Đình và Trúc Lâm cùng `grass` → hai khu có mảng
+  loang **giống nhau từng vệt**. Gieo theo `map.id`.
+
+Nền từng khu sau khi sửa (`npm run check:assets` in ra mỗi lần chạy):
+
+| Khu | biome | Nền |
+|---|---|---|
+| Thiên Đình | grass | grass, soft_grass, bamboo_litter |
+| Linh Sơn Cốc | dirt | dirt, **rocky_ground, fine_gravel** |
+| Trúc Lâm Mê Cung | grass | grass, soft_grass, bamboo_litter |
+| Phàm Trấn | concrete | concrete, worn_cobble, **dusty_earth** |
+| Băng Nguyệt Hồ | snow | **snow, ice** |
+
+**Nhờ anh nhìn 3 khu in đậm** — Linh Sơn Cốc, Phàm Trấn, Băng Nguyệt Hồ đổi nền hẳn.
+
+Còn mở: Thiên Đình và Trúc Lâm **cùng** `biome: "grass"` nên trải cùng bộ nền. Muốn Trúc Lâm
+có nền tre riêng (`bamboo_floor` chưa dùng) thì đổi `zoneDefs` cho `truc_lam` sang một biome
+riêng rồi sinh lại bản đồ — đổi dữ liệu bản đồ nên chờ anh.
+
+### Q27-2 ✅ trang trí: tag khu + chỉ đặt cái có art
+
+`cmd/mapgen/decor.go` mới là nguồn duy nhất:
+- `decorZones`: **mỗi vật trang trí gắn tag khu** (`red_plastic_stool → pham_tran, thien_dinh`…).
+- `haveDecorArt()` **đọc đĩa** `assets/src/decor/` chứ không gõ danh sách vào mã — art về là
+  mapgen dùng ngay, không phải sửa thêm dòng nào.
+- Chốt chặn trong `builder.decor()`: **không đặt vật không có art**, chặn ở nơi ĐẶT nên mọi
+  đường gọi đều an toàn, kể cả ba hàm sinh bản đồ cũ gọi thẳng vào đó.
+- Mapgen **in ra** loại nào chưa đặt được vì thiếu art, kèm đúng tên job artgen.
+
+**Mật độ là TỔNG của khu, không phải mỗi loại.** Bản đầu tôi để "mỗi loại n lần" và Phàm Trấn
+nhảy lên 447 vật chỉ vì nó hợp 9 loại — khi 7 ảnh còn thiếu về thì nó tự lên ~720. Mật độ bản
+đồ không được phụ thuộc vào việc hôm nay có bao nhiêu tệp art.
+
+Số trang trí sau khi sửa: 81 / 107 / 131 / 139 / 91 — **gần y như trước** (75/107/131/139/91),
+chỉ khác là **giờ chúng vẽ ra thật**. Đối chiếu từng bản đồ: ngoài lớp `decor`, obstacles /
+zones / gates / altars **giống hệt** bản cũ.
+
+Art còn thiếu: 7 ảnh (`rock_small`, `pine`, `bamboo`, `bush_small`, `lantern`, `well`,
+`banner`) → job artgen mới **`decor_nature`**. Chưa sinh được vì tài khoản minigen đang hết
+hạn cookie. Khi nào anh đăng nhập lại: `cd server && go run ./cmd/artgen run -only decor_nature`
+rồi `go run ./cmd/mapgen`.
+
+**Bốn test mới** (`cmd/mapgen/decor_test.go`), và cái thứ hai đã bắt lỗi thật ngay:
+1. `TestDecorPlacedAlwaysHasArt` — 5 khu × 10 seed, mọi vật đặt ra đều có ảnh.
+2. `TestEveryZoneGetsSomeDecor` — mỗi khu phải đặt được ít nhất MỘT loại. **Test này đỏ ngay
+   lần đầu**: Băng Nguyệt Hồ chỉ gắn `rock_small` + `pine`, cả hai chưa có art → khu đó trống
+   trơn. "Chỉ đặt cái có art" có một cách thoả mãn rất tệ là không đặt gì cả, và chỉ test này
+   phân biệt được. Đã gắn thêm `stone_lantern` cho khu đó.
+3. `TestDecorZonesNamesAreKnown` — tên khu trong bảng phải tồn tại; gõ sai là vật đó im lặng
+   không bao giờ được đặt ở đâu.
+4. `check:assets` thêm hai phép kiểm đọc **từ bản đồ**: mỗi `.tmj` phải tra ra ≥ 1 ảnh nền có
+   thật, và mọi decor bản đồ ĐẶT RA phải có ảnh.
+
+### Trang nhập tên hiện ngay, tải gói trong lúc gõ tên ✅
+
+Trang chủ không còn chờ asset nào. Ảnh chân dung và nền là `<img>` / `background-image` của
+DOM nên **trình duyệt tự tải lấy** — chỉ cần `manifest.json` để biết địa chỉ, không phải đi
+qua bộ nạp Pixi. Vậy trang chủ chỉ phụ thuộc hai lời gọi nhỏ: `/api/config` + `manifest.json`.
+
+Mọi thứ còn lại (`home`, `boot`, font, atlas của nhân vật đã lưu) tải **nền** trong lúc người
+chơi gõ tên và ngắm 10 thẻ kỹ năng — khoảng thời gian trước đây bỏ không.
+
+Bấm "Vào chơi": `assets.pending()` rỗng thì **không hiện thanh tiến độ** và vào thẳng. Hiện
+một thanh nhảy từ 0 lên 100% trong một khung hình chỉ làm người ta giật mình.
+
+Hai chỗ phải cẩn thận:
+- **Font vẫn chặn vào trận**, chỉ không chặn trang chủ. Bảng tên vẽ bằng `BitmapText`, thiếu
+  font là nó ném lỗi giữa trận. Font bắt đầu tải từ lúc mở trang nên hầu như luôn xong sẵn.
+- Vá ảnh trang chủ **tại chỗ**, không dựng lại màn hình: người chơi đang gõ tên, dựng lại là
+  xoá mất chữ họ vừa gõ.
+
+Số đo (trung vị 3 lượt, bóp mạng bằng CDP, 6 giây gõ tên): xem PERF_LOG lượt #10.

@@ -5,50 +5,28 @@ Câu đã xong ở `docs/QUESTIONS_DONE.md`.
 
 ---
 
-## Q27 — Tên vật trang trí: đổi mapgen hay vẽ thêm art?
-
-**Bối cảnh**: làm spec v6.4 phần A (§13.7), lúc phải trả lời "tệp art này thuộc khu nào" thì
-lộ ra `mapview.buildDecor()` **chưa bao giờ vẽ được một vật trang trí nào**. Nó tìm
-`decor/<tên>.png` với tên lấy nguyên từ `type` trong Tiled, mà hai bộ tên không trùng chữ nào:
-
-| mapgen đặt vào `.tmj` (299 vật trong 5 bản đồ) | `assets/src/decor/` đang có |
-|---|---|
-| `rock_small`, `pine`, `bamboo`, `bush_small`, `lantern`, `well`, `banner` | `red_plastic_stool`, `old_bicycle_leaning`, `pile_of_watermelons`, `street_food_cart`, `banana_tree`, `rusty_water_jar`, `broken_tv`, `lazy_sleeping_dog`, `bush_with_flowers`, `stone_lantern`, `wall_border` |
-
-Bộ bên phải là bộ "tấu hài phố" trong ART_PROMPTS §9; bộ bên trái là cây cỏ/đá/giếng mapgen
-sinh ra theo địa hình từng khu. Hai bộ sinh ra ở hai thời điểm khác nhau và chưa ai nối lại.
-
-**Phương án**:
-- **(a)** Đổi `cmd/mapgen` để đặt đúng 11 tên art đã có. Không cần vẽ gì. Nhưng Linh Sơn Cốc
-  sẽ rải ghế nhựa và xe đạp cũ giữa hẻm núi — hợp Phàm Trấn, không hợp núi đá.
-- **(b)** Vẽ thêm 7 ảnh theo tên mapgen đang dùng (đá nhỏ, thông, tre, bụi nhỏ, đèn lồng,
-  giếng, băng-rôn). Mỗi khu được bộ trang trí đúng chất của nó.
-- **(c)** Cả hai: đổi mapgen cho Phàm Trấn / Thiên Đình dùng bộ phố đã có, và vẽ thêm cho
-  Linh Sơn Cốc / Trúc Lâm / Băng Nguyệt Hồ.
-
-**Tạm dùng**: **chưa code gì** — hiện trạng là không vẽ trang trí, và nó đã như vậy từ trước
-phiên này. Tôi không tự chọn vì cả ba phương án đều **đổi hình ảnh trong game**, là việc của
-anh. Bộ `decor/` (0,13 MB) vẫn phát hành trong nhóm `boot`, nên chọn phương án nào cũng không
-phải dựng lại asset.
-
-Kèm theo, cùng gốc nhưng **không phải câu hỏi** (là lỗi rõ, chỉ chờ anh ừ): nền của cả 5 khu
-đang đều là cỏ, vì `BIOME_TILES` đánh khoá bằng tên khu (`'Linh Sơn'`) còn `map.biome` là tên
-biome (`'dirt'`). 14 trong 19 ảnh nền chưa từng hiện ra, mà `tiles/snow.png` / `dirt.png` /
-`concrete.png` thì có sẵn và tên khớp đúng giá trị `biome`. Anh ừ thì tôi đổi khoá.
-
----
-
-*(Ngoài Q27, không còn câu nào đang chờ — tính tới 30/10/2026.)*
+*(Không còn câu nào đang chờ — tính tới 31/10/2026.)*
 
 Q20, Q22, Q25 và Q26 anh đã trả lời trong `docs/_raw/ANSWERS.md` ngày 30/10; code đã làm
 theo và cả bốn đã chuyển sang `QUESTIONS_DONE.md`. Hai việc "chờ anh quyết" — tối ưu
 CHANGES_v4 mục 25–27, và hai thư viện `pixi-filters` / `revolt-fx` — cũng đã được duyệt,
 xem cuối `QUESTIONS_DONE.md`.
 
-**Việc lớn tiếp theo** (không phải câu hỏi), cập nhật 30/10 chiều:
-**NETCODE bước 3 — Protocol v2** (NETCODE_SPEC v1.2): schema chung + generator + bài đối
-chiếu golden/fuzz TRƯỚC, rồi vòng đời `Spawn/Desc/Update/Despawn` tường minh, delta theo ack,
-keyframe 2s, lượng tử hoá §4.6. Mục tiêu: đóng nốt respawn (về 0) và gói < 6 KB.
+**Thứ tự việc lớn anh chốt 31/10** (không phải câu hỏi):
+1. ~~Q27-1 nền 5 khu~~ · ~~Q27-2 trang trí~~ · ~~trang chủ hiện ngay~~ — **xong 31/10**.
+2. **Phần B của CHANGES_v6_4** — Tiên khí ×20 (§3.4, §4.1c): `tien_khi_ceilings`
+   [2000, 6000, 12000, 20000, 30000], Thiêu Đốt Tiên giới theo tỉ lệ
+   (`burn_tien_frac_per_sec` 0.004), viên Tiên khí mệnh giá 500/100/10/2/1 tối đa 40 viên,
+   sửa test theo checklist §17.
+3. **CHANGES_v6_5** — kỹ năng theo U, 3 lượt ở Tiên giới. ⚠ **chưa có `docs/_raw/CHANGES_v6_5.md`
+   trong repo** — anh dán vào rồi tôi làm.
+4. **NETCODE bước 3 — Protocol v2** (NETCODE_SPEC v1.2): giữ v1 chạy song song bằng cờ
+   (server config + `?proto=1|2`), thoả thuận phiên bản lúc handshake; chia bước nhỏ, mỗi
+   bước game chơi được + test + golden pass + ghi PERF_LOG. Thứ tự: ~~schema + generator +
+   golden/fuzz~~ (xong) → `Spawn/Desc/Update/Despawn` tường minh → delta theo ack →
+   keyframe 2s → lượng tử hoá §4.6.
+   **Mục tiêu dừng**: respawn = 0 (bench có bộ đếm "quay lại" > 0 thật) và gói < 6 KB. Đạt
+   thì dừng, không tối ưu thêm.
 
 Tối ưu CHANGES_v4 mục 25–27 **đã xong** (mốc chuẩn #4 trong PERF_LOG). Hướng A (một thân
 nhiều mặt) để sau cùng — art thử đã sinh cho 3 nhân vật, chưa code.

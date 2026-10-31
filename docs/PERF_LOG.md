@@ -70,8 +70,11 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 6 | 2026-10-30 | `ab0f706` | **Sửa texture 1 GB** — `filterArea` bám khung nhìn + atlas 128 + boulder 512 | S4\*\* | – | – | – | 58 / – | 0.5 | 112 | 0 | – | Texture GPU **1 076 → 102 MB**; art tĩnh 607 → 378 MB | Vẫn còn placeholder/respawn (xem dòng 7) |
 | 7 | 2026-10-30 | `d34def5` | Mở telemetry trên `:9999` — **lượt chạy kiểm chứng, KHÔNG phải người thật** | S6\*\*\* | 0.35 / 1.54 ✅ | 7.9 / 8.2 ✅ | 0.5 ✅ | 59 / 28 ⚠ | – | 54 ✅ | 12 ❌ | 13.50 ❌ | — | Placeholder và respawn vẫn vượt ngân sách → hướng A bước 2b |
 | 8 | 2026-10-30 | `9bca2c9` | **NETCODE bước 2b** — DescRequest, nhân vật dự phòng, mờ ra 150 ms, View Pool | FLICKER | – | – | – | 60 / – | – | 36 | **0** ✅ | **0.4** ⚠ | Placeholder 252→**0** qua 16 lượt | Respawn chưa về 0 hẳn (2/16 lượt có 1) — cần `Despawn` tường minh ở bước 3 |
+| – | 2026-10-30 | `20261030_2123_200e5bf` | **Người thật** 30/10 11:30 → 23:30 (N=68 phiên, 57 người) | S6 | 0.70 / 5.30 ✅ | 16.4 / 26.7 ⚠ | 3.8 ✅ | 59 / 28 ⚠ | – | 73 ✅ | 50 ❌ | 4.10 ❌ | **dòng S6 TỰ ĐỘNG đầu tiên** | FPS 1% thấp 28 (ngân sách 45); placeholder 50 và respawn 4.10 — đo trên build TRƯỚC bước 2b+§13.7 |
 | 9a | 2026-10-30 | `200e5bf` | **Mốc TRƯỚC §13.7** — bộ nạp tải cả manifest trước trang chủ | S7 | – | – | – | – | – | – | – | – | – | Gói chặn **77.4 MB** (vượt 9.7×); tổng 201.5 MB (vượt 2.5×) |
-| **9b** | 2026-10-30 | (phiên này) | **§13.7 A — asset-pipeline + nhóm tải + màn hình tải** | S7 | – | – | – | 58 / – | 0.6 | 36 | **0** ✅ | – | Gói chặn 77.4 → **7.02 MB** ✅ · tổng 201.5 → **11.41 MB** ✅ · vào trận 10 Mbps **8.3 s** ✅ · lần 2 **2.8 s** | Dư ngân sách gói chặn chỉ 0.98 MB; `zone_thien_dinh` 3.24 MB là phần nặng nhất |
+| **9b** | 2026-10-30 | `b55c14f` | **§13.7 A — asset-pipeline + nhóm tải + màn hình tải** | S7 | – | – | – | 58 / – | 0.6 | 36 | **0** ✅ | – | Gói chặn 77.4 → **7.02 MB** ✅ · tổng 201.5 → **11.41 MB** ✅ · vào trận 10 Mbps **8.3 s** ✅ · lần 2 **2.8 s** | Dư ngân sách gói chặn chỉ 0.98 MB; `zone_thien_dinh` 3.24 MB là phần nặng nhất |
+| **10** | 2026-10-31 | (phiên này) | **Trang chủ hiện ngay + tải gói lúc gõ tên** (chủ dự án chốt 31/10) | S7 | – | – | – | 60 / – | 0.32 | 40 | **0** ✅ | – | **Chờ thực** (bấm Vào chơi → trong trận) 10 Mbps 6.0 → **2.2 s**, Fast 4G 12.4 → **6.0 s**, có cache → **0.3 s** · trang chủ hiện 4.0 → **2.4 s** | Fast 4G dao động 2.4–9.4 s: 6 giây gõ tên chỉ phủ được ~40% gói 7 MB ở 4 Mbps |
+| 10b | 2026-10-31 | (phiên này) | Q27 — nền đúng biome + trang trí bản đồ **vẽ ra thật** (543 vật trước đây vô hình) | S4\*\* | – | – | – | 60 / – | 0.32 | 40 | 0 ✅ | – | +91 vật trang trí vẽ thêm (Băng Nguyệt Hồ): draw call 36 → 40, vẽ 0.6 → 0.32 ms | Chỉ đo được khu server xếp vào (Băng Nguyệt Hồ); Phàm Trấn 139 vật chưa đo trực tiếp |
 
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
@@ -338,6 +341,69 @@ Việc tiếp theo đề xuất:
    từ 512 xuống 384 (đo trước rồi quyết).
 3. Đo trên **điện thoại thật** — bảng §4 vẫn trống dòng điện thoại, và đó mới là máy có
    đường mạng mà §13.7 nhắm tới.
+
+### Lượt #10 — "Thời gian chờ thực" 6,0 → 2,2 giây (2026-10-31)
+
+Mục tiêu: chủ dự án chốt 31/10 — "trang nhập tên hiện ngay khi trang mở; tải gói boot ngầm
+trong lúc người chơi gõ tên/chọn nhân vật; bấm Vào chơi mà chưa xong mới hiện thanh".
+
+**Đổi cả chỉ số, không chỉ đổi code.** Lượt #9 đo "mở trang → trong trận", và con số đó
+trộn hai thứ người chơi cảm nhận hoàn toàn khác nhau: thời gian họ *ngồi chờ* và thời gian
+họ *đang chọn nhân vật*. Chỉ số đúng là **"chờ thực" = từ lúc bấm Vào chơi tới lúc ở trong
+trận**. Mọi byte tải xong trước lúc bấm là byte miễn phí.
+
+Thay đổi: trang chủ không chờ asset nào. Ảnh chân dung + nền là `<img>` /
+`background-image` nên trình duyệt tự tải; trang chủ chỉ cần `/api/config` +
+`manifest.json`. `home` / `boot` / font / atlas nhân vật đã lưu tải **nền** trong lúc gõ
+tên. Bấm Vào chơi mà `assets.pending()` rỗng thì vào thẳng, không hiện thanh.
+
+Kết quả (trung vị **3 lượt**, bóp mạng bằng CDP, `TYPE_MS=6000`):
+
+| Chỉ số | Trước (#9b) | Sau (#10) | Δ | Ngân sách |
+|---|---|---|---|---|
+| **Chờ thực**, 4G 10 Mbps | 6.0 s | **2.2 s** | −63% | – |
+| **Chờ thực**, Fast 4G 4 Mbps | 12.4 s | **6.0 s** | −52% | – |
+| **Chờ thực**, lần 2 (cache) | 2.8 s | **0.3 s** | −89% | – |
+| Trang chủ hiện, Fast 4G | 4.0 s | **2.4 s** | −40% | – |
+| Trang chủ hiện, 10 Mbps | 2.3 s | **1.8 s** | −22% | – |
+| Trang chủ hiện, có cache | 1.4 s | **1.0 s** | −29% | – |
+| Mở trang → trong trận, 10 Mbps | 8.3 s | 10.0 s | +1.7 s | < 10 s (sát mép) |
+
+Hai dòng cuối phải đọc kèm nhau, nếu không sẽ kết luận ngược: "mở trang → trong trận" **tăng**
+1,7 giây chỉ vì phép đo mới có **6 giây ngồi gõ tên** ở giữa. Trừ đi thì còn 4,0 giây tải
+thật, so với 8,3 giây trước đây. Giữ cột này trong bảng đúng là để không ai dùng một mình nó.
+
+Con số "trước" của ba dòng "chờ thực" là **suy ra từ chính các lượt đo #9b**: ở bản đó không
+có gì tải nền, nên chờ thực = tổng − thời gian trang chủ hiện (12,4 = 16,4 − 4,0 ·
+6,0 = 8,3 − 2,3 · 2,8 − 1,4 ≈ 1,4 → lấy 2,8 là mức bảo thủ). Không phải đo lại, và ghi rõ ở
+đây để đừng ai tưởng là số đo trực tiếp.
+
+Nút thắt tìm được (có số đo):
+1. **Fast 4G dao động 2,4 – 9,4 giây** qua 6 lượt. Ở 4 Mbps, gói chặn 7 MB cần ~14 giây, mà
+   6 giây gõ tên chỉ phủ được ~40%. Nên ở mạng này người chơi vẫn chờ thật — con số phụ
+   thuộc họ gõ tên nhanh hay chậm.
+2. **Lần 2 có cache: 0,3 giây và chỉ 0,04 MB qua dây.** Tức khi byte đã nằm trong máy thì
+   phần chờ còn lại gần như bằng 0 — không phải giải mã texture như tôi đoán ở lượt #9.
+   Lượt #9 đo ra 2,8 giây cho trường hợp này; phần chênh là do bản đó vẫn chặn ở nhóm `home`.
+3. Vật trang trí bản đồ **bắt đầu vẽ ra thật** (543 vật trước đây vô hình, xem Q27-2): draw
+   call 36 → 40, thời gian vẽ 0,6 → 0,32 ms, FPS 60. Không phải nút thắt.
+
+Bị chặn / chưa làm được:
+- `TYPE_MS = 6 giây` là **giả định duy nhất** của bài đo, không phải số đo. Đổi được bằng
+  biến môi trường. Số thật phải lấy từ telemetry S6 (thời gian từ lúc trang chủ hiện tới lúc
+  bấm Vào chơi) — hiện telemetry chưa ghi mốc đó.
+- Chưa đo trên **điện thoại thật**; bảng §4 vẫn trống dòng điện thoại.
+
+Tác dụng phụ / rủi ro:
+- **Font vẫn chặn vào trận**, chỉ không chặn trang chủ: bảng tên vẽ bằng `BitmapText`, thiếu
+  font là ném lỗi giữa trận. Font tải nền từ lúc mở trang nên hầu như luôn xong sẵn.
+- Trang chủ vá ảnh **tại chỗ** khi manifest về, không dựng lại màn hình — dựng lại là xoá
+  mất tên người chơi đang gõ.
+
+Việc tiếp theo đề xuất:
+1. Ghi mốc "trang chủ hiện → bấm Vào chơi" vào telemetry, để thay giả định 6 giây bằng số thật.
+2. Muốn Fast 4G cũng dưới ~3 giây: chuyển khung `break`/`regrow` của vật cản (2,6 MB) sang
+   nhóm tải nền.
 
 ### Mẫu — copy cho mỗi lượt
 

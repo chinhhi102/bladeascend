@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { catalog, type CatalogEntry } from '../src/render/catalog.ts';
+import { BIOME_TILES, catalog, type CatalogEntry } from '../src/render/catalog.ts';
 
 const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets', 'src');
 const AUDIO_EXTS = ['.ogg', '.mp3', '.wav'];
@@ -51,27 +51,47 @@ const BLOCKING = new Set(['Nhân vật', 'Quái', 'Vật phẩm', 'Vật cản',
  * Thiếu một thứ KHÔNG CÓ TÊN thì không có gì để mà thiếu. Nên phép kiểm phải xuất phát từ
  * thứ game THẬT SỰ DÙNG, không phải từ danh sách ta tự khai.
  */
+const MAPS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'maps');
+
+interface TmjDoc {
+  properties?: { name: string; value: unknown }[];
+  layers?: { name?: string; objects?: { name?: string; type?: string; properties?: { name: string; value: unknown }[] }[] }[];
+}
+
+/** mapFiles đọc mọi `.tmj` một lần, để ba phép kiểm dưới đây dùng chung. */
+function mapFiles(): { file: string; doc: TmjDoc }[] {
+  if (!existsSync(MAPS_DIR)) {
+    return [];
+  }
+  return readdirSync(MAPS_DIR)
+    .filter((n) => n.endsWith('.tmj'))
+    .sort()
+    .map((file) => ({ file, doc: JSON.parse(readFileSync(join(MAPS_DIR, file), 'utf8')) as TmjDoc }));
+}
+
+/** objectsOf lấy `type` của mọi đối tượng trong một lớp, kèm số lần xuất hiện. */
+function objectsOf(doc: TmjDoc, layerName: string): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const layer of doc.layers ?? []) {
+    if (layer.name !== layerName) {
+      continue;
+    }
+    for (const o of layer.objects ?? []) {
+      const props = Object.fromEntries((o.properties ?? []).map((p) => [p.name, p.value]));
+      const kind = String(props.art ?? props.kind ?? o.type ?? o.name ?? '');
+      if (kind) {
+        out.set(kind, (out.get(kind) ?? 0) + 1);
+      }
+    }
+  }
+  return out;
+}
+
 function mapObstacleKinds(): Map<string, number> {
   const out = new Map<string, number>();
-  const dir = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'maps');
-  if (!existsSync(dir)) {
-    return out;
-  }
-  for (const f of readdirSync(dir).filter((n) => n.endsWith('.tmj'))) {
-    const doc = JSON.parse(readFileSync(join(dir, f), 'utf8')) as {
-      layers?: { name?: string; objects?: { name?: string; type?: string; properties?: { name: string; value: unknown }[] }[] }[];
-    };
-    for (const layer of doc.layers ?? []) {
-      if (layer.name !== 'obstacles') {
-        continue;
-      }
-      for (const o of layer.objects ?? []) {
-        const props = Object.fromEntries((o.properties ?? []).map((p) => [p.name, p.value]));
-        const kind = String(props.art ?? props.kind ?? o.type ?? o.name ?? '');
-        if (kind) {
-          out.set(kind, (out.get(kind) ?? 0) + 1);
-        }
-      }
+  for (const { doc } of mapFiles()) {
+    for (const [kind, n] of objectsOf(doc, 'obstacles')) {
+      out.set(kind, (out.get(kind) ?? 0) + n);
     }
   }
   return out;
@@ -99,7 +119,58 @@ for (const [kind, n] of kinds) {
   }
 }
 
-console.log(`Đã kiểm ${checked} tệp bắt buộc trong ${catalog().length} mục, và ${kinds.size} loại vật cản bản đồ dùng.`);
+/**
+ * Mỗi khu phải tra ra ÍT NHẤT MỘT ảnh nền có thật (Q27-1).
+ *
+ * Phép kiểm này ra đời vì một lỗi không để lại dấu vết nào: `BIOME_TILES` thiếu khoá `snow`,
+ * nên Băng Nguyệt Hồ tra trượt, rơi về `['grass']` và **trải cỏ giữa hồ băng** — không log,
+ * không placeholder, build vẫn xanh. Thứ duy nhất bắt được là đi hỏi từng bản đồ "nền của
+ * mày là tệp nào", rồi xem tệp đó có trên đĩa không.
+ */
+const groundRows: { file: string; biome: string; have: string[]; want: string[] }[] = [];
+for (const { file, doc } of mapFiles()) {
+  const props = Object.fromEntries((doc.properties ?? []).map((p) => [p.name, p.value]));
+  const biome = String(props.biome ?? '');
+  const want = BIOME_TILES[biome] ?? [];
+  const have = want.filter((n) => exists(`tiles/${n}.png`));
+  groundRows.push({ file, biome, have, want });
+  if (have.length === 0) {
+    blocking.push({
+      group: 'Nền bản đồ (khu dùng)',
+      label: want.length === 0 ? `${file} — biome "${biome}" KHÔNG CÓ trong BIOME_TILES` : `${file} — biome "${biome}"`,
+      files: want.length === 0 ? ['(thêm khoá vào BIOME_TILES trong client/src/render/catalog.ts)'] : want.map((n) => `tiles/${n}.png`),
+    });
+  }
+}
+
+/**
+ * Mọi vật trang trí bản đồ ĐẶT RA đều phải có ảnh (Q27-2).
+ *
+ * `mapview.buildDecor()` gặp decor không có ảnh thì `continue` — im lặng tuyệt đối. Đó là
+ * lý do 299 vật trang trí trong 5 bản đồ không hiện gì suốt nhiều tuần mà không ai biết.
+ */
+const decorKinds = new Map<string, number>();
+for (const { doc } of mapFiles()) {
+  for (const [kind, n] of objectsOf(doc, 'decor')) {
+    decorKinds.set(kind, (decorKinds.get(kind) ?? 0) + n);
+  }
+}
+for (const [kind, n] of decorKinds) {
+  if (!exists(`decor/${kind}.png`)) {
+    blocking.push({
+      group: 'Trang trí (bản đồ đặt)',
+      label: `${kind} — ${n} chỗ trên bản đồ, không có ảnh nên KHÔNG VẼ GÌ`,
+      files: [`decor/${kind}.png`],
+    });
+  }
+}
+
+console.log(`Đã kiểm ${checked} tệp bắt buộc trong ${catalog().length} mục, ${kinds.size} loại vật cản và ${decorKinds.size} loại trang trí bản đồ dùng.`);
+console.log('\nNền từng khu:');
+for (const r of groundRows) {
+  const mark = r.have.length > 0 ? '✓' : '✗';
+  console.log(`  ${mark} ${r.file.padEnd(22)} biome=${r.biome.padEnd(10)} ${r.have.length}/${r.want.length} ảnh: ${r.have.join(', ') || '(không có)'}`);
+}
 if (warn.length > 0) {
   console.log(`\nThiếu ${warn.length} mục art KHÔNG chặn build (game bỏ qua, không vẽ placeholder):`);
   // In ĐÍCH DANH tệp, không chỉ đếm theo nhóm. Đếm thì biết "thiếu 7 mục" nhưng muốn sinh

@@ -122,9 +122,7 @@ func (g *gen) linhSonCoc() error {
 	}
 	g.b.zone("bush", s*0.45, s*0.1, 900, 700, true)
 	g.b.organicZone("mud", s*0.6, s*0.35, 700, 0.6)
-	for _, d := range []string{"rock_small", "pine"} {
-		g.b.decor(d, 70)
-	}
+	g.decorStepFor("linh_son_coc")
 	return nil
 }
 
@@ -226,9 +224,7 @@ func (g *gen) trucLam() error {
 		}
 		g.b.obstacle(kind, x, y, g.b.rnd(180, 280), g.b.rnd(140, 220), 90)
 	}
-	for _, d := range []string{"bamboo", "bush_small"} {
-		g.b.decor(d, 90)
-	}
+	g.decorStepFor("truc_lam")
 	return nil
 }
 
@@ -372,9 +368,7 @@ func (g *gen) phamTran() error {
 		g.b.alley(lo+float64(i+1)*2100, hi-2700, 1500, w, i%2 == 1)
 	}
 	g.b.organicZone("mud", s*0.5, s*0.82, 650, 0.6)
-	for _, d := range []string{"lantern", "well", "banner"} {
-		g.b.decor(d, 60)
-	}
+	g.decorStepFor("pham_tran")
 	return nil
 }
 
@@ -482,9 +476,7 @@ func (g *gen) bangNguyetHo() error {
 		}
 		g.b.boulder(p.X, p.Y, g.b.rnd(80, 150), 220)
 	}
-	for _, d := range []string{"rock_small", "pine"} {
-		g.b.decor(d, 50)
-	}
+	g.decorStepFor("bang_nguyet_ho")
 	return nil
 }
 

@@ -26,7 +26,7 @@ import { ringGeom } from './render/ringgeom';
 import type { Telemetry, TelemetryContext } from './telemetry';
 import { h, Screens } from './ui/dom';
 import { LoadingScreen, startBgLoadIndicator } from './ui/loading';
-import { guestId, homeScreen, type Profile } from './ui/home';
+import { guestId, homeScreen, type Profile, savedProfile } from './ui/home';
 import { Hud } from './ui/hud';
 import { leaderboardScreen } from './ui/leaderboard';
 import { STR } from './ui/strings';
@@ -87,6 +87,10 @@ class App {
     private readonly overlay: HTMLElement,
     stage: HTMLElement,
     private readonly loading: LoadingScreen,
+    /** fonts: BitmapFont đang tải nền. `join()` chờ nó trước khi vào trận (spec §12.3). */
+    private readonly fonts: Promise<void>,
+    /** artReady: nhóm `home` đang tải nền; trang chủ vá ảnh tại chỗ khi xong. */
+    private readonly artReady: Promise<void>,
   ) {
     this.screens = new Screens(overlay);
     this.scene = new GameScene(cfg);
@@ -174,7 +178,7 @@ class App {
   }
 
   private showHome(): void {
-    this.screens.show(homeScreen(this.cfg, (p) => this.join(p), () => this.showLeaderboard(() => this.showHome())));
+    this.screens.show(homeScreen(this.cfg, (p) => this.join(p), () => this.showLeaderboard(() => this.showHome()), this.artReady));
   }
 
   private showLeaderboard(back: () => void): void {
@@ -193,22 +197,39 @@ class App {
     this.profile = p;
     sound.startMusic();
     this.screens.show(null);
-    this.loading.show();
-    this.loading.setRunner(p.char);
-    this.loading.step(STR.loadChar(STR.characters[p.char] ?? p.char));
+    // Gói vào trận đã tải xong trong lúc người chơi gõ tên thì **không hiện thanh tiến độ**
+    // — hiện một thanh nhảy từ 0 lên 100% trong một khung hình chỉ làm người ta giật mình.
+    const need = ['home', 'boot', `char_${p.char}`];
+    const pending = assets.pending(need).length > 0;
+    if (pending) {
+      this.loading.show();
+      this.loading.setRunner(p.char);
+      this.loading.step(STR.loadChar(STR.characters[p.char] ?? p.char));
+    }
     void (async () => {
       try {
-        await assets.load(['boot', `char_${p.char}`], (pr) => this.loading.bytes(pr));
+        await assets.load(need, (pr) => {
+          if (pending) {
+            this.loading.bytes(pr);
+          }
+        });
+        // Bảng tên trong trận vẽ bằng BitmapText, nên font PHẢI xong trước khi vào trận
+        // (spec §12.3). Nó tải nền từ lúc mở trang nên hầu như luôn xong sẵn.
+        await this.fonts;
       } catch (err) {
         // Mạng ngắt giữa lúc tải: hiện "Thử lại" và tải TIẾP phần còn thiếu — `assets.load`
         // bỏ qua tệp đã xong, nên bấm lại không tải lại từ đầu (§13.7 mục 4).
         console.warn('tải gói vào trận lỗi', err);
+        this.loading.show();
+        this.loading.setRunner(p.char);
         this.loading.fail(() => this.join(p));
         return;
       }
       // Nhóm tải nền: 9 nhân vật còn lại, VFX Tiên giới, âm thanh. Không chặn ai.
       assets.loadBackground([...assets.chars.map((c) => `char_${c}`), 'fx_high', 'audio']);
-      this.loading.step(STR.loadRoom);
+      if (pending) {
+        this.loading.step(STR.loadRoom);
+      }
       const send = (): void => {
         if (!this.conn.isOpen) {
           window.setTimeout(send, 300);
@@ -558,14 +579,19 @@ class App {
 }
 
 /**
- * boot: chỉ tải nhóm `home` rồi mở trang chủ (GAME_SPEC §13.7 mục 3).
+ * boot: mở trang chủ NGAY, rồi tải art nền trong lúc người chơi gõ tên (chủ dự án chốt 31/10).
  *
- * Bản trước gọi `assets.preload()` — tải **toàn bộ** manifest, 547 tệp / 77,4 MB, trước khi
- * người chơi thấy bất cứ thứ gì. Đó là nguyên nhân "chờ tải rất lâu": không phải mạng chậm,
- * mà là tải cả bộ art của 10 nhân vật và 5 khu bản đồ để hiện một cái ô nhập tên.
+ * Ba bản, để đừng ai quay lại bản nào trước:
+ * 1. Bản gốc gọi `assets.preload()` — tải **toàn bộ** manifest, 547 tệp / 77,4 MB, trước khi
+ *    người chơi thấy bất cứ thứ gì. Đó là nguyên nhân "chờ tải rất lâu".
+ * 2. Bản §13.7 chặn trang chủ ở nhóm `home` (0,86 MB) — 4,0 giây ngồi nhìn thanh tiến độ.
+ * 3. Bản này **không chặn gì cả**. Trang chủ chỉ cần `/api/config` + `manifest.json`; ảnh
+ *    chân dung và nền là `<img>` / `background-image` nên trình duyệt tự tải song song. Mọi
+ *    thứ còn lại (`home`, `boot`, font, nhân vật đã lưu) tải NỀN trong lúc người chơi gõ
+ *    tên và chọn nhân vật — khoảng thời gian trước đây bỏ không.
  *
- * Giờ trang chủ cần 0,86 MB (font + giao diện + 10 chân dung). Phần còn lại chờ tới lúc
- * bấm "Vào chơi" (`App.join`) và tải nền trong trận.
+ * Kết quả: thời gian chờ thật của người chơi không còn là "mở trang → vào trận" mà là
+ * "bấm Vào chơi → vào trận", và phần lớn gói đã về trước lúc họ bấm.
  */
 async function boot(): Promise<void> {
   const overlay = document.getElementById('overlay') as HTMLElement;
@@ -578,13 +604,28 @@ async function boot(): Promise<void> {
     // Thiếu atlas của một nhân vật thì vẽ bằng nhân vật đầu tiên CÓ atlas, không vẽ
     // placeholder — build thật cấm placeholder.
     assets.setFallbackChars(cfg.characters);
-    screen.step(STR.loadUi);
-    await assets.load(['home'], (p) => screen.bytes(p));
-    await loadFonts(); // BitmapFont đủ dấu tiếng Việt cho bảng tên (spec §12.3)
     sound.init();
     startBgLoadIndicator();
+    // Font bắt đầu tải ngay nhưng KHÔNG chặn trang chủ: trang chủ là DOM, font hệ thống vẽ
+    // được. Chỉ bảng tên trong trận cần BitmapFont, nên `join()` mới chờ nó.
+    const fonts = loadFonts();
+    // Tải nền ngay: `home` (texture giao diện cho Pixi) rồi `boot` (nền, vật cản, cổng,
+    // quái) rồi atlas của nhân vật đang lưu — đúng thứ tự người chơi sẽ cần tới.
+    const saved = savedProfile(cfg);
+    const artReady = assets.load(['home']);
+    void artReady.catch(() => undefined);
+    void (async () => {
+      try {
+        await artReady;
+        await assets.load(['boot', `char_${saved.char}`]);
+      } catch (err) {
+        // Tải nền thất bại thì KHÔNG hỏng gì ở đây: `join()` tải lại đúng phần còn thiếu
+        // và lúc đó mới có thanh tiến độ + nút "Thử lại".
+        console.warn('tải nền trước khi vào trận lỗi', err);
+      }
+    })();
     screen.done();
-    await new App(cfg, overlay, stage, screen).start(stage);
+    await new App(cfg, overlay, stage, screen, fonts, artReady).start(stage);
   };
   try {
     await run();

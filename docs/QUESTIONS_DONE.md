@@ -60,3 +60,32 @@ Hai loại còn lại cố ý vẽ tay và em KHÔNG đụng vào: `sword` (đã
 **Trả lời (ANSWERS 30/10):** ĐƯA VÀO. ART_PROMPTS §8 đã thêm prompt (bong bóng chứa bó **5**
 kiếm buộc ruy băng đỏ, xoè nhẹ, hào quang vàng). Đã sinh ảnh, vẽ to hơn bong bóng kiếm thường
 20%, bó rơi từ xác in số kiếm lên bong bóng. Xong trong commit `9bca2c9`.
+
+---
+
+## Q27 — Tên vật trang trí + nền 5 khu · ĐÃ TRẢ LỜI 31/10
+
+**Anh chốt:**
+1. Nền: đổi khoá `BIOME_TILES` sang **tên biome**, thêm test "mỗi khu phải tra ra đúng ảnh
+   nền tồn tại trong manifest".
+2. Trang trí: mapgen **chỉ chọn decor có trong manifest**; mỗi decor **gắn tag khu**
+   (`red_plastic_stool → pham_tran`). Decor hợp chủ đề mà chưa có art (`rock_small`, `pine`,
+   `lantern`, `well`…) → **thêm job artgen**, chưa có art thì **không đặt**. Test: 5 khu ×
+   10 seed, mọi decor đặt ra đều có ảnh.
+
+**Đã làm xong cả hai** — xem PROGRESS "Phiên 31/10". Vài điều đáng ghi lại:
+
+- Chẩn đoán ban đầu của tôi sai một nửa: **có hai bảng `BIOME_TILES`** đã trôi khỏi nhau, và
+  chỉ Băng Nguyệt Hồ trải cỏ (thiếu khoá `snow`), không phải cả 5 khu. Linh Sơn Cốc thì nhận
+  bộ nền của làng vì bộ nền núi đá nằm dưới một khoá chết (`rock`). Đã **gộp còn một bảng**.
+- Mật độ trang trí phải là **tổng của khu**, không phải mỗi loại: để "mỗi loại n lần" thì
+  Phàm Trấn nhảy lên 447 vật chỉ vì nó hợp 9 loại, và sẽ tự lên ~720 khi 7 ảnh còn thiếu về.
+- Test "mỗi khu phải có ít nhất MỘT loại trang trí" bắt được lỗi thật ngay lần đầu: Băng
+  Nguyệt Hồ trống trơn vì cả hai loại được gắn cho nó đều chưa có art. "Chỉ đặt cái có art"
+  có một cách thoả mãn rất tệ là không đặt gì cả.
+
+**Còn chờ anh (không chặn gì):**
+- 7 ảnh của job `decor_nature` chưa sinh được — tài khoản minigen hết hạn cookie. Đăng nhập
+  lại rồi `go run ./cmd/artgen run -only decor_nature` và `go run ./cmd/mapgen`.
+- Thiên Đình và Trúc Lâm cùng `biome: "grass"` nên trải cùng bộ nền. Muốn Trúc Lâm có nền tre
+  riêng thì đổi `zoneDefs` cho `truc_lam` sang biome riêng + sinh lại bản đồ.

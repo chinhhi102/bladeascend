@@ -3,6 +3,7 @@ import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Rectangle, Spri
 import type { ClientWorld } from '../net/state';
 import type { GameMap, MapObstacle, Shape } from '../net/protocol';
 import { assets } from './assets';
+import { BIOME_TILES } from './catalog';
 import { buildDecals, type DecalLayer, obstacleSkirt } from './decals';
 import { GATE_COLORS } from './palette';
 
@@ -10,15 +11,19 @@ import { GATE_COLORS } from './palette';
  * Mỗi biome 2–3 texture nền, trộn bằng mặt nạ nhiễu (spec §8.6 mục 1). Lớp đầu phủ kín, các
  * lớp sau nằm trong mặt nạ loang nên ranh giới là mảng màu tự nhiên chứ không phải ô vuông.
  * Thiếu texture nào thì bỏ qua lớp đó, không vỡ gì.
+ *
+ * Bảng nằm ở `catalog.ts` — một nguồn duy nhất, dùng chung với `assets:report` /
+ * `check:assets`. Khai lại ở đây là cách hai bảng đã trôi khỏi nhau lần trước.
  */
-const BIOME_TILES: Record<string, string[]> = {
-  grass: ['grass', 'soft_grass', 'bamboo_litter'],
-  market: ['concrete', 'worn_cobble', 'dusty_earth'],
-  concrete: ['concrete', 'worn_cobble'],
-  dirt: ['dirt', 'dirt_path', 'village_grass'],
-  rock: ['dirt', 'rocky_ground', 'fine_gravel'],
-};
-const BIOME_COLOR: Record<string, number> = { grass: 0x7cc46a, concrete: 0xa9a49b, dirt: 0xc9a46a };
+/**
+ * BIOME_COLOR — màu nền khi KHÔNG có ảnh nền nào (chỉ dùng lúc art chưa về).
+ *
+ * Khoá là giá trị `biome` trong `.tmj`. Chỗ gọi trước đây tra bằng **tên tệp tile**
+ * (`BIOME_TILES[biome][0]` → `'grass'`, `'dirt'`, `'concrete'`… tuỳ bảng), nên khớp hay
+ * trượt là chuyện tình cờ: `grass`/`dirt`/`concrete` trùng tên tệp nên khớp, còn Băng Nguyệt
+ * Hồ thì trượt và ra xanh cỏ. Giờ tra thẳng bằng `map.biome`, và có thêm `snow`.
+ */
+const BIOME_COLOR: Record<string, number> = { grass: 0x7cc46a, concrete: 0xa9a49b, dirt: 0xc9a46a, snow: 0xdfe9f2 };
 const OBSTACLE_COLOR: Record<string, number> = { fence: 0xc8a165, stall: 0xe76f51, cart: 0x9c6644, brick: 0xb5523b, boulder: 0x8d8d8d, stone_wall: 0x5b6b5b };
 const TILE_WORLD = 400; // one 512px ground tile covers 400 world units
 const ART_FILL = 0.9; // object art fills ~90% of its canvas
@@ -280,12 +285,14 @@ export class MapView {
         }
         const layer = new TilingSprite({ texture: t2, width: size, height: size });
         layer.tileScale.set(TILE_WORLD / t2.width);
-        const mask = noiseMask(size, hashSeed(this.map.biome) + i * 7919, 0.42 - i * 0.12);
+        // Gieo theo ID KHU chứ không theo biome: Thiên Đình và Trúc Lâm cùng `biome:
+        // "grass"`, gieo theo biome thì hai khu có mảng loang giống nhau từng vệt.
+        const mask = noiseMask(size, hashSeed(this.map.id) + i * 7919, 0.42 - i * 0.12);
         layer.mask = mask;
         this.ground.addChild(layer, mask);
       }
     } else {
-      const g = new Graphics().rect(0, 0, size, size).fill(BIOME_COLOR[(BIOME_TILES[this.map.biome] ?? ['grass'])[0]] ?? 0x7cc46a);
+      const g = new Graphics().rect(0, 0, size, size).fill(BIOME_COLOR[this.map.biome] ?? 0x7cc46a);
       for (let v = 0; v <= size; v += TILE_WORLD) {
         g.moveTo(v, 0).lineTo(v, size).moveTo(0, v).lineTo(size, v);
       }

@@ -369,13 +369,13 @@ func (g *gen) gateNear(p Vec2, net, color string) {
 
 // ---- bước 7: decor ---------------------------------------------------------
 
+// decorStep rải trang trí cho Thiên Đình.
+//
+// Bản cũ lặp qua `biomes[q].decor` — bảng gõ tay mà **không tên nào có art**, nên bốn góc
+// Thiên Đình rải 56 vật vô hình. Giờ đi qua `decorStepFor` để dùng bảng tag khu + lọc theo
+// art có thật (decor.go).
 func (g *gen) decorStep() {
-	for q := 0; q < 4; q++ {
-		bm := biomes[q%len(biomes)]
-		for _, sprite := range bm.decor {
-			g.b.decor(sprite, 14)
-		}
-	}
+	g.decorStepFor("thien_dinh")
 }
 
 // ---- bước 8: kiểm tra hợp lệ ----------------------------------------------
