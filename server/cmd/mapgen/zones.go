@@ -285,6 +285,17 @@ func (g *gen) trucLam() error {
 	// Thiên Môn ở khoảng trống trung tâm mê cung (spec §8.4a) — đường vào ngoằn ngoèo.
 	g.b.heavenGate(s/2, s/2)
 	g.fourGates("green")
+	// VÒNG LÙM TRE quanh Thiên Môn — đặt TRƯỚC cụm, sau cổng/đài.
+	//
+	// Thứ tự quyết định vòng có thành hình hay không. Đặt sau cụm thì phần lớn khúc bị
+	// `b.obstacle` từ chối vì chỗ đã có cụm chiếm: đo được **8 khúc tre trên cả vành**, với
+	// bốn khe rộng — nhìn không ra cái vòng nào. Đặt trước thì vòng giành được chỗ, còn cụm
+	// tự né nó qua `freeFor`.
+	//
+	// Bỏ lưới mê cung ở lượt 3 giải quyết được khoảng thở nhưng cũng lấy mất thứ làm Trúc
+	// Lâm là Trúc Lâm: tâm vào thẳng từ mọi phía. Vòng tre trả lại chất "tìm đường vào tâm"
+	// mà chỉ tốn một vành mỏng. Chừa 2–3 lối vào rộng hơn hành lang của tre cổ thụ (240).
+	g.bambooRing(Vec2{s / 2, s / 2}, 1500)
 	// Đảo lấp mật độ chạy NGAY SAU cổng/đài, TRƯỚC nội dung rải rác của khu.
 	//
 	// Thứ tự này quyết định cả bài toán. Vật cản rải rác của khu nằm cách nhau trung bình
@@ -300,15 +311,6 @@ func (g *gen) trucLam() error {
 	// rộng 240 với khoảng cách 420, và ở 4/10 seed không đặt được bia nào. Rặng tre dùng
 	// `b.obstacle` nên tự tránh chỗ bia đã chiếm.
 	g.immortalAnchors("seal_stele", Vec2{s / 2, s / 2}, 1500, 5, 240)
-	// VÒNG LÙM TRE quanh Thiên Môn ở tâm — giữ chất "tìm đường vào tâm" của khu này.
-	//
-	// Bỏ lưới mê cung ở lượt 3 giải quyết được khoảng thở, nhưng cũng lấy mất thứ làm Trúc
-	// Lâm là Trúc Lâm: cái tâm giờ vào thẳng từ mọi phía. Một vòng tre quanh Thiên Môn trả
-	// lại đúng điều đó mà chỉ tốn một vành mỏng, không phủ cả khu như lưới cũ.
-	//
-	// Chừa 2–3 lối vào rộng hơn hành lang tối thiểu của tre cổ thụ (bậc 5 → 240), để người
-	// chưa chém được tre vẫn vào được — tìm đường, không phải bị nhốt ngoài.
-	g.bambooRing(Vec2{s / 2, s / 2}, 1500)
 
 	// MÊ CUNG giờ là chính các LÙM TRE của `islandsStep` (`bambooClumps`), không phải một
 	// lưới tường đào bằng thuật toán nữa.
