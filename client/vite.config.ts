@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { readFileSync } from 'node:fs';
+import { splitName } from './brand-split';
 
 // Thương hiệu lấy từ `config/game.json` — GAME_SPEC §20 yêu cầu MỘT nguồn duy nhất.
 //
@@ -88,9 +89,13 @@ export default defineConfig({
       transformIndexHtml(html) {
         // Thay cả ở `npm run dev`, không chỉ lúc build — nếu không thì trang dev hiện
         // nguyên chuỗi `%BRAND_NAME_VI%` và không ai nhận ra mình đang xem bản hỏng.
+        // Hai cụm tên game cho màn hình tải — cùng hàm `splitName` mà bảng trang chủ dùng,
+        // nên hai chỗ ngắt dòng ở ĐÚNG một chỗ.
+        const parts = splitName(brand.name_vi);
         const map: Record<string, string> = {
-          '%BRAND_NAME%': brand.name,
+          '%BRAND_NAME_VI_PARTS%': parts.map((p) => `<span class="boot-part">${p}</span>`).join(' '),
           '%BRAND_NAME_VI%': brand.name_vi,
+          '%BRAND_NAME%': brand.name,
           '%BRAND_TAGLINE_VI%': brand.tagline_vi,
           '%BRAND_DOMAIN%': brand.domain,
         };

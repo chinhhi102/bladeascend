@@ -771,10 +771,25 @@ class App {
  * Kết quả: thời gian chờ thật của người chơi không còn là "mở trang → vào trận" mà là
  * "bấm Vào chơi → vào trận", và phần lớn gói đã về trước lúc họ bấm.
  */
+/**
+ * Nút "Góp ý / báo lỗi" ở CHÂN TRANG (chủ dự án chốt 1/11).
+ *
+ * Nút nằm trong `index.html` dạng HTML tĩnh, nên nó có mặt trước cả khi bundle tải xong.
+ * Gắn trình xử lý ở đây — không gắn trong `feedback.ts` cùng với nút 💬 nổi: nút kia do
+ * `mountButton` dựng và sống/chết theo màn hình, còn nút này nằm sẵn trong trang.
+ *
+ * Bấm trước khi bundle tải xong thì không xảy ra gì và đó là hành vi đúng: hộp góp ý cần
+ * ngữ cảnh (phiên bản, thiết bị, khu, FPS) mà chỉ bundle mới biết.
+ */
+function wireFooterFeedback(): void {
+  document.getElementById('foot-feedback')?.addEventListener('click', () => feedback.open());
+}
+
 async function boot(): Promise<void> {
   const overlay = document.getElementById('overlay') as HTMLElement;
   const stage = document.getElementById('stage') as HTMLElement;
   const screen = new LoadingScreen();
+  wireFooterFeedback();
   const run = async (): Promise<void> => {
     const cfg = await loadConfig();
     await assets.init();

@@ -24,6 +24,11 @@ const sizes = [
   // Màn RỘNG: ba luật kích thước chủ dự án chốt 31/10 chỉ lộ ra ở đây. Ảnh chụp báo lỗi
   // hôm đó là 960×540; thêm cả 1920×1080 vì đó là cỡ hay gặp nhất.
   { name: 'PC 960x540', w: 960, h: 540, dpr: 1, mobile: false },
+  // 1366×768 — cỡ laptop phổ thông nhất, chủ dự án thêm 1/11. Nó rơi vào KHOẢNG TRỐNG
+  // giữa hai tầng CSS cũ (≤720 và ≤560) nên không tầng nào áp: bảng trang chủ giữ nguyên
+  // cỡ đầy đủ, cao 809 px trong khung 736 px, và 73 px cuối — nguyên dòng hướng dẫn điều
+  // khiển — bị đẩy vào thanh cuộn trong panel mà gần như không ai thấy.
+  { name: 'PC 1366x768', w: 1366, h: 768, dpr: 1, mobile: false },
   { name: 'PC 1920x1080', w: 1920, h: 1080, dpr: 1, mobile: false },
 ];
 
@@ -37,6 +42,85 @@ for (const s of sizes) {
   // KHÔNG bật ?debug=true: bảng đo F3 che nửa màn hình và không phải thứ người chơi thấy.
   await p.goto(TARGET, { waitUntil: 'domcontentloaded' });
   await p.waitForSelector('input', { timeout: 60000 });
+
+  // ── TRANG CHỦ: đo TRƯỚC khi bấm "Vào chơi" ────────────────────────────────────────
+  //
+  // Phần còn lại của bài này đo HUD trong trận. Nhưng màn hình đầu tiên người lạ nhìn
+  // thấy là trang chủ, và nó hỏng theo một kiểu mà mắt thường khó bắt: panel có
+  // `overflow-y: auto`, nên khi nội dung không vừa thì phần thừa KHÔNG tràn ra ngoài —
+  // nó trôi vào một thanh cuộn bên trong gần như vô hình.
+  //
+  // Vì vậy KHÔNG đo bằng `display`/`visibility`: `getComputedStyle` vẫn báo dòng hướng
+  // dẫn là `block` trong khi người ngồi trước máy không thấy dòng nào. Bằng chứng đúng
+  // là `scrollHeight - clientHeight`.
+  await p.waitForSelector('.home .panel', { timeout: 60000 });
+  await sleep(900);
+  const home = await p.evaluate(() => {
+    const panel = document.querySelector('.home .panel');
+    const hint = document.querySelector('.home .hint');
+    const r = panel.getBoundingClientRect();
+    const st = hint ? getComputedStyle(hint) : null;
+    const hintShown = !!st && st.display !== 'none' && st.visibility !== 'hidden';
+    // Dòng hướng dẫn nằm TRONG vùng nhìn thấy của panel hay đã trôi quá đáy nó?
+    let hintInView = false;
+    if (hintShown) {
+      const hr = hint.getBoundingClientRect();
+      hintInView = hr.bottom <= r.bottom + 1 && hr.top >= r.top - 1;
+    }
+    // Tên game: có chữ nào rơi lẻ một mình xuống dòng cuối không?
+    const logo = document.querySelector('.home .logo');
+    const tops = [];
+    const walk = (n) => {
+      if (n.nodeType === 3) {
+        const rng = document.createRange();
+        let i = 0;
+        for (const word of n.textContent.split(' ')) {
+          if (word) {
+            rng.setStart(n, i); rng.setEnd(n, i + word.length);
+            tops.push(Math.round(rng.getBoundingClientRect().top));
+          }
+          i += word.length + 1;
+        }
+        return;
+      }
+      for (const c of n.childNodes) walk(c);
+    };
+    if (logo) walk(logo);
+    const maxTop = tops.length ? Math.max(...tops) : 0;
+    return {
+      cachMepDuoi: Math.round(innerHeight - r.bottom),
+      biCuonTrongPanel: panel.scrollHeight - panel.clientHeight,
+      hintShown, hintInView,
+      soDongTen: new Set(tops).size,
+      soChuDongCuoi: tops.filter((t) => t === maxTop).length,
+      soH1: document.querySelectorAll('h1').length,
+      theDaiDong: [...document.querySelectorAll('.char-card .card-name')].filter((e) => {
+        const lh = parseFloat(getComputedStyle(e).lineHeight) || e.getBoundingClientRect().height;
+        return e.getBoundingClientRect().height > lh * 1.4;
+      }).length,
+    };
+  });
+  console.log(`\n=== ${s.name} ===`);
+  console.log(`  TRANG CHU: panel cach mep duoi ${home.cachMepDuoi}px · cuon trong panel ${home.biCuonTrongPanel}px · ten game ${home.soDongTen} dong`);
+  const kiemHome = (ok, nhan) => {
+    console.log(`  ${ok ? 'OK ' : 'VI PHAM'} ${nhan}`);
+    if (!ok) viPham++;
+  };
+  kiemHome(home.biCuonTrongPanel <= 1,
+    `bang trang chu khong bi cat vao thanh cuon (thua ${home.biCuonTrongPanel}px)`);
+  kiemHome(home.cachMepDuoi >= 4, `bang trang chu khong cham mep duoi (cach ${home.cachMepDuoi}px)`);
+  // Dòng hướng dẫn CHO PHÉP ẩn ở cửa sổ rất thấp (luật CSS ≤560px) — ở đó nó đọc được
+  // trong trận. Nhưng hiện mà nằm ngoài vùng nhìn thấy thì là hỏng, không phải lựa chọn.
+  kiemHome(!home.hintShown || home.hintInView, 'dong huong dan dieu khien nam trong vung nhin thay');
+  if (!s.mobile && s.h >= 640) {
+    kiemHome(home.hintShown && home.hintInView, 'man PC du cao thi PHAI thay dong huong dan');
+  }
+  kiemHome(home.soChuDongCuoi !== 1 || home.soDongTen === 1,
+    `ten game khong bo le mot chu o dong cuoi (${home.soDongTen} dong, dong cuoi ${home.soChuDongCuoi} chu)`);
+  kiemHome(home.soH1 === 1, `trang co dung 1 the h1 (dang co ${home.soH1})`);
+  kiemHome(home.theDaiDong === 0, `the nhan vat deu 1 dong (${home.theDaiDong} the bi xuong dong)`);
+  await p.screenshot({ path: `${OUT}/home_${s.w}x${s.h}.png` });
+
   await p.fill('input', 'UiTest');
   await p.getByText('Vào chơi', { exact: true }).click();
   await p.waitForSelector('.room-board', { timeout: 60000 });
@@ -120,7 +204,6 @@ for (const s of sizes) {
       })(),
     };
   });
-  console.log(`\n=== ${s.name} ===`);
   console.log(`  HUD phu ${res.phanTramManHinhBiHudPhu}% man hinh · bang ${res.soDongBangXepHang} dong · feed ${res.soTinKillFeed} tin · minimap ${res.minimapPx}px`);
   console.log(res.chongLan.length ? '  CHONG LAN:\n    ' + res.chongLan.join('\n    ') : '  khong khoi nao chong len nhau');
 

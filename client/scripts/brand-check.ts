@@ -18,7 +18,10 @@ import { join, relative } from 'node:path';
 const ROOT = new URL('../..', import.meta.url).pathname;
 
 // Quét những cây thư mục ra tới mắt người chơi.
-const SCAN = ['client/src', 'client/admin', 'client/index.html', 'server', 'config', 'maps', 'deploy', 'tools'];
+// `client/public` có mặt từ 1/11: `privacy.html` viết thẳng tên game (Vite chép nguyên xi
+// các tệp trong `public/`, không thay token `%BRAND_NAME_VI%` như với `index.html`), nên
+// đó đúng là loại chỗ mà lần đổi tên sau sẽ bỏ sót.
+const SCAN = ['client/src', 'client/admin', 'client/index.html', 'client/public', 'server', 'config', 'maps', 'deploy', 'tools'];
 
 const SKIP = new Set(['node_modules', 'dist', '.git', 'data', 'frames', '_raw', 'testdata']);
 

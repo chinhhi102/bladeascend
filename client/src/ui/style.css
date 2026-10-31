@@ -25,7 +25,11 @@ html, body { margin: 0; min-height: 100%; overflow: hidden; background: #2b2b2b;
    `body` thành một vùng cuộn riêng nằm trong `html`, và vì nó cao đúng 100% nên nội dung
    1132 px của nó bị cắt ở 768 px — trang trông y hệt lúc chưa cho cuộn, chỉ khác là giờ có
    hai vùng cuộn cùng không cuộn được. */
-html:has(body:not(.in-game) .home) { overflow-y: auto; touch-action: pan-y; }
+/* Nền trang ở TRANG CHỦ phải là màu GIẤY, không phải `#2b2b2b`.
+   `#below` kéo nền giấy tới hết nội dung, nhưng vùng người ta kéo quá cuối trang (overscroll
+   trên macOS/iOS) và mọi khoảng dư do làm tròn `100dvh` vẫn lộ ra màu nền trang — một vệt
+   đen ngay dưới chân trang. Đặt ở đây thì nền "kéo hết trang" đúng nghĩa. */
+html:has(body:not(.in-game) .home) { overflow-y: auto; touch-action: pan-y; background: var(--paper); }
 body:not(.in-game):has(.home) { overflow: visible; touch-action: pan-y; user-select: text; -webkit-user-select: text; }
 #stage, #stage canvas { position: fixed; inset: 0; display: block; }
 #overlay { position: fixed; inset: 0; pointer-events: none; }
@@ -40,7 +44,13 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 .screen.center { background: rgba(0, 0, 0, 0.55); }
 .panel { background: var(--panel); border: 4px solid var(--ink); border-radius: 18px; box-shadow: 0 8px 0 var(--ink); padding: 20px; width: min(560px, 100%); text-align: center; max-height: 100%; overflow-y: auto; }
 .panel.wide { width: min(720px, 100%); }
-.logo { font-size: clamp(28px, 6vw, 44px); margin: 0 0 4px; font-weight: 900; color: var(--accent); -webkit-text-stroke: 1.5px var(--ink); letter-spacing: 1px; }
+/* Tên game. `clamp` trần 44px từng làm "Đạo Hữu Xin Dừng Bước" rớt lẻ đúng chữ "Bước"
+   xuống dòng dưới trong panel rộng 560px — đo được ở 5/7 cỡ màn hình. Hạ trần xuống 38px
+   để cả tên vừa MỘT DÒNG trên PC, và `text-wrap: balance` chia đều khi buộc phải hai dòng.
+   `.logo-part` không-ngắt: chỗ ngắt duy nhất là khoảng giữa hai cụm (xem `STR.titleParts`),
+   nên không bề ngang nào sinh ra chữ lẻ. */
+.logo { font-size: clamp(26px, 5vw, 38px); margin: 0 0 4px; font-weight: 900; color: var(--accent); -webkit-text-stroke: 1.5px var(--ink); letter-spacing: 1px; line-height: 1.12; text-wrap: balance; }
+.logo-part { white-space: nowrap; }
 .subtitle, .hint, .muted { color: var(--muted); font-size: 14px; }
 .hint { margin-top: 12px; }
 .label { margin: 14px 0 8px; font-weight: 800; }
@@ -58,6 +68,11 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 .char-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .char-card { font: inherit; font-size: 11px; font-weight: 700; color: var(--ink); border: 3px solid transparent; border-radius: 12px; background: rgba(0,0,0,.05); padding: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .char-card.selected { border-color: var(--accent); background: #fff; }
+/* Tên trên thẻ: MỘT DÒNG, luôn luôn. Thẻ trong lưới 5 cột rộng ~100px trên PC và ~60px
+   trên điện thoại; tên đầy đủ ở đó xuống hai–ba dòng và làm các thẻ cao lệch nhau. Tên
+   ngắn (`STR.charactersShort`) vừa một dòng, còn `ellipsis` là lưới an toàn cho ngôn ngữ
+   khác: chữ bị cắt thì còn đọc được phần đầu, chứ không đẩy vỡ cả hàng. */
+.char-card .card-name { display: block; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Ảnh nhân vật ở MÀN CHỌN. Phải khoanh theo thẻ cha, không để `.portrait` trần:
    ô đại diện trên HUD cũng dùng class `.portrait`, và luật rộng 64px ở đây từng rò sang
    đó — ô HUD chỉ 40px nên ảnh tràn hẳn ra ngoài khung tròn và đè lên chữ "Kiếm x/y"
@@ -436,6 +451,33 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 .skill-btn .skill-count { font-size: 15px; font-weight: 700; color: #ffe9a8; }
 .skill-btn.empty { opacity: .45; filter: grayscale(1); }
 
+/* ---- Trang chủ trên MÀN HÌNH LAPTOP (≤ 880 px cao) ---------------------
+   Đo 1/11 trên 1366×768 — cỡ laptop phổ thông nhất: panel cao 736 px nhưng nội dung cao
+   809 px, tức **73 px bị đẩy vào thanh cuộn bên trong panel**. Thứ bị đẩy đi là đoạn cuối:
+   dòng hướng dẫn điều khiển. `getComputedStyle` vẫn báo nó `display: block` — nên một phép
+   kiểm "hint có hiện không" theo kiểu cũ sẽ báo ĐẠT, trong khi người ngồi trước máy không
+   thấy dòng nào. Phải đo bằng `scrollHeight - clientHeight`.
+
+   Hai tầng cũ chặn ở 720 px nên 768 và 800 rơi vào khoảng trống giữa chúng: không tầng nào
+   áp, panel giữ nguyên cỡ đầy đủ. Tầng này lấp đúng khoảng đó.
+
+   Bóp bằng cách thu ảnh và lề — KHÔNG ẩn gì. Ở 768 px vẫn còn đủ chỗ cho cả phụ đề lẫn
+   dòng hướng dẫn; ẩn chúng ở đây là mất chữ mà không cần thiết. Đặt TRƯỚC khối 720 px để
+   khi cửa sổ thấp hơn nữa thì luật gắt hơn vẫn thắng theo thứ tự nguồn. */
+@media (max-height: 880px) {
+  .screen.home { padding: 10px; }
+  .screen.home .panel { padding: 14px 18px; }
+  .screen.home .name-input { margin-top: 10px; padding: 10px 14px; }
+  .screen.home .label { margin: 10px 0 6px; }
+  .screen.home .char-card .portrait { width: 52px; height: 52px; }
+  .screen.home .char-card .portrait.placeholder { width: 44px; height: 44px; margin: 4px; }
+  .screen.home .preview-art, .screen.home .preview-art .portrait { width: 66px; height: 66px; }
+  .screen.home .preview-art .portrait.placeholder { width: 56px; height: 56px; }
+  .screen.home .char-preview { margin-top: 7px; padding: 8px 10px; }
+  .screen.home .row { margin-top: 10px; }
+  .screen.home .hint { margin-top: 8px; }
+}
+
 /* ---- Trang chủ trên CỬA SỔ THẤP ----------------------------------------
    Nội dung trang chủ cao 630 px (logo · phụ đề · ô tên · lưới 2×5 nhân vật · khung xem
    trước · hai nút · dòng hướng dẫn). Cửa sổ cao 561 px thì `.panel { max-height: 100% }`
@@ -453,13 +495,44 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
   /* Phụ đề là câu giới thiệu vui, bỏ đi không mất thông tin nào cần để chơi. */
   .screen.home .subtitle { display: none; }
   .screen.home .name-input { margin-top: 8px; padding: 9px 12px; font-size: 16px; }
-  .screen.home .char-card .portrait { width: 46px; height: 46px; }
-  .screen.home .char-card .portrait.placeholder { width: 38px; height: 38px; margin: 4px; }
-  .screen.home .preview-art .portrait { width: 52px; height: 52px; }
-  .screen.home .char-preview { margin-top: 6px; padding: 6px 10px; }
-  .screen.home .label { margin-top: 8px; }
-  .screen.home .row { margin-top: 8px; }
-  .screen.home .hint { margin-top: 6px; font-size: 12px; }
+  .screen.home .char-card .portrait { width: 42px; height: 42px; }
+  .screen.home .char-card .portrait.placeholder { width: 36px; height: 36px; margin: 3px; }
+  .screen.home .preview-art, .screen.home .preview-art .portrait { width: 46px; height: 46px; }
+  .screen.home .preview-art .portrait.placeholder { width: 40px; height: 40px; }
+  .screen.home .char-preview { margin-top: 5px; padding: 5px 9px; gap: 9px; }
+  /* Mô tả kỹ năng cắt còn HAI DÒNG thay vì ẩn hẳn.
+     Mô tả dài nhất (Cô Ba Gánh Hàng) chạy 4 dòng và một mình nó ăn 56 px — đúng phần đẩy
+     dòng hướng dẫn vào thanh cuộn ở 320×568. Hai dòng vẫn nói được kỹ năng làm gì, còn
+     đầy đủ thì đọc ở khung chi tiết khi cửa sổ cao hơn. */
+  .screen.home .preview-desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .screen.home .label { margin: 6px 0 5px; }
+  .screen.home .row { margin-top: 7px; }
+  .screen.home .hint { margin-top: 5px; font-size: 12px; }
+}
+
+/* Điện thoại NẰM NGANG rộng rãi (≤ 560 px cao nhưng ≥ 700 px ngang): lưới nhân vật xếp
+   MỘT HÀNG 10 ô thay vì 2×5. Bề ngang ở đây thừa còn chiều cao thì thiếu, nên đổi một
+   hàng thẻ (~50 px) lấy bề ngang là đổi đúng thứ đang hiếm. Dưới 700 px ngang thì 10 ô
+   bóp xuống còn 30 px/ô — ảnh nhân vật không còn nhận ra được, nên giữ 2×5. */
+@media (max-height: 560px) and (min-width: 700px) {
+  .screen.home .char-grid { grid-template-columns: repeat(10, 1fr); }
+}
+
+/* Điện thoại NHỎ và CŨ (≤ 640 px cao — iPhone SE đời đầu là 320×568).
+   Còn thiếu 54 px sau khi đã bóp ở tầng 720 px. Hai thứ nhường chỗ ở đây:
+
+   - Mô tả kỹ năng: ẩn hẳn, nhưng TÊN kỹ năng ngay trên nó vẫn còn, nên người chơi vẫn
+     biết mình chọn chiêu gì.
+   - `min-height` của dòng lỗi: nó tồn tại để layout không nhảy khi lỗi hiện ra. Ở màn
+     này, một cái nhảy 18 px khi gõ tên sai đáng đổi lấy việc dòng hướng dẫn đọc được
+     mọi lúc còn lại.
+
+   Dòng hướng dẫn thì GIỮ: đây vẫn là chỗ duy nhất trên trang chủ nói cách di chuyển. */
+@media (max-height: 640px) {
+  .screen.home { padding: 6px; }
+  .screen.home .preview-desc { display: none; }
+  .screen.home .error { min-height: 0; }
+  .screen.home .char-preview { margin-top: 4px; }
 }
 
 /* Cửa sổ RẤT thấp (≤ 560 px): bỏ nốt những thứ đọc được ở chỗ khác.
@@ -549,24 +622,76 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
    `body.in-game` thì tắt hẳn: khung game là `position: fixed` nên đoạn này không che gì,
    nhưng để nó lại thì TRANG CUỘN ĐƯỢC, và một cú quét ngón tay giữa trận kéo màn hình game
    đi mất. Trên điện thoại đó không phải lỗi hiếm — đó là lỗi mỗi lần vuốt. */
-#intro {
-  position: relative; z-index: 1;
-  /* `100dvh` chứ không `100vh`: trên Safari iOS `100vh` tính theo khung KHI THANH ĐỊA CHỈ
-     ĐÃ THU, nên đoạn này bị đẩy xuống quá một khoảng đúng bằng chiều cao thanh đó và trang
-     chủ có một mảng trống không giải thích được. */
-  margin: 100dvh auto 0; max-width: 46em; padding: 32px 20px 64px;
-  font-size: 16px; line-height: 1.7;
+/* `#below` gom TẤT CẢ nội dung dưới khung game: giới thiệu · ảnh chụp · cách chơi · FAQ ·
+   chân trang.
 
+   Trước đây `#intro` tự đẩy mình xuống bằng `margin-top: 100dvh` và là thứ duy nhất ở dưới.
+   Đo 1/11 ở 1366×768: trang cao 1536 px, nội dung kết thúc ở 1132 px — **404 px cuối là nền
+   `#2b2b2b` trống trơn**, đúng khoảng đen chủ dự án báo. Nay cái đẩy 100dvh nằm ở `#below`,
+   các mục bên trong xếp liền nhau, và nền của `#below` kéo tới hết trang nên không còn
+   mảng nào hở ra màu nền trang.
+
+   `100dvh` chứ không `100vh`: trên Safari iOS `100vh` tính theo khung KHI THANH ĐỊA CHỈ ĐÃ
+   THU, nên khối này bị đẩy xuống quá một khoảng đúng bằng chiều cao thanh đó. */
+#below {
+  position: relative; z-index: 1;
+  margin-top: 100dvh;
   /* Nền GIẤY, chữ MỰC — không dùng `color: var(--ink)` trên nền trang.
      Nền trang là `#2b2b2b` còn `--ink` là `#1d1a16`: đặt cạnh nhau ra 1,1:1, tức chữ đen
-     trên nền đen. Đúng loại lỗi đã làm hỏng form góp ý tuần này; ở đó cũng là một màu chép
-     sang từ chỗ có bảng màu ngược. `tools/browsertest/uioverlap.mjs` đo tỉ số thật. */
-  margin-left: auto; margin-right: auto;
+     trên nền đen. Đúng loại lỗi đã làm hỏng form góp ý tuần này. `uioverlap.mjs` đo thật. */
   background: var(--paper); color: var(--ink);
   border-radius: 16px 16px 0 0;
   box-shadow: 0 -8px 32px rgba(0, 0, 0, .45);
 }
-#intro h2 { font-size: 22px; margin: 0 0 12px; }
-#intro p { margin: 0 0 14px; }
-#intro em { font-style: italic; }
-body.in-game #intro { display: none; }
+#below > section, #below > footer { max-width: 46em; margin: 0 auto; padding: 28px 20px; }
+#below > section + section, #below > footer { border-top: 2px dashed rgba(29, 26, 22, .18); }
+#below h2 { font-size: 22px; margin: 0 0 12px; }
+#below p { margin: 0 0 14px; }
+#below em { font-style: italic; }
+#intro { font-size: 16px; line-height: 1.7; padding-top: 32px; }
+
+/* Ba ảnh chụp game. Một hàng trên màn rộng, xếp dọc trên điện thoại.
+   `aspect-ratio` + `width/height` trong thẻ `<img>`: chỗ của ảnh được giữ sẵn trước khi ảnh
+   tải xong, nên trang không nhảy chữ dưới chân người đang đọc. */
+/* Khối ảnh RỘNG HƠN cột chữ. 46em là bề ngang dễ đọc cho văn xuôi, nhưng chia ba cho ảnh
+   thì mỗi ảnh chỉ còn ~175 px — ở cỡ đó không nhìn ra vòng kiếm, tức là ba tấm ảnh chiếm
+   chỗ mà không nói được gì. Chữ giữ 46em, ảnh nới ra 68em. */
+/* `#below > #shots` chứ không phải `#shots`: luật chung ở trên là `#below > section`, tức
+   id + thẻ = độ đặc hiệu (1,0,1), cao hơn `#shots` (1,0,0) — đặt sau cũng không thắng. */
+#below > #shots { max-width: 68em; }
+#shots h2 { max-width: 46em; margin-left: auto; margin-right: auto; }
+#shots .shot-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+#shots figure { margin: 0; }
+#shots img {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover;
+  border: 3px solid var(--ink); border-radius: 10px; background: #1d1a16;
+}
+#shots figcaption { margin-top: 6px; font-size: 13px; line-height: 1.45; color: #4a4036; }
+@media (max-width: 700px) {
+  #shots .shot-row { grid-template-columns: 1fr; gap: 18px; }
+}
+
+#howto ol { margin: 0; padding-left: 1.4em; line-height: 1.7; }
+#howto li { margin-bottom: 8px; }
+
+/* FAQ bằng `<details>`: mở được khi bundle JS chưa tải, và nội dung trả lời nằm trong DOM
+   nên máy tìm kiếm đọc được dù mục đang đóng. */
+#faq details { border-bottom: 1px solid rgba(29, 26, 22, .14); padding: 10px 0; }
+#faq details:last-of-type { border-bottom: 0; }
+#faq summary { font-weight: 800; cursor: pointer; line-height: 1.5; }
+#faq summary::marker { color: var(--accent); }
+#faq details p { margin: 8px 0 2px; line-height: 1.65; }
+
+#foot { font-size: 14px; color: #4a4036; text-align: center; padding-bottom: 48px; }
+#foot .foot-lang { color: #5c5143; }
+#foot .foot-links { display: flex; gap: 16px; justify-content: center; align-items: center; flex-wrap: wrap; }
+/* Nút "Góp ý" phải khai `color` tường minh — xem ghi chú ở `.btn`: thẻ `<button>` lấy màu
+   chữ từ bảng mặc định của trình duyệt, không thừa kế từ cha. */
+#foot .foot-links button {
+  font: inherit; font-weight: 800; color: var(--ink); background: #fff;
+  border: 2px solid var(--ink); border-radius: 999px; padding: 7px 16px; cursor: pointer;
+}
+#foot .foot-links a { color: #7a2a20; font-weight: 700; }
+#foot .foot-brand { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
+
+body.in-game #below { display: none; }

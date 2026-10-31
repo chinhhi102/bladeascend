@@ -1,4 +1,5 @@
 // Every piece of text shown to players lives here (CLAUDE.md rule 5).
+import { splitName } from '../../brand-split';
 
 /** Thương hiệu do Vite cắm vào lúc build từ `config/game.json` — GAME_SPEC §20. */
 declare const __BRAND__: { name: string; domain: string; name_vi: string; tagline_vi: string };
@@ -7,6 +8,21 @@ export const BRAND = __BRAND__;
 
 export const STR = {
   title: BRAND.name_vi,
+  /**
+   * Tên game chia thành hai cụm để NGẮT DÒNG CÓ KIỂM SOÁT (chủ dự án chốt 1/11).
+   *
+   * Để trình duyệt tự ngắt thì "Đạo Hữu Xin Dừng Bước" trong panel rộng 560 px rớt đúng
+   * một chữ "Bước" xuống dòng dưới — đo được ở 5 trong 7 cỡ màn hình. Chữ lẻ một mình
+   * trông như lỗi hiển thị, không như một cái tên.
+   *
+   * Hai cụm là hai `<span>` không-ngắt, nên chỗ ngắt DUY NHẤT có thể xảy ra là khoảng
+   * giữa chúng: màn rộng ra một dòng, màn hẹp ra "Đạo Hữu" / "Xin Dừng Bước". Không bao
+   * giờ có chữ lẻ, ở bất cứ bề rộng nào.
+   *
+   * Cắt theo SỐ CHỮ chứ không ghi cứng hai cụm: tên game lấy từ `config.brand` (§20), ghi
+   * cứng ở đây là chỗ thứ hai lưu tên game — đúng loại chỗ mà lần đổi tên vừa rồi bỏ sót.
+   */
+  titleParts: splitName(BRAND.name_vi),
   subtitle: BRAND.tagline_vi,
   namePlaceholder: 'Nhập tên (2–16 ký tự)',
   pickCharacter: 'Chọn nhân vật',
@@ -327,6 +343,29 @@ export const STR = {
     be_ti: 'Bé Tí Cơ Bắp',
     shipper: 'Anh Shipper Tia Chớp',
     cu_rua: 'Cụ Rùa Thiền',
+  } as Record<string, string>,
+
+  /**
+   * Tên NGẮN cho THẺ CHỌN trong lưới 5 cột (chủ dự án chốt 1/11).
+   *
+   * Thẻ rộng ~100 px ở cỡ PC và ~60 px trên điện thoại. "Đại Ca Dép Tổ Ong" ở đó xuống
+   * ba dòng và đẩy cả hàng thẻ cao lên, còn "Anh Shipper Tia Chớp" thì vỡ chữ giữa từ.
+   * Tên ngắn giữ MỌI thẻ đúng một dòng, nên hàng thẻ cao đều nhau.
+   *
+   * Tên ĐẦY ĐỦ không mất đi: nó hiện ở khung chi tiết bên dưới ngay khi rê chuột hoặc
+   * chọn — tức là người chơi vẫn đọc được tên thật trước khi bấm "Vào chơi".
+   */
+  charactersShort: {
+    a_hon: 'A Hớn',
+    ba_tam_loa: 'Bà Tám',
+    ong_ba_vong: 'Ông Ba',
+    dai_ca_dep: 'Đại Ca',
+    map_tra_sua: 'Thằng Mập',
+    co_ba_ganh: 'Cô Ba',
+    su_phu_mi: 'Sư Phụ',
+    be_ti: 'Bé Tí',
+    shipper: 'Shipper',
+    cu_rua: 'Cụ Rùa',
   } as Record<string, string>,
 
   buffs: {

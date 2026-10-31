@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chính sách riêng tư — Đạo Hữu Xin Dừng Bước</title>
+    <meta name="robots" content="index, follow" />
+    <!--
+      Trang TĨNH, CSS nội tuyến, không JavaScript, không gọi mạng ra ngoài.
+
+      Nó nằm trong `client/public/` nên Vite chép nguyên xi — không qua asset-pipeline, không
+      có hash trong tên tệp. Địa chỉ `/privacy.html` phải ổn định vì chân trang trỏ tới nó và
+      vì cửa hàng ứng dụng / mạng xã hội đôi khi đòi một đường dẫn chính sách không đổi.
+
+      Tên game ở đây viết thẳng, KHÔNG dùng token `%BRAND_NAME_VI%`: plugin `kx-brand` chỉ
+      thay token trong `index.html` (`transformIndexHtml`), còn tệp trong `public/` thì Vite
+      chép y nguyên — để token ở đây là hiện nguyên chuỗi `%BRAND_NAME_VI%` cho người đọc.
+      Đổi tên game thì sửa cả tệp này; `client/scripts/brand-check.ts` quét `public/` nên tên
+      CŨ không lọt được, nhưng tên MỚI thì nó không tự điền.
+    -->
+    <style>
+      :root { color-scheme: light; }
+      body {
+        margin: 0 auto; max-width: 44em; padding: 32px 20px 64px;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        font-size: 16px; line-height: 1.7;
+        background: #fff7e6; color: #1d1a16;
+      }
+      h1 { font-size: 26px; margin: 0 0 6px; }
+      h2 { font-size: 19px; margin: 28px 0 8px; }
+      .when { color: #8a7f70; font-size: 14px; margin: 0 0 24px; }
+      ul { padding-left: 1.3em; }
+      li { margin-bottom: 7px; }
+      a { color: #7a2a20; }
+      .back { display: inline-block; margin-top: 32px; font-weight: 700; }
+      table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+      th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid rgba(29,26,22,.15); vertical-align: top; }
+      th { font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <h1>Chính sách riêng tư</h1>
+    <p class="when">Đạo Hữu Xin Dừng Bước (BladeAscend) · cập nhật 1/11/2026</p>
+
+    <p>
+      Game này <b>không có tài khoản</b>. Bạn không đưa email, không đặt mật khẩu, và chúng
+      tôi không có cách nào biết bạn là ai. Dưới đây là toàn bộ những gì game lưu và gửi đi.
+    </p>
+
+    <h2>Lưu trên máy bạn</h2>
+    <p>Ba thứ, nằm trong <i>localStorage</i> của trình duyệt — không gửi đi đâu trừ khi nói rõ ở dưới:</p>
+    <table>
+      <tr><th>Cái gì</th><th>Để làm gì</th></tr>
+      <tr><td>Tên bạn nhập</td><td>Điền sẵn cho lần chơi sau</td></tr>
+      <tr><td>Nhân vật bạn chọn</td><td>Chọn sẵn cho lần chơi sau</td></tr>
+      <tr><td>Một mã ngẫu nhiên (id khách)</td><td>Để bảng xếp hạng nhận ra đây vẫn là bạn qua các lần chơi. Mã này do trình duyệt bạn sinh ra, không gắn với bất cứ thông tin cá nhân nào.</td></tr>
+    </table>
+    <p>Xoá dữ liệu trang web trong trình duyệt là xoá sạch cả ba. Không có bản sao nào ở chỗ khác.</p>
+
+    <h2>Gửi về máy chủ</h2>
+    <ul>
+      <li>
+        <b>Tên và điểm</b> — để hiện bảng xếp hạng trong phòng và bảng chung. Tên là chữ bạn
+        tự nhập; nếu bạn không muốn ai thấy tên thật thì đừng nhập tên thật.
+      </li>
+      <li>
+        <b>Số đo hiệu năng</b> — FPS, độ trễ mạng, thời gian dựng khung hình, dung lượng
+        ảnh đã tải, loại thiết bị (máy tính hay điện thoại) và phiên bản game. Dùng để tìm
+        chỗ game bị giật. Số đo gắn với một mã phiên ngẫu nhiên, đổi mới mỗi lần bạn mở
+        trang, và <b>không</b> chứa tên, id khách, hay nội dung gì bạn gõ vào.
+      </li>
+      <li>
+        <b>Lỗi kỹ thuật</b> — khi game gặp lỗi, dòng lỗi đó được gửi về kèm loại thiết bị và
+        phiên bản, để sửa.
+      </li>
+      <li>
+        <b>Góp ý bạn tự gửi</b> — chỉ khi bạn bấm nút "Góp ý / báo lỗi" và bấm Gửi. Lúc đó
+        gửi kèm: nội dung bạn viết, phiên bản, thiết bị, khu đang chơi, cảnh giới, ping, FPS,
+        và ảnh chụp màn hình <i>nếu</i> bạn tự tick vào ô kèm ảnh. Không bấm Gửi thì không
+        có gì được gửi.
+      </li>
+    </ul>
+    <p>
+      Như mọi trang web, máy chủ ghi địa chỉ IP trong log kết nối để chống lạm dụng. Log này
+      không được ghép với tên hay điểm của bạn.
+    </p>
+
+    <h2>Những gì KHÔNG có</h2>
+    <ul>
+      <li>Không quảng cáo, không mã theo dõi của bên thứ ba (không Google Analytics, không pixel Facebook).</li>
+      <li>Không bán, không chia sẻ dữ liệu cho ai.</li>
+      <li>Không thanh toán, không mua vật phẩm — nên không có dữ liệu thẻ hay hoá đơn nào tồn tại.</li>
+      <li>Không đòi quyền truy cập micro, camera, danh bạ hay vị trí.</li>
+    </ul>
+
+    <h2>Trẻ em</h2>
+    <p>
+      Game không thu thông tin cá nhân, nên chơi được ở mọi tuổi. Chỉ cần nhớ: tên bạn nhập
+      thì người khác trong phòng đọc được — đừng nhập tên thật, trường học, hay số điện thoại.
+    </p>
+
+    <h2>Xoá dữ liệu</h2>
+    <p>
+      Xoá dữ liệu trang trong trình duyệt là xoá hết phần lưu trên máy bạn. Muốn xoá tên khỏi
+      bảng xếp hạng thì gửi yêu cầu qua nút "Góp ý / báo lỗi" ở chân trang chủ, nói rõ tên
+      cần xoá.
+    </p>
+
+    <h2>Thay đổi</h2>
+    <p>
+      Sửa gì ở chính sách này thì ngày cập nhật ở đầu trang đổi theo. Trang này không có bản
+      lưu nào khác ngoài chính nó.
+    </p>
+
+    <a class="back" href="/">← Về trang chơi</a>
+  </body>
+</html>

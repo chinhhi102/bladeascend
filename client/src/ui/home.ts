@@ -105,7 +105,11 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
   };
 
   for (const c of cfg.characters) {
-    const card = h('button', 'char-card', portrait(c, (p) => assets.url(p), toHex(charColor(c)[0])), h('span', '', STR.characters[c] ?? c));
+    // Thẻ dùng tên NGẮN (một dòng); tên đầy đủ nằm ở khung chi tiết bên dưới. `title` giữ
+    // tên đầy đủ để rê chuột trên PC vẫn đọc được ngay tại thẻ.
+    const card = h('button', 'char-card', portrait(c, (p) => assets.url(p), toHex(charColor(c)[0])),
+      h('span', 'card-name', STR.charactersShort[c] ?? STR.characters[c] ?? c));
+    card.title = STR.characters[c] ?? c;
     const pick = (): void => {
       selected = c;
       cards.forEach((el, id) => el.classList.toggle('selected', id === c));
@@ -150,8 +154,18 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
       play();
     }
   });
+  // Tên game: mỗi cụm một `<span>` không-ngắt, nên chỗ ngắt duy nhất là khoảng giữa hai
+  // cụm — xem `STR.titleParts`. Khoảng trắng giữa hai span phải là NÚT VĂN BẢN THẬT, không
+  // phải lề CSS: có thế thì màn rộng mới nối liền thành một dòng đọc đúng như tên gốc.
+  const logo = h('h1', 'logo');
+  STR.titleParts.forEach((part, i) => {
+    if (i > 0) {
+      logo.append(document.createTextNode(' '));
+    }
+    logo.append(h('span', 'logo-part', part));
+  });
   panel.append(
-    h('h1', 'logo', STR.title),
+    logo,
     h('div', 'subtitle', STR.subtitle),
     input,
     err,

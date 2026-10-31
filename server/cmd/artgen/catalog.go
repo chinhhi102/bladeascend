@@ -1,8 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
+
+	"bladeascend/server/internal/config"
 )
 
 // Post-processing modes.
@@ -757,28 +761,92 @@ func mapArtJobs() []Job {
 	return jobs
 }
 
+// brandName đọc tên game tiếng Việt từ `config/game.json` — GAME_SPEC §20 đòi MỘT nguồn.
+//
+// Lời nhắc của job logo phải chứa đúng từng chữ có dấu, nên nó cần tên thật chứ không phải
+// một chuỗi chép tay. Chép tay ở đây là chỗ thứ hai lưu tên game — đúng loại chỗ mà lần
+// đổi tên 31/10 bỏ sót ở chín nơi.
+func brandName() string {
+	b, err := os.ReadFile(config.FindRepoFile("config/game.json"))
+	if err != nil {
+		return ""
+	}
+	var cfg struct {
+		Brand struct {
+			NameVI string `json:"name_vi"`
+		} `json:"brand"`
+	}
+	if json.Unmarshal(b, &cfg) != nil {
+		return ""
+	}
+	return cfg.Brand.NameVI
+}
+
 // brandArtJobs: logo VẼ và icon VẼ — GAME_SPEC §20.
 //
-// Bốn tệp này đang có sẵn bản render bằng FONT do `tools/make_brandart.py` dựng, nên game
-// không chờ gì cả (CLAUDE.md quy tắc 11). Job ở đây là để sau này thay bằng bản vẽ tay.
+// **Ưu tiên 1 (chủ dự án chốt 1/11)**, nâng từ 3. Lý do đổi: tên game là thứ đầu tiên
+// người ta thấy trên trang chủ, trên màn hình tải và trên ảnh chia sẻ — ba chỗ quyết định
+// người lạ có bấm vào hay không. Bản render bằng font đọc được nhưng không có bản sắc nào.
 //
-// Ưu tiên 3: tên game đã đọc được, khẩu hiệu đã có, ảnh chia sẻ đã hiện đúng trên Facebook
-// và Discord. Đẹp hơn thì tốt, nhưng không chặn ai chơi.
+// ── Cảnh báo còn nguyên giá trị: MÔ HÌNH VIẾT SAI DẤU TIẾNG VIỆT ──────────────────────
 //
-// **Không sinh `logo_vi.png` bằng mô hình.** Chữ "Đạo Hữu Xin Dừng Bước" có năm dấu; mô
-// hình sinh ảnh viết sai dấu gần như chắc chắn, và một cái logo sai chính tả thì tệ hơn
-// hẳn một cái logo render bằng font. Job logo dưới đây chỉ sinh phần KHUNG trang trí,
-// chữ vẫn do `make_brandart.py` đặt lên.
+// "Đạo Hữu Xin Dừng Bước" có năm dấu. Mô hình sinh ảnh viết sai dấu gần như chắc chắn, và
+// một cái logo sai chính tả thì tệ hơn hẳn một cái logo render bằng font. Vì vậy:
+//
+//   - Job `brand_logo_vi` sinh ra ỨNG VIÊN, không sinh ra bản phát hành. Nó ghi vào
+//     `assets/src/ui/logo_vi_src.png`, KHÔNG ghi đè `client/public/brand/logo_vi.png`.
+//   - Bản đang phát hành vẫn là bản font của `tools/make_brandart.py` cho tới khi chủ dự
+//     án nhìn tận mắt và duyệt. Game không chờ art (CLAUDE.md quy tắc 11).
+//   - Duyệt xong thì sửa `make_brandart.py` để nó ghép từ tệp nguồn này, và lúc đó trang
+//     chủ / màn hình tải / ảnh chia sẻ đổi theo cùng một lúc vì cả ba đều đọc cùng một tệp.
+//
+// Đọc kỹ TỪNG DẤU trước khi duyệt: dễ sai nhất là "Hữu" (ngã, không phải hỏi) và "Bước"
+// (dấu sắc trên ơ, không phải trên u).
 func brandArtJobs() []Job {
-	return []Job{
-		{Name: "brand_logo_frame", Priority: 3, Mode: modeSprite, Out: "ui/logo_frame.png", W: 1024, H: 384, Pivot: "center",
+	name := brandName()
+	jobs := []Job{
+		{Name: "brand_logo_frame", Priority: 1, Mode: modeSprite, Out: "ui/logo_frame.png", W: 1024, H: 384, Pivot: "center",
 			Prompt: styleObject + " An ornate empty horizontal cartouche frame for a game logo: two crossed jian swords at each end, swirling cloud motifs, gold on transparent, wide empty center with NO text" + negative},
 		// Ghi ra art NGUỒN, không ghi đè `client/public/brand/icon_512.png`: tệp kia là bản
 		// phát hành do `make_brandart.py` dựng và phải giữ nguyên địa chỉ. Khi art vẽ xong,
 		// sửa `make_brandart.py` để nó ghép từ đây.
-		{Name: "brand_icon", Priority: 3, Mode: modeSprite, Out: "ui/brand_icon_src.png", W: 512, H: 512, Pivot: "center",
+		{Name: "brand_icon", Priority: 1, Mode: modeSprite, Out: "ui/brand_icon_src.png", W: 512, H: 512, Pivot: "center",
 			Prompt: styleObject + " App icon: a ring of ten small golden jian swords orbiting a single cultivator seen from above, dark ink background, bold simple silhouette readable at 48 pixels, no text" + negative},
 	}
+	if name != "" {
+		jobs = append(jobs, Job{
+			Name: "brand_logo_vi", Priority: 1, Mode: modeSprite, Out: "ui/logo_vi_src.png",
+			W: 1536, H: 512, Pivot: "center",
+			// Lời nhắc nhắc lại chuỗi BA LẦN và liệt kê từng chữ một. Mô hình bỏ dấu khi chuỗi
+			// chỉ xuất hiện một lần giữa một câu dài tiếng Anh; nhắc lại và tách chữ làm tỉ lệ
+			// đúng dấu cao hơn hẳn. Vẫn phải người duyệt — xem ghi chú trên hàm.
+			Prompt: "Vietnamese calligraphy game logo wordmark, brush-painted ink lettering with gold leaf, " +
+				"traditional xianxia wuxia style, thick confident brush strokes, slight ink splatter, " +
+				"transparent background, no frame, no border, centered, the text reads exactly: \"" + name + "\". " +
+				"Spell it letter by letter with every Vietnamese diacritic exactly as written: " + spellOut(name) + ". " +
+				"The complete wordmark must read \"" + name + "\" with correct Vietnamese tone marks." +
+				" --no latin-only-text, missing diacritics, misspelled text, english translation, watermark, signature, 3d render, photo",
+		})
+	}
+	return jobs
+}
+
+// spellOut tách tên thành từng chữ cái, cách nhau bằng dấu gạch — để lời nhắc nói rõ từng
+// dấu thanh thay vì để mô hình đoán từ một chuỗi liền.
+func spellOut(s string) string {
+	var b strings.Builder
+	for _, w := range strings.Fields(s) {
+		if b.Len() > 0 {
+			b.WriteString(" / ")
+		}
+		for i, r := range []rune(w) {
+			if i > 0 {
+				b.WriteString("-")
+			}
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func allJobs() []Job {
