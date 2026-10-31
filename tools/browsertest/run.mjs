@@ -23,7 +23,7 @@
 
 import { chromium } from 'playwright';
 import { execSync, spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { cpus, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -64,12 +64,25 @@ const DIRS = { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD' };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** goBin tìm lệnh `go`: trong PATH, hoặc bản nằm trong cache toolchain của máy này. */
+/**
+ * goBin tìm `go` — THEO THỨ TỰ, không gán cứng một phiên bản.
+ *
+ * Bản cũ gán cứng `toolchain@v0.0.1-go1.25.11`. Khi dự án lên go1.26 thì đường dẫn đó biến
+ * mất, hàm rơi về `'go'`, mà `go` không có trên PATH — nên server của bài test **không bao
+ * giờ khởi động** và cả bài chỉ in ra một màn hình `ERR_CONNECTION_REFUSED`. Không có gì
+ * báo "sai phiên bản Go"; nó trông y như server hỏng.
+ */
 function goBin() {
-  const cached = join(
-    process.env.HOME ?? '',
-    'go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.11.linux-amd64/bin/go',
-  );
-  return existsSync(cached) ? cached : 'go';
+  const modcache = process.env.GOMODCACHE ?? join(process.env.HOME ?? '', '.cache/kx-gomod');
+  const tcDir = join(modcache, 'golang.org');
+  if (existsSync(tcDir)) {
+    const tc = readdirSync(tcDir).filter((d) => d.startsWith('toolchain@')).sort().at(-1);
+    if (tc) {
+      const bin = join(tcDir, tc, 'bin', 'go');
+      if (existsSync(bin)) return bin;
+    }
+  }
+  return 'go';
 }
 
 /**
