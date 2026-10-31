@@ -565,7 +565,9 @@ function renderBoard() {
 }
 
 async function loadBoard() {
-  bdRows = await api('/api/admin/lives?limit=500');
+  // 1000 = trần của `RecentLives`. Để 500 thì với 735 mạng chơi trong DB, bộ lọc "chỉ
+  // mạng đang ẩn" chỉ hiện 27/42 — và không có gì nói rằng 15 dòng kia tồn tại.
+  bdRows = await api('/api/admin/lives?limit=1000');
   renderBoard();
 }
 
