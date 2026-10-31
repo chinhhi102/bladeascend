@@ -35,8 +35,10 @@ echo "== build id: $BUILD_ID =="
 echo "== 1/5 kiểm tra =="
 # Kiểm TRƯỚC khi build: deploy một bản thiếu art hoặc hỏng test thì người chơi lãnh đủ.
 ( cd server && go vet ./... && go test ./... >/dev/null )
-( cd client && npm run check:assets >/dev/null && npm run check:items >/dev/null )
-echo "   go vet, go test, check:assets, check:items — OK"
+# check:assets và check:dead là HAI CHIỀU của cùng một câu hỏi: code đòi tệp không có
+# (người chơi thấy placeholder), và tệp có mà không ai đòi (người chơi tải về rồi vứt).
+( cd client && npm run check:assets >/dev/null && npm run check:items >/dev/null && npm run check:dead >/dev/null )
+echo "   go vet, go test, check:assets, check:items, check:dead — OK"
 
 echo "== 2/5 build client (TELEMETRY=on) =="
 # TELEMETRY=on BẮT BUỘC cho server đội test. Thiếu cờ này thì server vẫn chạy ngon lành mà
