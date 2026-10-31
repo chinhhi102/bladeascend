@@ -38,6 +38,8 @@ type Room struct {
 	zones   []*Zone
 	mgr     *Manager
 	inbox   chan func()
+	// charsAtTick: tổng nhân vật cả phòng, chốt đầu mỗi tick (xem `Step`).
+	charsAtTick int
 	// ScoreMedian trả Uy Danh/phút trung vị của một cảnh giới, cho cờ "Tăng điểm bất
 	// thường" (§6.1). `cmd/server` cắm vào; nil thì không gắn cờ loại này.
 	//
@@ -317,6 +319,16 @@ func (r *Room) Step(dt float64) {
 	stepStart := time.Now()
 	r.drainInbox()
 	r.snapshotRanks()
+	// Chốt SỐ NHÂN VẬT CẢ PHÒNG một lần, TRƯỚC khi các khu chạy song song.
+	//
+	// `onBotDeath` cần con số này để quyết "chết luôn hay hồi sinh", mà nó chạy BÊN TRONG
+	// goroutine của một khu. Gọi `r.Humans()+r.Bots()` ở đó là đọc `z.clients`/`z.brains`
+	// của BỐN KHU KIA trong lúc chúng đang ghi — `go test -race` bắt được, và ngoài đời là
+	// "concurrent map writes" làm sập server (đã dính đúng vậy hôm 29/10 ở một đường khác).
+	//
+	// Chốt một lần cũng ĐÚNG HƠN về luật: cả năm khu quyết định từ cùng một con số, thay vì
+	// mỗi khu thấy một con số khác tuỳ thứ tự chạy.
+	r.charsAtTick = r.Humans() + r.Bots()
 	// Mỗi khu một GOROUTINE (spec v5 mục 4). An toàn vì trong một tick không khu nào đọc
 	// dữ liệu của khu khác: việc duy nhất đi qua ranh giới là chuyển người, và nó gom vào
 	// hàng chờ riêng của từng khu rồi chạy SAU khi mọi khu đã xong.

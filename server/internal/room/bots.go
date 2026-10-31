@@ -257,7 +257,9 @@ func (r *Room) onBotDeath(z *Zone, p *game.Player) {
 	// `fatal error: concurrent map writes` làm sập server (đã dính đúng vậy hôm 29/10).
 	// Tên người vừa rời gom vào hàng chờ của khu, `updateBots` gom lại sau khi mọi khu
 	// tick xong.
-	if r.Humans()+r.Bots()-1 >= r.cfg.Room.BotFillTarget {
+	// `charsAtTick` chứ không `r.Humans()+r.Bots()`: hàm này chạy trong goroutine của MỘT
+	// khu, còn hai hàm kia đọc map của cả năm khu. Xem ghi chú ở `Room.Step`.
+	if r.charsAtTick-1 >= r.cfg.Room.BotFillTarget {
 		z.departed = append(z.departed, p.Name)
 		z.G.RemovePlayer(p.ID)
 		delete(z.brains, p.ID)
