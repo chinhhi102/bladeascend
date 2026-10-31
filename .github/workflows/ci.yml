@@ -34,6 +34,13 @@ jobs:
       # Sinh lại từ schema rồi kiểm KHÔNG có gì đổi. Ai sửa `proto/schema.txt` mà quên chạy
       # generator thì code sinh ra và schema lệch nhau — và lệch kiểu đó không làm hỏng build,
       # nó chỉ làm client đọc rác lúc chạy.
+      # §8.1b "Kiểm tra bắt buộc": 5 khu × 14 cảnh giới, flood fill lưới 50. Trượt nghĩa là
+      # có cảnh giới nào đó bị NHỐT trong một túi kín, hoặc không tới được một cái Đài — tức
+      # người chơi ở cảnh giới đó mở game ra và không chơi được. Phải chặn ở CI vì cả hai
+      # cách làm hỏng nó đều im lặng: sinh lại bản đồ với seed khác, hoặc sửa .tmj bằng Tiled.
+      - name: bố cục 5 khu đi lọt ở cả 14 cảnh giới (§8.1b)
+        working-directory: server
+        run: go run ./cmd/mapgen --check
       - name: code sinh từ schema còn khớp
         working-directory: server
         run: |

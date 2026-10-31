@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"kiemxoay/server/internal/config"
@@ -396,8 +397,24 @@ func main() {
 	seed := flag.Int64("seed", 0, "seed; 0 = seed mặc định theo từng khu")
 	zone := flag.Int("zone", -1, "chỉ sinh khu này (0..4); -1 = sinh cả 5 khu")
 	png := flag.String("png", "", "xuất ảnh xem trước ra file này (chỉ dùng với --zone)")
+	// --check KHÔNG sinh bản đồ: nó kiểm bản đồ ĐANG CÓ trong `maps/` (spec §8.1b). Kiểm
+	// cái đã ghi ra đĩa chứ không cái vừa dựng trong bộ nhớ, vì đó mới là cái người chơi
+	// nhận — và vì CI phải bắt được cả trường hợp ai đó sửa .tmj bằng Tiled.
+	check := flag.Bool("check", false, "kiểm bố cục 5 khu × 14 cảnh giới theo §8.1b, không sinh gì")
+	checkPNG := flag.String("check-png", "", "xuất ảnh bộ kiểm vào thư mục này (vd docs/map_check)")
+	checkRealmsArg := flag.String("check-realms", "", "chỉ xuất ảnh cho các cảnh giới này (vd \"0,4,8\"); rỗng = đủ 14")
 	flag.Parse()
 	cfg := config.MustLoadDefault()
+	if *check {
+		dir := *checkPNG
+		if dir == "" && *checkRealmsArg != "" {
+			dir = config.FindRepoFile("docs/map_check")
+		}
+		if err := runCheck(*out, dir, cfg, parseRealms(*checkRealmsArg)); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	size := cfg.Room.MapSize
 	if err := os.MkdirAll(*out, 0o755); err != nil {
 		log.Fatal(err)
@@ -610,4 +627,21 @@ func nuiDa(b *builder) {
 	for _, d := range []string{"stone_lantern", "rusty_water_jar", "banana_tree"} {
 		b.decor(d, 16)
 	}
+}
+
+// parseRealms đọc "0,4,8" thành []int{0,4,8}. Rỗng → nil, nghĩa là đủ 14 cảnh giới.
+func parseRealms(s string) []int {
+	var out []int
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		n, err := strconv.Atoi(part)
+		if err != nil {
+			log.Fatalf("--check-realms: %q không phải số", part)
+		}
+		out = append(out, n)
+	}
+	return out
 }
