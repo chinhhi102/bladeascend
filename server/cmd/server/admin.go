@@ -42,6 +42,7 @@ func (s *server) adminRoutes(mux *http.ServeMux, adminDir string) {
 	mux.HandleFunc("GET /api/admin/bans", s.adminGuard(s.handleAdminBans))
 	mux.HandleFunc("POST /api/admin/unban", s.adminGuard(s.handleAdminUnban))
 	mux.HandleFunc("POST /api/admin/clearflag", s.adminGuard(s.handleAdminClearFlag))
+	mux.HandleFunc("GET /api/admin/errors", s.adminGuard(s.handleAdminErrors))
 	mux.HandleFunc("GET /api/admin/check", s.adminGuard(s.handleAdminCheck))
 	mux.HandleFunc("GET /api/admin/live", s.adminGuard(s.handleAdminLive))
 	mux.HandleFunc("GET /api/admin/lives", s.adminGuard(s.handleAdminLives))

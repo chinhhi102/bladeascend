@@ -376,6 +376,69 @@ document.getElementById('plq').addEventListener('input', () => {
   window.__plT = setTimeout(renderPlayers, 200);
 });
 
+// ── Lỗi của người chơi thật (§3, TELEMETRY_SPEC §4) ──────────────────────────────────────
+
+const ERR_LABEL = {
+  error: 'Lỗi JavaScript',
+  webgl_context_lost: 'Mất ngữ cảnh WebGL (màn hình trắng)',
+  gpu_pressure: 'Chạm trần bộ nhớ đồ hoạ',
+};
+
+/**
+ * errCard dựng một nhóm lỗi.
+ *
+ * `gpu_pressure` chở JSON số liệu chứ không phải thông báo lỗi, nên hiện nó dưới dạng bảng
+ * khoá=giá trị; lỗi thường thì giữ nguyên vết gọi hàm, xuống dòng đúng như nó đến.
+ */
+function errCard(e) {
+  const box = el('div', 'err ' + e.kind);
+  const head = el('div', 'head');
+  head.append(
+    el('span', 'tag', ERR_LABEL[e.kind] || e.kind),
+    el('strong', '', `${e.sessions} người`),
+    el('span', '', `${e.count} lần`),
+    el('span', '', new Date(e.last_at * 1000).toLocaleString('vi-VN')),
+  );
+  if (e.mobile) head.append(el('span', 'tag mob', `${e.mobile} trên điện thoại`));
+  box.append(head);
+
+  let shown = e.sample || e.sig;
+  if (e.kind === 'gpu_pressure') {
+    try {
+      const o = JSON.parse(e.sample);
+      shown = Object.entries(o).map(([k, v]) => `${k}=${v}`).join(' · ');
+    } catch (_) { /* giữ nguyên */ }
+  }
+  box.append(el('pre', 'body', shown));
+
+  const foot = el('div', 'foot');
+  if (e.devices?.length) foot.append(el('span', '', 'Thiết bị: ' + e.devices.join(', ')));
+  if (e.builds?.length) foot.append(el('span', '', 'Bản: ' + e.builds.join(', ')));
+  foot.append(el('span', '', 'Lần đầu: ' + new Date(e.first_at * 1000).toLocaleString('vi-VN')));
+  box.append(foot);
+  return box;
+}
+
+async function loadErrors() {
+  const days = document.getElementById('errdays').value;
+  const r = await api('/api/admin/errors?days=' + days);
+  const list = document.getElementById('errlist');
+  const info = document.getElementById('errinfo');
+  if (r.off) {
+    info.textContent = r.note;
+    list.replaceChildren();
+    return;
+  }
+  const g = r.groups || [];
+  info.textContent = g.length
+    ? `${g.length} loại lỗi · ${g.reduce((a, x) => a + x.count, 0)} lần · `
+      + `${g.reduce((a, x) => a + x.sessions, 0)} lượt người dính`
+    : '';
+  list.replaceChildren(...(g.length ? g.map(errCard) : [el('p', '', 'Không có lỗi nào. Tốt.')]));
+}
+
+document.getElementById('errdays').addEventListener('change', () => loadErrors().catch(() => {}));
+
 // ── Danh sách cấm (§6.2) ─────────────────────────────────────────────────────────────────
 
 async function loadBans() {
@@ -524,6 +587,7 @@ function show(id) {
   if (id === 'board') loadBoard().catch(() => {});
   if (id === 'players') loadPlayers().catch(() => {});
   if (id === 'bans') loadBans().catch(() => {});
+  if (id === 'errors') loadErrors().catch(() => {});
   if (id === 'map') mpTickLive().catch(() => {});
 }
 
@@ -546,6 +610,9 @@ async function tick() {
     // Số người đang có cờ, ở thanh bên. Nếu đang mở đúng trang Người chơi thì làm mới
     // luôn danh sách — nhưng CHỈ khi đang mở: kéo 500 dòng mỗi 2 giây cho một trang
     // không ai nhìn là tốn băng thông và làm goroutine phòng bận không lý do.
+    const errPill = document.getElementById('errcount');
+    errPill.hidden = !s.errors_today;
+    errPill.textContent = s.errors_today ?? 0;
     const flagPill = document.getElementById('flagcount');
     flagPill.hidden = !s.flagged;
     flagPill.textContent = s.flagged ?? 0;

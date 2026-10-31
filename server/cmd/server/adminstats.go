@@ -67,6 +67,11 @@ type adminStats struct {
 	// Flagged: số người thật đang mang ít nhất một cờ nghi hack (§6.1). Chỉ là con số ở
 	// thanh bên — không có gì chạy theo nó.
 	Flagged int `json:"flagged"`
+	// ErrorsToday: số LOẠI lỗi khác nhau người chơi gặp trong 24 giờ (§3).
+	//
+	// Đếm loại chứ không đếm lần: một lỗi trong vòng vẽ bắn 60 lần/giây, và con số "18 432"
+	// ở thanh bên chỉ nói lên rằng có ai đó đang mở tab, không nói có mấy vấn đề.
+	ErrorsToday int `json:"errors_today"`
 }
 
 func (s *server) handleAdminStats(w http.ResponseWriter, _ *http.Request) {
@@ -81,6 +86,11 @@ func (s *server) collectStats() adminStats {
 	st.Uptime = int64(time.Since(s.startedAt).Seconds())
 	st.Realms = map[int]int{}
 	st.FeedbackNew = s.adminAuth.Store().UnreadFeedback()
+	if s.telemetry != nil {
+		if g, err := s.telemetry.RecentErrors(24*time.Hour, time.Now()); err == nil {
+			st.ErrorsToday = len(g)
+		}
+	}
 
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)

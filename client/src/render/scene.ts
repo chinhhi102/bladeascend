@@ -279,6 +279,7 @@ export class GameScene {
     this.skillFx.update(now);
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
     this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;
+    this.sampleFps(dt);
     drawCalls.frames += 1;
     if (drawCalls.frames >= 30) {
       drawCalls.perFrame = drawCalls.acc / drawCalls.frames;
@@ -666,10 +667,19 @@ export class GameScene {
     };
   }
 
-  perfLine(dt: number, net: { rttMs: number; kbPerSec: number; snapBytes: number; srvMs: number }): string {
-    // Đo FPS bằng ĐỒNG HỒ THẬT, không dùng `dt` của ticker: Pixi kẹp `deltaMS` ở minFPS=10,
-    // nên một máy chạy 3 khung/giây vẫn báo đúng 10.0. Bài test 10 tab headless từng cho ra
-    // cột FPS toàn 10.0 / 10.0 / 10.0 vì đúng lỗi này.
+  /**
+   * sampleFps đếm khung hình — gọi TỪ VÒNG VẼ, mỗi khung, với mọi người chơi.
+   *
+   * Trước đây nó nằm trong `perfLine`, mà `perfLine` chỉ chạy khi mở overlay F3. Hậu quả:
+   * `perfStats().fps` LUÔN bằng 0 với người chơi thường — và `perfStats()` chính là thứ
+   * đính kèm vào sự kiện `gpu_pressure` gửi về server. Nên bằng chứng từ chiếc iPhone thật
+   * ngày 31/10 ghi `"fps":0` trong lúc máy đang tụt khung: đúng con số cần nhất thì trống.
+   *
+   * Đo bằng ĐỒNG HỒ THẬT, không dùng `dt` của ticker: Pixi kẹp `deltaMS` ở minFPS=10, nên
+   * một máy chạy 3 khung/giây vẫn báo đúng 10.0. Bài test 10 tab headless từng cho ra cột
+   * FPS toàn 10.0 / 10.0 / 10.0 vì đúng lỗi này.
+   */
+  private sampleFps(dt: number): void {
     const t = performance.now() / 1000;
     this.fpsAcc += this.fpsLast > 0 ? t - this.fpsLast : dt;
     this.fpsLast = t;
@@ -679,6 +689,10 @@ export class GameScene {
       this.fpsAcc = 0;
       this.fpsFrames = 0;
     }
+  }
+
+  perfLine(dt: number, net: { rttMs: number; kbPerSec: number; snapBytes: number; srvMs: number }): string {
+    void dt; // FPS nay đếm trong vòng vẽ (xem sampleFps), không đếm ở đây nữa
     let swords = 0;
     for (const p of this.players.values()) {
       swords += p.swordCount;

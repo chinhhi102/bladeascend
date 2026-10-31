@@ -11,6 +11,7 @@
   <a href="#feedback">Góp ý <span id="fbcount" class="pill" hidden>0</span></a>
   <a href="#map">Bản đồ</a>
   <a href="#players">Người chơi <span id="flagcount" class="pill warn" hidden>0</span></a>
+  <a href="#errors">Lỗi người chơi <span id="errcount" class="pill bad" hidden>0</span></a>
   <a href="#bans">Danh sách cấm</a>
   <a href="#board">Bảng xếp hạng</a>
   <a href="#audit">Nhật ký</a>
@@ -64,6 +65,21 @@
       <span id="plcount" class="hint"></span>
     </div>
     <div id="pllist"></div>
+  </section>
+  <section id="errors" hidden>
+    <h2>Lỗi của người chơi thật</h2>
+    <p class="hint">Lỗi gửi về từ máy người chơi (TELEMETRY_SPEC §4). Gom theo nội dung —
+      một lỗi trong vòng vẽ bắn 60 lần mỗi giây, nên đếm từng dòng thì không đọc được.
+      Xếp theo <strong>số người dính</strong> trước, rồi mới tới số lần.</p>
+    <div class="filters">
+      <select id="errdays">
+        <option value="1">24 giờ qua</option>
+        <option value="7" selected>7 ngày qua</option>
+        <option value="30">30 ngày qua</option>
+      </select>
+      <span id="errinfo" class="hint"></span>
+    </div>
+    <div id="errlist"></div>
   </section>
   <section id="bans" hidden>
     <h2>Danh sách cấm</h2>

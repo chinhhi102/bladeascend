@@ -378,22 +378,29 @@ class App {
     this.hud.setDebug(w.debug);
     this.hud.setChar(this.profile?.char ?? '');
     this.hud.setSkill(this.profile?.char ?? '', 0);
+    const g = window as unknown as { kx?: unknown; __stats?: unknown; __playing?: unknown };
+    // `__stats` KHÔNG khoá sau quyền debug: nó chỉ là số đo (FPS, bộ nhớ texture, số
+    // sprite, ping) — không có một quyền nào lên luật chơi. Khoá nó lại thì bộ đo hiệu
+    // năng không chạy được trên server THẬT, mà server thật là nơi duy nhất đo đúng: đó
+    // là bản build người chơi nhận, với bản đồ thật và bot thật.
+    //
+    // `kx` thì vẫn khoá: nó cầm thẳng `scene`, `world`, `conn` — từ đó sửa được trạng
+    // thái, và ADMIN_SPEC §1.1 nói rõ quyền ấy do phiên admin quyết.
+    g.__stats = (): Record<string, number> => ({
+      ...this.scene.perfStats(),
+      ping: this.conn.rttMs,
+      kbPerSec: this.conn.kbPerSec,
+      snapKB: this.conn.lastSnapBytes / 1024,
+      srvMs: this.srvMs,
+    });
+    g.__playing = (): boolean => this.playing;
     if (w.debug) {
       // ?debug=true: mở cửa sau cho console của trình duyệt (xem VFX, đếm thần thú...).
-      const g = window as unknown as { kx?: unknown; __stats?: unknown };
+      //
       // `playing` phải hỏi qua hàm: `world.me()` vẫn trả về dữ liệu CŨ sau khi chết và rời
       // phòng, nên công cụ đo tưởng nhân vật còn sống và không bấm "Chơi tiếp" (mất mấy
       // lượt đo vì chuyện này).
       g.kx = { scene: this.scene, world: this.world, conn: this.conn, playing: () => this.playing };
-      // __stats là cùng bộ số của overlay F3 nhưng ở dạng object, cho tools/browsertest
-      // đọc mỗi giây. Giữ tên cố định để script không phải bám vào nội bộ renderer.
-      g.__stats = (): Record<string, number> => ({
-        ...this.scene.perfStats(),
-        ping: this.conn.rttMs,
-        kbPerSec: this.conn.kbPerSec,
-        snapKB: this.conn.lastSnapBytes / 1024,
-        srvMs: this.srvMs,
-      });
     }
     this.screens.show(null);
     this.loading.done();

@@ -183,3 +183,28 @@ func (s *server) handleAdminCheck(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(b)
 }
+
+// handleAdminErrors trả lỗi của NGƯỜI CHƠI THẬT, gom nhóm (ADMIN_SPEC §3).
+//
+// Đây là câu trả lời cho "người chơi iPhone báo luôn bị lỗi mà không biết lỗi gì": console
+// trên máy họ thì mình không với tới, và bảo họ chụp màn hình console Safari iOS là chuyện
+// không xảy ra.
+func (s *server) handleAdminErrors(w http.ResponseWriter, r *http.Request) {
+	if s.telemetry == nil {
+		adminJSON(w, http.StatusOK, map[string]any{
+			"off": true, "groups": []any{},
+			"note": "server đang chạy với -telemetry=false nên không thu lỗi người chơi",
+		})
+		return
+	}
+	days, _ := strconv.Atoi(r.URL.Query().Get("days"))
+	if days <= 0 || days > 30 {
+		days = 7
+	}
+	groups, err := s.telemetry.RecentErrors(time.Duration(days)*24*time.Hour, time.Now())
+	if err != nil {
+		adminJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	adminJSON(w, http.StatusOK, map[string]any{"days": days, "groups": groups})
+}

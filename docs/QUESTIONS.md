@@ -31,3 +31,26 @@ cảnh giới trong 2 phút". Cần một bảng trung vị theo cảnh giới �
 
 **Tạm dùng: C**, rơi về B khi chưa đủ dữ liệu (< 50 mạng chơi trong 24 giờ). C dùng dữ liệu
 thật nên không lệch khi cân bằng đổi, mà vẫn không nhiễu như A.
+
+## Q30 — iPhone chạm 84% trần bộ nhớ đồ hoạ: giải phóng atlas nhân vật thế nào?
+
+**Bối cảnh.** Máy iPhone thật (Safari 18.7) gửi về `gpu_pressure` ở **216 MB / trần 256**,
+trên bản build ĐÃ có đợt giảm bộ nhớ ngày 31/10. Tệ hơn: cơ chế tự hạ chất lượng chạy rồi
+mà bộ nhớ **tăng** (214 MB ở mức "Vừa" → 216 MB ở mức "Thấp"), nghĩa là hạ chất lượng
+không trả lại texture đã nạp. Sự kiện ghi `chars:7` — bảy atlas nhân vật đang nằm trong bộ
+nhớ, và đó là phần lớn chi phí (GAME_SPEC §13.7 nạp `char_<nhân vật>` theo người gặp phải).
+
+**Phương án.**
+- A. **Giải phóng atlas của nhân vật không còn ai trong khu dùng.** Đúng gốc rễ, nhưng phải
+     đếm tham chiếu cẩn thận; nhả nhầm thì người đó hiện placeholder giữa trận.
+- B. **Hạ độ phân giải atlas khi chạm 80% trần** — nạp lại bản 512 thay vì 1024. Giải phóng
+     thật, nhưng có một nhịp khựng lúc đổi.
+- C. **Trần số atlas (vd 5), nhân vật thứ 6 trở đi vẽ placeholder.** Rẻ nhất, chắc chắn
+     nhất về bộ nhớ, nhưng người chơi thấy hình sai — đổi một lỗi thành một lỗi khác.
+
+**Tạm dùng: chưa làm gì, chỉ ghi lại** (nút thắt B13 trong PERF_LOG). Đây là việc lớn và
+anh dặn mục lớn chưa làm thì ghi vào bảng chứ không tự làm. Nghiêng về **A**, rơi về B nếu
+đếm tham chiếu hoá ra không đáng tin.
+
+**Việc đã làm trong lượt này:** sửa `perfStats().fps` (trước luôn bằng 0 với người chơi
+thường, nên mọi bằng chứng gửi về đều thiếu đúng con số cần nhất — nút thắt B14, đã đóng).
