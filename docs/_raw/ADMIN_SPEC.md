@@ -1,4 +1,6 @@
-# ADMIN CONSOLE — Spec v1.1
+# ADMIN CONSOLE — Spec v1.2
+
+**v1.2:** bản đồ admin = bản đồ thật trong game để xem toàn cảnh (bỏ chấm người chơi live); giao diện admin dùng Ant Design; góp ý cho phép tải ảnh lên (§5, §2.1, §7).
 
 **v1.1:** `?debug=true` chỉ hoạt động khi đã đăng nhập admin (§1.1).
 
@@ -44,7 +46,15 @@ Về sau có thể thêm 2 lớp (TOTP 2FA) — chưa cần ở v1.
 
 ## 2. Bố cục trang admin
 
-Thanh bên trái: **Dashboard · Phòng & Khu · Bản đồ · Người chơi · Góp ý (số chưa đọc) · Nhật ký · Đăng xuất**. Giao diện tối giản, chữ rõ, chạy được trên điện thoại (để xem nhanh khi không ở máy tính).
+Thanh bên trái: **Dashboard · Phòng & Khu · Bản đồ · Người chơi · Góp ý (số chưa đọc) · Nhật ký · Đăng xuất**.
+
+### 2.1 Giao diện — dùng Ant Design
+- Trang admin là **bundle riêng** (không nằm trong bundle của game, không làm nặng game): **React + Ant Design (antd v5)** — đã duyệt cho riêng trang admin.
+- Bố cục `Layout` + `Sider` (thu gọn được) + `Header` (tên build đang chạy, nút đăng xuất) + `Content`. Hỗ trợ chế độ sáng/tối (`ConfigProvider` theme algorithm), mặc định theo máy.
+- **Dashboard**: lưới `Card` + `Statistic` (số to, đơn vị, mũi tên tăng/giảm so với 1 phút trước), màu theo ngưỡng (`Tag`/`Badge` xanh/vàng/đỏ), nhóm theo các mục §3. Không biểu đồ phức tạp; tuỳ chọn sparkline nhỏ 10 phút.
+- **Mọi bảng dùng `Table` của antd**: header cố định, sắp xếp + lọc theo cột, phân trang (20/50/100), tìm kiếm, cột trạng thái là `Tag` màu, số căn phải, thời gian hiển thị tương đối ("3 phút trước", rê chuột thấy giờ đầy đủ), hàng bấm được → `Drawer` chi tiết bên phải (dùng `Descriptions`).
+- Thao tác nguy hiểm (kick, cấm, ẩn bảng xếp hạng): `Modal.confirm` + ô lý do bắt buộc; kết quả báo bằng `message`.
+- Chạy được trên điện thoại (Sider tự thu gọn, bảng cuộn ngang).
 
 Dữ liệu live đi qua 1 kết nối **`/api/admin/ws`** (WebSocket, xác thực bằng cookie phiên). Admin **không** được tính là người chơi, không vào phòng, không ảnh hưởng bot fill.
 
@@ -83,23 +93,14 @@ Bảng phòng → bấm mở ra 5 khu:
 
 ---
 
-## 5. Xem bản đồ
+## 5. Xem bản đồ (toàn cảnh bản đồ thật trong game)
 
-Hai chế độ:
+**Mục đích**: nhìn toàn cảnh mỗi khu **đúng như người chơi thấy** (art thật, nền, decal, vật cản, cổng, Đài, Thiên Môn) để đánh giá bố cục và thẩm mỹ. **Không** vẽ người chơi trực tiếp (bỏ luồng dữ liệu 5 Hz của bản v1.1 — không tốn tài nguyên server).
 
-**5.1 Xem trực tiếp (live)** — chọn phòng + khu:
-- Vẽ toàn khu bằng Canvas 2D (nhẹ, không cần art): vật cản **tô màu theo bậc** (bảng chú thích bậc 0–13), vật cản đang bị chém hiện nét đứt, vùng (bụi, bùn, băng, nước), cổng, Thiên Môn, Đài Tiên Khí, bến.
-- Chấm người chơi: người thật (màu sáng, có tên), bot (xám), cỡ chấm theo scale, vòng mờ = tầm kiếm `reach`. Viên Tiên khí trên đất (vàng). Cập nhật 5 lần/giây.
-- Kéo / phóng to bằng chuột hoặc chạm. Bấm vào 1 người → mở bảng thông tin người đó (§6) + nút **"Bám theo"** (camera đi theo).
-- Bật/tắt lớp: bậc vật cản · vùng · tầm kiếm · AOI của 1 người · lưới 1 000.
-- **Chỉ xem**, không có thao tác lên trận (trừ nút kick ở bảng người chơi).
-- Server gửi cho admin dữ liệu **cả khu** ở tần số thấp (5 Hz, lượng tử hoá như snapshot), tách khỏi luồng snapshot người chơi; tối đa 2 admin xem cùng lúc.
-
-**5.2 Xem bố cục theo seed (tĩnh)** — nhập khu + seed (mặc định seed đang chạy):
-- Hiện bố cục do mapgen sinh ra + kết quả `--check` (mật độ, khoảng thở, túi kín) + ảnh lớp theo cảnh giới r = 0..13 (thanh trượt chọn r: xám = vật cản, cam = không lọt, đỏ = bị nhốt).
-- Dùng để duyệt bố cục mới trước khi deploy thay cho ảnh PNG gửi tay.
-
----
+- Chọn **phòng → khu** (mặc định: bản đồ seed đang chạy của khu đó) hoặc nhập **khu + seed** bất kỳ để xem bố cục mới trước khi deploy.
+- Vẽ bằng **chính bộ vẽ bản đồ của game** (`render/mapview.ts` + decal + ambient + vật cản), chế độ "toàn cảnh": thu nhỏ vừa khung, kéo/phóng to mượt tới mức cận cảnh như trong game. Có nút **Ảnh chụp toàn khu** (xuất PNG độ phân giải cao).
+- Lớp phủ bật/tắt (mặc định tắt, để nhìn như người chơi): bậc vật cản (tô màu), lưới 1 000, kết quả `--check` theo cảnh giới r = 0..13 (thanh trượt), vùng (bụi/bùn/băng/nước).
+- Số liệu live của khu đặt ở thanh bên cạnh bản đồ (cập nhật 2s): người thật / bot, tick ms, viên Tiên khí trên đất, đếm ngược Đài — **chỉ số, không chấm vị trí**.
 
 ## 6. Người chơi (người thật đang online)
 
@@ -142,13 +143,15 @@ Cờ hiện ở dashboard và danh sách; mỗi cờ lưu bằng chứng (số l
 ### 7.1 Phía người chơi
 - Nút nhỏ **💬 Góp ý** ở góc dưới (trang chủ và trong trận; trong trận không che HUD, không tạm dừng game).
 - Form: **loại** (Báo lỗi · Cân bằng · Ý tưởng · Khác), **nội dung** (5–1 000 ký tự), ô tick **"Kèm ảnh chụp màn hình"** (mặc định bật khi chọn Báo lỗi; chụp canvas, nén WebP ≤ 300 KB).
+- **Tải ảnh lên từ máy**: nút "Thêm ảnh" (`<input type="file" accept="image/*" multiple>` — trên iPhone/Android mở thư viện ảnh hoặc máy ảnh), **kéo-thả** và **dán (Ctrl+V)** trên PC. Tối đa **3 ảnh** (tính cả ảnh chụp màn hình), xem trước dạng ô nhỏ có nút xoá. Trình duyệt tự thu nhỏ (cạnh dài ≤ 1 600 px) và nén WebP ≤ 300 KB/ảnh trước khi gửi; nhận JPG/PNG/WebP/HEIC (HEIC không đọc được thì báo "Chưa hỗ trợ định dạng này").
+- Server: kiểm định dạng bằng nội dung tệp (không tin đuôi), **mã hoá lại ảnh** → xoá toàn bộ EXIF (ảnh điện thoại có thể chứa toạ độ GPS nhà người chơi), giới hạn 3 ảnh × 300 KB / góp ý.
 - Tự đính kèm (người chơi được thấy dòng "Sẽ gửi kèm: phiên bản, thiết bị, khu, cảnh giới, ping, FPS"): build, thiết bị/trình duyệt, kích thước màn hình, phòng/khu, cảnh giới, ping, FPS, `guest_id`, tên, 20 lỗi console gần nhất (nếu là Báo lỗi).
 - Gửi xong: "Cảm ơn! Đã nhận góp ý." Giới hạn 3 góp ý / 10 phút / `guest_id`; người bị cấm không gửi được.
 
 ### 7.2 Phía admin
 - Danh sách góp ý mới nhất trước, lọc theo loại / trạng thái / thiết bị / build; tìm theo nội dung.
 - Trạng thái: **Mới · Đã xem · Đang làm · Xong · Bỏ qua** + ghi chú riêng của admin.
-- Xem ảnh chụp, thông tin đính kèm, bấm sang thông tin người chơi.
+- Xem ảnh (chụp màn hình + ảnh tải lên, bấm để phóng to dạng `Image.PreviewGroup`), thông tin đính kèm, bấm sang thông tin người chơi.
 - Xuất CSV.
 - Số góp ý **Mới** hiện ở thanh bên và dashboard.
 
@@ -175,7 +178,7 @@ Cờ hiện ở dashboard và danh sách; mỗi cờ lưu bằng chứng (số l
 |---|---|---|
 | POST | `/api/admin/login` · `/api/admin/logout` | |
 | GET | `/api/admin/me` | trả CSRF token |
-| WS | `/api/admin/ws` | kênh live: dashboard 2s, phòng/khu 2s, bản đồ live 5 Hz khi đang xem |
+| WS | `/api/admin/ws` | kênh live: dashboard 2s, phòng/khu 2s (chỉ số, không gửi vị trí người chơi) |
 | GET | `/api/admin/rooms` · `/api/admin/players` · `/api/admin/players/{guest_id}` | |
 | POST | `/api/admin/players/{guest_id}/kick` · `/ban` | lý do bắt buộc |
 | DELETE | `/api/admin/bans/{id}` | |
@@ -193,14 +196,16 @@ Cờ hiện ở dashboard và danh sách; mỗi cờ lưu bằng chứng (số l
 | A1 | Đăng nhập + phiên + chặn dò + audit + khung trang + Dashboard + **khoá cờ debug theo phiên admin (§1.1)** | Vào `/admin` bị đẩy về login; đăng nhập xong thấy dashboard số nhảy mỗi 2s |
 | A2 | Phòng & Khu + Người chơi + cờ nghi hack + kick/cấm/gỡ cấm | Kick được 1 tab thử; tab đó thấy thông báo; nhật ký ghi lại |
 | A3 | Hòm thư góp ý (nút trong game + trang admin) | Gửi góp ý kèm ảnh từ điện thoại, thấy ở admin |
-| A4 | Bản đồ: xem theo seed + xem trực tiếp | Bám theo 1 người chơi trên bản đồ live |
+| A4 | Bản đồ: toàn cảnh bằng bộ vẽ thật của game + số liệu khu | Xem đủ 5 khu như người chơi thấy, xuất được PNG |
 
 ## 11. Checklist
 - [ ] Không đăng nhập: `/admin`, `/admin/*.js`, `/api/admin/*`, ảnh góp ý → đều 401/redirect.
 - [ ] Sai mật khẩu 5 lần → khoá IP 15 phút.
 - [ ] Góp ý chứa `<script>alert(1)</script>` và tên người chơi chứa HTML → hiển thị nguyên văn, không chạy.
-- [ ] Admin xem bản đồ live không làm tăng tick ms người chơi quá 0,3 ms.
+- [ ] Trang Bản đồ hiện đúng art như trong game, phóng to/kéo mượt, xuất PNG toàn khu; không có luồng vị trí người chơi.
 - [ ] Không có đoạn code nào tự kick theo cờ.
 - [ ] Production, chưa đăng nhập admin: mở `?debug=true` → không có phím debug, F3 không hiện; gửi lệnh debug thủ công qua WebSocket → bị từ chối + gắn cờ.
 - [ ] Đã đăng nhập admin: `?debug=true` bật đủ phím debug; dùng lệnh → có trong nhật ký; mạng đó không lên bảng xếp hạng toàn cục.
+- [ ] Gửi góp ý kèm 3 ảnh tải lên từ iPhone (thư viện ảnh) → admin thấy đủ 3 ảnh, ảnh đã mất EXIF/GPS.
+- [ ] Mọi bảng admin: sắp xếp, lọc, phân trang, Drawer chi tiết; dashboard dạng Card/Statistic.
 - [ ] Người bị cấm 1 giờ: vào trang thấy thông báo + giờ hết hạn; sau 1 giờ vào lại được.

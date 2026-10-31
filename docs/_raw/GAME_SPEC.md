@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.16:** thêm đa ngôn ngữ đợt 1 (vi, en, pt-BR, es, id, th) + SEO đa ngôn ngữ (§19); tên game & thương hiệu (§20).
+
 **Thay đổi v6.15:** `?debug=true` chỉ hoạt động sau khi đăng nhập admin (§18, ADMIN_SPEC §1.1).
 
 **Thay đổi v6.14:** duyệt bố cục lượt 3; mật độ hình vẽ chốt 8–14% (Băng Nguyệt 4–10%) (§8.1b).
@@ -1333,6 +1335,51 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 
 ### 18.1 Bảng hướng dẫn điều khiển lúc vào trận
 - Vừa vào trận: hiện bảng mờ (nền 50%) giữa-dưới màn hình liệt kê điều khiển (di chuyển; Thiêu Đốt: Shift / nháy đúp giữ / 🔥; **Kỹ năng: Space / nút kỹ năng** (cần Bí Kíp); M minimap...). Tự mờ dần sau 5s (trùng thời gian bất tử) hoặc biến mất khi người chơi bắt đầu di chuyển.
+
+
+## 19. Đa ngôn ngữ (i18n)
+
+**Ngôn ngữ đợt 1**: Tiếng Việt (gốc) · **English** · **Português (Brasil)** · **Español** · **Bahasa Indonesia** · **ไทย (Thái)**. Đây là các thị trường game .io trên trình duyệt đông người chơi; đợt 2 cân nhắc Русский, Türkçe, 日本語, 한국어 theo telemetry quốc gia.
+
+**Cơ chế**
+- Toàn bộ chữ người chơi thấy nằm trong `client/src/i18n/{lang}.json` (gồm cả chuỗi tấu hài, kill feed, danh hiệu Top 1–10, mẹo màn hình tải, tên nhân vật, tên kỹ năng, tên cảnh giới, tên khu, lời nhắc lỗi). Không chuỗi cứng nào trong code. CI: thiếu khoá ở ngôn ngữ nào → cảnh báo, rơi về English (rồi tới Tiếng Việt).
+- Chọn ngôn ngữ: tự theo `navigator.language` lần đầu → lưu localStorage; nút chọn cờ ở trang chủ; URL `?lang=en` ghi đè.
+- Server gửi **mã** sự kiện (vd `kill.realm_drop {a, b, realm}`), client dịch — kill feed / tin loan toàn server hiện đúng ngôn ngữ từng người xem.
+- Bảng tên, danh hiệu, cảnh giới: dịch theo ngôn ngữ **người xem**. Tên người chơi giữ nguyên chữ họ nhập (mọi bảng chữ cái).
+- Font: Be Vietnam Pro cho chữ Latin (đã đủ dấu Việt, Bồ, Tây Ban Nha, Indonesia); thêm **Noto Sans Thai** cho tiếng Thái. BitmapFont sinh sẵn theo bộ ký tự từng ngôn ngữ, **chỉ tải font của ngôn ngữ đang chọn**. Tên người chơi có ký tự ngoài bộ (vd chữ Hán) → vẽ bằng Text thường (có cache).
+- Góp ý admin: lưu kèm ngôn ngữ người gửi; admin có nút "Dịch" (tuỳ chọn, để sau).
+
+**Thuật ngữ tu tiên**: dùng tên chuẩn mà cộng đồng truyện tu tiên quốc tế quen dùng, không dịch máy từng chữ.
+
+| Việt | English | Ghi chú cho các ngôn ngữ khác |
+|---|---|---|
+| Luyện Khí | Qi Refining | Dịch nghĩa theo English |
+| Trúc Cơ | Foundation Establishment | |
+| Kim Đan | Golden Core | |
+| Nguyên Anh | Nascent Soul | |
+| Hóa Thần | Deity Transformation | |
+| Luyện Hư | Void Refinement | |
+| Hợp Thể | Body Integration | |
+| Độ Kiếp | Tribulation Transcendence | |
+| Đại Thừa | Mahayana | |
+| Chân Tiên / Kim Tiên | True Immortal / Golden Immortal | |
+| Thái Ất Ngọc Tiên / Đại La Kim Tiên | Taiyi Jade Immortal / Daluo Golden Immortal | |
+| Đạo Tổ | Dao Ancestor | |
+| Linh khí / Tiên khí | Spirit Qi / Immortal Qi | |
+| Uy Danh | Renown | |
+
+- Câu tấu hài (kill feed, câu thoại, danh hiệu): **viết lại cho buồn cười theo từng ngôn ngữ**, không dịch sát chữ. Mỗi ngôn ngữ cần 1 người bản ngữ đọc duyệt trước khi phát hành (agent soạn bản nháp + ghi chú ngữ cảnh từng câu vào `i18n/NOTES.md`).
+- Tên nhân vật: giữ tên Việt có dấu làm tên riêng (bản sắc), kèm biệt danh dịch nghĩa ngắn ở thẻ chọn nhân vật (vd "A Hớn — *the Bun Guy*").
+
+**SEO đa ngôn ngữ**
+- Mỗi ngôn ngữ một đường dẫn trang chủ riêng (`/`, `/en/`, `/pt/`, `/es/`, `/id/`, `/th/`), có `<title>`, `<meta description>`, ảnh OG, nội dung giới thiệu ngắn **dạng HTML tĩnh** (công cụ tìm kiếm đọc được, không phụ thuộc JS), thẻ `hreflang` liên kết các bản, `sitemap.xml`.
+- Trang chủ có đoạn mô tả ngắn + 3 ảnh chụp game + cách chơi, đặt **phía dưới** khung game (không làm chậm vào game).
+
+## 20. Tên game & thương hiệu
+
+- Tên hiện tại "Kiếm Xoay Tu Tiên" là tên tạm, khó tìm thấy với người nước ngoài. Tên mới chốt ở `config.brand` (tên quốc tế + phụ đề Tiếng Việt), mọi nơi hiển thị lấy từ đây.
+- Tiêu chí: ngắn (≤ 12 ký tự trước `.io`), dễ đánh vần bằng tiếng Anh, gợi "kiếm xoay" + "tu tiên", **không đụng thương hiệu có sẵn** (vd tránh "Halo" — thương hiệu Microsoft; tránh "Tiên Kiếm" — tên một dòng game nổi tiếng), còn tên miền `.io` và tên trên các cổng game.
+- Trước khi chốt: kiểm tên miền, tra trùng tên trên các cổng game .io lớn và cửa hàng ứng dụng, tra nhãn hiệu (WIPO Global Brand Database).
 
 ## 17. Checklist test chấp nhận
 

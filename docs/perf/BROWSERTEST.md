@@ -18,22 +18,22 @@ cổng 8099 với database tạm** rồi tắt khi xong, không đụng tới se
 > Lượt B bóp băng thông **sau khi đã vào game**: ta đo lưu lượng lúc chơi, không đo lúc
 > tải trang.
 
-**Lượt A — mạng bình thường (LAN nội bộ)** — 615 mẫu trong giai đoạn đánh nhau
+**Lượt B — giả lập 4G yếu (trễ 100 ms, 1.6 Mbps xuống, 750 Kbps lên)** — 670 mẫu trong giai đoạn đánh nhau
 
 | Chỉ số | 5 tab Đạo Tổ (TB / p95 / tệ nhất) | 5 tab thường (TB / p95 / tệ nhất) |
 |---|---|---|
-| FPS *(TB / p5 / thấp nhất — xem ghi chú)* | 11.7 / 5.8 / 1.4 | *(chỉ đo ở tab 1)* |
-| Cảnh giới (cấp) | 130.0 / 130.0 / 130.0 | 4.3 / 16.0 / 17.0 |
-| Kiếm của chính tab | 1026.7 / 1050.0 / 1050.0 | 2.6 / 10.0 / 10.0 |
-| Thời gian vẽ | 0.6 / 0.9 / 1.0 ms | *(chỉ đo ở tab 1)* |
-| Ping | 88.2 / 307.0 / 980.0 ms | 25.7 / 109.0 / 323.0 ms |
-| Băng thông xuống | 6.8 / 14.3 / 23.4 KB/s | 3.6 / 5.5 / 9.2 KB/s |
-| Kích thước snapshot | 0.3 / 0.8 / 2.0 KB | 0.1 / 0.2 / 1.1 KB |
-| Tick server | 1.3 / 3.0 / 6.8 ms | 1.1 / 2.4 / 6.6 ms |
-| Số sprite | 2723.7 / 2752.0 / 2759.0 | *(chỉ đo ở tab 1)* |
-| Draw call | 340.6 / 355.9 / 361.2 | *(chỉ đo ở tab 1)* |
-| Entity trong AOI | 497.2 / 908.0 / 1248.0 | 235.9 / 327.0 / 417.0 |
-| Tổng kiếm thấy trên màn hình | 1344.5 / 2114.0 / 2212.0 | 45.1 / 86.0 / 1095.0 |
+| FPS *(TB / p5 / thấp nhất — xem ghi chú)* | 20.6 / 8.8 / 6.8 | *(chỉ đo ở tab 1)* |
+| Cảnh giới (cấp) | 130.0 / 130.0 / 130.0 | 2.4 / 10.0 / 10.0 |
+| Kiếm của chính tab | 1049.8 / 1050.0 / 1050.0 | 3.0 / 10.0 / 10.0 |
+| Thời gian vẽ | 0.6 / 0.8 / 0.9 ms | *(chỉ đo ở tab 1)* |
+| Ping | 84.3 / 264.0 / 371.0 ms | 65.2 / 294.0 / 731.0 ms |
+| Băng thông xuống | 7.1 / 11.9 / 73.6 KB/s | 3.5 / 6.1 / 10.1 KB/s |
+| Kích thước snapshot | 0.4 / 0.8 / 3.8 KB | 0.2 / 0.3 / 1.1 KB |
+| Tick server | 1.4 / 3.1 / 7.6 ms | 1.2 / 2.7 / 6.5 ms |
+| Số sprite | 1862.8 / 1918.0 / 1929.0 | *(chỉ đo ở tab 1)* |
+| Draw call | 222.1 / 227.0 / 229.3 | *(chỉ đo ở tab 1)* |
+| Entity trong AOI | 580.2 / 917.0 / 1062.0 | 283.9 / 367.0 / 384.0 |
+| Tổng kiếm thấy trên màn hình | 1090.9 / 1133.0 / 1377.0 | 402.2 / 1142.0 / 1169.0 |
 
 Ảnh chụp lúc đông nhất: `docs/perf/browsertest-mang-binh-thuong.png` và
 `docs/perf/browsertest-4g-yeu.png`.
