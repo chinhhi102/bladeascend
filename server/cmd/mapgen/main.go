@@ -699,6 +699,10 @@ func main() {
 	check := flag.Bool("check", false, "kiểm bố cục 5 khu × 14 cảnh giới theo §8.1b, không sinh gì")
 	checkPNG := flag.String("check-png", "", "xuất ảnh bộ kiểm vào thư mục này (vd docs/map_check)")
 	checkRealmsArg := flag.String("check-realms", "", "chỉ xuất ảnh cho các cảnh giới này (vd \"0,4,8\"); rỗng = đủ 14")
+	// --check-json ghi kết quả ra cạnh bản đồ để trang quản trị §5.2 đọc. Mặc định ghi
+	// luôn: báo cáo hết hạn (ứng với bộ bản đồ cũ) còn tệ hơn không có báo cáo, nên nó
+	// phải được viết lại mỗi lần chạy kiểm chứ không chờ ai nhớ bật cờ.
+	checkJSON := flag.String("check-json", "", "ghi kết quả bộ kiểm ra JSON (rỗng = <out>/check.json)")
 	flag.Parse()
 	cfg := config.MustLoadDefault()
 	if *check {
@@ -706,7 +710,11 @@ func main() {
 		if dir == "" && *checkRealmsArg != "" {
 			dir = config.FindRepoFile("docs/map_check")
 		}
-		if err := runCheck(*out, dir, cfg, parseRealms(*checkRealmsArg)); err != nil {
+		jsonOut := *checkJSON
+		if jsonOut == "" {
+			jsonOut = filepath.Join(*out, "check.json")
+		}
+		if err := runCheck(*out, dir, jsonOut, *seed, cfg, parseRealms(*checkRealmsArg)); err != nil {
 			log.Fatal(err)
 		}
 		return

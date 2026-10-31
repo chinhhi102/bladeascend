@@ -15,6 +15,7 @@
 | **S4** | Chơi tay 1 tab có giao diện, `?debug=true`, máy chuẩn (ghi cấu hình ở §4) | Đứng giữa trận đông nhất 60s, đọc F3. Đo FPS thật. |
 | **S5** | `go run ./cmd/sim --bots 40 --minutes 5 --seed 7` | Nhịp chơi (không phải hiệu năng): lượt chết, thời gian lên cảnh giới. |
 | **S6** | `go run ./cmd/perfreport --real --since 7d` | Số liệu **người chơi thật** trên server LAN `:9999` (TELEMETRY_SPEC). Ghi cả số phiên N; N < 5 thì tự đánh dấu "ít mẫu, tham khảo". |
+| **S8** | `node tools/browsertest/livemap.mjs <cổng>` | **Giá của trang quản trị** (ADMIN_SPEC §11): đo tick TB cao nhất khi KHÔNG ai xem bản đồ, rồi khi 2 admin xem ở 5 lần/giây, lấy hiệu. Trần 0,3 ms. |
 | **S7** | `cd client && npm run assets:size` + `node tools/browsertest/loadtime.mjs <url>` | **Dung lượng tải & thời gian vào trận** (GAME_SPEC §13.7). Hai nửa: dung lượng lấy từ manifest (chính xác tuyệt đối), thời gian đo trong Chrome có bóp mạng 4 Mbps / 10 Mbps / lần 2 có cache. |
 
 Mỗi kịch bản chạy **3 lần**, ghi trung vị. Cùng máy, cùng commit build, đóng ứng dụng nặng khác.
@@ -80,6 +81,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 11b | 2026-10-31 | (phiên này) | Như trên, máy bàn 1280×720 | S4\*\* | – | – | – | 58 / – | 0.81 | 118 | 0 ✅ | – | Texture **1 416 → 98 MB** (−93%) | – |
 | 10b | 2026-10-31 | `494d517` | Q27 — nền đúng biome + trang trí bản đồ **vẽ ra thật** (543 vật trước đây vô hình) | S4\*\* | – | – | – | 60 / – | 0.32 | 40 | 0 ✅ | – | Băng Nguyệt Hồ (+91 vật): draw call 36 → 40, vẽ 0.6 → 0.32 ms | – |
 | 10c | 2026-10-31 | `494d517` | Như trên, đo trên `:9999` SAU KHI DEPLOY — **khu nhiều trang trí nhất** | S4\*\* | – | – | – | 58 / – | 0.9 | 34 | 0 ✅ | – | Phàm Trấn, 139 vật trang trí, nền `concrete` mới: 58 fps · 34 draw call · hiệu chỉnh 0/giây | – |
+| **18** | 2026-10-31 | `fc429eb`→ | **A4 trang quản trị xem bản đồ trực tiếp (ADMIN_SPEC §5)** | S8 | 1.412 → 1.417 ✅ | – | 50.8 (gói xem, không phải gói người chơi) | – | – | – | – | – | Tick +0.005 ms khi 2 admin xem 5 lần/giây (trần §11: 0.3) · gói xem 398 → 50.8 KB | – |
 
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
@@ -575,6 +577,8 @@ Việc tiếp theo đề xuất: <1–3 việc, xếp theo lợi ích / công s�
 | B2 | Server tick vượt ngân sách khi 10 Đạo Tổ chụm | Lag server | Lượt #0 | **Đóng** — tick 11.45 → 1.56 ms | #4 |
 | B3b | **Chỉ số respawn DAO ĐỘNG MẠNH giữa các lượt** | Phương pháp đo | Cùng một bản build, 8 lượt `flicker.mjs` ra 0,0,0,2,3,1,0,0. Và `netcode-bench` cũ **không bao giờ ép được entity quay lại khung nhìn**, nên số respawn = 0 của nó là con số hiển nhiên, không chứng minh gì. | **Đóng (#12)** — bài đo giờ đi theo KHOẢNG CÁCH tới chỗ đứng ban đầu, không theo đồng hồ và không theo tab kia: 4 lần quay lại thật trên 4 lượt, respawn 0. | #8, #9, #12 |
 | B3 | Nhấp nháy + placeholder khi entity vào khung | Hình ảnh | Trên `:9999` THẬT, 16 lượt `flicker.mjs` sau bước 2b: **placeholder 0/16 lượt** (trước 2b: 252/0/24/4/0), **respawn 2/16 lượt có đúng 1** (trước 2b ~1.0/30s, trước 2a 38/30s) | **Placeholder: đóng.** Respawn: còn hở, cần `Despawn` tường minh từ server (bước 3) — client không phân biệt được "vắng mặt do AOI" với "đã rời đi thật" | #5, #7, #8 |
+| B12 | **Trang quản trị đọc trạng thái phòng từ goroutine HTTP** | **Sập server**, không phải chậm | `go test -race ./internal/room/` trên bản cũ: DATA RACE ngay lượt đầu. `Room.Clients()` và `collectStats()` duyệt `z.clients` / `g.Players` / `g.Obstacles` trong lúc goroutine phòng ghi vào — Go dừng hẳn chương trình với "concurrent map iteration and map write". Dashboard làm mới 2 giây/lần từ A1, nên chỉ cần một người bấm Vào trận đúng nhịp. | **Đóng (#18)** — mọi lần đọc đi qua `Room.Query`, chạy trên chính goroutine phòng giữa hai tick. Test giữ: 248 lần đọc song song với 120 lượt vào/ra, `-race` sạch. | #18 |
+| B11 | **Gói "xem bản đồ trực tiếp" 398 KB** | 2 admin xem = 3,9 MB/giây; tick +0,498 ms (vượt trần §11 là 0,3) | Bản đầu gửi 6 300 viên dạng `{"x":9761.202420898862,…}`. Đo bằng `livemap.mjs`. | **Đóng (#18)** — lượng tử hoá 16 đơn vị + mảng số phẳng theo loại + gộp ô trùng: **398 → 50,8 KB**, tick **+0,498 → +0,005 ms**. Số viên thật vẫn gửi riêng (`n_items`) nên không im lặng giấu mất gì. | #18 |
 | B4 | Băng thông game thật 61.7 KB/s | Mạng yếu | Lượt #0b | Mở — S2 còn **45.5 KB/s đỉnh** ở tab Đạo Tổ (ngân sách 40) | – |
 | B5 | Gói snapshot 6.8 KB vs ngân sách mới 6 KB | Mạng yếu | Lượt #4 | Mở — cần Protocol v2 nhị phân (NETCODE bước 3) | – |
 | **B6** | **Bài đo S3 không nâng được Đạo Tổ**; draw call đọc ra 0 | Không đánh giá được kịch bản nặng trên mạng yếu | Lượt #4 | Mở — **phải sửa trước khi tin số S3** | – |

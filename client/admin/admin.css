@@ -120,3 +120,24 @@ td.num { text-align:right; font-variant-numeric:tabular-nums }
 #bantbl td { padding:7px 9px; border-bottom:1px solid #1d2026 }
 #bantbl button { padding:5px 10px; border-radius:6px; border:1px solid var(--line);
                  background:#262b35; color:var(--ink); font:inherit; font-size:12px; cursor:pointer }
+
+/* ── Bản đồ (§5) ───────────────────────────────────────────────────────────────────── */
+#mpwrap { border:1px solid var(--line); border-radius:10px; overflow:hidden;
+          background:#0c0f14; display:inline-block; max-width:100%; line-height:0 }
+#mpcv { max-width:100%; height:auto; touch-action:none; cursor:grab; display:block }
+#mpcv:active { cursor:grabbing }
+.layers { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; color:var(--dim) }
+.layers label { display:flex; align-items:center; gap:4px; cursor:pointer }
+#mprlab { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--dim) }
+#mprlab input { width:150px }
+#mprlab b { color:var(--ink); min-width:18px; text-align:center }
+#mpcheck { margin-top:10px }
+.checkline { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px }
+.checkline i { color:var(--dim); font-style:normal; font-size:11px;
+               text-transform:uppercase; letter-spacing:.3px }
+.checkline .bad { color:#ff9b9b; font-weight:700 }
+.layers.items { margin:-6px 0 12px; gap:4px 14px }
+.layers.items .flabel { color:var(--dim); font-size:11px; text-transform:uppercase;
+                        letter-spacing:.4px; align-self:center }
+.layers.items b.sw { width:9px; height:9px; border-radius:2px; display:inline-block }
+.layers.items small { color:var(--dim); font-size:11px }

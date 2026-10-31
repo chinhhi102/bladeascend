@@ -42,6 +42,8 @@ type server struct {
 	startedAt time.Time
 	// dbPath: đường dẫn file SQLite, để biết chỗ đặt thư mục ảnh góp ý (§8).
 	dbPath string
+	// mapsDir: thư mục bản đồ, để đọc `check.json` cho trang xem bố cục (§5.2).
+	mapsDir string
 }
 
 func (s *server) routes(assetsDir, clientDir string) http.Handler {

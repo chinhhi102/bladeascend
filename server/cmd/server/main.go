@@ -82,7 +82,7 @@ func main() {
 		cfg.Net.MaxConnsPerIP = *maxConns
 	}
 	mgr := room.NewManager(cfg, maps, st)
-	mgr.AllowDebug = *debug // người chơi vẫn phải tự mở bằng ?debug=true mới thấy bảng
+	mgr.AllowDebug = *debug // công tắc tổng; ai được dùng thì `admin.DebugGate` quyết (§1.1)
 	tel := startTelemetry(telemetryPath(*telemetryDB), buildIDOrNow(*buildID), *telemetryOn)
 	// Trang quản trị (ADMIN_SPEC §1). Dùng CHUNG file SQLite với bảng xếp hạng, như spec §8
 	// nói — tên bảng đều có tiền tố `admin_` nên không đụng dữ liệu đã có.
@@ -100,7 +100,7 @@ func main() {
 
 	srv := &server{cfg: cfg, rawCfg: raw, mgr: mgr, store: st, maps: maps, debug: *debug,
 		adminAuth: adminAuth, debugGate: admin.NewDebugGate(adminAuth),
-		buildID: buildIDOrNow(*buildID), startedAt: time.Now(), dbPath: dbFile,
+		buildID: buildIDOrNow(*buildID), startedAt: time.Now(), dbPath: dbFile, mapsDir: *mapsDir,
 		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words.txt")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP),
 		telemetry: tel}
 	stopSampler := make(chan struct{})

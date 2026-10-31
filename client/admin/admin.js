@@ -524,6 +524,7 @@ function show(id) {
   if (id === 'board') loadBoard().catch(() => {});
   if (id === 'players') loadPlayers().catch(() => {});
   if (id === 'bans') loadBans().catch(() => {});
+  if (id === 'map') mpTickLive().catch(() => {});
 }
 
 window.addEventListener('hashchange', () => show(location.hash.slice(1) || 'dashboard'));
@@ -549,12 +550,15 @@ async function tick() {
     flagPill.hidden = !s.flagged;
     flagPill.textContent = s.flagged ?? 0;
     if (!document.getElementById('players').hidden) loadPlayers().catch(() => {});
+    // Danh sách khu cho trang Bản đồ lấy từ chính gói này, không gọi thêm API.
+    mpZones(s);
   } catch (_) { /* 401 đã tự chuyển trang; lỗi mạng thì bỏ qua một nhịp */ }
 }
 
 (async () => {
   const me = await api('/api/admin/me');
   csrf = me.csrf;
+  mpInit();
   show(location.hash.slice(1) || 'dashboard');
   await tick();
   // §3: dashboard cập nhật mỗi 2 giây.

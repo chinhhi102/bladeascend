@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"kiemxoay/server/internal/config"
 	"kiemxoay/server/internal/game"
@@ -142,7 +144,23 @@ type landmark struct {
 }
 
 // runCheck kiểm mọi bản đồ trong `dir`. `pngDir` khác rỗng thì xuất ảnh cho từng cảnh giới.
-func runCheck(dir, pngDir string, cfg *config.Config, pngRealms []int) error {
+// checkReport là bản ghi JSON cho trang quản trị §5.2.
+//
+// mapgen là `package main` nên server không import được bộ kiểm. Thay vì gọi lại mapgen
+// như một tiến trình con (bản deploy không có sẵn toolchain Go), mapgen GHI kết quả ra
+// cạnh bản đồ và server chỉ việc đọc. Số liệu vì thế luôn là số của chính lần sinh ra bộ
+// bản đồ đang chạy — không có cách nào để hai bên lệch nhau.
+type checkReport struct {
+	At      int64                    `json:"at"`
+	Seed    int64                    `json:"seed"`
+	Maps    map[string][]checkResult `json:"maps"`
+	Targets map[string][2]float64    `json:"targets"`
+	Bad     int                      `json:"bad"`
+}
+
+func runCheck(dir, pngDir, jsonOut string, seed int64, cfg *config.Config, pngRealms []int) error {
+	rep := checkReport{At: time.Now().Unix(), Seed: seed,
+		Maps: map[string][]checkResult{}, Targets: map[string][2]float64{}}
 	maps, err := world.LoadDir(dir, world.LoadOptions{
 		Tier: cfg.Obstacles.ObstacleTier, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH,
 	})
@@ -161,8 +179,10 @@ func runCheck(dir, pngDir string, cfg *config.Config, pngRealms []int) error {
 	for _, m := range maps {
 		fmt.Printf("== %s (%s)\n", m.ID, m.Name)
 		marks := landmarksOf(m)
+		rep.Targets[m.ID] = densityRange(m.ID)
 		for r := 0; r < realms; r++ {
 			res, grid := checkRealm(m, prog, cfg, r, marks)
+			rep.Maps[m.ID] = append(rep.Maps[m.ID], res)
 			status := "ĐẠT"
 			if !res.ok() {
 				status, bad = "TRƯỢT", bad+1
@@ -209,6 +229,19 @@ func runCheck(dir, pngDir string, cfg *config.Config, pngRealms []int) error {
 				}
 			}
 		}
+	}
+	// Ghi báo cáo TRƯỚC khi trả lỗi: một lượt kiểm trượt là lúc người ta cần nhìn số nhất,
+	// nên bỏ báo cáo đi vì nó trượt là đúng chuyện ngược đời.
+	rep.Bad = bad
+	if jsonOut != "" {
+		b, err := json.MarshalIndent(rep, "", "  ")
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(jsonOut, b, 0o644); err != nil {
+			return err
+		}
+		fmt.Printf("đã ghi báo cáo: %s\n", jsonOut)
 	}
 	if bad > 0 {
 		return fmt.Errorf("%d cảnh giới trượt bộ kiểm §8.1b", bad)

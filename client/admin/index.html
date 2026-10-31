@@ -9,6 +9,7 @@
   <a href="#dashboard" class="on">Dashboard</a>
   <a href="#rooms">Phòng &amp; Khu</a>
   <a href="#feedback">Góp ý <span id="fbcount" class="pill" hidden>0</span></a>
+  <a href="#map">Bản đồ</a>
   <a href="#players">Người chơi <span id="flagcount" class="pill warn" hidden>0</span></a>
   <a href="#bans">Danh sách cấm</a>
   <a href="#board">Bảng xếp hạng</a>
@@ -36,6 +37,21 @@
       <a id="fbcsv" href="/api/admin/feedback.csv" download>Xuất CSV</a>
     </div>
     <div id="fblist"></div>
+  </section>
+  <section id="map" hidden>
+    <h2>Bản đồ <small id="mapinfo"></small></h2>
+    <div class="filters">
+      <select id="mpmode">
+        <option value="live">Xem trực tiếp (5 lần/giây)</option>
+        <option value="seed">Xem bố cục tĩnh + kết quả --check</option>
+      </select>
+      <select id="mpzone"></select>
+      <label id="mprlab" hidden>Cảnh giới r=<input id="mpr" type="range" min="0" max="13" value="0"><b id="mprv">0</b></label>
+      <span id="mplayers" class="layers"></span>
+    </div>
+    <div id="mpitems" class="layers items"></div>
+    <div id="mpcheck" class="hint"></div>
+    <div id="mpwrap"><canvas id="mpcv" width="860" height="860"></canvas></div>
   </section>
   <section id="players" hidden>
     <h2>Người chơi đang online</h2>
@@ -78,5 +94,6 @@
     </tr></thead><tbody></tbody></table>
   </section>
 </main>
-<script type="module" src="/admin/admin.js"></script>
+<script src="/admin/admin.js"></script>
+<script src="/admin/map.js"></script>
 </body></html>
