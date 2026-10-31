@@ -45,6 +45,11 @@ type gen struct {
 	cfg   config.Mapgen
 	size  float64
 	roads []seg // đoạn đường: không đặt vật cản lên
+	// obs: bảng bậc vật cản (§8.2). Đảo cần nó để biết lõi bậc mấy và hành lang tối thiểu
+	// bao nhiêu — viết số vào mã là bảng đổi mà bản đồ không đổi theo.
+	obs config.Obstacles
+	// target: mật độ chân đế mục tiêu của khu đang dựng.
+	target float64
 }
 
 // seg is a road segment with a width; roads are a chain of these.
@@ -416,7 +421,7 @@ func (g *gen) check() error {
 // clearAround checks nothing solid sits within r of a point.
 func (g *gen) clearAround(x, y, r float64, what string) error {
 	for _, s := range g.b.solid {
-		if s.x0 < x+r && x-r < s.x1 && s.y0 < y+r && y-r < s.y1 {
+		if s.r.x0 < x+r && x-r < s.r.x1 && s.r.y0 < y+r && y-r < s.r.y1 {
 			return fmt.Errorf("vật cản trong bán kính %.0f quanh %s tại (%.0f,%.0f)", r, what, x, y)
 		}
 	}
@@ -436,7 +441,7 @@ func (g *gen) floodFill(cell float64) (open, total, reachable int) {
 		x := lo + (float64(i%n)+0.5)*cell
 		y := lo + (float64(i/n)+0.5)*cell
 		for _, s := range g.b.solid {
-			if s.x0 <= x && x <= s.x1 && s.y0 <= y && y <= s.y1 {
+			if s.r.x0 <= x && x <= s.r.x1 && s.r.y0 <= y && y <= s.r.y1 {
 				blocked[i] = true
 				break
 			}

@@ -48,7 +48,7 @@ func TestCheckCatchesTrappedLandmark(t *testing.T) {
 	if low.MainFrac >= 0.99 {
 		t.Errorf("vùng chính %.0f%% — chỗ trống trong hộp phải tính là bị nhốt", low.MainFrac*100)
 	}
-	if low.ok(cfg.Mapgen.MinOpenRatio) {
+	if low.ok() {
 		t.Error("bộ kiểm báo ĐẠT cho một bản đồ có Đài không tới được")
 	}
 
@@ -57,7 +57,7 @@ func TestCheckCatchesTrappedLandmark(t *testing.T) {
 	if len(high.CutOff) != 0 {
 		t.Errorf("Luyện Hư chém được tường bậc 5 mà vẫn báo không tới được: %v", high.CutOff)
 	}
-	if !high.ok(cfg.Mapgen.MinOpenRatio) {
+	if !high.ok() {
 		t.Error("bộ kiểm báo TRƯỢT cho cảnh giới chém thủng được cái hộp")
 	}
 }
@@ -94,8 +94,8 @@ func TestCheckFailsOnTooLittleOpenSpace(t *testing.T) {
 		{ID: 0, Kind: "jade_pillar", Tier: 11, Shape: world.Shape{X: lo, Y: lo, W: span, H: span * 0.8}},
 	}
 	res, _ := checkRealm(m, prog, cfg, 0, nil)
-	if res.ok(cfg.Mapgen.MinOpenRatio) {
-		t.Errorf("trống chỉ %.0f%% mà vẫn ĐẠT (ngưỡng %.0f%%)", res.OpenFrac*100, cfg.Mapgen.MinOpenRatio*100)
+	if res.ok() {
+		t.Errorf("trống chỉ %.0f%% mà vẫn ĐẠT (ngưỡng %.0f%%)", res.OpenFrac*100, minOpenRatio*100)
 	}
 }
 
