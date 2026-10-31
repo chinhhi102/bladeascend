@@ -9,6 +9,7 @@ import (
 
 	"github.com/coder/websocket"
 
+	"kiemxoay/server/internal/admin"
 	"kiemxoay/server/internal/netproto"
 	"kiemxoay/server/internal/room"
 	"kiemxoay/server/internal/telemetry"
@@ -70,8 +71,19 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	conn := &wsConn{out: make(chan []byte, sendQueue)}
 	go writeLoop(ctx, ws, conn.out, cancel)
-	// Debug bật theo từng người: server chỉ cho phép, client phải tự xin bằng ?debug=true.
-	client := room.NewClient(conn, false)
+	// Quyền debug chốt NGAY LÚC BẮT TAY, từ phiên admin trong cookie (ADMIN_SPEC §1.1).
+	//
+	// `?debug=true` trên URL không còn ý nghĩa gì ở đây — client chỉ được bật phím test khi
+	// server nói có, và server nói có khi có phiên admin (hoặc APP_ENV=dev trên localhost).
+	src := s.debugGate.Allow(r)
+	client := room.NewClient(conn, src != admin.DebugNone)
+	client.DebugSource = string(src)
+	// Kiểm lại mỗi 60 giây: phiên admin có thể hết hạn GIỮA TRẬN. Giữ `r` để đọc lại cookie
+	// — request gốc sống đúng bằng kết nối WebSocket nên dùng nó là an toàn.
+	client.RecheckDebug = func() (bool, string) {
+		s := s.debugGate.Allow(r)
+		return s != admin.DebugNone, string(s)
+	}
 	// Băm IP ngay tại đây, không giữ IP thô ở bất cứ đâu khác (TELEMETRY_SPEC §1.3): nó chỉ
 	// dùng để biết "hai phiên này cùng một mạng", không để truy ra ai.
 	s.readLoop(ctx, ws, client, telemetry.Hash(ip))
@@ -150,16 +162,23 @@ func (s *server) dispatch(c *room.Client, t string, data []byte, ipHash string) 
 		var d netproto.Debug
 		// Bỏ lệnh test trong im lặng từng làm hai lượt đo 10 tab ra bảng số sai mà không ai
 		// biết vì sao. Giờ nói rõ bỏ vì lý do gì.
+		// Từ chối MỌI lệnh debug từ kết nối không có quyền — kể cả khi client bị sửa để
+		// gửi thẳng gói (§1.1). Lệnh bị từ chối tính vào cờ nghi hack §6.1.
 		switch rm := c.Room(); {
 		case !s.debug:
 			log.Printf("dbg bỏ qua: server không chạy với -debug")
-		case !c.Debug:
-			log.Printf("dbg bỏ qua: client %d không ở chế độ debug", c.PlayerID)
+		case !c.DebugAllowed(time.Now()):
+			c.RefusedCmds++
+			s.auditRefusedDebug(c, data)
 		case netproto.Decode(data, &d) != nil:
 			log.Printf("dbg bỏ qua: gói hỏng (%d byte)", len(data))
 		case rm == nil:
 			log.Printf("dbg bỏ qua: client %d chưa ở trong phòng nào", c.PlayerID)
 		default:
+			// Mỗi lệnh debug ĐƯỢC DÙNG đều vào nhật ký (§1.1), và đánh dấu mạng này đã
+			// "nhiễm debug" để không ghi vào bảng xếp hạng toàn cục.
+			c.DebugUsed = true
+			s.auditDebugCmd(c, d)
 			rm.Debug(c, d)
 		}
 	default:

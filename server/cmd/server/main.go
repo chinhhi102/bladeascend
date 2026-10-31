@@ -93,7 +93,8 @@ func main() {
 	log.Print(adminEnabledNote(adminAuth))
 
 	srv := &server{cfg: cfg, rawCfg: raw, mgr: mgr, store: st, maps: maps, debug: *debug,
-		adminAuth: adminAuth, buildID: buildIDOrNow(*buildID), startedAt: time.Now(),
+		adminAuth: adminAuth, debugGate: admin.NewDebugGate(adminAuth),
+		buildID: buildIDOrNow(*buildID), startedAt: time.Now(),
 		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words.txt")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP),
 		telemetry: tel}
 	stopSampler := make(chan struct{})

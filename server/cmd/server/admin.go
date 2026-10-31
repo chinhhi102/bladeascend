@@ -2,12 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"kiemxoay/server/internal/admin"
+	"kiemxoay/server/internal/netproto"
+	"kiemxoay/server/internal/room"
 )
 
 // Trang quản trị — ADMIN_SPEC §1, §9.
@@ -231,4 +234,36 @@ func sanitizeReason(s string) string {
 		s = s[:500]
 	}
 	return strings.TrimSpace(s)
+}
+
+// auditDebugCmd ghi một lệnh debug ĐƯỢC DÙNG vào nhật ký (ADMIN_SPEC §1.1).
+//
+// Ghi đủ ngữ cảnh để sau này đọc lại biết chuyện gì đã xảy ra: lệnh gì, ai, phòng/khu nào,
+// và quyền debug đến từ đâu. Thiếu nguồn quyền thì không phân biệt được "chủ dự án test"
+// với "ai đó mượn được phiên admin".
+func (s *server) auditDebugCmd(c *room.Client, d netproto.Debug) {
+	zone := ""
+	if rm := c.Room(); rm != nil {
+		zone = rm.ID
+	}
+	s.adminAuth.Store().Audit("debug_cmd", c.GuestID, d.Cmd, "", map[string]any{
+		"cmd": d.Cmd, "n": d.N, "player": c.PlayerID, "room": zone, "source": c.DebugSource,
+	})
+}
+
+// auditRefusedDebug ghi một lệnh debug BỊ TỪ CHỐI.
+//
+// Đây là tín hiệu nghi hack chứ không phải lỗi vận hành: client bình thường không bao giờ
+// gửi gói debug khi server chưa cấp quyền — nó chỉ gửi sau khi nhận `debug: true` trong
+// Welcome. Gói debug không có quyền nghĩa là ai đó đang gửi thủ công.
+func (s *server) auditRefusedDebug(c *room.Client, data []byte) {
+	var d netproto.Debug
+	cmd := "(gói hỏng)"
+	if netproto.Decode(data, &d) == nil {
+		cmd = d.Cmd
+	}
+	log.Printf("dbg TỪ CHỐI: client %d không có quyền debug (lệnh %q, lần thứ %d)",
+		c.PlayerID, cmd, c.RefusedCmds)
+	s.adminAuth.Store().Audit("debug_refused", c.GuestID, cmd, "không có quyền debug",
+		map[string]any{"cmd": cmd, "player": c.PlayerID, "refused_total": c.RefusedCmds})
 }

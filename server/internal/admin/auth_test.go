@@ -202,3 +202,76 @@ func TestAuditRecordsLogins(t *testing.T) {
 		}
 	}
 }
+
+// ── §1.1 Cờ debug gắn với đăng nhập admin ────────────────────────────────────────────────
+
+// devReq dựng request từ localhost (để thử cửa APP_ENV=dev).
+func devReq(path string) *http.Request {
+	r := httptest.NewRequest(http.MethodGet, path, nil)
+	r.RemoteAddr = "127.0.0.1:5555"
+	return r
+}
+
+// §1.1: `?debug=true` MỘT MÌNH không bao giờ đủ.
+//
+// Đây là luật quan trọng nhất của cả mục: trước v1.1, ai gõ `?debug=true` cũng tự lên Đạo
+// Tổ được bằng phím test, và điểm đó vẫn vào bảng xếp hạng toàn cục.
+func TestDebugDeniedWithoutAdminSession(t *testing.T) {
+	g := NewDebugGate(testAuth(t, "mat-khau-rat-dai-123"))
+	g.dev, g.token = false, "" // giả lập production
+	if got := g.Allow(devReq("/ws?debug=true")); got != DebugNone {
+		t.Fatalf("chưa đăng nhập mà vẫn được debug (nguồn %q)", got)
+	}
+}
+
+// Có phiên admin → được debug.
+func TestDebugAllowedWithAdminSession(t *testing.T) {
+	a := testAuth(t, "mat-khau-rat-dai-123")
+	g := NewDebugGate(a)
+	g.dev, g.token = false, ""
+	sess, err := a.store.CreateSession(time.Hour, "127.0.0.1", "ua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := devReq("/ws")
+	r.AddCookie(&http.Cookie{Name: CookieName, Value: sess.Token})
+	if got := g.Allow(r); got != DebugAdmin {
+		t.Fatalf("có phiên admin mà không được debug (nguồn %q)", got)
+	}
+	// Phiên hết hạn GIỮA TRẬN → mất quyền ngay ở lần kiểm sau (§1.1).
+	a.store.DeleteSession(sess.Token)
+	if got := g.Allow(r); got != DebugNone {
+		t.Errorf("phiên đã xoá mà vẫn còn quyền debug (nguồn %q)", got)
+	}
+}
+
+// §1.1: "production không bao giờ nhận DEBUG_TOKEN".
+func TestDebugTokenOnlyInDev(t *testing.T) {
+	g := NewDebugGate(testAuth(t, "mat-khau-rat-dai-123"))
+	g.token = "bi-mat-cua-cong-cu-do"
+
+	g.dev = false // production
+	if got := g.Allow(devReq("/ws?debug_token=bi-mat-cua-cong-cu-do")); got != DebugNone {
+		t.Fatalf("production mà DEBUG_TOKEN vẫn mở được debug (nguồn %q)", got)
+	}
+	g.dev = true // phát triển
+	if got := g.Allow(devReq("/ws?debug_token=bi-mat-cua-cong-cu-do")); got != DebugToken {
+		t.Errorf("ở dev mà token đúng vẫn bị từ chối (nguồn %q)", got)
+	}
+	if got := g.Allow(devReq("/ws?debug_token=sai")); got != DebugDev {
+		// Token sai thì rơi về cửa dev-localhost, vẫn được — nhưng KHÔNG phải vì token.
+		t.Errorf("token sai ra nguồn %q, muốn %q", got, DebugDev)
+	}
+}
+
+// §1.1: cửa dev chỉ mở trên localhost. Đặt APP_ENV=dev trên máy chủ thật mà vẫn mở cho cả
+// Internet thì nó còn tệ hơn cái nó thay thế.
+func TestDebugDevGateNeedsLocalhost(t *testing.T) {
+	g := NewDebugGate(testAuth(t, "mat-khau-rat-dai-123"))
+	g.dev, g.token = true, "bi-mat"
+	r := httptest.NewRequest(http.MethodGet, "/ws?debug_token=bi-mat", nil)
+	r.RemoteAddr = "203.0.113.9:4444" // không phải localhost
+	if got := g.Allow(r); got != DebugNone {
+		t.Fatalf("APP_ENV=dev nhưng gọi từ xa vẫn được debug (nguồn %q)", got)
+	}
+}

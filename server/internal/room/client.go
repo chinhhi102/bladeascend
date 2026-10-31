@@ -27,9 +27,28 @@ type LossyConn interface {
 
 // Client is a connected human. The room goroutine owns everything except the input fields.
 type Client struct {
-	Conn     Conn
-	GuestID  string
-	Debug    bool
+	Conn    Conn
+	GuestID string
+	// Debug: kết nối này được dùng lệnh test không (ADMIN_SPEC §1.1).
+	//
+	// KHÔNG lấy từ `?debug=true` trên URL. Server tự quyết định lúc bắt tay (phiên admin,
+	// hoặc APP_ENV=dev trên localhost, hoặc DEBUG_TOKEN ở dev) rồi mới báo cho client. URL
+	// một mình không bao giờ đủ — nếu không thì ai cũng tự lên Đạo Tổ bằng cách sửa địa chỉ.
+	Debug bool
+	// DebugSource ghi quyền debug đến TỪ ĐÂU, để vào nhật ký `admin_audit`.
+	DebugSource string
+	// RecheckDebug kiểm lại quyền (phiên admin có thể hết hạn GIỮA TRẬN). nil = không kiểm.
+	RecheckDebug func() (bool, string)
+	debugNextAt  time.Time
+	// DebugUsed: kết nối này đã dùng ÍT NHẤT MỘT lệnh debug.
+	//
+	// Một khi bật thì không bao giờ tắt trong phiên đó: §1.1 nói mạng chơi có dùng lệnh
+	// debug thì không được ghi vào bảng xếp hạng toàn cục, và "đã dùng rồi" là chuyện đã
+	// rồi — tắt debug đi không làm sạch lại số điểm đã nặn ra.
+	DebugUsed bool
+	// RefusedCmds đếm lệnh bị từ chối, cho cờ nghi hack "Hành động bị từ chối" (§6.1).
+	RefusedCmds int
+
 	PlayerID uint32
 	room     *Room
 
@@ -73,6 +92,23 @@ type Client struct {
 	skill bool
 	dirty bool
 }
+
+// DebugAllowed trả về quyền debug HIỆN TẠI, kiểm lại định kỳ.
+//
+// Kiểm lại là bắt buộc chứ không phải cẩn thận thừa: §1.1 nói "phiên admin hết hạn giữa
+// trận → tắt quyền debug ngay ở lần kiểm tiếp theo". Không kiểm lại thì một phiên 12 giờ
+// đã hết hạn vẫn giữ quyền cho tới khi người đó đóng tab — có thể là nhiều ngày.
+func (c *Client) DebugAllowed(now time.Time) bool {
+	if c.RecheckDebug != nil && now.After(c.debugNextAt) {
+		c.debugNextAt = now.Add(debugRecheckEvery)
+		c.Debug, c.DebugSource = c.RecheckDebug()
+	}
+	return c.Debug
+}
+
+// debugRecheckEvery khớp `admin.RecheckEvery` (§1.1: 60 giây). Để hằng số riêng ở đây để
+// `internal/room` không phải phụ thuộc vào package `admin`.
+const debugRecheckEvery = 60 * time.Second
 
 func NewClient(c Conn, debug bool) *Client {
 	return &Client{Conn: c, Debug: debug}

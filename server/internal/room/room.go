@@ -406,7 +406,12 @@ func (r *Room) applyInputs(z *Zone) {
 // addHuman spawns the client's player at Luyện Khí 1 with 1 sword (spec §7).
 func (r *Room) addHuman(c *Client, j netproto.Join) {
 	// Bảng phím test chỉ hiện cho người tự mở bằng ?debug=true (và server phải cho phép).
-	c.Debug = c.Debug || (r.mgr != nil && r.mgr.AllowDebug && j.Debug)
+	// Quyền debug do SERVER quyết (ADMIN_SPEC §1.1), đã chốt lúc bắt tay WebSocket. `j.Debug`
+	// chỉ là lời XIN của client — nó không được cộng thêm quyền gì.
+	//
+	// Trước v1.1 dòng này là `c.Debug || (AllowDebug && j.Debug)`, tức ai gõ `?debug=true`
+	// cũng tự lên Đạo Tổ được, và điểm đó vẫn vào bảng xếp hạng toàn cục.
+	c.Debug = c.Debug && (r.mgr == nil || r.mgr.AllowDebug)
 	// Vào trận ở khu ÍT NGƯỜI THẬT NHẤT (spec §8.0) — cả điểm của việc có 5 khu là để
 	// người mới không vừa vào đã bị dí.
 	z := r.thinnestZone()
@@ -483,6 +488,17 @@ func (r *Room) handleDeaths(z *Zone) {
 
 func (r *Room) record(z *Zone, p *game.Player) {
 	if p.IsBot || r.recorder == nil {
+		return
+	}
+	// Mạng chơi có dùng lệnh debug thì KHÔNG ghi vào bảng xếp hạng toàn cục (ADMIN_SPEC
+	// §1.1). Không phải vì người dùng nó gian — chủ dự án test cũng dùng — mà vì một mạng
+	// nặn ra bằng "+100 EXP, lên cảnh giới, +kiếm" không so được với mạng chơi thật, và nó
+	// đứng đầu bảng vĩnh viễn thì bảng mất hết ý nghĩa.
+	//
+	// Xét theo KẾT NỐI, không theo nhân vật: người chơi có thể chết rồi hồi sinh nhiều lần
+	// trong một kết nối, và lệnh debug ở mạng trước vẫn ảnh hưởng số liệu mạng sau (kiếm,
+	// cảnh giới mang theo).
+	if c := z.clients[p.ID]; c != nil && c.DebugUsed {
 		return
 	}
 	end := p.DiedAt

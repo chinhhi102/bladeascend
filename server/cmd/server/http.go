@@ -36,6 +36,8 @@ type server struct {
 	// adminAuth không bao giờ nil, nhưng `Enabled()` là false khi chưa đặt
 	// ADMIN_PASSWORD_HASH — lúc đó mọi đường dẫn /admin đều đóng (ADMIN_SPEC §1).
 	adminAuth *admin.Auth
+	// debugGate quyết định kết nối nào được dùng lệnh test (ADMIN_SPEC §1.1).
+	debugGate *admin.DebugGate
 	buildID   string
 	startedAt time.Time
 }

@@ -266,7 +266,12 @@ class App {
           window.setTimeout(send, 300);
           return;
         }
-        // Mở game bằng ?debug=true để bật bảng phím test cho riêng mình.
+        // `?debug=true` chỉ là lời XIN. Server mới quyết (ADMIN_SPEC §1.1): nó xét phiên
+        // đăng nhập admin trong cookie rồi trả `debug` trong gói Welcome, và client chỉ bật
+        // phím test khi server nói có (xem `setWorld` → `this.debug = w.debug`).
+        //
+        // Không có phiên admin thì game chạy BÌNH THƯỜNG, không báo lỗi gì — người lạ gõ
+        // `?debug=true` không được biết là có chế độ debug tồn tại.
         const wantDebug = new URLSearchParams(location.search).get('debug') === 'true';
         this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId(), debug: wantDebug });
       };
