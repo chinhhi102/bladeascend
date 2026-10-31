@@ -40,6 +40,8 @@ type server struct {
 	debugGate *admin.DebugGate
 	buildID   string
 	startedAt time.Time
+	// dbPath: đường dẫn file SQLite, để biết chỗ đặt thư mục ảnh góp ý (§8).
+	dbPath string
 }
 
 func (s *server) routes(assetsDir, clientDir string) http.Handler {

@@ -60,8 +60,10 @@ type Store struct {
 
 // New mở store trên một `*sql.DB` đã có và dựng bảng nếu chưa có.
 func New(db *sql.DB) (*Store, error) {
-	if _, err := db.Exec(Schema); err != nil {
-		return nil, fmt.Errorf("dựng bảng admin: %w", err)
+	for _, q := range []string{Schema, FeedbackSchema} {
+		if _, err := db.Exec(q); err != nil {
+			return nil, fmt.Errorf("dựng bảng admin: %w", err)
+		}
 	}
 	return &Store{db: db}, nil
 }

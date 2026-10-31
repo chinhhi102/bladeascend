@@ -81,6 +81,7 @@ func main() {
 	tel := startTelemetry(telemetryPath(*telemetryDB), buildIDOrNow(*buildID), *telemetryOn)
 	// Trang quản trị (ADMIN_SPEC §1). Dùng CHUNG file SQLite với bảng xếp hạng, như spec §8
 	// nói — tên bảng đều có tiền tố `admin_` nên không đụng dữ liệu đã có.
+	dbFile := storePath(*dbPath)
 	adminStore, err := admin.New(st.DB())
 	if err != nil {
 		log.Fatal(err)
@@ -94,7 +95,7 @@ func main() {
 
 	srv := &server{cfg: cfg, rawCfg: raw, mgr: mgr, store: st, maps: maps, debug: *debug,
 		adminAuth: adminAuth, debugGate: admin.NewDebugGate(adminAuth),
-		buildID: buildIDOrNow(*buildID), startedAt: time.Now(),
+		buildID: buildIDOrNow(*buildID), startedAt: time.Now(), dbPath: dbFile,
 		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words.txt")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP),
 		telemetry: tel}
 	stopSampler := make(chan struct{})
@@ -162,15 +163,24 @@ func buildIDOrNow(id string) string {
 	return time.Now().Format("2006-01-02_1504")
 }
 
-func openStore(path string, cfg *config.Config) *store.Store {
-	if path == "" {
-		repo := filepath.Dir(filepath.Dir(config.FindRepoFile("config/game.json")))
-		dir := filepath.Join(repo, "server", "data")
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			log.Fatal(err)
-		}
-		path = filepath.Join(dir, "leaderboard.db")
+// storePath suy ra đường dẫn file SQLite thật từ cờ `-db` (rỗng = mặc định).
+//
+// Tách khỏi `openStore` vì hai nơi cần nó: mở DB, và biết chỗ đặt thư mục ảnh góp ý
+// (`data/feedback/`, §8 — ngoài thư mục phục vụ công khai).
+func storePath(path string) string {
+	if path != "" {
+		return path
 	}
+	repo := filepath.Dir(filepath.Dir(config.FindRepoFile("config/game.json")))
+	dir := filepath.Join(repo, "server", "data")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		log.Fatal(err)
+	}
+	return filepath.Join(dir, "leaderboard.db")
+}
+
+func openStore(path string, cfg *config.Config) *store.Store {
+	path = storePath(path)
 	st, err := store.Open(path, time.Duration(cfg.Net.LeaderboardCacheSc*float64(time.Second)))
 	if err != nil {
 		log.Fatal(err)

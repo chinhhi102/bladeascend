@@ -1,4 +1,5 @@
 import type { GameConfig } from '../config';
+import { mountButton } from './feedback';
 import { assets } from '../render/assets';
 import { charColor } from '../render/palette';
 import { button, h, portrait } from './dom';
@@ -70,6 +71,9 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     }
   };
   applyBg();
+  // Nút 💬 ở trang chủ (ADMIN_SPEC §7.1). Đặt ở đây chứ không ở `main.ts` để nó sống và
+  // chết cùng màn hình chủ — gắn vào body thì nó còn lại trên màn hình trong trận.
+  mountButton(root, 'home');
   const panel = h('div', 'panel');
   const input = h('input', 'name-input');
   input.placeholder = STR.namePlaceholder;

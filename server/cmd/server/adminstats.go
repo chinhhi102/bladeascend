@@ -62,6 +62,8 @@ type adminStats struct {
 	Realms map[int]int `json:"realms"`
 	TienN  int         `json:"tien_count"`
 	Rooms  []roomStat  `json:"rooms"`
+	// FeedbackNew: số góp ý chưa đọc, hiện ở thanh bên và dashboard (§3, §7.2).
+	FeedbackNew int `json:"feedback_new"`
 }
 
 func (s *server) handleAdminStats(w http.ResponseWriter, _ *http.Request) {
@@ -75,6 +77,7 @@ func (s *server) collectStats() adminStats {
 	st.Build = s.buildID
 	st.Uptime = int64(time.Since(s.startedAt).Seconds())
 	st.Realms = map[int]int{}
+	st.FeedbackNew = s.adminAuth.Store().UnreadFeedback()
 
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)

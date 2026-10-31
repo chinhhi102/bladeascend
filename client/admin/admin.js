@@ -134,12 +134,118 @@ async function loadAudit() {
   }));
 }
 
+// ── Hòm thư góp ý (§7.2) ─────────────────────────────────────────────────────────────────
+
+const FB_KINDS = { bug: 'Báo lỗi', balance: 'Cân bằng', idea: 'Ý tưởng', other: 'Khác' };
+const FB_STATUS = { moi: 'Mới', da_xem: 'Đã xem', dang_lam: 'Đang làm', xong: 'Xong', bo_qua: 'Bỏ qua' };
+
+/** fillSelect đổ options vào một <select>, giữ lại mục "mọi ..." đầu tiên. */
+function fillSelect(el, map) {
+  if (el.options.length > 1) return;
+  for (const [v, label] of Object.entries(map)) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = label;
+    el.appendChild(o);
+  }
+}
+
+/**
+ * fbCard dựng một lá thư.
+ *
+ * MỌI chỗ đổ dữ liệu đều `textContent` (qua `el()`): nội dung và tên là thứ NGƯỜI CHƠI tự
+ * nhập. §1 nói rõ, và §11 có một mục kiểm riêng cho nó — gửi `<script>alert(1)</script>`
+ * thì phải thấy nguyên văn mấy chữ đó.
+ */
+function fbCard(f) {
+  const box = el('div', 'fb');
+  const head = el('div', 'head');
+  head.append(
+    el('span', 'tag', FB_KINDS[f.kind] ?? f.kind),
+    el('span', 'tag', FB_STATUS[f.status] ?? f.status),
+    el('span', '', new Date(f.at * 1000).toLocaleString('vi-VN')),
+    el('span', '', f.name || '(không tên)'),
+    el('span', '', f.guest_id.slice(0, 8)),
+  );
+  box.append(head, el('p', 'body', f.body));
+
+  if (f.context && f.context !== '{}') {
+    const c = el('div', 'ctx');
+    try {
+      const o = JSON.parse(f.context);
+      // Lỗi console in riêng từng dòng cho dễ đọc; phần còn lại gộp một dòng.
+      const errs = Array.isArray(o.console) ? o.console : null;
+      delete o.console;
+      c.textContent = Object.entries(o).map(([k, v]) => `${k}=${v}`).join(' · ');
+      if (errs && errs.length) {
+        c.append(el('div', '', `— ${errs.length} dòng lỗi —`));
+        for (const line of errs) c.append(el('div', '', line));
+      }
+    } catch (_) { c.textContent = f.context; }
+    box.append(c);
+  }
+  if (f.has_image) {
+    const img = document.createElement('img');
+    img.src = `/api/admin/feedback/${f.id}/image`;
+    img.alt = 'ảnh chụp màn hình';
+    img.loading = 'lazy';
+    box.append(img);
+  }
+
+  const tools = el('div', 'tools');
+  const st = document.createElement('select');
+  for (const [v, label] of Object.entries(FB_STATUS)) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = label; o.selected = v === f.status;
+    st.appendChild(o);
+  }
+  const note = document.createElement('input');
+  note.placeholder = 'Ghi chú riêng của admin...';
+  note.value = f.note || '';
+  const save = el('button', '', 'Lưu');
+  save.addEventListener('click', async () => {
+    save.disabled = true;
+    await api(`/api/admin/feedback/${f.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: st.value, note: note.value }),
+    }).catch(() => {});
+    save.disabled = false;
+    loadFeedback();
+  });
+  tools.append(st, note, save);
+  box.append(tools);
+  return box;
+}
+
+async function loadFeedback() {
+  const kind = document.getElementById('fbkind');
+  const status = document.getElementById('fbstatus');
+  fillSelect(kind, FB_KINDS);
+  fillSelect(status, FB_STATUS);
+  const q = new URLSearchParams();
+  if (kind.value) q.set('kind', kind.value);
+  if (status.value) q.set('status', status.value);
+  const text = document.getElementById('fbq').value.trim();
+  if (text) q.set('q', text);
+  const rows = await api('/api/admin/feedback?' + q);
+  const list = document.getElementById('fblist');
+  list.replaceChildren(...(rows.length ? rows.map(fbCard) : [el('p', '', 'Chưa có góp ý nào.')]));
+}
+
+for (const id of ['fbkind', 'fbstatus']) {
+  document.getElementById(id).addEventListener('change', () => loadFeedback().catch(() => {}));
+}
+document.getElementById('fbq').addEventListener('input', () => {
+  clearTimeout(window.__fbT);
+  window.__fbT = setTimeout(() => loadFeedback().catch(() => {}), 300);
+});
+
 // ── Khung trang ──────────────────────────────────────────────────────────────────────────
 
 function show(id) {
   for (const sec of document.querySelectorAll('main > section')) sec.hidden = sec.id !== id;
   for (const a of document.querySelectorAll('#side a')) a.classList.toggle('on', a.hash === '#' + id);
   if (id === 'audit') loadAudit().catch(() => {});
+  if (id === 'feedback') loadFeedback().catch(() => {});
 }
 
 window.addEventListener('hashchange', () => show(location.hash.slice(1) || 'dashboard'));
@@ -154,6 +260,10 @@ async function tick() {
     const s = await api('/api/admin/stats');
     renderDashboard(s);
     renderRooms(s);
+    // Số góp ý "Mới" ở thanh bên (§7.2).
+    const pill = document.getElementById('fbcount');
+    pill.hidden = !s.feedback_new;
+    pill.textContent = s.feedback_new ?? 0;
   } catch (_) { /* 401 đã tự chuyển trang; lỗi mạng thì bỏ qua một nhịp */ }
 }
 

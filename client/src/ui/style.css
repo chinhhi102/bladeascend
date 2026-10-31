@@ -444,3 +444,38 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2b2b; col
 .skill-dots { position: absolute; left: 0; right: 0; bottom: 5px; display: flex; gap: 4px; justify-content: center; pointer-events: none; }
 .skill-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(0, 0, 0, .35); border: 1px solid rgba(255, 255, 255, .5); }
 .skill-dot.on { background: var(--gold); border-color: #fff; box-shadow: 0 0 5px var(--gold); }
+
+/* ── Hòm thư góp ý (ADMIN_SPEC §7.1) ────────────────────────────────────────────────── */
+/* Nút 💬 phải với tới được bằng ngón cái trên điện thoại mà KHÔNG che HUD: góc dưới-trái,
+   nơi HUD không đặt gì (thanh tiến độ ở dưới-giữa, nút kỹ năng ở dưới-phải). */
+.fb-btn {
+  position: fixed; z-index: 60; left: 12px; bottom: 12px;
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.22); background: rgba(20,22,28,.72);
+  color: #fff; font-size: 20px; line-height: 1; cursor: pointer;
+  display: grid; place-items: center; padding: 0;
+}
+.fb-btn:hover { background: rgba(40,44,54,.9) }
+.fb-home { position: absolute; left: 14px; bottom: 14px }
+.fb-wrap {
+  position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
+  background: rgba(8,9,12,.62); padding: 16px;
+}
+.fb-box {
+  width: min(94vw, 420px); max-height: 88vh; overflow: auto;
+  background: #1b1e25; color: var(--ink, #e8eaed); border-radius: 12px;
+  padding: 18px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 10px 40px #0009;
+}
+.fb-box h3 { margin: 0; font-size: 17px }
+.fb-kind, .fb-body {
+  width: 100%; box-sizing: border-box; padding: 9px 10px; border-radius: 8px;
+  border: 1px solid #3a3f49; background: #14161b; color: var(--ink, #e8eaed);
+  font: inherit; font-size: 15px;
+}
+.fb-body { resize: vertical; min-height: 92px }
+.fb-row { display: flex; align-items: center; gap: 8px; font-size: 14px }
+.fb-note { margin: 0; font-size: 12px; color: #9aa0a6; line-height: 1.45 }
+.fb-msg { min-height: 1.4em; font-size: 13px; color: #ffcf8f }
+.fb-actions { display: flex; gap: 8px; justify-content: flex-end }
+.fb-send { background: #4c7dff; color: #fff }

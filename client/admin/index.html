@@ -8,6 +8,7 @@
   <h1>Kiếm Xoay</h1>
   <a href="#dashboard" class="on">Dashboard</a>
   <a href="#rooms">Phòng &amp; Khu</a>
+  <a href="#feedback">Góp ý <span id="fbcount" class="pill" hidden>0</span></a>
   <a href="#audit">Nhật ký</a>
   <button id="logout">Đăng xuất</button>
   <div id="build"></div>
@@ -22,6 +23,16 @@
   <section id="rooms" hidden>
     <h2>Phòng &amp; Khu</h2>
     <div id="roomlist"></div>
+  </section>
+  <section id="feedback" hidden>
+    <h2>Hòm thư góp ý</h2>
+    <div class="filters">
+      <select id="fbkind"><option value="">Mọi loại</option></select>
+      <select id="fbstatus"><option value="">Mọi trạng thái</option></select>
+      <input id="fbq" type="search" placeholder="Tìm trong nội dung...">
+      <a id="fbcsv" href="/api/admin/feedback.csv" download>Xuất CSV</a>
+    </div>
+    <div id="fblist"></div>
   </section>
   <section id="audit" hidden>
     <h2>Nhật ký thao tác</h2>

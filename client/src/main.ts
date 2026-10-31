@@ -30,6 +30,7 @@ import { LoadingScreen, startBgLoadIndicator } from './ui/loading';
 import { guestId, homeScreen, type Profile, savedProfile } from './ui/home';
 import { Hud } from './ui/hud';
 import { leaderboardScreen } from './ui/leaderboard';
+import * as feedback from './ui/feedback';
 import { STR } from './ui/strings';
 import { summaryScreen } from './ui/summary';
 
@@ -70,6 +71,8 @@ class App {
   private readonly conn: Conn;
   private readonly thresholds: number[];
   private profile: Profile | null = null;
+  /** lastFps: FPS gần nhất, để đính kèm vào góp ý (ADMIN_SPEC §7.1). */
+  private lastFps = 0;
   private playing = false;
   // Snapshots that arrive while the map is still loading: the first ones carry names and
   // characters (sent only once per player), so they must not be dropped.
@@ -102,11 +105,16 @@ class App {
     this.bindSkillButton();
     this.conn = new Conn((m) => this.onMessage(m));
     this.thresholds = levelThresholds(cfg);
+    this.setupFeedback();
   }
 
   async start(stage: HTMLElement): Promise<void> {
     await this.scene.init(stage, fpsCap());
-    this.scene.app.ticker.add((t) => this.frame(t.deltaMS / 1000));
+    this.scene.app.ticker.add((t) => {
+      // FPS trượt mượt để đính kèm vào góp ý — số tức thời nhảy quá, đọc không ra gì.
+      this.lastFps = this.lastFps * 0.9 + (1000 / Math.max(t.deltaMS, 1)) * 0.1;
+      this.frame(t.deltaMS / 1000);
+    });
     window.setInterval(() => this.sendInput(), 1000 / this.cfg.net.tick_hz);
     window.addEventListener('keydown', (e) => {
       if (this.playing && SKILL_KEYS.includes(e.code) && !e.repeat) {
@@ -451,6 +459,57 @@ class App {
   }
 
   /** bindBurnButton makes the on-screen 🔥 a hold button (spec §4.1c). */
+  /**
+   * setupFeedback gắn nút 💬 và nối nó với ngữ cảnh của trận (ADMIN_SPEC §7.1).
+   *
+   * Ngữ cảnh lấy LÚC BẤM GỬI chứ không lúc mở form: người chơi có thể mở form rồi mô tả
+   * một lúc, và cái cần biết là tình trạng lúc họ gặp vấn đề — tức lúc gần nhất có thể.
+   */
+  private setupFeedback(): void {
+    feedback.installErrorCapture();
+    feedback.configure(
+      () => ({
+        guest_id: guestId(),
+        name: this.profile?.name ?? '',
+        build: BUILD_ID,
+        zone: this.world.map?.id ?? '',
+        level: this.world.me()?.L ?? -1,
+        swords: this.world.me()?.n ?? -1,
+        ping: Math.round(this.conn.rttMs),
+        fps: Math.round(this.lastFps),
+        playing: this.playing,
+      }),
+      () => this.screenshot(),
+    );
+    feedback.mountButton(this.hud.root, 'match');
+  }
+
+  /**
+   * screenshot chụp canvas thành WebP ≤ 300 KB (§7.1).
+   *
+   * Hạ dần chất lượng cho tới khi lọt ngân sách thay vì chụp một lần rồi chịu: ảnh 4K ở
+   * chất lượng 0.9 dễ vượt 1 MB, mà server từ chối thì người chơi mất cả bài góp ý vừa gõ.
+   * Trả null nếu không chụp được — form vẫn gửi được phần chữ.
+   */
+  private screenshot(): string | null {
+    try {
+      const cv = this.scene.app.canvas as HTMLCanvasElement | null;
+      if (!cv) {
+        return null;
+      }
+      for (const q of [0.7, 0.5, 0.35, 0.2]) {
+        const url = cv.toDataURL('image/webp', q);
+        // 300 KB sau base64 ≈ 400 000 ký tự. Đo trên chuỗi là đủ chính xác ở đây.
+        if (url.length < 400_000) {
+          return url;
+        }
+      }
+      return null;
+    } catch (_) {
+      return null; // canvas "bẩn" hoặc WebGL mất ngữ cảnh
+    }
+  }
+
   private bindBurnButton(): void {
     const b = this.hud.burnBtn;
     const set = (on: boolean) => (e: Event): void => {

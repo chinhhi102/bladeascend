@@ -8,6 +8,24 @@ export const STR = {
   play: 'Vào chơi',
   leaderboard: 'Bảng xếp hạng',
   findingRoom: 'Đang tìm phòng...',
+  // ── Hòm thư góp ý (ADMIN_SPEC §7.1) ──
+  feedbackTitle: 'Góp ý',
+  feedbackKinds: {
+    bug: 'Báo lỗi',
+    balance: 'Cân bằng',
+    idea: 'Ý tưởng',
+    other: 'Khác',
+  } as Record<string, string>,
+  feedbackPlaceholder: 'Kể rõ chuyện gì xảy ra, bạn đang làm gì lúc đó...',
+  feedbackAttachShot: 'Kèm ảnh chụp màn hình',
+  feedbackWillSend: 'Sẽ gửi kèm: phiên bản, thiết bị, khu, cảnh giới, ping, FPS.',
+  feedbackWillSendBug: ' Kèm 20 dòng lỗi gần nhất.',
+  feedbackSend: 'Gửi',
+  feedbackCancel: 'Đóng',
+  feedbackSending: 'Đang gửi...',
+  feedbackThanks: 'Cảm ơn! Đã nhận góp ý.',
+  feedbackTooShort: 'Viết thêm vài chữ nữa nhé (ít nhất 5 ký tự).',
+  feedbackFailed: 'Chưa gửi được. Thử lại sau một lát.',
   /** Chữ nổi khi kiếm chạm vật cản quá bậc (spec §8.2). */
   needRealm: (realm: string): string => `Cần ${realm}`,
   /** Chữ nổi khi câu hát ru bị chém đứt (spec v6.9 §6.3). */
