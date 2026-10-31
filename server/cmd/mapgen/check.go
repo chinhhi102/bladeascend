@@ -33,35 +33,26 @@ import (
 
 const checkCell = 50.0
 
-// Mục tiêu mật độ theo TỪNG KHU (chủ dự án chốt 31/10/2026).
+// Mục tiêu mật độ — §8.1b mục 5, cách đo của spec v6.12 (chủ dự án chốt 31/10/2026).
 //
-// Con số 18–28% của spec §8.1b đặt lúc chưa ai đo gì; đo thật rồi thì 18% đã là một khu
-// chật đến mức người Đại Thừa (thân 150) không lách nổi. Mục tiêu mới tính theo **diện tích
-// chân đế** — phần đất vật cản thật sự chiếm, không phải "chỗ người cỡ này không lọt".
+// 18–28% là **diện tích HÌNH VẼ**, tức phần đất bị sprite vật cản phủ lên. Không phải chân
+// đế: chân đế chỉ rộng 90% và cao 30% hình vẽ nên nó chỉ bằng ~27% — cùng một bản đồ, đo
+// theo chân đế ra 5–7,5% còn đo theo hình vẽ ra 18–28%.
 //
-// Mỗi khu một mức vì mỗi khu một vai: Băng Nguyệt Hồ là mặt hồ để trượt và rượt nhau nên
-// phải thoáng; Trúc Lâm là mê cung phục kích nên dày nhất.
-var densityTarget = map[string][2]float64{
-	"bang_nguyet_ho": {0.04, 0.06},
-	"thien_dinh":     {0.08, 0.12},
-	"pham_tran":      {0.08, 0.12},
-	"linh_son_coc":   {0.10, 0.14},
-	"truc_lam":       {0.10, 0.14},
-}
-
-// densityHardMax: vượt mức này là TRƯỢT, không phải cảnh báo.
-//
-// Dưới mục tiêu thì khu chỉ nhạt — chơi vẫn được. Vượt trần thì bắt đầu có người bị kẹt, và
-// bộ kiểm liên thông không bắt được hết: nó đo "có đường đi không", không đo "đường có hẹp
-// tới mức đi một bước phải né ba lần không".
-const densityHardMax = 0.16
-
-func densityRange(id string) [2]float64 {
-	if r, ok := densityTarget[id]; ok {
-		return r
-	}
-	return [2]float64{0.08, 0.12}
-}
+// Hình vẽ mới là thứ người chơi NHÌN THẤY và là thứ kiếm chém trúng (§8.2: "thân hình —
+// vùng kiếm chém trúng, đúng với cái người chơi nhìn thấy"). Chân đế chỉ quyết định chân có
+// bị chặn không. Hỏi "khu này trông có đầy không" thì phải đo cái người ta nhìn.
+const (
+	densityMin = 0.18
+	densityMax = 0.28
+	// densityHardMax: vượt mức này là TRƯỢT, không phải cảnh báo.
+	//
+	// Hai hướng không đối xứng vì hậu quả không đối xứng: khu nhạt thì chơi vẫn được, chỉ
+	// kém hay; khu chật thì bắt đầu có người kẹt — và bộ kiểm liên thông không bắt được hết,
+	// nó đo "có đường đi không" chứ không đo "đường có hẹp tới mức đi một bước né ba lần
+	// không".
+	densityHardMax = 0.32
+)
 
 // checkResult là kết quả của một cảnh giới.
 type checkResult struct {
@@ -73,12 +64,21 @@ type checkResult struct {
 	Regions   int
 	CutOff    []string // tên những mốc không tới được
 	TrappedPx int
-	// Density: phần diện tích khu bị vật cản chiếm, tính với thân NHỎ NHẤT (tức diện tích
-	// thật của vật cản, không phải "chỗ người này không lọt"). §8.1b mục 5: 18–28%.
+	// BiggestTrap: số ô của TÚI BỊ NHỐT LỚN NHẤT (không tính vùng chính).
 	//
-	// Đo riêng vì nó KHÔNG phụ thuộc cảnh giới — nhưng vẫn in mỗi dòng để thấy được mật độ
-	// tụt thế nào khi người chơi lên cảnh giới và chém được thêm nhiều loại.
+	// Phải đo riêng, không gộp vào `TrappedPx`: 40 ô lẻ rải khắp bản đồ là chuyện bình
+	// thường (khe hẹp giữa hai khối), còn 40 ô NẰM LIỀN NHAU là một cái sân kín 100×100 mà
+	// không ai vào được — hai chuyện khác hẳn, mà tổng số ô thì giống nhau.
+	BiggestTrap int
+	// Density: phần diện tích khu bị **HÌNH VẼ** vật cản phủ — thứ người chơi nhìn thấy và
+	// thứ kiếm chém trúng (§8.2 "thân hình"). Đây là con số §8.1b mục 5 nói tới: 18–28%.
+	//
+	// Nó TỤT khi cảnh giới lên vì vật cản bậc ≤ r coi như không có, và đó chính là thứ cần
+	// nhìn: Đại Thừa còn lại bao nhiêu địa hình.
 	Density float64
+	// FootDensity: phần diện tích bị CHÂN ĐẾ phủ — đất thật sự chặn chân, bằng ~27% hình vẽ
+	// (chân đế rộng 90% cao 30% sprite). Giữ lại để đối chiếu hai cách đo.
+	FootDensity float64
 }
 
 // minOpenRatio là ngưỡng của §8.1b: "Diện tích trống ≥ 60%".
@@ -89,8 +89,22 @@ type checkResult struct {
 // chấp nhận từ 60%.
 const minOpenRatio = 0.60
 
+// maxTrapCells: túi bị nhốt lớn nhất được tha thứ, tính bằng ô lưới 50.
+//
+// §8.1b nói "toàn bộ chỗ trống phải liên thông", nhưng tuyệt đối 0 thì không đặt được: hai
+// khối chạm mép nhau luôn để lại một khe 1–2 ô mà không ai vào nổi, và đó không phải lỗi.
+//
+// Luật cũ dùng TỈ LỆ ("vùng chính ≥ 99% chỗ trống") và nó BỎ SÓT đúng thứ cần bắt: Linh Sơn
+// Cốc có một cái sân kín **45 ô liền nhau** (≈ 335 × 335 đơn vị — thừa chỗ cho mấy người
+// đánh nhau) mà vẫn ĐẠT, vì 46 ô trên 82 000 ô trống chỉ là 0,06%. Tỉ lệ trả lời "bao nhiêu
+// phần bản đồ bị nhốt", còn câu cần hỏi là "có cái phòng kín nào không".
+//
+// 4 ô = 100 × 100 đơn vị: chỗ nhỏ nhất mà một người Luyện Khí (thân 42) đứng lọt. Nhỏ hơn
+// thế thì không ai vào được kể cả khi bị đẩy, nên nó không tồn tại với người chơi.
+const maxTrapCells = 4
+
 func (r checkResult) ok() bool {
-	return r.OpenFrac >= minOpenRatio && r.MainFrac >= 0.99 && len(r.CutOff) == 0
+	return r.OpenFrac >= minOpenRatio && r.BiggestTrap < maxTrapCells && len(r.CutOff) == 0
 }
 
 // landmark là một mốc phải tới được: cổng, Thiên Môn, bến, Đài, điểm spawn.
@@ -125,8 +139,8 @@ func runCheck(dir, pngDir string, cfg *config.Config, pngRealms []int) error {
 			if !res.ok() {
 				status, bad = "TRƯỢT", bad+1
 			}
-			fmt.Printf("  r=%-2d %-17s thân %3.0f · vật cản %4.1f%% · trống %4.0f%% · vùng chính %3.0f%% · %d vùng · %s",
-				r, res.Name, res.BodyR, res.Density*100, res.OpenFrac*100, res.MainFrac*100, res.Regions, status)
+			fmt.Printf("  r=%-2d %-17s thân %3.0f · vật cản %4.1f%% (chân %4.1f%%) · trống %4.0f%% · nhốt %d ô (túi to nhất %d) · %s",
+				r, res.Name, res.BodyR, res.Density*100, res.FootDensity*100, res.OpenFrac*100, res.TrappedPx, res.BiggestTrap, status)
 			if len(res.CutOff) > 0 {
 				fmt.Printf(" · KHÔNG TỚI ĐƯỢC: %s", strings.Join(res.CutOff, ", "))
 			}
@@ -137,18 +151,17 @@ func runCheck(dir, pngDir string, cfg *config.Config, pngRealms []int) error {
 			// liên thông không bắt được hết, nó đo "có đường đi không" chứ không đo "đường
 			// có hẹp tới mức đi một bước né ba lần không".
 			if r == 0 {
-				want := densityRange(m.ID)
 				switch {
 				case res.Density > densityHardMax:
-					fmt.Printf("     ✗ mật độ chân đế %.1f%% VƯỢT TRẦN %.0f%% — khu chật, người to kẹt\n",
+					fmt.Printf("     ✗ mật độ hình vẽ %.1f%% VƯỢT TRẦN %.0f%% — khu chật, người to kẹt\n",
 						res.Density*100, densityHardMax*100)
 					bad++
-				case res.Density < want[0]:
-					fmt.Printf("     ⚠ mật độ chân đế %.1f%%, mục tiêu khu này %.0f–%.0f%% — còn trống\n",
-						res.Density*100, want[0]*100, want[1]*100)
-				case res.Density > want[1]:
-					fmt.Printf("     ⚠ mật độ chân đế %.1f%%, mục tiêu khu này %.0f–%.0f%% — hơi dày\n",
-						res.Density*100, want[0]*100, want[1]*100)
+				case res.Density < densityMin:
+					fmt.Printf("     ⚠ mật độ hình vẽ %.1f%% (chân đế %.1f%%), §8.1b nói %.0f–%.0f%% — còn trống\n",
+						res.Density*100, res.FootDensity*100, densityMin*100, densityMax*100)
+				case res.Density > densityMax:
+					fmt.Printf("     ⚠ mật độ hình vẽ %.1f%% (chân đế %.1f%%), §8.1b nói %.0f–%.0f%% — hơi dày\n",
+						res.Density*100, res.FootDensity*100, densityMin*100, densityMax*100)
 				}
 			}
 			if pngDir != "" && wants(pngRealms, r) {
@@ -218,11 +231,14 @@ type checkGrid struct {
 	// kính thân người, nên `solid` trả lời "đi được không" còn `footprint` trả lời "đất bị
 	// chiếm bao nhiêu" — mật độ hỏi câu sau.
 	footprint []bool
-	label     []int
-	main      int
-	sizes     []int
-	marks     []landmark
-	cutOff    []string
+	// visual: tâm ô nằm trong HÌNH VẼ một vật cản (`Shape`, không phải `Block`). Đây là
+	// mật độ §8.1b nói tới.
+	visual []bool
+	label  []int
+	main   int
+	sizes  []int
+	marks  []landmark
+	cutOff []string
 }
 
 // checkRealm chạy bộ kiểm cho đúng một cảnh giới.
@@ -231,7 +247,8 @@ func checkRealm(m *world.Map, prog *game.Progression, cfg *config.Config, r int,
 	lo, hi := m.PlayMargin, m.Size-m.PlayMargin
 	n := int((hi - lo) / checkCell)
 	g := &checkGrid{n: n, lo: lo, solid: make([]bool, n*n), tight: make([]bool, n*n),
-		footprint: make([]bool, n*n), label: make([]int, n*n), marks: marks}
+		footprint: make([]bool, n*n), visual: make([]bool, n*n),
+		label: make([]int, n*n), marks: marks}
 	for i := range g.label {
 		g.label[i] = -1
 	}
@@ -252,7 +269,8 @@ func checkRealm(m *world.Map, prog *game.Progression, cfg *config.Config, r int,
 		small := cfg.Player.BodyR * prog.Scale(0)
 		g.solid[i] = blockedAt(walls, c, bodyR)
 		g.tight[i] = g.solid[i] && !blockedAt(walls, c, small)
-		g.footprint[i] = insideAny(walls, c)
+		g.footprint[i] = insideAny(walls, c, func(o world.Obstacle) world.Shape { return o.Block() })
+		g.visual[i] = insideAny(walls, c, func(o world.Obstacle) world.Shape { return o.Shape })
 	}
 	g.components()
 	res := checkResult{Realm: r, Name: prog.RealmName(r), BodyR: bodyR}
@@ -265,18 +283,27 @@ func checkRealm(m *world.Map, prog *game.Progression, cfg *config.Config, r int,
 	if n > 0 {
 		res.OpenFrac = float64(free) / float64(n*n)
 	}
-	covered := 0
+	covered, feet := 0, 0
 	for i := 0; i < n*n; i++ {
-		if g.footprint[i] {
+		if g.visual[i] {
 			covered++
+		}
+		if g.footprint[i] {
+			feet++
 		}
 	}
 	if n > 0 {
 		res.Density = float64(covered) / float64(n*n)
+		res.FootDensity = float64(feet) / float64(n*n)
 	}
 	if free > 0 && g.main >= 0 {
 		res.MainFrac = float64(g.sizes[g.main]) / float64(free)
 		res.TrappedPx = free - g.sizes[g.main]
+		for i, n := range g.sizes {
+			if i != g.main && n > res.BiggestTrap {
+				res.BiggestTrap = n
+			}
+		}
 	}
 	res.Regions = len(g.sizes)
 	res.CutOff = g.unreachable()
@@ -289,9 +316,9 @@ func checkRealm(m *world.Map, prog *game.Progression, cfg *config.Config, r int,
 // về "không chạm" cho mọi điểm — hình tròn bán kính 0 không chồng lên gì theo định nghĩa
 // của nó. Dùng nhầm thì mật độ ra đúng 0,00% cho mọi bản đồ, và con số 0 đó trông y như
 // "bản đồ chưa có vật cản" chứ không như một lỗi.
-func insideAny(walls []world.Obstacle, c geom.Vec) bool {
+func insideAny(walls []world.Obstacle, c geom.Vec, pick func(world.Obstacle) world.Shape) bool {
 	for _, o := range walls {
-		b := o.Block()
+		b := pick(o)
 		lo, hi := b.Bounds()
 		if c.X >= lo.X && c.X <= hi.X && c.Y >= lo.Y && c.Y <= hi.Y {
 			return true

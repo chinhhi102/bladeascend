@@ -119,3 +119,36 @@ func TestCheckTolerantAtLandmarkEdge(t *testing.T) {
 		t.Errorf("cổng có lối vào từ mọi phía mà vẫn báo không tới được: %v", res.CutOff)
 	}
 }
+
+// Túi bị nhốt ĐỦ TO phải làm bộ kiểm đỏ, dù nó chỉ chiếm một phần nghìn bản đồ.
+//
+// Luật cũ dùng TỈ LỆ ("vùng chính ≥ 99% chỗ trống") và bỏ sót đúng thứ cần bắt: Linh Sơn
+// Cốc có một cái sân kín **45 ô liền nhau** (≈ 335 × 335 đơn vị, thừa chỗ cho mấy người
+// đánh nhau) mà vẫn ĐẠT, vì 46 ô trên 82 000 ô trống chỉ là 0,06%. Tỉ lệ trả lời "bao
+// nhiêu phần bản đồ bị nhốt", còn câu cần hỏi là "có cái phòng kín nào không".
+func TestCheckCatchesSmallSealedRoom(t *testing.T) {
+	cfg := config.MustLoadDefault()
+	prog := game.NewProgression(cfg.Cultivation, cfg.Sword.MaxSwords)
+	m := world.EmptyMap(12000)
+	m.PlayMargin = 420
+	// Một cái sân kín 400×400 giữa đồng trống: tường bậc 11 nên không cảnh giới phàm nào
+	// chém được, và nó CHỈ chiếm vài phần nghìn bản đồ.
+	const x, y, w, th = 5000.0, 5000.0, 400.0, 200.0
+	m.Obstacles = []world.Obstacle{
+		{ID: 0, Kind: "jade_pillar", Tier: 11, Shape: world.Shape{X: x - th, Y: y - th, W: w + 2*th, H: th}},
+		{ID: 1, Kind: "jade_pillar", Tier: 11, Shape: world.Shape{X: x - th, Y: y + w, W: w + 2*th, H: th}},
+		{ID: 2, Kind: "jade_pillar", Tier: 11, Shape: world.Shape{X: x - th, Y: y, W: th, H: w}},
+		{ID: 3, Kind: "jade_pillar", Tier: 11, Shape: world.Shape{X: x + w, Y: y, W: th, H: w}},
+	}
+	res, _ := checkRealm(m, prog, cfg, 0, nil)
+
+	if res.BiggestTrap < maxTrapCells {
+		t.Fatalf("sân kín 400×400 chỉ ra %d ô bị nhốt — không nhận ra cái phòng kín", res.BiggestTrap)
+	}
+	if res.MainFrac < 0.99 {
+		t.Errorf("tỉ lệ vùng chính %.4f — bài này cần nó VẪN ≥ 99%% mới chứng minh được luật cũ bỏ sót", res.MainFrac)
+	}
+	if res.ok() {
+		t.Error("bộ kiểm báo ĐẠT cho bản đồ có một cái phòng kín không ai vào được")
+	}
+}

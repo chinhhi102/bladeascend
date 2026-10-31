@@ -600,5 +600,8 @@ func generateZone(b *builder, cfg config.Mapgen, zone int) error {
 	if err := zoneDefs[zone].build(g); err != nil {
 		return err
 	}
+	// Đục túi bị nhốt — chạy SAU CÙNG, sau cả đảo và trang trí: túi là tính chất của cả cụm
+	// vật cản quanh nó, nên chỉ biết được khi mọi thứ đã nằm yên chỗ.
+	g.unsealStep(realmSizesOf(config.MustLoadDefault()))
 	return g.check()
 }

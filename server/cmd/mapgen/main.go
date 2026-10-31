@@ -165,6 +165,11 @@ const coverCell = 50.0
 // chỉ số x0..x1 thì một khối rộng 140 chiếm 3–4 ô (150–200 đơn vị), dôi ra 40%.
 func (b *builder) addSolid(r rect, tier int) {
 	b.solid = append(b.solid, solidRect{r, tier})
+	b.stampCover(r)
+}
+
+// stampCover đánh dấu các ô lưới mà CHÂN ĐẾ của `r` phủ lên.
+func (b *builder) stampCover(r rect) {
 	f := footprintRect(r, b.footW, b.footH)
 	y0 := int((f.y0 - b.coverLo) / coverCell)
 	y1 := int((f.y1-b.coverLo)/coverCell) + 1
@@ -199,6 +204,35 @@ func footprintRect(r rect, fw, fh float64) rect {
 }
 
 // footprintDensity: phần diện tích khu chơi được bị chân đế vật cản chiếm.
+// removeSolid xoá một vật cản khỏi cả `solid` lẫn lớp `obstacles`, rồi dựng lại lưới phủ.
+//
+// Hai mảng đó SONG SONG: mọi đường thêm vật cản (`obstacle`, `obstacleForce`, `boulder`,
+// `wall`) đều ghi vào cả hai, cùng thứ tự. Xoá lệch một bên là bản đồ có vật cản vô hình
+// (chặn mà không vẽ) hoặc vật cản ma (vẽ mà không chặn) — cả hai đều im lặng.
+func (b *builder) removeSolid(i int) {
+	if i < 0 || i >= len(b.solid) {
+		return
+	}
+	b.solid = append(b.solid[:i], b.solid[i+1:]...)
+	obs := b.layers["obstacles"]
+	if i < len(obs) {
+		b.layers["obstacles"] = append(obs[:i], obs[i+1:]...)
+	}
+	b.rebuildCover()
+}
+
+// rebuildCover dựng lại lưới phủ từ đầu. Chỉ gọi sau khi XOÁ — lưới cộng dồn không trừ
+// ngược được (một ô có thể do nhiều khối cùng phủ).
+func (b *builder) rebuildCover() {
+	for i := range b.cover {
+		b.cover[i] = false
+	}
+	b.coverHit = 0
+	for _, s := range b.solid {
+		b.stampCover(s.r)
+	}
+}
+
 func (b *builder) footprintDensity() float64 {
 	if b.coverN == 0 {
 		return 0
