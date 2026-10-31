@@ -74,12 +74,8 @@ func ZoneName(i int) string {
 }
 
 func newZone(index int, cfg *config.Config, m *world.Map, seed int64) *Zone {
-	g := game.New(cfg, m, seed)
-	// Khoảng id riêng cho khu này — id phải duy nhất trong CẢ PHÒNG (xem `game.newID`).
-	//
-	// Gọi được ngay sau `game.New` vì `New` chưa sinh entity nào: nó chỉ dựng chỉ mục vật
-	// cản và lưới tìm đường. Quái và vật phẩm do phòng sinh sau, ở tick đầu.
-	g.SetIDBase(index)
+	// `index` cũng là khoảng id của khu — id phải duy nhất trong CẢ PHÒNG (xem `game.newID`).
+	g := game.New(cfg, m, seed, index)
 	return &Zone{
 		Index:   index,
 		Name:    ZoneName(index),

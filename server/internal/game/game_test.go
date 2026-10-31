@@ -21,7 +21,7 @@ func quietGame(t *testing.T, m *world.Map) *Game {
 	if m == nil {
 		m = world.EmptyMap(cfg.Room.MapSize)
 	}
-	return New(cfg, m, 1)
+	return New(cfg, m, 1, 0)
 }
 
 // place puts a player at pos with ring phase angle (sword 0's hilt points there), not
@@ -815,7 +815,7 @@ func TestFootprintBlocksOnlyTheBase(t *testing.T) {
 func TestAmbientOrbsRegrowInSameRegion(t *testing.T) {
 	cfg := config.MustLoadDefault()
 	cfg.Room.MonsterCount, cfg.Items.CountPerRoom = 0, 0
-	g := New(cfg, world.EmptyMap(cfg.Room.MapSize), 1)
+	g := New(cfg, world.EmptyMap(cfg.Room.MapSize), 1, 0)
 	n, _ := countItems(g, "orb")
 	cells := int(cfg.Room.MapSize / cfg.ExpOrbs.Cell)
 	if n < cells*cells*9/10 {
@@ -857,7 +857,7 @@ func TestItemPoolRespawnsAfterDelay(t *testing.T) {
 	cfg := config.MustLoadDefault()
 	cfg.Room.MonsterCount, cfg.ExpOrbs.Cell, cfg.Items.ChestEverySecs = 0, 0, 1e9
 	cfg.Items.CountPerRoom = 10
-	g := New(cfg, world.EmptyMap(cfg.Room.MapSize), 1)
+	g := New(cfg, world.EmptyMap(cfg.Room.MapSize), 1, 0)
 	g.Tick(dt)
 	if g.poolCount != 10 {
 		t.Fatalf("pool = %d, want 10", g.poolCount)

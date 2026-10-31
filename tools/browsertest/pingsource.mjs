@@ -35,6 +35,14 @@ const DAOTO = process.argv.includes('--daoto');
  * Đạo Tổ, máy rảnh). Không tái hiện được nó thì không kết luận được 307 ms đến từ đâu.
  */
 const EXTRA = Number((process.argv.find((a) => a.startsWith('--tabs=')) ?? '--tabs=0').slice(7));
+/**
+ * --cpu=N: bóp CPU N lần qua CDP, giả lập MÁY YẾU.
+ *
+ * Khác hẳn `--tabs`: `--tabs` làm nhiều tab tranh nhau một CPU nhanh (tình huống của bài
+ * đo, không phải của người chơi), còn `--cpu` làm MỘT tab chạy trên một CPU chậm — đúng
+ * tình huống của một người chơi máy cũ. Đây mới là con số nói được điều gì về họ.
+ */
+const CPU = Number((process.argv.find((a) => a.startsWith('--cpu=')) ?? '--cpu=1').slice(6));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -98,6 +106,11 @@ const br = await chromium.launch({
 });
 const ctx = await br.newContext({ viewport: { width: 1280, height: 720 } });
 const page = await ctx.newPage();
+if (CPU > 1) {
+  const cdp = await ctx.newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
+  console.log(`  (bóp CPU ${CPU}× — giả lập máy yếu)`);
+}
 await page.goto(TARGET, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('input', { timeout: 60000 });
 await page.fill('input', 'DoTre');
@@ -188,7 +201,11 @@ await br.close();
 
 console.log(`\n  ping LUỒNG CHÍNH (ping của game)  ${fmt(main)}`);
 console.log(`  ping WEB WORKER (luồng riêng)     ${fmt(worker)}`);
-console.log(`  FPS trung bình ${frames.length ? (frames.reduce((a, b) => a + b, 0) / frames.length).toFixed(1) : '?'} · server ${srv.toFixed(2)} ms/tick`);
+// FPS p10 là con số quyết định: trung bình che mất những khung tệ nhất, mà chính những
+// khung đó mới là lúc người chơi thấy giật.
+const fp10 = frames.length ? pct(frames, 10) : 0;
+const fp50 = frames.length ? pct(frames, 50) : 0;
+console.log(`  FPS p10 ${fp10.toFixed(1)} · p50 ${fp50.toFixed(1)} · TB ${frames.length ? (frames.reduce((a, b) => a + b, 0) / frames.length).toFixed(1) : '?'} · server ${srv.toFixed(2)} ms/tick`);
 console.log(`\n  MỘT KHUNG mổ ra: tổng ${pct(frameMs, 50).toFixed(1)} ms · giải mã gói ${pct(decode, 95).toFixed(2)} ms · Pixi vẽ ${pct(draw, 95).toFixed(2)} ms`);
 console.log(`  → phần còn lại (dựng cảnh, nội suy, vật lý client, GC…): ${(pct(frameMs, 50) - pct(decode, 95) - pct(draw, 95)).toFixed(1)} ms`);
 

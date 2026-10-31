@@ -123,9 +123,9 @@ func diffPlayer(old, now wirePlayer) uint16 {
 // `c` giữ trạng thái đã gửi lần trước, nên hàm này có tác dụng phụ — gọi đúng một lần cho
 // mỗi client mỗi tick.
 func (c *Client) EncodeSnapshot(s *netproto.Snapshot, chars []string) []byte {
-	keyframe := s.Time-c.keyframeAt >= keyframeEverySecs || c.lastWire == nil
+	keyframe := c.forceKeyframe || c.lastWire == nil || s.Time-c.keyframeAt >= keyframeEverySecs
 	if keyframe {
-		c.keyframeAt = s.Time
+		c.keyframeAt, c.forceKeyframe = s.Time, false
 		// Quên hết: gói này chở lại toàn bộ, nên mọi so sánh delta phải bắt đầu từ con số 0.
 		c.lastWire = make(map[uint32]wirePlayer, len(s.Players))
 	}

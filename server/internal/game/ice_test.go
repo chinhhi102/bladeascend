@@ -16,7 +16,7 @@ func iceGame(t *testing.T) *Game {
 	m := world.EmptyMap(cfg.Room.MapSize)
 	c := cfg.Room.MapSize / 2
 	m.Zones = append(m.Zones, world.Zone{Kind: "ice", Shape: world.Shape{X: c - 3000, Y: c - 3000, W: 6000, H: 6000}})
-	return New(cfg, m, 1)
+	return New(cfg, m, 1, 0)
 }
 
 // Trên mặt băng, thả phím thì vẫn TRÔI TIẾP — đó là cả điểm của khu Băng Nguyệt Hồ

@@ -76,7 +76,7 @@ func main() {
 		}
 	}
 
-	g := game.New(cfg, m, *seed)
+	g := game.New(cfg, m, *seed, 0) // một khu đơn lẻ: khoảng id 0
 	rng := rand.New(rand.NewSource(*seed))
 	f := fixture{Map: m, Cases: make([]oneCase, 0, *n)}
 	dt := 1 / float64(max(cfg.Net.TickHz, 1))

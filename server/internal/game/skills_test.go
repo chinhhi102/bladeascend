@@ -12,7 +12,7 @@ func skillGame(t *testing.T) *Game {
 	t.Helper()
 	cfg := config.MustLoadDefault()
 	cfg.Room.MonsterCount, cfg.Items.CountPerRoom = 0, 0
-	return New(cfg, world.EmptyMap(cfg.Room.MapSize), 1)
+	return New(cfg, world.EmptyMap(cfg.Room.MapSize), 1, 0)
 }
 
 // put đặt một nhân vật ở đúng chỗ, bất tử tắt, để test điều khiển hoàn toàn.
@@ -391,7 +391,7 @@ func TestGhostPassesEverythingButBorder(t *testing.T) {
 		{ID: 1, Kind: "jade_pillar", Tier: 11, Shape: world.Shape{X: 4200, Y: 2900, W: 200, H: 200}},
 		{ID: 2, Kind: config.BorderKind, Tier: config.TierBorder, Shape: world.Shape{X: 5200, Y: 2900, W: 200, H: 200}},
 	}
-	g := New(cfg, m, 1)
+	g := New(cfg, m, 1, 0)
 	p := put(g, "shipper", Vec{X: 3000, Y: 3000}, 10, 20)
 	g.AddSkillCharge(p)
 	g.CastSkill(p)
@@ -428,7 +428,7 @@ func TestGhostUnsticksSmoothly(t *testing.T) {
 	m.Obstacles = []world.Obstacle{
 		{ID: 0, Kind: "stone_wall", Tier: 5, Shape: world.Shape{X: 3200, Y: 2900, W: 400, H: 400}},
 	}
-	g := New(cfg, m, 1)
+	g := New(cfg, m, 1, 0)
 	p := put(g, "shipper", Vec{X: 3000, Y: 3000}, 10, 20)
 	g.AddSkillCharge(p)
 	g.CastSkill(p)

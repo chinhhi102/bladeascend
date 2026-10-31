@@ -47,7 +47,7 @@ func main() {
 		cfg.ExpOrbs.Cell = *cell
 	}
 	m := pickMap(cfg, *mapID, *seed)
-	g := game.New(cfg, m, *seed)
+	g := game.New(cfg, m, *seed, 0) // một khu đơn lẻ: khoảng id 0
 	rng := rand.New(rand.NewSource(*seed))
 	brains, stats := spawnBots(g, cfg, rng, *bots)
 

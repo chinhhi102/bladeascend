@@ -376,6 +376,12 @@ class App {
     this.conn.snap.chars = this.cfg.characters;
     // Nhân vật của chính mình không bao giờ bị nhả khỏi bộ nhớ đồ hoạ (Q30).
     this.scene.myChar = this.profile?.char ?? '';
+    // Quên entity của khu CŨ.
+    //
+    // `welcome` đến giữa trận nghĩa là vừa qua cổng (§8.0). Bộ giải mã nhị phân giữ trạng
+    // thái entity giữa các gói để tính delta; không xoá thì nó tiếp tục vẽ ra người và quái
+    // của khu vừa rời, cho tới gói keyframe kế tiếp.
+    this.conn.snap.reset();
     // Welcome đến GIỮA TRẬN nghĩa là vừa qua cổng sang khu khác (spec §8.0, §8.4): sang
     // khu là đổi hẳn bản đồ nên phải tải lại từ đầu, nhưng KHÔNG phải vào trận lại — giữ
     // nguyên hồ sơ, không phát lại âm thanh hồi sinh, không hiện lại hướng dẫn.

@@ -43,7 +43,7 @@ func TestSparseRingsTouchMatchesNaive(t *testing.T) {
 	_ = t
 	cfg := config.MustLoadDefault()
 	cfg.Room.MonsterCount, cfg.Items.CountPerRoom = 0, 0
-	g := New(cfg, world.EmptyMap(cfg.Room.MapSize), 1)
+	g := New(cfg, world.EmptyMap(cfg.Room.MapSize), 1, 0)
 	rng := rand.New(rand.NewSource(7))
 	for trial := 0; trial < 300; trial++ {
 		a, b := &Player{}, &Player{}

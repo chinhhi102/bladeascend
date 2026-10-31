@@ -231,3 +231,55 @@ func TestQuantisationStaysWithinBudget(t *testing.T) {
 		}
 	}
 }
+
+// Qua cổng thì gói kế tiếp phải là KEYFRAME, và trạng thái delta phải quên sạch.
+//
+// Thiếu điều đó, bộ giải mã bên client vẫn giữ entity của khu CŨ và vẽ chúng ra mỗi
+// snapshot cho tới keyframe kế tiếp — tối đa 2 giây nhìn thấy ma của khu vừa rời.
+//
+// Lỗi này do chính Protocol v2 tạo ra: `resetKnown()` có từ trước và quên `knownPlayers`,
+// nhưng `lastWire`/`keyframeAt` là hai trường tôi thêm vào mà không nối vào đó.
+func TestZoneChangeForcesKeyframe(t *testing.T) {
+	m, cfg := fiveZoneRoom(t)
+	conn := &recConn{}
+	c := NewClient(conn, false)
+	r := joinWith(m, c, "QuaCong")
+	dt := 1 / float64(cfg.Net.TickHz)
+	r.Step(dt)
+	// Chạy cho qua keyframe đầu, rồi để delta chạy một lúc.
+	for i := 0; i < 20; i++ {
+		r.Step(dt)
+	}
+	from := r.ZoneOf(c.PlayerID)
+	if from == nil {
+		t.Fatal("không tìm thấy khu")
+	}
+	if len(c.lastWire) == 0 {
+		t.Fatal("chưa có trạng thái delta nào — test không chạm tới thứ nó định kiểm")
+	}
+	to := r.Zone((from.Index + 1) % r.ZoneCount())
+	p := from.G.Players[c.PlayerID]
+
+	before := len(conn.sent)
+	r.queueTransfer(transfer{playerID: c.PlayerID, from: from, to: to, at: p.Pos, destGate: -1})
+	r.Step(dt)
+	r.Step(dt)
+
+	var keyframes, updates int
+	for _, s := range snapsOf(t, conn.sent[before:]) {
+		if s.Head.Flags&1 != 0 {
+			keyframes++
+		} else {
+			updates += len(s.Updates)
+		}
+	}
+	if keyframes == 0 {
+		t.Errorf("qua cổng mà KHÔNG có keyframe — client giữ lại entity của khu cũ và vẽ "+
+			"chúng ra tới %g giây", keyframeEverySecs)
+	}
+	// Và mọi entity của khu mới phải đến bằng Spawn, không phải Update so với bản cũ.
+	if updates > 0 {
+		t.Errorf("ngay sau khi qua cổng vẫn gửi %d Update — delta đang so với trạng thái "+
+			"của khu CŨ", updates)
+	}
+}

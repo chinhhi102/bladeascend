@@ -86,8 +86,18 @@ type Game struct {
 	bossCount int
 }
 
-func New(cfg *config.Config, m *world.Map, seed int64) *Game {
+// New dựng thế giới của MỘT khu.
+//
+// `zoneIndex` quyết định khoảng id của khu này — xem `newID`. Truyền vào đây, KHÔNG đặt
+// bằng một setter gọi sau: `New` sinh hàng nghìn viên Linh khí ngay trong thân hàm
+// (`seedOrbs`), nên một setter gọi sau là đã muộn và mọi viên đó mang id của khu 0.
+//
+// Tôi đã viết đúng lỗi đó: thêm `SetIDBase` gọi sau `New`, kèm một comment khẳng định
+// "`New` chưa sinh entity nào". Comment sai, và bài kiểm bắt được ngay — quái thì đúng
+// khoảng, còn vật phẩm vẫn trùng. Tham số bắt buộc thì không có cách nào gọi sai thứ tự.
+func New(cfg *config.Config, m *world.Map, seed int64, zoneIndex int) *Game {
 	g := &Game{
+		idBase: uint32(zoneIndex) << 24,
 		Cfg: cfg, Prog: NewProgression(cfg.Cultivation, cfg.Sword.MaxSwords), Map: m,
 		Rng:       rand.New(rand.NewSource(seed)),
 		Players:   map[uint32]*Player{},
@@ -112,7 +122,7 @@ func New(cfg *config.Config, m *world.Map, seed int64) *Game {
 // Id phải duy nhất trong CẢ PHÒNG, không chỉ trong khu. Trước đây `nextID` bắt đầu từ 0 ở
 // MỌI khu, mà năm khu sinh ra cùng số quái và cùng số vật phẩm theo config — nên khu 0 và
 // khu 1 cấp ra đúng những con số giống nhau. Đo thật: **79 id trùng** trong một phòng 5 khu
-// ngay ở tick đầu tiên.
+// ngay ở tick đầu tiên (và hơn 2 000 nếu đếm cả vật phẩm).
 //
 // Hậu quả không hề im lặng cho lắm, chỉ là khó lần ra:
 //   - `Room.rankAt[p.ID]` là bảng CẢ PHÒNG → hai người khác khu cùng id ghi đè hạng của
@@ -127,11 +137,6 @@ func New(cfg *config.Config, m *world.Map, seed int64) *Game {
 func (g *Game) newID() uint32 {
 	g.nextID++
 	return g.idBase | g.nextID
-}
-
-// SetIDBase đặt khoảng id cho khu này. Gọi MỘT LẦN lúc dựng, trước khi sinh entity nào.
-func (g *Game) SetIDBase(zoneIndex int) {
-	g.idBase = uint32(zoneIndex) << 24
 }
 
 func (g *Game) emit(e Event) { g.Events = append(g.Events, e) }

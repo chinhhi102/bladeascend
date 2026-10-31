@@ -111,7 +111,15 @@ type Client struct {
 	// giá trị đó mã hoá ra cùng một con số u16.
 	lastWire map[uint32]wirePlayer
 	// keyframeAt: thời điểm gói toàn-bộ-trạng-thái gần nhất (§4.3).
+	//
+	// Đây là đồng hồ CỦA MỘT KHU. Mỗi khu tick riêng nên `s.Time` của khu mới không liên
+	// quan gì tới khu cũ — vì thế việc "đến hẹn keyframe chưa" không được tính qua hai khu.
+	// Đó là lý do có `forceKeyframe` riêng bên dưới thay vì đặt `keyframeAt = 0`: nếu khu
+	// cũ đang ở giây 500 và khu mới ở giây 10 thì hiệu số ÂM, và client mất keyframe
+	// suốt 490 giây.
 	keyframeAt float64
+	// forceKeyframe: gói kế tiếp phải chở TOÀN BỘ trạng thái, bất kể đồng hồ.
+	forceKeyframe bool
 	// lastSelfExtra: phần chỉ chủ nhân cần, lần gửi trước. Gần như không đổi nên so cả
 	// struct là đủ.
 	lastSelfExtra wire.SelfExtra
@@ -215,6 +223,14 @@ func (c *Client) resetKnown() {
 	}
 	c.knownItems = c.knownItems[:0]
 	c.knownSlots = c.knownSlots[:0]
+	// Trạng thái delta của Protocol v2 cũng phải quên — và phải ÉP một keyframe.
+	//
+	// Thiếu chỗ này thì sau khi qua cổng, bộ giải mã bên client vẫn giữ entity của khu CŨ
+	// và vẽ chúng ra mỗi snapshot, cho tới keyframe kế tiếp (tối đa 2 giây). Người chơi
+	// thấy ma của khu vừa rời. `lastWire` cũng phình dần vì entity khu cũ không bao giờ
+	// được dọn.
+	clear(c.lastWire)
+	c.forceKeyframe = true
 }
 
 func (c *Client) SetInput(in netproto.Input) {

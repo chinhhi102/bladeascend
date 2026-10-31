@@ -12,7 +12,7 @@ func rulesGame(t *testing.T) *Game {
 	t.Helper()
 	cfg := config.MustLoadDefault()
 	cfg.Room.MonsterCount, cfg.Items.CountPerRoom = 0, 0
-	return New(cfg, world.EmptyMap(cfg.Room.MapSize), 1)
+	return New(cfg, world.EmptyMap(cfg.Room.MapSize), 1, 0)
 }
 
 // Lên Đạo Tổ rồi thì không còn cảnh giới để lên; Tiên khí nhặt thêm phải đổi thành Uy Danh
