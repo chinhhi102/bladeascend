@@ -146,16 +146,29 @@ func (g *Game) AddPlayer(o SpawnOptions) *Player {
 func (g *Game) ForceState(p *Player, level, swords int, at Vec) {
 	p.Level = level
 	p.PeakLevel = max(p.PeakLevel, level)
-	// Nhảy thẳng vào Tiên giới thì phải đặt Tiên khí đúng mốc khởi điểm của cảnh giới đó.
-	// Thiếu bước này, phím test cho ra trạng thái không bao giờ có thật: Đạo Tổ mà Tiên khí
-	// bằng 0, nên luật "Tiên khí dư đổi thành Uy Danh" và luật cướp đoạt §3.4 đều đo sai.
-	if r := g.Prog.Realm(level); g.Prog.IsTien(r) {
-		p.TienKhi = math.Max(p.TienKhi, g.Prog.TienEntry(g.Prog.TienIndex(r)))
-	}
+	g.seatTienKhi(p, level)
 	p.Ring.Count = swords
 	p.Pos = at
 	p.InvulnUntil = g.Time + 1e9 // không để họ chém nhau chết giữa lúc đang đo
 	g.refreshDerived(p)
+}
+
+// seatTienKhi đặt thanh Tiên khí đúng mốc khởi điểm khi một người được ĐẶT THẲNG vào một
+// cảnh giới Tiên, thay vì tu lên tới đó.
+//
+// Phải gọi ở MỌI chỗ gán `p.Level` mà không đi qua `GainTienKhi`. Thiếu nó thì người đó có
+// `Level` ở Tiên giới nhưng `TienKhi = 0`, và hai nguồn sự thật nói ngược nhau:
+//
+//	applyBodyHit:  Realm(Level) = 9 → IsTien → gọi robTienKhi
+//	robTienKhi:    TienRealmOf → TienRealmForKhi(0) = -1 → return, KHÔNG LÀM GÌ
+//
+// Triệu chứng ngoài trận: **bot Chân Tiên bị chém mà không rớt cảnh giới** — vẫn bị đẩy
+// lùi, vẫn hiện "Hit", nhưng đứng nguyên ở Chân Tiên mãi mãi. Bot dính nhiều nhất vì
+// `randomBotLevel` chép thẳng `Level` của người hạng N, mà người đó có thể đang ở Tiên giới.
+func (g *Game) seatTienKhi(p *Player, level int) {
+	if r := g.Prog.Realm(level); g.Prog.IsTien(r) {
+		p.TienKhi = math.Max(p.TienKhi, g.Prog.TienEntry(g.Prog.TienIndex(r)))
+	}
 }
 
 // resetPlayer (re)spawns a player at a safe spot (spec §7).
@@ -166,6 +179,10 @@ func (g *Game) resetPlayer(p *Player, level, swords int) {
 	// A new life starts from zero Uy Danh (spec §11.1).
 	p.Score, p.Hits, p.Top1Secs, p.DaiThuaSecs = 0, 0, 0, 0
 	p.Burning, p.BurnedExp, p.TienKhi = false, 0, 0
+	// Đặt SAU khi xoá về 0: sinh thẳng ở một cảnh giới Tiên (bot chép cảnh giới người hạng
+	// N, hoặc hồi sinh ở Tiên giới) thì thanh Tiên khí phải ở mốc khởi điểm của cảnh giới
+	// đó, không phải 0. Xem `seatTienKhi`.
+	g.seatTienKhi(p, level)
 	p.ScoreBy, p.HitCooldown, p.ScoredRealms = map[string]float64{}, map[string]float64{}, map[int]bool{}
 	p.Title, p.pendingTitle, p.titleSince = 0, 0, 0
 	p.Ring = Ring{Count: max(g.Cfg.Sword.StartCount, swords), Dir: 1, Angle: g.Rng.Float64() * 2 * math.Pi}

@@ -24,15 +24,21 @@ type zoneDef struct {
 	biome  string
 	gateCo string
 	build  func(*gen) error
+	// density: mật độ chân đế mục tiêu của khu này (chủ dự án chốt 31/10/2026). Mỗi khu
+	// một mức vì mỗi khu một vai — Băng Nguyệt Hồ là mặt hồ để rượt nhau nên phải thoáng,
+	// Trúc Lâm là mê cung phục kích nên dày nhất. Khớp bảng trong `check.go`.
+	density float64
 }
 
 // zoneDefs theo đúng thứ tự bảng §8.0.
 var zoneDefs = []zoneDef{
-	{"thien_dinh", "Thiên Đình", "grass", "gold", (*gen).thienDinh},
-	{"linh_son_coc", "Linh Sơn Cốc", "dirt", "slate", (*gen).linhSonCoc},
-	{"truc_lam", "Trúc Lâm Mê Cung", "grass", "green", (*gen).trucLam},
-	{"pham_tran", "Phàm Trấn", "concrete", "red", (*gen).phamTran},
-	{"bang_nguyet_ho", "Băng Nguyệt Hồ", "snow", "cyan", (*gen).bangNguyetHo},
+	// Nhắm GIỮA khoảng mục tiêu, không nhắm mép dưới: đảo đặt xong mới biết chồng mép bao
+	// nhiêu, nên nhắm mép là rơi xuống dưới mục tiêu ở vài seed.
+	{"thien_dinh", "Thiên Đình", "grass", "gold", (*gen).thienDinh, 0.10},
+	{"linh_son_coc", "Linh Sơn Cốc", "dirt", "slate", (*gen).linhSonCoc, 0.12},
+	{"truc_lam", "Trúc Lâm Mê Cung", "grass", "green", (*gen).trucLam, 0.12},
+	{"pham_tran", "Phàm Trấn", "concrete", "red", (*gen).phamTran, 0.10},
+	{"bang_nguyet_ho", "Băng Nguyệt Hồ", "snow", "cyan", (*gen).bangNguyetHo, 0.05},
 }
 
 // gateNet là tên mạng cổng chung của CẢ THẾ GIỚI (spec §8.4: 20 cổng, một mạng).
@@ -46,6 +52,15 @@ func (g *gen) thienDinh() error {
 	// sau sẽ tự tránh. Đặt sau thì không có cách nào bảo đảm luật "trống 300 quanh cổng".
 	g.gatesStep()
 	g.heavenDocks()
+	// Đảo lấp mật độ chạy NGAY SAU cổng/đài, TRƯỚC nội dung rải rác của khu.
+	//
+	// Thứ tự này quyết định cả bài toán. Vật cản rải rác của khu nằm cách nhau trung bình
+	// ~645 đơn vị; một cái đảo cần 2r + hành lang, tức ≥ 740. Đặt đảo sau thì gần như không
+	// ô lưới nào lọt (đo được 4/72), còn đặt trước thì đảo chiếm chỗ đẹp và nội dung rải rác
+	// tự né quanh nó — đúng ý §8.1b mục 2 "vật cản xếp thành đảo giữa các đường".
+	//
+	// Cổng và đài vẫn phải đặt TRƯỚC đảo: chúng ghi vùng giữ trống, nên đảo tự tránh.
+	g.islandsStep(g.target)
 	g.quadrantContent()
 	g.terrainZones()
 	// §8.2: Thiên Đình = cột ngọc quanh Thiên Tiên Đài (xem `frame`) + 4–6 thạch bi cấm chế.
@@ -100,6 +115,15 @@ func (g *gen) linhSonCoc() error {
 	// Thiên Môn trên một bình nguyên giữa các hẻm núi (spec §8.4a).
 	g.b.heavenGate(s/2, s/2)
 	g.fourGates("slate")
+	// Đảo lấp mật độ chạy NGAY SAU cổng/đài, TRƯỚC nội dung rải rác của khu.
+	//
+	// Thứ tự này quyết định cả bài toán. Vật cản rải rác của khu nằm cách nhau trung bình
+	// ~645 đơn vị; một cái đảo cần 2r + hành lang, tức ≥ 740. Đặt đảo sau thì gần như không
+	// ô lưới nào lọt (đo được 4/72), còn đặt trước thì đảo chiếm chỗ đẹp và nội dung rải rác
+	// tự né quanh nó — đúng ý §8.1b mục 2 "vật cản xếp thành đảo giữa các đường".
+	//
+	// Cổng và đài vẫn phải đặt TRƯỚC đảo: chúng ghi vùng giữ trống, nên đảo tự tránh.
+	g.islandsStep(g.target)
 
 	// Vách đá xếp SO LE: dãy lẻ chạm mép trái và hụt mép phải, dãy chẵn ngược lại. Nhờ vậy
 	// đường đi uốn thành hình rắn bò từ trên xuống dưới — vẫn ra hẻm núi, mà **không bao
@@ -240,6 +264,15 @@ func (g *gen) trucLam() error {
 	// Thiên Môn ở khoảng trống trung tâm mê cung (spec §8.4a) — đường vào ngoằn ngoèo.
 	g.b.heavenGate(s/2, s/2)
 	g.fourGates("green")
+	// Đảo lấp mật độ chạy NGAY SAU cổng/đài, TRƯỚC nội dung rải rác của khu.
+	//
+	// Thứ tự này quyết định cả bài toán. Vật cản rải rác của khu nằm cách nhau trung bình
+	// ~645 đơn vị; một cái đảo cần 2r + hành lang, tức ≥ 740. Đặt đảo sau thì gần như không
+	// ô lưới nào lọt (đo được 4/72), còn đặt trước thì đảo chiếm chỗ đẹp và nội dung rải rác
+	// tự né quanh nó — đúng ý §8.1b mục 2 "vật cản xếp thành đảo giữa các đường".
+	//
+	// Cổng và đài vẫn phải đặt TRƯỚC đảo: chúng ghi vùng giữ trống, nên đảo tự tránh.
+	g.islandsStep(g.target)
 	// §8.2: Trúc Lâm = thạch bi cấm chế (bậc 13) quanh Thiên Môn ở tâm.
 	//
 	// Đặt TRƯỚC khi đào mê cung: rặng tre phủ kín khu nên sau đó không còn chỗ trống nào
@@ -376,6 +409,15 @@ func (g *gen) phamTran() error {
 	// Thiên Môn ở quảng trường chính giữa thị trấn (spec §8.4a).
 	g.b.heavenGate(s/2, s/2)
 	g.fourGates("red")
+	// Đảo lấp mật độ chạy NGAY SAU cổng/đài, TRƯỚC nội dung rải rác của khu.
+	//
+	// Thứ tự này quyết định cả bài toán. Vật cản rải rác của khu nằm cách nhau trung bình
+	// ~645 đơn vị; một cái đảo cần 2r + hành lang, tức ≥ 740. Đặt đảo sau thì gần như không
+	// ô lưới nào lọt (đo được 4/72), còn đặt trước thì đảo chiếm chỗ đẹp và nội dung rải rác
+	// tự né quanh nó — đúng ý §8.1b mục 2 "vật cản xếp thành đảo giữa các đường".
+	//
+	// Cổng và đài vẫn phải đặt TRƯỚC đảo: chúng ghi vùng giữ trống, nên đảo tự tránh.
+	g.islandsStep(g.target)
 
 	// Lưới phố — nhưng **cố tình không đều**. Bản đầu tôi chia đúng 1 800 một ô và ra một
 	// cái bàn cờ hoàn hảo: §8.6 cấm đúng kiểu đó ("không khối hình học lộ ra"), và thị trấn
@@ -513,6 +555,15 @@ func (g *gen) bangNguyetHo() error {
 	g.b.organicZone("snow", c.X, c.Y, 700, 0.9)
 	g.b.heavenGate(c.X, c.Y)
 	g.fourGates("cyan")
+	// Đảo lấp mật độ chạy NGAY SAU cổng/đài, TRƯỚC nội dung rải rác của khu.
+	//
+	// Thứ tự này quyết định cả bài toán. Vật cản rải rác của khu nằm cách nhau trung bình
+	// ~645 đơn vị; một cái đảo cần 2r + hành lang, tức ≥ 740. Đặt đảo sau thì gần như không
+	// ô lưới nào lọt (đo được 4/72), còn đặt trước thì đảo chiếm chỗ đẹp và nội dung rải rác
+	// tự né quanh nó — đúng ý §8.1b mục 2 "vật cản xếp thành đảo giữa các đường".
+	//
+	// Cổng và đài vẫn phải đặt TRƯỚC đảo: chúng ghi vùng giữ trống, nên đảo tự tránh.
+	g.islandsStep(g.target)
 
 	// Đảo băng: vùng tuyết nhỏ giữa hồ (đứng được, không trượt) viền vài tảng băng.
 	for _, is := range []Vec2{islandA, islandB, {c.X + 1500, c.Y - 1800}, {c.X - 1500, c.Y + 1800}} {
@@ -544,7 +595,7 @@ func generateZone(b *builder, cfg config.Mapgen, zone int) error {
 	if zone < 0 || zone >= len(zoneDefs) {
 		return fmt.Errorf("khu %d không có (chỉ có 0..%d)", zone, len(zoneDefs)-1)
 	}
-	g := &gen{b: b, cfg: cfg, size: b.size}
+	g := &gen{b: b, cfg: cfg, size: b.size, obs: b.obs, target: zoneDefs[zone].density}
 	b.border()
 	if err := zoneDefs[zone].build(g); err != nil {
 		return err

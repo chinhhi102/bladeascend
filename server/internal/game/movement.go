@@ -295,22 +295,36 @@ func (g *Game) resolveBorders(pos Vec, r float64) Vec {
 
 func (g *Game) resolveBlocking(pos Vec, r float64) Vec {
 	pos = g.clampToPlay(pos, r)
+	// Lọc danh sách ứng viên MỘT LẦN, trước vòng lặp, với bán kính rộng rãi.
+	//
+	// Client không có lưới không gian nên nó duyệt TOÀN BỘ vật cản mỗi lượt; `pushOut` tự
+	// trả nil cho cái nào không chạm. Server muốn ra cùng kết quả thì tập ứng viên của nó
+	// phải là một TẬP CHA của những cái thực sự chạm — ở mọi lượt, kể cả sau khi đã bị đẩy
+	// đi chỗ khác.
+	//
+	// Bản trước truy vấn lại mỗi lượt theo vị trí ĐẦU LƯỢT với bán kính đúng bằng `r`. Trên
+	// bản đồ thưa thì không sao. Trên bản đồ dày (v6.12), đẩy ra khỏi khối này thường đẩy
+	// vào khối kia — mà khối kia nằm ngoài bán kính `r` của vị trí cũ, nên server bỏ sót nó
+	// trong lượt đó còn client thì không. Bài đối chiếu 3 000 bước bắt được: lệch 4,03 đơn
+	// vị ở Phàm Trấn, ngay chỗ hai khối gạch kề nhau.
+	//
+	// `3r` là trần an toàn: một lần đẩy ra khỏi hình chữ nhật dịch tâm nhiều nhất 2r (từ
+	// giữa ruột ra ngoài mép), nên không có khối nào ngoài 3r chạm tới được.
+	ids := g.obsBuf[:0]
+	g.QueryObstacles(pos, 3*r, func(id int) {
+		if g.ObstacleSolid(id) {
+			ids = append(ids, id)
+		}
+	})
+	g.obsBuf = ids
+	// Đẩy ra theo THỨ TỰ ID TĂNG DẦN, không theo thứ tự lưới không gian trả về.
+	//
+	// Đẩy lần lượt ra khỏi nhiều vật cản là phép KHÔNG GIAO HOÁN: đứng ở góc hai vật cản,
+	// đẩy A trước rồi B cho ra chỗ khác hẳn đẩy B trước rồi A. Lưới không gian duyệt theo ô
+	// nên thứ tự phụ thuộc vị trí, còn client duyệt theo mảng — hai bên ra hai kết quả khác
+	// nhau. Bài đối chiếu 1 000 bước bắt được 4 ca lệch, ca nặng nhất **173,7 đơn vị**.
+	sort.Ints(ids)
 	for iter := 0; iter < 3; iter++ {
-		// Đẩy ra theo THỨ TỰ ID TĂNG DẦN, không theo thứ tự lưới không gian trả về.
-		//
-		// Đẩy lần lượt ra khỏi nhiều vật cản là phép KHÔNG GIAO HOÁN: đứng ở góc hai vật
-		// cản, đẩy A trước rồi B cho ra chỗ khác hẳn đẩy B trước rồi A. Lưới không gian
-		// duyệt theo ô nên thứ tự phụ thuộc vị trí, còn client duyệt theo mảng — hai bên ra
-		// hai kết quả khác nhau. Bài đối chiếu 1 000 bước (cmd/collisionfixture) bắt được
-		// 4 ca lệch, ca nặng nhất **173,7 đơn vị**, đủ để người chơi thấy giật nảy.
-		ids := g.obsBuf[:0]
-		g.QueryObstacles(pos, r, func(id int) {
-			if g.ObstacleSolid(id) {
-				ids = append(ids, id)
-			}
-		})
-		g.obsBuf = ids
-		sort.Ints(ids)
 		moved := false
 		for _, id := range ids {
 			if np, hit := g.Map.Obstacles[id].Block().PushOut(pos, r); hit {

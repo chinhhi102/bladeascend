@@ -88,6 +88,20 @@ const (
 // rect is a placed footprint used to keep obstacles apart.
 type rect struct{ x0, y0, x1, y1 float64 }
 
+// solidRect là một khối đã đặt, KÈM BẬC của nó.
+//
+// Phải nhớ bậc vì §8.1b tính hành lang theo `corridor_min[min(bậcA, bậcB)]`: khe giữa một
+// tảng đá khổng lồ (bậc 9) và một bức tường gạch (bậc 2) chỉ cần 160, không cần 340 — ai
+// chém được gạch thì đã đi xuyên qua rồi, khe chỉ phải lọt người KHÔNG chém được cả hai, mà
+// người đó là cảnh giới 1.
+//
+// Dùng một con số hành lang chung cho mọi cặp là lý do bản đồ kẹt ở 2% mật độ: chỉ 2/70 ô
+// lưới nhận được đảo, vì mỗi đảo bậc 9 đòi 340 trống quanh cả những viên gạch bậc 2.
+type solidRect struct {
+	r    rect
+	tier int
+}
+
 func (a rect) overlaps(b rect, margin float64) bool {
 	return a.x0-margin < b.x1 && b.x0-margin < a.x1 && a.y0-margin < b.y1 && b.y0-margin < a.y1
 }
@@ -99,8 +113,22 @@ type builder struct {
 	rng    *rand.Rand
 	nextID int
 	layers map[string][]object
-	solid  []rect
+	solid  []solidRect
 	keep   []rect // areas that must stay clear (spawn plaza)
+	// cover: lưới 50 đánh dấu ô nào đã bị chân đế vật cản chiếm, cập nhật DẦN mỗi lần thêm
+	// một khối. Có nó thì `footprintDensity` là một phép chia, không phải quét lại toàn bộ.
+	//
+	// Quét lại mỗi lần là 230² ô × 500 vật cản = 26 triệu phép so sánh, mà `islandsStep` gọi
+	// nó tới 4 000 lần — tức 100 tỉ phép cho một khu.
+	cover    []bool
+	coverN   int
+	coverLo  float64
+	coverHit int
+	// footW/footH: tỉ lệ chân đế lấy từ `obstacles.footprint_w/h`. Giữ trong builder để
+	// `addSolid` không phải nạp config mỗi lần.
+	footW, footH float64
+	// obs: bảng bậc + hành lang tối thiểu (§8.2).
+	obs config.Obstacles
 	// decorSkipped: vật trang trí bị chốt chặn trong `decor()` từ chối vì không có art.
 	// Giữ lại để in ra; bỏ qua trong im lặng là đúng cái lỗi Q27-2.
 	decorSkipped []string
@@ -108,9 +136,78 @@ type builder struct {
 
 func newBuilder(size float64, seed int64) *builder {
 	c := size / 2
-	return &builder{size: size, seed: seed, rng: rand.New(rand.NewSource(seed)), nextID: 1, layers: map[string][]object{},
+	b := &builder{size: size, seed: seed, rng: rand.New(rand.NewSource(seed)), nextID: 1, layers: map[string][]object{},
 		keep: []rect{{c - 600, c - 600, c + 600, c + 600}}}
+	lo, hi := b.playable()
+	b.coverLo = lo
+	b.coverN = int((hi - lo) / coverCell)
+	b.cover = make([]bool, b.coverN*b.coverN)
+	b.obs = config.MustLoadDefault().Obstacles
+	b.footW, b.footH = b.obs.FootprintW, b.obs.FootprintH
+	return b
 }
+
+// coverCell phải BẰNG lưới của `cmd/mapgen --check`: hai nơi đo cùng một con số, lệch lưới
+// là mapgen tưởng đã đủ mật độ trong khi bộ kiểm báo còn trống.
+const coverCell = 50.0
+
+// addSolid ghi một khối vào danh sách chặn VÀ cập nhật lưới phủ.
+//
+// Mọi chỗ thêm vật cản phải đi qua đây. Thêm thẳng vào `b.solid` thì lưới phủ lệch, và
+// `islandsStep` quay mãi vì mật độ không bao giờ tăng.
+//
+// Lưới phủ đếm **CHÂN ĐẾ**, không phải hình vẽ. Hai thứ chênh nhau hơn ba lần: chân đế mặc
+// định rộng 90% và cao 30% hình vẽ, nằm ở đáy (`world.Footprint`). Đếm hình vẽ thì mapgen
+// báo 13,4% trong khi `--check` đo 6,3% — hai con số của cùng một bản đồ, và mapgen dừng
+// sớm vì tưởng đã đủ.
+//
+// Ô tính là bị phủ khi **tâm ô** nằm trong chân đế, đúng phép của `--check`. Lấy cả dải
+// chỉ số x0..x1 thì một khối rộng 140 chiếm 3–4 ô (150–200 đơn vị), dôi ra 40%.
+func (b *builder) addSolid(r rect, tier int) {
+	b.solid = append(b.solid, solidRect{r, tier})
+	f := footprintRect(r, b.footW, b.footH)
+	y0 := int((f.y0 - b.coverLo) / coverCell)
+	y1 := int((f.y1-b.coverLo)/coverCell) + 1
+	x0 := int((f.x0 - b.coverLo) / coverCell)
+	x1 := int((f.x1-b.coverLo)/coverCell) + 1
+	for y := max(y0, 0); y <= min(y1, b.coverN-1); y++ {
+		cy := b.coverLo + (float64(y)+0.5)*coverCell
+		if cy < f.y0 || cy > f.y1 {
+			continue
+		}
+		for x := max(x0, 0); x <= min(x1, b.coverN-1); x++ {
+			cx := b.coverLo + (float64(x)+0.5)*coverCell
+			if cx < f.x0 || cx > f.x1 {
+				continue
+			}
+			if i := y*b.coverN + x; !b.cover[i] {
+				b.cover[i] = true
+				b.coverHit++
+			}
+		}
+	}
+}
+
+// footprintRect là bản `world.Footprint` cho `rect`: rộng `fw` phần, cao `fh` phần, nằm ở
+// ĐÁY hình. Viết lại ở đây thay vì gọi `world` vì mapgen làm việc trên `rect` chứ không
+// `world.Shape`; hai công thức phải khớp, và `TestMapgenDensityMatchesCheck` canh điều đó.
+func footprintRect(r rect, fw, fh float64) rect {
+	w, h := r.x1-r.x0, r.y1-r.y0
+	nw, nh := w*fw, h*fh
+	x := r.x0 + (w-nw)/2
+	return rect{x, r.y1 - nh, x + nw, r.y1}
+}
+
+// footprintDensity: phần diện tích khu chơi được bị chân đế vật cản chiếm.
+func (b *builder) footprintDensity() float64 {
+	if b.coverN == 0 {
+		return 0
+	}
+	return float64(b.coverHit) / float64(b.coverN*b.coverN)
+}
+
+// tierOf tra bậc của một loại vật cản từ config — không viết số vào mã.
+func (b *builder) tierOf(kind string) int { return b.obs.ObstacleTier(kind) }
 
 func (b *builder) add(layerName string, o object) {
 	o.ID = b.nextID
@@ -139,7 +236,26 @@ func (b *builder) free(r rect, margin float64) bool {
 		}
 	}
 	for _, s := range b.solid {
-		if r.overlaps(s, margin) {
+		if r.overlaps(s.r, margin) {
+			return false
+		}
+	}
+	return true
+}
+
+// freeFor là `free` có xét BẬC: khe với mỗi khối đã đặt lấy theo `corridor_min[min(bậc)]`
+// (§8.1b), thay vì một con số chung.
+func (b *builder) freeFor(r rect, tier int, corridor func(int) float64) bool {
+	if !b.inBounds(r) {
+		return false
+	}
+	for _, k := range b.keep {
+		if r.overlaps(k, 0) {
+			return false
+		}
+	}
+	for _, s := range b.solid {
+		if r.overlaps(s.r, corridor(min(tier, s.tier))) {
 			return false
 		}
 	}
@@ -152,9 +268,24 @@ func (b *builder) obstacle(kind string, x, y, w, h, margin float64) bool {
 	if !b.free(r, margin) {
 		return false
 	}
-	b.solid = append(b.solid, r)
+	b.addSolid(r, b.tierOf(kind))
 	b.add("obstacles", object{Type: kind, X: x, Y: y, Width: w, Height: h})
 	return true
+}
+
+// obstacleForce đặt một khối KHÔNG kiểm chỗ trống.
+//
+// Chỉ dùng cho các khối BÊN TRONG một đảo, sau khi `freeFor` đã duyệt cả hộp bao của đảo
+// (xem `placeIsland`). Trong một đảo các khối phải chồng mép lên nhau mới thành một cụm
+// đặc; đi qua `obstacle` thì `free(r, 0)` từ chối ngay vì chồng mép LÀ chồng, và kết quả là
+// mỗi đảo chỉ còn đúng cái lõi — đo được: 81 đảo đặt xuống mà chỉ thêm 81 vật cản.
+func (b *builder) obstacleForce(kind string, x, y, w, h float64) {
+	r := rect{x, y, x + w, y + h}
+	if !b.inBounds(r) {
+		return
+	}
+	b.addSolid(r, b.tierOf(kind))
+	b.add("obstacles", object{Type: kind, X: x, Y: y, Width: w, Height: h})
 }
 
 func (b *builder) boulder(cx, cy, r, margin float64) bool {
@@ -162,7 +293,7 @@ func (b *builder) boulder(cx, cy, r, margin float64) bool {
 	if !b.free(rr, margin) {
 		return false
 	}
-	b.solid = append(b.solid, rr)
+	b.addSolid(rr, b.tierOf("boulder"))
 	b.add("obstacles", object{Type: "boulder", X: cx - r, Y: cy - r, Width: 2 * r, Height: 2 * r, Ellipse: true})
 	return true
 }
@@ -186,7 +317,7 @@ func (b *builder) wall(kind string, x, y, w, h float64) bool {
 			return false
 		}
 	}
-	b.solid = append(b.solid, r)
+	b.addSolid(r, b.tierOf(kind))
 	b.add("obstacles", object{Type: kind, X: x, Y: y, Width: w, Height: h})
 	return true
 }
