@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # tools/deploy.sh — đưa bản mới lên server LAN :9999 một cách AN TOÀN.
 #
-#   tools/deploy.sh            # kiểm tra, build, deploy, khởi động lại
+#   tools/deploy.sh                      # kiểm tra, build, deploy, khởi động lại
 #   tools/deploy.sh --no-restart
+#   tools/deploy.sh rollback             # liệt kê các bản lùi được
+#   tools/deploy.sh rollback <build-id>  # quay về đúng bản đó, < 1 phút
 #
 # ── Vì sao có file này ──────────────────────────────────────────────────────────────────
 # Ngày 30/10 chủ dự án đang chơi thì game đứng. Nguyên nhân không phải lỗi game: server
@@ -22,11 +24,138 @@ cd "$(dirname "$0")/.."
 REPO="$PWD"
 DEPLOY="$REPO/server/data/deploy"
 STAGE="$DEPLOY.new"
+# ARCHIVE giữ các bản đã deploy để lùi lại được.
+#
+# Chép bằng LIÊN KẾT CỨNG (`cp -al`): hai bản liền nhau khác nhau vài tệp, phần còn lại
+# dùng chung inode. 5 bản gần nhất tốn thêm vài MB chứ không phải 50 MB. Đây cũng là lý do
+# lùi được trong vài giây: không chép gì, chỉ đổi tên thư mục.
+ARCHIVE="$REPO/server/data/deploy-archive"
+KEEP_BUILDS=8
 
 GOROOT="${GOROOT:-$HOME/.cache/kx-gomod/golang.org/toolchain@v0.0.1-go1.26.0.linux-amd64}"
 if [ -x "$GOROOT/bin/go" ]; then
   export GOROOT GOMODCACHE="${GOMODCACHE:-$HOME/.cache/kx-gomod}"
   export PATH="$GOROOT/bin:$PATH"
+fi
+
+# ── Hàm dùng chung cho deploy và rollback ───────────────────────────────────────────────
+#
+# Tách ra thành hàm vì `rollback` phải chạy ĐÚNG những bước này. Viết lại một bản rút gọn
+# cho rollback là cách chắc chắn nhất để một ngày nào đó lùi về bản cũ rồi phát hiện server
+# không lên, đúng lúc đang cần lùi gấp.
+
+restart_server() {
+  local build="$1"
+  pkill -f 'kxserver' 2>/dev/null || true
+  sleep 2
+  ( cd "$REPO/server" && setsid env KX_ADMIN_PASS="${KX_ADMIN_PASS:-kiemxoay}" ./kxserver \
+      -build "$build" \
+      -client "$DEPLOY/client" \
+      -assets "$DEPLOY/assets" \
+      > data/kxserver.log 2>&1 < /dev/null & )
+  sleep 4
+  if ! ss -ltn 2>/dev/null | grep -q ':9999'; then
+    echo "LỖI: server không lên. Xem server/data/kxserver.log" >&2
+    tail -5 "$REPO/server/data/kxserver.log" >&2
+    return 1
+  fi
+}
+
+# self_check hỏi một câu duy nhất: NGƯỜI CHƠI THẬT có vào được không.
+#
+# "Server đang lắng nghe" không trả lời được câu đó. Lần deploy 30/10 server lên bình
+# thường, trả HTTP 200 cho mọi trang, mà game vẫn đứng ở màn hình chờ vì thiếu đúng hai tệp
+# font — và chủ dự án phải vào lại 8 lần mới báo.
+self_check() {
+  local fail=0
+  # Địa chỉ font lấy TỪ MANIFEST, không gõ tay: tên tệp trong `assets/dist` mang hash nội
+  # dung nên đổi mỗi lần art đổi. Gõ tay là bài tự kiểm sẽ báo đỏ đúng cái nó không nên
+  # báo, rồi người ta sẽ bỏ qua nó — và lần thiếu font thật thì cũng bỏ qua luôn.
+  local font_urls
+  font_urls=$(python3 - "$DEPLOY/assets/manifest.json" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1]))
+for rel in ('fonts/BeVietnamPro-700.ttf', 'fonts/BeVietnamPro-800.ttf'):
+    f = m['files'].get(rel)
+    if f:
+        print('/assets/' + f['url'])
+PY
+)
+  local u code
+  for u in / /api/config /assets/manifest.json $font_urls; do
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:9999$u" || echo 000)
+    if [ "$code" != "200" ]; then
+      echo "   LỖI $u → HTTP $code" >&2
+      fail=1
+    fi
+  done
+  # Tệp bundle mà index.html trỏ tới phải tồn tại — đây là chỗ hỏng khi build đè lên thư
+  # mục đang phục vụ.
+  local js
+  for js in $(grep -o 'static/[A-Za-z0-9._-]*\.js' "$DEPLOY/client/index.html"); do
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:9999/$js" || echo 000)
+    [ "$code" = "200" ] || { echo "   LỖI /$js → HTTP $code" >&2; fail=1; }
+  done
+  return "$fail"
+}
+
+list_builds() {
+  if [ ! -d "$ARCHIVE" ] || [ -z "$(ls -A "$ARCHIVE" 2>/dev/null)" ]; then
+    echo 'Kho rỗng — chưa có bản nào lùi được. Chạy tools/deploy.sh một lần là có.'
+    return 0
+  fi
+  local cur=""
+  [ -f "$DEPLOY/BUILD_ID" ] && cur=$(cat "$DEPLOY/BUILD_ID")
+  echo "Các bản lùi được (mới nhất trước):"
+  local b
+  for b in $(ls -1 "$ARCHIVE" | sort -r); do
+    if [ "$b" = "$cur" ]; then
+      echo "  $b   ← đang chạy"
+    else
+      echo "  $b"
+    fi
+  done
+  echo
+  echo "Lùi về:  tools/deploy.sh rollback <build-id>"
+}
+
+do_rollback() {
+  local want="$1"
+  local src="$ARCHIVE/$want"
+  if [ ! -d "$src" ]; then
+    echo "LỖI: không có bản \"$want\" trong kho." >&2
+    echo >&2
+    list_builds >&2
+    exit 1
+  fi
+  echo "== LÙI VỀ $want =="
+  # KHÔNG build, KHÔNG kiểm tra lại: bản này đã qua đủ cổng kiểm lúc deploy lần đầu, và
+  # lúc cần lùi thì thứ quý nhất là thời gian. Lùi phải xong trong vài giây.
+  local t0=$SECONDS
+  rm -rf "$DEPLOY.rollback"
+  cp -al "$src" "$DEPLOY.rollback"
+  rm -rf "$DEPLOY.prev"
+  [ -d "$DEPLOY" ] && mv "$DEPLOY" "$DEPLOY.prev"
+  mv "$DEPLOY.rollback" "$DEPLOY"
+  rm -rf "$DEPLOY.prev"
+  echo "   đổi thư mục xong ($((SECONDS - t0))s)"
+  restart_server "$want"
+  echo "== tự kiểm bản vừa lùi =="
+  if ! self_check; then
+    echo "LỖI: bản lùi về KHÔNG chơi được. Server vẫn chạy nó — xem log." >&2
+    exit 1
+  fi
+  echo "   server đang chạy build $want, mọi tệp cần thiết đều tải được ($((SECONDS - t0))s tổng)"
+}
+
+# ── Điều hướng lệnh ─────────────────────────────────────────────────────────────────────
+if [ "${1:-}" = "rollback" ]; then
+  if [ -n "${2:-}" ]; then
+    do_rollback "$2"
+  else
+    list_builds
+  fi
+  exit 0
 fi
 
 BUILD_ID="$(date +%Y%m%d_%H%M)_$(git rev-parse --short HEAD)"
@@ -92,55 +221,23 @@ if [ "${1:-}" = "--no-restart" ]; then
 fi
 
 echo "== 5/5 khởi động lại :9999 =="
-pkill -f 'kxserver' 2>/dev/null || true
-sleep 2
-cd server
-# `-client` và `-assets` trỏ vào thư mục deploy, KHÔNG phải thư mục làm việc.
-setsid env KX_ADMIN_PASS="${KX_ADMIN_PASS:-kiemxoay}" ./kxserver \
-  -build "$BUILD_ID" \
-  -client "$DEPLOY/client" \
-  -assets "$DEPLOY/assets" \
-  > data/kxserver.log 2>&1 < /dev/null &
-sleep 4
-if ! ss -ltn 2>/dev/null | grep -q ':9999'; then
-  echo "LỖI: server không lên. Xem server/data/kxserver.log" >&2
-  tail -5 data/kxserver.log >&2
-  exit 1
-fi
+restart_server "$BUILD_ID"
 
 echo "== 6/6 tự kiểm bản vừa deploy =="
-# "Server đang lắng nghe" KHÔNG có nghĩa là chơi được. Lần deploy trước server lên bình
-# thường, trả HTTP 200 cho mọi trang, mà game vẫn đứng ở màn hình chờ vì thiếu đúng hai tệp
-# font — và chủ dự án phải vào lại 8 lần mới báo. Nên bước cuối phải hỏi: một người chơi
-# thật có vào được không.
-fail=0
-# Địa chỉ font lấy TỪ MANIFEST, không gõ tay: tên tệp trong `assets/dist` mang hash nội
-# dung nên đổi mỗi lần art đổi. Gõ tay là bài tự kiểm sẽ báo đỏ đúng cái nó không nên báo,
-# rồi người ta sẽ bỏ qua nó — và lần thiếu font thật thì cũng bỏ qua luôn.
-FONT_URLS=$(python3 - "$DEPLOY/assets/manifest.json" <<'PY'
-import json, sys
-m = json.load(open(sys.argv[1]))
-for rel in ('fonts/BeVietnamPro-700.ttf', 'fonts/BeVietnamPro-800.ttf'):
-    f = m['files'].get(rel)
-    if f:
-        print('/assets/' + f['url'])
-PY
-)
-for u in / /api/config /assets/manifest.json $FONT_URLS; do
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:9999$u" || echo 000)
-  if [ "$code" != "200" ]; then
-    echo "   LỖI $u → HTTP $code" >&2
-    fail=1
-  fi
-done
-# Tệp bundle mà index.html trỏ tới phải tồn tại — đây là chỗ hỏng khi build đè lên thư mục
-# đang phục vụ.
-for js in $(grep -o 'static/[A-Za-z0-9._-]*\.js' "$DEPLOY/client/index.html"); do
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:9999/$js" || echo 000)
-  [ "$code" = "200" ] || { echo "   LỖI /$js → HTTP $code" >&2; fail=1; }
-done
-if [ "$fail" != "0" ]; then
+if ! self_check; then
   echo "LỖI: bản vừa deploy KHÔNG chơi được. Server vẫn chạy bản này — sửa rồi deploy lại." >&2
+  echo "Lùi nhanh về bản trước:  tools/deploy.sh rollback" >&2
   exit 1
 fi
 echo "   server đang chạy build $BUILD_ID, mọi tệp cần thiết đều tải được"
+
+# Cất vào kho SAU KHI đã tự kiểm xong: kho chỉ nên chứa bản đã chứng minh là chơi được.
+# Cất một bản hỏng vào kho là đặt sẵn một cái bẫy cho lần lùi gấp sau này.
+mkdir -p "$ARCHIVE"
+rm -rf "$ARCHIVE/$BUILD_ID"
+cp -al "$DEPLOY" "$ARCHIVE/$BUILD_ID"
+# Giữ KEEP_BUILDS bản gần nhất.
+ls -1 "$ARCHIVE" | sort -r | tail -n "+$((KEEP_BUILDS + 1))" | while read -r old; do
+  rm -rf "${ARCHIVE:?}/$old"
+done
+echo "   đã cất vào kho ($(ls -1 "$ARCHIVE" | wc -l) bản lùi được — tools/deploy.sh rollback)"
