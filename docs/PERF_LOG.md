@@ -74,7 +74,8 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 9a | 2026-10-30 | `200e5bf` | **Mốc TRƯỚC §13.7** — bộ nạp tải cả manifest trước trang chủ | S7 | – | – | – | – | – | – | – | – | – | Gói chặn **77.4 MB** (vượt 9.7×); tổng 201.5 MB (vượt 2.5×) |
 | **9b** | 2026-10-30 | `b55c14f` | **§13.7 A — asset-pipeline + nhóm tải + màn hình tải** | S7 | – | – | – | 58 / – | 0.6 | 36 | **0** ✅ | – | Gói chặn 77.4 → **7.02 MB** ✅ · tổng 201.5 → **11.41 MB** ✅ · vào trận 10 Mbps **8.3 s** ✅ · lần 2 **2.8 s** | Dư ngân sách gói chặn chỉ 0.98 MB; `zone_thien_dinh` 3.24 MB là phần nặng nhất |
 | **10** | 2026-10-31 | (phiên này) | **Trang chủ hiện ngay + tải gói lúc gõ tên** (chủ dự án chốt 31/10) | S7 | – | – | – | 60 / – | 0.32 | 40 | **0** ✅ | – | **Chờ thực** (bấm Vào chơi → trong trận) 10 Mbps 6.0 → **2.2 s**, Fast 4G 12.4 → **6.0 s**, có cache → **0.3 s** · trang chủ hiện 4.0 → **2.4 s** | Fast 4G dao động 2.4–9.4 s: 6 giây gõ tên chỉ phủ được ~40% gói 7 MB ở 4 Mbps |
-| 10b | 2026-10-31 | (phiên này) | Q27 — nền đúng biome + trang trí bản đồ **vẽ ra thật** (543 vật trước đây vô hình) | S4\*\* | – | – | – | 60 / – | 0.32 | 40 | 0 ✅ | – | +91 vật trang trí vẽ thêm (Băng Nguyệt Hồ): draw call 36 → 40, vẽ 0.6 → 0.32 ms | Chỉ đo được khu server xếp vào (Băng Nguyệt Hồ); Phàm Trấn 139 vật chưa đo trực tiếp |
+| 10b | 2026-10-31 | `494d517` | Q27 — nền đúng biome + trang trí bản đồ **vẽ ra thật** (543 vật trước đây vô hình) | S4\*\* | – | – | – | 60 / – | 0.32 | 40 | 0 ✅ | – | Băng Nguyệt Hồ (+91 vật): draw call 36 → 40, vẽ 0.6 → 0.32 ms | – |
+| 10c | 2026-10-31 | `494d517` | Như trên, đo trên `:9999` SAU KHI DEPLOY — **khu nhiều trang trí nhất** | S4\*\* | – | – | – | 58 / – | 0.9 | 34 | 0 ✅ | – | Phàm Trấn, 139 vật trang trí, nền `concrete` mới: 58 fps · 34 draw call · hiệu chỉnh 0/giây | – |
 
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
@@ -385,8 +386,11 @@ Nút thắt tìm được (có số đo):
 2. **Lần 2 có cache: 0,3 giây và chỉ 0,04 MB qua dây.** Tức khi byte đã nằm trong máy thì
    phần chờ còn lại gần như bằng 0 — không phải giải mã texture như tôi đoán ở lượt #9.
    Lượt #9 đo ra 2,8 giây cho trường hợp này; phần chênh là do bản đó vẫn chặn ở nhóm `home`.
-3. Vật trang trí bản đồ **bắt đầu vẽ ra thật** (543 vật trước đây vô hình, xem Q27-2): draw
-   call 36 → 40, thời gian vẽ 0,6 → 0,32 ms, FPS 60. Không phải nút thắt.
+3. Vật trang trí bản đồ **bắt đầu vẽ ra thật** (543 vật trước đây vô hình, xem Q27-2):
+   draw call 36 → 40, thời gian vẽ 0,6 → 0,32 ms, FPS 60. Không phải nút thắt. Đo thêm trên
+   `:9999` sau khi deploy, đúng **khu nhiều trang trí nhất** (Phàm Trấn, 139 vật, nền
+   `concrete` mới): **58 fps, 0,9 ms vẽ, 34 draw call, 0 placeholder, hiệu chỉnh 0/giây**.
+   Chúng dùng chung texture nên PixiJS gộp lô được; thêm vật trang trí gần như miễn phí.
 
 Bị chặn / chưa làm được:
 - `TYPE_MS = 6 giây` là **giả định duy nhất** của bài đo, không phải số đo. Đổi được bằng
