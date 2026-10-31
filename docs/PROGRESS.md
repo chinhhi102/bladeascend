@@ -1399,3 +1399,51 @@ bộ nhớ. Nút thắt **B13 để mở**, câu hỏi **Q30**.
 Xem `docs/STATUS_AUDIT.md` mục 9. Gọn lại: **mục nhỏ (đổi số/config) không còn mục nào
 chưa làm** — đã kiểm từng khoá config của v6.4 → v6.11. Mục lớn còn 3: `ev`+`ia` sang nhị
 phân (62% gói), giải phóng atlas nhân vật trên iOS, và 34 tệp art không ai nạp (Q31).
+
+## Phiên 31/10 (tiếp 7) — Protocol v2 thay hẳn v1, trả lời Q28–Q31, dọn bảng xếp hạng
+
+| Bước | Việc | Commit |
+|---|---|---|
+| 0 | Tag git + `tools/deploy.sh rollback` (lùi thật: **6 giây**) · `go test -race ./...` toàn bộ: 20 gói, 0 race | `15dafff`, `4e129b3` |
+| 1 | Protocol v2 — snapshot nhị phân, bỏ msgpack đường nóng | `e8717f1` |
+| 2+3 | Q28–Q31 + ẩn 42 mạng đã duyệt + sửa trang quản trị đang tắt | `6cc900a` |
+
+### Số đo Protocol v2
+
+| | Trước (msgpack v1) | Sau (nhị phân v2) |
+|---|---|---|
+| Gói snapshot lớn nhất | 5,5 KB | **4,4 KB** |
+| Băng thông / người | 9,3 KB/s | **3,9 KB/s** |
+| Tick TB / p95 | 1,47 / 2,95 ms | **1,17 / 2,19 ms** |
+| `ia` mỗi mục | 29 byte | 14 byte |
+| `ev` mỗi mục | 43 byte | 17 byte |
+| `m` mỗi mục | 21 byte | 10 byte |
+| state người chơi | 89 byte | 14 byte (Update delta) |
+
+Mục tiêu dừng anh đặt (< 6 KB) **đạt**. Nút thắt mới: `ir` (id vật phẩm rời tầm
+nhìn) nay chiếm 62% gói lớn nhất — 558 id × 5 byte trong một đợt khi người Đạo Tổ
+chạy nhanh. Chưa tối ưu thêm, đúng như anh dặn "đạt thì dừng".
+
+### Ba lỗi tìm ra trong lúc làm
+
+**1. Trang quản trị TẮT trên `:9999` suốt từ A1.** `deploy.sh` truyền
+`KX_ADMIN_PASS`, một tên biến server không bao giờ đọc — `admin.NewAuth` chỉ nhìn
+`ADMIN_PASSWORD_HASH`. Mọi thứ A1–A4 dựng lên đều không vào được, và dòng log
+"trang quản trị: tắt" trôi qua mà tôi không đọc. Nay deploy đọc
+`server/data/admin.env` và cảnh báo rõ nếu vẫn tắt.
+
+**2. Bộ giải mã trả về thiếu entity.** Bản đầu chỉ trả entity mà gói hiện tại
+"chạm tới". Hai đường sai, cả hai im lặng: người ĐỨNG YÊN hoàn toàn sẽ biến mất
+khỏi màn hình sau vài giây (`state.expire`), và bộ nội suy thiếu mẫu nên nhân vật
+trôi. Delta tiết kiệm ở đường truyền, không phải đường vẽ.
+
+**3. `deploy.sh` treo khi gọi qua ống.** Server chạy nền kế thừa fd của subshell;
+khi gọi `deploy.sh | grep` thì fd đó là cái ống và server giữ nó mở suốt đời.
+
+### Còn lại
+
+- **Anh cần chạy một lần**: `cd server && go run ./cmd/adminpass` → dán vào
+  `server/data/admin.env`. Không có bước này thì trang quản trị vẫn tắt.
+- Đo lại bộ nhớ trên **iPhone thật** sau Q30 (nút thắt B13b): giả lập cho 95,8 MB
+  (từ 113,5) nhưng nó chỉ có 2–3 nhân vật, còn máy thật ghi `chars:7`.
+- `ir` 62% gói — việc tối ưu tiếp theo nếu cần.
