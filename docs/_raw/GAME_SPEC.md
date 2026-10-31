@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.14:** duyệt bố cục lượt 3; mật độ hình vẽ chốt 8–14% (Băng Nguyệt 4–10%) (§8.1b).
+
 **Thay đổi v6.13:** chốt mục tiêu bố cục theo lượt 2 (mật độ hình vẽ 12–20%, khoảng thở ≥ 20%, Băng Nguyệt ≥ 40%), mẫu cụm riêng từng khu, luật túi kín ≥ 4 ô (§8.1b).
 
 **Thay đổi v6.12:** mật độ đo theo hình vẽ (giữ mức hiện tại, không nới corridor_min); thêm luật nhịp cụm – khoảng thở, đa dạng hình khối, bản sắc từng khu (§8.1b).
@@ -673,7 +675,7 @@ Bậc = **chỉ số cảnh giới tối thiểu** (0 = Luyện Khí … 8 = Đ�
 2. **Vật cản xếp thành "đảo"** giữa các đường (cụm nhà, cụm đá, cụm tre), mỗi đảo tối đa ~1 200 × 1 200. **Không tường liền dài quá 800**; tường dài hơn phải có khe ≥ `corridor_min` của bậc đó.
 3. **Đảo phân tầng**: viền ngoài bậc thấp (rào, sạp), lõi bậc cao (gạch, đá) → người nhỏ chui vào nấp, người lớn chém thẳng vào.
 4. **Quanh cổng, Thiên Môn, Đài Tiên Khí, bến Thiên Môn**: trống bán kính ≥ 600, có ≥ 3 lối vào rộng ≥ 400.
-5. **Mật độ**: đo theo **diện tích hình vẽ** của vật cản (chân đế chỉ ≈ 27% hình vẽ). Mục tiêu hình vẽ: Băng Nguyệt Hồ 6–12%, các khu khác **12–20%** (chỉnh theo lượt bố cục 2: khi đã gom cụm, 12–16% nhìn đã đủ dày). Không nới `corridor_min` để tăng mật độ.
+5. **Mật độ**: đo theo **diện tích hình vẽ** của vật cản (chân đế chỉ ≈ 27% hình vẽ). Mục tiêu hình vẽ: Băng Nguyệt Hồ 4–10%, các khu khác **8–14%** (chốt theo lượt bố cục 3 đã duyệt: cụm rỗng ruột — nhà có sân, bãi đá rời, lùm tre so le — nên mật độ hình vẽ thấp mà vẫn đủ đầy; trần cứng 26%). Không nới `corridor_min` để tăng mật độ.
 6. **Nhịp "cụm – khoảng thở"**, không rải đều: **≥ 20%** diện tích khu (Băng Nguyệt Hồ ≥ 40%) là **khoảng trống** (không vật cản trong bán kính 400) để giao tranh; vật cản dồn thành cụm/đảo có hình dáng rõ (nhà, sân, lùm tre, bãi đá), giữa các cụm là khoảng trống. Cấm kiểu rải đều như giấy kẻ ô (Poisson đều khắp khu) — người chơi không có mốc để nhớ đường.
 7. **Đa dạng hình khối & mẫu cụm riêng từng khu**: trộn kích thước, xoay, hướng. Mỗi khu có **mẫu cụm riêng**, không dùng chung một mẫu ô 2×2: Linh Sơn = bãi đá tròn/méo, xoay ngẫu nhiên; Trúc Lâm = lùm tre dài cong, xếp so le; Phàm Trấn = nhà chữ nhật có sân/cửa; Thiên Đình = điện/sân có tường bao; Băng Nguyệt = đá & băng tròn trên đảo và bờ.
 8. **Bản sắc từng khu là luật, không phải trang trí**: Thiên Đình = trục đường chữ X + vành đai + sân; Linh Sơn Cốc = dải vách núi là nhân vật chính, thung lũng giữa các dải phần lớn trống, chỉ vài bãi đá; Trúc Lâm = **lối đi quanh co giữa các lùm tre** (mê cung hữu cơ, hành lang ≥ 220, không phải lưới); Phàm Trấn = lưới phố + khối nhà (tường gạch thành nhà có sân/cửa); Băng Nguyệt Hồ = **mặt hồ gần như trống** (chỉ đảo có vật cản), vật cản dồn ở bờ và trên đảo.

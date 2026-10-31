@@ -299,16 +299,17 @@ func (g *gen) trucLam() error {
 	// `b.obstacle` nên tự tránh chỗ bia đã chiếm.
 	g.immortalAnchors("seal_stele", Vec2{s / 2, s / 2}, 1500, 5, 240)
 
-	walls := carveMaze(cells, func(n int) int { return g.b.rng.Intn(n) })
-	for _, w := range walls {
-		x := lo + float64(w.cx)*cell
-		y := lo + float64(w.cy)*cell
-		if w.vertical {
-			g.bambooRow(x, y, cell, true)
-		} else {
-			g.bambooRow(x, y, cell, false)
-		}
-	}
+	// MÊ CUNG giờ là chính các LÙM TRE của `islandsStep` (`bambooClumps`), không phải một
+	// lưới tường đào bằng thuật toán nữa.
+	//
+	// Lưới 7×7 phủ đều cả khu theo đúng cách nó được dựng — và đo được là **một mình nó đã
+	// nuốt hết khoảng thở xuống 18%**, dưới ngưỡng 20% của §8.1b, kể cả khi không đặt thêm
+	// một cụm nào. Không có cách chỉnh tham số nào cứu được: đào đường lùi dần BẮT BUỘC phải
+	// chạm mọi ô, đó là tính chất làm nó bảo đảm liên thông.
+	//
+	// Lùm tre cong xếp so le cho ra đúng thứ spec muốn ("lối đi quanh co giữa các lùm tre"),
+	// mà vẫn chừa được những khoảng rộng giữa các cụm. Liên thông thì `--check` canh, và
+	// `unsealStep` đục nốt túi nào lọt.
 	// Bụi rậm GẤP 3 so với khu thường (spec §8.0) — đây là khu tầm nhìn ngắn.
 	for i := 0; i < 36; i++ {
 		g.b.zone("bush", g.b.rnd(lo+300, hi-900), g.b.rnd(lo+300, hi-900), g.b.rnd(400, 800), g.b.rnd(350, 700), true)

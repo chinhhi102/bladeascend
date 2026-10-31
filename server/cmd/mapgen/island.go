@@ -132,18 +132,28 @@ const breathFloor = 0.24
 // cụm dừng ở 24%, nội dung rải rác kéo xuống 14%, và bộ kiểm đỏ.
 func (g *gen) breathFloorOf() float64 { return breathFloorFor(g.zoneID) + frameCost(g.zoneID) }
 
-// frameCost: BỘ KHUNG CỐ ĐỊNH của khu ăn mất bao nhiêu điểm khoảng thở sau khi cụm đã đặt
-// xong. Đo thực tế, không phải phỏng đoán.
+// frameCost: BỘ KHUNG CỐ ĐỊNH của khu ăn mất bao nhiêu điểm khoảng thở SAU KHI cụm đã đặt
+// xong. Đo thực tế cho từng khu, không phải phỏng đoán — và phải đo lại mỗi lần đổi mẫu cụm
+// hoặc đổi khung khu.
 //
-// Khu thường mất ~12 điểm vì nhà/rào/bãi đá rải sau. Thiên Đình mất nhiều hơn hẳn vì khung
-// của nó là thứ đặt TRƯỚC và không bỏ được: vòng cột quanh Thiên Tiên Đài, bốn sân môn phái
-// có tường bao, cộng tám cổng với vùng giữ trống. Để chung 12 điểm thì nó dừng ở 32% rồi
-// tụt còn 17% — dưới ngưỡng.
+// Vì sao phải có bảng này: bộ sinh dừng đặt cụm khi khoảng thở chạm sàn, nhưng nội dung
+// riêng của khu đặt SAU đó và ăn thêm. Để sàn đúng bằng ngưỡng thì khu nào cũng trượt; để
+// dư chung một con số thì khu nhẹ khung bị thiệt còn khu nặng khung vẫn trượt.
+//
+//   - Linh Sơn Cốc nặng nhất: ba dải vách chạy SUỐT chiều ngang. Mỗi dải cộng biên 400 mỗi
+//     bên là một băng 1 020 × 11 160 không có chỗ thở nào — ba dải đã gần một phần ba khu.
+//   - Thiên Đình: vòng cột quanh Thiên Tiên Đài + 4 sân môn phái + 8 cổng, đều là thứ đặt
+//     TRƯỚC và không bỏ được.
+//   - Còn lại: nhà, rào, bãi đá rải sau.
 func frameCost(zoneID string) float64 {
-	if zoneID == "thien_dinh" {
+	switch zoneID {
+	case "linh_son_coc":
+		return 0.26
+	case "thien_dinh":
 		return 0.18
+	default:
+		return 0.16
 	}
-	return 0.12
 }
 
 // clusterLattice rải một lớp cụm theo lưới có xê dịch.
@@ -191,63 +201,41 @@ const (
 //   - dải chạy theo MỘT hướng chung cho cả cụm (ngang hoặc dọc), nên cụm có "thớ";
 //   - độ dài mỗi dải cắt theo đường bao TRÒN của cụm, nên mép cụm cong chứ không vuông;
 //   - lõi bậc cao nằm giữa, viền bậc thấp ở hai đầu dải (§8.1b mục 3 "đảo phân tầng").
+//
+// placeCluster dựng MỘT cụm theo mẫu RIÊNG của khu (xem `cluster_shapes.go`).
+//
+// Luật chung áp cho mọi mẫu: khối trong cùng cụm ĐƯỢC chạm nhau (hành lang chỉ áp giữa hai
+// cụm), và khối xen kẽ bậc cao / bậc thấp nên khe giữa hai khối kề nhau chỉ cần
+// `corridor_min` của bậc THẤP HƠN (§8.1b).
+//
+// Đây là chỗ quyết định cụm đặc hay rỗng: nếu mọi khối cùng bậc 9 thì khe phải 340, cụm chỉ
+// đặc 37%, và mật độ cả khu không bao giờ quá 11%. Xen kẽ thì khe chỉ cần 160–180, cụm đặc
+// ~70%. Luật đi lọt vẫn nguyên: ai không chém được khối bậc cao thì chém được khối bậc thấp
+// ngay cạnh, hoặc đi qua khe 160 vốn đủ rộng cho họ.
 func (g *gen) placeCluster(cx, cy, r float64) {
 	core := g.pickCore()
 	rim := islandRim[g.b.rng.Intn(len(islandRim))]
 	if !g.b.freeFor(rect{cx - r, cy - r, cx + r, cy + r}, max(g.tierOf(core), g.tierOf(rim)), g.corridorFor) {
 		return
 	}
-	vertical := g.b.rng.Intn(2) == 0
-	// Dải XEN KẼ bậc cao / bậc thấp, và khe giữa hai dải kề nhau lấy theo `corridor_min` của
-	// bậc THẤP HƠN (§8.1b: "khe giữa vật cản bậc A và bậc B ≥ corridor_min[min(A,B)]").
-	//
-	// Đây là chỗ quyết định cụm đặc hay rỗng. Nếu mọi dải cùng bậc 9 thì khe phải 340, và
-	// với dải dày 200 thì cụm chỉ đặc 200/(200+340) = 37% — đo được mật độ cả khu 8–11%,
-	// không bao giờ chạm 18%. Xen kẽ thì khe chỉ cần 160–180, cụm đặc ~70%, và mật độ lên
-	// đúng tầm mà vẫn giữ nguyên luật đi lọt: ai không chém được dải bậc cao thì chém được
-	// dải bậc thấp ngay cạnh, hoặc đi qua khe 160 vốn đủ rộng cho họ.
-	lowGap := g.corridorFor(g.tierOf(rim))
-	thick := g.b.rnd(300, 450)
-	step := thick + lowGap
-	i := 0
-	for t := -r; t <= r; t += step {
-		half := math.Sqrt(math.Max(r*r-t*t, 0))
-		if half < 80 {
-			i++
-			continue
-		}
-		kind := core
-		if i%2 == 1 {
-			kind = rim
-		}
-		g.segmentedRun(cx, cy, t, half, thick, lowGap, vertical, kind)
-		i++
+	k := clusterKit{cx: cx, cy: cy, r: r, core: core, rim: rim, gap: g.corridorFor(g.tierOf(rim))}
+	switch g.zoneID {
+	case "linh_son_coc":
+		g.rockField(k)
+	case "truc_lam":
+		g.bambooClumps(k)
+	case "pham_tran":
+		g.townBlock(k)
+	case "thien_dinh":
+		g.palaceYard(k)
+	default:
+		// Băng Nguyệt Hồ: bờ tuyết và đảo — bãi đá hợp hơn cả, và nó cũng là mẫu thưa nhất.
+		g.rockField(k)
 	}
 }
 
 // maxRunLen: "Không tường liền dài quá 800" (§8.1b mục 2).
 const maxRunLen = 800.0
-
-// segmentedRun đặt một dải dài `2*half` thành từng khúc ≤ `maxRunLen`.
-func (g *gen) segmentedRun(cx, cy, t, half, thick, gap float64, vertical bool, kind string) {
-	total := 2 * half
-	segs := int(math.Ceil(total / maxRunLen))
-	if segs < 1 {
-		return
-	}
-	segLen := (total - float64(segs-1)*gap) / float64(segs)
-	if segLen < 80 {
-		return
-	}
-	for i := 0; i < segs; i++ {
-		a := -half + float64(i)*(segLen+gap)
-		if vertical {
-			g.b.obstacleForce(kind, cx+t-thick/2, cy+a, thick, segLen)
-		} else {
-			g.b.obstacleForce(kind, cx+a, cy+t-thick/2, segLen, thick)
-		}
-	}
-}
 
 // tierOf tra bậc của một loại vật cản từ config — không viết số vào mã.
 func (g *gen) tierOf(kind string) int { return g.b.tierOf(kind) }

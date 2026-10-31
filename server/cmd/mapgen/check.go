@@ -34,26 +34,42 @@ import (
 
 const checkCell = 50.0
 
-// Mục tiêu mật độ — §8.1b mục 5, cách đo của spec v6.12 (chủ dự án chốt 31/10/2026).
+// Mục tiêu mật độ — §8.1b mục 5, chốt ở spec v6.14 (31/10/2026).
 //
-// 12–20% là **diện tích HÌNH VẼ**, tức phần đất bị sprite vật cản phủ lên. Không phải chân
+// Con số là **diện tích HÌNH VẼ**, tức phần đất bị sprite vật cản phủ lên. Không phải chân
 // đế: chân đế chỉ rộng 90% và cao 30% hình vẽ nên nó chỉ bằng ~27% — cùng một bản đồ, đo
-// theo chân đế ra 5–7,5% còn đo theo hình vẽ ra 18–28%.
+// chân đế ra 2,5–4% còn đo hình vẽ ra 8–14%.
 //
-// Hình vẽ mới là thứ người chơi NHÌN THẤY và là thứ kiếm chém trúng (§8.2: "thân hình —
-// vùng kiếm chém trúng, đúng với cái người chơi nhìn thấy"). Chân đế chỉ quyết định chân có
-// bị chặn không. Hỏi "khu này trông có đầy không" thì phải đo cái người ta nhìn.
-const (
-	densityMin = 0.12
-	densityMax = 0.20
-	// densityHardMax: vượt mức này là TRƯỢT, không phải cảnh báo.
-	//
-	// Hai hướng không đối xứng vì hậu quả không đối xứng: khu nhạt thì chơi vẫn được, chỉ
-	// kém hay; khu chật thì bắt đầu có người kẹt — và bộ kiểm liên thông không bắt được hết,
-	// nó đo "có đường đi không" chứ không đo "đường có hẹp tới mức đi một bước né ba lần
-	// không".
-	densityHardMax = 0.26
-)
+// Hình vẽ mới là thứ người chơi NHÌN THẤY và là thứ kiếm chém trúng (§8.2 "thân hình —
+// vùng kiếm chém trúng, đúng với cái người chơi nhìn thấy"). Hỏi "khu này trông có đầy
+// không" thì phải đo cái người ta nhìn.
+//
+// Ba lần chỉnh con số này đều do ĐO rồi mới chốt, không phải đổi ý:
+//
+//	v6.12  18–28%  — đặt lúc chưa ai đo gì; đạt được nhưng chỉ khi rải đều, mà rải đều thì
+//	                 khoảng thở về 0 (xem `breathMin`).
+//	v6.13  12–20%  — sau khi cụm hoá; mẫu dải đặc chạm được 10–15%.
+//	v6.14   8–14%  — sau khi mỗi khu có mẫu cụm riêng. Mẫu mới CỐ TÌNH rỗng ruột (nhà có
+//	                 sân, bãi đá rời, lùm tre so le) nên cùng một diện tích chiếm chỗ thì
+//	                 mật độ hình vẽ thấp hơn hẳn mẫu dải đặc.
+var densityTarget = map[string][2]float64{
+	// Băng Nguyệt Hồ thấp hơn vì mặt hồ (~1/4 khu) là vùng CẤM đặt vật cản.
+	"bang_nguyet_ho": {0.04, 0.10},
+}
+
+func densityRange(id string) [2]float64 {
+	if r, ok := densityTarget[id]; ok {
+		return r
+	}
+	return [2]float64{0.08, 0.14}
+}
+
+// densityHardMax: vượt mức này là TRƯỢT, không phải cảnh báo.
+//
+// Hai hướng không đối xứng vì hậu quả không đối xứng: khu nhạt thì chơi vẫn được, chỉ kém
+// hay; khu chật thì bắt đầu có người kẹt — và bộ kiểm liên thông không bắt được hết, nó đo
+// "có đường đi không" chứ không đo "đường có hẹp tới mức đi một bước né ba lần không".
+const densityHardMax = 0.20
 
 // checkResult là kết quả của một cảnh giới.
 type checkResult struct {
@@ -163,9 +179,10 @@ func runCheck(dir, pngDir string, cfg *config.Config, pngRealms []int) error {
 			// liên thông không bắt được hết, nó đo "có đường đi không" chứ không đo "đường
 			// có hẹp tới mức đi một bước né ba lần không".
 			if r == 0 {
-				if want := breathFloorFor(m.ID); res.Breathing < want {
+				want := densityRange(m.ID)
+				if bw := breathFloorFor(m.ID); res.Breathing < bw {
 					fmt.Printf("     ✗ khoảng thở %.0f%% < %.0f%% — vật cản rải đều, không có chỗ rượt nhau\n",
-						res.Breathing*100, want*100)
+						res.Breathing*100, bw*100)
 					bad++
 				}
 				if res.LakeObstacle > lakeMaxObstacle {
@@ -178,12 +195,12 @@ func runCheck(dir, pngDir string, cfg *config.Config, pngRealms []int) error {
 					fmt.Printf("     ✗ mật độ hình vẽ %.1f%% VƯỢT TRẦN %.0f%% — khu chật, người to kẹt\n",
 						res.Density*100, densityHardMax*100)
 					bad++
-				case res.Density < densityMin:
-					fmt.Printf("     ⚠ mật độ hình vẽ %.1f%% (chân đế %.1f%%), §8.1b nói %.0f–%.0f%% — còn trống\n",
-						res.Density*100, res.FootDensity*100, densityMin*100, densityMax*100)
-				case res.Density > densityMax:
-					fmt.Printf("     ⚠ mật độ hình vẽ %.1f%% (chân đế %.1f%%), §8.1b nói %.0f–%.0f%% — hơi dày\n",
-						res.Density*100, res.FootDensity*100, densityMin*100, densityMax*100)
+				case res.Density < want[0]:
+					fmt.Printf("     ⚠ mật độ hình vẽ %.1f%% (chân đế %.1f%%), mục tiêu %.0f–%.0f%% — còn trống\n",
+						res.Density*100, res.FootDensity*100, want[0]*100, want[1]*100)
+				case res.Density > want[1]:
+					fmt.Printf("     ⚠ mật độ hình vẽ %.1f%% (chân đế %.1f%%), mục tiêu %.0f–%.0f%% — hơi dày\n",
+						res.Density*100, res.FootDensity*100, want[0]*100, want[1]*100)
 				}
 			}
 			if pngDir != "" && wants(pngRealms, r) {

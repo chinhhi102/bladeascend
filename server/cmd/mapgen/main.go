@@ -416,16 +416,29 @@ func (b *builder) obstacle(kind string, x, y, w, h, margin float64) bool {
 	return true
 }
 
-// obstacleForce đặt một khối KHÔNG kiểm chỗ trống.
+// obstacleForce đặt một khối, BỎ QUA luật giãn cách giữa các vật cản.
 //
-// Chỉ dùng cho các khối BÊN TRONG một đảo, sau khi `freeFor` đã duyệt cả hộp bao của đảo
-// (xem `placeIsland`). Trong một đảo các khối phải chồng mép lên nhau mới thành một cụm
-// đặc; đi qua `obstacle` thì `free(r, 0)` từ chối ngay vì chồng mép LÀ chồng, và kết quả là
-// mỗi đảo chỉ còn đúng cái lõi — đo được: 81 đảo đặt xuống mà chỉ thêm 81 vật cản.
+// Dùng cho các khối BÊN TRONG một cụm, sau khi `freeFor` đã duyệt hộp bao của cụm. Trong
+// một cụm các khối phải chồng mép lên nhau mới thành một khối đặc; đi qua `obstacle` thì
+// `free(r, 0)` từ chối ngay vì chồng mép LÀ chồng, và mỗi cụm chỉ còn đúng cái lõi — đo
+// được: 81 cụm đặt xuống mà chỉ thêm 81 vật cản.
+//
+// Nhưng "bỏ qua giãn cách" KHÔNG phải "bỏ qua tất cả". Vùng giữ trống quanh cổng và đài
+// (`b.keep`) là tuyệt đối — §8.1 bước 8 đòi trống 300 quanh cổng, và một cái cổng bị vật
+// cản chặn miệng là người chơi dịch chuyển tới rồi kẹt luôn tại đó.
+//
+// Lỗi thật đã gặp: mẫu cụm riêng từng khu (lượt 3) đặt khối ra NGOÀI hộp bao đã duyệt —
+// bãi đá rải tới 1,1 lần bán kính, lùm tre cong ra xa hơn nữa — nên chúng với tới cổng.
+// `truc_lam` seed 9 trượt với "vật cản trong bán kính 300 quanh cổng tại (10320,6000)".
 func (b *builder) obstacleForce(kind string, x, y, w, h float64) {
 	r := rect{x, y, x + w, y + h}
 	if !b.inBounds(r) || b.onLake(r) {
 		return
+	}
+	for _, k := range b.keep {
+		if r.overlaps(k, 0) {
+			return
+		}
 	}
 	b.addSolid(r, b.tierOf(kind))
 	b.add("obstacles", object{Type: kind, X: x, Y: y, Width: w, Height: h})
