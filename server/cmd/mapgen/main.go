@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -85,6 +86,19 @@ const (
 	borderThick float64 = 120 // bề dày tường biên không phá được
 )
 
+// lakeArea là một mặt hồ: hình tròn bị bẹp theo trục dọc, đúng hình `organicZone` sinh ra.
+type lakeArea struct {
+	cx, cy, r, squash float64
+}
+
+// contains: điểm này có nằm trên mặt hồ không (nới thêm `pad` ra ngoài mép).
+func (l lakeArea) contains(x, y, pad float64) bool {
+	dy := (y - l.cy) / math.Max(l.squash, 1e-6)
+	dx := x - l.cx
+	rr := l.r + pad
+	return dx*dx+dy*dy <= rr*rr
+}
+
 // rect is a placed footprint used to keep obstacles apart.
 type rect struct{ x0, y0, x1, y1 float64 }
 
@@ -124,11 +138,29 @@ type builder struct {
 	coverN   int
 	coverLo  float64
 	coverHit int
+	// vis / visHit: cùng lưới nhưng đếm HÌNH VẼ thay vì chân đế. Mục tiêu mật độ của §8.1b
+	// tính theo hình vẽ (spec v6.12), nên bộ sinh phải lặp theo đúng con số bộ kiểm đo.
+	vis    []bool
+	visHit int
+	// air / airHit: ô CÁCH MỌI VẬT CẢN ít nhất `breathR`. Đếm ngược (đánh dấu ô GẦN vật
+	// cản) nên `airHit` là số ô đã mất chỗ thở.
+	//
+	// Có nó thì bộ sinh biết DỪNG: khoảng thở là ràng buộc ngang hàng với mật độ, không
+	// phải thứ đo sau. Thiếu nó thì vòng lặp cứ nhồi cho đủ mật độ rồi mới phát hiện đã
+	// nuốt sạch chỗ trống — đo được mật độ 15% / khoảng thở 13%.
+	air    []bool
+	airHit int
 	// footW/footH: tỉ lệ chân đế lấy từ `obstacles.footprint_w/h`. Giữ trong builder để
 	// `addSolid` không phải nạp config mỗi lần.
 	footW, footH float64
 	// obs: bảng bậc + hành lang tối thiểu (§8.2).
 	obs config.Obstacles
+	// lakeKeep: mặt hồ — KHÔNG đặt vật cản lên (chủ dự án chốt 31/10: "mặt hồ gần như
+	// trống, vật cản ngoài đảo ≤ 1%").
+	//
+	// Mặt hồ Băng Nguyệt Hồ là sân trượt băng để rượt nhau; đó là thứ làm khu ấy khác bốn
+	// khu kia. Rải vật cản lên đó thì nó thành một khu như mọi khu, chỉ khác màu nền.
+	lakeKeep []lakeArea
 	// decorSkipped: vật trang trí bị chốt chặn trong `decor()` từ chối vì không có art.
 	// Giữ lại để in ra; bỏ qua trong im lặng là đúng cái lỗi Q27-2.
 	decorSkipped []string
@@ -142,6 +174,8 @@ func newBuilder(size float64, seed int64) *builder {
 	b.coverLo = lo
 	b.coverN = int((hi - lo) / coverCell)
 	b.cover = make([]bool, b.coverN*b.coverN)
+	b.vis = make([]bool, b.coverN*b.coverN)
+	b.air = make([]bool, b.coverN*b.coverN)
 	b.obs = config.MustLoadDefault().Obstacles
 	b.footW, b.footH = b.obs.FootprintW, b.obs.FootprintH
 	return b
@@ -168,9 +202,29 @@ func (b *builder) addSolid(r rect, tier int) {
 	b.stampCover(r)
 }
 
+// stampVisual đánh dấu ô mà HÌNH VẼ của `r` phủ lên (không co về chân đế), và đồng thời
+// đánh dấu vành `breathR` quanh nó là "mất chỗ thở".
+func (b *builder) stampVisual(r rect) {
+	b.stampGrid(b.vis, &b.visHit, r)
+	b.stampGrid(b.air, &b.airHit, rect{r.x0 - breathR, r.y0 - breathR, r.x1 + breathR, r.y1 + breathR})
+}
+
+// breathing: phần diện tích khu cách MỌI vật cản ít nhất `breathR` (§8.1b mục 6).
+func (b *builder) breathing() float64 {
+	if b.coverN == 0 {
+		return 1
+	}
+	return 1 - float64(b.airHit)/float64(b.coverN*b.coverN)
+}
+
 // stampCover đánh dấu các ô lưới mà CHÂN ĐẾ của `r` phủ lên.
 func (b *builder) stampCover(r rect) {
-	f := footprintRect(r, b.footW, b.footH)
+	b.stampGrid(b.cover, &b.coverHit, footprintRect(r, b.footW, b.footH))
+	b.stampVisual(r)
+}
+
+// stampGrid đánh dấu ô có TÂM nằm trong `f`, đúng phép của `cmd/mapgen --check`.
+func (b *builder) stampGrid(grid []bool, hits *int, f rect) {
 	y0 := int((f.y0 - b.coverLo) / coverCell)
 	y1 := int((f.y1-b.coverLo)/coverCell) + 1
 	x0 := int((f.x0 - b.coverLo) / coverCell)
@@ -185,9 +239,9 @@ func (b *builder) stampCover(r rect) {
 			if cx < f.x0 || cx > f.x1 {
 				continue
 			}
-			if i := y*b.coverN + x; !b.cover[i] {
-				b.cover[i] = true
-				b.coverHit++
+			if i := y*b.coverN + x; !grid[i] {
+				grid[i] = true
+				*hits++
 			}
 		}
 	}
@@ -226,11 +280,22 @@ func (b *builder) removeSolid(i int) {
 func (b *builder) rebuildCover() {
 	for i := range b.cover {
 		b.cover[i] = false
+		b.vis[i] = false
+		b.air[i] = false
 	}
-	b.coverHit = 0
+	b.coverHit, b.visHit, b.airHit = 0, 0, 0
 	for _, s := range b.solid {
 		b.stampCover(s.r)
 	}
+}
+
+// visualDensity: phần diện tích khu bị HÌNH VẼ vật cản phủ — con số §8.1b mục 5 nói tới
+// (18–28%). Khác `footprintDensity` (chân đế) đúng tỉ lệ chân đế / hình vẽ ≈ 27%.
+func (b *builder) visualDensity() float64 {
+	if b.coverN == 0 {
+		return 0
+	}
+	return float64(b.visHit) / float64(b.coverN*b.coverN)
 }
 
 func (b *builder) footprintDensity() float64 {
@@ -260,8 +325,39 @@ func (b *builder) playable() (lo, hi float64) {
 	return mapMargin + borderThick, b.size - mapMargin - borderThick
 }
 
+// onLake: hình này có chạm mặt hồ không. Lùi vào 120 so với mép hồ để bờ vẫn đặt được —
+// "dồn vật cản lên đảo và bờ".
+func (b *builder) onLake(r rect) bool {
+	for _, l := range b.lakeKeep {
+		if l.contains((r.x0+r.x1)/2, (r.y0+r.y1)/2, -120) {
+			return true
+		}
+	}
+	return false
+}
+
+// nearSolid: có vật cản nào trong bán kính `r` quanh điểm này không.
+//
+// Dùng để BẮT nội dung rải rác của khu bám vào cụm thay vì trải đều (§8.1b mục 6). Nhà,
+// rào, sạp, bãi đá — tất cả đều đi qua đây, nên chỉ cần một chốt là cả năm khu đổi nết.
+//
+// Không có chốt này thì dù cụm có gọn tới đâu, lớp rải rác vẫn phủ kín khoảng trống giữa
+// các cụm: đo được khoảng thở 11–29% trong khi cụm một mình cho 45–60%.
+func (b *builder) nearSolid(x, y, r float64) bool {
+	rr := rect{x - r, y - r, x + r, y + r}
+	for _, s := range b.solid {
+		if s.tier >= config.TierBorder {
+			continue // biên khu không tính là "có cụm ở đây"
+		}
+		if rr.overlaps(s.r, 0) {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *builder) free(r rect, margin float64) bool {
-	if !b.inBounds(r) {
+	if !b.inBounds(r) || b.onLake(r) {
 		return false
 	}
 	for _, k := range b.keep {
@@ -280,7 +376,7 @@ func (b *builder) free(r rect, margin float64) bool {
 // freeFor là `free` có xét BẬC: khe với mỗi khối đã đặt lấy theo `corridor_min[min(bậc)]`
 // (§8.1b), thay vì một con số chung.
 func (b *builder) freeFor(r rect, tier int, corridor func(int) float64) bool {
-	if !b.inBounds(r) {
+	if !b.inBounds(r) || b.onLake(r) {
 		return false
 	}
 	for _, k := range b.keep {
@@ -315,7 +411,7 @@ func (b *builder) obstacle(kind string, x, y, w, h, margin float64) bool {
 // mỗi đảo chỉ còn đúng cái lõi — đo được: 81 đảo đặt xuống mà chỉ thêm 81 vật cản.
 func (b *builder) obstacleForce(kind string, x, y, w, h float64) {
 	r := rect{x, y, x + w, y + h}
-	if !b.inBounds(r) {
+	if !b.inBounds(r) || b.onLake(r) {
 		return
 	}
 	b.addSolid(r, b.tierOf(kind))
@@ -533,6 +629,11 @@ func (b *builder) zonePoly(kind string, pts []float64, props ...prop) bool {
 
 // organicZone là lối tắt hay dùng: vùng méo quanh một tâm.
 func (b *builder) organicZone(kind string, cx, cy, r float64, squash float64, props ...prop) bool {
+	// Hồ băng / hồ nước ĐỦ LỚN thì ghi lại làm vùng cấm đặt vật cản. Ghi ở đây chứ không
+	// để khu tự nhớ: `organicZone` là cửa duy nhất sinh ra mặt hồ, nên không sót được.
+	if (kind == "ice" || kind == "water") && r > 1500 {
+		b.lakeKeep = append(b.lakeKeep, lakeArea{cx, cy, r, squash})
+	}
 	return b.zonePoly(kind, organicPoly(cx, cy, r, 14, squash, b.seed+int64(len(b.layers["zones"]))), props...)
 }
 
