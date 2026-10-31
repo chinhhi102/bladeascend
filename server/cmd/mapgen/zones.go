@@ -36,13 +36,15 @@ type zoneDef struct {
 var zoneDefs = []zoneDef{
 	// Nhắm GIỮA khoảng mục tiêu, không nhắm mép dưới: đảo đặt xong mới biết chồng mép bao
 	// nhiêu, nên nhắm mép là rơi xuống dưới mục tiêu ở vài seed.
-	{"thien_dinh", "Thiên Đình", "grass", "gold", (*gen).thienDinh, 0.23},
-	{"linh_son_coc", "Linh Sơn Cốc", "dirt", "slate", (*gen).linhSonCoc, 0.23},
-	{"truc_lam", "Trúc Lâm Mê Cung", "grass", "green", (*gen).trucLam, 0.24},
-	{"pham_tran", "Phàm Trấn", "concrete", "red", (*gen).phamTran, 0.23},
+	// Nhắm GIỮA khoảng mục tiêu v6.14 (8–14%), không nhắm mép trên: nội dung riêng của khu
+	// còn cộng thêm sau khi cụm dừng, nên nhắm mép là vượt.
+	{"thien_dinh", "Thiên Đình", "grass", "gold", (*gen).thienDinh, 0.12},
+	{"linh_son_coc", "Linh Sơn Cốc", "dirt", "slate", (*gen).linhSonCoc, 0.12},
+	{"truc_lam", "Trúc Lâm Mê Cung", "grass", "green", (*gen).trucLam, 0.12},
+	{"pham_tran", "Phàm Trấn", "concrete", "red", (*gen).phamTran, 0.12},
 	// Băng Nguyệt Hồ nhắm CAO HƠN vì mặt hồ (~1/4 khu) bị cấm đặt: toàn bộ mật độ phải dồn
 	// vào phần đất còn lại, nên nhắm theo cả khu thì phải nhắm cao mới chạm 18%.
-	{"bang_nguyet_ho", "Băng Nguyệt Hồ", "snow", "cyan", (*gen).bangNguyetHo, 0.26},
+	{"bang_nguyet_ho", "Băng Nguyệt Hồ", "snow", "cyan", (*gen).bangNguyetHo, 0.08},
 }
 
 // gateNet là tên mạng cổng chung của CẢ THẾ GIỚI (spec §8.4: 20 cổng, một mạng).
@@ -152,7 +154,7 @@ func (g *gen) linhSonCoc() error {
 	// Đá tảng rải rác trong lòng hẻm cho đỡ trống, nhưng thưa — khu này sống bằng địa hình.
 	// Bãi đá chỉ rải QUANH dải vách và các cụm, không khắp thung lũng: "dải vách núi là
 	// chính, thung lũng phần lớn trống, chỉ vài bãi đá" (chủ dự án chốt 31/10).
-	for _, p := range g.poisson(900, 500) {
+	for _, p := range g.poisson(1150, 500) {
 		if !g.b.nearSolid(p.X, p.Y, clusterGlue) {
 			continue
 		}
@@ -283,6 +285,17 @@ func (g *gen) trucLam() error {
 	// Thiên Môn ở khoảng trống trung tâm mê cung (spec §8.4a) — đường vào ngoằn ngoèo.
 	g.b.heavenGate(s/2, s/2)
 	g.fourGates("green")
+	// VÒNG LÙM TRE quanh Thiên Môn — đặt TRƯỚC cụm, sau cổng/đài.
+	//
+	// Thứ tự quyết định vòng có thành hình hay không. Đặt sau cụm thì phần lớn khúc bị
+	// `b.obstacle` từ chối vì chỗ đã có cụm chiếm: đo được **8 khúc tre trên cả vành**, với
+	// bốn khe rộng — nhìn không ra cái vòng nào. Đặt trước thì vòng giành được chỗ, còn cụm
+	// tự né nó qua `freeFor`.
+	//
+	// Bỏ lưới mê cung ở lượt 3 giải quyết được khoảng thở nhưng cũng lấy mất thứ làm Trúc
+	// Lâm là Trúc Lâm: tâm vào thẳng từ mọi phía. Vòng tre trả lại chất "tìm đường vào tâm"
+	// mà chỉ tốn một vành mỏng. Chừa 2–3 lối vào rộng hơn hành lang của tre cổ thụ (240).
+	g.bambooRing(Vec2{s / 2, s / 2}, 1500)
 	// Đảo lấp mật độ chạy NGAY SAU cổng/đài, TRƯỚC nội dung rải rác của khu.
 	//
 	// Thứ tự này quyết định cả bài toán. Vật cản rải rác của khu nằm cách nhau trung bình
@@ -638,4 +651,45 @@ func generateZone(b *builder, cfg config.Mapgen, zone int) error {
 	// vật cản quanh nó, nên chỉ biết được khi mọi thứ đã nằm yên chỗ.
 	g.unsealStep(realmSizesOf(config.MustLoadDefault()))
 	return g.check()
+}
+
+// bambooRing dựng một vòng lùm tre quanh `c`, chừa 2–3 lối vào.
+//
+// Dùng `obstacle` (có kiểm chỗ trống) chứ không `obstacleForce`: vòng này đặt sau cụm và
+// sau thạch bi, nên nó phải NHƯỜNG những thứ đã có — chồng lên thạch bi thì cái vòng dày
+// lên bất thường ở đúng chỗ đó.
+func (g *gen) bambooRing(c Vec2, r float64) {
+	gaps := 2 + g.b.rng.Intn(2)
+	// Lối vào rộng hơn hành lang tối thiểu của tre cổ thụ (bậc 5 = 240) một quãng an toàn.
+	const gapArc = 320.0
+	gapAt := make([]float64, 0, gaps)
+	for i := 0; i < gaps; i++ {
+		gapAt = append(gapAt, float64(i)/float64(gaps)*2*math.Pi+g.b.rnd(0, 0.8))
+	}
+	const seg = 260.0
+	n := int(2 * math.Pi * r / seg)
+	for i := 0; i < n; i++ {
+		a := 2 * math.Pi * float64(i) / float64(n)
+		skip := false
+		for _, ga := range gapAt {
+			// So sánh theo ĐỘ DÀI CUNG, không theo radian: cùng một góc ở bán kính khác
+			// nhau cho ra lối vào rộng hẹp khác hẳn.
+			if d := math.Abs(math.Atan2(math.Sin(a-ga), math.Cos(a-ga))); d*r < gapArc/2 {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		}
+		// Bán kính xê dịch để vòng không ra một đường tròn hoàn hảo (§8.6).
+		rr := r + g.b.rnd(-110, 110)
+		w := g.b.rnd(200, 300)
+		h := g.b.rnd(200, 300)
+		kind := "bamboo_ancient"
+		if g.b.rng.Intn(3) == 0 {
+			kind = "bamboo_wall"
+		}
+		g.b.obstacle(kind, c.X+math.Cos(a)*rr-w/2, c.Y+math.Sin(a)*rr-h/2, w, h, 60)
+	}
 }

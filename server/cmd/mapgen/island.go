@@ -64,12 +64,21 @@ func (g *gen) pickCore() string {
 	return islandCoreMid[g.b.rng.Intn(len(islandCoreMid))]
 }
 
-// islandJitter: biên xê dịch mỗi đảo khỏi ô lưới, để không lộ ra bàn cờ (§8.6 cấm "khối
-// hình học lộ ra").
+// islandJitterFrac: biên xê dịch mỗi cụm khỏi ô lưới, tính theo PHẦN của bước lưới.
 //
-// Phải cộng vào bước lưới (xem `islandLattice`), nên xê dịch càng lớn thì lưới càng thưa và
-// mật độ càng thấp. 90 là chỗ cân: đủ để nhìn không ra hàng lối, mà bước chỉ dài thêm 180.
-const islandJitter = 60.0
+// Trước đây là một con số tuyệt đối (60) cộng vào bước. Trên bước 2 700 thì 60 chỉ là 2% —
+// mắt vẫn đọc ra hàng lối ngay, và đó đúng là điều chủ dự án nhìn thấy: "các bãi đá đang
+// xếp thẳng hàng như bàn cờ".
+//
+// 25% bước là đủ để phá hàng lối. Không cộng vào bước nữa: cụm nào xê dịch tới mức chạm cụm
+// bên cạnh thì `freeFor` từ chối, và **chính những lần bị từ chối đó là thứ làm bãi đá rải
+// không đều** — vừa phá lưới vừa cho ra "chỗ dày chỗ thưa" mà không cần luật riêng.
+const islandJitterFrac = 0.25
+
+// clusterSkipChance: bỏ hẳn một số ô lưới. Xê dịch phá được HÀNG LỐI nhưng không phá được
+// MẬT ĐỘ ĐỀU — mỗi ô vẫn đúng một cụm. Bỏ ngẫu nhiên 1/6 số ô tạo ra những khoảng rộng
+// hơn hẳn, và đó mới là thứ làm bản đồ trông tự nhiên.
+const clusterSkipChance = 1.0 / 6.0
 
 var islandRim = []string{"fence", "stall", "cart", "bamboo_thin", "brick", "bamboo_wall", "boulder"}
 
@@ -181,10 +190,17 @@ func (g *gen) clusterLattice(lo, hi, pitch, off, target float64) {
 		if g.b.visualDensity() >= target || g.b.breathing() <= g.breathFloorOf() {
 			return
 		}
+		// Bỏ hẳn một số ô: xê dịch phá được HÀNG LỐI nhưng không phá được MẬT ĐỘ ĐỀU — mỗi
+		// ô vẫn đúng một cụm. Bỏ ngẫu nhiên tạo ra những khoảng rộng hơn hẳn.
+		if g.b.rng.Float64() < clusterSkipChance {
+			continue
+		}
+		jit := pitch * islandJitterFrac
 		g.placeCluster(
-			cl.x+g.b.rnd(-islandJitter, islandJitter),
-			cl.y+g.b.rnd(-islandJitter, islandJitter),
-			g.b.rnd(clusterMinSpan, clusterMaxSpan)/2)
+			cl.x+g.b.rnd(-jit, jit),
+			cl.y+g.b.rnd(-jit, jit),
+			// Cỡ cụm lệch hẳn nhau (0,7–1,3 lần) — cụm to nhỏ xen kẽ là thứ mắt đọc ra ngay.
+			g.b.rnd(clusterMinSpan, clusterMaxSpan)/2*g.b.rnd(0.7, 1.3))
 	}
 }
 
