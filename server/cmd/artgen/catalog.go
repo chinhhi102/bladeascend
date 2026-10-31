@@ -402,59 +402,68 @@ var obstacles = []struct {
 	id, desc string
 	w, h     int
 }{
+	// Đủ 16 loại của bảng bậc §8.2. Trước v6.7 chỉ có 7 loại vì bản đồ chỉ dùng 7; giờ
+	// mapgen đặt cả tre cổ thụ, vách núi, đá khổng lồ, băng vạn năm, cột ngọc, thạch bi —
+	// thiếu tên ở đây nghĩa là **2 800 vật cản vẽ ra khung chữ nhật màu trơn**.
 	{"fence", "a straight horizontal bamboo fence segment tied with rope", 512, 512},
 	{"stall", "a street market stall with a striped canopy and fruit baskets", 512, 512},
 	{"cart", "a wooden street food cart with a small stove", 512, 512},
+	{"bamboo_thin", "a row of thin young bamboo stalks with sparse leaves", 512, 512},
 	{"brick", "a short horizontal red brick wall segment with moss", 512, 512},
-	{"boulder", "a huge round grey boulder with cartoon crack lines", 512, 512},
-	{"stone_wall", "an ancient mossy horizontal stone wall with carved patterns", 512, 512},
-	// `bamboo_wall` THIẾU art từ lâu mà không ai biết: bản đồ Trúc Lâm Mê Cung dùng 300 cái,
-	// và chúng vẽ ra khung chữ nhật trắng. Chủ dự án nhìn thấy trong game ngày 30/10.
-	// `check:assets` cũ không bắt được vì nó kiểm danh mục art, còn `bamboo_wall` thì chưa
-	// bao giờ có trong danh mục — thiếu cái gì không có tên thì không có gì để thiếu.
 	{"bamboo_wall", "a wall of thick green bamboo poles tied together with rope, viewed from the side", 512, 512},
+	{"boulder", "a huge round grey boulder with cartoon crack lines", 512, 512},
+	{"bamboo_ancient", "a grove of ancient giant bamboo trunks, thick and dark green with age rings", 512, 512},
+	{"stone_wall", "an ancient mossy horizontal stone wall with carved patterns", 512, 512},
+	{"sect_wall", "a grand sect compound wall with curved tiled roof caps and red lacquer panels", 512, 512},
+	{"cliff", "a rugged rock cliff face with layered strata and sparse grass on top", 512, 512},
+	{"boulder_huge", "a colossal weathered boulder twice a person's height, deep cracks and lichen", 512, 512},
+	{"ice_eternal", "a massive block of eternal blue ice, translucent with frost cracks and cold mist", 512, 512},
+	{"jade_pillar", "a carved celestial jade pillar, pale green translucent stone with gold cloud reliefs", 512, 512},
+	{"seal_stele", "a forbidding stone stele covered in glowing talisman script, dark granite with purple runes", 512, 512},
+	{"border", "an impassable towering dark stone rampart, featureless and grim", 512, 512},
 }
 
+// obstacleJobs sinh art cho vật cản theo ĐÚNG bộ trạng thái của v6.7 (xem
+// `client/src/render/catalog.ts` → `OBSTACLE_STATES`).
+//
+// Từ v6.7 vật cản **không còn máu**: đủ bậc thì chạm là biến mất, chưa đủ thì kiếm đi
+// xuyên (§8.2). Nên chỉ còn MỘT trạng thái `intact` — bỏ hẳn `cracked`, `nearly_broken`,
+// `rubble` và cả hoạt ảnh `break` ("biến mất ngay lập tức, không hoạt ảnh vỡ").
+//
+// Mỗi loại cần ba thứ: `intact.png` (đoạn ngang), `intact_vertical.png` (cùng vật đó xoay
+// 90° trên mặt đất), và `regrow/` 6 khung (mọc lại sau 30 giây). `border` không bao giờ bị
+// chém nên không cần mọc lại.
 func obstacleJobs() []Job {
 	var jobs []Job
 	for _, o := range obstacles {
 		dir := "obstacles/" + o.id
 		subject := "a top-down 3/4 view game obstacle, " + o.desc
-		states := []Seg{{Anim: "states", Frames: 4, Out: dir, Names: []string{"intact", "cracked", "nearly_broken", "rubble"},
-			W: o.w, H: o.h, Pivot: "center",
-			Poses: "1) intact and solid 2) with visible cracks 3) heavily damaged, crumbling, pieces missing 4) flat pile of rubble and debris on the ground"}}
-		jobs = append(jobs, Job{Name: "obs_" + o.id + "_states", Priority: 1, Mode: modeSheet, Rows: []int{2, 2}, Segs: states,
-			Prompt: sheetPrompt(styleObject, subject, []int{2, 2}, states, true)})
-		// Đoạn DỌC: client xếp gạch theo chiều dài nên ảnh ngang kéo dọc trông sai hẳn
-		// (hàng rào nằm ngang chồng lên nhau). Mỗi vật cản cần thêm một bộ 4 trạng thái vẽ
-		// theo chiều dọc, tên file `<state>_vertical.png`.
+		// Một ảnh duy nhất → `modeSprite`, không phải lưới sheet: ghép ô rồi cắt chỉ có
+		// nghĩa khi cần nhiều khung cùng phong cách.
+		jobs = append(jobs, Job{Name: "obs_" + o.id + "_states", Priority: 1, Mode: modeSprite,
+			Out: dir + "/intact.png", W: o.w, H: o.h, Pivot: "center",
+			Prompt: styleObject + " " + subject + negative})
+		// Đoạn DỌC: client xếp gạch theo chiều dài nên ảnh ngang kéo dọc trông sai hẳn.
+		//
 		// "vertical" dễ bị hiểu thành "dựng đứng" (một tấm panel đứng), trong khi cái cần là
-		// cùng vật cản đó XOAY 90° TRÊN MẶT ĐẤT để chạy ra xa máy quay. Nên mô tả theo hướng
-		// chạy và bắt nó chạm mép trên + mép dưới khung hình thì xếp gạch mới nối liền.
+		// cùng vật cản đó XOAY 90° TRÊN MẶT ĐẤT để chạy ra xa máy quay.
 		vdesc := strings.ReplaceAll(o.desc, "horizontal ", "")
 		vdesc = strings.ReplaceAll(vdesc, " horizontal", "")
-		vstates := []Seg{{Anim: "states", Frames: 4, Out: dir,
-			Names: []string{"intact_vertical", "cracked_vertical", "nearly_broken_vertical", "rubble_vertical"},
-			W:     o.w, H: o.h, Pivot: "center",
-			Poses: "1) intact and solid 2) with visible cracks 3) heavily damaged, crumbling, pieces missing 4) flat pile of rubble and debris on the ground"}}
-		jobs = append(jobs, Job{Name: "obs_" + o.id + "_states_vertical", Priority: 1, Mode: modeSheet, Rows: []int{2, 2}, Segs: vstates,
-			Prompt: sheetPrompt(styleObject, "a top-down 3/4 view game obstacle, "+vdesc+
-				", rotated 90 degrees flat on the ground so its length runs AWAY from the viewer, "+
-				"going from the bottom edge of the frame straight up to the top edge; the shape is TALL and NARROW, "+
-				"it touches both the top and the bottom edge so copies stacked on top of each other join seamlessly; "+
-				"this is the same object as the horizontal version, only turned, not stood upright on its end",
-				[]int{2, 2}, vstates, true)})
-		if o.id == "stone_wall" {
+		jobs = append(jobs, Job{Name: "obs_" + o.id + "_states_vertical", Priority: 1, Mode: modeSprite,
+			Out: dir + "/intact_vertical.png", W: o.w, H: o.h, Pivot: "center",
+			Prompt: styleObject + " a top-down 3/4 view game obstacle, " + vdesc +
+				", rotated 90 degrees flat on the ground so its length runs AWAY from the viewer, " +
+				"going from the bottom edge of the frame straight up to the top edge; the shape is TALL and NARROW, " +
+				"it touches both the top and the bottom edge so copies stacked on top of each other join seamlessly; " +
+				"this is the same object as the horizontal version, only turned, not stood upright on its end" + negative})
+		if o.id == "border" {
 			continue
 		}
-		for _, an := range []Seg{
-			{Anim: "break", Frames: 6, Out: dir + "/break", W: o.w, H: o.h, Pivot: "center", Poses: "1) shaking 2) cracking 3) bursting apart 4) debris flying 5) dust cloud 6) rubble pile"},
-			{Anim: "regrow", Frames: 6, Out: dir + "/regrow", W: o.w, H: o.h, Pivot: "center", Poses: "1) glowing rubble 2) pieces rising with light 3) half rebuilt glowing 4) almost whole 5) whole with sparkles 6) intact and solid"},
-		} {
-			segs := []Seg{an}
-			jobs = append(jobs, Job{Name: "obs_" + o.id + "_" + an.Anim, Priority: 4, Mode: modeSheet, Rows: []int{3, 3}, Segs: segs,
-				Prompt: sheetPrompt(styleObject, subject, []int{3, 3}, segs, true)})
-		}
+		an := Seg{Anim: "regrow", Frames: 6, Out: dir + "/regrow", W: o.w, H: o.h, Pivot: "center",
+			Poses: "1) glowing rubble 2) pieces rising with light 3) half rebuilt glowing 4) almost whole 5) whole with sparkles 6) intact and solid"}
+		segs := []Seg{an}
+		jobs = append(jobs, Job{Name: "obs_" + o.id + "_regrow", Priority: 4, Mode: modeSheet, Rows: []int{3, 3}, Segs: segs,
+			Prompt: sheetPrompt(styleObject, subject, []int{3, 3}, segs, true)})
 	}
 	return jobs
 }

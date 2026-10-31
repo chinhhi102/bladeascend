@@ -4,13 +4,13 @@ Tạo lại file này: `cd server && go run ./cmd/artgen status`.
 Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.
 Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.
 
-## Còn thiếu (1 ảnh)
+## Còn thiếu (0 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
-| `decor_nature` | p3 | decor (decor ×7) |
 
-## Đã có (347 ảnh)
+
+## Đã có (356 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
@@ -84,6 +84,8 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `gate_blue` | p1 | gates/blue (idle ×6), gates/blue (warn ×4), gates/blue (burst ×6) |
 | `gate_orange` | p1 | gates/orange (idle ×6), gates/orange (warn ×4), gates/orange (burst ×6) |
 | `item_skill_scroll` | p2 | items/skill_scroll.png |
+| `item_tien_orb_100` | p2 | items/tien_orb_100.png |
+| `item_tien_orb_500` | p2 | items/tien_orb_500.png |
 | `chest` | p2 | items/chest (idle ×4), items/chest (open ×6) |
 | `char_a_hon_hit` | p2 | characters/a_hon/frames (hit ×4) |
 | `char_a_hon_death` | p2 | characters/a_hon/frames (death ×8) |
@@ -165,6 +167,13 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `char_cu_rua_skill` | p3 | characters/cu_rua/frames (skill ×6) |
 | `decor_sheet` | p3 | decor (decor ×10), decor (wall ×1) |
 | `zone_wind` | p3 | zones (wind ×4) |
+| `decor_rock_small` | p3 | decor/rock_small.png |
+| `decor_pine` | p3 | decor/pine.png |
+| `decor_bamboo` | p3 | decor/bamboo.png |
+| `decor_bush_small` | p3 | decor/bush_small.png |
+| `decor_lantern` | p3 | decor/lantern.png |
+| `decor_well` | p3 | decor/well.png |
+| `decor_banner` | p3 | decor/banner.png |
 | `vfx_levelup_aura` | p3 | vfx/levelup_aura (levelup_aura ×6) |
 | `vfx_lightning` | p3 | vfx/lightning (lightning ×6) |
 | `vfx_shield_break` | p3 | vfx/shield_break (shield_break ×6) |
