@@ -93,7 +93,8 @@ export const STR = {
   zoneEntered: (name: string): string => `— ${name} —`,
   glLost: 'Card màn hình vừa bị gián đoạn. Đang khôi phục, bạn sẽ vào lại phòng ngay…',
   glLostManual: 'Đồ hoạ lỗi liên tục. Hãy hạ chất lượng bằng phím V rồi tải lại trang (Ctrl+F5).',
-  versionMismatch: 'Máy chủ vừa được cập nhật. Hãy tải lại trang (Ctrl+F5) để chơi tiếp.',
+  versionMismatch: 'Đã có bản mới — bấm để tải lại.',
+  versionReload: 'Tải lại',
   disconnected: 'Mất kết nối với máy chủ. Đang thử lại...',
   badName: 'Tên phải dài 2–16 ký tự.',
 

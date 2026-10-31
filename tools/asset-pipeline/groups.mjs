@@ -81,6 +81,23 @@ const NEVER_SHIP = [
   // manifest cũ (v1: `files: string[]`). Pipeline tự ghi manifest v2 vào `assets/dist`;
   // phát hành cả bản cũ thì bộ nạp có hai nguồn sự thật và chắc chắn có ngày đọc nhầm bản sai.
   /^manifest\.json$/,
+  // ── Art có sẵn nhưng CHƯA khu nào dùng (chủ dự án chốt 31/10, QUESTIONS Q31 nhóm 2) ──
+  //
+  // Giữ trong `assets/src` để khi bản đồ cần thì có ngay, nhưng KHÔNG phát hành: người chơi
+  // đang tải chúng về rồi không vẽ một lần nào. `npm run check:dead` là thứ tìm ra chúng.
+  //
+  // Thêm một khu dùng tới loại nào thì bỏ dòng tương ứng ở đây.
+  /^obstacles\/(rope_bridge|village_roof|cliff_wall|lantern_string|ice_island_edge|bamboo_corner)\.png$/,
+  /^tiles\/(cobblestone|mountain_rock|mossy_stone|damp_earth)\.png$/,
+  /^decals\/(frozen_reeds|ice_skid|snow_pile)\.png$/,
+  // `dan_em` không nằm trong 10 nhân vật chơi được (`config.characters`). Đàn em của Đại Ca
+  // vẽ bằng chính atlas của Đại Ca thu nhỏ (spec v5.4 mục 19), không dùng atlas riêng.
+  /^characters\/dan_em\//,
+  // Tệp cấu hình của `cmd/artgen` (công cụ DỰNG art), không phải art. Client không đọc
+  // chúng — `npm run check:dead` tìm ra. Giữ ở `assets/src` vì artgen đọc từ đó.
+  /^anim_overrides\.json$/,
+  /^jitter_exceptions\.json$/,
+  /(^|\/)LICENSE[^/]*$/,
 ];
 
 export function neverShip(rel) {

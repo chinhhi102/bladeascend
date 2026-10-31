@@ -45,6 +45,9 @@ message Spawn 1
   mood        u8
   buffs       u16     # bitmask buff
   flags       u16     # bitmask cờ trạng thái
+  tilt        i8      # độ nghiêng lưỡi kiếm, bước 1/128 rad (|tilt| ≤ 35° = 0.61 rad)
+  status      u16     # bitmask trạng thái do kỹ năng (ngủ, trói, choáng…) — MỌI người thấy
+  crack       u8      # vết nứt vòng kiếm 0..1, bước 1/255
 
 message Desc 2
   doc Descriptor đổi (danh hiệu, cảnh giới, skin) — đổi TẠI CHỖ, không dựng lại view (§5.5).
@@ -58,7 +61,7 @@ message Update 3
   doc Delta mỗi snapshot: chỉ chở trường ĐÃ ĐỔI so với bản client đã ack (§4.3).
   doc Đây là chỗ tiết kiệm băng thông lớn nhất — đứng yên thì gói gần như rỗng.
   id          u32
-  changed     u16     bitmask x,y,facing,level,scale,swords,ring_phase,ring_dir,mood,buffs,flags
+  changed     u16     bitmask x,y,facing,level,scale,swords,ring_phase,ring_dir,mood,buffs,flags,tilt,status,crack
   x           u16     if x
   y           u16     if y
   facing      u8      if facing
@@ -70,6 +73,9 @@ message Update 3
   mood        u8      if mood
   buffs       u16     if buffs
   flags       u16     if flags
+  tilt        i8      if tilt
+  status      u16     if status
+  crack       u8      if crack
 
 message Despawn 4
   doc Entity rời đi THẬT SỰ — thứ bước 2b còn thiếu.
@@ -94,3 +100,76 @@ message Input 6
   seq         u32
   angle       u8
   buttons     u8      # bit0 moving · bit1 burn · bit2 skill
+
+message Event 7
+  doc Sự kiện trong khu (chém trúng, nhặt đồ, đột phá, kỹ năng…) — §4.1.
+  doc
+  doc Đây là phần NẶNG NHẤT của gói: 37% ở bản msgpack v1, vì mỗi sự kiện chở `kind` dạng
+  doc CHUỖI ("TienKhiPicked" = 14 byte) cộng tên khoá của từng trường. Ở đây `kind` là 1
+  doc byte tra bảng `EventKinds`, và `has` quyết trường nào có mặt — sự kiện thường chỉ
+  doc dùng 2–3 trường nên phần còn lại không tốn byte nào.
+  kind        u8      # chỉ số trong netproto.EventKinds
+  has         u8      bitmask a,b,n,s,f
+  x           u16     # lượng tử theo khu như vị trí người chơi
+  y           u16
+  a           u32     if a
+  b           u32     if b
+  n           i32     if n
+  s           str     if s
+  f           f32     if f
+
+message ItemAdd 8
+  doc Vật phẩm vào tầm nhìn — 25% gói ở bản v1.
+  doc `value` chỉ có ở viên Tiên khí và Linh khí; vật phẩm buff không dùng tới.
+  id          u32
+  x           u16
+  y           u16
+  kind        u8      # chỉ số trong netproto.ItemKinds
+  has         u8      bitmask value
+  value       f32     if value
+
+message ItemDel 9
+  doc Vật phẩm rời tầm nhìn hoặc bị nhặt.
+  id          u32
+
+message Monster 10
+  doc Quái trong tầm nhìn. Phần tĩnh (loại, máu tối đa, bán kính) chỉ gửi LẦN ĐẦU, và máu
+  doc chỉ gửi khi ĐỔI — ba bit riêng thay vì một bit "static" chung, vì generator đòi mỗi
+  doc bit của bitmask phải là một trường có thật (và cách đó cũng gọn hơn: quái đứng yên
+  doc không đổi máu thì gói chỉ còn id + x + y + has = 9 byte).
+  id          u32
+  x           u16
+  y           u16
+  has         u8      bitmask hp,kind,max_hp,r
+  hp          u16     if hp
+  kind        u8      if kind
+  max_hp      u16     if max_hp
+  r           u16     if r
+
+message MonsterDel 11
+  doc Quái rời tầm nhìn hoặc chết.
+  id          u32
+
+message SnapHead 12
+  doc Đầu mỗi snapshot. Sau nó là một dãy message, mỗi message mở đầu bằng 1 byte loại.
+  doc
+  doc `ack` là seq input cuối server đã xử lý — client dùng để biết delta tính từ đâu
+  doc (§4.3). `flags` bit0 = keyframe: gói này chở TOÀN BỘ trạng thái, không phải delta.
+  tick        u32
+  ack         u32
+  time_ms     u32     # đồng hồ server, ms kể từ lúc phòng mở
+  srv_us      u16     # thời gian xử lý một tick, micro-giây (chỉ để đo §13.6)
+  flags       u8      # bit0 keyframe
+
+message SelfExtra 13
+  doc Phần trạng thái CHỈ chủ nhân cần: EXP, lượt kỹ năng, danh hiệu, Tiên khí.
+  doc
+  doc Tách khỏi SelfState vì SelfState đi MỌI tick (vị trí để hiệu chỉnh dự đoán) còn mấy
+  doc số này gần như không đổi. `status` và `crack` KHÔNG ở đây: chúng ở Spawn/Update vì
+  doc người khác cũng phải thấy — client vẽ "zzz" trên đầu người đang ngủ.
+  has         u8      bitmask exp,charges,title,tien_have,tien_need
+  exp         f32     if exp
+  charges     u8      if charges
+  title       u8      if title
+  tien_have   f32     if tien_have
+  tien_need   f32     if tien_need

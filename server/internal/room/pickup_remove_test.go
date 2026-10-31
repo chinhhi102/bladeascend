@@ -48,19 +48,16 @@ func TestItemDisappearsAfterPickup(t *testing.T) {
 	for tick := 0; tick < 120; tick++ {
 		r.Step(dt)
 	}
+	// Gói snapshot nay đi NHỊ PHÂN (Protocol v2), không còn msgpack — xem `snapwire.go`.
 	var seenAdded, seenRemoved bool
-	for _, raw := range conn.sent {
-		var s netproto.Snapshot
-		if netproto.Decode(raw, &s) != nil || s.T != "snap" {
-			continue
-		}
+	for _, s := range snapsOf(t, conn.sent) {
 		for _, a := range s.ItemsAdded {
 			if a.ID == itemID {
 				seenAdded = true
 			}
 		}
-		for _, id := range s.ItemsRemoved {
-			if id == itemID {
+		for _, d := range s.ItemsDel {
+			if d.ID == itemID {
 				seenRemoved = true
 			}
 		}
@@ -124,13 +121,9 @@ func TestRemovalReportedEvenWhenSlotReused(t *testing.T) {
 	}
 
 	var removed bool
-	for _, raw := range conn.sent {
-		var s netproto.Snapshot
-		if netproto.Decode(raw, &s) != nil || s.T != "snap" {
-			continue
-		}
-		for _, id := range s.ItemsRemoved {
-			if id == oldID {
+	for _, s := range snapsOf(t, conn.sent) {
+		for _, d := range s.ItemsDel {
+			if d.ID == oldID {
 				removed = true
 			}
 		}

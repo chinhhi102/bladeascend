@@ -8,6 +8,7 @@ import (
 
 	"kiemxoay/server/internal/game"
 	"kiemxoay/server/internal/netproto"
+	"kiemxoay/server/internal/wire"
 )
 
 // Conn is the transport for one browser tab; implemented by the WebSocket handler.
@@ -101,6 +102,21 @@ type Client struct {
 	// aoi theo dõi client này đã biết những entity nào, để gửi `Despawn` tường minh
 	// (NETCODE_SPEC §4.3). Chỉ goroutine phòng đụng tới.
 	aoi *aoiTracker
+
+	// lastWire: trạng thái ĐÃ GỬI gần nhất cho từng entity, để tính delta (Protocol v2
+	// §4.3). nil = chưa gửi gói nào, nên gói kế tiếp là keyframe.
+	//
+	// Giữ ở dạng ĐÃ LƯỢNG TỬ HOÁ, không ở dạng float gốc: so float thì vị trí nhúc nhích
+	// 0,001 đơn vị cũng tính là "đã đổi" và delta chẳng tiết kiệm được gì, trong khi hai
+	// giá trị đó mã hoá ra cùng một con số u16.
+	lastWire map[uint32]wirePlayer
+	// keyframeAt: thời điểm gói toàn-bộ-trạng-thái gần nhất (§4.3).
+	keyframeAt float64
+	// lastSelfExtra: phần chỉ chủ nhân cần, lần gửi trước. Gần như không đổi nên so cả
+	// struct là đủ.
+	lastSelfExtra wire.SelfExtra
+	// scoreWatch: mốc Uy Danh đầu cửa sổ 2 phút, cho cờ "Tăng điểm bất thường" (§6.1).
+	scoreWatch scoreWatch
 
 	evMu     sync.Mutex
 	evWindow time.Time
@@ -332,11 +348,11 @@ func (r *Room) ZoneKbpsOut(z *Zone, secs float64) float64 {
 
 // sendSnapshot gửi gói ảnh trạng thái: được phép bỏ bản cũ khi nghẽn, khác với `welcome` hay
 // `leaderboard` vốn mất là mất luôn.
-func (c *Client) sendSnapshot(v any) {
-	b, err := netproto.Encode(v)
-	if err != nil {
-		return
-	}
+//
+// `SendLossy` **cố ý vứt** snapshot cũ khi hàng đợi đầy. Đó là lý do Protocol v2 phải có
+// keyframe: delta chỉ đúng nếu client nhận được mọi gói trước đó, mà chỗ này thì không hứa
+// điều đó — và nó vứt gói đúng lúc mạng yếu, tức là đúng lúc client cần nhất.
+func (c *Client) sendSnapshotBytes(b []byte) {
 	c.countOut(len(b))
 	if lossy, ok := c.Conn.(LossyConn); ok {
 		lossy.SendLossy(b)

@@ -1,6 +1,7 @@
 import { decode, encode } from '@msgpack/msgpack';
 
 import type { ServerMsg } from './protocol';
+import { isBinarySnapshot, SnapshotDecoder } from './snapwire';
 
 type Handler = (msg: ServerMsg) => void;
 
@@ -28,6 +29,14 @@ export class Conn {
   private bytesAt = performance.now();
   kbPerSec = 0;
   lastSnapBytes = 0;
+  /**
+   * snap giải mã snapshot NHỊ PHÂN (Protocol v2).
+   *
+   * Nó giữ trạng thái giữa các gói vì server chỉ gửi trường đã đổi, nên nối lại phải dựng
+   * bộ mới — xem `open()`. Mọi message KHÁC snapshot (welcome, leaderboard, feed, kick…)
+   * vẫn đi msgpack: chúng thưa và không nằm trên đường nóng.
+   */
+  readonly snap = new SnapshotDecoder();
 
   constructor(private readonly onMessage: Handler) {}
 
@@ -41,6 +50,8 @@ export class Conn {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const ws = new WebSocket(`${proto}://${location.host}/ws`);
     ws.binaryType = 'arraybuffer';
+    // Nối lại = server không còn nhớ đã gửi gì cho mình, nên delta phải bắt đầu lại từ đầu.
+    this.snap.reset();
     ws.onopen = () => {
       this.pingTimer = window.setInterval(() => this.send({ t: 'ping', c: performance.now() }), PING_EVERY_MS);
       this.onOpenCb?.();
@@ -54,9 +65,22 @@ export class Conn {
         this.bytesAcc = 0;
         this.bytesAt = now;
       }
-      const msg = decode(new Uint8Array(e.data)) as ServerMsg;
-      if (msg.t === 'snap') {
+      const u8 = new Uint8Array(e.data);
+      let msg: ServerMsg;
+      if (isBinarySnapshot(u8)) {
         this.lastSnapBytes = bytes;
+        try {
+          msg = this.snap.decode(u8);
+        } catch (err) {
+          // Gói hỏng: BỎ QUA gói đó, đừng để lỗi nổ ra vòng vẽ.
+          //
+          // Keyframe 2 giây một lần sẽ dựng lại toàn bộ trạng thái, nên mất một gói là mất
+          // nhiều nhất 2 giây độ chính xác. Ném lỗi ở đây thì cả game đứng vì một gói lẻ.
+          console.error('snapshot v2 hỏng:', err);
+          return;
+        }
+      } else {
+        msg = decode(u8) as ServerMsg;
       }
       this.delay(() => this.receive(msg));
     };

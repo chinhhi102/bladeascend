@@ -94,7 +94,15 @@ const srv = spawn(bin, [
   '-telemetry=false',
   '-client', join(REPO, 'server', 'data', 'deploy', 'client'),
   '-assets', join(REPO, 'server', 'data', 'deploy', 'assets'),
-], { stdio: ['ignore', 'pipe', 'pipe'] });
+], {
+  stdio: ['ignore', 'pipe', 'pipe'],
+  // APP_ENV=dev mở cửa debug cho kết nối từ localhost (ADMIN_SPEC §1.1 `DebugGate`).
+  //
+  // Bài đo này đọc `window.kx.world` và `window.kx.scene` — nội bộ renderer, chỉ có khi
+  // server CẤP quyền debug. Server riêng của bài đo nghe trên 127.0.0.1 và chết cùng bài
+  // đo, nên mở cửa ở đây không chạm gì tới server thật.
+  env: { ...process.env, APP_ENV: 'dev' },
+});
 srv.stdout.on('data', () => {});
 srv.stderr.on('data', () => {});
 process.on('exit', () => srv.kill());
@@ -112,7 +120,11 @@ async function round(browser) {
     await page.waitForSelector('input', { timeout: 30000 });
     await page.fill('input', name);
     await page.getByText('Vào chơi', { exact: true }).click();
-    await page.waitForFunction(() => window.kx?.playing?.() === true, null, { timeout: 30000 });
+    // `window.__playing` chứ không phải `window.kx.playing()`: từ ADMIN_SPEC §1.1, `kx`
+    // chỉ có khi server CẤP quyền debug, mà `?debug=true` một mình không còn đủ. Bài đo
+    // này chạy trên server riêng không đăng nhập admin, nên `kx` không bao giờ xuất hiện
+    // và bài đo treo 30 giây rồi chết. `__playing` là số đo thuần, không khoá.
+    await page.waitForFunction(() => window.__playing?.() === true, null, { timeout: 30000 });
   };
   await join(watcher, 'QuanSat');
   await join(walker, 'NguoiDi');

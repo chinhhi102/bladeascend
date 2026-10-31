@@ -13,7 +13,7 @@ import (
 
 // SchemaHash là băm của proto/schema.txt. Client gửi hash của nó lúc bắt tay;
 // lệch nghĩa là hai bên đang nói hai thứ tiếng — từ chối kết nối thay vì đọc rác (§4.9).
-const SchemaHash = "64277c847bf551ea"
+const SchemaHash = "597500cc51639dac"
 
 // SchemaVersion lấy từ dòng `version` trong schema.
 const SchemaVersion = 2
@@ -23,33 +23,43 @@ var ErrShort = errors.New("wire: gói ngắn")
 
 // Loại message — byte đầu của gói.
 const (
-	TypeSpawn     = 1
-	TypeDesc      = 2
-	TypeUpdate    = 3
-	TypeDespawn   = 4
+	TypeSpawn = 1
+	TypeDesc = 2
+	TypeUpdate = 3
+	TypeDespawn = 4
 	TypeSelfState = 5
-	TypeInput     = 6
+	TypeInput = 6
+	TypeEvent = 7
+	TypeItemAdd = 8
+	TypeItemDel = 9
+	TypeMonster = 10
+	TypeMonsterDel = 11
+	TypeSnapHead = 12
+	TypeSelfExtra = 13
 )
 
 // Entity vào vùng quan tâm lần đầu, hoặc quay lại sau khi đã Despawn (§4.3).
 // Chở ĐỦ descriptor + state nên client dựng được ngay, không phải hỏi thêm.
 type Spawn struct {
-	ID        uint32
-	DescVer   uint16 // phiên bản descriptor; đổi thì server gửi Desc
-	Name      string
-	Char      uint8 // chỉ số trong config.characters
-	Title     uint8
-	X         uint16 // lượng tử theo khu: 12000/65535 ≈ 0.18 đơn vị (§4.6)
-	Y         uint16
-	Facing    uint8 // góc 0..255 ứng với 0..2π
-	Level     uint8
-	Scale     uint8 // bước 0.02
-	Swords    uint16
+	ID uint32
+	DescVer uint16 // phiên bản descriptor; đổi thì server gửi Desc
+	Name string
+	Char uint8 // chỉ số trong config.characters
+	Title uint8
+	X uint16 // lượng tử theo khu: 12000/65535 ≈ 0.18 đơn vị (§4.6)
+	Y uint16
+	Facing uint8 // góc 0..255 ứng với 0..2π
+	Level uint8
+	Scale uint8 // bước 0.02
+	Swords uint16
 	RingPhase uint16
-	RingDir   int8
-	Mood      uint8
-	Buffs     uint16 // bitmask buff
-	Flags     uint16 // bitmask cờ trạng thái
+	RingDir int8
+	Mood uint8
+	Buffs uint16 // bitmask buff
+	Flags uint16 // bitmask cờ trạng thái
+	Tilt int8 // độ nghiêng lưỡi kiếm, bước 1/128 rad (|tilt| ≤ 35° = 0.61 rad)
+	Status uint16 // bitmask trạng thái do kỹ năng (ngủ, trói, choáng…) — MỌI người thấy
+	Crack uint8 // vết nứt vòng kiếm 0..1, bước 1/255
 }
 
 // Encode nối Spawn vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
@@ -70,6 +80,9 @@ func (v Spawn) Encode(dst []byte) []byte {
 	dst = putU8(dst, v.Mood)
 	dst = putU16(dst, v.Buffs)
 	dst = putU16(dst, v.Flags)
+	dst = putI8(dst, v.Tilt)
+	dst = putU16(dst, v.Status)
+	dst = putU8(dst, v.Crack)
 	return dst
 }
 
@@ -142,16 +155,28 @@ func DecodeSpawn(src []byte) (Spawn, int, error) {
 	if err != nil {
 		return v, p, err
 	}
+	v.Tilt, p, err = getI8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Status, p, err = getU16(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Crack, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
 	return v, p, nil
 }
 
 // Descriptor đổi (danh hiệu, cảnh giới, skin) — đổi TẠI CHỖ, không dựng lại view (§5.5).
 type Desc struct {
-	ID      uint32
+	ID uint32
 	DescVer uint16
-	Name    string
-	Char    uint8
-	Title   uint8
+	Name string
+	Char uint8
+	Title uint8
 }
 
 // Encode nối Desc vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
@@ -195,19 +220,22 @@ func DecodeDesc(src []byte) (Desc, int, error) {
 // Delta mỗi snapshot: chỉ chở trường ĐÃ ĐỔI so với bản client đã ack (§4.3).
 // Đây là chỗ tiết kiệm băng thông lớn nhất — đứng yên thì gói gần như rỗng.
 type Update struct {
-	ID        uint32
-	Changed   uint16
-	X         uint16
-	Y         uint16
-	Facing    uint8
-	Level     uint8
-	Scale     uint8
-	Swords    uint16
+	ID uint32
+	Changed uint16
+	X uint16
+	Y uint16
+	Facing uint8
+	Level uint8
+	Scale uint8
+	Swords uint16
 	RingPhase uint16
-	RingDir   int8
-	Mood      uint8
-	Buffs     uint16
-	Flags     uint16
+	RingDir int8
+	Mood uint8
+	Buffs uint16
+	Flags uint16
+	Tilt int8
+	Status uint16
+	Crack uint8
 }
 
 // Encode nối Update vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
@@ -246,6 +274,15 @@ func (v Update) Encode(dst []byte) []byte {
 	}
 	if v.Changed&(1<<10) != 0 {
 		dst = putU16(dst, v.Flags)
+	}
+	if v.Changed&(1<<11) != 0 {
+		dst = putI8(dst, v.Tilt)
+	}
+	if v.Changed&(1<<12) != 0 {
+		dst = putU16(dst, v.Status)
+	}
+	if v.Changed&(1<<13) != 0 {
+		dst = putU8(dst, v.Crack)
 	}
 	return dst
 }
@@ -329,6 +366,24 @@ func DecodeUpdate(src []byte) (Update, int, error) {
 			return v, p, err
 		}
 	}
+	if v.Changed&(1<<11) != 0 {
+		v.Tilt, p, err = getI8(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Changed&(1<<12) != 0 {
+		v.Status, p, err = getU16(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Changed&(1<<13) != 0 {
+		v.Crack, p, err = getU8(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
 	return v, p, nil
 }
 
@@ -337,7 +392,7 @@ func DecodeUpdate(src []byte) (Update, int, error) {
 // giờ phân biệt được "vắng mặt vì AOI" với "đã đi mất".
 // reason: 0 out_of_view · 1 died · 2 teleported · 3 left
 type Despawn struct {
-	ID     uint32
+	ID uint32
 	Reason uint8
 }
 
@@ -369,10 +424,10 @@ func DecodeDespawn(src []byte) (Despawn, int, error) {
 // hiệu chỉnh dự đoán (GAME_SPEC §8.2a) nên sai số lượng tử ở đây biến thành giật.
 type SelfState struct {
 	AckSeq uint32 // input cuối server đã xử lý
-	X      int32  // fixed-point 1/256 đơn vị
-	Y      int32
-	Vx     int32
-	Vy     int32
+	X int32 // fixed-point 1/256 đơn vị
+	Y int32
+	Vx int32
+	Vy int32
 }
 
 // Encode nối SelfState vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
@@ -415,8 +470,8 @@ func DecodeSelfState(src []byte) (SelfState, int, error) {
 
 // Client → server, 30 lần/giây. Không có trường nào thừa.
 type Input struct {
-	Seq     uint32
-	Angle   uint8
+	Seq uint32
+	Angle uint8
 	Buttons uint8 // bit0 moving · bit1 burn · bit2 skill
 }
 
@@ -447,6 +502,418 @@ func DecodeInput(src []byte) (Input, int, error) {
 	}
 	return v, p, nil
 }
+
+// Sự kiện trong khu (chém trúng, nhặt đồ, đột phá, kỹ năng…) — §4.1.
+// 
+// Đây là phần NẶNG NHẤT của gói: 37% ở bản msgpack v1, vì mỗi sự kiện chở `kind` dạng
+// CHUỖI ("TienKhiPicked" = 14 byte) cộng tên khoá của từng trường. Ở đây `kind` là 1
+// byte tra bảng `EventKinds`, và `has` quyết trường nào có mặt — sự kiện thường chỉ
+// dùng 2–3 trường nên phần còn lại không tốn byte nào.
+type Event struct {
+	Kind uint8 // chỉ số trong netproto.EventKinds
+	Has uint8
+	X uint16 // lượng tử theo khu như vị trí người chơi
+	Y uint16
+	A uint32
+	B uint32
+	N int32
+	S string
+	F float32
+}
+
+// Encode nối Event vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
+func (v Event) Encode(dst []byte) []byte {
+	dst = putU8(dst, v.Kind)
+	dst = putU8(dst, v.Has)
+	dst = putU16(dst, v.X)
+	dst = putU16(dst, v.Y)
+	if v.Has&(1<<0) != 0 {
+		dst = putU32(dst, v.A)
+	}
+	if v.Has&(1<<1) != 0 {
+		dst = putU32(dst, v.B)
+	}
+	if v.Has&(1<<2) != 0 {
+		dst = putI32(dst, v.N)
+	}
+	if v.Has&(1<<3) != 0 {
+		dst = putStr(dst, v.S)
+	}
+	if v.Has&(1<<4) != 0 {
+		dst = putF32(dst, v.F)
+	}
+	return dst
+}
+
+// DecodeEvent đọc một Event từ `src`, trả về giá trị và số byte đã dùng.
+func DecodeEvent(src []byte) (Event, int, error) {
+	var v Event
+	var err error
+	p := 0
+	v.Kind, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Has, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.X, p, err = getU16(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Y, p, err = getU16(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	if v.Has&(1<<0) != 0 {
+		v.A, p, err = getU32(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<1) != 0 {
+		v.B, p, err = getU32(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<2) != 0 {
+		v.N, p, err = getI32(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<3) != 0 {
+		v.S, p, err = getStr(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<4) != 0 {
+		v.F, p, err = getF32(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	return v, p, nil
+}
+
+// Vật phẩm vào tầm nhìn — 25% gói ở bản v1.
+// `value` chỉ có ở viên Tiên khí và Linh khí; vật phẩm buff không dùng tới.
+type ItemAdd struct {
+	ID uint32
+	X uint16
+	Y uint16
+	Kind uint8 // chỉ số trong netproto.ItemKinds
+	Has uint8
+	Value float32
+}
+
+// Encode nối ItemAdd vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
+func (v ItemAdd) Encode(dst []byte) []byte {
+	dst = putU32(dst, v.ID)
+	dst = putU16(dst, v.X)
+	dst = putU16(dst, v.Y)
+	dst = putU8(dst, v.Kind)
+	dst = putU8(dst, v.Has)
+	if v.Has&(1<<0) != 0 {
+		dst = putF32(dst, v.Value)
+	}
+	return dst
+}
+
+// DecodeItemAdd đọc một ItemAdd từ `src`, trả về giá trị và số byte đã dùng.
+func DecodeItemAdd(src []byte) (ItemAdd, int, error) {
+	var v ItemAdd
+	var err error
+	p := 0
+	v.ID, p, err = getU32(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.X, p, err = getU16(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Y, p, err = getU16(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Kind, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Has, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	if v.Has&(1<<0) != 0 {
+		v.Value, p, err = getF32(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	return v, p, nil
+}
+
+// Vật phẩm rời tầm nhìn hoặc bị nhặt.
+type ItemDel struct {
+	ID uint32
+}
+
+// Encode nối ItemDel vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
+func (v ItemDel) Encode(dst []byte) []byte {
+	dst = putU32(dst, v.ID)
+	return dst
+}
+
+// DecodeItemDel đọc một ItemDel từ `src`, trả về giá trị và số byte đã dùng.
+func DecodeItemDel(src []byte) (ItemDel, int, error) {
+	var v ItemDel
+	var err error
+	p := 0
+	v.ID, p, err = getU32(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	return v, p, nil
+}
+
+// Quái trong tầm nhìn. Phần tĩnh (loại, máu tối đa, bán kính) chỉ gửi LẦN ĐẦU, và máu
+// chỉ gửi khi ĐỔI — ba bit riêng thay vì một bit "static" chung, vì generator đòi mỗi
+// bit của bitmask phải là một trường có thật (và cách đó cũng gọn hơn: quái đứng yên
+// không đổi máu thì gói chỉ còn id + x + y + has = 9 byte).
+type Monster struct {
+	ID uint32
+	X uint16
+	Y uint16
+	Has uint8
+	Hp uint16
+	Kind uint8
+	MaxHp uint16
+	R uint16
+}
+
+// Encode nối Monster vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
+func (v Monster) Encode(dst []byte) []byte {
+	dst = putU32(dst, v.ID)
+	dst = putU16(dst, v.X)
+	dst = putU16(dst, v.Y)
+	dst = putU8(dst, v.Has)
+	if v.Has&(1<<0) != 0 {
+		dst = putU16(dst, v.Hp)
+	}
+	if v.Has&(1<<1) != 0 {
+		dst = putU8(dst, v.Kind)
+	}
+	if v.Has&(1<<2) != 0 {
+		dst = putU16(dst, v.MaxHp)
+	}
+	if v.Has&(1<<3) != 0 {
+		dst = putU16(dst, v.R)
+	}
+	return dst
+}
+
+// DecodeMonster đọc một Monster từ `src`, trả về giá trị và số byte đã dùng.
+func DecodeMonster(src []byte) (Monster, int, error) {
+	var v Monster
+	var err error
+	p := 0
+	v.ID, p, err = getU32(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.X, p, err = getU16(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Y, p, err = getU16(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Has, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	if v.Has&(1<<0) != 0 {
+		v.Hp, p, err = getU16(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<1) != 0 {
+		v.Kind, p, err = getU8(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<2) != 0 {
+		v.MaxHp, p, err = getU16(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<3) != 0 {
+		v.R, p, err = getU16(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	return v, p, nil
+}
+
+// Quái rời tầm nhìn hoặc chết.
+type MonsterDel struct {
+	ID uint32
+}
+
+// Encode nối MonsterDel vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
+func (v MonsterDel) Encode(dst []byte) []byte {
+	dst = putU32(dst, v.ID)
+	return dst
+}
+
+// DecodeMonsterDel đọc một MonsterDel từ `src`, trả về giá trị và số byte đã dùng.
+func DecodeMonsterDel(src []byte) (MonsterDel, int, error) {
+	var v MonsterDel
+	var err error
+	p := 0
+	v.ID, p, err = getU32(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	return v, p, nil
+}
+
+// Đầu mỗi snapshot. Sau nó là một dãy message, mỗi message mở đầu bằng 1 byte loại.
+// 
+// `ack` là seq input cuối server đã xử lý — client dùng để biết delta tính từ đâu
+// (§4.3). `flags` bit0 = keyframe: gói này chở TOÀN BỘ trạng thái, không phải delta.
+type SnapHead struct {
+	Tick uint32
+	Ack uint32
+	TimeMs uint32 // đồng hồ server, ms kể từ lúc phòng mở
+	SrvUs uint16 // thời gian xử lý một tick, micro-giây (chỉ để đo §13.6)
+	Flags uint8 // bit0 keyframe
+}
+
+// Encode nối SnapHead vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
+func (v SnapHead) Encode(dst []byte) []byte {
+	dst = putU32(dst, v.Tick)
+	dst = putU32(dst, v.Ack)
+	dst = putU32(dst, v.TimeMs)
+	dst = putU16(dst, v.SrvUs)
+	dst = putU8(dst, v.Flags)
+	return dst
+}
+
+// DecodeSnapHead đọc một SnapHead từ `src`, trả về giá trị và số byte đã dùng.
+func DecodeSnapHead(src []byte) (SnapHead, int, error) {
+	var v SnapHead
+	var err error
+	p := 0
+	v.Tick, p, err = getU32(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Ack, p, err = getU32(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.TimeMs, p, err = getU32(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.SrvUs, p, err = getU16(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Flags, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	return v, p, nil
+}
+
+// Phần trạng thái CHỈ chủ nhân cần: EXP, lượt kỹ năng, danh hiệu, Tiên khí.
+// 
+// Tách khỏi SelfState vì SelfState đi MỌI tick (vị trí để hiệu chỉnh dự đoán) còn mấy
+// số này gần như không đổi. `status` và `crack` KHÔNG ở đây: chúng ở Spawn/Update vì
+// người khác cũng phải thấy — client vẽ "zzz" trên đầu người đang ngủ.
+type SelfExtra struct {
+	Has uint8
+	Exp float32
+	Charges uint8
+	Title uint8
+	TienHave float32
+	TienNeed float32
+}
+
+// Encode nối SelfExtra vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
+func (v SelfExtra) Encode(dst []byte) []byte {
+	dst = putU8(dst, v.Has)
+	if v.Has&(1<<0) != 0 {
+		dst = putF32(dst, v.Exp)
+	}
+	if v.Has&(1<<1) != 0 {
+		dst = putU8(dst, v.Charges)
+	}
+	if v.Has&(1<<2) != 0 {
+		dst = putU8(dst, v.Title)
+	}
+	if v.Has&(1<<3) != 0 {
+		dst = putF32(dst, v.TienHave)
+	}
+	if v.Has&(1<<4) != 0 {
+		dst = putF32(dst, v.TienNeed)
+	}
+	return dst
+}
+
+// DecodeSelfExtra đọc một SelfExtra từ `src`, trả về giá trị và số byte đã dùng.
+func DecodeSelfExtra(src []byte) (SelfExtra, int, error) {
+	var v SelfExtra
+	var err error
+	p := 0
+	v.Has, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	if v.Has&(1<<0) != 0 {
+		v.Exp, p, err = getF32(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<1) != 0 {
+		v.Charges, p, err = getU8(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<2) != 0 {
+		v.Title, p, err = getU8(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<3) != 0 {
+		v.TienHave, p, err = getF32(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<4) != 0 {
+		v.TienNeed, p, err = getF32(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	return v, p, nil
+}
+
 
 // ── đọc/ghi nguyên thuỷ ──────────────────────────────────────────────────────────────────
 // Little-endian cho mọi số: JavaScript `DataView` mặc định là big-endian, nên phía

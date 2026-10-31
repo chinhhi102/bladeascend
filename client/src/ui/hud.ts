@@ -153,6 +153,14 @@ export class Hud {
   /** skillDots: dãy chấm số lượt Bí Kíp — 2 chấm phàm giới, 3 chấm Tiên giới (§6.3). */
   private readonly skillDots = h('div', 'skill-dots');
   private readonly skillIcon = h('span', 'skill-icon', '✦');
+  /**
+   * skillScroll: ảnh cuộn Bí Kíp cạnh số lượt.
+   *
+   * Lượt kỹ năng CHỈ đến từ Bí Kíp (spec v5 mục 11), nhưng nút chỉ hiện một con số trần —
+   * người chơi mới không nối được "3" với cuộn giấy vừa nhặt. Ảnh `ui/icon_skill_scroll.png`
+   * đã có từ lâu mà không nơi nào nạp; `npm run check:dead` tìm ra nó.
+   */
+  private readonly skillScroll = h('img', 'skill-scroll') as HTMLImageElement;
   private readonly guide = h('div', 'guide');
   private readonly isTouch: boolean;
 
@@ -412,7 +420,11 @@ export class Hud {
     this.skillBtn.classList.toggle('empty', charges <= 0);
     this.skillBtn.title = STR.skillNames[char] ?? '';
     if (!this.skillBtn.firstChild) {
-      this.skillBtn.append(this.skillIcon, this.skillCount, this.skillDots);
+      // Đường dẫn LOGIC qua `assets.url`, không ghép tay `/assets/...`: tên tệp mang hash
+      // nội dung nên ghép tay là 404 trong im lặng (CLAUDE.md).
+      this.skillScroll.src = assets.url('ui/icon_skill_scroll.png');
+      this.skillScroll.alt = '';
+      this.skillBtn.append(this.skillIcon, this.skillScroll, this.skillCount, this.skillDots);
     }
     // Chấm lượt: **3 chấm ở Tiên giới**, 2 ở phàm giới (spec v6.5 §6.3 mục 4).
     //

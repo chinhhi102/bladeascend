@@ -14,6 +14,7 @@ const ZONE_BANNER_SECS = 1.5;
 const ZONE_ART_WAIT_MS = 2000;
 
 import { FLAG, PROTOCOL_VERSION } from './net/protocol';
+import { SCHEMA_HASH } from './net/wire.gen';
 import { pendingRejoin, watchContextLoss } from './render/glrecover';
 import type { DeadMsg, GameMap, KickedMsg, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
@@ -25,7 +26,7 @@ import { loadJitter } from './render/jitter';
 import { cycleQuality, quality, QUALITY_NAME } from './render/quality';
 import { ringGeom } from './render/ringgeom';
 import type { Telemetry, TelemetryContext } from './telemetry';
-import { h, Screens } from './ui/dom';
+import { Screens, button, h } from './ui/dom';
 import { LoadingScreen, startBgLoadIndicator } from './ui/loading';
 import { kickedScreen } from './ui/kicked';
 import { guestId, homeScreen, type Profile, savedProfile } from './ui/home';
@@ -350,13 +351,29 @@ class App {
   }
 
   private async onWelcome(w: Welcome): Promise<void> {
-    if ((w.pv ?? 0) !== PROTOCOL_VERSION) {
+    if ((w.pv ?? 0) !== PROTOCOL_VERSION || (w.sh ?? '') !== SCHEMA_HASH) {
       // Server và client nói hai thứ tiếng khác nhau. Dừng hẳn ở đây và nói rõ, thay vì
       // đọc rác rồi treo máy — chính là chuyện đã xảy ra một lần.
+      //
+      // Kiểm CẢ `sh` (băm schema nhị phân): số phiên bản là thứ người ta quên tăng, còn
+      // băm thì đổi tự động mỗi khi `proto/schema.txt` đổi một dòng. Hai lớp vì hậu quả
+      // của việc lọt là client đọc rác — không lỗi, không thông báo, chỉ nhân vật nhảy lung
+      // tung hoặc màn hình đứng.
+      //
+      // Một NÚT, không phải một câu chữ: người đang mở tab từ hôm qua không nên phải tự
+      // nghĩ ra Ctrl+F5.
       this.conn.stop();
-      this.screens.show(h('div', 'screen center', h('div', 'panel', STR.versionMismatch)));
+      const panel = h('div', 'panel', h('p', '', STR.versionMismatch));
+      const row = h('div', 'row');
+      row.append(button(STR.versionReload, 'btn primary', () => location.reload()));
+      panel.append(row);
+      this.screens.show(h('div', 'screen center', panel));
       return;
     }
+    // Bộ giải mã snapshot nhị phân cần biết "mình là ai" (để nhận SelfState) và bảng nhân
+    // vật (để đổi chỉ số về tên).
+    this.conn.snap.myId = w.id;
+    this.conn.snap.chars = this.cfg.characters;
     // Welcome đến GIỮA TRẬN nghĩa là vừa qua cổng sang khu khác (spec §8.0, §8.4): sang
     // khu là đổi hẳn bản đồ nên phải tải lại từ đầu, nhưng KHÔNG phải vào trận lại — giữ
     // nguyên hồ sơ, không phát lại âm thanh hồi sinh, không hiện lại hướng dẫn.

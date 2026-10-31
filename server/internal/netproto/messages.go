@@ -80,7 +80,7 @@ type ObstacleState struct {
 // Thêm hẳn một LOẠI gói mới (như `tm` telemetry) thì không phải đổi hình dạng gói cũ, nên
 // không tăng số: client cũ chỉ là không bao giờ gửi `tm`, còn server cũ gặp `tm` thì rơi vào
 // nhánh `default` và bỏ qua. Cả hai chiều đều an toàn, không ai đọc rác.
-const ProtocolVersion = 5
+const ProtocolVersion = 6 // v6: snapshot đi nhị phân (Protocol v2), bỏ hẳn msgpack đường nóng
 
 // Telemetry chở thông tin phiên, mẫu 10 giây và sự kiện (TELEMETRY_SPEC §2, §3).
 //
@@ -118,6 +118,12 @@ type Welcome struct {
 	// là đổi hẳn bản đồ.
 	Zone     int    `msgpack:"zn"`
 	ZoneName string `msgpack:"znm,omitempty"`
+	// SchemaHash: băm của `proto/schema.txt` mà server đang dùng (NETCODE_SPEC §4.9).
+	//
+	// Số phiên bản là thứ người ta QUÊN tăng; băm thì đổi tự động mỗi khi schema đổi một
+	// dòng. Hai lớp vì hậu quả của việc lọt là client đọc rác — không lỗi, không thông báo,
+	// chỉ nhân vật nhảy lung tung.
+	SchemaHash string `msgpack:"sh,omitempty"`
 }
 
 // Player flags.
@@ -236,6 +242,15 @@ func QuantPos(v float64) uint16 {
 }
 
 // Snapshot is sent at snapshot_hz. Items are diffed per client (added / removed).
+// Snapshot KHÔNG CÒN ĐI RA DÂY — từ Protocol v2 nó chỉ là một cấu trúc trung gian.
+//
+// `room.snapshotFor` dựng nó (với toàn bộ luật AOI, ngân sách byte, nhịp 10/20 Hz, vòng đời
+// Despawn), rồi `Client.EncodeSnapshot` biến nó thành byte nhị phân. Thẻ `msgpack` còn lại
+// chỉ phục vụ test cũ và công cụ đo; **đừng gửi struct này qua `netproto.Encode`** — client
+// từ `ProtocolVersion = 6` không đọc msgpack trên đường snapshot nữa.
+//
+// Giữ struct lại thay vì xoá là chủ ý: nó là chỗ DUY NHẤT mô tả đầy đủ "một snapshot gồm
+// những gì", và tách phần quyết-định-gửi-gì khỏi phần mã-hoá làm cả hai dễ kiểm hơn hẳn.
 type Snapshot struct {
 	T            string         `msgpack:"t"`
 	Tick         uint32         `msgpack:"tk"`
@@ -311,6 +326,12 @@ type Feed struct {
 	// khu khác — không có nó thì người chơi tưởng vừa có người chết ngay cạnh mình.
 	Zone     int    `msgpack:"zn"`
 	ZoneName string `msgpack:"znm,omitempty"`
+	// SchemaHash: băm của `proto/schema.txt` mà server đang dùng (NETCODE_SPEC §4.9).
+	//
+	// Số phiên bản là thứ người ta QUÊN tăng; băm thì đổi tự động mỗi khi schema đổi một
+	// dòng. Hai lớp vì hậu quả của việc lọt là client đọc rác — không lỗi, không thông báo,
+	// chỉ nhân vật nhảy lung tung.
+	SchemaHash string `msgpack:"sh,omitempty"`
 }
 
 // Dead is the Tổng kết screen payload (spec §7, §11.1).

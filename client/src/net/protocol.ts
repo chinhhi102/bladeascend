@@ -137,7 +137,7 @@ export function statusOn(st: number | undefined, name: (typeof STATUS)[number]):
   return ((st ?? 0) & (1 << STATUS.indexOf(name))) !== 0;
 }
 
-export const PROTOCOL_VERSION = 5;
+export const PROTOCOL_VERSION = 6;
 
 export interface Welcome {
   t: 'welcome';
@@ -153,6 +153,13 @@ export interface Welcome {
   /** zn / znm: khu đang ở và tên khu (spec §8.0). Gửi lại mỗi lần sang khu khác. */
   zn?: number;
   znm?: string;
+  /**
+   * sh: băm `proto/schema.txt` mà server đang dùng (NETCODE_SPEC §4.9).
+   *
+   * Lớp kiểm thứ hai bên cạnh `pv`: số phiên bản là thứ người ta QUÊN tăng, còn băm thì đổi
+   * tự động mỗi khi schema đổi một dòng.
+   */
+  sh?: string;
 }
 
 export interface LeaderboardMsg {

@@ -12,7 +12,7 @@
  * Không có bước này thì client cũ gặp server mới sẽ đọc rác và đứng hình — đã dính
  * đúng một lần với trường `mood`.
  */
-export const SCHEMA_HASH = "64277c847bf551ea";
+export const SCHEMA_HASH = "597500cc51639dac";
 
 export const SCHEMA_VERSION = 2;
 
@@ -24,6 +24,13 @@ export const MsgType = {
   Despawn: 4,
   SelfState: 5,
   Input: 6,
+  Event: 7,
+  ItemAdd: 8,
+  ItemDel: 9,
+  Monster: 10,
+  MonsterDel: 11,
+  SnapHead: 12,
+  SelfExtra: 13,
 } as const;
 
 /**
@@ -47,6 +54,9 @@ export interface Spawn {
   mood: number;
   buffs: number; // bitmask buff
   flags: number; // bitmask cờ trạng thái
+  tilt: number; // độ nghiêng lưỡi kiếm, bước 1/128 rad (|tilt| ≤ 35° = 0.61 rad)
+  status: number; // bitmask trạng thái do kỹ năng (ngủ, trói, choáng…) — MỌI người thấy
+  crack: number; // vết nứt vòng kiếm 0..1, bước 1/255
 }
 
 /** decodeSpawn đọc một Spawn từ `r`. */
@@ -68,6 +78,9 @@ export function decodeSpawn(r: Reader): Spawn {
   v.mood = r.u8v();
   v.buffs = r.u16();
   v.flags = r.u16();
+  v.tilt = r.i8v();
+  v.status = r.u16();
+  v.crack = r.u8v();
   return v;
 }
 
@@ -89,6 +102,9 @@ export function encodeSpawn(w: Writer, v: Spawn): void {
   w.putU8(v.mood ?? 0);
   w.putU16(v.buffs ?? 0);
   w.putU16(v.flags ?? 0);
+  w.putI8(v.tilt ?? 0);
+  w.putU16(v.status ?? 0);
+  w.putU8(v.crack ?? 0);
 }
 
 /**
@@ -140,6 +156,9 @@ export interface Update {
   mood?: number;
   buffs?: number;
   flags?: number;
+  tilt?: number;
+  status?: number;
+  crack?: number;
 }
 
 /** decodeUpdate đọc một Update từ `r`. */
@@ -180,6 +199,15 @@ export function decodeUpdate(r: Reader): Update {
   if ((v.changed & (1 << 10)) !== 0) {
     v.flags = r.u16();
   }
+  if ((v.changed & (1 << 11)) !== 0) {
+    v.tilt = r.i8v();
+  }
+  if ((v.changed & (1 << 12)) !== 0) {
+    v.status = r.u16();
+  }
+  if ((v.changed & (1 << 13)) !== 0) {
+    v.crack = r.u8v();
+  }
   return v;
 }
 
@@ -219,6 +247,15 @@ export function encodeUpdate(w: Writer, v: Update): void {
   }
   if ((v.changed & (1 << 10)) !== 0) {
     w.putU16(v.flags ?? 0);
+  }
+  if ((v.changed & (1 << 11)) !== 0) {
+    w.putI8(v.tilt ?? 0);
+  }
+  if ((v.changed & (1 << 12)) !== 0) {
+    w.putU16(v.status ?? 0);
+  }
+  if ((v.changed & (1 << 13)) !== 0) {
+    w.putU8(v.crack ?? 0);
   }
 }
 
@@ -303,6 +340,302 @@ export function encodeInput(w: Writer, v: Input): void {
   w.putU32(v.seq ?? 0);
   w.putU8(v.angle ?? 0);
   w.putU8(v.buttons ?? 0);
+}
+
+/**
+ * Sự kiện trong khu (chém trúng, nhặt đồ, đột phá, kỹ năng…) — §4.1.
+ * 
+ * Đây là phần NẶNG NHẤT của gói: 37% ở bản msgpack v1, vì mỗi sự kiện chở `kind` dạng
+ * CHUỖI ("TienKhiPicked" = 14 byte) cộng tên khoá của từng trường. Ở đây `kind` là 1
+ * byte tra bảng `EventKinds`, và `has` quyết trường nào có mặt — sự kiện thường chỉ
+ * dùng 2–3 trường nên phần còn lại không tốn byte nào.
+ */
+export interface Event {
+  kind: number; // chỉ số trong netproto.EventKinds
+  has: number;
+  x: number; // lượng tử theo khu như vị trí người chơi
+  y: number;
+  a?: number;
+  b?: number;
+  n?: number;
+  s?: string;
+  f?: number;
+}
+
+/** decodeEvent đọc một Event từ `r`. */
+export function decodeEvent(r: Reader): Event {
+  const v = {} as Event;
+  v.kind = r.u8v();
+  v.has = r.u8v();
+  v.x = r.u16();
+  v.y = r.u16();
+  if ((v.has & (1 << 0)) !== 0) {
+    v.a = r.u32();
+  }
+  if ((v.has & (1 << 1)) !== 0) {
+    v.b = r.u32();
+  }
+  if ((v.has & (1 << 2)) !== 0) {
+    v.n = r.i32();
+  }
+  if ((v.has & (1 << 3)) !== 0) {
+    v.s = r.str();
+  }
+  if ((v.has & (1 << 4)) !== 0) {
+    v.f = r.f32();
+  }
+  return v;
+}
+
+/** encodeEvent ghi một Event vào `w`. Dùng cho bài đối chiếu và cho gói client gửi lên. */
+export function encodeEvent(w: Writer, v: Event): void {
+  w.putU8(v.kind ?? 0);
+  w.putU8(v.has ?? 0);
+  w.putU16(v.x ?? 0);
+  w.putU16(v.y ?? 0);
+  if ((v.has & (1 << 0)) !== 0) {
+    w.putU32(v.a ?? 0);
+  }
+  if ((v.has & (1 << 1)) !== 0) {
+    w.putU32(v.b ?? 0);
+  }
+  if ((v.has & (1 << 2)) !== 0) {
+    w.putI32(v.n ?? 0);
+  }
+  if ((v.has & (1 << 3)) !== 0) {
+    w.putStr(v.s ?? '');
+  }
+  if ((v.has & (1 << 4)) !== 0) {
+    w.putF32(v.f ?? 0);
+  }
+}
+
+/**
+ * Vật phẩm vào tầm nhìn — 25% gói ở bản v1.
+ * `value` chỉ có ở viên Tiên khí và Linh khí; vật phẩm buff không dùng tới.
+ */
+export interface ItemAdd {
+  id: number;
+  x: number;
+  y: number;
+  kind: number; // chỉ số trong netproto.ItemKinds
+  has: number;
+  value?: number;
+}
+
+/** decodeItemAdd đọc một ItemAdd từ `r`. */
+export function decodeItemAdd(r: Reader): ItemAdd {
+  const v = {} as ItemAdd;
+  v.id = r.u32();
+  v.x = r.u16();
+  v.y = r.u16();
+  v.kind = r.u8v();
+  v.has = r.u8v();
+  if ((v.has & (1 << 0)) !== 0) {
+    v.value = r.f32();
+  }
+  return v;
+}
+
+/** encodeItemAdd ghi một ItemAdd vào `w`. Dùng cho bài đối chiếu và cho gói client gửi lên. */
+export function encodeItemAdd(w: Writer, v: ItemAdd): void {
+  w.putU32(v.id ?? 0);
+  w.putU16(v.x ?? 0);
+  w.putU16(v.y ?? 0);
+  w.putU8(v.kind ?? 0);
+  w.putU8(v.has ?? 0);
+  if ((v.has & (1 << 0)) !== 0) {
+    w.putF32(v.value ?? 0);
+  }
+}
+
+/**
+ * Vật phẩm rời tầm nhìn hoặc bị nhặt.
+ */
+export interface ItemDel {
+  id: number;
+}
+
+/** decodeItemDel đọc một ItemDel từ `r`. */
+export function decodeItemDel(r: Reader): ItemDel {
+  const v = {} as ItemDel;
+  v.id = r.u32();
+  return v;
+}
+
+/** encodeItemDel ghi một ItemDel vào `w`. Dùng cho bài đối chiếu và cho gói client gửi lên. */
+export function encodeItemDel(w: Writer, v: ItemDel): void {
+  w.putU32(v.id ?? 0);
+}
+
+/**
+ * Quái trong tầm nhìn. Phần tĩnh (loại, máu tối đa, bán kính) chỉ gửi LẦN ĐẦU, và máu
+ * chỉ gửi khi ĐỔI — ba bit riêng thay vì một bit "static" chung, vì generator đòi mỗi
+ * bit của bitmask phải là một trường có thật (và cách đó cũng gọn hơn: quái đứng yên
+ * không đổi máu thì gói chỉ còn id + x + y + has = 9 byte).
+ */
+export interface Monster {
+  id: number;
+  x: number;
+  y: number;
+  has: number;
+  hp?: number;
+  kind?: number;
+  maxHp?: number;
+  r?: number;
+}
+
+/** decodeMonster đọc một Monster từ `r`. */
+export function decodeMonster(r: Reader): Monster {
+  const v = {} as Monster;
+  v.id = r.u32();
+  v.x = r.u16();
+  v.y = r.u16();
+  v.has = r.u8v();
+  if ((v.has & (1 << 0)) !== 0) {
+    v.hp = r.u16();
+  }
+  if ((v.has & (1 << 1)) !== 0) {
+    v.kind = r.u8v();
+  }
+  if ((v.has & (1 << 2)) !== 0) {
+    v.maxHp = r.u16();
+  }
+  if ((v.has & (1 << 3)) !== 0) {
+    v.r = r.u16();
+  }
+  return v;
+}
+
+/** encodeMonster ghi một Monster vào `w`. Dùng cho bài đối chiếu và cho gói client gửi lên. */
+export function encodeMonster(w: Writer, v: Monster): void {
+  w.putU32(v.id ?? 0);
+  w.putU16(v.x ?? 0);
+  w.putU16(v.y ?? 0);
+  w.putU8(v.has ?? 0);
+  if ((v.has & (1 << 0)) !== 0) {
+    w.putU16(v.hp ?? 0);
+  }
+  if ((v.has & (1 << 1)) !== 0) {
+    w.putU8(v.kind ?? 0);
+  }
+  if ((v.has & (1 << 2)) !== 0) {
+    w.putU16(v.maxHp ?? 0);
+  }
+  if ((v.has & (1 << 3)) !== 0) {
+    w.putU16(v.r ?? 0);
+  }
+}
+
+/**
+ * Quái rời tầm nhìn hoặc chết.
+ */
+export interface MonsterDel {
+  id: number;
+}
+
+/** decodeMonsterDel đọc một MonsterDel từ `r`. */
+export function decodeMonsterDel(r: Reader): MonsterDel {
+  const v = {} as MonsterDel;
+  v.id = r.u32();
+  return v;
+}
+
+/** encodeMonsterDel ghi một MonsterDel vào `w`. Dùng cho bài đối chiếu và cho gói client gửi lên. */
+export function encodeMonsterDel(w: Writer, v: MonsterDel): void {
+  w.putU32(v.id ?? 0);
+}
+
+/**
+ * Đầu mỗi snapshot. Sau nó là một dãy message, mỗi message mở đầu bằng 1 byte loại.
+ * 
+ * `ack` là seq input cuối server đã xử lý — client dùng để biết delta tính từ đâu
+ * (§4.3). `flags` bit0 = keyframe: gói này chở TOÀN BỘ trạng thái, không phải delta.
+ */
+export interface SnapHead {
+  tick: number;
+  ack: number;
+  timeMs: number; // đồng hồ server, ms kể từ lúc phòng mở
+  srvUs: number; // thời gian xử lý một tick, micro-giây (chỉ để đo §13.6)
+  flags: number; // bit0 keyframe
+}
+
+/** decodeSnapHead đọc một SnapHead từ `r`. */
+export function decodeSnapHead(r: Reader): SnapHead {
+  const v = {} as SnapHead;
+  v.tick = r.u32();
+  v.ack = r.u32();
+  v.timeMs = r.u32();
+  v.srvUs = r.u16();
+  v.flags = r.u8v();
+  return v;
+}
+
+/** encodeSnapHead ghi một SnapHead vào `w`. Dùng cho bài đối chiếu và cho gói client gửi lên. */
+export function encodeSnapHead(w: Writer, v: SnapHead): void {
+  w.putU32(v.tick ?? 0);
+  w.putU32(v.ack ?? 0);
+  w.putU32(v.timeMs ?? 0);
+  w.putU16(v.srvUs ?? 0);
+  w.putU8(v.flags ?? 0);
+}
+
+/**
+ * Phần trạng thái CHỈ chủ nhân cần: EXP, lượt kỹ năng, danh hiệu, Tiên khí.
+ * 
+ * Tách khỏi SelfState vì SelfState đi MỌI tick (vị trí để hiệu chỉnh dự đoán) còn mấy
+ * số này gần như không đổi. `status` và `crack` KHÔNG ở đây: chúng ở Spawn/Update vì
+ * người khác cũng phải thấy — client vẽ "zzz" trên đầu người đang ngủ.
+ */
+export interface SelfExtra {
+  has: number;
+  exp?: number;
+  charges?: number;
+  title?: number;
+  tienHave?: number;
+  tienNeed?: number;
+}
+
+/** decodeSelfExtra đọc một SelfExtra từ `r`. */
+export function decodeSelfExtra(r: Reader): SelfExtra {
+  const v = {} as SelfExtra;
+  v.has = r.u8v();
+  if ((v.has & (1 << 0)) !== 0) {
+    v.exp = r.f32();
+  }
+  if ((v.has & (1 << 1)) !== 0) {
+    v.charges = r.u8v();
+  }
+  if ((v.has & (1 << 2)) !== 0) {
+    v.title = r.u8v();
+  }
+  if ((v.has & (1 << 3)) !== 0) {
+    v.tienHave = r.f32();
+  }
+  if ((v.has & (1 << 4)) !== 0) {
+    v.tienNeed = r.f32();
+  }
+  return v;
+}
+
+/** encodeSelfExtra ghi một SelfExtra vào `w`. Dùng cho bài đối chiếu và cho gói client gửi lên. */
+export function encodeSelfExtra(w: Writer, v: SelfExtra): void {
+  w.putU8(v.has ?? 0);
+  if ((v.has & (1 << 0)) !== 0) {
+    w.putF32(v.exp ?? 0);
+  }
+  if ((v.has & (1 << 1)) !== 0) {
+    w.putU8(v.charges ?? 0);
+  }
+  if ((v.has & (1 << 2)) !== 0) {
+    w.putU8(v.title ?? 0);
+  }
+  if ((v.has & (1 << 3)) !== 0) {
+    w.putF32(v.tienHave ?? 0);
+  }
+  if ((v.has & (1 << 4)) !== 0) {
+    w.putF32(v.tienNeed ?? 0);
+  }
 }
 
 

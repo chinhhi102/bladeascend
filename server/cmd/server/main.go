@@ -17,6 +17,7 @@ import (
 
 	"kiemxoay/server/internal/admin"
 	"kiemxoay/server/internal/config"
+	"kiemxoay/server/internal/game"
 	"kiemxoay/server/internal/room"
 	"kiemxoay/server/internal/store"
 	"kiemxoay/server/internal/world"
@@ -83,6 +84,15 @@ func main() {
 	}
 	mgr := room.NewManager(cfg, maps, st)
 	mgr.AllowDebug = *debug // công tắc tổng; ai được dùng thì `admin.DebugGate` quyết (§1.1)
+	// Mốc trung vị cho cờ "Tăng điểm bất thường" (ADMIN_SPEC §6.1, QUESTIONS Q29).
+	//
+	// Cắm bằng hàm vì gói `room` không được chạm SQLite giữa tick: `ScoreMedianPerMin` giữ
+	// cache 5 phút, nên lời gọi từ vòng tick gần như luôn chỉ đọc một map trong bộ nhớ.
+	prog := game.NewProgression(cfg.Cultivation, cfg.Sword.MaxSwords)
+	mgr.ScoreMedian = func(realm int) float64 {
+		v, _ := st.ScoreMedianPerMin(realm, prog.Realm, time.Now())
+		return v
+	}
 	tel := startTelemetry(telemetryPath(*telemetryDB), buildIDOrNow(*buildID), *telemetryOn)
 	// Trang quản trị (ADMIN_SPEC §1). Dùng CHUNG file SQLite với bảng xếp hạng, như spec §8
 	// nói — tên bảng đều có tiền tố `admin_` nên không đụng dữ liệu đã có.
@@ -104,6 +114,9 @@ func main() {
 		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words.txt")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP),
 		telemetry: tel}
 	stopSampler := make(chan struct{})
+	// Dọn dẹp hằng ngày (Q28): xoá ảnh góp ý của thư đã khép quá 90 ngày, giữ chữ mãi.
+	// Chạy kể cả khi tắt telemetry — nó dọn DB quản trị, không liên quan telemetry.
+	go srv.runHousekeeper(stopSampler)
 	if tel != nil {
 		defer tel.Close()
 		go srv.runServerSampler(stopSampler)

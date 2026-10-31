@@ -3,6 +3,7 @@ package room
 import (
 	"math"
 	"sort"
+	"time"
 
 	"kiemxoay/server/internal/game"
 	"kiemxoay/server/internal/netproto"
@@ -34,12 +35,37 @@ func (r *Room) broadcast(z *Zone) {
 		z.namesAt = z.G.Time
 	}
 	r.sendFeeds(z, events)
+	r.checkScoreRates(z)
 	for id, c := range z.clients {
 		viewer, ok := z.G.Players[id]
 		if !ok {
 			continue
 		}
-		c.sendSnapshot(r.snapshotFor(z, c, viewer, events))
+		// Protocol v2: snapshot đi NHỊ PHÂN, không còn msgpack (NETCODE_SPEC §4.1).
+		//
+		// `snapshotFor` vẫn giữ nguyên — toàn bộ luật AOI, ngân sách byte, nhịp 10/20 Hz và
+		// vòng đời Despawn đã có test, đổi cùng lúc với cách mã hoá là cách chắc chắn nhất
+		// để một con số sai mà không biết nó sai vì phần nào.
+		s := r.snapshotFor(z, c, viewer, events)
+		c.sendSnapshotBytes(c.EncodeSnapshot(&s, r.cfg.Characters))
+	}
+}
+
+// checkScoreRates gắn cờ "Tăng điểm bất thường" (§6.1).
+//
+// Mốc trung vị lấy từ `Room.ScoreMedian` — một hàm do `cmd/server` cắm vào, vì gói `room`
+// không được truy vấn SQLite giữa tick. nil = chưa cắm (test, công cụ đo) → bỏ qua.
+func (r *Room) checkScoreRates(z *Zone) {
+	if r.ScoreMedian == nil {
+		return
+	}
+	now := time.Now()
+	for id, c := range z.clients {
+		p, ok := z.G.Players[id]
+		if !ok || p.IsBot {
+			continue
+		}
+		c.CheckScoreRate(now, z.G.Time, p.Score, r.ScoreMedian(z.G.Prog.Realm(p.Level)))
 	}
 }
 

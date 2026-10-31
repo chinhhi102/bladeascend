@@ -405,3 +405,60 @@ func maskIPStore(ip string) string {
 	}
 	return "x.x.x.x"
 }
+
+// ── Dọn ảnh góp ý cũ (QUESTIONS Q28, chủ dự án chốt 31/10) ──────────────────────────────
+
+// FeedbackImageKeepDays: ảnh của thư đã XONG hoặc BỎ QUA quá ngần này ngày thì xoá.
+//
+// Chỉ ảnh, không bao giờ xoá chữ. Một báo lỗi cũ vẫn có giá trị khi lỗi đó quay lại — mà
+// ảnh thì nặng gấp hàng trăm lần và hết giá trị ngay khi việc đã xong.
+//
+// Chỉ thư ở trạng thái "xong"/"bo_qua": thư "mới"/"đã xem"/"đang làm" nghĩa là chuyện CHƯA
+// giải quyết, và xoá bằng chứng của một việc đang làm dở là chuyện ngược đời.
+const FeedbackImageKeepDays = 90
+
+// PurgeOldImages xoá ảnh của thư đã khép lại quá hạn. Trả về số ảnh đã xoá.
+//
+// Xoá tệp TRƯỚC rồi mới xoá tên trong DB. Ngược lại thì một lần tắt máy giữa chừng để lại
+// tệp mồ côi mà không ai biết nó thuộc về đâu — còn thứ tự này, tệ nhất là một dòng DB trỏ
+// tới tệp không còn, và chỗ phục vụ ảnh đã trả 404 cho trường hợp đó.
+func (s *Store) PurgeOldImages(dir string, now time.Time) (int, error) {
+	cutoff := now.AddDate(0, 0, -FeedbackImageKeepDays).Unix()
+	rows, err := s.db.Query(
+		`SELECT id, image FROM feedback
+		 WHERE image <> '' AND status IN ('xong','bo_qua') AND at < ?`, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	type victim struct {
+		id   int64
+		file string
+	}
+	var list []victim
+	for rows.Next() {
+		var v victim
+		if err := rows.Scan(&v.id, &v.file); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		list = append(list, v)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+
+	n := 0
+	for _, v := range list {
+		// `filepath.Base`: tên trong DB do server đặt, nhưng đọc từ DB rồi ghép thẳng vào
+		// đường dẫn xoá thì một ngày nào đó ai đó sửa DB bằng tay và `../../` đi ra ngoài.
+		if err := os.Remove(filepath.Join(dir, filepath.Base(v.file))); err != nil && !os.IsNotExist(err) {
+			continue // không xoá được thì để lại, đừng quên tên trong DB
+		}
+		if _, err := s.db.Exec(`UPDATE feedback SET image = '' WHERE id = ?`, v.id); err != nil {
+			continue
+		}
+		n++
+	}
+	return n, nil
+}

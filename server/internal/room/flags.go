@@ -212,3 +212,34 @@ func fmtRate(rate, median, times float64) string {
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
+
+// ── Cờ "Tăng điểm bất thường" (§6.1) ────────────────────────────────────────────────────
+
+// scoreWindowSecs: cửa sổ đo tốc độ lên điểm. §6.1 nói "trong 2 phút".
+const scoreWindowSecs = 120.0
+
+// scoreWatch nhớ mốc điểm đầu cửa sổ của một người.
+type scoreWatch struct {
+	at    float64
+	score float64
+}
+
+// CheckScoreRate đo Uy Danh/phút của một người và so với trung vị cùng cảnh giới.
+//
+// `median` do người gọi lấy từ `store.ScoreMedianPerMin` — gói `room` không tự truy vấn DB
+// giữa tick. `median <= 0` (chưa có mốc) thì KHÔNG gắn cờ: thà im còn hơn gắn cờ dựa vào
+// một con số không có nghĩa.
+func (c *Client) CheckScoreRate(now time.Time, gameTime, score, median float64) {
+	w := c.scoreWatch
+	if w.at == 0 || gameTime-w.at >= scoreWindowSecs {
+		c.scoreWatch = scoreWatch{at: gameTime, score: score}
+		if w.at == 0 {
+			return // cửa sổ đầu tiên: chưa có gì để so
+		}
+		elapsed := gameTime - w.at
+		if elapsed <= 0 || median <= 0 {
+			return
+		}
+		c.NoteScoreSpike(now, (score-w.score)/elapsed*60, median)
+	}
+}

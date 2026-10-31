@@ -11,6 +11,7 @@ import (
 	"kiemxoay/server/internal/config"
 	"kiemxoay/server/internal/game"
 	"kiemxoay/server/internal/netproto"
+	"kiemxoay/server/internal/wire"
 	"kiemxoay/server/internal/store"
 	"kiemxoay/server/internal/world"
 )
@@ -37,6 +38,12 @@ type Room struct {
 	zones   []*Zone
 	mgr     *Manager
 	inbox   chan func()
+	// ScoreMedian trả Uy Danh/phút trung vị của một cảnh giới, cho cờ "Tăng điểm bất
+	// thường" (§6.1). `cmd/server` cắm vào; nil thì không gắn cờ loại này.
+	//
+	// Là một HÀM chứ không phải con số: mốc tính từ 24 giờ dữ liệu thật và làm mới mỗi 5
+	// phút (xem `store.ScoreMedianPerMin`), mà gói này không được chạm vào SQLite giữa tick.
+	ScoreMedian func(realm int) float64
 	// transfers: người chờ sang khu khác, gom lại rồi chuyển một lượt ở RANH GIỚI TICK —
 	// lúc không khu nào đang chạy, nên không cần khoá (xem Zone).
 	transfers []transfer
@@ -428,7 +435,7 @@ func (r *Room) addHuman(c *Client, j netproto.Join) {
 func (r *Room) welcomeFor(z *Zone, p *game.Player, c *Client) netproto.Welcome {
 	w := netproto.Welcome{T: "welcome", ID: p.ID, Room: r.ID, Map: z.G.Map.ID,
 		TickHz: r.cfg.Net.TickHz, Time: z.G.Time, Debug: c.Debug, Proto: netproto.ProtocolVersion,
-		Zone: z.Index, ZoneName: z.Name}
+		Zone: z.Index, ZoneName: z.Name, SchemaHash: wire.SchemaHash}
 	// Chỉ gửi vật cản ĐANG BỊ CHÉM. Từ v6.7 không còn máu nên không còn trạng thái trung
 	// gian nào để đồng bộ — vật cản hoặc còn đó, hoặc đang đếm giờ mọc lại.
 	for id, st := range z.G.Obstacles {

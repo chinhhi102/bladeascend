@@ -34,6 +34,8 @@ type Store struct {
 	cacheTTL time.Duration
 	mu       sync.Mutex
 	cache    map[string]cached
+	// medians: mốc trung vị Uy Danh theo cảnh giới, cache 5 phút (xem median.go).
+	medians medianCache
 }
 
 type cached struct {

@@ -24,6 +24,9 @@ type Manager struct {
 	Start func(r *Room)
 	// AllowDebug: server chạy với -debug, nên client xin ?debug=true thì được bật.
 	AllowDebug bool
+	// ScoreMedian: Uy Danh/phút trung vị theo cảnh giới, cho cờ "Tăng điểm bất thường"
+	// (§6.1). `cmd/server` cắm vào; nil thì không gắn cờ loại này.
+	ScoreMedian func(realm int) float64
 }
 
 func NewManager(cfg *config.Config, maps []*world.Map, rec Recorder) *Manager {
@@ -58,6 +61,9 @@ func (m *Manager) Join(c *Client, j netproto.Join) *Room {
 func (m *Manager) createLocked() *Room {
 	m.nextID++
 	r := newRoom(fmt.Sprintf("r%d", m.nextID), m.cfg, m.zoneMaps(), m, m.recorder, m.rng.Int63())
+	// Mốc trung vị dùng chung cho mọi phòng (§6.1) — cắm từ Manager để phòng mới sinh ra
+	// giữa chừng cũng có, không phải nhớ gắn tay.
+	r.ScoreMedian = m.ScoreMedian
 	m.rooms = append(m.rooms, r)
 	m.Start(r)
 	return r

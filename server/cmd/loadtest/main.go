@@ -24,6 +24,7 @@ import (
 	"kiemxoay/server/internal/config"
 	"kiemxoay/server/internal/game"
 	"kiemxoay/server/internal/netproto"
+	"kiemxoay/server/internal/wire"
 	"kiemxoay/server/internal/room"
 )
 
@@ -33,7 +34,86 @@ import (
 // Cách đo: giải mã gói thành map, rồi mã hoá lại TỪNG trường một và đếm byte. Không chính
 // xác tuyệt đối (mỗi lần mã hoá lại có thêm vài byte khung map), nhưng đủ để biết phần nào
 // chiếm chỗ — và đó là tất cả những gì cần để chọn chỗ tối ưu.
-func snapParts(b []byte) (map[string]int, map[string]int) {
+// snapPartsV2 mổ một gói NHỊ PHÂN ra từng phần — thay cho `snapParts` của bản msgpack.
+//
+// Đo theo SỐ BYTE THẬT của từng message trên dây, không ước lượng: generator trả về số byte
+// đã đọc, nên cộng lại là ra đúng. Bản msgpack phải mã hoá lại từng phần để đoán kích thước;
+// ở đây không cần đoán.
+func snapPartsV2(b []byte) (map[string]int, map[string]int) {
+	parts, ents := map[string]int{}, map[string]int{}
+	if len(b) == 0 || b[0] != wire.TypeSnapHead {
+		return parts, ents
+	}
+	p := 1
+	_, n, err := wire.DecodeSnapHead(b[p:])
+	if err != nil {
+		return parts, ents
+	}
+	parts["head"] += 1 + n
+	p += n
+
+	for p < len(b) {
+		typ := b[p]
+		start := p
+		p++
+		var n int
+		var err error
+		name := ""
+		switch typ {
+		case wire.TypeSpawn:
+			var v wire.Spawn
+			v, n, err = wire.DecodeSpawn(b[p:])
+			name = "p:spawn"
+			_ = v
+		case wire.TypeDesc:
+			_, n, err = wire.DecodeDesc(b[p:])
+			name = "p:desc"
+		case wire.TypeUpdate:
+			_, n, err = wire.DecodeUpdate(b[p:])
+			name = "p:update"
+		case wire.TypeDespawn:
+			_, n, err = wire.DecodeDespawn(b[p:])
+			name = "ds"
+		case wire.TypeMonster:
+			_, n, err = wire.DecodeMonster(b[p:])
+			name = "m"
+		case wire.TypeItemAdd:
+			_, n, err = wire.DecodeItemAdd(b[p:])
+			name = "ia"
+		case wire.TypeItemDel:
+			_, n, err = wire.DecodeItemDel(b[p:])
+			name = "ir"
+		case wire.TypeSelfState:
+			_, n, err = wire.DecodeSelfState(b[p:])
+			name = "self"
+		case wire.TypeSelfExtra:
+			_, n, err = wire.DecodeSelfExtra(b[p:])
+			name = "self"
+		case wire.TypeEvent:
+			var ev wire.Event
+			ev, n, err = wire.DecodeEvent(b[p:])
+			name = "ev"
+			if err == nil {
+				// Sự kiện chiếm phần lớn gói, nên phải biết LOẠI nào — "293 sự kiện" không
+				// nói được gì, còn "250 lượt va kiếm" thì chỉ thẳng vào chỗ phải sửa.
+				k := "ev:" + netproto.EventKindName(ev.Kind)
+				parts[k] += 1 + n
+				ents[k]++
+			}
+		default:
+			return parts, ents // khung hỏng: trả về phần đọc được
+		}
+		if err != nil {
+			return parts, ents
+		}
+		p += n
+		parts[name] += p - start
+		ents[name]++
+	}
+	return parts, ents
+}
+
+func snapPartsMsgpack(b []byte) (map[string]int, map[string]int) {
 	var m map[string]any
 	if err := netproto.Decode(b, &m); err != nil {
 		return nil, nil
@@ -94,18 +174,23 @@ type client struct {
 
 func (c *client) Send(b []byte) bool {
 	c.bytes += int64(len(b))
+	// Snapshot đi NHỊ PHÂN từ Protocol v2 (NETCODE_SPEC §4.1): byte đầu là `TypeSnapHead`.
+	// Phân biệt được với msgpack mà không cần thêm byte nào — map msgpack luôn bắt đầu từ
+	// 0x80 trở lên, còn mọi loại message của ta đều < 0x80.
+	if len(b) > 0 && b[0] == wire.TypeSnapHead {
+		c.snaps++
+		if len(b) > c.snapMax {
+			c.snapMax = len(b)
+			c.parts, c.ents = snapPartsV2(b)
+		}
+		return true
+	}
 	var head struct {
 		T string  `msgpack:"t"`
 		C float64 `msgpack:"c"`
 	}
 	if err := netproto.Decode(b, &head); err == nil {
 		switch head.T {
-		case "snap":
-			c.snaps++
-			if len(b) > c.snapMax {
-				c.snapMax = len(b)
-				c.parts, c.ents = snapParts(b)
-			}
 		case "pong":
 			if at, ok := c.sentAt[head.C]; ok {
 				c.pings = append(c.pings, float64(time.Since(at).Microseconds())/1000)
