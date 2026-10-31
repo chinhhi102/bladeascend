@@ -11,6 +11,7 @@
 //   - `trangChu`: từ lúc mở trang tới lúc THẤY được ô nhập tên (nhóm `home`).
 //   - `vaoTran` : từ lúc mở trang tới lúc nhân vật đã ở trong trận (`home+boot+char+zone`).
 import { chromium } from 'playwright';
+import { requireDebug } from './needdebug.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const URL = process.argv[2] ?? 'http://127.0.0.1:9997';
@@ -69,7 +70,8 @@ async function measure({ name, down, up, rtt, ctx: reuse }) {
   // ——— "Thời gian chờ THỰC" của người chơi: bấm Vào chơi → đang ở trong trận ———
   const tClick = Date.now();
   await p.getByText('Vào chơi', { exact: true }).click();
-  await p.waitForFunction(() => window.kx?.playing?.() === true, null, { timeout: 180000 });
+  await p.waitForFunction(() => window.__playing?.() === true, null, { timeout: 180000 });
+  await requireDebug(p, 'loadtime.mjs');
   const waited = Date.now() - tClick;
   const play = Date.now() - t0;
   await p.close();

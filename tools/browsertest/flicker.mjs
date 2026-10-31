@@ -12,6 +12,7 @@
 // chúng nằm quanh ranh giới AOI — server bỏ qua entity xa hơn NỬA khung nhìn trên các tick
 // lẻ (tối ưu 10 Hz), nên mép đó chính là nơi "vắng mặt một gói" xảy ra liên tục.
 import { chromium } from 'playwright';
+import { requireDebug } from './needdebug.mjs';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const URL = process.argv[2] ?? 'http://127.0.0.1:9998';
 const WATCH_MS = 30000;
@@ -22,7 +23,8 @@ await p.goto(`${URL}/?debug=true`, { waitUntil: 'domcontentloaded' });
 await p.waitForSelector('input', { timeout: 60000 });
 await p.fill('input', 'FlickTest');
 await p.getByText('Vào chơi', { exact: true }).click();
-await p.waitForFunction(() => window.kx?.playing?.() === true, null, { timeout: 60000 });
+await p.waitForFunction(() => window.__playing?.() === true, null, { timeout: 60000 });
+await requireDebug(p, 'flicker.mjs');
 await sleep(2000);
 
 // Lên cảnh giới cao: khung nhìn rộng ra, nên "nửa khung nhìn" (ranh giới 10 Hz) nằm xa

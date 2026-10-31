@@ -120,7 +120,20 @@ async function startServer() {
     ...(HAS_TASKSET ? ['taskset', ['-c', SERVER_CORES, goBin(), ...srvArgs]] : [goBin(), srvArgs]),
     {
       cwd: resolve(REPO, 'server'),
-      env: { ...process.env, GOMODCACHE: process.env.GOMODCACHE ?? join(process.env.HOME ?? '', '.cache/kx-gomod') },
+      // APP_ENV=dev mở cửa lệnh test cho kết nối từ localhost (ADMIN_SPEC §1.1 `DebugGate`).
+      //
+      // Bài đo này đọc `window.kx` để đưa 5 tab lên Đạo Tổ và đọc vị trí. Từ §1.1, `kx` chỉ
+      // có khi SERVER cấp quyền debug — `?debug=true` một mình không còn đủ. Thiếu dòng này
+      // thì bài chạy hết nhưng in ra "0/5 tab lên được Đạo Tổ" rồi "BỎ LƯỢT", tức là một
+      // bảng số sai kịch bản chứ không phải một lỗi.
+      //
+      // Server riêng của bài đo nghe trên 127.0.0.1 và chết cùng bài, nên không chạm gì tới
+      // server thật.
+      env: {
+        ...process.env,
+        APP_ENV: 'dev',
+        GOMODCACHE: process.env.GOMODCACHE ?? join(process.env.HOME ?? '', '.cache/kx-gomod'),
+      },
       stdio: ['ignore', 'pipe', 'pipe'],
       // Nhóm tiến trình riêng: `go run` chạy binary trong tiến trình CON, giết mỗi `go run`
       // thì binary sống tiếp và giữ cổng — lần chạy sau chết vì "address already in use"

@@ -11,6 +11,7 @@
 // bản đồ**: chặn `fetch` để lấy JSON `/api/map/…` client vừa tải, chọn một dãy TƯỜNG KHÔNG
 // PHÁ ĐƯỢC (`hp: 0`) dài nhất ở gần, đi tới đó, rồi ép vào tường và trượt dọc.
 import { chromium } from 'playwright';
+import { requireDebug } from './needdebug.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const URL = process.argv[2] ?? 'http://127.0.0.1:9999';
@@ -50,7 +51,8 @@ await p.goto(`${URL}/?debug=true`, { waitUntil: 'domcontentloaded' });
 await p.waitForSelector('input', { timeout: 60000 });
 await p.fill('input', 'WallHug');
 await p.getByText('Vào chơi', { exact: true }).click();
-await p.waitForFunction(() => window.kx?.playing?.() === true && window.__map, null, { timeout: 60000 });
+await p.waitForFunction(() => window.__playing?.() === true && window.__map, null, { timeout: 60000 });
+await requireDebug(p, 'wallhug.mjs');
 await sleep(2500);
 
 const probe = () =>
