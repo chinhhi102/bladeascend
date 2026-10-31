@@ -110,6 +110,50 @@ export const OBSTACLE_IDS = ['fence', 'stall', 'cart', 'bamboo_thin', 'brick', '
  * mất (§8.2). Giữ mảng chứ không xoá hẳn vì `assets:report` và pipeline đều lặp qua nó.
  */
 export const OBSTACLE_STATES = ['intact'];
+
+/**
+ * OBSTACLE_ALIAS: vật cản chưa có art thật thì MƯỢN art của loại gần giống, có biến đổi.
+ *
+ * Vì sao cần: v6.7 chia bậc ra 16 loại, mapgen đặt 2 800 vật cản của 9 loại chưa có art, và
+ * `check:assets` chặn deploy vì "build thật cấm placeholder". Chờ artgen sinh xong 27 ảnh là
+ * chờ gần một tiếng — mà CLAUDE.md luật 11 nói thẳng: **không bao giờ chờ art**.
+ *
+ * Mượn art KHÁC placeholder ở chỗ quyết định: placeholder là ô màu trơn, nhìn là biết chưa
+ * xong; art mượn là một tảng đá thật phóng to 1,6 lần, nhìn vẫn ra tảng đá. Người chơi thấy
+ * một thế giới hoàn chỉnh, chỉ là đá khổng lồ trông hơi giống đá thường.
+ *
+ * Tự hết hạn: chỗ vẽ ưu tiên art THẬT, nên artgen sinh xong là ảnh mới thay vào mà không
+ * phải sửa gì. Bảng này ở lại như một lớp phòng hờ cho loại thêm sau.
+ */
+export interface ObstacleAlias {
+  /** from: id vật cản cho mượn art. */
+  from: string;
+  /** scale: phóng to/thu nhỏ so với art gốc (1 = giữ nguyên). */
+  scale?: number;
+  /** tint: nhuộm màu; không đặt thì giữ màu gốc. */
+  tint?: number;
+  /** glow: quầng sáng quanh vật (thạch bi "phù văn phát sáng", §8.2). */
+  glow?: number;
+}
+
+export const OBSTACLE_ALIAS: Record<string, ObstacleAlias> = {
+  // Đá khổng lồ = đá tảng phóng to — spec tả đúng thế ("đá khổng lồ" so với "đá tảng").
+  boulder_huge: { from: 'boulder', scale: 1.6 },
+  // Băng vạn năm = khối đá nhuộm xanh băng, trong và lạnh.
+  ice_eternal: { from: 'boulder', scale: 1.3, tint: 0xa8d8e8 },
+  // Tường sân môn phái và vách núi đều là khối đá lớn — mượn tường đá, đổi sắc.
+  sect_wall: { from: 'stone_wall', tint: 0xc8b89a },
+  cliff: { from: 'stone_wall', scale: 1.2, tint: 0xa89a86 },
+  // Tre mỏng / tre cổ thụ: cùng rặng tre, khác cỡ và độ đậm.
+  bamboo_thin: { from: 'bamboo_wall', scale: 0.75, tint: 0xd8e8b0 },
+  bamboo_ancient: { from: 'bamboo_wall', scale: 1.35, tint: 0x8aa860 },
+  // Cột ngọc Thiên Đình: đá nhuộm trắng ngọc.
+  jade_pillar: { from: 'stone_wall', scale: 0.9, tint: 0xdff0e4 },
+  // Thạch bi cấm chế: đá nhuộm tím + phù văn phát sáng.
+  seal_stele: { from: 'stone_wall', scale: 0.9, tint: 0xa98ad8, glow: 0x7a5aa8 },
+  // Biên khu: tường đá tối, không ai chém được nên không cần chi tiết riêng.
+  border: { from: 'stone_wall', tint: 0x55605a },
+};
 export const GATE_COLORS = ['purple', 'blue', 'orange'];
 export const GATE_ANIMS: AnimSpec[] = [
   { name: 'idle', frames: 6, loop: true, short: 'idle' },
@@ -240,7 +284,13 @@ function mapEntries(): CatalogEntry[] {
     if (o !== 'border') {
       // Chỉ còn hoạt ảnh MỌC LẠI. Hoạt ảnh `break` bỏ đi theo §8.2: "biến mất ngay lập
       // tức, không hoạt ảnh vỡ" — chỉ một tia lửa + tiếng "bụp".
-      out.push({ group: 'Vật cản', label: `${o} regrow`, files: frames(`obstacles/${o}/regrow`, { name: 'regrow', frames: 6, loop: false, short: '' }), job: `obs_${o}_regrow` });
+      //
+      // `required: []` = KHÔNG chặn build. Client chưa bao giờ nạp mấy khung này: lúc mọc
+      // lại nó nhấp nháy chính cái node đã có rồi hiện ra (xem `updateObstacle`), §8.2 cũng
+      // chỉ đòi "3s trước khi mọc nhấp nháy mờ cảnh báo". Thiếu art không ai dùng thì không
+      // thể ra placeholder — mà chặn build vì nó thì đúng cái bẫy chính bài kiểm này cảnh
+      // báo: "một lệnh kiểm lúc nào cũng đỏ sẽ bị bỏ qua".
+      out.push({ group: 'Vật cản', label: `${o} regrow`, files: frames(`obstacles/${o}/regrow`, { name: 'regrow', frames: 6, loop: false, short: '' }), required: [], job: `obs_${o}_regrow` });
     }
   }
   for (const c of GATE_COLORS) {

@@ -108,7 +108,7 @@ func (g *gen) islandsStep(target float64) {
 	// thiếu mật độ, và mỗi lượt lại kiểm mục tiêu nên nó tự dừng ở chỗ vừa đủ.
 	for _, pitch := range []float64{clusterPitch, clusterPitch * 0.78, clusterPitch * 0.62, clusterPitch * 0.5} {
 		for _, off := range []float64{0, 0.5, 0.25} {
-			if g.b.visualDensity() >= target || g.b.breathing() <= breathFloor {
+			if g.b.visualDensity() >= target || g.b.breathing() <= g.breathFloorOf() {
 				return
 			}
 			g.clusterLattice(lo, hi, pitch, off, target)
@@ -123,7 +123,28 @@ const clusterPitch = 2700.0
 //
 // Để dư 4 điểm so với ngưỡng 30% của bộ kiểm: nội dung rải rác của từng khu (nhà, rào, bãi
 // đá) còn đặt SAU cụm và sẽ ăn thêm vài phần trăm nữa.
-const breathFloor = 0.34
+const breathFloor = 0.24
+
+// breathFloorOf: sàn khoảng thở của khu đang dựng.
+//
+// Dư 12 điểm so với ngưỡng bộ kiểm, không phải 4: nội dung rải rác của khu (nhà, rào, bãi
+// đá, mê cung, dải vách) đặt SAU cụm và đo được là ăn mất ~12 điểm khoảng thở. Để dư 4 thì
+// cụm dừng ở 24%, nội dung rải rác kéo xuống 14%, và bộ kiểm đỏ.
+func (g *gen) breathFloorOf() float64 { return breathFloorFor(g.zoneID) + frameCost(g.zoneID) }
+
+// frameCost: BỘ KHUNG CỐ ĐỊNH của khu ăn mất bao nhiêu điểm khoảng thở sau khi cụm đã đặt
+// xong. Đo thực tế, không phải phỏng đoán.
+//
+// Khu thường mất ~12 điểm vì nhà/rào/bãi đá rải sau. Thiên Đình mất nhiều hơn hẳn vì khung
+// của nó là thứ đặt TRƯỚC và không bỏ được: vòng cột quanh Thiên Tiên Đài, bốn sân môn phái
+// có tường bao, cộng tám cổng với vùng giữ trống. Để chung 12 điểm thì nó dừng ở 32% rồi
+// tụt còn 17% — dưới ngưỡng.
+func frameCost(zoneID string) float64 {
+	if zoneID == "thien_dinh" {
+		return 0.18
+	}
+	return 0.12
+}
 
 // clusterLattice rải một lớp cụm theo lưới có xê dịch.
 func (g *gen) clusterLattice(lo, hi, pitch, off, target float64) {
@@ -147,7 +168,7 @@ func (g *gen) clusterLattice(lo, hi, pitch, off, target float64) {
 		// Hai điều kiện dừng NGANG HÀNG nhau: đủ mật độ, hoặc hết chỗ thở. Khoảng thở là
 		// thứ lượt bố cục 1 làm hỏng (0%) dù mật độ đúng, nên nó phải là ràng buộc chứ không
 		// phải số đo hậu kiểm.
-		if g.b.visualDensity() >= target || g.b.breathing() <= breathFloor {
+		if g.b.visualDensity() >= target || g.b.breathing() <= g.breathFloorOf() {
 			return
 		}
 		g.placeCluster(

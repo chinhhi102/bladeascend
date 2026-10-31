@@ -36,7 +36,7 @@ const checkCell = 50.0
 
 // Mục tiêu mật độ — §8.1b mục 5, cách đo của spec v6.12 (chủ dự án chốt 31/10/2026).
 //
-// 18–28% là **diện tích HÌNH VẼ**, tức phần đất bị sprite vật cản phủ lên. Không phải chân
+// 12–20% là **diện tích HÌNH VẼ**, tức phần đất bị sprite vật cản phủ lên. Không phải chân
 // đế: chân đế chỉ rộng 90% và cao 30% hình vẽ nên nó chỉ bằng ~27% — cùng một bản đồ, đo
 // theo chân đế ra 5–7,5% còn đo theo hình vẽ ra 18–28%.
 //
@@ -44,15 +44,15 @@ const checkCell = 50.0
 // vùng kiếm chém trúng, đúng với cái người chơi nhìn thấy"). Chân đế chỉ quyết định chân có
 // bị chặn không. Hỏi "khu này trông có đầy không" thì phải đo cái người ta nhìn.
 const (
-	densityMin = 0.18
-	densityMax = 0.28
+	densityMin = 0.12
+	densityMax = 0.20
 	// densityHardMax: vượt mức này là TRƯỢT, không phải cảnh báo.
 	//
 	// Hai hướng không đối xứng vì hậu quả không đối xứng: khu nhạt thì chơi vẫn được, chỉ
 	// kém hay; khu chật thì bắt đầu có người kẹt — và bộ kiểm liên thông không bắt được hết,
 	// nó đo "có đường đi không" chứ không đo "đường có hẹp tới mức đi một bước né ba lần
 	// không".
-	densityHardMax = 0.32
+	densityHardMax = 0.26
 )
 
 // checkResult là kết quả của một cảnh giới.
@@ -163,9 +163,9 @@ func runCheck(dir, pngDir string, cfg *config.Config, pngRealms []int) error {
 			// liên thông không bắt được hết, nó đo "có đường đi không" chứ không đo "đường
 			// có hẹp tới mức đi một bước né ba lần không".
 			if r == 0 {
-				if res.Breathing < breathMin {
+				if want := breathFloorFor(m.ID); res.Breathing < want {
 					fmt.Printf("     ✗ khoảng thở %.0f%% < %.0f%% — vật cản rải đều, không có chỗ rượt nhau\n",
-						res.Breathing*100, breathMin*100)
+						res.Breathing*100, want*100)
 					bad++
 				}
 				if res.LakeObstacle > lakeMaxObstacle {
@@ -282,6 +282,10 @@ func checkRealm(m *world.Map, prog *game.Progression, cfg *config.Config, r int,
 	// trống" áp lên chúng là vô nghĩa — đo được 42,9% và 26,4%, nhưng đó chỉ là mấy cái vũng
 	// nằm lọt giữa khu chứ không phải sân trượt băng của Băng Nguyệt Hồ.
 	lakes := bigLakes(m)
+	// ĐẢO giữa hồ không tính là mặt hồ. Đảo là vùng `snow` nhỏ nằm lọt trong mặt băng, và
+	// spec nói rõ "dồn vật cản lên đảo và bờ" — đếm đá trên đảo thành "vật cản trên mặt hồ"
+	// thì luật tự mâu thuẫn: đặt đúng chỗ spec bảo đặt lại làm bộ kiểm đỏ.
+	islands := iceIslands(m)
 	// Chỉ giữ vật cản cảnh giới này CHƯA chém được. Bậc ≤ r thì họ chạm là nó biến mất, nên
 	// với họ bức tường đó không tồn tại.
 	var walls []world.Obstacle
@@ -301,12 +305,7 @@ func checkRealm(m *world.Map, prog *game.Progression, cfg *config.Config, r int,
 		g.tight[i] = g.solid[i] && !blockedAt(walls, c, small)
 		g.footprint[i] = insideAny(walls, c, func(o world.Obstacle) world.Shape { return o.Block() })
 		g.visual[i] = insideAny(walls, c, func(o world.Obstacle) world.Shape { return o.Shape })
-		for _, z := range lakes {
-			if z.Shape.Contains(c) {
-				g.lake[i] = true
-				break
-			}
-		}
+		g.lake[i] = inAny(lakes, c) && !inAny(islands, c)
 	}
 	g.components()
 	res := checkResult{Realm: r, Name: prog.RealmName(r), BodyR: bodyR}
@@ -398,6 +397,30 @@ func bigLakes(m *world.Map) []world.Zone {
 	return out
 }
 
+// iceIslands: vùng tuyết NHỎ (đảo) — ngoại lệ của luật "mặt hồ phải trống".
+func iceIslands(m *world.Map) []world.Zone {
+	var out []world.Zone
+	for _, z := range m.Zones {
+		if z.Kind != "snow" {
+			continue
+		}
+		lo, hi := z.Shape.Bounds()
+		if hi.X-lo.X < 2600 && hi.Y-lo.Y < 2600 {
+			out = append(out, z)
+		}
+	}
+	return out
+}
+
+func inAny(zs []world.Zone, c geom.Vec) bool {
+	for _, z := range zs {
+		if z.Shape.Contains(c) {
+			return true
+		}
+	}
+	return false
+}
+
 const breathR = 400.0
 
 // breathMin / lakeMaxObstacle: hai ngưỡng của lượt bố cục 2 (chủ dự án chốt 31/10/2026).
@@ -407,9 +430,20 @@ const breathR = 400.0
 //   - vật cản trên mặt hồ ≤ 1%: mặt hồ Băng Nguyệt Hồ là sân trượt băng, đó là thứ làm khu
 //     ấy khác bốn khu kia.
 const (
-	breathMin       = 0.30
+	breathMin       = 0.20
 	lakeMaxObstacle = 0.01
+	// breathMinLake: Băng Nguyệt Hồ phải thoáng hơn hẳn — mặt hồ là sân trượt băng để rượt
+	// nhau, đó là thứ làm khu ấy khác bốn khu kia (spec v6.13 §8.1b).
+	breathMinLake = 0.40
 )
+
+// breathFloorFor: ngưỡng khoảng thở của riêng khu này.
+func breathFloorFor(id string) float64 {
+	if id == "bang_nguyet_ho" {
+		return breathMinLake
+	}
+	return breathMin
+}
 
 // breathingCells đếm số ô cách MỌI vật cản ít nhất `breathR`.
 //

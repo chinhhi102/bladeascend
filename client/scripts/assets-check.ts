@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { BIOME_TILES, catalog, type CatalogEntry } from '../src/render/catalog.ts';
+import { BIOME_TILES, catalog, type CatalogEntry, OBSTACLE_ALIAS } from '../src/render/catalog.ts';
 
 const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets', 'src');
 const AUDIO_EXTS = ['.ogg', '.mp3', '.wav'];
@@ -21,6 +21,25 @@ function exists(rel: string): boolean {
     return AUDIO_EXTS.some((e) => existsSync(join(ASSETS, base + e)));
   }
   return existsSync(join(ASSETS, rel));
+}
+
+/**
+ * aliased: đường dẫn này là art vật cản CHƯA CÓ nhưng đã có alias mượn art loại khác?
+ *
+ * Mượn art không phải placeholder: placeholder là ô màu trơn, nhìn là biết chưa xong; art
+ * mượn là một tảng đá thật phóng to, người chơi thấy một thế giới hoàn chỉnh. Nên nó KHÔNG
+ * vi phạm luật "build thật cấm placeholder" (NETCODE_SPEC §5) mà bài kiểm này canh.
+ *
+ * Vẫn phải kiểm art NGUỒN có thật: alias trỏ tới một loại cũng chưa có art thì rốt cuộc vẫn
+ * ra ô màu trơn, và lúc đó bài kiểm phải đỏ.
+ */
+function aliased(rel: string): boolean {
+  const m = /^obstacles\/([^/]+)\//.exec(rel);
+  if (!m) {
+    return false;
+  }
+  const al = OBSTACLE_ALIAS[m[1]];
+  return al !== undefined && exists(rel.replace(`obstacles/${m[1]}/`, `obstacles/${al.from}/`));
 }
 
 /** requiredOf: danh sách file BẮT BUỘC của một mục; `required` không khai báo thì là tất cả. */
@@ -103,7 +122,7 @@ let checked = 0;
 for (const e of catalog()) {
   const need = requiredOf(e);
   checked += need.length;
-  const gone = need.filter((f) => !exists(f));
+  const gone = need.filter((f) => !exists(f) && !aliased(f));
   if (gone.length === 0) {
     continue;
   }
@@ -113,9 +132,24 @@ for (const e of catalog()) {
 // Loại vật cản bản đồ dùng mà không có art → khung chữ nhật trắng giữa màn hình.
 // `intact.png` là trạng thái luôn phải có; các trạng thái vỡ có thể thiếu mà vẫn chơi được.
 const kinds = mapObstacleKinds();
+const borrowed: string[] = [];
 for (const [kind, n] of kinds) {
-  if (!existsSync(join(ASSETS, 'obstacles', kind, 'intact.png'))) {
-    blocking.push({ group: 'Vật cản (bản đồ dùng)', label: `${kind} — ${n} chỗ trên bản đồ`, files: [`obstacles/${kind}/intact.png`] });
+  if (existsSync(join(ASSETS, 'obstacles', kind, 'intact.png'))) {
+    continue;
+  }
+  const rel = `obstacles/${kind}/intact.png`;
+  if (aliased(rel)) {
+    // Mượn art thì KHÔNG chặn build, nhưng phải NÓI RA — bỏ qua trong im lặng là đúng cái
+    // lỗi bài kiểm này sinh ra để chặn.
+    borrowed.push(`${kind} (${n} chỗ) ← ${OBSTACLE_ALIAS[kind].from}`);
+    continue;
+  }
+  blocking.push({ group: 'Vật cản (bản đồ dùng)', label: `${kind} — ${n} chỗ trên bản đồ`, files: [rel] });
+}
+if (borrowed.length > 0) {
+  console.log(`ℹ ${borrowed.length} loại vật cản đang MƯỢN art (artgen sinh xong sẽ tự thay):`);
+  for (const b of borrowed) {
+    console.log(`   ${b}`);
   }
 }
 

@@ -48,8 +48,10 @@ type gen struct {
 	// obs: bảng bậc vật cản (§8.2). Đảo cần nó để biết lõi bậc mấy và hành lang tối thiểu
 	// bao nhiêu — viết số vào mã là bảng đổi mà bản đồ không đổi theo.
 	obs config.Obstacles
-	// target: mật độ chân đế mục tiêu của khu đang dựng.
+	// target: mật độ hình vẽ mục tiêu của khu đang dựng.
 	target float64
+	// zoneID: id khu, để tra ngưỡng riêng của khu (khoảng thở của Băng Nguyệt Hồ cao hơn).
+	zoneID string
 }
 
 // seg is a road segment with a width; roads are a chain of these.

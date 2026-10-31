@@ -161,6 +161,10 @@ type builder struct {
 	// Mặt hồ Băng Nguyệt Hồ là sân trượt băng để rượt nhau; đó là thứ làm khu ấy khác bốn
 	// khu kia. Rải vật cản lên đó thì nó thành một khu như mọi khu, chỉ khác màu nền.
 	lakeKeep []lakeArea
+	// islandKeep: đảo giữa hồ — NGOẠI LỆ của `lakeKeep`. Đảo là vùng `snow` nhỏ nằm lọt
+	// trong mặt băng; không có ngoại lệ này thì luật "mặt hồ phải trống" quét luôn cả đảo,
+	// và đảo đứng trơ không một tảng đá (đo được: 4 đảo, 0 vật cản).
+	islandKeep []lakeArea
 	// decorSkipped: vật trang trí bị chốt chặn trong `decor()` từ chối vì không có art.
 	// Giữ lại để in ra; bỏ qua trong im lặng là đúng cái lỗi Q27-2.
 	decorSkipped []string
@@ -325,12 +329,21 @@ func (b *builder) playable() (lo, hi float64) {
 	return mapMargin + borderThick, b.size - mapMargin - borderThick
 }
 
-// onLake: hình này có chạm mặt hồ không. Lùi vào 120 so với mép hồ để bờ vẫn đặt được —
-// "dồn vật cản lên đảo và bờ".
+// onLake: hình này có chạm MẶT BĂNG không (đảo giữa hồ không tính).
+//
+// Xét cả BỐN GÓC chứ không chỉ tâm: một tảng đá có tâm nằm ngoài mép hồ vẫn thò nửa thân
+// xuống băng, và cộng lại chúng đẩy "vật cản trên mặt hồ" lên 1,4% — quá ngưỡng 1%.
 func (b *builder) onLake(r rect) bool {
+	for _, is := range b.islandKeep {
+		if is.contains((r.x0+r.x1)/2, (r.y0+r.y1)/2, 0) {
+			return false // trên đảo thì được đặt
+		}
+	}
 	for _, l := range b.lakeKeep {
-		if l.contains((r.x0+r.x1)/2, (r.y0+r.y1)/2, -120) {
-			return true
+		for _, p := range [4][2]float64{{r.x0, r.y0}, {r.x1, r.y0}, {r.x0, r.y1}, {r.x1, r.y1}} {
+			if l.contains(p[0], p[1], 0) {
+				return true
+			}
 		}
 	}
 	return false
@@ -631,8 +644,12 @@ func (b *builder) zonePoly(kind string, pts []float64, props ...prop) bool {
 func (b *builder) organicZone(kind string, cx, cy, r float64, squash float64, props ...prop) bool {
 	// Hồ băng / hồ nước ĐỦ LỚN thì ghi lại làm vùng cấm đặt vật cản. Ghi ở đây chứ không
 	// để khu tự nhớ: `organicZone` là cửa duy nhất sinh ra mặt hồ, nên không sót được.
-	if (kind == "ice" || kind == "water") && r > 1500 {
+	switch {
+	case (kind == "ice" || kind == "water") && r > 1500:
 		b.lakeKeep = append(b.lakeKeep, lakeArea{cx, cy, r, squash})
+	case kind == "snow" && r < 1200:
+		// Vùng tuyết NHỎ nằm giữa hồ = đảo. Vùng tuyết lớn là bờ, không cần ghi.
+		b.islandKeep = append(b.islandKeep, lakeArea{cx, cy, r, squash})
 	}
 	return b.zonePoly(kind, organicPoly(cx, cy, r, 14, squash, b.seed+int64(len(b.layers["zones"]))), props...)
 }

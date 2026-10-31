@@ -584,12 +584,26 @@ func (g *gen) bangNguyetHo() error {
 	// Cổng và đài vẫn phải đặt TRƯỚC đảo: chúng ghi vùng giữ trống, nên đảo tự tránh.
 	g.islandsStep(g.target)
 
-	// Đảo băng: vùng tuyết nhỏ giữa hồ (đứng được, không trượt) viền vài tảng băng.
+	// Đảo băng: vùng tuyết nhỏ giữa hồ (đứng được, không trượt).
+	//
+	// Mỗi đảo cắm 1–2 **tảng băng vạn năm** (bậc 9) hoặc đá khổng lồ ở GIỮA đảo. Giữa chứ
+	// không viền: viền đảo nằm đúng mép hồ, mà mép hồ là chỗ cấm đặt — bản trước rải 5 tảng
+	// ở bán kính 700 và cả 5 đều bị từ chối, nên 4 cái đảo đứng trơ không một vật cản.
+	//
+	// Bậc 9 là có chủ ý: đây là thứ duy nhất còn lại ở Băng Nguyệt Hồ khi người chơi lên
+	// Đại Thừa, tức chỗ nấp và chỗ bị ép vào tường duy nhất của cả khu (§8.2).
 	for _, is := range []Vec2{islandA, islandB, {c.X + 1500, c.Y - 1800}, {c.X - 1500, c.Y + 1800}} {
 		g.b.organicZone("snow", is.X, is.Y, 820, 0.85)
-		for i := 0; i < 5; i++ {
-			a := float64(i) / 5 * 2 * math.Pi
-			g.b.boulder(is.X+math.Cos(a)*700, is.Y+math.Sin(a)*700, g.b.rnd(70, 120), 200)
+		n := 1 + g.b.rng.Intn(2)
+		for i := 0; i < n; i++ {
+			a := g.b.rnd(0, 2*math.Pi)
+			d := g.b.rnd(0, 260)
+			kind := "ice_eternal"
+			if g.b.rng.Intn(3) == 0 {
+				kind = "boulder_huge"
+			}
+			w := g.b.rnd(240, 380)
+			g.b.obstacle(kind, is.X+math.Cos(a)*d-w/2, is.Y+math.Sin(a)*d-w/2, w, w, 160)
 		}
 	}
 	// Vật cản ngoài hồ: thưa, chỉ để bờ tuyết không trống trơn.
@@ -614,7 +628,7 @@ func generateZone(b *builder, cfg config.Mapgen, zone int) error {
 	if zone < 0 || zone >= len(zoneDefs) {
 		return fmt.Errorf("khu %d không có (chỉ có 0..%d)", zone, len(zoneDefs)-1)
 	}
-	g := &gen{b: b, cfg: cfg, size: b.size, obs: b.obs, target: zoneDefs[zone].density}
+	g := &gen{b: b, cfg: cfg, size: b.size, obs: b.obs, target: zoneDefs[zone].density, zoneID: zoneDefs[zone].id}
 	b.border()
 	if err := zoneDefs[zone].build(g); err != nil {
 		return err
