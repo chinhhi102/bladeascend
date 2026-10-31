@@ -414,20 +414,29 @@ type Bots struct {
 	IdleAfterJoinSecs    []float64 `json:"idle_after_join_secs"`
 	// SpawnRank: bot sinh ra ngang với người đang đứng hạng này trong phòng (mặc định 11,
 	// tức ngay dưới Top 10). Phòng chưa đủ người để có hạng đó → sinh ở Luyện Khí.
-	// Không có trần cảnh giới: phòng toàn Nguyên Anh thì bot mới cũng Nguyên Anh.
-	SpawnRank   int      `json:"spawn_rank"`
-	DecideMin   float64  `json:"decide_min"`
-	DecideMax   float64  `json:"decide_max"`
-	ReactionMin float64  `json:"reaction_min"`
-	ReactionMax float64  `json:"reaction_max"`
-	HuntR       float64  `json:"hunt_r"`
-	HuntRatio   float64  `json:"hunt_ratio"`
-	FleeR       float64  `json:"flee_r"`
-	FleeRatio   float64  `json:"flee_ratio"`
-	PathGrid    float64  `json:"path_grid"`
-	AmbushR     float64  `json:"ambush_r"`
-	AmbushSecs  float64  `json:"ambush_secs"`
-	Names       []string `json:"names"`
+	SpawnRank int `json:"spawn_rank"`
+	// MaxSpawnRealm: trần cảnh giới của bot MỚI SINH (chủ dự án chốt 31/10/2026).
+	//
+	// Bot vẫn tu lên cao được trong lúc chơi; trần này chỉ chặn lúc SINH RA. Không có nó thì
+	// `SpawnRank` chép thẳng cảnh giới của người hạng N — phòng có một người lên Chân Tiên
+	// là bot mới cũng sinh thẳng ở Chân Tiên, tức người chơi vừa vào đã gặp cả phòng Tiên
+	// giới mà không ai tu lên được như thế.
+	//
+	// 6 = Hợp Thể: còn đủ cao để bot không thành bia tập bắn, mà vẫn dưới Độ Kiếp / Đại Thừa
+	// / Tiên giới — ba mức mà người chơi phải tự tu tới mới gặp.
+	MaxSpawnRealm int      `json:"max_spawn_realm"`
+	DecideMin     float64  `json:"decide_min"`
+	DecideMax     float64  `json:"decide_max"`
+	ReactionMin   float64  `json:"reaction_min"`
+	ReactionMax   float64  `json:"reaction_max"`
+	HuntR         float64  `json:"hunt_r"`
+	HuntRatio     float64  `json:"hunt_ratio"`
+	FleeR         float64  `json:"flee_r"`
+	FleeRatio     float64  `json:"flee_ratio"`
+	PathGrid      float64  `json:"path_grid"`
+	AmbushR       float64  `json:"ambush_r"`
+	AmbushSecs    float64  `json:"ambush_secs"`
+	Names         []string `json:"names"`
 }
 
 type Mood struct {
@@ -496,6 +505,10 @@ type Score struct {
 }
 
 type Net struct {
+	// MaxRingFlips: tối đa bao nhiêu sự kiện va kiếm được gửi cho MỘT người trong một gói
+	// (giữ cái gần họ nhất). Va kiếm không mang luật chơi — chiều quay mới nằm ở trường `d`
+	// mỗi gói — nên đây thuần là ngân sách băng thông cho tia lửa. 0 = không giới hạn.
+	MaxRingFlips       int     `json:"max_ring_flips"`
 	TickHz             int     `json:"tick_hz"`
 	SnapshotHz         int     `json:"snapshot_hz"`
 	InterpMs           int     `json:"interp_ms"`
