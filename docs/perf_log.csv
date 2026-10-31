@@ -19,3 +19,5 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 10,2026-10-31,,"Trang chủ hiện ngay + tải gói lúc gõ tên",S7,,,,,,,,60.0,,0.32,40,2773,,0,,,,,7.02,11.41,10.0,15.2,7.4,"CHỜ THỰC (bấm Vào chơi → trong trận) trung vị 3 lượt: 10Mbps 2.2s, Fast4G 6.0s, cache 0.3s; trang chủ hiện 2.4s/1.8s/1.0s; TYPE_MS=6000 là giả định",
 10b,2026-10-31,,"Q27 nền đúng biome + trang trí vẽ ra thật",S4,,,,,,,,60.0,,0.32,40,2773,,0,,,,,,,,,,"+91 vật trang trí (Băng Nguyệt Hồ): draw call 36→40, vẽ 0.6→0.32ms; 543 vật trước đây vô hình",
 10c,2026-10-31,494d517,"Q27 đo sau deploy - Phàm Trấn 139 trang trí",S4,,,,,,,,58.0,,0.9,34,,,0,,,,,,,,,,"nền concrete mới + 139 vật trang trí vẽ thật; hiệu chỉnh 0/giây; 0 lỗi console",
+11,2026-10-31,,"Bộ nhớ GPU 1426→150MB - chia ô nền 1024 + huỷ ô xa",S4,,,,,,,,44.0,,,266,,150.0,0,,,,,,,,,,"giả lập iPhone DPR3, 2 phút chỗ đông; TRƯỚC: 1426MB vào trận / 1958MB Đạo Tổ; 0 lỗi",
+11b,2026-10-31,,"Như trên - máy bàn 1280x720",S4,,,,,,,,58.3,,0.81,118,,98.0,0,,,,,,,,,,"TRƯỚC: 1416MB vào trận / 1911MB Đạo Tổ",

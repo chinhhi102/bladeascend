@@ -74,6 +74,8 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 9a | 2026-10-30 | `200e5bf` | **Mốc TRƯỚC §13.7** — bộ nạp tải cả manifest trước trang chủ | S7 | – | – | – | – | – | – | – | – | – | Gói chặn **77.4 MB** (vượt 9.7×); tổng 201.5 MB (vượt 2.5×) |
 | **9b** | 2026-10-30 | `b55c14f` | **§13.7 A — asset-pipeline + nhóm tải + màn hình tải** | S7 | – | – | – | 58 / – | 0.6 | 36 | **0** ✅ | – | Gói chặn 77.4 → **7.02 MB** ✅ · tổng 201.5 → **11.41 MB** ✅ · vào trận 10 Mbps **8.3 s** ✅ · lần 2 **2.8 s** | Dư ngân sách gói chặn chỉ 0.98 MB; `zone_thien_dinh` 3.24 MB là phần nặng nhất |
 | **10** | 2026-10-31 | (phiên này) | **Trang chủ hiện ngay + tải gói lúc gõ tên** (chủ dự án chốt 31/10) | S7 | – | – | – | 60 / – | 0.32 | 40 | **0** ✅ | – | **Chờ thực** (bấm Vào chơi → trong trận) 10 Mbps 6.0 → **2.2 s**, Fast 4G 12.4 → **6.0 s**, có cache → **0.3 s** · trang chủ hiện 4.0 → **2.4 s** | Fast 4G dao động 2.4–9.4 s: 6 giây gõ tên chỉ phủ được ~40% gói 7 MB ở 4 Mbps |
+| **11** | 2026-10-31 | (phiên này) | **Bộ nhớ GPU 1 426 → 150 MB** — chia ô nền 1 024 + huỷ ô xa (iPhone) | S4\*\* | – | – | – | 44 / – | – | 266 | 0 ✅ | – | Texture **1 426 → 150 MB đỉnh** (−89%) trên giả lập iPhone 2 phút chỗ đông | Chạy bằng Chromium giả lập, **chưa phải WebKit** (thiếu `libavif16`) |
+| 11b | 2026-10-31 | (phiên này) | Như trên, máy bàn 1280×720 | S4\*\* | – | – | – | 58 / – | 0.81 | 118 | 0 ✅ | – | Texture **1 416 → 98 MB** (−93%) | – |
 | 10b | 2026-10-31 | `494d517` | Q27 — nền đúng biome + trang trí bản đồ **vẽ ra thật** (543 vật trước đây vô hình) | S4\*\* | – | – | – | 60 / – | 0.32 | 40 | 0 ✅ | – | Băng Nguyệt Hồ (+91 vật): draw call 36 → 40, vẽ 0.6 → 0.32 ms | – |
 | 10c | 2026-10-31 | `494d517` | Như trên, đo trên `:9999` SAU KHI DEPLOY — **khu nhiều trang trí nhất** | S4\*\* | – | – | – | 58 / – | 0.9 | 34 | 0 ✅ | – | Phàm Trấn, 139 vật trang trí, nền `concrete` mới: 58 fps · 34 draw call · hiệu chỉnh 0/giây | – |
 
@@ -409,6 +411,82 @@ Việc tiếp theo đề xuất:
 2. Muốn Fast 4G cũng dưới ~3 giây: chuyển khung `break`/`regrow` của vật cản (2,6 MB) sang
    nhóm tải nền.
 
+### Lượt #11 — Bộ nhớ GPU 1,4 GB → 150 MB (2026-10-31)
+
+Mục tiêu: người chơi báo **"trên iPhone luôn bị lỗi"**. iOS không báo lỗi khi hết bộ nhớ
+đồ hoạ — Safari **giết hẳn tab**, không ngoại lệ, không log.
+
+**Đo trước, và phải viết dụng cụ đo trước đã.** Cột `tex_mb` trong telemetry **luôn bằng 0
+từ ngày mở**: PixiJS không công bố tổng bộ nhớ texture, nên không ai từng nhìn thấy con số
+này trên máy người chơi. Con số "1 076 → 102 MB" ở lượt #6 là đo tay một lần rồi thôi.
+
+Viết `render/gpumem.ts` (bọc bốn hàm cấp phát/giải phóng texture của WebGL) rồi đo lại:
+
+| | Máy bàn 1280×720 | Giả lập iPhone DPR 3 |
+|---|---|---|
+| Vừa vào trận | **1 416 MB** | **1 426 MB** |
+| Đạo Tổ, đông người | **1 911 MB** | **1 958 MB** |
+
+Gấp **7 lần** ngân sách của một iPhone.
+
+**Một tấm texture duy nhất chiếm 1 365 MB: 16 384 × 16 384.** Nguồn gốc: mặt nạ sprite của
+PixiJS cấp phát render texture **bằng kích thước vật bị che**, và lớp nền trộn (§8.6 mục 1)
+trải khắp bản đồ 12 000 → làm tròn lên luỹ thừa 2 là 16 384². Lượt #6 từng sửa đúng lỗi
+cùng loại cho `filterArea` và ghi lại rất rõ — nhưng mặt nạ đi một đường khác, và `filterArea`
+không áp dụng cho mặt nạ.
+
+Thay đổi:
+1. **Chia ô nền 1 024 đơn vị** (CHANGES mục 2): lớp nền chính vẫn là một `TilingSprite` phủ
+   cả bản đồ (không mặt nạ → không cấp phát gì), lớp trộn chia ô quanh khung nhìn. Ô ra
+   ngoài tầm bị **huỷ hẳn** — `renderable = false` vẫn giữ texture trên GPU, đúng thứ đang cắt.
+2. `resolution = min(DPR, 2)`, mức **Thấp dùng 1.5**. iPhone DPR 3 để nguyên là tốn gấp 9 lần.
+3. **Điện thoại không tải sẵn 10 atlas nhân vật còn lại** — mỗi cái 1 280×1 152 ≈ 7,5 MB
+   GPU, mười cái là 75 MB cho những nhân vật có thể không gặp lần nào. `charAtlas` đã tự
+   yêu cầu đúng nhân vật vừa lọt vào khung hình.
+4. **Ngân sách GPU theo thiết bị** (`render/device.ts`): iOS 256 MB · điện thoại khác 384 ·
+   máy bàn 1 024. Chạm 80% hạ một bậc chất lượng, vượt trần xuống Thấp ngay — **bỏ qua cả
+   lựa chọn tay của người chơi**, vì không ai chọn "cho tab chết".
+
+Kết quả (`node tools/browsertest/iphone.mjs`, 2 phút đứng chỗ đông):
+
+| Chỉ số | Trước | Sau | Δ | Ngân sách |
+|---|---|---|---|---|
+| Texture, giả lập iPhone, vào trận | 1 426 MB | **38 MB** | −97% | – |
+| Texture, giả lập iPhone, đỉnh 2 phút | 1 958 MB | **150 MB** | −92% | < 256 MB ✅ |
+| Texture, máy bàn, Đạo Tổ đông | 1 911 MB | **98 MB** | −95% | – |
+| FPS giả lập iPhone | – | 44 | – | (trần 45 trên điện thoại) |
+| Lỗi / tab bị giết trong 2 phút | – | **0** | – | 0 ✅ |
+
+Đường cong bộ nhớ còn cho thấy việc huỷ ô nền hoạt động thật: nó **tụt** 149 → 138 MB ở
+phút 1.4 khi người chơi đi khỏi vùng cũ, chứ không chỉ tăng đều.
+
+Nút thắt tìm được (có số đo):
+1. Mặt nạ nền map-sized — 1 365 MB trong MỘT tấm. Đã đóng.
+2. Atlas nhân vật 1 280×1 152 = **7,5 MB mỗi nhân vật**, 11 nhân vật = 82 MB. Trên điện
+   thoại giờ chỉ tải khi gặp; trên máy bàn vẫn tải sẵn cho mượt.
+3. Số texture vẫn bò lên 58 → 260 trong 2 phút (ô nền + nhân vật + khu). MB thì đứng yên
+   quanh 140–150, nên chưa phải nút thắt — nhưng là chỗ cần nhìn nếu con số lại trôi.
+
+Bị chặn / chưa làm được:
+- **Chưa chạy được WebKit thật** (`libavif16` cần quyền sudo). Lượt đo này là Chromium giả
+  lập iPhone: con số bộ nhớ đúng, nhưng cách Safari thu hồi tab thì không mô phỏng được.
+  Cài: `sudo apt-get install -y libavif16` rồi `npx playwright install webkit`.
+- **Texture vòng kiếm ≤ 1 024 trên điện thoại** (NETCODE_SPEC §5 L1) — chưa làm được vì
+  **cache texture vòng kiếm chưa tồn tại**: `swordring.ts` vẽ từng thanh bằng sprite, không
+  bake ra `RenderTexture`. Đó là việc của bước Protocol v2 / L1, không phải một dòng sửa.
+- **Atlas ≤ 2 048**: hiện atlas lớn nhất là 1 280×1 152, đã nằm dưới trần. Chưa thêm phép
+  kiểm tự động chặn atlas tương lai vượt 2 048.
+
+Tác dụng phụ / rủi ro:
+- Ô nền dựng lại khi người chơi quay lại vùng cũ. Mặt nạ gieo theo **toạ độ ô**, nên cùng
+  một ô luôn ra cùng mảng loang — nền không "đổi kiểu" sau lưng người chơi.
+- Draw call tăng (118 → 266 ở chỗ đông) vì mỗi ô nền là một lượt vẽ. Vẫn dưới ngân sách
+  200 ở máy bàn... **ở chỗ đông trên điện thoại thì 266 là vượt** — ghi vào nút thắt B10.
+
+Việc tiếp theo đề xuất:
+1. Chạy lại bằng WebKit thật sau khi cài `libavif16`.
+2. Gộp ô nền trộn thành một lớp duy nhất (hoặc bake sẵn) để kéo draw call xuống.
+
 ### Mẫu — copy cho mỗi lượt
 
 ```
@@ -447,6 +525,9 @@ Việc tiếp theo đề xuất: <1–3 việc, xếp theo lợi ích / công s�
 | B7 | Lần tải đầu 77,4 MB / 547 tệp trước khi hiện trang chủ | Người chơi chờ rất lâu rồi bỏ | Lượt #9a (`assets:size`) | **Đóng** — gói chặn 7,02 MB, vào trận 8,3 s ở 10 Mbps | #9 |
 | **B8** | Dư ngân sách gói chặn chỉ còn **0,98 MB**; `zone_thien_dinh` chiếm 3,24 MB | Thêm một khu hoặc một bộ vật cản mới là vượt 8 MB | Lượt #9b | Mở — `assets:budget` sẽ chặn build khi vượt, nên không lọt ra người chơi được. Cắt tiếp: khung `break`/`regrow` 2,6 MB sang tải nền, hoặc `obstacles` `maxPx` 512 → 384 | – |
 | **B9** | Fast 4G (4 Mbps) vào trận **16,4 s** | Người chơi mạng yếu | Lượt #9b | Mở — **ngoài** ngân sách §13.7 (dòng ngân sách ghi 10 Mbps), ghi lại để không ai tưởng đã xong | – |
+| **B10** | **Bộ nhớ GPU 1,4–1,9 GB** vì mặt nạ nền map-sized 16 384² | iPhone Safari giết tab → "luôn bị lỗi" | Lượt #11 (`render/gpumem.ts`) | **Đóng** — 150 MB đỉnh, dưới ngân sách iOS 256 MB | #11 |
+| **B11** | Draw call **266** ở chỗ đông trên điện thoại (ngân sách < 200) | Chi phí của việc chia ô nền | Lượt #11 | Mở — gộp ô nền trộn hoặc bake sẵn | – |
+| **B12** | Chưa chạy được **WebKit thật**, chỉ Chromium giả lập iPhone | Không xác nhận được hành vi Safari | Lượt #11 | Mở — cần `sudo apt-get install -y libavif16` | – |
 
 ## 7. Quy tắc cho agent
 1. **Đo trước, rồi mới sửa.** Mỗi lượt tối ưu bắt đầu bằng 1 dòng "Trước" (hoặc dùng dòng mốc gần nhất cùng kịch bản nếu chưa đổi code).

@@ -1195,3 +1195,75 @@ trận thì không để lại dấu vết nào — thiết bị hỏng nặng n
 Playwright chạy tốt (44,5 fps, 0 lỗi). Nhờ anh thử lại trên đúng cái điện thoại đó rồi báo:
 máy gì, trình duyệt gì, và nó chơi lại từ đầu **trước hay sau** khi vào được trận. Lần này
 telemetry sẽ ghi lại phiên đó kể cả khi game không vào nổi.
+
+## Phiên 31/10 (tiếp 3) — iPhone: bộ nhớ GPU 1,4 GB → 150 MB, và ghi lỗi từ xa
+
+### Tìm ra nguyên nhân "trên iPhone luôn bị lỗi" — và phải viết dụng cụ đo trước
+
+iOS **không báo lỗi khi hết bộ nhớ đồ hoạ**: Safari giết hẳn tab, không ngoại lệ để bắt,
+không dòng log nào. Nên không có cách nào ngoài tự đo.
+
+Mà cột `tex_mb` trong telemetry **luôn bằng 0 từ ngày mở** — PixiJS không công bố tổng bộ
+nhớ texture, nên không ai từng nhìn thấy con số này trên máy người chơi. Viết
+`render/gpumem.ts` (bọc bốn hàm cấp phát/giải phóng texture của WebGL) rồi đo:
+
+| | Máy bàn | Giả lập iPhone DPR 3 |
+|---|---|---|
+| Vừa vào trận | **1 416 MB** | **1 426 MB** |
+| Đạo Tổ, đông người | **1 911 MB** | **1 958 MB** |
+
+Gấp **7 lần** ngân sách của một iPhone. Và **một tấm texture duy nhất chiếm 1 365 MB:
+16 384 × 16 384.**
+
+Nguồn: mặt nạ sprite của PixiJS cấp phát render texture **bằng kích thước vật bị che**, mà
+lớp nền trộn (§8.6 mục 1) trải khắp bản đồ 12 000 → làm tròn lên luỹ thừa 2 là 16 384².
+Lượt #6 từng sửa đúng lỗi cùng loại cho `filterArea` và ghi lại rất rõ — nhưng **mặt nạ đi
+một đường khác**, và `filterArea` không áp dụng cho mặt nạ. Cùng một cái bẫy, cửa khác.
+
+### Sửa (CHANGES mục 2)
+
+1. **Ô nền 1 024** — lớp nền chính vẫn một `TilingSprite` phủ cả bản đồ (không mặt nạ →
+   không cấp phát gì); lớp trộn chia ô quanh khung nhìn, ô xa **huỷ hẳn** (ẩn thì texture
+   vẫn nằm trên GPU, đúng thứ đang cắt). Mặt nạ gieo theo **toạ độ ô** nên nền không đổi
+   kiểu sau lưng người chơi khi họ quay lại.
+2. `resolution = min(DPR, 2)`, mức **Thấp 1.5**.
+3. **Điện thoại không tải sẵn 10 atlas nhân vật còn lại** (7,5 MB GPU mỗi cái).
+4. **Ngân sách GPU theo thiết bị** (`render/device.ts`): iOS 256 · điện thoại 384 · máy bàn
+   1 024 MB. Chạm 80% hạ một bậc, vượt trần xuống Thấp ngay — **bỏ qua cả lựa chọn tay của
+   người chơi**, vì không ai chọn "cho tab chết". Kiểm mỗi giây, không mỗi khung: con số này
+   đổi khi NẠP ẢNH, không đổi khi vẽ.
+
+Kết quả (2 phút đứng chỗ đông, giả lập iPhone): **38 MB vào trận · 150 MB đỉnh · 0 lỗi ·
+44 fps**. Máy bàn: 1 416 → **98 MB**. Đường cong còn cho thấy việc huỷ ô hoạt động thật —
+bộ nhớ **tụt** 149 → 138 MB ở phút 1.4 khi người chơi đi khỏi vùng cũ.
+
+### Ghi lỗi từ xa (CHANGES mục 1)
+
+- `window.onerror` / `unhandledrejection` / `webgl_context_lost` / `restored` /
+  `gpu_pressure` đều gửi về server **kèm bối cảnh**: giai đoạn (`home`/`loading`/`match`),
+  `texMB`, số texture, DPR, cỡ canvas, số người trên màn hình, FPS, mức chất lượng.
+  Chỉ mỗi dòng thông báo thì vô dụng khi máy báo lỗi ở xa: cùng một `TypeError: null` có thể
+  do thiếu art, do hết bộ nhớ GPU, hay do mất ngữ cảnh WebGL — kèm bối cảnh thì phân biệt
+  được ngay từ một dòng.
+- **Bộ đệm lỗi SỚM trong `index.html`**: một thẻ `<script>` chạy trước bundle gắn
+  `window.onerror` và đẩy vào `window.__kxEarlyErrors`; telemetry nạp xong thì vét gửi đi.
+  Không có nó thì **mọi lỗi trước khi bundle chạy xong đều biến mất** — đúng loại lỗi làm
+  game không vào nổi trận, tức loại đang phải tìm.
+- **`?debug=true` hiện lỗi ngay trên màn hình** (dải đỏ dưới đáy). iPhone không mở được
+  console, nên đây là cách duy nhất người cầm máy đọc được lỗi rồi chụp màn hình gửi về.
+- Cột `tex_mb` / `tex_uploads` trong telemetry **giờ có số thật**, không còn 0.
+
+### Chưa làm được, nói rõ
+
+- **Chưa chạy được WebKit thật**: cần `sudo apt-get install -y libavif16` rồi
+  `npx playwright install webkit`. Lượt đo trên là **Chromium giả lập iPhone** — con số bộ
+  nhớ đúng, nhưng cách Safari thu hồi tab thì không mô phỏng được. `tools/browsertest/iphone.mjs`
+  đã viết sẵn để tự dùng WebKit khi có, và **nói rõ** khi phải rơi về Chromium.
+- **Texture vòng kiếm ≤ 1 024 trên điện thoại** (CHANGES mục 2, NETCODE_SPEC §5 L1) — chưa
+  làm được vì **cache texture vòng kiếm chưa tồn tại**: `swordring.ts` vẽ từng thanh bằng
+  sprite, không bake ra `RenderTexture`. Đó là việc của L1 trong Protocol v2, không phải một
+  dòng sửa. Ghi lại để đừng ai tưởng đã xong.
+- **Atlas ≤ 2 048**: atlas lớn nhất hiện là 1 280×1 152, đã dưới trần. Chưa thêm phép kiểm
+  tự động chặn atlas tương lai vượt 2 048.
+- **Draw call lên 266** ở chỗ đông (ngân sách < 200) vì mỗi ô nền là một lượt vẽ — nút thắt
+  B11 mới, đổi bộ nhớ lấy lệnh vẽ. Trên điện thoại đây là cái giá phải theo dõi.

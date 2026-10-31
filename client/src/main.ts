@@ -18,6 +18,7 @@ import { pendingRejoin, watchContextLoss } from './render/glrecover';
 import type { DeadMsg, GameMap, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
+import { isMobile } from './render/device';
 import { loadFonts } from './render/fonts';
 import { GameScene } from './render/scene';
 import { loadJitter } from './render/jitter';
@@ -162,6 +163,9 @@ class App {
       this.scene.app.canvas as HTMLCanvasElement,
       () => this.profile,
       (canRecover) => {
+        // Gửi về server KÈM BỐI CẢNH: mất ngữ cảnh WebGL trên iPhone gần như luôn là hệ quả
+        // của hết bộ nhớ GPU, nên con số `texMB` đi cùng mới nói được nguyên nhân.
+        this.telemetry?.event('webgl_context_lost', JSON.stringify({ canRecover, ...(this.telemetry?.errorContext() ?? {}) }));
         this.playing = false;
         this.input.enabled = false;
         this.hud.root.remove();
@@ -172,7 +176,7 @@ class App {
       // phòng cũ đã đá mình ra từ lâu, và tự nhảy vào một trận mới là đúng cái cảm giác
       // "game tự chơi lại từ đầu" mà ta đang sửa.
       () => {
-        this.telemetry?.event('gl_restored');
+        this.telemetry?.event('webgl_context_restored', JSON.stringify(this.telemetry?.errorContext() ?? {}));
         this.showHome();
       },
     );
@@ -194,6 +198,7 @@ class App {
   }
 
   private showHome(): void {
+    this.telemetry?.setPhase('home');
     this.screens.show(homeScreen(this.cfg, (p) => this.join(p), () => this.showLeaderboard(() => this.showHome()), this.artReady));
   }
 
@@ -212,6 +217,7 @@ class App {
   private join(p: Profile): void {
     this.profile = p;
     sound.startMusic();
+    this.telemetry?.setPhase('loading');
     this.screens.show(null);
     // Gói vào trận đã tải xong trong lúc người chơi gõ tên thì **không hiện thanh tiến độ**
     // — hiện một thanh nhảy từ 0 lên 100% trong một khung hình chỉ làm người ta giật mình.
@@ -241,8 +247,17 @@ class App {
         this.loading.fail(() => this.join(p));
         return;
       }
-      // Nhóm tải nền: 9 nhân vật còn lại, VFX Tiên giới, âm thanh. Không chặn ai.
-      assets.loadBackground([...assets.chars.map((c) => `char_${c}`), 'fx_high', 'audio']);
+      // Nhóm tải nền: VFX Tiên giới, âm thanh — và trên MÁY BÀN thì cả 10 nhân vật còn lại.
+      //
+      // Điện thoại KHÔNG tải sẵn 10 nhân vật kia: mỗi atlas là một texture 1280×1152 ≈
+      // **7,5 MB trên GPU**, mười cái là 75 MB — một phần ba ngân sách 256 MB của iPhone,
+      // tiêu cho những nhân vật người chơi có thể không gặp lần nào. `assets.charAtlas` đã
+      // tự yêu cầu tải đúng nhân vật nào vừa lọt vào khung hình, nên chờ tới lúc đó.
+      const bg = ['fx_high', 'audio'];
+      if (!isMobile()) {
+        bg.unshift(...assets.chars.map((c) => `char_${c}`));
+      }
+      assets.loadBackground(bg);
       if (pending) {
         this.loading.step(STR.loadRoom);
       }
@@ -355,6 +370,7 @@ class App {
     }
     this.screens.show(null);
     this.loading.done();
+    this.telemetry?.setPhase('match');
     this.overlay.appendChild(this.hud.root);
     this.playing = true;
     this.joining = false;
@@ -532,6 +548,18 @@ class App {
       return;
     }
     const { Telemetry } = await import('./telemetry');
+    const { setErrorDisplay } = await import('./telemetry/early');
+    // `?debug=true`: mọi lỗi hiện thẳng lên màn hình. iPhone không mở được console nên đây
+    // là cách duy nhất người cầm máy đọc được lỗi rồi chụp màn hình gửi về.
+    if (new URLSearchParams(location.search).get('debug') === 'true') {
+      const box = document.getElementById('kxerr');
+      setErrorDisplay((msg) => {
+        if (box) {
+          box.classList.add('on');
+          box.textContent = `${new Date().toLocaleTimeString()} ${msg}\n${box.textContent ?? ''}`.slice(0, 4000);
+        }
+      });
+    }
     const t = new Telemetry(
       {
         perfStats: () => this.scene.perfStats(),
@@ -556,6 +584,11 @@ class App {
     );
     t.start();
     this.telemetry = t;
+    // Tự hạ chất lượng vì chạm ngân sách bộ nhớ GPU: ghi lại, vì đó là dấu hiệu sớm nhất
+    // của việc tab sắp bị iOS giết — và là thứ duy nhất báo trước.
+    this.scene.onMemoryPressure = (mb) => {
+      t.event('gpu_pressure', JSON.stringify({ mb: Math.round(mb), ...t.errorContext() }));
+    };
     // Mất ngữ cảnh WebGL là ngưỡng cảnh báo §4.3 — chính là lỗi đội test gặp ngày 30/10.
     const canvas = this.scene.app.canvas as HTMLCanvasElement;
     canvas.addEventListener('webglcontextlost', () => t.event('webgl_context_lost'));

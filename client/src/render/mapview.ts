@@ -26,6 +26,16 @@ import { GATE_COLORS } from './palette';
 const BIOME_COLOR: Record<string, number> = { grass: 0x7cc46a, concrete: 0xa9a49b, dirt: 0xc9a46a, snow: 0xdfe9f2 };
 const OBSTACLE_COLOR: Record<string, number> = { fence: 0xc8a165, stall: 0xe76f51, cart: 0x9c6644, brick: 0xb5523b, boulder: 0x8d8d8d, stone_wall: 0x5b6b5b };
 const TILE_WORLD = 400; // one 512px ground tile covers 400 world units
+/**
+ * GROUND_CHUNK: cạnh một ô nền trộn, tính bằng đơn vị thế giới.
+ *
+ * 1 024 chứ không phải 2 048: mặt nạ sprite cấp phát render texture bằng kích thước vật bị
+ * che, nên ô càng nhỏ thì tấm texture càng nhỏ — 1 024² ≈ 5,6 MB so với 2 048² ≈ 22 MB.
+ * Nhỏ hơn nữa thì số ô (và số lệnh vẽ) tăng nhanh hơn phần bộ nhớ tiết kiệm được.
+ */
+const GROUND_CHUNK = 1024;
+/** GROUND_PAD: giữ thêm một vành ô quanh khung nhìn để lúc camera chạy không thấy ô hiện ra. */
+const GROUND_PAD = 1;
 const ART_FILL = 0.9; // object art fills ~90% of its canvas
 
 function bounds(s: Shape): { x: number; y: number; w: number; h: number } {
@@ -196,6 +206,12 @@ function hpColor(frac: number): number {
  */
 export class MapView {
   readonly ground = new Container();
+  /** blendRoot chứa các ô nền trộn (lớp 2–3), dựng và huỷ theo khung nhìn. */
+  private readonly blendRoot = new Container();
+  /** blendNames: tên tile của lớp trộn; rỗng nghĩa là biome này chỉ có một lớp nền. */
+  private blendNames: string[] = [];
+  /** blendChunks: ô đang dựng, khoá `"cx,cy"`. Ra ngoài khung nhìn là **huỷ**, không ẩn. */
+  private readonly blendChunks = new Map<string, Container>();
   readonly decor = new Container();
   readonly under = new Container(); // zones under entities (mud, wind) + gates
   readonly over = new Container(); // bush canopy above entities
@@ -228,6 +244,72 @@ export class MapView {
     // khung hình đầu tiên (trước khi `update` chạy lần nào) cũng không cấp phát cả bản đồ.
     this.ground.filterArea = new Rectangle(0, 0, 1, 1);
     this.decor.filterArea = new Rectangle(0, 0, 1, 1);
+  }
+
+  /**
+   * updateGroundChunks dựng ô nền trộn quanh khung nhìn và **huỷ** ô đi xa.
+   *
+   * Huỷ chứ không chỉ ẩn: `renderable = false` vẫn giữ nguyên texture trên GPU, mà texture
+   * mới đúng là thứ đang phải cắt. Một ô giữ 1–2 mặt nạ 1 024² (~5,6 MB mỗi cái), nên 30 ô
+   * mồ côi là ~300 MB nằm im trên card.
+   */
+  private updateGroundChunks(view: { x: number; y: number; w: number; h: number }): void {
+    if (this.blendNames.length === 0) {
+      return;
+    }
+    const last = Math.floor(this.map.size / GROUND_CHUNK);
+    const cx0 = Math.max(0, Math.floor((view.x - view.w / 2) / GROUND_CHUNK) - GROUND_PAD);
+    const cx1 = Math.min(last, Math.floor((view.x + view.w / 2) / GROUND_CHUNK) + GROUND_PAD);
+    const cy0 = Math.max(0, Math.floor((view.y - view.h / 2) / GROUND_CHUNK) - GROUND_PAD);
+    const cy1 = Math.min(last, Math.floor((view.y + view.h / 2) / GROUND_CHUNK) + GROUND_PAD);
+
+    for (const [key, node] of this.blendChunks) {
+      const [kx, ky] = key.split(',').map(Number);
+      if (kx < cx0 || kx > cx1 || ky < cy0 || ky > cy1) {
+        node.destroy({ children: true });
+        this.blendChunks.delete(key);
+      }
+    }
+    for (let cy = cy0; cy <= cy1; cy++) {
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const key = `${cx},${cy}`;
+        if (!this.blendChunks.has(key)) {
+          const node = this.buildBlendChunk(cx, cy);
+          this.blendChunks.set(key, node);
+          this.blendRoot.addChild(node);
+        }
+      }
+    }
+  }
+
+  /** buildBlendChunk dựng một ô: mỗi lớp trộn là một TilingSprite che bởi mặt nạ cỡ ô. */
+  private buildBlendChunk(cx: number, cy: number): Container {
+    const node = new Container();
+    const x = cx * GROUND_CHUNK;
+    const y = cy * GROUND_CHUNK;
+    const w = Math.min(GROUND_CHUNK, this.map.size - x);
+    const h = Math.min(GROUND_CHUNK, this.map.size - y);
+    this.blendNames.forEach((name, i) => {
+      const t2 = assets.texture(`tiles/${name}.png`);
+      if (!t2 || w <= 0 || h <= 0) {
+        return;
+      }
+      const layer = new TilingSprite({ texture: t2, width: w, height: h });
+      layer.tileScale.set(TILE_WORLD / t2.width);
+      // Gốc lát bám TOẠ ĐỘ THẾ GIỚI, không bám góc ô: không có dòng này thì hoa văn nhảy
+      // lại từ đầu ở mỗi mép ô và cả bản đồ hiện ra một lưới ô vuông.
+      layer.tilePosition.set(-x * layer.tileScale.x, -y * layer.tileScale.y);
+      layer.position.set(x, y);
+      // Mặt nạ gieo theo Ô: cùng một ô luôn ra cùng mảng loang, dù dựng lại bao nhiêu lần
+      // khi người chơi đi qua đi lại. Gieo theo thời gian thì nền "đổi kiểu" sau lưng họ.
+      const mask = noiseMask(Math.max(w, h), hashSeed(`${this.map.id}:${cx}:${cy}:${i}`), 0.42 - i * 0.12);
+      mask.position.set(x, y);
+      mask.width = w;
+      mask.height = h;
+      layer.mask = mask;
+      node.addChild(layer, mask);
+    });
+    return node;
   }
 
   /**
@@ -268,29 +350,35 @@ export class MapView {
     return [...this.obstacleNodes.values()].map((n) => n.node);
   }
 
+  /**
+   * buildGround trải nền: lớp 1 phủ kín cả bản đồ, lớp 2–3 trộn bằng mặt nạ loang theo
+   * **từng ô 1 024 đơn vị** quanh khung nhìn (spec §8.6 mục 1).
+   *
+   * Vì sao phải chia ô — đây là chỗ ngốn bộ nhớ GPU lớn nhất của cả game, đo ngày 31/10:
+   * mặt nạ sprite của PixiJS cấp phát một render texture **bằng kích thước vật bị che**.
+   * Lớp trộn trước đây trải khắp bản đồ 12 000, làm tròn lên luỹ thừa 2 là
+   * **16 384 × 16 384 × 4 byte = 1 365 MB** cho MỘT tấm. Tổng bộ nhớ texture đo được là
+   * **1,4 GB lúc vừa vào trận, 1,9 GB khi lên Đạo Tổ**.
+   *
+   * iPhone không báo lỗi khi hết bộ nhớ GPU — Safari **giết hẳn tab**. Đó khớp với báo cáo
+   * "trên iPhone luôn bị lỗi" và với nhật ký server thấy một người vào lại phòng 8 lần
+   * trong 40 giây.
+   *
+   * Chia ô 1 024 thì mỗi mặt nạ chỉ còn 1 024² (~5,6 MB), và ô ngoài khung nhìn bị **huỷ
+   * hẳn** chứ không chỉ ẩn đi — ẩn thì texture vẫn nằm trên GPU, đúng thứ ta đang cắt.
+   */
   private buildGround(): void {
     const size = this.map.size;
     const names = (BIOME_TILES[this.map.biome] ?? ['grass']).filter((n) => assets.texture(`tiles/${n}.png`));
     const tex = names.length ? assets.texture(`tiles/${names[0]}.png`) : null;
     if (tex) {
+      // Lớp nền: MỘT TilingSprite phủ cả bản đồ. Không có mặt nạ nên không cấp phát gì —
+      // `TilingSprite` chỉ lặp lại một texture 512², không phụ thuộc kích thước phủ.
       const t = new TilingSprite({ texture: tex, width: size, height: size });
       t.tileScale.set(TILE_WORLD / tex.width);
       this.ground.addChild(t);
-      // Lớp 2–3: trộn bằng mặt nạ nhiễu nên ranh giới là mảng loang, không phải ô vuông
-      // (spec §8.6 mục 1). Mặt nạ vẽ một lần lúc vào phòng, không trộn lại mỗi khung.
-      for (let i = 1; i < names.length; i++) {
-        const t2 = assets.texture(`tiles/${names[i]}.png`);
-        if (!t2) {
-          continue;
-        }
-        const layer = new TilingSprite({ texture: t2, width: size, height: size });
-        layer.tileScale.set(TILE_WORLD / t2.width);
-        // Gieo theo ID KHU chứ không theo biome: Thiên Đình và Trúc Lâm cùng `biome:
-        // "grass"`, gieo theo biome thì hai khu có mảng loang giống nhau từng vệt.
-        const mask = noiseMask(size, hashSeed(this.map.id) + i * 7919, 0.42 - i * 0.12);
-        layer.mask = mask;
-        this.ground.addChild(layer, mask);
-      }
+      this.blendNames = names.slice(1).filter((n) => assets.texture(`tiles/${n}.png`));
+      this.ground.addChild(this.blendRoot);
     } else {
       const g = new Graphics().rect(0, 0, size, size).fill(BIOME_COLOR[this.map.biome] ?? 0x7cc46a);
       for (let v = 0; v <= size; v += TILE_WORLD) {
@@ -515,6 +603,7 @@ export class MapView {
     if (view) {
       this.decals.update(view.x, view.y, view.w / 2, view.h / 2);
       this.clampFilterArea(view);
+      this.updateGroundChunks(view);
     }
     for (const n of this.obstacleNodes.values()) {
       this.updateObstacle(n, w, now);

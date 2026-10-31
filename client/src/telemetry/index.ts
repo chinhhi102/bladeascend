@@ -11,6 +11,7 @@
 // release (`TELEMETRY` không bật) KHÔNG đóng gói một dòng nào của nó.
 
 import { collectSession, randomId, type SessionInfo } from './session';
+import { earlyErrors, onErrorShown } from './early';
 
 /** SAMPLE_MS: nhịp gộp và gửi một mẫu (§2.2). */
 const SAMPLE_MS = 10_000;
@@ -195,8 +196,11 @@ export class Telemetry {
       lt: this.longTasks,
       dc: Math.round(avg(this.draws)),
       sp: Math.round(avg(this.sprites)),
-      tx: 0, // chưa đo được: PixiJS v8 không công bố tổng bộ nhớ texture (xem PERF_LOG §6)
-      tu: 0,
+      // Bộ nhớ texture GPU — **đo được từ 31/10** bằng `render/gpumem.ts` (bọc các hàm cấp
+      // phát texture của WebGL). Trước đây cột này luôn bằng 0 vì PixiJS không công bố con
+      // số, và chính vì thiếu nó mà 1,4 GB texture nằm im nhiều tuần không ai thấy.
+      tx: +Number(this.host.perfStats().texMB ?? 0).toFixed(1),
+      tu: Math.round(Number(this.host.perfStats().textures ?? 0)),
       ph: this.placeholderFrames,
       p50: Math.round(pct(this.pings, 0.5)),
       p95: Math.round(pct(this.pings, 0.95)),
@@ -272,6 +276,41 @@ export class Telemetry {
     this.events = [];
   }
 
+  /**
+   * errorEvent gửi một lỗi KÈM BỐI CẢNH (chủ dự án chốt 31/10).
+   *
+   * Chỉ mỗi dòng thông báo thì gần như vô dụng khi máy báo lỗi ở xa: cùng một
+   * `TypeError: null` có thể do thiếu art, do hết bộ nhớ GPU, hay do mất ngữ cảnh WebGL.
+   * Kèm theo giai đoạn đang ở, bộ nhớ texture, số texture, DPR, cỡ canvas và số người
+   * trên màn hình thì ba khả năng đó phân biệt được ngay từ một dòng.
+   */
+  errorEvent(msg: string): void {
+    this.event('error', `${msg} :: ${JSON.stringify(this.errorContext())}`);
+    onErrorShown?.(msg);
+  }
+
+  /** errorContext là bối cảnh gắn kèm mọi lỗi và mọi sự kiện WebGL. */
+  errorContext(): Record<string, unknown> {
+    const s = this.host.perfStats();
+    return {
+      phase: this.phase,
+      texMB: Math.round(Number(s.texMB ?? 0)),
+      tex: Number(s.textures ?? 0),
+      dpr: +(window.devicePixelRatio || 1).toFixed(2),
+      canvas: `${this.host.canvasSize().w}x${this.host.canvasSize().h}`,
+      chars: Number(s.players ?? 0),
+      fps: Math.round(Number(s.fps ?? 0)),
+      q: this.host.context().quality,
+    };
+  }
+
+  /** setPhase ghi lại người chơi đang ở đâu: `home` · `loading` · `match`. */
+  setPhase(p: string): void {
+    this.phase = p;
+  }
+
+  private phase = 'home';
+
   /** event ghi một sự kiện (§2.3), có trần 20/phút để một tab lỗi không làm ngập DB. */
   event(kind: string, data = ''): void {
     if (this.stopped) {
@@ -311,11 +350,17 @@ export class Telemetry {
       this.event(document.hidden ? 'tab_hidden' : 'tab_visible');
     });
     window.addEventListener('error', (e) => {
-      this.event('error', cleanError(e.message, e.error));
+      this.errorEvent(cleanError(e.message, e.error));
     });
     window.addEventListener('unhandledrejection', (e) => {
-      this.event('error', cleanError(String(e.reason), e.reason));
+      this.errorEvent(cleanError(String(e.reason), e.reason));
     });
+    // Lỗi xảy ra TRƯỚC khi module này nạp xong nằm trong bộ đệm sớm của `index.html`.
+    // Không vét nó thì chính những lỗi sớm nhất — loại làm game không vào nổi trận, tức là
+    // loại đang phải tìm trên iPhone — là loại duy nhất không bao giờ được gửi về.
+    for (const msg of earlyErrors()) {
+      this.errorEvent(msg);
+    }
     // pagehide chứ không phải unload: trên điện thoại `unload` thường không chạy.
     window.addEventListener('pagehide', () => this.end());
   }

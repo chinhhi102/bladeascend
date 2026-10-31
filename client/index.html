@@ -70,6 +70,18 @@
       }
       #boot.failed .retry { display: block; }
       #boot.failed .step { color: #ff9b7a; }
+      /* Lớp hiện lỗi NGAY TRÊN MÀN HÌNH, chỉ khi `?debug=true`.
+         iPhone không mở được console, nên đây là cách duy nhất người cầm máy đọc được lỗi
+         rồi chụp màn hình gửi về. */
+      #kxerr {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 9500; display: none;
+        max-height: 42%; overflow: auto; padding: 8px 10px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.35;
+        color: #ffd9d0; background: rgba(60, 10, 6, .93); border-top: 2px solid #ff6b4a;
+        white-space: pre-wrap; word-break: break-word;
+      }
+      #kxerr.on { display: block; }
+      #kxerr b { color: #ff9b7a; }
       /* Icon % tải nền trong trận (§13.7 mục 4, dòng cuối). */
       #bgload {
         position: fixed; right: 10px; bottom: 10px; z-index: 50; display: none;
@@ -81,6 +93,7 @@
     </style>
   </head>
   <body>
+    <div id="kxerr"></div>
     <div id="stage"></div>
     <div id="overlay"></div>
     <div id="bgload"></div>
@@ -95,6 +108,35 @@
       <div class="tip" id="boot-tip"></div>
       <button class="retry" id="boot-retry" type="button">Thử lại</button>
     </div>
+    <!--
+      Bắt lỗi NGAY, trước cả khi bundle tải về.
+
+      Thẻ script này chạy trước `/src/main.ts` vài trăm milligiây tới vài giây (trên 4G thì
+      lâu hơn). Mọi lỗi trong quãng đó — kể cả lỗi làm chính bundle không chạy nổi — trước
+      đây **biến mất không dấu vết**, mà đó đúng là loại lỗi khiến iPhone "luôn bị lỗi" và
+      telemetry không ghi được phiên nào.
+
+      Giữ tối đa 20 lỗi; telemetry nạp xong sẽ vét và gửi đi (xem telemetry/early.ts).
+    -->
+    <script>
+      (function () {
+        window.__kxEarlyErrors = [];
+        var push = function (msg) {
+          if (window.__kxEarlyErrors.length < 20) { window.__kxEarlyErrors.push(String(msg).slice(0, 500)); }
+          var box = document.getElementById('kxerr');
+          if (box && location.search.indexOf('debug=true') >= 0) {
+            box.className = 'on';
+            box.innerHTML += '<b>' + new Date().toLocaleTimeString() + '</b> ' + String(msg).slice(0, 500).replace(/</g, '&lt;') + '\n';
+          }
+        };
+        window.addEventListener('error', function (e) {
+          push((e.message || 'lỗi') + ' @ ' + (e.filename || '?') + ':' + (e.lineno || 0));
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          push('promise: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

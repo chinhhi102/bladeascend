@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.6:** Tiên khí giảm từ ×20 xuống **×10** bản gốc (Chân Tiên 1 000 … Đạo Tổ 15 000); Thiêu Đốt Tiên khí vẫn 8–40/giây (frac 0.008) (§3.4, §4.1c).
+
 **Thay đổi v6.5:** phạm vi kỹ năng tính theo U = vòng hút EXP của người dùng (pickup_r × scale), đẩy lùi theo U người dùng; Tiên giới giữ tối đa 3 lượt Bí Kíp (§6.3).
 
 **Thay đổi v6.4:** Tiên khí gấp 20 lần (Chân Tiên 2 000 … Đạo Tổ 30 000), Thiêu Đốt Tiên khí giữ lượng tuyệt đối cũ, viên rơi có mệnh giá lớn (§3.4, §4.1c); giảm dung lượng tải + tải theo nhóm + màn hình tải có thanh tiến độ (§13.7).
@@ -160,18 +162,18 @@ Sau Đại Thừa có thêm 5 cảnh giới. **Không dùng Linh khí (EXP)**, c
 
 | r | Cảnh giới | Tiên khí (cộng dồn) | Trần | Kiếm tối đa | Số vòng | Scale |
 |---|---|---|---|---|---|---|
-| 9 | Chân Tiên | 1 – 2 000 | 2 000 | 550 | 10 | 5.2 |
-| 10 | Kim Tiên | 2 001 – 6 000 | 6 000 | 660 | 11 | 5.4 |
-| 11 | Thái Ất Ngọc Tiên | 6 001 – 12 000 | 12 000 | 780 | 12 | 5.6 |
-| 12 | Đại La Kim Tiên | 12 001 – 20 000 | 20 000 | 910 | 13 | 5.8 |
-| 13 | Đạo Tổ | 20 001 – 30 000 | 30 000 | 1 050 | 14 | 6.0 |
+| 9 | Chân Tiên | 1 – 1 000 | 1 000 | 550 | 10 | 5.2 |
+| 10 | Kim Tiên | 1 001 – 3 000 | 3 000 | 660 | 11 | 5.4 |
+| 11 | Thái Ất Ngọc Tiên | 3 001 – 6 000 | 6 000 | 780 | 12 | 5.6 |
+| 12 | Đại La Kim Tiên | 6 001 – 10 000 | 10 000 | 910 | 13 | 5.8 |
+| 13 | Đạo Tổ | 10 001 – 15 000 | 15 000 | 1 050 | 14 | 6.0 |
 
-(v6.4: **gấp 20 lần** bản trước — lên Tiên giới chậm lại; nguồn Tiên khí từ đài giữ nguyên.)
+(v6.6: **gấp 10 lần** bản gốc v5.7 — v6.4 từng thử ×20 nhưng ước tính ôm trọn 2 đài vẫn mất ~62 phút mới tới Đạo Tổ, quá lâu so với một ván; ×10 ≈ 30 phút khi ôm 2 đài. Nguồn Tiên khí từ đài giữ nguyên.)
 
 - **Điều kiện vào Tiên giới**: Đại Thừa tầng 10 **đầy thanh Linh khí** (694 960). Chỉ khi đó mới nhặt được Tiên khí; **viên Tiên khí đầu tiên (tien_khi = 1) → Chân Tiên ngay**.
-- Lên cảnh giới khi Tiên khí **vượt trần** cảnh giới hiện tại: 2 000 → 2 001 là Kim Tiên, 6 000 → 6 001 là Thái Ất, 12 000 → 12 001 là Đại La, **20 000 → 20 001 là Đạo Tổ**.
-- **Mốc khởi điểm** mỗi cảnh giới (đáy): Chân Tiên 1 · Kim Tiên 2 001 · Thái Ất 6 001 · Đại La 12 001 · Đạo Tổ 20 001.
-- Config: `tien_khi_ceilings: [2000, 6000, 12000, 20000, 30000]`.
+- Lên cảnh giới khi Tiên khí **vượt trần** cảnh giới hiện tại: 1 000 → 1 001 là Kim Tiên, 3 000 → 3 001 là Thái Ất, 6 000 → 6 001 là Đại La, **10 000 → 10 001 là Đạo Tổ**.
+- **Mốc khởi điểm** mỗi cảnh giới (đáy): Chân Tiên 1 · Kim Tiên 1 001 · Thái Ất 3 001 · Đại La 6 001 · Đạo Tổ 10 001.
+- Config: `tien_khi_ceilings: [1000, 3000, 6000, 10000, 15000]`.
 
 **Ai nhặt được Tiên khí**
 **Linh khí và Tiên khí tách hẳn nhau** (ranh giới: Đại Thừa tầng 10 đầy thanh):
@@ -182,7 +184,7 @@ Sau Đại Thừa có thêm 5 cảnh giới. **Không dùng Linh khí (EXP)**, c
 
 **Bị chém khi đang ở Tiên giới (cướp đoạt Tiên khí)**
 - Rớt 1 cảnh giới như thường (§5.1): Đạo Tổ → Đại La Kim Tiên ... Kim Tiên → Chân Tiên.
-- Tiên khí **về mốc khởi điểm của cảnh giới mới**: `loss = tien_khi − đáy_mới`. Ví dụ Thái Ất đang 9 000 bị chém → Kim Tiên, Tiên khí về 2 001, `loss = 6 999`.
+- Tiên khí **về mốc khởi điểm của cảnh giới mới**: `loss = tien_khi − đáy_mới`. Ví dụ Thái Ất đang 4 500 bị chém → Kim Tiên, Tiên khí về 1 001, `loss = 3 499`.
 - **Chân Tiên bị chém** → về **sàn Đại Thừa** (tầng 1, 0%, `total_exp = 346 800`; phải nạp lại 348 160 Linh khí mới đầy Đại Thừa 10), Tiên khí về 0. Phần Linh khí mất tính theo §5.1, phần Tiên khí mất = toàn bộ Tiên khí đang có.
 - Người chém (nếu đang hấp thụ được Tiên khí) nhận **50% loss** Tiên khí.
 - **Luôn rơi 30% loss thành viên Tiên khí** quanh nạn nhân — **bất kể người chém là ai** (phàm, Tiên, bot) và bất kể nạn nhân rớt về đâu (kể cả Chân Tiên rớt về Đại Thừa). Đây là nguồn Tiên khí quan trọng ngoài Đài Tiên Khí, phải luôn xảy ra.
@@ -193,12 +195,12 @@ Sau Đại Thừa có thêm 5 cảnh giới. **Không dùng Linh khí (EXP)**, c
 - Kiếm thừa so với max mới rơi ra thành Bó Kiếm như thường.
 
 **Đạo Tổ: nạp đầy rồi mới đổi Uy Danh**
-- Đạo Tổ vẫn nhặt Tiên khí bình thường để nạp thanh từ 20 001 lên **trần 30 000**.
-- **Chỉ khi thanh đang ở đúng 30 000** thì Tiên khí nhặt thêm mới đổi sang Uy Danh theo tỉ lệ **10 Tiên khí = 1 Uy Danh** (`tien_overflow_score` = 0.1). Thanh không vượt 30 000.
-- Đạo Tổ dùng Thiêu Đốt → Tiên khí bị trừ như thường (từ 30 000 trở xuống, không dưới 20 001). Muốn đổi Uy Danh tiếp thì phải **nạp lại đầy 30 000** trước.
+- Đạo Tổ vẫn nhặt Tiên khí bình thường để nạp thanh từ 10 001 lên **trần 15 000**.
+- **Chỉ khi thanh đang ở đúng 15 000** thì Tiên khí nhặt thêm mới đổi sang Uy Danh theo tỉ lệ **10 Tiên khí = 1 Uy Danh** (`tien_overflow_score` = 0.1). Thanh không vượt 15 000.
+- Đạo Tổ dùng Thiêu Đốt → Tiên khí bị trừ như thường (từ 15 000 trở xuống, không dưới 10 001). Muốn đổi Uy Danh tiếp thì phải **nạp lại đầy 15 000** trước.
 
 **Hiển thị & tấu hài**
-- HUD: **giữ nguyên thanh tiến độ**, chỉ đổi tên: dưới Tiên giới gọi là **Linh khí**, từ Chân Tiên trở lên gọi là **Tiên khí** (màu vàng kim), thanh chạy từ đáy tới trần cảnh giới. Ví dụ: `Kim Tiên — Tiên khí 3 000/6 000`. Đạo Tổ đầy 30 000: thanh nhấp nháy vàng + chữ "Tiên khí dư → Uy Danh".
+- HUD: **giữ nguyên thanh tiến độ**, chỉ đổi tên: dưới Tiên giới gọi là **Linh khí**, từ Chân Tiên trở lên gọi là **Tiên khí** (màu vàng kim), thanh chạy từ đáy tới trần cảnh giới. Ví dụ: `Kim Tiên — Tiên khí 2 000/3 000`. Đạo Tổ đầy 15 000: thanh nhấp nháy vàng + chữ "Tiên khí dư → Uy Danh".
 - Đột phá Tiên giới: hiệu ứng **Thiên Kiếp** (mây đen, sét đánh 3 lần liên tiếp, màn hình rung), kill feed toàn phòng: `"{A} vượt Thiên Kiếp, phi thăng {realm}!"`.
 - **Hào quang sau lưng** (mọi cảnh giới Tiên, mỗi cảnh giới một màu):
 
@@ -350,7 +352,7 @@ camera: chiều cao vùng nhìn thấy (đơn vị thế giới) = max(900 * sca
 ### 4.1c Thiêu Đốt Tinh Huyết (chạy nước rút)
 - Giữ **Shift**, hoặc **nháy đúp rồi giữ** chuột (PC); giữ nút **🔥**, hoặc **chạm 2 lần rồi giữ** (điện thoại): tốc chạy × 1.8.
 - Trong lúc giữ: mỗi giây đốt **8% EXP của tầng hiện tại** (`exp_needed(r, s) × 0.08`). Có thể rớt tầng nhưng **không bao giờ rớt cảnh giới**: tiến độ chạm đáy cảnh giới hiện tại (tầng 1, 0%) thì tự tắt.
-- **Ở Tiên giới** (Chân Tiên trở lên): đốt **Tiên khí** thay cho EXP — mỗi giây **giữ nguyên lượng tuyệt đối như trước** (Chân Tiên 8/giây, Kim Tiên 16, Thái Ất 24, Đại La 32, **Đạo Tổ 40**) — tức 0.4% độ rộng khoảng Tiên khí sau khi tăng ×20 (nếu để 8% thì 1 giây chạy nhanh tốn cả trăm viên Tiên khí, quá đắt). Không bao giờ xuống dưới đáy cảnh giới đang đứng. Đạo Tổ đầy 30 000 đốt được bình thường; sau đó phải nạp lại 30 000 mới đổi Uy Danh tiếp (§3.4).
+- **Ở Tiên giới** (Chân Tiên trở lên): đốt **Tiên khí** thay cho EXP — mỗi giây **giữ nguyên lượng tuyệt đối như trước** (Chân Tiên 8/giây, Kim Tiên 16, Thái Ất 24, Đại La 32, **Đạo Tổ 40**) — tức 0.8% độ rộng khoảng Tiên khí sau khi tăng ×10 (nếu để 8% thì 1 giây chạy nhanh tốn hàng chục viên Tiên khí, quá đắt). Không bao giờ xuống dưới đáy cảnh giới đang đứng. Đạo Tổ đầy 15 000 đốt được bình thường; sau đó phải nạp lại 15 000 mới đổi Uy Danh tiếp (§3.4).
 - Hiệu ứng: người bốc khói đỏ, mặt đỏ gay, vệt lửa sau chân, emote "Liều mạng!".
 
 ## 5. Chiến đấu
@@ -1178,7 +1180,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "cultivation": {
     "realms": ["Luyện Khí","Trúc Cơ","Kim Đan","Nguyên Anh","Hóa Thần","Luyện Hư","Hợp Thể","Độ Kiếp","Đại Thừa"],
     "tien_realms": ["Chân Tiên","Kim Tiên","Thái Ất Ngọc Tiên","Đại La Kim Tiên","Đạo Tổ"],
-    "tien_khi_ceilings": [2000, 6000, 12000, 20000, 30000], "tien_entry_requires_full_exp": true,
+    "tien_khi_ceilings": [1000, 3000, 6000, 10000, 15000], "tien_entry_requires_full_exp": true,
     "tien_rob_share": 0.5, "tien_drop_share": 0.3,
     "tien_scale_step": 0.2, "tien_overflow_score": 0.1,
     "tien_aura_colors": ["#E8F1FF", "#FFD60A", "#4CE0B3", "#B15CFF", "yin_yang"],
@@ -1199,7 +1201,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "player": {
     "body_r": 30, "move_base": 195, "move_scale_sqrt": false, "pickup_r": 90,
     "invuln_on_hit": 1.0, "invuln_on_spawn": 5.0,
-    "burn_speed_mult": 1.8, "burn_exp_per_sec": 0.08, "burn_tien_frac_per_sec": 0.004,
+    "burn_speed_mult": 1.8, "burn_exp_per_sec": 0.08, "burn_tien_frac_per_sec": 0.008,
     "attacker_share": 0.5, "drop_share": 0.3, "kill_bonus_exp": 30,
     "death_sword_drop": 0.5, "orb_owner_secs": 1.5,
     "camera_view_h": 900, "camera_exp": 0.85, "camera_reach_mult": 2.6,
@@ -1333,12 +1335,12 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Ẩn Thân: người khác thấy mờ 20%, không tên; tối đa 5s; chém trúng người là hiện ngay.
 - [ ] Trúc Cơ chém trúng Nguyên Anh → +800 Uy Danh; chém lại cùng người trong 60s → +0.
 - [ ] Bảng Thần Tốc chỉ có những mạng đã đạt Đại Thừa.
-- [ ] Đại Thừa tầng 10 chưa đầy thanh: nhặt Linh khí bình thường, không nhặt được Tiên khí. Đầy 694 960: nhặt 1 Tiên khí → Chân Tiên; 2 001 → Kim Tiên; 20 001 → Đạo Tổ. Người dưới Đại Thừa 10 đi qua viên Tiên khí không nhặt được (viên mờ 30%); người Tiên giới đi qua viên Linh khí không nhặt được.
+- [ ] Đại Thừa tầng 10 chưa đầy thanh: nhặt Linh khí bình thường, không nhặt được Tiên khí. Đầy 694 960: nhặt 1 Tiên khí → Chân Tiên; 1 001 → Kim Tiên; 10 001 → Đạo Tổ. Người dưới Đại Thừa 10 đi qua viên Tiên khí không nhặt được (viên mờ 30%); người Tiên giới đi qua viên Linh khí không nhặt được.
 - [ ] Đột phá Kim Tiên: rồng vàng chui lên từ chân, quấn quanh người 1.5 vòng (nửa sau khuất sau nhân vật), bay vút lên, 2.5s; sau đó rồng nhỏ (60%) luôn lượn lờ quanh người, mỗi 8–15s làm 1 động tác ngẫu nhiên, khi chạy thì bị kéo dài phía sau.
 - [ ] Lên Chân Tiên thấy hào quang trắng bạc sau lưng; mỗi cảnh giới Tiên một màu; rớt về Đại Thừa thì tắt hào quang.
-- [ ] Thái Ất đang 9 000 bị chém → Kim Tiên, Tiên khí 2 001; người chém (Tiên giới) +3 499; rơi 2 099 Tiên khí thành ≤ 40 viên (mệnh giá 500/100/10/2/1).
-- [ ] Chém người Tiên giới (người chém là phàm, Tiên hoặc bot đều được): luôn có viên Tiên khí vàng văng ra quanh xác, tổng = 30% Tiên khí nạn nhân mất (Chân Tiên 1 600 Tiên khí bị chém → rơi 480).
-- [ ] Đạo Tổ: nhặt Tiên khí khi chưa đủ 30 000 → nạp thanh, không cộng Uy Danh; đủ 30 000 → +1 Uy Danh mỗi 10 Tiên khí; Thiêu Đốt kéo thanh xuống (40/giây), phải nạp lại 30 000 mới đổi tiếp.
+- [ ] Thái Ất đang 4 500 bị chém → Kim Tiên, Tiên khí 1 001; người chém (Tiên giới) +1 749; rơi 1 049 Tiên khí thành ≤ 40 viên (mệnh giá 500/100/10/2/1).
+- [ ] Chém người Tiên giới (người chém là phàm, Tiên hoặc bot đều được): luôn có viên Tiên khí vàng văng ra quanh xác, tổng = 30% Tiên khí nạn nhân mất (Chân Tiên 800 Tiên khí bị chém → rơi 240).
+- [ ] Đạo Tổ: nhặt Tiên khí khi chưa đủ 15 000 → nạp thanh, không cộng Uy Danh; đủ 15 000 → +1 Uy Danh mỗi 10 Tiên khí; Thiêu Đốt kéo thanh xuống (40/giây), phải nạp lại 15 000 mới đổi tiếp.
 - [ ] Không còn vùng nền/bùn/bụi/đường nào là hình chữ nhật thẳng cạnh hay hình tròn hoàn hảo; ranh giới biome loang tự nhiên; đứng sát mép bùn thì hiệu ứng chậm khớp đúng mép đa giác.
 - [ ] HUD góc trên trái là chân dung nhân vật, viền màu cảnh giới, biểu cảm đổi theo trạng thái.
 - [ ] Bảng tên đọc rõ trên nền vòng kiếm nhiều màu; tên mình màu vàng có ▼; người cao cảnh giới hơn mình có ▲ đỏ; Top 1 có ruy băng đỏ-vàng + vương miện + vệt sáng lướt.

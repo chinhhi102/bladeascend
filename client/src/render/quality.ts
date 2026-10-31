@@ -1,3 +1,5 @@
+import { gpuBudgetMB } from './device';
+
 /**
  * Mức chất lượng đồ họa (spec §3.6): Cao / Vừa / Thấp. Người chơi đổi bằng phím V, lựa chọn
  * lưu trong localStorage.
@@ -51,6 +53,42 @@ export function cycleQuality(): Quality {
 let manual = false;
 let lowSince = 0;
 let okSince = 0;
+
+/**
+ * gpuPressure: bộ nhớ texture đã vượt ngân sách thiết bị chưa (NETCODE_SPEC §5 L1).
+ *
+ * Trả về mức 0 (ổn) · 1 (sát trần, hạ một bậc) · 2 (vượt trần, xuống Thấp ngay).
+ */
+export function gpuPressure(texMB: number): 0 | 1 | 2 {
+  const budget = gpuBudgetMB();
+  if (texMB >= budget) {
+    return 2;
+  }
+  return texMB >= budget * 0.8 ? 1 : 0;
+}
+
+/**
+ * autoQualityByMemory hạ chất lượng khi bộ nhớ GPU chạm ngân sách — **kể cả khi FPS vẫn đẹp**.
+ *
+ * Đây là điểm khác hẳn `autoQuality`: trên iOS, hết bộ nhớ đồ hoạ KHÔNG làm tụt khung hình
+ * trước. Máy chạy 60 fps tới đúng khoảnh khắc Safari giết tab. Nên nhìn FPS là nhìn sai chỗ;
+ * phải nhìn chính con số bộ nhớ.
+ *
+ * Và hạ chất lượng ở đây **bỏ qua cả lựa chọn tay của người chơi** (`manual`): họ chọn mức
+ * nào là quyền của họ, nhưng không ai chọn "cho tab chết".
+ */
+export function autoQualityByMemory(texMB: number): boolean {
+  const level = gpuPressure(texMB);
+  if (level === 0) {
+    return false;
+  }
+  const want: Quality = level === 2 ? 'low' : ORDER[Math.min(ORDER.indexOf(current) + 1, ORDER.length - 1)];
+  if (want === current) {
+    return false;
+  }
+  setQuality(want);
+  return true;
+}
 
 export function autoQuality(fps: number, now: number): void {
   if (manual || fps <= 0) {

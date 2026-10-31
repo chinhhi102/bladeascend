@@ -2,6 +2,8 @@ import { Application, Container } from 'pixi.js';
 import { AnimViewer } from './animviewer';
 import { assets } from './assets';
 import { SkillFx } from './skillfx';
+import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuTextureCount, trackGpuMemory } from './gpumem';
+import { rendererResolution } from './device';
 import { FADE_OUT_SECS, ViewPool } from './viewpool';
 import { BobaOverlay } from './boba';
 
@@ -17,7 +19,7 @@ import { MapView, type Viewer } from './mapview';
 import { OrbLayer } from './orblayer';
 import { Ambient } from './ambient';
 import { Breakthrough, HITSTOP_SECS } from './breakthrough';
-import { autoQuality } from './quality';
+import { autoQuality, autoQualityByMemory, quality } from './quality';
 import { AURA_FAR_PX, TienAura } from './tienaura';
 import { VfxLayer } from './vfxlayer';
 import { PlayerSprite } from './player';
@@ -111,6 +113,10 @@ export class GameScene {
   private beasts: { b: Beast; owner: number }[] = [];
   /** Cảnh giới Tiên của từng người ở khung hình trước — RealmDrop cần biết họ VỪA là gì. */
   private lastTien = new Map<number, number>();
+  /** memCheckAt: lần cuối kiểm ngân sách bộ nhớ GPU (giây). */
+  private memCheckAt = 0;
+  /** onMemoryPressure: báo ra ngoài khi phải tự hạ chất lượng vì bộ nhớ — telemetry ghi lại. */
+  onMemoryPressure: ((mb: number) => void) | null = null;
 
   constructor(private readonly cfg: GameConfig) {
     this.skillFx = new SkillFx(cfg);
@@ -126,13 +132,22 @@ export class GameScene {
       resizeTo: window,
       background: 0x2b2b2b,
       antialias: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      // `resolution` quyết định mọi bộ đệm khung hình và render texture (xem device.ts).
+      // iPhone DPR 3 để nguyên là tốn gấp 9 lần DPR 1.
+      resolution: rendererResolution(quality() === 'low'),
       autoDensity: true,
     });
     this.app.ticker.maxFPS = maxFps;
     const gl = (this.app.renderer as unknown as { gl?: WebGL2RenderingContext }).gl;
-    if (gl && new URLSearchParams(location.search).get('debug') === 'true') {
-      countDrawCalls(gl); // chỉ đếm khi đang đo, tránh phí ở bản chơi thật
+    if (gl) {
+      // Đo bộ nhớ texture LUÔN BẬT, kể cả bản chơi thật: nó là chỉ số quyết định tab có bị
+      // iOS giết hay không, và chi phí là vài phép cộng mỗi lần nạp ảnh — không phải mỗi
+      // khung hình. Khác hẳn `countDrawCalls` (bọc đúng hàm vẽ, chạy hàng nghìn lần/giây)
+      // nên cái đó vẫn chỉ bật khi đang đo.
+      trackGpuMemory(gl);
+      if (new URLSearchParams(location.search).get('debug') === 'true') {
+        countDrawCalls(gl);
+      }
     }
     parent.appendChild(this.app.canvas);
     this.entities.sortableChildren = true;
@@ -224,6 +239,17 @@ export class GameScene {
       this.updateCamera(me.x, me.y, me.s.sc, ringGeom(this.cfg, me.s.sc, me.s.n).reach, now);
     }
     autoQuality(this.fps, now); // máy yếu thì tự hạ chất lượng (spec §13.6 mục 8)
+    // Ngân sách bộ nhớ GPU (NETCODE_SPEC §5 L1): kiểm mỗi giây, không mỗi khung — con số
+    // này đổi khi NẠP ẢNH, không đổi khi vẽ. Hạ chất lượng vì bộ nhớ là nhánh riêng, vì
+    // trên iOS hết bộ nhớ đồ hoạ không làm tụt FPS trước: máy chạy 60 fps tới đúng lúc
+    // Safari giết tab.
+    if (now - this.memCheckAt >= 1) {
+      this.memCheckAt = now;
+      const mb = gpuMemMB();
+      if (autoQualityByMemory(mb)) {
+        this.onMemoryPressure?.(mb);
+      }
+    }
     this.glow.apply(); // mức chất lượng vừa đổi thì gắn lại bloom (§3.6)
     this.syncPlayers(frames, now);
     this.syncMonsters(now);
@@ -594,6 +620,11 @@ export class GameScene {
     return { charsInView: this.players.size, swordsDrawn, placeholder };
   }
 
+  /** gpuBiggest: vài texture to nhất đang giữ — để biết cắt chỗ nào trước (debug). */
+  gpuBiggest(n = 10): { w: number; h: number; mb: number }[] {
+    return gpuBiggest(n);
+  }
+
   /** perfStats là cùng bộ số của overlay F3 nhưng ở dạng object (tools/browsertest đọc). */
   perfStats(): Record<string, number> {
     let swords = 0;
@@ -609,6 +640,9 @@ export class GameScene {
       drawMs: this.lastRenderMs,
       sprites: countNodes(this.app.stage),
       drawCalls: drawCalls.perFrame,
+      texMB: gpuMemMB(),
+      texPeakMB: gpuPeakMB(),
+      textures: gpuTextureCount(),
       fixPerSec: this.world?.fixPerSec ?? 0,
       fixMax: this.world?.fixMax ?? 0,
       players: this.players.size,
