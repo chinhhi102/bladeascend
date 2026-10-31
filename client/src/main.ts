@@ -374,6 +374,8 @@ class App {
     // vật (để đổi chỉ số về tên).
     this.conn.snap.myId = w.id;
     this.conn.snap.chars = this.cfg.characters;
+    // Nhân vật của chính mình không bao giờ bị nhả khỏi bộ nhớ đồ hoạ (Q30).
+    this.scene.myChar = this.profile?.char ?? '';
     // Welcome đến GIỮA TRẬN nghĩa là vừa qua cổng sang khu khác (spec §8.0, §8.4): sang
     // khu là đổi hẳn bản đồ nên phải tải lại từ đầu, nhưng KHÔNG phải vào trận lại — giữ
     // nguyên hồ sơ, không phát lại âm thanh hồi sinh, không hiện lại hướng dẫn.

@@ -49,3 +49,4 @@ frames_norm/
 server/data/deploy/
 server/data/deploy.new/
 server/data/deploy.old/
+server/data/admin.env

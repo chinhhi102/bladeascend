@@ -276,6 +276,112 @@ class AssetStore {
     return null;
   }
 
+  // ── Nhả atlas nhân vật không còn ai dùng (QUESTIONS Q30, chủ dự án chốt 31/10) ────────
+  //
+  // Vì sao cần: iPhone thật gửi về `gpu_pressure` ở **216 MB / trần 256** với `chars:7` —
+  // bảy atlas nhân vật nằm trong bộ nhớ. Tự hạ chất lượng chạy rồi mà bộ nhớ TĂNG (214 ở
+  // "Vừa" → 216 ở "Thấp"): hạ chất lượng không trả lại texture đã nạp.
+  //
+  // Cách làm: đếm xem mỗi nhân vật còn bao nhiêu người trong khu đang dùng. Về 0 thì CHỜ
+  // 10 GIÂY rồi mới nhả. Chờ là bắt buộc — người chơi đi ra đi vào ranh giới tầm nhìn liên
+  // tục, và nhả ngay là nạp lại ngay, cứ thế mỗi vài giây: tốn băng thông, giật khung hình,
+  // mà bộ nhớ chẳng giảm.
+
+  /** CHAR_RELEASE_DELAY_MS: chờ ngần này sau khi không còn ai dùng mới nhả. */
+  private static readonly CHAR_RELEASE_DELAY_MS = 10_000;
+
+  /** charIdleSince: nhân vật → thời điểm bắt đầu không còn ai dùng. */
+  private readonly charIdleSince = new Map<string, number>();
+
+  /**
+   * keepChars báo danh sách nhân vật ĐANG CẦN, gọi mỗi khung từ vòng vẽ.
+   *
+   * Nhận cả danh sách thay vì đếm tăng/giảm từng con: đếm tham chiếu bằng tay thì chỉ cần
+   * một đường thoát quên giảm là con số kẹt mãi trên 0 và không bao giờ nhả được — mà
+   * đường thoát thì có nhiều (chết, qua cổng, despawn, đổi khu, mất kết nối). Danh sách
+   * "ai đang trên màn hình" thì không có đường nào để quên.
+   */
+  keepChars(inUse: Iterable<string>, mine: string, now: number): void {
+    const live = new Set(inUse);
+    live.add(mine); // nhân vật của chính mình không bao giờ nhả
+    for (const rel of this.atlases.keys()) {
+      const m = /^characters\/(.+)$/.exec(rel);
+      if (!m) {
+        continue;
+      }
+      const char = m[1];
+      if (live.has(char)) {
+        this.charIdleSince.delete(char);
+        continue;
+      }
+      const since = this.charIdleSince.get(char);
+      if (since === undefined) {
+        this.charIdleSince.set(char, now);
+        continue;
+      }
+      if (now - since >= AssetStore.CHAR_RELEASE_DELAY_MS) {
+        this.releaseChar(char);
+      }
+    }
+  }
+
+  /**
+   * releaseIdleCharsNow nhả NGAY mọi atlas đang rảnh, không chờ 10 giây.
+   *
+   * Gọi khi chạm trần bộ nhớ (`gpuPressure`). Lúc đó Safari sắp thu hồi tab, và 10 giây
+   * chờ cho êm là một sự xa xỉ — chờ để tránh nạp lại liên tục thì vô nghĩa nếu tab chết
+   * trước khi kịp nạp lại lần nào.
+   *
+   * Trả về số atlas đã nhả, để chỗ gọi ghi vào bằng chứng gửi về server.
+   */
+  releaseIdleCharsNow(): number {
+    let n = 0;
+    for (const char of [...this.charIdleSince.keys()]) {
+      this.releaseChar(char);
+      n++;
+    }
+    return n;
+  }
+
+  /**
+   * releaseChar nhả atlas của một nhân vật khỏi bộ nhớ đồ hoạ.
+   *
+   * Gọi `Texture.destroy(true)` — tham số `true` huỷ cả nguồn ảnh. Thiếu nó thì chỉ bỏ
+   * texture mà ảnh gốc vẫn nằm trên GPU, và con số `texMB` không nhúc nhích: đúng cái đã
+   * xảy ra với cơ chế tự hạ chất lượng.
+   */
+  private releaseChar(char: string): void {
+    const rel = `characters/${char}`;
+    const set = this.atlases.get(rel);
+    if (!set) {
+      return;
+    }
+    const seen = new Set<unknown>();
+    for (const anim of set.anims.values()) {
+      for (const tex of anim.textures) {
+        const src = (tex as unknown as { source?: unknown }).source;
+        if (src && !seen.has(src)) {
+          seen.add(src);
+        }
+        tex.destroy(false); // khung hình chỉ là cửa sổ vào ảnh nguồn
+      }
+    }
+    // Huỷ ảnh NGUỒN đúng một lần: mọi khung của một atlas dùng chung một ảnh.
+    for (const src of seen) {
+      (src as { destroy?: () => void }).destroy?.();
+    }
+    this.atlases.delete(rel);
+    this.charIdleSince.delete(char);
+    // Bỏ dấu "đã tải" của MỌI tệp thuộc nhân vật này, không chỉ tên nhóm: `loaded` chứa
+    // đường dẫn logic từng tệp, nên quên xoá chúng là lần sau `loadBackground` tưởng đã có
+    // và không tải lại — nhân vật đó vĩnh viễn hiện bằng người dự phòng.
+    for (const key of [...this.loaded]) {
+      if (key.startsWith(`characters/${char}/`)) {
+        this.loaded.delete(key);
+      }
+    }
+  }
+
   /** fallbackChars: thứ tự thử nhân vật dự phòng. Đặt bởi `setFallbackChars` lúc có config. */
   private fallbackChars: string[] = [];
   private readonly warnedChars = new Set<string>();

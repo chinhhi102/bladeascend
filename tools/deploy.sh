@@ -48,7 +48,18 @@ restart_server() {
   local build="$1"
   pkill -f 'kxserver' 2>/dev/null || true
   sleep 2
-  ( cd "$REPO/server" && setsid env KX_ADMIN_PASS="${KX_ADMIN_PASS:-kiemxoay}" ./kxserver \
+  # Mật khẩu quản trị đọc từ `server/data/admin.env` (ngoài git — xem .gitignore).
+  #
+  # Trước đây chỗ này truyền `KX_ADMIN_PASS`, một tên biến **server không bao giờ đọc**:
+  # `admin.NewAuth` chỉ nhìn `ADMIN_PASSWORD_HASH`. Hậu quả là trang quản trị TẮT trên
+  # `:9999` suốt từ lúc làm A1 — mọi thứ A1–A4 dựng lên đều không vào được, và dòng log
+  # "trang quản trị: tắt" trôi qua mà không ai đọc.
+  local adminenv="$REPO/server/data/admin.env"
+  if [ -f "$adminenv" ]; then
+    # shellcheck disable=SC1090
+    set -a; . "$adminenv"; set +a
+  fi
+  ( cd "$REPO/server" && setsid env ADMIN_PASSWORD_HASH="${ADMIN_PASSWORD_HASH:-}" ./kxserver \
       -build "$build" \
       -client "$DEPLOY/client" \
       -assets "$DEPLOY/assets" \
@@ -60,6 +71,10 @@ restart_server() {
   # suốt đời nó — `grep` ngồi chờ EOF không bao giờ tới, nên lệnh deploy "treo" dù đã xong
   # từ lâu. Chuyển hướng ở chính `./kxserver` là chưa đủ: subshell vẫn cầm bản sao.
   sleep 4
+  if ! grep -q "trang quản trị: BẬT" "$REPO/server/data/kxserver.log" 2>/dev/null; then
+    echo "   ⚠ trang quản trị TẮT — chưa có server/data/admin.env." >&2
+    echo "     Tạo bằng:  cd server && go run ./cmd/adminpass" >&2
+  fi
   if ! ss -ltn 2>/dev/null | grep -q ':9999'; then
     echo "LỖI: server không lên. Xem server/data/kxserver.log" >&2
     tail -5 "$REPO/server/data/kxserver.log" >&2

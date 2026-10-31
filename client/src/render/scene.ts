@@ -19,7 +19,7 @@ import { MapView, type Viewer } from './mapview';
 import { OrbLayer } from './orblayer';
 import { Ambient } from './ambient';
 import { Breakthrough, HITSTOP_SECS } from './breakthrough';
-import { autoQuality, autoQualityByMemory, quality } from './quality';
+import { autoQuality, autoQualityByMemory, gpuPressure, quality } from './quality';
 import { AURA_FAR_PX, TienAura } from './tienaura';
 import { FloatTextLayer } from './floattext';
 import { StallView } from './stallview';
@@ -112,6 +112,10 @@ export class GameScene {
   private fpsAcc = 0;
   private fpsFrames = 0;
   private lastRenderMs = 0;
+  /** charsInUse: dùng lại mỗi khung thay vì cấp phát Set mới — §5 "không tạo object lúc chơi". */
+  private readonly charsInUse = new Set<string>();
+  /** myChar: nhân vật của chính mình, không bao giờ nhả. */
+  myChar = '';
   private detail = 1;
   private lastSpark = { t: 0, x: 0, y: 0 };
   private showHitbox = false;
@@ -255,6 +259,17 @@ export class GameScene {
     if (now - this.memCheckAt >= 1) {
       this.memCheckAt = now;
       const mb = gpuMemMB();
+      // Chạm trần thì NHẢ TEXTURE TRƯỚC, hạ chất lượng sau.
+      //
+      // Hạ chất lượng một mình KHÔNG trả lại bộ nhớ đã nạp — đo được trên iPhone thật ngày
+      // 31/10: `texMB 214` ở mức "Vừa" rồi `216` ở mức "Thấp", tức là TĂNG. Nó chỉ làm ảnh
+      // nạp SAU này nhỏ hơn, mà lúc đó tab đã sắp bị thu hồi.
+      if (gpuPressure(mb) > 0) {
+        const freed = assets.releaseIdleCharsNow();
+        if (freed > 0) {
+          console.warn(`chạm trần bộ nhớ đồ hoạ (${mb.toFixed(0)} MB) — nhả ${freed} atlas nhân vật`);
+        }
+      }
       if (autoQualityByMemory(mb)) {
         this.onMemoryPressure?.(mb);
       }
@@ -280,6 +295,18 @@ export class GameScene {
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
     this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;
     this.sampleFps(dt);
+    // Nhả atlas nhân vật không còn ai trong khu dùng (QUESTIONS Q30).
+    //
+    // Báo DANH SÁCH "ai đang trên màn hình" chứ không đếm tăng/giảm: đếm bằng tay thì chỉ
+    // cần một đường thoát quên giảm (chết, qua cổng, despawn, đổi khu, mất kết nối) là con
+    // số kẹt mãi trên 0 và không bao giờ nhả được.
+    this.charsInUse.clear();
+    for (const sp of this.players.values()) {
+      if (sp.char) {
+        this.charsInUse.add(sp.char);
+      }
+    }
+    assets.keepChars(this.charsInUse, this.myChar, performance.now());
     drawCalls.frames += 1;
     if (drawCalls.frames >= 30) {
       drawCalls.perFrame = drawCalls.acc / drawCalls.frames;
