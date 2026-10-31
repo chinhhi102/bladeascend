@@ -163,6 +163,11 @@ function itemEntries(): CatalogEntry[] {
     out.push({ group: 'Kiếm', label: `realm_${r}`, files: [`swords/realm_${r}.png`], job: `sword_realm_${r}` });
   }
   out.push({ group: 'Vật phẩm', label: 'sword', files: ['items/sword.png'], job: 'item_sword' });
+  // Viên Tiên khí mệnh giá lớn (spec v6.4 §3.4 mục 10). Chỉ 100 và 500 có ảnh riêng; 1/2/10
+  // vẫn vẽ bằng Graphics vì trên màn hình chúng bé bằng hạt đậu.
+  for (const v of [100, 500]) {
+    out.push({ group: 'Vật phẩm', label: `Tiên khí ${v}`, files: [`items/tien_orb_${v}.png`], job: `item_tien_orb_${v}` });
+  }
   for (const o of ['orb_small', 'orb_medium', 'orb_large']) {
     out.push({ group: 'Vật phẩm', label: o, files: [`items/${o}.png`], job: `item_${o}` });
   }

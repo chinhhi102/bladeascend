@@ -1032,3 +1032,80 @@ Hai chỗ phải cẩn thận:
   xoá mất chữ họ vừa gõ.
 
 Số đo (trung vị 3 lượt, bóp mạng bằng CDP, 6 giây gõ tên): xem PERF_LOG lượt #10.
+
+## Phiên 31/10 (tiếp) — phần B Tiên khí ×20, genart, hai lỗi trang chủ
+
+### Hai lỗi trang chủ chủ dự án chụp màn hình — CẢ HAI LÀ LỖI TÔI VỪA GÂY RA
+
+**1. Nút "Bảng xếp hạng" mất hẳn chữ.** Hôm qua tôi thêm `:root { color-scheme: dark; }`
+vào `index.html` cho màn hình tải. Luật đó rò ra toàn trang: thẻ `<button>` lấy màu chữ từ
+**bảng mặc định của trình duyệt** (`color: ButtonText`), không thừa kế từ cha — nên ở chế độ
+tối nó hoá **trắng**. Mọi nút của game đặt `background: #fff` mà không đặt `color`, thành
+chữ trắng trên nền trắng. `font: inherit` không che được `color`.
+
+Sửa hai lớp: `color-scheme` thu về `#boot` (chỉ màn hình tải), **và** `.btn` / `.tab` /
+`.char-card` đặt `color: var(--ink)` tường minh. Lớp thứ hai mới là lớp chống tái phát —
+nút không được phép phụ thuộc vào `color-scheme` của trang.
+
+**2. Phần trên panel bị cắt, không thấy ô nhập tên.** Nội dung trang chủ cao **630 px**, mà
+`.panel { max-height: 100% }` ở cửa sổ 561 px chỉ còn 529 → phần thừa trôi vào thanh cuộn
+**bên trong** panel, gần như không nhìn thấy. Cuộn được không có nghĩa là dùng được: thứ đầu
+tiên phải làm là nhập tên, mà nó chính là thứ bị đẩy khỏi màn hình.
+
+Thêm hai mức cửa sổ thấp (`max-height: 720px` và `560px`): bóp lề, thu ảnh nhân vật, ẩn phụ
+đề / dòng hướng dẫn / mô tả kỹ năng — **không bao giờ ẩn ô nhập tên và nút "Vào chơi"**.
+Đo lại: 650×561 · 650×480 · 1280×800 · 390×640 đều **vừa khít, không phải cuộn**. Còn
+844×390 (điện thoại xoay ngang) vẫn thừa 78 px — ghi vào lỗi đã biết.
+
+### Phần B — Tiên khí ×20 (CHANGES_v6_4 mục 8–11) ✅
+
+- `tien_khi_ceilings` → **[2 000, 6 000, 12 000, 20 000, 30 000]**. Đáy: 1 / 2 001 / 6 001 /
+  12 001 / 20 001. Toàn bộ `progression.go` vốn đã suy ra từ config nên không phải sửa dòng nào.
+- `burn.tien_frac_per_sec` **0.08 → 0.004**. Đây là chỗ dễ sai nhất của lượt ×20: đổi trần mà
+  quên đổi tỉ lệ thì một giây chạy nhanh tốn cả trăm viên. Đốt vẫn **8 · 16 · 24 · 32 · 40**
+  mỗi giây, đúng lượng tuyệt đối cũ.
+- **Mệnh giá viên 500 / 100 / 10 / 2 / 1, tối đa 40 viên** (`splitTienOrbs`). Với bộ cũ
+  {10, 2, 1} thì 2 099 điểm rơi ra là **210 viên** quanh một cái xác — một rừng vật phẩm và
+  210 entity nhồi vào gói snapshot. Vượt trần thì **gộp** phần nhỏ, nên tổng điểm luôn đúng.
+- Sprite **viên 100 và 500** (`items/tien_orb_100/500.png`) + `tienKhiRadius` 5 mức. Viên
+  1/2/10 vẫn vẽ bằng Graphics — trên màn hình chúng bé bằng hạt đậu.
+- Thanh HUD có dấu phân cách nghìn: `Tiên khí 9.999/10.000`.
+- Test: sửa 14 chỗ trong `burn_tien_test.go` + `altar_test.go` theo checklist §17 mới, thêm
+  3 test cho `splitTienOrbs` (tổng đúng · ví dụ 2 099 ra đúng 18 viên · trần 40 chặn thật).
+
+**⚠ Hệ quả cân bằng, nhờ anh quyết** — spec nói rõ "nguồn Tiên khí từ đài giữ nguyên", nên
+tôi KHÔNG đụng vào, nhưng con số đáng nhìn: 2 Đài Tiên Khí của một khu phun **5,3 điểm/giây**
+cộng lại. Một người ôm trọn cả hai đài, không ai tranh:
+
+| Mốc | Thời gian |
+|---|---|
+| Chân Tiên → Kim Tiên (2 000) | ~6 phút |
+| Lên tới Đạo Tổ (20 001) | **~62 phút** |
+| Nạp đầy 30 000 để đổi Uy Danh | ~94 phút |
+
+Trước ×20 thì tới Đạo Tổ chỉ ~3 phút. Nguồn thứ hai là 30% Tiên khí rơi ra khi chém người
+Tiên giới — nhưng nguồn đó chỉ chảy *sau khi* đã có người lên cao, nên nó không rút ngắn
+người đầu tiên. Nếu anh muốn Đạo Tổ nằm trong tầm một phiên chơi thì phải tăng đài
+(`altars.small.orb_value` hoặc `burst_*`), và đó là con số cân bằng của anh.
+
+### genart ✅ — và một lỗi đường dẫn tôi gây ra hôm qua
+
+`artgen status` thoát lỗi `assets/docs/ASSETS_STATUS.md: no such file`. Nguyên nhân: nó lấy
+thư mục `docs` bằng `filepath.Dir(assets)` — đúng khi art ở `<repo>/assets`, nhưng sau khi
+art chuyển sang `<repo>/assets/src` (§13.7) thì ra `<repo>/assets/docs`. Ba chỗ, đã chuyển
+sang `config.FindRepoFile("docs/...")`.
+
+**Sinh xong 9 ảnh**: 7 vật trang trí (`rock_small` `pine` `bamboo` `bush_small` `lantern`
+`well` `banner`) + 2 viên Tiên khí (100, 500).
+
+**Lượt đầu hỏng theo kiểu tệ nhất và đáng ghi lại**: tôi gộp 7 vật vào MỘT sheet 4+3. Bên vẽ
+vẽ đủ cả 7, nhưng bộ cắt tìm khung bằng **vùng pixel liền nhau** nên cây thông chạm bụi tre
+bị đếm thành một khung — ra 5 khung cho 7 tên, và mọi tên sau chỗ dính bị **gán lệch**:
+`bush_small.png` hoá ra là cái đèn lồng, `lantern.png` là cái giếng. Art sai nhãn tệ hơn hẳn
+art thiếu: `check:assets` thấy đủ tệp nên báo xanh, và bản đồ rải đèn lồng ở chỗ lẽ ra là bụi
+cây. Đã xoá 5 ảnh đó và chuyển sang **mỗi vật một job sprite riêng** — một vật một ảnh thì
+không có gì để cắt sai.
+
+Sinh lại bản đồ: giờ mỗi khu có bộ trang trí đúng chất của nó — Linh Sơn Cốc đá + thông,
+Trúc Lâm tre + bụi, Phàm Trấn cả bộ phố + giếng + băng-rôn, Băng Nguyệt Hồ thông + đá + đèn
+đá. Tổng số vật giữ nguyên (81/107/131/139/90) vì mật độ là **tổng của khu**.

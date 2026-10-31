@@ -7291,7 +7291,7 @@
     {
      "id": 493,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "bamboo",
      "x": 4512.724244643325,
      "y": 1073.8815708791376,
      "width": 0,
@@ -7303,7 +7303,7 @@
     {
      "id": 494,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "bamboo",
      "x": 5063.4215168968285,
      "y": 7449.604460735401,
      "width": 0,
@@ -7315,7 +7315,7 @@
     {
      "id": 495,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "bamboo",
      "x": 9932.178080671174,
      "y": 4817.026547830585,
      "width": 0,
@@ -7327,7 +7327,7 @@
     {
      "id": 496,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "bamboo",
      "x": 11375.386204171791,
      "y": 5139.752390905676,
      "width": 0,
@@ -7339,7 +7339,7 @@
     {
      "id": 497,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "bamboo",
      "x": 678.2223479816714,
      "y": 5233.76573011023,
      "width": 0,
@@ -7351,7 +7351,7 @@
     {
      "id": 498,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "bamboo",
      "x": 6680.84554217325,
      "y": 5742.593078867197,
      "width": 0,
@@ -7363,7 +7363,7 @@
     {
      "id": 499,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "bamboo",
      "x": 11327.576481544746,
      "y": 11205.646345869476,
      "width": 0,
@@ -7375,7 +7375,7 @@
     {
      "id": 500,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "banner",
      "x": 2389.8011309050216,
      "y": 5681.330688517521,
      "width": 0,
@@ -7387,7 +7387,7 @@
     {
      "id": 501,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "banner",
      "x": 11476.284590832724,
      "y": 6607.433635126444,
      "width": 0,
@@ -7399,7 +7399,7 @@
     {
      "id": 502,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "banner",
      "x": 7325.943564112757,
      "y": 11407.159637533336,
      "width": 0,
@@ -7411,7 +7411,7 @@
     {
      "id": 503,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "banner",
      "x": 2226.341431015212,
      "y": 960.1242278177085,
      "width": 0,
@@ -7423,7 +7423,7 @@
     {
      "id": 504,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "banner",
      "x": 4667.878379501191,
      "y": 1860.1034251450724,
      "width": 0,
@@ -7435,7 +7435,7 @@
     {
      "id": 505,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "bush_small",
      "x": 9025.564196330755,
      "y": 4199.901135237527,
      "width": 0,
@@ -7447,7 +7447,7 @@
     {
      "id": 506,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "bush_small",
      "x": 4347.3301814935385,
      "y": 533.0961559725871,
      "width": 0,
@@ -7459,7 +7459,7 @@
     {
      "id": 507,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "bush_small",
      "x": 8566.456662601442,
      "y": 6145.839536312853,
      "width": 0,
@@ -7471,7 +7471,7 @@
     {
      "id": 508,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_small",
      "x": 10039.77060532155,
      "y": 601.7410981169178,
      "width": 0,
@@ -7483,7 +7483,7 @@
     {
      "id": 509,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_small",
      "x": 3343.1705220035465,
      "y": 7971.960626937517,
      "width": 0,
@@ -7495,7 +7495,7 @@
     {
      "id": 510,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_small",
      "x": 7808.222793031842,
      "y": 9797.987301840705,
      "width": 0,
@@ -7507,7 +7507,7 @@
     {
      "id": 511,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_with_flowers",
      "x": 9468.70882526111,
      "y": 806.1737098414105,
      "width": 0,
@@ -7519,7 +7519,7 @@
     {
      "id": 512,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_with_flowers",
      "x": 1635.76437681299,
      "y": 5562.715747298811,
      "width": 0,
@@ -7531,7 +7531,7 @@
     {
      "id": 513,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_with_flowers",
      "x": 10001.368249136025,
      "y": 10677.592729977814,
      "width": 0,
@@ -7543,7 +7543,7 @@
     {
      "id": 514,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_with_flowers",
      "x": 7634.37598261731,
      "y": 5536.215881345603,
      "width": 0,
@@ -7555,7 +7555,7 @@
     {
      "id": 515,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_with_flowers",
      "x": 9185.93157998535,
      "y": 6602.446241910355,
      "width": 0,
@@ -7567,7 +7567,7 @@
     {
      "id": 516,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_with_flowers",
      "x": 4734.986850708943,
      "y": 10048.662630701427,
      "width": 0,
@@ -7579,7 +7579,7 @@
     {
      "id": 517,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_with_flowers",
      "x": 11183.74029817407,
      "y": 6799.606765940745,
      "width": 0,
@@ -7591,7 +7591,7 @@
     {
      "id": 518,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "bush_with_flowers",
      "x": 4662.113992172679,
      "y": 4789.616846470392,
      "width": 0,
@@ -7603,7 +7603,7 @@
     {
      "id": 519,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 3399.813909130082,
      "y": 5069.388055846782,
      "width": 0,
@@ -7615,7 +7615,7 @@
     {
      "id": 520,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 10765.335519858563,
      "y": 6972.685996842864,
      "width": 0,
@@ -7627,7 +7627,7 @@
     {
      "id": 521,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 4817.880328817249,
      "y": 7376.015799105566,
      "width": 0,
@@ -7639,7 +7639,7 @@
     {
      "id": 522,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 8644.38849407585,
      "y": 8648.011796416973,
      "width": 0,
@@ -7651,7 +7651,7 @@
     {
      "id": 523,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 5005.530231054487,
      "y": 7163.429642765952,
      "width": 0,
@@ -7663,7 +7663,7 @@
     {
      "id": 524,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 7147.024673554434,
      "y": 6962.618838907194,
      "width": 0,
@@ -7675,7 +7675,7 @@
     {
      "id": 525,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "lantern",
      "x": 11510.02213472318,
      "y": 2823.6034325344995,
      "width": 0,
@@ -7687,7 +7687,7 @@
     {
      "id": 526,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "lazy_sleeping_dog",
      "x": 9739.862334411773,
      "y": 3002.7693953084367,
      "width": 0,
@@ -7699,7 +7699,7 @@
     {
      "id": 527,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "lazy_sleeping_dog",
      "x": 8732.946755430048,
      "y": 8316.248915478773,
      "width": 0,
@@ -7711,7 +7711,7 @@
     {
      "id": 528,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "lazy_sleeping_dog",
      "x": 10195.36773033524,
      "y": 7797.875318041736,
      "width": 0,
@@ -7723,7 +7723,7 @@
     {
      "id": 529,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "lazy_sleeping_dog",
      "x": 1415.3601899720288,
      "y": 11383.87021270082,
      "width": 0,
@@ -7735,7 +7735,7 @@
     {
      "id": 530,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "lazy_sleeping_dog",
      "x": 5552.089241130959,
      "y": 3576.238163393121,
      "width": 0,
@@ -7747,7 +7747,7 @@
     {
      "id": 531,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "lazy_sleeping_dog",
      "x": 10788.843888446161,
      "y": 4657.175763779515,
      "width": 0,
@@ -7759,7 +7759,7 @@
     {
      "id": 532,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "pine",
      "x": 10678.53983188635,
      "y": 5608.403870859636,
      "width": 0,
@@ -7771,7 +7771,7 @@
     {
      "id": 533,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "pine",
      "x": 5232.130889751042,
      "y": 9402.243332682849,
      "width": 0,
@@ -7783,7 +7783,7 @@
     {
      "id": 534,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "pine",
      "x": 10606.409308626804,
      "y": 10265.442878383768,
      "width": 0,
@@ -7795,7 +7795,7 @@
     {
      "id": 535,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "pine",
      "x": 8485.132871288632,
      "y": 5119.810343151251,
      "width": 0,
@@ -7807,7 +7807,7 @@
     {
      "id": 536,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "pine",
      "x": 6399.478330708574,
      "y": 9742.656492957929,
      "width": 0,
@@ -7819,7 +7819,7 @@
     {
      "id": 537,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "pine",
      "x": 8470.237001529076,
      "y": 870.431156587739,
      "width": 0,
@@ -7831,7 +7831,7 @@
     {
      "id": 538,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "pine",
      "x": 1525.9781042271688,
      "y": 3538.170884366569,
      "width": 0,
@@ -7855,7 +7855,7 @@
     {
      "id": 540,
      "name": "",
-     "type": "stone_lantern",
+     "type": "red_plastic_stool",
      "x": 9534.31222100758,
      "y": 7578.533491493661,
      "width": 0,
@@ -7867,7 +7867,7 @@
     {
      "id": 541,
      "name": "",
-     "type": "stone_lantern",
+     "type": "red_plastic_stool",
      "x": 10519.81272557048,
      "y": 8685.23547552938,
      "width": 0,
@@ -7879,7 +7879,7 @@
     {
      "id": 542,
      "name": "",
-     "type": "stone_lantern",
+     "type": "red_plastic_stool",
      "x": 2956.9599419591514,
      "y": 10808.939286377565,
      "width": 0,
@@ -7891,7 +7891,7 @@
     {
      "id": 543,
      "name": "",
-     "type": "stone_lantern",
+     "type": "red_plastic_stool",
      "x": 1046.7637231527644,
      "y": 8010.253507732902,
      "width": 0,
@@ -7903,7 +7903,7 @@
     {
      "id": 544,
      "name": "",
-     "type": "stone_lantern",
+     "type": "red_plastic_stool",
      "x": 9554.583775710229,
      "y": 8022.679877936037,
      "width": 0,
@@ -7915,7 +7915,7 @@
     {
      "id": 545,
      "name": "",
-     "type": "stone_lantern",
+     "type": "red_plastic_stool",
      "x": 4078.7169235881124,
      "y": 4586.042422191535,
      "width": 0,
@@ -7927,7 +7927,7 @@
     {
      "id": 546,
      "name": "",
-     "type": "stone_lantern",
+     "type": "red_plastic_stool",
      "x": 2987.004128844745,
      "y": 1372.1111281831054,
      "width": 0,
@@ -7939,7 +7939,7 @@
     {
      "id": 547,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 8719.244319647125,
      "y": 7880.402626245402,
      "width": 0,
@@ -7951,7 +7951,7 @@
     {
      "id": 548,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 4465.471626771125,
      "y": 9201.049702768385,
      "width": 0,
@@ -7963,7 +7963,7 @@
     {
      "id": 549,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 1295.9723089187064,
      "y": 4613.712654362351,
      "width": 0,
@@ -7975,7 +7975,7 @@
     {
      "id": 550,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 11474.589342356798,
      "y": 8572.075156274155,
      "width": 0,
@@ -7987,7 +7987,7 @@
     {
      "id": 551,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 1048.6157546738891,
      "y": 8008.889284710862,
      "width": 0,
@@ -8071,7 +8071,7 @@
     {
      "id": 558,
      "name": "",
-     "type": "street_food_cart",
+     "type": "stone_lantern",
      "x": 5667.474213442309,
      "y": 10789.631749086158,
      "width": 0,
@@ -8083,7 +8083,7 @@
     {
      "id": 559,
      "name": "",
-     "type": "street_food_cart",
+     "type": "stone_lantern",
      "x": 1290.3206827404715,
      "y": 6393.7703147612565,
      "width": 0,
@@ -8095,7 +8095,7 @@
     {
      "id": 560,
      "name": "",
-     "type": "street_food_cart",
+     "type": "stone_lantern",
      "x": 8750.100762122504,
      "y": 5577.163163735642,
      "width": 0,
@@ -8179,7 +8179,7 @@
     {
      "id": 567,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 4315.896125170868,
      "y": 4449.952402225068,
      "width": 0,
@@ -8191,7 +8191,7 @@
     {
      "id": 568,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 3310.4636317844397,
      "y": 647.0287800861335,
      "width": 0,
@@ -8203,7 +8203,7 @@
     {
      "id": 569,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 2199.1324105224703,
      "y": 1805.8401718007856,
      "width": 0,
@@ -8215,7 +8215,7 @@
     {
      "id": 570,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 3941.5033574446416,
      "y": 4477.429676622292,
      "width": 0,
@@ -8227,7 +8227,7 @@
     {
      "id": 571,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 11415.576708443607,
      "y": 7521.62785349251,
      "width": 0,
@@ -8239,7 +8239,7 @@
     {
      "id": 572,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 4695.311072963424,
      "y": 5431.80349040143,
      "width": 0,
@@ -8251,7 +8251,7 @@
     {
      "id": 573,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 5843.207127754194,
      "y": 8870.718357372114,
      "width": 0,

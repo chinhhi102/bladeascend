@@ -106,9 +106,48 @@ func (g *Game) sprayTienKhi(a world.Altar, n int, value float64) {
 	}
 }
 
-// scatterTienKhi drops robbed Tiên khí around a victim (spec §3.4). It splits the total into
-// orbs no bigger than the medium orb so a single pickup cannot take it all back.
-// Chia viên **10 → 2 → 1** và văng ra bán kính 200–500 (spec v5.9 §3.4).
+// tienOrbUnits là mệnh giá viên Tiên khí rơi ra, LỚN TRƯỚC (spec v6.4 §3.4).
+//
+// Thêm 500 và 100 vì Tiên khí đã ×20: Thái Ất 9 000 bị chém rơi 2 099 điểm. Với bộ cũ
+// {10, 2, 1} thì đó là **210 viên** rải quanh một cái xác — vừa là một rừng vật phẩm che
+// kín màn hình, vừa là 210 entity nhồi vào gói snapshot.
+var tienOrbUnits = []float64{500, 100, 10, 2, 1}
+
+// tienOrbMax là trần số viên mỗi lần rơi (spec v6.4 §3.4: "tối đa 40 viên").
+const tienOrbMax = 40
+
+// splitTienOrbs chia `total` thành mệnh giá, lớn trước, **không quá `tienOrbMax` viên**.
+//
+// Vượt trần thì gộp phần nhỏ vào MỘT viên (spec: "nếu vượt thì gộp phần nhỏ vào viên lớn
+// hơn"), nên tổng điểm rơi ra **luôn đúng bằng** `floor(total)` — đó là thứ test khoá lại.
+// Gộp bằng cách giữ 39 viên lớn nhất rồi dồn tất cả phần còn lại vào viên thứ 40.
+//
+// Tách thành hàm thuần (không đụng `g`) để test được bằng bảng, không cần dựng cả trận.
+func splitTienOrbs(total float64) []float64 {
+	left := math.Floor(total)
+	if left <= 0 {
+		return nil
+	}
+	out := make([]float64, 0, tienOrbMax)
+	for _, unit := range tienOrbUnits {
+		for left >= unit {
+			out = append(out, unit)
+			left -= unit
+		}
+	}
+	if len(out) <= tienOrbMax {
+		return out
+	}
+	// `out` đã giảm dần (mệnh giá lớn trước), nên phần đuôi chính là phần nhỏ nhất.
+	rest := 0.0
+	for _, v := range out[tienOrbMax-1:] {
+		rest += v
+	}
+	return append(out[:tienOrbMax-1:tienOrbMax-1], rest)
+}
+
+// scatterTienKhi drops robbed Tiên khí around a victim (spec §3.4), splitting the total into
+// denominations so a single pickup cannot take it all back.
 //
 // Bán kính là chỗ đã hỏng và khó thấy: bản cũ dùng `items.scatter_r` = 90, trong khi người
 // Tiên giới có scale 5–6 nên thân rộng hơn 150 và cao hơn 400 pixel — mà vật phẩm vẽ DƯỚI
@@ -120,14 +159,10 @@ func (g *Game) scatterTienKhi(at Vec, total float64) {
 	c := g.Cfg.Cultivation
 	lo := math.Max(1, c.TienDropScatterMin)
 	hi := math.Max(lo, c.TienDropScatterMax)
-	left := math.Floor(total)
-	for _, unit := range []float64{10, 2, 1} {
-		for left >= unit {
-			ang := g.Rng.Float64() * 2 * math.Pi
-			d := lo + g.Rng.Float64()*(hi-lo)
-			g.addTienKhiOrb(at.Add(geom.FromAngle(ang).Mul(d)), unit)
-			left -= unit
-		}
+	for _, unit := range splitTienOrbs(total) {
+		ang := g.Rng.Float64() * 2 * math.Pi
+		d := lo + g.Rng.Float64()*(hi-lo)
+		g.addTienKhiOrb(at.Add(geom.FromAngle(ang).Mul(d)), unit)
 	}
 }
 

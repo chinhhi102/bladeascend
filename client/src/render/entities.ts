@@ -120,15 +120,29 @@ export class MonsterSprite {
   }
 }
 
-/** tienKhiRadius: viên Tiên khí to theo số điểm (2 → nhỏ, 10 → vừa, 150 → khổng lồ). */
+/**
+ * tienKhiRadius: viên Tiên khí to theo MỆNH GIÁ (spec v6.4 §3.4: 500 / 100 / 10 / 2 / 1).
+ *
+ * Năm mức, không phải ba: từ v6.4 Tiên khí ×20 nên viên 500 và 100 mới xuất hiện, và chúng
+ * phải nhìn ra ngay là "món to" — một người chạy ngang qua phải biết có đáng vòng lại nhặt
+ * không. Mức 2 và 1 cố tình bằng nhau: chênh một điểm thì to nhỏ khác nhau chỉ gây nhiễu.
+ */
 export function tienKhiRadius(v: number): number {
-  return v >= 100 ? 46 : v >= 10 ? 26 : 17;
+  return v >= 500 ? 60 : v >= 100 ? 46 : v >= 10 ? 26 : 17;
 }
 
 function itemTexture(it: ItemState): Texture | null {
   if (it.k === 'orb') {
     const size = (it.v ?? 0) >= 60 ? 'large' : (it.v ?? 0) >= 20 ? 'medium' : 'small';
     return assets.texture(`items/orb_${size}.png`);
+  }
+  if (it.k === 'tien_khi') {
+    // Chỉ HAI mệnh giá lớn có ảnh riêng (spec v6.4 mục 10). Mấy viên lẻ 1/2/10 vẫn vẽ bằng
+    // Graphics: chúng nhỏ bằng hạt đậu trên màn hình, một ảnh 256px cho chúng là tải thừa.
+    const v = it.v ?? 0;
+    return v >= 500 ? assets.texture('items/tien_orb_500.png')
+      : v >= 100 ? assets.texture('items/tien_orb_100.png')
+      : null;
   }
   if (it.k === 'bundle') {
     return assets.texture('items/bundle.png');

@@ -34,8 +34,12 @@ function artFor(kind: string): string[] {
       // Chủ dự án duyệt 30/10, prompt ở ART_PROMPTS §8. Vẽ to hơn bong bóng kiếm đơn 20%.
       return ['items/bundle.png'];
     case 'tien_khi':
-      // Cố ý vẽ bằng Graphics, KHÔNG phải thiếu art: viên vàng kim nhiều lớp sáng; kích
-      // thước và vành ngoài đổi theo giá trị viên, nên một ảnh tĩnh không tả được.
+      // Hai mệnh giá LỚN (100, 500) có ảnh riêng từ spec v6.4 §3.4 mục 10 — chúng phải nhìn
+      // ra ngay là món đáng vòng lại nhặt. Mệnh giá 1 / 2 / 10 **cố ý** vẽ bằng Graphics,
+      // không phải thiếu art: trên màn hình chúng bé bằng hạt đậu.
+      //
+      // Trả [] ở đây (không chặn) vì thiếu ảnh viên lớn thì nó rơi về Graphics như cũ, vẫn
+      // chơi được; `assets:report` mới là chỗ liệt kê chúng.
       return [];
     default:
       return [`buffs/${kind}.png`];

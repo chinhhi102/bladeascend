@@ -74,7 +74,7 @@ func main() {
 		printNorm(stats)
 	case "preview":
 		// GIF + onion-skin để duyệt bằng mắt (GAME_SPEC §12.5 B.6).
-		if err := buildPreview(assets, *only, filepath.Join(filepath.Dir(assets), "docs", "anim_preview")); err != nil {
+		if err := buildPreview(assets, *only, config.FindRepoFile("docs/anim_preview")); err != nil {
 			log.Fatal(err)
 		}
 	case "jitter":
@@ -96,9 +96,9 @@ func main() {
 		}
 		printJitter(rep, 0)
 	case "prompts":
-		writePrompts(jobs, assets, filepath.Join(filepath.Dir(assets), "docs", "ART_JOBS.md"))
+		writePrompts(jobs, assets, config.FindRepoFile("docs/ART_JOBS.md"))
 	case "status":
-		writeStatus(jobs, assets, filepath.Join(filepath.Dir(assets), "docs", "ASSETS_STATUS.md"))
+		writeStatus(jobs, assets, config.FindRepoFile("docs/ASSETS_STATUS.md"))
 	default:
 		log.Fatalf("unknown command %q", os.Args[1])
 	}

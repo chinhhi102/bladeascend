@@ -15,7 +15,13 @@
       hiện ngay từ byte đầu tiên của HTML — trước cả khi PixiJS được tải về.
     -->
     <style>
-      :root { color-scheme: dark; }
+      /* `color-scheme` CHỈ cho màn hình tải, không đặt ở `:root`.
+         Đặt ở `:root` thì trình duyệt dùng bảng mặc định CHẾ ĐỘ TỐI cho mọi thẻ `<button>`,
+         tức `color: ButtonText` hoá ra TRẮNG. Mọi nút của game đều đặt `background: #fff`
+         mà không đặt `color`, nên chúng thành chữ trắng trên nền trắng — nút "Bảng xếp hạng"
+         biến mất hẳn (ảnh chụp 31/10). Luật này tôi thêm vào hôm qua cho màn hình tải và nó
+         rò ra toàn trang; chữ "inherit" của `font: inherit` không che được `color`. */
+      #boot { color-scheme: dark; }
       html, body { margin: 0; height: 100%; background: #14110e; }
       #boot {
         position: fixed; inset: 0; z-index: 9000;

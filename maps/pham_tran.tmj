@@ -2488,7 +2488,7 @@
     {
      "id": 191,
      "name": "",
-     "type": "banana_tree",
+     "type": "banner",
      "x": 5739.35892867699,
      "y": 11294.528593010904,
      "width": 0,
@@ -2500,7 +2500,7 @@
     {
      "id": 192,
      "name": "",
-     "type": "banana_tree",
+     "type": "banner",
      "x": 4750.4365399823955,
      "y": 8103.704859815386,
      "width": 0,
@@ -2512,7 +2512,7 @@
     {
      "id": 193,
      "name": "",
-     "type": "banana_tree",
+     "type": "banner",
      "x": 8084.338251796869,
      "y": 3751.2216953461184,
      "width": 0,
@@ -2524,7 +2524,7 @@
     {
      "id": 194,
      "name": "",
-     "type": "banana_tree",
+     "type": "banner",
      "x": 5559.728150104441,
      "y": 917.1282915312287,
      "width": 0,
@@ -2536,7 +2536,7 @@
     {
      "id": 195,
      "name": "",
-     "type": "banana_tree",
+     "type": "banner",
      "x": 10910.601733196878,
      "y": 5858.76578602939,
      "width": 0,
@@ -2548,7 +2548,7 @@
     {
      "id": 196,
      "name": "",
-     "type": "broken_tv",
+     "type": "banner",
      "x": 5624.375763860384,
      "y": 6887.672705867266,
      "width": 0,
@@ -2560,7 +2560,7 @@
     {
      "id": 197,
      "name": "",
-     "type": "broken_tv",
+     "type": "banner",
      "x": 1124.235511216057,
      "y": 8608.545916256182,
      "width": 0,
@@ -2572,7 +2572,7 @@
     {
      "id": 198,
      "name": "",
-     "type": "broken_tv",
+     "type": "banner",
      "x": 11036.304966596548,
      "y": 5807.342963672274,
      "width": 0,
@@ -2584,7 +2584,7 @@
     {
      "id": 199,
      "name": "",
-     "type": "broken_tv",
+     "type": "banner",
      "x": 6558.848076762017,
      "y": 11299.880906117774,
      "width": 0,
@@ -2596,7 +2596,7 @@
     {
      "id": 200,
      "name": "",
-     "type": "broken_tv",
+     "type": "banner",
      "x": 10178.3071403808,
      "y": 7780.970501101298,
      "width": 0,
@@ -2608,7 +2608,7 @@
     {
      "id": 201,
      "name": "",
-     "type": "broken_tv",
+     "type": "banner",
      "x": 2381.965386091133,
      "y": 11490.032018825848,
      "width": 0,
@@ -2620,7 +2620,7 @@
     {
      "id": 202,
      "name": "",
-     "type": "broken_tv",
+     "type": "banner",
      "x": 1853.1916935330808,
      "y": 11339.649716100384,
      "width": 0,
@@ -2752,7 +2752,7 @@
     {
      "id": 213,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "broken_tv",
      "x": 4321.489510365493,
      "y": 9569.90159475377,
      "width": 0,
@@ -2764,7 +2764,7 @@
     {
      "id": 214,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "broken_tv",
      "x": 9760.48093641425,
      "y": 3254.9621695462874,
      "width": 0,
@@ -2776,7 +2776,7 @@
     {
      "id": 215,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "broken_tv",
      "x": 10954.8845352001,
      "y": 6986.309775067049,
      "width": 0,
@@ -2788,7 +2788,7 @@
     {
      "id": 216,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "broken_tv",
      "x": 1849.521316017477,
      "y": 5253.164233206845,
      "width": 0,
@@ -2800,7 +2800,7 @@
     {
      "id": 217,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "broken_tv",
      "x": 584.4969057759313,
      "y": 10738.803767247708,
      "width": 0,
@@ -2932,7 +2932,7 @@
     {
      "id": 228,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 3722.1373774323824,
      "y": 4379.246673893169,
      "width": 0,
@@ -2944,7 +2944,7 @@
     {
      "id": 229,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 3021.068808969917,
      "y": 10437.188280303651,
      "width": 0,
@@ -2956,7 +2956,7 @@
     {
      "id": 230,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 940.1566882258504,
      "y": 872.6056451973652,
      "width": 0,
@@ -2968,7 +2968,7 @@
     {
      "id": 231,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 7093.600356966824,
      "y": 2113.2317711462065,
      "width": 0,
@@ -2980,7 +2980,7 @@
     {
      "id": 232,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 5647.037388628492,
      "y": 1234.5494716744251,
      "width": 0,
@@ -2992,7 +2992,7 @@
     {
      "id": 233,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 3230.3898696518363,
      "y": 6086.910288542112,
      "width": 0,
@@ -3004,7 +3004,7 @@
     {
      "id": 234,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 11373.51730132026,
      "y": 3514.4808316588296,
      "width": 0,
@@ -3016,7 +3016,7 @@
     {
      "id": 235,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 1929.11149474621,
      "y": 10891.557383601204,
      "width": 0,
@@ -3028,7 +3028,7 @@
     {
      "id": 236,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 7798.537373840085,
      "y": 10719.012144171627,
      "width": 0,
@@ -3040,7 +3040,7 @@
     {
      "id": 237,
      "name": "",
-     "type": "lazy_sleeping_dog",
+     "type": "lantern",
      "x": 7804.144549503659,
      "y": 7532.645290468584,
      "width": 0,
@@ -3088,7 +3088,7 @@
     {
      "id": 241,
      "name": "",
-     "type": "old_bicycle_leaning",
+     "type": "lazy_sleeping_dog",
      "x": 4888.485303694425,
      "y": 1713.5184848181852,
      "width": 0,
@@ -3100,7 +3100,7 @@
     {
      "id": 242,
      "name": "",
-     "type": "old_bicycle_leaning",
+     "type": "lazy_sleeping_dog",
      "x": 11352.974511092454,
      "y": 1610.969851282088,
      "width": 0,
@@ -3112,7 +3112,7 @@
     {
      "id": 243,
      "name": "",
-     "type": "old_bicycle_leaning",
+     "type": "lazy_sleeping_dog",
      "x": 6858.570823454069,
      "y": 7200.485425647995,
      "width": 0,
@@ -3124,7 +3124,7 @@
     {
      "id": 244,
      "name": "",
-     "type": "old_bicycle_leaning",
+     "type": "lazy_sleeping_dog",
      "x": 1668.4106778445932,
      "y": 1081.0003266096123,
      "width": 0,
@@ -3136,7 +3136,7 @@
     {
      "id": 245,
      "name": "",
-     "type": "old_bicycle_leaning",
+     "type": "lazy_sleeping_dog",
      "x": 7854.097364910004,
      "y": 9750.498208114628,
      "width": 0,
@@ -3148,7 +3148,7 @@
     {
      "id": 246,
      "name": "",
-     "type": "old_bicycle_leaning",
+     "type": "lazy_sleeping_dog",
      "x": 6910.947147828549,
      "y": 4399.359208482767,
      "width": 0,
@@ -3160,7 +3160,7 @@
     {
      "id": 247,
      "name": "",
-     "type": "old_bicycle_leaning",
+     "type": "lazy_sleeping_dog",
      "x": 9913.35469272693,
      "y": 9867.935520435241,
      "width": 0,
@@ -3172,7 +3172,7 @@
     {
      "id": 248,
      "name": "",
-     "type": "old_bicycle_leaning",
+     "type": "lazy_sleeping_dog",
      "x": 7945.900550970354,
      "y": 1336.4739899633005,
      "width": 0,
@@ -3268,7 +3268,7 @@
     {
      "id": 256,
      "name": "",
-     "type": "pile_of_watermelons",
+     "type": "old_bicycle_leaning",
      "x": 10465.637530017406,
      "y": 1949.2810317141364,
      "width": 0,
@@ -3280,7 +3280,7 @@
     {
      "id": 257,
      "name": "",
-     "type": "pile_of_watermelons",
+     "type": "old_bicycle_leaning",
      "x": 1401.4003740497947,
      "y": 8627.929459625491,
      "width": 0,
@@ -3292,7 +3292,7 @@
     {
      "id": 258,
      "name": "",
-     "type": "pile_of_watermelons",
+     "type": "old_bicycle_leaning",
      "x": 9487.7112437158,
      "y": 6019.7191713526545,
      "width": 0,
@@ -3604,7 +3604,7 @@
     {
      "id": 284,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "rusty_water_jar",
      "x": 2239.3574434118977,
      "y": 3105.346061105696,
      "width": 0,
@@ -3616,7 +3616,7 @@
     {
      "id": 285,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "rusty_water_jar",
      "x": 6870.936003369803,
      "y": 9721.27655750638,
      "width": 0,
@@ -3628,7 +3628,7 @@
     {
      "id": 286,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "rusty_water_jar",
      "x": 1483.0396135901988,
      "y": 7139.776791202383,
      "width": 0,
@@ -3640,7 +3640,7 @@
     {
      "id": 287,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "rusty_water_jar",
      "x": 5546.0021735735045,
      "y": 10784.3072944653,
      "width": 0,
@@ -3652,7 +3652,7 @@
     {
      "id": 288,
      "name": "",
-     "type": "red_plastic_stool",
+     "type": "rusty_water_jar",
      "x": 693.5369301134402,
      "y": 1677.4248228239228,
      "width": 0,
@@ -3736,7 +3736,7 @@
     {
      "id": 295,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "street_food_cart",
      "x": 9317.524680883154,
      "y": 11047.667406827466,
      "width": 0,
@@ -3748,7 +3748,7 @@
     {
      "id": 296,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "street_food_cart",
      "x": 3345.7483658645137,
      "y": 5578.813396948686,
      "width": 0,
@@ -3760,7 +3760,7 @@
     {
      "id": 297,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "street_food_cart",
      "x": 2366.818158307066,
      "y": 8740.569552874518,
      "width": 0,
@@ -3772,7 +3772,7 @@
     {
      "id": 298,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "street_food_cart",
      "x": 5545.862576553222,
      "y": 1298.7136731145374,
      "width": 0,
@@ -3784,7 +3784,7 @@
     {
      "id": 299,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "street_food_cart",
      "x": 1380.2210593015593,
      "y": 10464.769092568316,
      "width": 0,
@@ -3796,7 +3796,7 @@
     {
      "id": 300,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "street_food_cart",
      "x": 3751.516267180731,
      "y": 10663.552914612092,
      "width": 0,
@@ -3808,7 +3808,7 @@
     {
      "id": 301,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "street_food_cart",
      "x": 9605.369166433202,
      "y": 4590.592082704734,
      "width": 0,
@@ -3820,7 +3820,7 @@
     {
      "id": 302,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "street_food_cart",
      "x": 7403.122573029507,
      "y": 2520.779330539087,
      "width": 0,
@@ -3832,7 +3832,7 @@
     {
      "id": 303,
      "name": "",
-     "type": "rusty_water_jar",
+     "type": "street_food_cart",
      "x": 9301.055824368477,
      "y": 887.2614189453703,
      "width": 0,
@@ -3892,7 +3892,7 @@
     {
      "id": 308,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 10321.550725310937,
      "y": 2449.1129925071064,
      "width": 0,
@@ -3904,7 +3904,7 @@
     {
      "id": 309,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 1012.1902728411034,
      "y": 8033.490810459175,
      "width": 0,
@@ -3916,7 +3916,7 @@
     {
      "id": 310,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 2061.904576030461,
      "y": 10728.872290883139,
      "width": 0,
@@ -3928,7 +3928,7 @@
     {
      "id": 311,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 10200.614169682589,
      "y": 4138.284634582414,
      "width": 0,
@@ -3940,7 +3940,7 @@
     {
      "id": 312,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 1714.9598851677213,
      "y": 693.0522238490062,
      "width": 0,
@@ -3952,7 +3952,7 @@
     {
      "id": 313,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 6877.052839569211,
      "y": 3304.6946830198235,
      "width": 0,
@@ -3964,7 +3964,7 @@
     {
      "id": 314,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 4660.820709612694,
      "y": 1905.5948694580904,
      "width": 0,
@@ -3976,7 +3976,7 @@
     {
      "id": 315,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 6496.150095856452,
      "y": 9004.703178070888,
      "width": 0,
@@ -3988,7 +3988,7 @@
     {
      "id": 316,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 9422.792020154571,
      "y": 10406.624640262587,
      "width": 0,
@@ -4000,7 +4000,7 @@
     {
      "id": 317,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 4909.580379851994,
      "y": 9779.829326641768,
      "width": 0,
@@ -4012,7 +4012,7 @@
     {
      "id": 318,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 9985.286037875676,
      "y": 4453.586677034451,
      "width": 0,
@@ -4024,7 +4024,7 @@
     {
      "id": 319,
      "name": "",
-     "type": "street_food_cart",
+     "type": "well",
      "x": 4688.9379060842,
      "y": 1832.7159881766354,
      "width": 0,

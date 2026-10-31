@@ -112,9 +112,12 @@ export const STR = {
   realmTier: (realm: string, tier: number) => `${realm} tầng ${tier}`,
   // Thanh tiến độ đổi tên theo cảnh giới (spec §3.4): phàm = Linh khí, Tiên giới = Tiên khí.
   linhKhi: 'Linh khí',
-  tienKhi: (have: number, need: number) => `Tiên khí ${Math.floor(have)}/${Math.round(need)}`,
+  // Có dấu phân cách nghìn từ v6.4: Tiên khí ×20 nên thanh Đạo Tổ ghi `9999/10000` —
+  // năm chữ số dính liền thì đọc nhầm hàng là chuyện chắc chắn xảy ra.
+  tienKhi: (have: number, need: number) =>
+    `Tiên khí ${Math.floor(have).toLocaleString('vi-VN')}/${Math.round(need).toLocaleString('vi-VN')}`,
   tienMax: 'Đỉnh cao Tiên giới',
-  /** Đạo Tổ đã nạp đầy 1 500: từ đây Tiên khí nhặt thêm mới đổi Uy Danh (spec v5.7 §3.4). */
+  /** Đạo Tổ đã nạp đầy 30 000: từ đây Tiên khí nhặt thêm mới đổi Uy Danh (spec v6.4 §3.4). */
   tienOverflow: 'Tiên khí dư → Uy Danh',
   swords: (n: number, max: number) => `Kiếm ${n}/${max}`,
   roomTop: 'Top phòng',

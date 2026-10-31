@@ -10,7 +10,7 @@
  "tileheight": 100,
  "infinite": false,
  "nextlayerid": 6,
- "nextobjectid": 135,
+ "nextobjectid": 134,
  "properties": [
   {
    "name": "name",
@@ -2016,7 +2016,7 @@
     {
      "id": 44,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 10403.364749194783,
      "y": 3577.392957220877,
      "width": 0,
@@ -2028,7 +2028,7 @@
     {
      "id": 45,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 7428.651805455428,
      "y": 3407.2683769938035,
      "width": 0,
@@ -2040,7 +2040,7 @@
     {
      "id": 46,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 645.2104492340625,
      "y": 7140.1653072408335,
      "width": 0,
@@ -2052,7 +2052,7 @@
     {
      "id": 47,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 6770.96519936532,
      "y": 4328.986322314988,
      "width": 0,
@@ -2064,7 +2064,7 @@
     {
      "id": 48,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 4571.72306925992,
      "y": 8392.784582087901,
      "width": 0,
@@ -2076,7 +2076,7 @@
     {
      "id": 49,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 10787.161944258247,
      "y": 970.7349312914055,
      "width": 0,
@@ -2088,7 +2088,7 @@
     {
      "id": 50,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 759.1087035668927,
      "y": 8295.265496818714,
      "width": 0,
@@ -2100,7 +2100,7 @@
     {
      "id": 51,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 6818.816773561986,
      "y": 2092.3247148480605,
      "width": 0,
@@ -2112,7 +2112,7 @@
     {
      "id": 52,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 2033.3863774091078,
      "y": 7174.431982708333,
      "width": 0,
@@ -2124,7 +2124,7 @@
     {
      "id": 53,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 6910.228716903855,
      "y": 8900.645965669964,
      "width": 0,
@@ -2136,7 +2136,7 @@
     {
      "id": 54,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 8815.47815869447,
      "y": 4977.15390163098,
      "width": 0,
@@ -2148,7 +2148,7 @@
     {
      "id": 55,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 11038.13009276459,
      "y": 11260.470327451618,
      "width": 0,
@@ -2160,7 +2160,7 @@
     {
      "id": 56,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 11214.896972075934,
      "y": 7665.307285825355,
      "width": 0,
@@ -2172,7 +2172,7 @@
     {
      "id": 57,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 962.4439365967755,
      "y": 5509.857732644109,
      "width": 0,
@@ -2184,7 +2184,7 @@
     {
      "id": 58,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 10378.940916296933,
      "y": 1251.5306997407472,
      "width": 0,
@@ -2196,7 +2196,7 @@
     {
      "id": 59,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 5481.647431621179,
      "y": 1138.0819820522656,
      "width": 0,
@@ -2208,7 +2208,7 @@
     {
      "id": 60,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 2552.9970895382553,
      "y": 7172.80972061298,
      "width": 0,
@@ -2220,7 +2220,7 @@
     {
      "id": 61,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 8334.048737698758,
      "y": 5399.7294285278385,
      "width": 0,
@@ -2232,7 +2232,7 @@
     {
      "id": 62,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 1722.8543100399918,
      "y": 10410.823462242222,
      "width": 0,
@@ -2244,7 +2244,7 @@
     {
      "id": 63,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 2012.1086451779975,
      "y": 9061.691124700406,
      "width": 0,
@@ -2256,7 +2256,7 @@
     {
      "id": 64,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 5757.080183009028,
      "y": 4260.139784647894,
      "width": 0,
@@ -2268,7 +2268,7 @@
     {
      "id": 65,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 482.6697893332427,
      "y": 3109.1817087142954,
      "width": 0,
@@ -2280,7 +2280,7 @@
     {
      "id": 66,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 6541.221768284845,
      "y": 2007.3795239002932,
      "width": 0,
@@ -2292,7 +2292,7 @@
     {
      "id": 67,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 1264.1701545002657,
      "y": 11139.025277439347,
      "width": 0,
@@ -2304,7 +2304,7 @@
     {
      "id": 68,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 2179.04778591574,
      "y": 5481.896264446634,
      "width": 0,
@@ -2316,7 +2316,7 @@
     {
      "id": 69,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 6264.645119934488,
      "y": 11023.878538215668,
      "width": 0,
@@ -2328,7 +2328,7 @@
     {
      "id": 70,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 2611.7036874361997,
      "y": 10966.62723058764,
      "width": 0,
@@ -2340,7 +2340,7 @@
     {
      "id": 71,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 11165.706518625984,
      "y": 1215.8021788233505,
      "width": 0,
@@ -2352,7 +2352,7 @@
     {
      "id": 72,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 3223.7329799464533,
      "y": 4623.371142529388,
      "width": 0,
@@ -2364,7 +2364,7 @@
     {
      "id": 73,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 6973.593182397717,
      "y": 7047.551968421195,
      "width": 0,
@@ -2376,7 +2376,7 @@
     {
      "id": 74,
      "name": "",
-     "type": "stone_lantern",
+     "type": "pine",
      "x": 954.2927534654236,
      "y": 9383.334496703072,
      "width": 0,
@@ -2388,7 +2388,7 @@
     {
      "id": 75,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 4453.847482630757,
      "y": 8186.515964970516,
      "width": 0,
@@ -2400,7 +2400,7 @@
     {
      "id": 76,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 1642.807234681743,
      "y": 7569.793437552134,
      "width": 0,
@@ -2412,7 +2412,7 @@
     {
      "id": 77,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 9126.05617996491,
      "y": 3442.6789815408056,
      "width": 0,
@@ -2424,7 +2424,7 @@
     {
      "id": 78,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3327.3881466642533,
      "y": 3590.7747014025144,
      "width": 0,
@@ -2436,7 +2436,7 @@
     {
      "id": 79,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 499.12637057794575,
      "y": 8878.566652040943,
      "width": 0,
@@ -2448,7 +2448,7 @@
     {
      "id": 80,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 11103.109181687865,
      "y": 8908.09826381183,
      "width": 0,
@@ -2460,7 +2460,7 @@
     {
      "id": 81,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 5320.783636633995,
      "y": 6944.912771090276,
      "width": 0,
@@ -2472,7 +2472,7 @@
     {
      "id": 82,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 5645.6785457365095,
      "y": 11173.198839221592,
      "width": 0,
@@ -2484,7 +2484,7 @@
     {
      "id": 83,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 10367.101488297683,
      "y": 7025.720489535103,
      "width": 0,
@@ -2496,7 +2496,7 @@
     {
      "id": 84,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 4245.694886323616,
      "y": 11278.543724380173,
      "width": 0,
@@ -2508,7 +2508,7 @@
     {
      "id": 85,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 10001.197488725573,
      "y": 11342.337735701169,
      "width": 0,
@@ -2520,7 +2520,7 @@
     {
      "id": 86,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 11241.993545233316,
      "y": 6144.424339125294,
      "width": 0,
@@ -2532,7 +2532,7 @@
     {
      "id": 87,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 2776.8794130331516,
      "y": 5600.301899887326,
      "width": 0,
@@ -2544,7 +2544,7 @@
     {
      "id": 88,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 1414.6385945358963,
      "y": 793.2940794658969,
      "width": 0,
@@ -2556,7 +2556,7 @@
     {
      "id": 89,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 4190.301202674646,
      "y": 3363.661760026009,
      "width": 0,
@@ -2568,7 +2568,7 @@
     {
      "id": 90,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3568.4745186813548,
      "y": 3762.076584042586,
      "width": 0,
@@ -2580,7 +2580,7 @@
     {
      "id": 91,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 7240.162351327983,
      "y": 11213.536683422139,
      "width": 0,
@@ -2592,7 +2592,7 @@
     {
      "id": 92,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3643.8538375139055,
      "y": 9818.494832034437,
      "width": 0,
@@ -2604,7 +2604,7 @@
     {
      "id": 93,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 894.4206184840561,
      "y": 3608.0105842120297,
      "width": 0,
@@ -2616,7 +2616,7 @@
     {
      "id": 94,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 8166.001090693613,
      "y": 2009.5268138400347,
      "width": 0,
@@ -2628,7 +2628,7 @@
     {
      "id": 95,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 7733.634616080531,
      "y": 606.2341084622597,
      "width": 0,
@@ -2640,7 +2640,7 @@
     {
      "id": 96,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 7505.90632326247,
      "y": 1965.8581843534828,
      "width": 0,
@@ -2652,7 +2652,7 @@
     {
      "id": 97,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 4942.115207162312,
      "y": 8414.049155426836,
      "width": 0,
@@ -2664,7 +2664,7 @@
     {
      "id": 98,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3424.3480835215328,
      "y": 9607.911952673792,
      "width": 0,
@@ -2676,7 +2676,7 @@
     {
      "id": 99,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 9406.528178629485,
      "y": 11208.775142207187,
      "width": 0,
@@ -2688,7 +2688,7 @@
     {
      "id": 100,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 5624.493549591795,
      "y": 3013.088139052724,
      "width": 0,
@@ -2700,7 +2700,7 @@
     {
      "id": 101,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 8769.835331414946,
      "y": 2130.183924782322,
      "width": 0,
@@ -2712,7 +2712,7 @@
     {
      "id": 102,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 9101.861069915412,
      "y": 551.8084162523805,
      "width": 0,
@@ -2724,7 +2724,7 @@
     {
      "id": 103,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3475.951570792327,
      "y": 4699.122236858147,
      "width": 0,
@@ -3087,18 +3087,6 @@
      "type": "stone_lantern",
      "x": 5456.26806504083,
      "y": 3313.534555331506,
-     "width": 0,
-     "height": 0,
-     "rotation": 0,
-     "visible": true,
-     "point": true
-    },
-    {
-     "id": 134,
-     "name": "",
-     "type": "stone_lantern",
-     "x": 10756.51704933204,
-     "y": 7240.09106983798,
      "width": 0,
      "height": 0,
      "rotation": 0,

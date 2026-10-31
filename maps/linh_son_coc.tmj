@@ -2659,7 +2659,7 @@
     {
      "id": 204,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 6095.569646702795,
      "y": 5099.931157197869,
      "width": 0,
@@ -2671,7 +2671,7 @@
     {
      "id": 205,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 6214.412876969168,
      "y": 6926.603408797914,
      "width": 0,
@@ -2683,7 +2683,7 @@
     {
      "id": 206,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 1911.4350910933347,
      "y": 10155.162883769639,
      "width": 0,
@@ -2695,7 +2695,7 @@
     {
      "id": 207,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 10526.494381962451,
      "y": 3544.830260954795,
      "width": 0,
@@ -2707,7 +2707,7 @@
     {
      "id": 208,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 3266.189951376088,
      "y": 11217.033914630087,
      "width": 0,
@@ -2719,7 +2719,7 @@
     {
      "id": 209,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 7192.35338302564,
      "y": 5436.404977021806,
      "width": 0,
@@ -2731,7 +2731,7 @@
     {
      "id": 210,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 1875.9646431290132,
      "y": 8218.219877974698,
      "width": 0,
@@ -2743,7 +2743,7 @@
     {
      "id": 211,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 10104.363833201322,
      "y": 3786.709841895324,
      "width": 0,
@@ -2755,7 +2755,7 @@
     {
      "id": 212,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 11289.963236947706,
      "y": 3713.9450857758397,
      "width": 0,
@@ -2767,7 +2767,7 @@
     {
      "id": 213,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 4529.686351607795,
      "y": 9092.641387504482,
      "width": 0,
@@ -2779,7 +2779,7 @@
     {
      "id": 214,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 5780.599525073079,
      "y": 9040.01187925425,
      "width": 0,
@@ -2791,7 +2791,7 @@
     {
      "id": 215,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 11103.406989872956,
      "y": 8346.074426596835,
      "width": 0,
@@ -2803,7 +2803,7 @@
     {
      "id": 216,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 8182.742788978921,
      "y": 2889.358469909893,
      "width": 0,
@@ -2815,7 +2815,7 @@
     {
      "id": 217,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 732.1109559994551,
      "y": 3522.6321915732688,
      "width": 0,
@@ -2827,7 +2827,7 @@
     {
      "id": 218,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 9364.674218486365,
      "y": 7375.041200657654,
      "width": 0,
@@ -2839,7 +2839,7 @@
     {
      "id": 219,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 7319.766741446635,
      "y": 2769.7032196128202,
      "width": 0,
@@ -2851,7 +2851,7 @@
     {
      "id": 220,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 9817.611666761923,
      "y": 3121.6391266960845,
      "width": 0,
@@ -2863,7 +2863,7 @@
     {
      "id": 221,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 707.4240950356975,
      "y": 7413.455551934025,
      "width": 0,
@@ -2875,7 +2875,7 @@
     {
      "id": 222,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 6146.8820334643915,
      "y": 2812.589887052454,
      "width": 0,
@@ -2887,7 +2887,7 @@
     {
      "id": 223,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 7417.458095867617,
      "y": 8798.98458639574,
      "width": 0,
@@ -2899,7 +2899,7 @@
     {
      "id": 224,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 1918.3603830218617,
      "y": 10484.301775021595,
      "width": 0,
@@ -2911,7 +2911,7 @@
     {
      "id": 225,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 1539.883182832079,
      "y": 1610.8193567255867,
      "width": 0,
@@ -2923,7 +2923,7 @@
     {
      "id": 226,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 8429.837436828555,
      "y": 1066.6213645390812,
      "width": 0,
@@ -2935,7 +2935,7 @@
     {
      "id": 227,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 8804.701971439756,
      "y": 10856.381588074664,
      "width": 0,
@@ -2947,7 +2947,7 @@
     {
      "id": 228,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 10724.406869678898,
      "y": 10031.222609609325,
      "width": 0,
@@ -2959,7 +2959,7 @@
     {
      "id": 229,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 1061.0275293917814,
      "y": 8963.486181366008,
      "width": 0,
@@ -2971,7 +2971,7 @@
     {
      "id": 230,
      "name": "",
-     "type": "bush_with_flowers",
+     "type": "pine",
      "x": 10179.476617094977,
      "y": 3468.627159924007,
      "width": 0,
@@ -2983,7 +2983,7 @@
     {
      "id": 231,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 7113.096172591862,
      "y": 2505.513887498033,
      "width": 0,
@@ -2995,7 +2995,7 @@
     {
      "id": 232,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 2091.9332848914764,
      "y": 1575.6047293731967,
      "width": 0,
@@ -3007,7 +3007,7 @@
     {
      "id": 233,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 11130.903020803851,
      "y": 1041.4087149613786,
      "width": 0,
@@ -3019,7 +3019,7 @@
     {
      "id": 234,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 2335.902951234035,
      "y": 8112.707655730892,
      "width": 0,
@@ -3031,7 +3031,7 @@
     {
      "id": 235,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 7808.183648900582,
      "y": 11118.224095995354,
      "width": 0,
@@ -3043,7 +3043,7 @@
     {
      "id": 236,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 10415.804725847847,
      "y": 4572.550297804776,
      "width": 0,
@@ -3055,7 +3055,7 @@
     {
      "id": 237,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 627.7391512634101,
      "y": 1281.603942778329,
      "width": 0,
@@ -3067,7 +3067,7 @@
     {
      "id": 238,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3820.7262895793947,
      "y": 735.5989247293198,
      "width": 0,
@@ -3079,7 +3079,7 @@
     {
      "id": 239,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 5785.002951361127,
      "y": 9340.348046453171,
      "width": 0,
@@ -3091,7 +3091,7 @@
     {
      "id": 240,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 4442.657357189181,
      "y": 2746.411063955762,
      "width": 0,
@@ -3103,7 +3103,7 @@
     {
      "id": 241,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 7882.017650853937,
      "y": 11115.814308828916,
      "width": 0,
@@ -3115,7 +3115,7 @@
     {
      "id": 242,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 10220.58833239744,
      "y": 1751.722247003883,
      "width": 0,
@@ -3127,7 +3127,7 @@
     {
      "id": 243,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3798.992626268633,
      "y": 9094.08008094927,
      "width": 0,
@@ -3139,7 +3139,7 @@
     {
      "id": 244,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3451.9344687191497,
      "y": 9195.10782115488,
      "width": 0,
@@ -3151,7 +3151,7 @@
     {
      "id": 245,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 8442.613623370115,
      "y": 4039.0004834970987,
      "width": 0,
@@ -3163,7 +3163,7 @@
     {
      "id": 246,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 1787.3046696815863,
      "y": 3107.4838068406902,
      "width": 0,
@@ -3175,7 +3175,7 @@
     {
      "id": 247,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 7518.447313738551,
      "y": 2869.369888035189,
      "width": 0,
@@ -3187,7 +3187,7 @@
     {
      "id": 248,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3441.8220638459043,
      "y": 3932.9843217653097,
      "width": 0,
@@ -3199,7 +3199,7 @@
     {
      "id": 249,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 8641.043421603623,
      "y": 681.1684334539409,
      "width": 0,
@@ -3211,7 +3211,7 @@
     {
      "id": 250,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 10159.045820357982,
      "y": 3552.5766297569503,
      "width": 0,
@@ -3223,7 +3223,7 @@
     {
      "id": 251,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 9071.084734193188,
      "y": 6791.999071409028,
      "width": 0,
@@ -3235,7 +3235,7 @@
     {
      "id": 252,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 3735.5692276302348,
      "y": 7172.6864395011,
      "width": 0,
@@ -3247,7 +3247,7 @@
     {
      "id": 253,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 9862.23038783515,
      "y": 7242.818886393606,
      "width": 0,
@@ -3259,7 +3259,7 @@
     {
      "id": 254,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 2146.410281232599,
      "y": 7172.122905143268,
      "width": 0,
@@ -3271,7 +3271,7 @@
     {
      "id": 255,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 1946.94687368615,
      "y": 10847.572897290993,
      "width": 0,
@@ -3283,7 +3283,7 @@
     {
      "id": 256,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 11394.590486623718,
      "y": 11171.27075755621,
      "width": 0,
@@ -3295,7 +3295,7 @@
     {
      "id": 257,
      "name": "",
-     "type": "stone_lantern",
+     "type": "rock_small",
      "x": 4654.12537195697,
      "y": 2438.3106755669414,
      "width": 0,

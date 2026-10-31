@@ -287,6 +287,15 @@ func itemJobs() []Job {
 		{Anim: "idle", Frames: 4, Out: "items/chest", W: 512, H: 512, Pivot: "feet", Poses: "1) still 2) rattling left 3) still 4) rattling right"},
 		{Anim: "open", Frames: 6, Out: "items/chest", W: 512, H: 512, Pivot: "feet", Poses: "1) closed shaking 2) lid cracking open 3) lid bursting open with light 4) items flying out 5) light fading 6) open empty chest"},
 	}
+	// Viên Tiên khí mệnh giá lớn (spec v6.4 §3.4 mục 10 · ART_PROMPTS §9.2c). Hai ảnh riêng
+	// cho 100 và 500: sau khi Tiên khí ×20 thì đây là hai mệnh giá người chơi vòng lại nhặt,
+	// nên chúng phải to và sáng hơn hẳn mấy viên lẻ.
+	jobs = append(jobs,
+		Job{Name: "item_tien_orb_100", Priority: 2, Mode: modeSprite, Out: "items/tien_orb_100.png", W: 192, H: 192, Pivot: "center",
+			Prompt: styleObject + " A glowing golden celestial energy orb with a tiny cloud swirl inside, sparkly, bright gold and white, centered." + negative},
+		Job{Name: "item_tien_orb_500", Priority: 2, Mode: modeSprite, Out: "items/tien_orb_500.png", W: 256, H: 256, Pivot: "center",
+			Prompt: styleObject + " A huge radiant golden celestial energy orb with swirling clouds and light rays bursting out, majestic, much brighter and grander than a small orb, centered." + negative})
+
 	jobs = append(jobs, Job{Name: "chest", Priority: 2, Mode: modeSheet, Rows: []int{4, 6}, Segs: segs,
 		Prompt: sheetPrompt(styleObject, chest, []int{4, 6}, segs, true)})
 	return jobs
@@ -301,18 +310,26 @@ var decorList = []string{"a red plastic stool", "an old bicycle leaning", "a pil
 // núi hay rừng tre hay mặt hồ băng. Bảy cái dưới đây là bộ cây cỏ / đá / giếng mà
 // `cmd/mapgen/decor.go` gắn tag cho Linh Sơn Cốc, Trúc Lâm, Băng Nguyệt Hồ và Thiên Đình.
 //
-// **Tên tệp lấy từ `names`, không suy từ câu mô tả.** `decorID("a small rock")` ra
-// `small_rock`, còn mapgen cần `rock_small` — suy tên từ mô tả là tự tạo ra đúng loại lệch
-// tên đã làm 543 vật trang trí vô hình.
-var natureDecorNames = []string{"rock_small", "pine", "bamboo", "bush_small", "lantern", "well", "banner"}
-var natureDecorPoses = []string{
-	"a small grey rock with patches of moss",
-	"a small dark green pine tree seen from above",
-	"a small clump of green bamboo stalks with leaves",
-	"a small round leafy green bush",
-	"a hanging red paper lantern with a tassel",
-	"an old round stone water well with a wooden frame",
-	"a hanging cloth shop banner on a bamboo pole, plain fabric, no text",
+// **MỖI VẬT MỘT JOB RIÊNG, không gộp thành sheet.** Lượt đầu tôi gộp 7 vật vào một sheet
+// 4+3 và nó hỏng theo kiểu tệ nhất: bên vẽ vẽ đủ cả 7, nhưng bộ cắt tìm khung bằng **vùng
+// pixel liền nhau** nên cây thông chạm bụi tre bị đếm thành MỘT khung — ra 5 khung cho 7
+// tên, và mọi tên sau chỗ dính bị **gán lệch**: `bush_small.png` hoá ra là cái đèn lồng,
+// `lantern.png` là cái giếng. Art sai nhãn tệ hơn hẳn art thiếu: `check:assets` thấy đủ tệp
+// nên báo xanh, và bản đồ rải đèn lồng ở chỗ lẽ ra là bụi cây.
+//
+// Sheet chỉ an toàn khi các hình chắc chắn rời nhau. Bộ "tấu hài phố" ở trên may mắn rời
+// nhau; bộ cây cỏ thì tán lá luôn chạm nhau. Một vật một ảnh thì không có gì để cắt sai.
+//
+// Tên tệp lấy từ `Out`, không suy từ câu mô tả: `decorID("a small rock")` ra `small_rock`
+// còn mapgen cần `rock_small`.
+var natureDecor = []struct{ name, desc string }{
+	{"rock_small", "a small grey boulder with patches of green moss, sitting on the ground"},
+	{"pine", "a single small dark green pine tree seen from a high angle, narrow conical shape"},
+	{"bamboo", "a small clump of green bamboo stalks with a few leaves, narrow and upright"},
+	{"bush_small", "a single small round leafy green bush, compact and low"},
+	{"lantern", "a single hanging red paper lantern with a gold tassel"},
+	{"well", "an old round stone water well with a small wooden roof frame"},
+	{"banner", "a cloth shop banner hanging from a bamboo pole, plain cream fabric, no text, no letters"},
 }
 
 func mapJobs() []Job {
@@ -344,20 +361,18 @@ func mapJobs() []Job {
 	rows := []int{5, 5, 1}
 	wind := []Seg{{Anim: "wind", Frames: 4, Out: "zones", W: 256, H: 256, Pivot: "center",
 		Poses: "a white cartoon wind gust arrow with swirl lines and light blue outline pointing right, sliding right a little more each frame"}}
-	// Bộ cây cỏ / đá / giếng mapgen đang cần (Q27-2). Ưu tiên 3 như bộ decor phố: thiếu nó
-	// thì bản đồ trống trải chứ không vẽ placeholder, nên không chặn ai.
-	natSegs := []Seg{
-		{Anim: "decor", Frames: len(natureDecorNames), Out: "decor", Names: natureDecorNames, W: 128, H: 128, Pivot: "center", Each: true,
-			Poses: "seven different props in this order: " + strings.Join(natureDecorPoses, ", ")},
-	}
-	natRows := []int{4, 3}
 	jobs = append(jobs,
 		Job{Name: "decor_sheet", Priority: 3, Mode: modeSheet, Rows: rows, Segs: segs,
 			Prompt: sheetPrompt(styleObject, "top-down 3/4 view decoration props", rows, segs, false)},
-		Job{Name: "decor_nature", Priority: 3, Mode: modeSheet, Rows: natRows, Segs: natSegs,
-			Prompt: sheetPrompt(styleObject, "top-down 3/4 view nature and village decoration props", natRows, natSegs, false)},
 		Job{Name: "zone_wind", Priority: 3, Mode: modeSheet, Rows: []int{4}, Segs: wind,
 			Prompt: sheetPrompt(styleObject, "a wind gust effect", []int{4}, wind, false)})
+	// Bộ cây cỏ / đá / giếng mapgen đang cần (Q27-2), mỗi vật một job. Ưu tiên 3 như bộ decor
+	// phố: thiếu thì bản đồ trống trải chứ không vẽ placeholder, nên không chặn ai.
+	for _, d := range natureDecor {
+		jobs = append(jobs, Job{Name: "decor_" + d.name, Priority: 3, Mode: modeSprite,
+			Out: "decor/" + d.name + ".png", W: 256, H: 256, Pivot: "center",
+			Prompt: styleObject + " Top-down 3/4 view of " + d.desc + ", a single object centered in the frame, nothing else." + negative})
+	}
 	return jobs
 }
 
