@@ -40,6 +40,47 @@ check(await btn.isVisible(), 'nút 💬 hiện ở trang chủ (WebKit/iPhone)')
 
 await btn.click();
 await page.waitForSelector('.fb-box', { timeout: 10000 });
+// Mọi chữ trong form phải ĐỌC ĐƯỢC.
+//
+// Kiểm bằng độ tương phản thật (WCAG), không phải bằng mắt tôi. Bản đầu của form này chép
+// `color: var(--ink, …)` từ bảng màu trang quản trị, chỗ đó `--ink` là màu sáng; trong game
+// `--ink` gần đen — nên cả hộp thành chữ đen trên nền đen và tôi không hề biết cho tới khi
+// anh chụp màn hình gửi. Mắt người kiểm bằng ảnh thì bỏ sót; con số thì không.
+const dim = await page.evaluate(() => {
+  const lum = (c) => {
+    const [r, g, b] = c.map((v) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const parse = (s) => (s.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+  // Nền thật = nền của tổ tiên gần nhất không trong suốt.
+  const bgOf = (el) => {
+    for (let n = el; n; n = n.parentElement) {
+      const bg = getComputedStyle(n).backgroundColor;
+      const a = (bg.match(/[\d.]+/g) ?? [])[3];
+      if (bg !== 'transparent' && a !== '0') return parse(bg);
+    }
+    return [255, 255, 255];
+  };
+  const ratio = (a, b) => {
+    const [x, y] = [lum(a) + 0.05, lum(b) + 0.05];
+    return x > y ? x / y : y / x;
+  };
+  const bad = [];
+  for (const el of document.querySelectorAll('.fb-box, .fb-box *')) {
+    // Chỉ xét phần tử có chữ của chính nó.
+    const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+    const isField = el.matches('select, textarea, input, button');
+    if (!own && !isField) continue;
+    const r = ratio(parse(getComputedStyle(el).color), bgOf(el));
+    if (r < 3) bad.push(`${el.tagName.toLowerCase()}.${el.className || '-'} = ${r.toFixed(2)}:1`);
+  }
+  return bad;
+});
+check(dim.length === 0, `mọi chữ trong form đều đọc được (tương phản ≥ 3:1)${dim.length ? ' — mờ: ' + dim.join(', ') : ''}`);
+
 await page.selectOption('.fb-kind', 'bug');
 await page.fill('.fb-body', `Thử từ iPhone. ${XSS}`);
 await page.click('.fb-send');
