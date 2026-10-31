@@ -1351,3 +1351,51 @@ Mục tiêu anh ghi là ≈ 30 phút — **31 phút**, khớp.
 Lưu ý một chỗ tôi làm chưa sạch: `CHANGES_v6_6.md` anh dán lúc 09:48 đã bị cuốn vào một
 commit trước đó qua `git add -A` mà tôi **chưa đọc**. Nội dung không bị sửa, chỉ là nó nằm
 trong lịch sử trước khi được làm. Từ giờ tôi soát `docs/_raw/` trước mỗi lần commit.
+
+## Phiên 31/10 (tiếp 6) — ADMIN_SPEC A2/A3/A4 + CI art chết + rà toàn bộ
+
+Bảy bước theo yêu cầu "làm hết một lượt, không dừng giữa chừng để hỏi". Mỗi bước một
+commit riêng, chạy đủ cổng kiểm, deploy lên `:9999`.
+
+| Bước | Việc | Build deploy |
+|---|---|---|
+| 1 | A3 hòm thư góp ý (§7) | `20261031_1811_53be62c` |
+| 2 | Rà bảng xếp hạng + nút ẩn (§6.2) | `20261031_1827_0efc19c` |
+| — | Sửa form góp ý chữ đen trên nền đen (anh báo bằng ảnh) | `20261031_1830_3517dc5` |
+| 3 | A2 người chơi, cờ nghi hack, kick/cấm (§6) | `20261031_1843_fc429eb` |
+| 4 | A4 xem bản đồ trực tiếp + bố cục theo cảnh giới (§5) | `20261031_1900_1040dd6` |
+| 5 | Lỗi người chơi lên trang quản trị + sửa bộ đếm FPS | `20261031_1915_9973dec` |
+| 6 | CI chặn art không ai nạp (`check:dead`) | `20261031_1919_b335083` |
+| 7 | Rà trạng thái toàn bộ → `docs/STATUS_AUDIT.md` | — |
+
+### Ba lỗi tìm ra trong lúc làm, không phải việc được giao
+
+**1. Trang quản trị có thể làm SẬP SERVER.** `Room.Clients()` và `collectStats()` duyệt
+`z.clients` / `g.Players` / `g.Obstacles` từ goroutine HTTP trong lúc goroutine phòng ghi
+vào. Go dừng hẳn chương trình khi gặp "concurrent map iteration and map write" — một người
+bấm Vào trận đúng nhịp làm mới 2 giây của dashboard là đủ. Dashboard đã chạy như thế từ A1.
+Sửa bằng `Room.Query` (đẩy hàm đọc sang chạy trên goroutine phòng, giữa hai tick). Test
+giữ: 248 lần đọc song song với 120 lượt vào/ra; đổi ngược lại thì `-race` báo ngay.
+
+**2. `perfStats().fps` luôn bằng 0 với người chơi thường.** Bộ đếm khung nằm trong
+`perfLine`, mà `perfLine` chỉ chạy khi mở overlay F3. Mà `perfStats()` chính là thứ đính
+kèm vào sự kiện `gpu_pressure` gửi về server — nên mọi báo cáo "máy tôi chậm" từ máy thật
+đều ghi `"fps":0`: đúng con số cần nhất thì trống.
+
+**3. Form góp ý chữ đen trên nền đen.** Chép `color: var(--ink, …)` từ bảng màu trang quản
+trị sang, chỗ đó `--ink` là màu sáng còn trong game nó gần đen. Tôi đã xem ảnh chụp
+WebKit/iPhone lúc làm A3 và vẫn không thấy — ảnh thì mắt bỏ sót, con số thì không. Nay
+`feedback.mjs` tính độ tương phản WCAG từng phần tử, dưới 3:1 là trượt.
+
+### Phát hiện từ chính hệ thống ghi lỗi từ xa
+
+iPhone thật (Safari 18.7) gửi về `gpu_pressure` ở **216 MB / trần 256**, trên bản build đã
+có đợt giảm bộ nhớ. Tự hạ chất lượng chạy rồi mà bộ nhớ **tăng** (214 ở "Vừa" → 216 ở
+"Thấp") — hạ chất lượng không trả lại texture đã nạp. `chars:7`: bảy atlas nhân vật trong
+bộ nhớ. Nút thắt **B13 để mở**, câu hỏi **Q30**.
+
+### Còn lại
+
+Xem `docs/STATUS_AUDIT.md` mục 9. Gọn lại: **mục nhỏ (đổi số/config) không còn mục nào
+chưa làm** — đã kiểm từng khoá config của v6.4 → v6.11. Mục lớn còn 3: `ev`+`ia` sang nhị
+phân (62% gói), giải phóng atlas nhân vật trên iOS, và 34 tệp art không ai nạp (Q31).
