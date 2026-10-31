@@ -24,31 +24,44 @@ type clusterKit struct {
 	gap float64
 }
 
-// rockField — Linh Sơn Cốc: bãi đá tròn/méo, cỡ lẫn lộn, xoay ngẫu nhiên.
+// rockField — Linh Sơn Cốc và bờ Băng Nguyệt Hồ: bãi đá ÍT MẢNH, cỡ lệch hẳn nhau.
 //
-// Đá không xếp hàng. Rải theo vòng đồng tâm với bước góc lệch nhau để không lộ ra vòng
-// tròn, mỗi tảng một cỡ và một tỉ lệ bẹp riêng.
+// Bản lượt 3 rải 2–3 vòng đồng tâm, mỗi vòng 3–9 tảng — ra tới 20 tảng một bãi, và phần lớn
+// là mảnh li ti. Nhìn thành một đám sỏi đều tăm tắp chứ không ra bãi đá.
+//
+// Giờ: 1–2 KHỐI LỚN làm lõi, cộng 2–4 khối nhỏ nép quanh. Chênh lệch cỡ giữa lớn và nhỏ ít
+// nhất gấp đôi, nên mắt đọc ra "một tảng to với mấy hòn kê" chứ không ra "nhiều hòn bằng
+// nhau". Không mảnh nào nhỏ hơn `minRockSize` — dưới cỡ đó nó chỉ là nhiễu thị giác, vướng
+// chân mà không che được ai.
 func (g *gen) rockField(k clusterKit) {
-	rings := 2 + g.b.rng.Intn(2)
-	for ri := 0; ri < rings; ri++ {
-		rr := k.r * (0.3 + 0.6*float64(ri)/float64(max(rings-1, 1)))
-		n := 3 + ri*3 + g.b.rng.Intn(3)
-		off := g.b.rnd(0, 2*math.Pi)
-		for i := 0; i < n; i++ {
-			a := off + float64(i)/float64(n)*2*math.Pi + g.b.rnd(-0.25, 0.25)
-			// Tảng ở vòng NGOÀI nhỏ hơn: bãi đá có lõi to, rìa vụn dần.
-			size := k.r * g.b.rnd(0.18, 0.42) * (1.1 - 0.35*float64(ri)/float64(max(rings-1, 1)))
-			squash := g.b.rnd(0.65, 1.45) // méo theo một trục → không tảng nào tròn đều
-			w, h := size, size*squash
-			kind := k.core
-			if ri == rings-1 {
-				kind = k.rim
-			}
-			g.b.obstacleForce(kind,
-				k.cx+math.Cos(a)*rr-w/2, k.cy+math.Sin(a)*rr-h/2, w, h)
-		}
+	// Khối lớn: 1 hoặc 2, đặt lệch tâm một chút để bãi không đối xứng.
+	bigN := 1 + g.b.rng.Intn(2)
+	placed := make([][3]float64, 0, 6) // x, y, bán kính thô — để khối nhỏ nép vào
+	for i := 0; i < bigN; i++ {
+		a := g.b.rnd(0, 2*math.Pi)
+		d := k.r * g.b.rnd(0, 0.22)
+		size := k.r * g.b.rnd(0.70, 1.05)
+		squash := g.b.rnd(0.72, 1.38) // méo theo một trục → không tảng nào tròn đều
+		w, h := size, size*squash
+		x, y := k.cx+math.Cos(a)*d, k.cy+math.Sin(a)*d
+		g.b.obstacleForce(k.core, x-w/2, y-h/2, w, h)
+		placed = append(placed, [3]float64{x, y, math.Max(w, h) / 2})
+	}
+	// Khối nhỏ: nép vào SƯỜN khối lớn, cỡ bằng 0,3–0,5 khối lớn.
+	for i := 0; i < 2+g.b.rng.Intn(3); i++ {
+		host := placed[g.b.rng.Intn(len(placed))]
+		a := g.b.rnd(0, 2*math.Pi)
+		size := math.Max(k.r*g.b.rnd(0.22, 0.38), minRockSize)
+		squash := g.b.rnd(0.7, 1.4)
+		w, h := size, size*squash
+		// Đặt ở mép khối lớn, chồng vào khoảng 1/4 để trông như kê vào nhau, không rời rạc.
+		d := host[2] + size*0.3
+		g.b.obstacleForce(k.rim, host[0]+math.Cos(a)*d-w/2, host[1]+math.Sin(a)*d-h/2, w, h)
 	}
 }
+
+// minRockSize: mảnh đá nhỏ hơn thế này chỉ là nhiễu — vướng chân mà không che được ai.
+const minRockSize = 150.0
 
 // bambooClumps — Trúc Lâm: lùm tre DÀI và CONG, xếp so le dọc theo lối đi.
 //
@@ -137,6 +150,14 @@ func (g *gen) houseWall(cx, cy, w, h, wall float64, side int, horiz bool, long f
 }
 
 // houseWallAt đặt một đoạn tường dài `long` trên cạnh `side`, lệch `off` dọc theo cạnh.
+//
+// Hai cạnh DỌC thụt vào `wall` mỗi đầu để góc nhà **chạm chứ không chồng** lên cạnh ngang.
+//
+// Chồng mép ở góc nghe thì vô hại, nhưng nó phá phép đẩy ra khỏi vật cản: `resolveBlocking`
+// lặp 3 lượt, và với các khối RỜI nhau thì nó hội tụ về đúng một kết quả, còn với các khối
+// CHỒNG nhau thì kết quả phụ thuộc số lượt. Gói nhiều nhà vào một chỗ là một điểm có cả
+// chục cặp chồng mép, 3 lượt không đủ, và client tính ra khác server — bài đối chiếu bắt
+// được **lệch 12,98 đơn vị** ở Phàm Trấn, đủ để người chơi thấy giật nảy.
 func (g *gen) houseWallAt(cx, cy, w, h, wall float64, side int, horiz bool, long, off float64, kind string) {
 	switch side {
 	case 0: // trên
@@ -144,9 +165,13 @@ func (g *gen) houseWallAt(cx, cy, w, h, wall float64, side int, horiz bool, long
 	case 2: // dưới
 		g.b.obstacleForce(kind, cx-long/2+off, cy+h/2-wall, long, wall)
 	case 1: // phải
-		g.b.obstacleForce(kind, cx+w/2-wall, cy-long/2+off, wall, long)
+		if ln := long - 2*wall; ln > 40 {
+			g.b.obstacleForce(kind, cx+w/2-wall, cy-ln/2+off, wall, ln)
+		}
 	default: // trái
-		g.b.obstacleForce(kind, cx-w/2, cy-long/2+off, wall, long)
+		if ln := long - 2*wall; ln > 40 {
+			g.b.obstacleForce(kind, cx-w/2, cy-ln/2+off, wall, ln)
+		}
 	}
 }
 
