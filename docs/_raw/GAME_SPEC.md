@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.7:** vật cản bỏ HP — chém được theo bậc cảnh giới, chém là biến mất ngay; không còn vật cản không phá được trong khu; luật sắp xếp bản đồ + kiểm tra liên thông theo từng cảnh giới (§5.3, §8.0, §8.1b, §8.2).
+
 **Thay đổi v6.6:** Tiên khí giảm từ ×20 xuống **×10** bản gốc (Chân Tiên 1 000 … Đạo Tổ 15 000); Thiêu Đốt Tiên khí vẫn 8–40/giây (frac 0.008) (§3.4, §4.1c).
 
 **Thay đổi v6.5:** phạm vi kỹ năng tính theo U = vòng hút EXP của người dùng (pickup_r × scale), đẩy lùi theo U người dùng; Tiên giới giữ tối đa 3 lượt Bí Kíp (§6.3).
@@ -426,9 +428,7 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 
 ### 5.3 Kiếm chạm quái / vật cản
 - Quái: 1 damage mỗi lần chạm (2 nếu có Cương Kiếm), cooldown mỗi cặp (kiếm, quái) 0.25s. Quái chết → **toàn bộ EXP rơi thành viên EXP** tại chỗ. Trong `orb_owner_secs` (1.5s) đầu, chỉ người chém hạ quái được nhặt; sau đó ai cũng nhặt được.
-- Vật cản: tính damage **theo người, không theo từng thanh kiếm** (trước đây mỗi thanh kiếm gây damage riêng → 60–400 kiếm xay nát vật cản trong chớp mắt). Mỗi người chỉ gây damage lên 1 vật cản tối đa 1 lần / 0.5s, khi có ít nhất 1 kiếm của họ chạm vật cản:
-  `damage = (r + 1) × (1 + 0.5 × (số_vòng − 1)) × (2 nếu có Cương Kiếm)` → mỗi vòng thêm +50% sức phá. Nhiều người cùng chém thì cộng dồn.
-  **Kiếm xuyên qua vật cản và không bị mất/bể** khi chém vật cản.
+- Vật cản: **không còn tính damage**. Kiếm của người đủ cảnh giới (bậc §8.2) chạm vào là vật cản biến mất ngay. Kiếm xuyên qua vật cản và không bị mất/bể.
 - Kiếm không tương tác với chính chủ.
 
 ## 6. EXP rải khắp bản đồ & vật phẩm
@@ -450,7 +450,7 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 | Tốc Kiếm | **Chỉ** tăng tốc độ quay: ω × 1.6. **Không** đổi chiều dài/bán kính/tầm chém | 12s | 12 |
 | Thần Hành | Tốc chạy × 1.4 | 10s | 12 |
 | Nam Châm | Bán kính hút đồ × 3 | 15s | 8 |
-| **Cương Kiếm** (độ cứng) | Kiếm cứng hơn: độ bền khi va kiếm × 1.5 (§5.2), sát thương lên quái và vật cản × 2 | 10s | 7 |
+| **Cương Kiếm** (độ cứng) | Kiếm cứng hơn: độ bền khi va kiếm × 1.5 (§5.2), sát thương lên quái × 2, **chém được vật cản cao hơn 1 bậc** (§8.2) | 10s | 7 |
 | Kim Cang (khiên) | Chặn 1 lần bị chém vào thân | 8s hoặc tới khi vỡ | 7 |
 | **Bí Kíp** | +1 lượt dùng kỹ năng của nhân vật mình (tối đa 2), xem §6.3 | – | 10 |
 | Song Bội Đan | EXP nhận × 2 | 20s | 5 |
@@ -542,6 +542,12 @@ Mỗi phòng là **1 thế giới gồm 5 khu vực tách biệt**. Mỗi khu v�
 | 4 | **Phàm Trấn** | **Lưới phố** kiểu thị trấn: nhà (khung tường gạch có cửa), chợ đêm (sạp hàng tạo hẻm 150/250/350), quảng trường nhỏ | Nhiều vật cản phá được nhất → thay đổi địa hình liên tục | 2 đài ở 2 quảng trường |
 | 5 | **Băng Nguyệt Hồ** | Hồ băng lớn ở giữa + đảo băng, bờ tuyết xung quanh, ít vật cản | **Mặt băng trơn**: trên băng di chuyển có quán tính (trượt, khó dừng/đổi hướng); bờ tuyết làm chậm 0.8 | 2 đài trên 2 đảo băng |
 
+- **Hướng sửa từng khu theo bản kiểm tra 31/10** (người Đại Thừa, scale 5):
+  - *Thiên Đình*: 2 sân môn phái bên phải bị **nhốt kín** (Đài bên trong không tới được), góc trên trái có túi kín; còn 51% chỗ trống. → Mở 3–4 cổng sân rộng ≥ 400, tường sân bậc 4; bỏ 30–40% tường gạch lẻ giữa sân trung tâm và sân môn phái, gom phần còn lại thành đảo.
+  - *Linh Sơn Cốc*: các dải vách chạy ngang cắt khu thành tầng, đèo quá hẹp → **cả nửa dưới (có 1 cổng, 1 Đài) bị cô lập**. → Mỗi dải vách ≥ 3 đèo rộng ≥ 300, vách bậc 5, đá tảng bậc 3.
+  - *Trúc Lâm Mê Cung*: hành lang ~150 → người to gần như kẹt khắp nơi (trống còn 46%). → Hành lang ≥ 220; tre chia bậc theo vòng: ngoài bậc 1, giữa bậc 2, lõi quanh Thiên Môn bậc 3 (muốn đi tắt vào tâm phải đủ Nguyên Anh, không thì tìm đường).
+  - *Phàm Trấn*: ổn nhất; nới ngõ giữa các khối nhà ≥ 160 (nhà = gạch bậc 2), giữ đường phố chính trống.
+  - *Băng Nguyệt Hồ*: ngược lại — **quá trống** (85%), chỉ có đá tảng lẻ. → Thêm 4–6 đảo băng nhỏ có đá tảng bậc 3 + tảng băng bậc 1 quanh 2 Đài làm chỗ nấp, vẫn giữ mặt hồ rộng.
 - Mỗi khu dùng thuật toán sinh riêng (`mapgen` nhận `zone_type`), vẫn tuân thủ: đường/quảng trường chính không vật cản, kiểm tra liên thông **trong khu**, §8.6 (không khối hình học lộ ra). Khu 1 giữ nguyên thuật toán §8.1.
 - **Băng trơn**: vận tốc mới = vận tốc cũ × 0.92 + hướng input × gia tốc nhỏ mỗi tick (tức là trượt dài); thiết kế art cần mặt băng bóng, vết trượt.
 - **Vào trận** (lần đầu hoặc "Chơi tiếp"): spawn ở **khu ít người thật nhất** (hòa → ngẫu nhiên), chỗ an toàn trong khu đó.
@@ -597,41 +603,55 @@ Bản đồ 12 000 × 12 000, tường biên không phá được. Mỗi phòng 
 
 Thêm lệnh `go run ./cmd/mapgen --seed N --png out.png` xuất ảnh xem trước để duyệt nhanh.
 
-### 8.2 Vật cản (chặn thân, có độ cứng)
+### 8.2 Vật cản — chém được theo cảnh giới (không còn độ cứng)
 
-| Loại | HP | Ghi chú |
-|---|---|---|
-| Hàng rào tre | 30 | Mỏng, dài |
-| Sạp hàng / xe đẩy | 80 | Vỡ ra: 30% rơi 1 item |
-| Tường gạch | 250 | |
-| Đá tảng | 800 | Rất lớn |
-| Tường đá cổ / biên map | ∞ | Không phá được |
+**Bỏ hẳn HP / độ cứng.** Mỗi vật cản có 1 **bậc** = cảnh giới tối thiểu để chém được. Kiếm của người **đủ cảnh giới** chạm vào → vật cản **biến mất ngay lập tức**, không hoạt ảnh vỡ, không đống đổ nát (chỉ 1 tiếng "bụp" ngắn). Người chưa đủ cảnh giới: kiếm đi xuyên như cũ, không có tác dụng.
+**Không còn vật cản nào không phá được** trong khu — chỉ **biên khu vực** là không qua được.
 
-Thời gian 1 người (đủ kiếm tối đa của cảnh giới) phá vỡ, theo công thức §5.3:
+| Bậc | Vật cản | Chém được từ | Hành lang tối thiểu giữa 2 vật cản cùng bậc (§8.1b) |
+|---|---|---|---|
+| 0 | Hàng rào tre, rào gỗ | Luyện Khí | – (ai cũng chém được) |
+| 1 | Sạp hàng, xe đẩy, tre mỏng (vòng ngoài Trúc Lâm) | Trúc Cơ | 150 |
+| 2 | Tường gạch (nhà Phàm Trấn, tường lẻ Thiên Đình), tre dày (vòng giữa Trúc Lâm) | Kim Đan | 160 |
+| 3 | Đá tảng, tre cổ thụ (lõi Trúc Lâm) | Nguyên Anh | 180 |
+| 4 | Tường đá (tường sân môn phái Thiên Đình, tường đá trong khu) | Hóa Thần | 220 |
+| 5 | Vách núi (Linh Sơn Cốc), đá tảng khổng lồ | Luyện Hư | 240 |
+| ∞ | Biên khu vực | Không bao giờ | – |
 
-| Cảnh giới (số vòng) | Sức phá/giây | Rào tre | Sạp hàng | Tường gạch | Đá tảng |
-|---|---|---|---|---|---|
-| Luyện Khí (1) | 2 | 15s | 40s | 125s | 400s |
-| Trúc Cơ (2) | 6 | 5s | 13s | 42s | 133s |
-| Kim Đan (3) | 12 | 2.5s | 6.7s | 21s | 67s |
-| Nguyên Anh (4) | 20 | 1.5s | 4s | 12.5s | 40s |
-| Hóa Thần (5) | 30 | 1s | 2.7s | 8.3s | 27s |
-| Đại Thừa (9) | 90 | 0.3s | 0.9s | 2.8s | 8.9s |
-| Đạo Tổ (14) | 210 | tức thì | 0.4s | 1.2s | 3.8s |
-
-→ Người nhỏ gần như không phá nổi tường gạch, đá tảng → dùng làm chỗ nấp thật sự. Người khổng lồ cảnh giới cao thì càn quét được — đúng cảm giác "đại năng".
+- Bậc gán theo **loại vật cản** (config `obstacles.min_realm`), mapgen có thể ghi đè từng vật bằng thuộc tính Tiled `min_realm` (vd tre trong Trúc Lâm theo vòng).
+- **Cương Kiếm** (§6.2): trong thời gian buff, chém được vật cản **cao hơn 1 bậc** so với cảnh giới.
+- Tiên giới chém được mọi vật cản (trừ biên).
+- **Nhận biết bậc**: vật cản cao hơn cảnh giới của mình hiện **viền tối mờ** khi nằm trong tầm kiếm; kiếm chạm vào → tia lửa nhỏ + chữ nổi "Cần {cảnh giới}" (tối đa 1 lần / 3s / vật cản). Vật cản mình chém được trông bình thường.
+- **Mọc lại** sau **30s** ở đúng chỗ cũ: 3s trước khi mọc nhấp nháy mờ cảnh báo; có người/quái đứng trong vùng → chờ trống rồi mới mọc (đẩy mượt ra như §8.2a).
+- Sạp hàng / xe đẩy bị chém: vẫn 30% rơi 1 item.
+- Bot: tìm đường coi vật cản mình chém được là "đi qua được, tốn thêm 0.3s".
 
 - **Hai vùng va chạm khác nhau cho mỗi vật cản:**
   - **Chân đế (footprint)** — chặn thân nhân vật và quái. Chỉ là phần sát mặt đất: mặc định hình elip/chữ nhật rộng 90% sprite, cao **30% sprite, nằm ở đáy**. Trong Tiled đặt được thủ công bằng thuộc tính `footprint` (nếu không có thì tính tự động như trên).
   - **Thân hình (visual bounds)** — vùng kiếm chém trúng để gây damage (đúng với cái người chơi nhìn thấy).
 - **Sắp xếp lớp vẽ theo chân (y-sort)**: nhân vật đứng phía sau (y chân nhỏ hơn đáy vật cản) được vẽ khuất sau vật cản; phần vật cản che lên nhân vật mình thì mờ đi 50% để vẫn thấy mình.
 - **Vật cản dạng dãy** (hàng rào, tường): art phải liền mạch, nối tiếp nhau không hở (tile ngang). Chỗ nào art có khe hở thì footprint cũng phải hở theo — người chơi thấy đi qua được thì phải đi qua được.
-- Kiếm đi xuyên vật cản và gây damage (mục 5.3).
-- Hiển thị 3 trạng thái theo HP: nguyên vẹn (>66%), nứt (33–66%), sắp vỡ (<33%).
-- **Vỡ** → thành đống đổ nát, đi qua được. Sau **30s** mọc lại:
-  - 3s trước khi mọc: hiệu ứng nhấp nháy cảnh báo.
-  - Nếu có nhân vật/quái đứng trong vùng lúc mọc → chờ tới khi trống rồi mới mọc (không kẹt người).
-  - Mọc lại với HP đầy.
+- Kiếm đi xuyên vật cản; chém được hay không theo bậc ở trên.
+
+### 8.1b Luật sắp xếp bản đồ (áp cho cả 5 khu, mapgen phải kiểm)
+
+**Nguyên tắc "không chém được thì phải đi lọt"**: người cảnh giới r chưa chém được vật cản bậc > r, nên mọi khe giữa hai vật cản phải đủ rộng cho người **to nhất** trong số những người không chém được chúng:
+- Khe giữa vật cản bậc A và bậc B ≥ `corridor_min[min(A, B)]` (bảng §8.2). Vật cản bậc 0 không cần (ai cũng chém được).
+- Lý do con số: bậc T chặn người cảnh giới < T, người to nhất trong nhóm đó là cảnh giới T−1 tầng 10 → đường kính thân `60 × scale` + 40 dư.
+
+**Khung bản đồ** (thay cho kiểu rải tường dài xuyên khu):
+1. **3 cấp đường**: đường chính rộng ≥ 600, **không bao giờ có vật cản**; đường phụ ≥ 300; ngõ hẹp chỉ nằm bên trong cụm.
+2. **Vật cản xếp thành "đảo"** giữa các đường (cụm nhà, cụm đá, cụm tre), mỗi đảo tối đa ~1 200 × 1 200. **Không tường liền dài quá 800**; tường dài hơn phải có khe ≥ `corridor_min` của bậc đó.
+3. **Đảo phân tầng**: viền ngoài bậc thấp (rào, sạp), lõi bậc cao (gạch, đá) → người nhỏ chui vào nấp, người lớn chém thẳng vào.
+4. **Quanh cổng, Thiên Môn, Đài Tiên Khí, bến Thiên Môn**: trống bán kính ≥ 600, có ≥ 3 lối vào rộng ≥ 400.
+5. **Mật độ vật cản** 18–28% diện tích khu; trống ở giữa/quanh đài (chỗ đánh nhau), dày hơn ở rìa (chỗ farm, phục kích).
+6. **Đối xứng** (xoay 4 phía hoặc gương) để mọi hướng vào công bằng.
+
+**Kiểm tra bắt buộc** — `cmd/mapgen --check` (CI fail nếu trượt): với **mỗi cảnh giới r = 0..13**, dùng thân to nhất của r (tầng 10) và **bỏ các vật cản bậc ≤ r** (vì r chém được), flood fill lưới 50:
+- Toàn bộ chỗ trống phải **liên thông** (không túi bị nhốt).
+- Mọi cổng, Thiên Môn, Đài, bến, điểm spawn đều tới được.
+- Diện tích trống ≥ 60%.
+- Xuất ảnh `docs/map_check/{khu}_r{r}.png`: xám = vật cản, cam = chỗ thân không lọt, đỏ = vùng bị nhốt.
 
 ### 8.2a Di chuyển mượt khi chạm vật cản (sửa lỗi giật)
 
@@ -1227,9 +1247,9 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   },
   "obstacles": {
     "footprint_w": 0.9, "footprint_h": 0.3, "occlusion_alpha": 0.5,
-    "regrow_secs": 30, "regrow_warn_secs": 3,
-    "hp": { "fence": 30, "stall": 80, "brick": 250, "boulder": 800 },
-    "dmg_cooldown_secs": 0.5, "dmg_per_extra_ring": 0.5,
+    "regrow_secs": 30, "regrow_warn_secs": 3, "hard_buff_extra_tier": 1, "cut_hint_cooldown_secs": 3,
+    "corridor_min": { "1": 150, "2": 160, "3": 180, "4": 220, "5": 240 },
+    "min_realm": { "fence": 0, "stall": 1, "cart": 1, "bamboo_wall": 1, "brick": 2, "boulder": 3, "stone_wall": 4, "cliff": 5, "boulder_huge": 5 },
     "stall_item_drop": 0.3
   },
   "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
@@ -1278,6 +1298,10 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - Vừa vào trận: hiện bảng mờ (nền 50%) giữa-dưới màn hình liệt kê điều khiển (di chuyển; Thiêu Đốt: Shift / nháy đúp giữ / 🔥; **Kỹ năng: Space / nút kỹ năng** (cần Bí Kíp); M minimap...). Tự mờ dần sau 5s (trùng thời gian bất tử) hoặc biến mất khi người chơi bắt đầu di chuyển.
 
 ## 17. Checklist test chấp nhận
+
+- [ ] Luyện Khí chém rào tre → biến mất ngay, không hoạt ảnh; chém tường gạch → không có tác dụng + chữ "Cần Kim Đan"; 30s sau rào mọc lại đúng chỗ.
+- [ ] `mapgen --check` pass cả 5 khu × 14 cảnh giới: không túi kín, mọi cổng/Đài/Thiên Môn tới được, trống ≥ 60%.
+- [ ] Không còn vật cản nào trong khu có bậc ∞ (chỉ biên khu).
 
 - [ ] Loa Phường của Bà Tám Luyện Khí 1 đẩy người Đạo Tổ đúng 540; Bà Tám Đạo Tổ đẩy người Luyện Khí đúng 3 240 (theo U người dùng, không theo người bị đẩy); đẩy không xuyên tường.
 - [ ] Không còn số phạm vi cố định nào trong code kỹ năng — mọi phạm vi đọc từ `skills.ranges_u` × U.

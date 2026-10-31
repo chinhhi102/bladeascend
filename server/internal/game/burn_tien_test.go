@@ -10,10 +10,10 @@ import (
 // Con số trong các test này lấy thẳng từ checklist §17 của spec, không tự đặt — có thế thì
 // test mới là bản dịch của spec chứ không phải bản chụp của code.
 //
-// Trần: 2 000 / 6 000 / 12 000 / 20 000 / 30 000. Đáy: 1 / 2 001 / 6 001 / 12 001 / 20 001.
-// Thiêu Đốt vẫn **8 · 16 · 24 · 32 · 40** mỗi giây như trước ×20 — vì `tien_frac_per_sec`
-// hạ từ 8% xuống 0,4% đúng theo §4.1c. Đó là chỗ dễ sửa sai nhất của lượt ×20: đổi trần mà
-// quên đổi tỉ lệ thì một giây chạy nhanh tốn cả trăm viên Tiên khí.
+// Trần: 1 000 / 3 000 / 6 000 / 10 000 / 15 000. Đáy: 1 / 1 001 / 3 001 / 6 001 / 10 001.
+// Thiêu Đốt vẫn **8 · 16 · 24 · 32 · 40** mỗi giây — `tien_frac_per_sec` đi ngược lại đúng
+// bằng mức trần đổi (v6.4 ×20 → 0,4%; v6.6 ×10 → 0,8%). Đó là chỗ dễ sửa sai nhất của mỗi
+// lần đổi thang: đổi trần mà quên đổi tỉ lệ thì một giây chạy nhanh tốn cả trăm viên.
 
 // tienPlayer dựng một người đã vào Tiên giới với đúng ngần này Tiên khí.
 func tienPlayer(t *testing.T, g *Game, khi float64) *Player {
@@ -63,15 +63,15 @@ func TestTienRealmFromTotalKhi(t *testing.T) {
 	}{
 		{0, -1, "chưa có Tiên khí"},
 		{1, 0, "1 → Chân Tiên"},
-		{2000, 0, "2 000 → vẫn Chân Tiên"},
-		{2001, 1, "2 001 → Kim Tiên"},
-		{6000, 1, "6 000 → vẫn Kim Tiên"},
-		{6001, 2, "6 001 → Thái Ất"},
-		{12000, 2, "12 000 → vẫn Thái Ất"},
-		{12001, 3, "12 001 → Đại La"},
-		{20000, 3, "20 000 → vẫn Đại La"},
-		{20001, 4, "20 001 → Đạo Tổ"},
-		{30000, 4, "30 000 → vẫn Đạo Tổ"},
+		{1000, 0, "1 000 → vẫn Chân Tiên"},
+		{1001, 1, "1 001 → Kim Tiên"},
+		{3000, 1, "3 000 → vẫn Kim Tiên"},
+		{3001, 2, "3 001 → Thái Ất"},
+		{6000, 2, "6 000 → vẫn Thái Ất"},
+		{6001, 3, "6 001 → Đại La"},
+		{10000, 3, "10 000 → vẫn Đại La"},
+		{10001, 4, "10 001 → Đạo Tổ"},
+		{15000, 4, "15 000 → vẫn Đạo Tổ"},
 	} {
 		if got := g.Prog.TienRealmForKhi(c.khi); got != c.want {
 			t.Errorf("%s: ra %d, muốn %d", c.name, got, c.want)
@@ -89,41 +89,41 @@ func TestTienPromotesByKhi(t *testing.T) {
 	if want := g.Prog.TienLevel(0); p.Level != want {
 		t.Errorf("level %d, muốn %d — `Level` phải đi theo Tiên khí", p.Level, want)
 	}
-	g.GainTienKhi(p, 2000) // 2 001 → Kim Tiên
+	g.GainTienKhi(p, 1000) // 1 001 → Kim Tiên
 	if got := g.TienRealmOf(p); got != 1 {
-		t.Errorf("2 001 Tiên khí phải là Kim Tiên, ra idx %d", got)
+		t.Errorf("1 001 Tiên khí phải là Kim Tiên, ra idx %d", got)
 	}
 	if want := g.Prog.TienLevel(1); p.Level != want {
 		t.Errorf("level %d, muốn %d", p.Level, want)
 	}
 }
 
-// Đạo Tổ: nạp thanh bình thường tới 1 500; CHỈ khi đang đúng 1 500 thì dư mới đổi Uy Danh.
+// Đạo Tổ: nạp thanh bình thường tới 15 000; CHỈ khi đang đúng 15 000 thì dư mới đổi Uy Danh.
 func TestDaoToFillsThenConverts(t *testing.T) {
 	g := rulesGame(t)
-	p := tienPlayer(t, g, 20001) // vừa vào Đạo Tổ
+	p := tienPlayer(t, g, 10001) // vừa vào Đạo Tổ
 	if got := g.TienRealmOf(p); got != 4 {
-		t.Fatalf("20 001 Tiên khí phải là Đạo Tổ, ra idx %d", got)
+		t.Fatalf("10 001 Tiên khí phải là Đạo Tổ, ra idx %d", got)
 	}
 	scoreBefore := p.Score
 
-	g.GainTienKhi(p, 100) // 20 101, chưa đầy
-	if p.TienKhi != 20101 {
-		t.Errorf("Tiên khí %.0f, muốn 20 101 — Đạo Tổ phải nạp được thanh", p.TienKhi)
+	g.GainTienKhi(p, 100) // 10 101, chưa đầy
+	if p.TienKhi != 10101 {
+		t.Errorf("Tiên khí %.0f, muốn 10 101 — Đạo Tổ phải nạp được thanh", p.TienKhi)
 	}
 	if p.Score != scoreBefore {
-		t.Error("chưa đầy 30 000 mà đã cộng Uy Danh")
+		t.Error("chưa đầy 15 000 mà đã cộng Uy Danh")
 	}
 
-	g.GainTienKhi(p, 9899) // đúng 30 000
-	if p.TienKhi != 30000 || p.Score != scoreBefore {
-		t.Errorf("Tiên khí %.0f / Uy Danh +%.1f — đúng 30 000 thì chưa được cộng gì",
+	g.GainTienKhi(p, 4899) // đúng 15 000
+	if p.TienKhi != 15000 || p.Score != scoreBefore {
+		t.Errorf("Tiên khí %.0f / Uy Danh +%.1f — đúng 15 000 thì chưa được cộng gì",
 			p.TienKhi, p.Score-scoreBefore)
 	}
 
 	g.GainTienKhi(p, 500) // dư 500 → +50 Uy Danh (10:1)
-	if p.TienKhi != 30000 {
-		t.Errorf("Tiên khí %.0f — thanh không được vượt 30 000", p.TienKhi)
+	if p.TienKhi != 15000 {
+		t.Errorf("Tiên khí %.0f — thanh không được vượt 15 000", p.TienKhi)
 	}
 	if got := p.Score - scoreBefore; math.Abs(got-50) > 1e-6 {
 		t.Errorf("dư 500 Tiên khí được %.1f Uy Danh, muốn 50 (10:1)", got)
@@ -133,23 +133,24 @@ func TestDaoToFillsThenConverts(t *testing.T) {
 // Đạo Tổ Thiêu Đốt được, và đốt xong phải nạp lại đầy mới đổi Uy Danh tiếp (Q26 đã xong).
 func TestDaoToCanBurn(t *testing.T) {
 	g := rulesGame(t)
-	p := tienPlayer(t, g, 30000)
+	p := tienPlayer(t, g, 15000)
 	p.Moving, p.Burning = true, true
 	if !g.Burning(p) {
 		t.Fatal("Đạo Tổ đầy thanh mà không Thiêu Đốt được — đây chính là Q26")
 	}
 	g.burnExp(p, 1.0)
-	if want := 30000 - 40.0; math.Abs(p.TienKhi-want) > 1e-6 {
-		t.Errorf("đốt 1 giây còn %.1f Tiên khí, muốn %.0f (0,4%% × 10 000 = 40/giây)", p.TienKhi, want)
+	if want := 15000 - 40.0; math.Abs(p.TienKhi-want) > 1e-6 {
+		t.Errorf("đốt 1 giây còn %.1f Tiên khí, muốn %.0f (0,8%% × 5 000 = 40/giây)", p.TienKhi, want)
 	}
 	if g.TienRealmOf(p) != 4 {
 		t.Error("đốt một giây mà rớt khỏi Đạo Tổ")
 	}
 }
 
-// Tốc độ đốt = 0,4% ĐỘ RỘNG KHOẢNG của cảnh giới: 8 · 16 · 24 · 32 · 40 (spec v6.4 §4.1c).
+// Tốc độ đốt = 0,8% ĐỘ RỘNG KHOẢNG của cảnh giới: 8 · 16 · 24 · 32 · 40 (spec v6.6 §4.1c).
 //
-// Lượng TUYỆT ĐỐI giữ nguyên sau khi Tiên khí ×20 — đó là cả ý của việc hạ 8% xuống 0,4%.
+// Lượng TUYỆT ĐỐI giữ nguyên qua CẢ HAI lần đổi thang (v6.4 ×20, v6.6 ×10) — đó là cả ý
+// của việc tỉ lệ đi ngược lại đúng bằng mức trần đổi.
 func TestTienBurnRatePerRealm(t *testing.T) {
 	g := rulesGame(t)
 	for _, c := range []struct {
@@ -157,11 +158,11 @@ func TestTienBurnRatePerRealm(t *testing.T) {
 		want float64
 		name string
 	}{
-		{1000, 8, "Chân Tiên"},
-		{4000, 16, "Kim Tiên"},
-		{8000, 24, "Thái Ất"},
-		{16000, 32, "Đại La"},
-		{25000, 40, "Đạo Tổ"},
+		{500, 8, "Chân Tiên"},
+		{2000, 16, "Kim Tiên"},
+		{4000, 24, "Thái Ất"},
+		{8000, 32, "Đại La"},
+		{12000, 40, "Đạo Tổ"},
 	} {
 		p := tienPlayer(t, g, c.khi)
 		if got := g.tienBurnPerSec(p); math.Abs(got-c.want) > 1e-6 {
@@ -174,14 +175,14 @@ func TestTienBurnRatePerRealm(t *testing.T) {
 // Đốt không bao giờ xuống dưới đáy cảnh giới đang đứng.
 func TestTienBurnStopsAtRealmFloor(t *testing.T) {
 	g := rulesGame(t)
-	p := tienPlayer(t, g, 7000) // Thái Ất, đáy 6 001
+	p := tienPlayer(t, g, 3500) // Thái Ất, đáy 3 001
 	p.Moving, p.Burning = true, true
-	// 999 điểm trên đáy, đốt 24/giây → ~42 giây là chạm đáy; 60 vòng là dư để thử vượt qua.
+	// 499 điểm trên đáy, đốt 24/giây → ~21 giây là chạm đáy; 60 vòng là dư để thử vượt qua.
 	for i := 0; i < 60; i++ {
 		g.burnExp(p, 1.0)
 	}
-	if p.TienKhi < 6001-1e-9 {
-		t.Errorf("Tiên khí tụt xuống %.1f, đáy Thái Ất là 6 001", p.TienKhi)
+	if p.TienKhi < 3001-1e-9 {
+		t.Errorf("Tiên khí tụt xuống %.1f, đáy Thái Ất là 3 001", p.TienKhi)
 	}
 	if g.TienRealmOf(p) != 2 {
 		t.Error("Thiêu Đốt làm rớt cảnh giới — spec cấm")
@@ -191,31 +192,30 @@ func TestTienBurnStopsAtRealmFloor(t *testing.T) {
 	}
 }
 
-// Checklist §17 (v6.4): Thái Ất đang **9 000** bị chém → Kim Tiên, Tiên khí **2 001**;
-// người chém (Tiên giới) **+3 499**; rơi **2 099** Tiên khí thành ≤ 40 viên.
-func TestCutTienGioiThaiAt9000(t *testing.T) {
+// Checklist §17 (v6.6): Thái Ất đang **4 500** bị chém → Kim Tiên, Tiên khí **1 001**;
+// người chém (Tiên giới) **+1 749**; rơi **1 049** Tiên khí thành ≤ 40 viên.
+func TestCutTienGioiThaiAt4500(t *testing.T) {
 	g := rulesGame(t)
-	victim := tienPlayer(t, g, 9000)
+	victim := tienPlayer(t, g, 4500)
 	att := tienPlayer(t, g, 1)
 	attBefore := att.TienKhi
 
 	g.robTienKhi(att, victim)
 
-	if victim.TienKhi != 2001 {
-		t.Errorf("nạn nhân còn %.0f Tiên khí, muốn 2 001 (đáy Kim Tiên)", victim.TienKhi)
+	if victim.TienKhi != 1001 {
+		t.Errorf("nạn nhân còn %.0f Tiên khí, muốn 1 001 (đáy Kim Tiên)", victim.TienKhi)
 	}
 	if got := g.TienRealmOf(victim); got != 1 {
 		t.Errorf("nạn nhân ở idx %d, muốn 1 (Kim Tiên)", got)
 	}
-	// loss = 9 000 − 2 001 = 6 999; cướp 50% = 3 499.5
-	if got := att.TienKhi - attBefore; math.Abs(got-3499.5) > 0.6 {
-		t.Errorf("người chém nhận %.1f Tiên khí, muốn ≈3 499", got)
+	// loss = 4 500 − 1 001 = 3 499; cướp 50% = 1 749.5
+	if got := att.TienKhi - attBefore; math.Abs(got-1749.5) > 0.6 {
+		t.Errorf("người chém nhận %.1f Tiên khí, muốn ≈1 749", got)
 	}
-	if got := totalTienOrbs(g); got != 2099 {
-		t.Errorf("rơi %d điểm Tiên khí, muốn 2 099 (30%% của 6 999)", got)
+	if got := totalTienOrbs(g); got != 1049 {
+		t.Errorf("rơi %d điểm Tiên khí, muốn 1 049 (30%% của 3 499)", got)
 	}
-	// Trần 40 viên là phần MỚI của v6.4: với bộ mệnh giá cũ {10,2,1} thì 2 099 điểm là 210
-	// viên rải quanh một cái xác.
+	// Trần 40 viên: với bộ mệnh giá cũ {10,2,1} thì 1 049 điểm là 105 viên quanh một cái xác.
 	if n := countTienOrbs(g); n > 40 {
 		t.Errorf("rơi %d viên, spec cho tối đa 40", n)
 	}
@@ -224,7 +224,7 @@ func TestCutTienGioiThaiAt9000(t *testing.T) {
 // Checklist §17: Chân Tiên bị chém → sàn Đại Thừa (tầng 1, 0%), Tiên khí 0.
 func TestCutChanTienFallsToDaiThuaFloor(t *testing.T) {
 	g := rulesGame(t)
-	victim := tienPlayer(t, g, 1600)
+	victim := tienPlayer(t, g, 800)
 	att := g.AddPlayer(SpawnOptions{Name: "A", Char: g.Cfg.Characters[1]})
 
 	g.robTienKhi(att, victim)
@@ -239,16 +239,16 @@ func TestCutChanTienFallsToDaiThuaFloor(t *testing.T) {
 	if want := g.Prog.Threshold(wantLevel); math.Abs(victim.TotalExp-want) > 1e-6 {
 		t.Errorf("total_exp %.0f, muốn %.0f (sàn Đại Thừa)", victim.TotalExp, want)
 	}
-	// Checklist §17 (v6.4): Chân Tiên 1 600 Tiên khí bị chém → rơi 480.
-	if got := totalTienOrbs(g); got != 480 {
-		t.Errorf("rơi %d điểm Tiên khí, muốn 480 (30%% của 1 600)", got)
+	// Checklist §17 (v6.6): Chân Tiên 800 Tiên khí bị chém → rơi 240.
+	if got := totalTienOrbs(g); got != 240 {
+		t.Errorf("rơi %d điểm Tiên khí, muốn 240 (30%% của 800)", got)
 	}
 }
 
 // v5.9: người chém là PHÀM (không nhặt được Tiên khí) thì vẫn phải rơi đủ 30%.
 func TestMortalAttackerStillDropsTienKhi(t *testing.T) {
 	g := rulesGame(t)
-	victim := tienPlayer(t, g, 1600)
+	victim := tienPlayer(t, g, 800)
 	att := g.AddPlayer(SpawnOptions{Name: "A", Char: g.Cfg.Characters[1]}) // Luyện Khí
 
 	g.robTienKhi(att, victim)
@@ -256,8 +256,8 @@ func TestMortalAttackerStillDropsTienKhi(t *testing.T) {
 	if att.TienKhi != 0 {
 		t.Errorf("người phàm nhận %.0f Tiên khí — spec nói không nhận được", att.TienKhi)
 	}
-	if got := totalTienOrbs(g); got != 480 {
-		t.Errorf("rơi %d điểm Tiên khí, muốn 480 — phần rơi ra đất không phụ thuộc người chém", got)
+	if got := totalTienOrbs(g); got != 240 {
+		t.Errorf("rơi %d điểm Tiên khí, muốn 240 — phần rơi ra đất không phụ thuộc người chém", got)
 	}
 }
 
@@ -265,7 +265,7 @@ func TestMortalAttackerStillDropsTienKhi(t *testing.T) {
 // nhân vật, nên viên rơi sát chân là nằm khuất hẳn — đó là lỗi "chém mà không thấy rơi".
 func TestTienOrbsScatterFarEnough(t *testing.T) {
 	g := rulesGame(t)
-	victim := tienPlayer(t, g, 9000)
+	victim := tienPlayer(t, g, 4500)
 	victim.Pos = Vec{X: 5000, Y: 5000}
 	att := tienPlayer(t, g, 1)
 

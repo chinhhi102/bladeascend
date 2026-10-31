@@ -170,13 +170,13 @@ func TestOrbsOnlyGoToTheRightCultivator(t *testing.T) {
 	}
 }
 
-// Spec v6.4 §3.4: cảnh giới Tiên suy ra từ tổng Tiên khí; trần là 2 000, 6 000, 12 000,
-// 20 000, 30 000 (×20 so với v5.9) và **viên đầu tiên là vào Chân Tiên ngay**.
+// Spec v6.6 §3.4: cảnh giới Tiên suy ra từ tổng Tiên khí; trần là 1 000, 3 000, 6 000,
+// 10 000, 15 000 (×10 so với v5.9) và **viên đầu tiên là vào Chân Tiên ngay**.
 func TestTienKhiPromotesAtThresholds(t *testing.T) {
 	g := altarGame(t)
 	p := g.AddPlayer(SpawnOptions{Name: "P", Level: g.Prog.TopMortalLevel(), Swords: 1})
 	p.TotalExp = g.Prog.MaxExp() // đầy thanh Đại Thừa 10 mới nhặt được Tiên khí
-	for i, want := range []float64{2000, 6000, 12000, 20000, 30000} {
+	for i, want := range []float64{1000, 3000, 6000, 10000, 15000} {
 		if got := g.Prog.TienCeil(i); got != want {
 			t.Fatalf("trần Tiên giới %d = %v, muốn %v", i, got, want)
 		}
@@ -188,12 +188,12 @@ func TestTienKhiPromotesAtThresholds(t *testing.T) {
 	if g.TienRealmOf(p) != 0 {
 		t.Fatalf("viên Tiên khí đầu tiên phải vào Chân Tiên ngay, đang %d", g.TienRealmOf(p))
 	}
-	g.GainTienKhi(p, 20000) // tổng 20 001 → Đạo Tổ
+	g.GainTienKhi(p, 10000) // tổng 10 001 → Đạo Tổ
 	if got := g.TienRealmOf(p); got != 4 {
-		t.Fatalf("20 001 Tiên khí phải tới Đạo Tổ (4), đang %d", got)
+		t.Fatalf("10 001 Tiên khí phải tới Đạo Tổ (4), đang %d", got)
 	}
 }
 
 // Luật cướp đoạt Tiên khí khi bị chém nằm ở `burn_tien_test.go`
-// (TestCutTienGioiThaiAt9000, TestCutChanTienFallsToDaiThuaFloor) — con số lấy thẳng từ
-// checklist §17 của spec v6.4.
+// (TestCutTienGioiThaiAt4500, TestCutChanTienFallsToDaiThuaFloor) — con số lấy thẳng từ
+// checklist §17 của spec v6.6.

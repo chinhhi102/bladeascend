@@ -1323,3 +1323,31 @@ Nên bước sau nên chuyển `ev` + `ia` sang nhị phân trước — hai ph�
 **Cờ `proto=1|2` và thoả thuận lúc handshake cũng chưa làm, và cố ý chưa làm**: chưa có
 message v2 nào chạy trên dây để mà chọn. Làm cờ trước khi có thứ để bật là làm một công tắc
 không nối vào đâu.
+
+## Phiên 31/10 (tiếp 5) — v6.6: Tiên khí ×10 thay vì ×20
+
+Anh dán `CHANGES_v6_6.md` ngay sau khi tôi báo con số 62 phút. Đây đúng là câu trả lời cho
+cảnh báo cân bằng đó, nên làm luôn.
+
+- Trần **[1 000, 3 000, 6 000, 10 000, 15 000]** (×10 so với v5.9, trước đó v6.4 để ×20).
+  Đáy: 1 / 1 001 / 3 001 / 6 001 / 10 001.
+- `burn.tien_frac_per_sec` **0.004 → 0.008**. Thiêu Đốt vẫn **đúng 8 · 16 · 24 · 32 · 40**
+  mỗi giây — tỉ lệ đi ngược lại đúng bằng mức trần đổi, cả hai lần.
+- Mệnh giá viên 500/100/10/2/1 và trần 40 viên giữ nguyên.
+- Sửa test theo checklist §17 mới. Cả bốn con số khớp đúng từ code, không chỉnh tay:
+  Thái Ất 4 500 bị chém → Kim Tiên **1 001**, người chém **+1 749**, rơi **1 049**;
+  Chân Tiên 800 → rơi **240**; Đạo Tổ trần **15 000**.
+
+**Nhịp lên Đạo Tổ, ôm trọn 2 Đài Tiên Khí của một khu (5,33 điểm/giây):**
+
+| Mốc | v6.4 (×20) | v6.6 (×10) |
+|---|---|---|
+| Chân Tiên → Kim Tiên | 6 phút | **3 phút** |
+| Lên tới Đạo Tổ | 62 phút | **31 phút** |
+| Nạp đầy để đổi Uy Danh | 94 phút | **47 phút** |
+
+Mục tiêu anh ghi là ≈ 30 phút — **31 phút**, khớp.
+
+Lưu ý một chỗ tôi làm chưa sạch: `CHANGES_v6_6.md` anh dán lúc 09:48 đã bị cuốn vào một
+commit trước đó qua `git add -A` mà tôi **chưa đọc**. Nội dung không bị sửa, chỉ là nó nằm
+trong lịch sử trước khi được làm. Từ giờ tôi soát `docs/_raw/` trước mỗi lần commit.

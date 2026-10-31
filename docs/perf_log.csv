@@ -22,3 +22,4 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 11,2026-10-31,,"Bộ nhớ GPU 1426→150MB - chia ô nền 1024 + huỷ ô xa",S4,,,,,,,,44.0,,,266,,150.0,0,,,,,,,,,,"giả lập iPhone DPR3, 2 phút chỗ đông; TRƯỚC: 1426MB vào trận / 1958MB Đạo Tổ; 0 lỗi",
 11b,2026-10-31,,"Như trên - máy bàn 1280x720",S4,,,,,,,,58.3,,0.81,118,,98.0,0,,,,,,,,,,"TRƯỚC: 1416MB vào trận / 1911MB Đạo Tổ",
 12,2026-10-31,,"Protocol v2 bước 1 - Entity Store + bài đo đi theo khoảng cách",NETBENCH,,,,,,6.9,,,,,,,,0,0.0,,,,,,,,,"4 lần quay lại THẬT trên 4 lượt (trước: 0, bài đo không chạm tới); placeholder 0/4744 khung; gói vẫn 6.9KB cần đường nhị phân v2",
+13,2026-10-31,,"v6.6 Tiên khí ×10 (từ ×20)",S5,,,,,,,,,,,,,,,,,,,,,,,"lên Đạo Tổ ôm 2 đài 62 → 31 phút (mục tiêu spec ≈30); Thiêu Đốt vẫn 8/16/24/32/40 mỗi giây",
