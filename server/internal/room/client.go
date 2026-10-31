@@ -49,6 +49,29 @@ type Client struct {
 	// RefusedCmds đếm lệnh bị từ chối, cho cờ nghi hack "Hành động bị từ chối" (§6.1).
 	RefusedCmds int
 
+	// Flags: cờ nghi hack của kết nối này (§6.1). Không bao giờ nil — xem `NewClient`.
+	// CHỈ gắn cờ; không có đường nào từ đây dẫn tới việc ngắt kết nối (xem flags.go).
+	Flags *Flags
+	// IP là địa chỉ THÔ, chỉ giữ trong bộ nhớ của kết nối đang mở và chỉ để hai việc §6 cần:
+	// hiện che bớt cho admin (`113.161.x.x`), và so khi cấm theo IP. Không ghi ra đĩa, không
+	// vào telemetry — chỗ đó dùng bản băm (TELEMETRY_SPEC §1.3).
+	IP string
+	// UA là User-Agent, để cột "Thiết bị / trình duyệt" (§6).
+	UA string
+	// JoinedAt là lúc kết nối vào phòng, cho cột "thời gian sống".
+	JoinedAt time.Time
+
+	// pingMu giữ ba số dưới đây: chúng được ghi từ goroutine đọc WebSocket và đọc từ
+	// goroutine gom số liệu cho trang quản trị.
+	pingMu sync.Mutex
+	rttMs  float64
+	fps    float64
+	// corrections: số lần server kéo vị trí client về / phút (§6).
+	corrections int
+	corrStart   time.Time
+	// lastPingMs: mốc đồng hồ client gửi ở lần ping trước (xem NotePing).
+	lastPingMs float64
+
 	PlayerID uint32
 	room     *Room
 
@@ -111,7 +134,55 @@ func (c *Client) DebugAllowed(now time.Time) bool {
 const debugRecheckEvery = 60 * time.Second
 
 func NewClient(c Conn, debug bool) *Client {
-	return &Client{Conn: c, Debug: debug}
+	return &Client{Conn: c, Debug: debug, Flags: newFlags(), JoinedAt: time.Now()}
+}
+
+// NotePing ghi RTT đo được, và gắn cờ "Ping giả" nếu mốc thời gian vô lý (§6.1).
+//
+// `clientMs` là đồng hồ của MÁY NGƯỜI CHƠI nên nó lệch so với server là bình thường — múi
+// giờ, đồng hồ chạy sai, máy vừa ngủ dậy. Nên không so hai đồng hồ với nhau; chỉ đo khoảng
+// cách giữa hai lần chính client đó gửi, và chỉ coi là giả khi nó đi LÙI.
+func (c *Client) NotePing(now time.Time, clientMs float64) {
+	c.pingMu.Lock()
+	last := c.lastPingMs
+	c.lastPingMs = clientMs
+	if last > 0 {
+		if d := clientMs - last; d < 0 {
+			c.pingMu.Unlock()
+			c.NoteFakePing(now, d)
+			return
+		}
+	}
+	c.pingMu.Unlock()
+}
+
+// NoteRTT ghi độ trễ vòng do client tự báo qua telemetry.
+func (c *Client) NoteRTT(rtt, fps float64) {
+	c.pingMu.Lock()
+	defer c.pingMu.Unlock()
+	if rtt > 0 {
+		c.rttMs = rtt
+	}
+	if fps > 0 {
+		c.fps = fps
+	}
+}
+
+// NoteCorrection đếm một lần server kéo vị trí client về (§6 cột "hiệu chỉnh / phút").
+func (c *Client) NoteCorrection(now time.Time) {
+	c.pingMu.Lock()
+	defer c.pingMu.Unlock()
+	if now.Sub(c.corrStart) > time.Minute {
+		c.corrStart, c.corrections = now, 0
+	}
+	c.corrections++
+}
+
+// Net trả về RTT, FPS và số hiệu chỉnh/phút cho trang quản trị.
+func (c *Client) Net() (rttMs, fps float64, corrections int) {
+	c.pingMu.Lock()
+	defer c.pingMu.Unlock()
+	return c.rttMs, c.fps, c.corrections
 }
 
 // SetInput is called from the connection goroutine; the room applies it on its next tick.

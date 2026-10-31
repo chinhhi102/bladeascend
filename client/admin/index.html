@@ -9,6 +9,8 @@
   <a href="#dashboard" class="on">Dashboard</a>
   <a href="#rooms">Phòng &amp; Khu</a>
   <a href="#feedback">Góp ý <span id="fbcount" class="pill" hidden>0</span></a>
+  <a href="#players">Người chơi <span id="flagcount" class="pill warn" hidden>0</span></a>
+  <a href="#bans">Danh sách cấm</a>
   <a href="#board">Bảng xếp hạng</a>
   <a href="#audit">Nhật ký</a>
   <button id="logout">Đăng xuất</button>
@@ -34,6 +36,25 @@
       <a id="fbcsv" href="/api/admin/feedback.csv" download>Xuất CSV</a>
     </div>
     <div id="fblist"></div>
+  </section>
+  <section id="players" hidden>
+    <h2>Người chơi đang online</h2>
+    <p class="hint">Cờ nghi hack chỉ là <strong>dấu hiệu</strong>, không phải bằng chứng —
+      mạng chập chờn, hai anh em chung nhà, máy yếu nhấp liên tục đều gắn cờ được.
+      Server không bao giờ tự kick ai; mọi thao tác dưới đây đều do anh bấm và phải nêu lý do.</p>
+    <div class="filters">
+      <label><input id="plflag" type="checkbox"> Chỉ người có cờ</label>
+      <input id="plq" type="search" placeholder="Tìm tên hoặc guest_id...">
+      <span id="plcount" class="hint"></span>
+    </div>
+    <div id="pllist"></div>
+  </section>
+  <section id="bans" hidden>
+    <h2>Danh sách cấm</h2>
+    <p class="hint">Cấm theo <code>guest_id</code> và IP cùng lúc. Gỡ cấm thì gỡ cả hai.</p>
+    <table id="bantbl"><thead><tr>
+      <th>Từ</th><th>guest_id</th><th>IP</th><th>Hết hạn</th><th>Lý do</th><th></th>
+    </tr></thead><tbody></tbody></table>
   </section>
   <section id="board" hidden>
     <h2>Bảng xếp hạng — rà soát</h2>

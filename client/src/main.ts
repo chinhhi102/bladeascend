@@ -15,7 +15,7 @@ const ZONE_ART_WAIT_MS = 2000;
 
 import { FLAG, PROTOCOL_VERSION } from './net/protocol';
 import { pendingRejoin, watchContextLoss } from './render/glrecover';
-import type { DeadMsg, GameMap, ServerMsg, Snapshot, Welcome } from './net/protocol';
+import type { DeadMsg, GameMap, KickedMsg, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
 import { isMobile } from './render/device';
@@ -27,6 +27,7 @@ import { ringGeom } from './render/ringgeom';
 import type { Telemetry, TelemetryContext } from './telemetry';
 import { h, Screens } from './ui/dom';
 import { LoadingScreen, startBgLoadIndicator } from './ui/loading';
+import { kickedScreen } from './ui/kicked';
 import { guestId, homeScreen, type Profile, savedProfile } from './ui/home';
 import { Hud } from './ui/hud';
 import { leaderboardScreen } from './ui/leaderboard';
@@ -205,6 +206,16 @@ class App {
     }
   }
 
+  /** onKicked: bị mời ra hoặc bị cấm (ADMIN_SPEC §6.2). */
+  private onKicked(m: KickedMsg): void {
+    // `stop()` chứ không phải đóng thường: nó tắt luôn việc tự nối lại. Đóng thường thì
+    // client nối lại sau vài giây, server cấm tiếp, và người vừa bị cấm quay vòng giữa
+    // "bị cấm" và "đang kết nối" mà không đọc kịp lý do.
+    this.conn.stop();
+    this.telemetry?.setPhase('home');
+    this.screens.show(kickedScreen(m.reason, m.until, () => this.showHome()));
+  }
+
   private showHome(): void {
     this.telemetry?.setPhase('home');
     this.screens.show(homeScreen(this.cfg, (p) => this.join(p), () => this.showLeaderboard(() => this.showHome()), this.artReady));
@@ -312,6 +323,9 @@ class App {
         if (m.msg === 'bad_name') {
           this.showHome();
         }
+        break;
+      case 'kick':
+        this.onKicked(m);
         break;
       default:
     }

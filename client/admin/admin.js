@@ -239,6 +239,179 @@ document.getElementById('fbq').addEventListener('input', () => {
   window.__fbT = setTimeout(() => loadFeedback().catch(() => {}), 300);
 });
 
+// ── Người chơi, cờ nghi hack, kick và cấm (§6) ───────────────────────────────────────────
+//
+// Mọi nút ở đây đều hỏi lý do và hỏi xác nhận. Không có nút nào chạy mà không có người bấm.
+
+/** BAN_SPANS: thời hạn cấm §6.2 cho phép. 0 = chỉ kick, -1 = vĩnh viễn. */
+const BAN_SPANS = [
+  { secs: 0, label: 'Chỉ mời ra (vào lại được ngay)' },
+  { secs: 3600, label: 'Cấm 1 giờ' },
+  { secs: 86400, label: 'Cấm 24 giờ' },
+  { secs: 604800, label: 'Cấm 7 ngày' },
+  { secs: -1, label: 'Cấm vĩnh viễn' },
+];
+
+let plRows = [];
+
+/** secs rút gọn số giây thành "2 phút" / "1 giờ 3 phút". */
+function secs(n) {
+  const m = Math.floor(n / 60);
+  if (m < 60) return m + ' phút';
+  return Math.floor(m / 60) + ' giờ ' + (m % 60) + ' phút';
+}
+
+function plCard(p) {
+  const box = el('div', 'pl' + (p.flags.length ? ' flagged' : ''));
+  const head = el('div', 'head');
+  head.append(
+    el('strong', '', p.name || '(chưa vào trận)'),
+    el('span', 'tag', p.character || '?'),
+    el('span', '', p.guest_id.slice(0, 8)),
+    el('span', '', p.device),
+    el('span', '', p.ip_mask),
+  );
+  // Kết nối CÓ quyền lệnh test thì nói rõ — đó là thông tin quan trọng nhất về một dòng
+  // đang có điểm cao bất thường, và nó giải thích luôn cờ "Hành động bị từ chối".
+  if (p.debug_source) {
+    head.append(el('span', 'tag dbg', 'lệnh test: ' + p.debug_source + (p.debug_used ? ' (đã dùng)' : '')));
+  }
+  box.append(head);
+
+  const stats = el('div', 'stats');
+  for (const [k, v] of [
+    ['Khu', p.zone || '—'], ['Cảnh giới', `${p.realm || '—'} (tầng ${p.level})`],
+    ['Kiếm', p.swords], ['Uy Danh', Math.round(p.score)], ['Chém trúng', p.hits],
+    ['Sống', secs(p.alive_secs)], ['Ping', Math.round(p.ping_ms) + ' ms'],
+    ['FPS', Math.round(p.fps)], ['Hiệu chỉnh/phút', p.corrections],
+  ]) {
+    const s = el('span');
+    s.append(el('i', '', k), document.createTextNode(' ' + v));
+    stats.append(s);
+  }
+  box.append(stats);
+
+  for (const f of p.flags) {
+    const fl = el('div', 'flag');
+    fl.append(
+      el('span', 'ftag', '⚠ ' + f.name + (f.count > 1 ? ` ×${f.count}` : '')),
+      el('span', 'fev', f.evidence),
+    );
+    const x = el('button', 'small', 'Bỏ cờ');
+    x.title = 'Đánh dấu nhầm — bỏ cờ này đi';
+    x.addEventListener('click', async () => {
+      x.disabled = true;
+      await api('/api/admin/clearflag', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guest_id: p.guest_id, kind: f.kind }),
+      }).catch((e) => alert('Không xong: ' + e.message));
+      loadPlayers().catch(() => {});
+    });
+    fl.append(x);
+    box.append(fl);
+  }
+
+  const tools = el('div', 'tools');
+  const span = document.createElement('select');
+  for (const s of BAN_SPANS) {
+    const o = document.createElement('option');
+    o.value = String(s.secs); o.textContent = s.label;
+    span.appendChild(o);
+  }
+  const go = el('button', 'danger', 'Mời ra');
+  span.addEventListener('change', () => {
+    go.textContent = span.value === '0' ? 'Mời ra' : 'Mời ra + cấm';
+  });
+  go.addEventListener('click', async () => {
+    const banSecs = Number(span.value);
+    const what = BAN_SPANS.find((s) => s.secs === banSecs).label;
+    // Lý do BẮT BUỘC, và người chơi sẽ ĐỌC được nó trên màn hình của họ — nên nhắc rõ
+    // ở đây, để không ai gõ một câu chỉ mình hiểu.
+    const reason = prompt(`${what}\nNgười chơi: ${p.name} (${p.guest_id.slice(0, 8)})\n\n`
+      + 'Lý do (bắt buộc — NGƯỜI CHƠI SẼ ĐỌC ĐƯỢC câu này):', '');
+    if (reason === null) return;
+    if (!reason.trim()) { alert('Phải nêu lý do.'); return; }
+    if (!confirm(`${what}\n\n"${p.name}"\nLý do: ${reason}\n\nXác nhận?`)) return;
+    go.disabled = true;
+    try {
+      const r = await api('/api/admin/kick', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guest_id: p.guest_id, reason, ban_secs: banSecs }),
+      });
+      alert(`Đã ngắt ${r.kicked} kết nối.`);
+    } catch (e) { alert('Không xong: ' + e.message); }
+    go.disabled = false;
+    loadPlayers().catch(() => {});
+  });
+  tools.append(span, go);
+  box.append(tools);
+  return box;
+}
+
+function renderPlayers() {
+  const onlyFlag = document.getElementById('plflag').checked;
+  const q = document.getElementById('plq').value.trim().toLowerCase();
+  const rows = plRows.filter((p) => {
+    if (onlyFlag && !p.flags.length) return false;
+    if (q && !((p.name || '').toLowerCase().includes(q) || p.guest_id.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const list = document.getElementById('pllist');
+  list.replaceChildren(...(rows.length
+    ? rows.map(plCard)
+    : [el('p', '', plRows.length ? 'Không ai khớp bộ lọc.' : 'Chưa có người thật nào online.')]));
+  const nf = plRows.filter((p) => p.flags.length).length;
+  document.getElementById('plcount').textContent =
+    `${plRows.length} người online · ${nf} có cờ · hiện ${rows.length}`;
+}
+
+async function loadPlayers() {
+  plRows = await api('/api/admin/players');
+  renderPlayers();
+}
+
+document.getElementById('plflag').addEventListener('change', renderPlayers);
+document.getElementById('plq').addEventListener('input', () => {
+  clearTimeout(window.__plT);
+  window.__plT = setTimeout(renderPlayers, 200);
+});
+
+// ── Danh sách cấm (§6.2) ─────────────────────────────────────────────────────────────────
+
+async function loadBans() {
+  const rows = await api('/api/admin/bans');
+  const tb = document.querySelector('#bantbl tbody');
+  if (!rows.length) {
+    const tr = el('tr'); const td = el('td', '', 'Chưa cấm ai.'); td.colSpan = 6;
+    tr.append(td); tb.replaceChildren(tr);
+    return;
+  }
+  tb.replaceChildren(...rows.map((b) => {
+    const tr = el('tr');
+    tr.append(
+      el('td', '', new Date(b.from * 1000).toLocaleString('vi-VN')),
+      el('td', '', b.guest_id.slice(0, 12) || '—'),
+      el('td', '', b.ip || '—'),
+      el('td', '', b.until ? new Date(b.until * 1000).toLocaleString('vi-VN') : 'vĩnh viễn'),
+      el('td', '', b.reason),
+    );
+    const cell = el('td');
+    const btn = el('button', '', 'Gỡ cấm');
+    btn.addEventListener('click', async () => {
+      if (!confirm(`Gỡ cấm ${b.guest_id.slice(0, 12)}?\nLý do cấm: ${b.reason}`)) return;
+      btn.disabled = true;
+      await api('/api/admin/unban', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guest_id: b.guest_id, reason: 'gỡ thủ công' }),
+      }).catch((e) => alert('Không xong: ' + e.message));
+      loadBans().catch(() => {});
+    });
+    cell.append(btn);
+    tr.append(cell);
+    return tr;
+  }));
+}
+
 // ── Bảng xếp hạng: rà soát và ẩn (§6.2) ──────────────────────────────────────────────────
 //
 // Nút duy nhất ở đây là "Ẩn". Không có nút xoá, và sẽ không có — xem `internal/store/hidden.go`.
@@ -349,6 +522,8 @@ function show(id) {
   if (id === 'audit') loadAudit().catch(() => {});
   if (id === 'feedback') loadFeedback().catch(() => {});
   if (id === 'board') loadBoard().catch(() => {});
+  if (id === 'players') loadPlayers().catch(() => {});
+  if (id === 'bans') loadBans().catch(() => {});
 }
 
 window.addEventListener('hashchange', () => show(location.hash.slice(1) || 'dashboard'));
@@ -367,6 +542,13 @@ async function tick() {
     const pill = document.getElementById('fbcount');
     pill.hidden = !s.feedback_new;
     pill.textContent = s.feedback_new ?? 0;
+    // Số người đang có cờ, ở thanh bên. Nếu đang mở đúng trang Người chơi thì làm mới
+    // luôn danh sách — nhưng CHỈ khi đang mở: kéo 500 dòng mỗi 2 giây cho một trang
+    // không ai nhìn là tốn băng thông và làm goroutine phòng bận không lý do.
+    const flagPill = document.getElementById('flagcount');
+    flagPill.hidden = !s.flagged;
+    flagPill.textContent = s.flagged ?? 0;
+    if (!document.getElementById('players').hidden) loadPlayers().catch(() => {});
   } catch (_) { /* 401 đã tự chuyển trang; lỗi mạng thì bỏ qua một nhịp */ }
 }
 

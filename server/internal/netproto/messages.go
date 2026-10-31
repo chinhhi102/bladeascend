@@ -23,6 +23,9 @@ const (
 	TDescRequest = "dreq"
 )
 
+// TKicked: server → client, người chơi bị mời ra khỏi phòng (ADMIN_SPEC §6.2).
+const TKicked = "kick"
+
 // Envelope is decoded first to find the message type.
 type Envelope struct {
 	T string `msgpack:"t"`
@@ -342,3 +345,16 @@ type Error struct {
 func Encode(v any) ([]byte, error) { return msgpack.Marshal(v) }
 
 func Decode(b []byte, v any) error { return msgpack.Unmarshal(b, v) }
+
+// Kicked báo cho người chơi biết mình bị mời ra, VÀ VÌ SAO (ADMIN_SPEC §6.2).
+//
+// Lý do là bắt buộc ở phía server (xem `handleAdminKick`). Một màn hình "Bạn đã bị mời ra
+// khỏi phòng" trống không chỉ tạo ra một người giận mà không hiểu vì sao — và §6.2 nói rõ
+// kick thì "vào lại được ngay", nên người đó sẽ vào lại và làm đúng việc vừa rồi.
+type Kicked struct {
+	T      string `msgpack:"t"`
+	Reason string `msgpack:"reason"`
+	// Until: mốc hết hạn cấm (giây unix). 0 = chỉ kick, vào lại được ngay.
+	// -1 = cấm vĩnh viễn.
+	Until int64 `msgpack:"until,omitempty"`
+}

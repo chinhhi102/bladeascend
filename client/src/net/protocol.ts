@@ -215,7 +215,16 @@ export interface ErrorMsg {
   msg: string;
 }
 
-export type ServerMsg = Snapshot | Welcome | LeaderboardMsg | FeedMsg | DeadMsg | PongMsg | ErrorMsg;
+/** KickedMsg: bị mời ra khỏi phòng, hoặc bị cấm (ADMIN_SPEC §6.2). */
+export interface KickedMsg {
+  t: 'kick';
+  reason: string;
+  /** Mốc hết hạn cấm (giây unix). Thiếu/0 = chỉ kick, vào lại được ngay. -1 = vĩnh viễn. */
+  until?: number;
+}
+
+export type ServerMsg = Snapshot | Welcome | LeaderboardMsg | FeedMsg | DeadMsg | PongMsg
+  | ErrorMsg | KickedMsg;
 
 // Player flags (netproto.Flag*).
 export const FLAG = {

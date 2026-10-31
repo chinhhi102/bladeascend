@@ -78,6 +78,9 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	src := s.debugGate.Allow(r)
 	client := room.NewClient(conn, src != admin.DebugNone)
 	client.DebugSource = string(src)
+	// Giữ IP thô và User-Agent TRÊN KẾT NỐI, không ghi ra đĩa: §6 cần hiện `113.161.x.x`
+	// và cần so khi cấm theo IP, cả hai chỉ có nghĩa khi người đó đang online.
+	client.IP, client.UA = ip, r.UserAgent()
 	// Kiểm lại mỗi 60 giây: phiên admin có thể hết hạn GIỮA TRẬN. Giữ `r` để đọc lại cookie
 	// — request gốc sống đúng bằng kết nối WebSocket nên dùng nó là an toàn.
 	client.RecheckDebug = func() (bool, string) {
@@ -126,6 +129,9 @@ func (s *server) readLoop(ctx context.Context, ws *websocket.Conn, c *room.Clien
 		}
 		var env netproto.Envelope
 		if netproto.Decode(data, &env) != nil {
+			// Gói vỡ là chuyện bình thường khi mạng tệ; chỉ thành cờ khi nó LẶP LẠI
+			// (> 5 lần/phút, §6.1). Ngưỡng nằm trong `NoteBadPacket`.
+			c.NoteBadPacket(time.Now())
 			continue
 		}
 		s.dispatch(c, env.T, data, ipHash)
@@ -138,12 +144,16 @@ func (s *server) dispatch(c *room.Client, t string, data []byte, ipHash string) 
 		var in netproto.Input
 		if netproto.Decode(data, &in) == nil {
 			c.SetInput(in)
+			c.NoteInput(time.Now(), s.cfg.Net.MaxMsgsPerSec)
+		} else {
+			c.NoteBadPacket(time.Now())
 		}
 	case netproto.TJoin:
 		s.handleJoin(c, data)
 	case netproto.TPing:
 		var p netproto.Ping
 		if netproto.Decode(data, &p) == nil {
+			c.NotePing(time.Now(), p.Client)
 			if b, err := netproto.Encode(netproto.Pong{T: "pong", Client: p.Client, Server: float64(time.Now().UnixMilli())}); err == nil {
 				c.Conn.Send(b)
 			}
@@ -168,7 +178,7 @@ func (s *server) dispatch(c *room.Client, t string, data []byte, ipHash string) 
 		case !s.debug:
 			log.Printf("dbg bỏ qua: server không chạy với -debug")
 		case !c.DebugAllowed(time.Now()):
-			c.RefusedCmds++
+			c.NoteRefused(time.Now())
 			s.auditRefusedDebug(c, data)
 		case netproto.Decode(data, &d) != nil:
 			log.Printf("dbg bỏ qua: gói hỏng (%d byte)", len(data))
@@ -205,6 +215,23 @@ func (s *server) handleJoin(c *room.Client, data []byte) {
 		j.GuestID = j.GuestID[:64]
 	}
 	c.GuestID = j.GuestID
+	// Người bị cấm không vào được (§6.2) — và ĐƯỢC BIẾT vì sao, cùng thời điểm hết hạn.
+	//
+	// Chặn ở đây chứ không ở lúc bắt tay WebSocket: lúc bắt tay chưa có `guest_id` (nó nằm
+	// trong gói `join`), nên chặn sớm hơn thì chỉ chặn được theo IP — và cấm IP một mình
+	// thì đụng cả nhà người ta.
+	if ban := s.adminAuth.Store().BanOf(c.GuestID, c.IP); ban != nil {
+		until := int64(-1) // vĩnh viễn
+		if ban.Until != nil {
+			until = *ban.Until
+		}
+		if b, err := netproto.Encode(netproto.Kicked{
+			T: netproto.TKicked, Reason: ban.Reason, Until: until,
+		}); err == nil {
+			c.Conn.Send(b)
+		}
+		return
+	}
 	rm := s.mgr.Join(c, j)
 	log.Printf("join %q (%s) → room %s", j.Name, j.Char, rm.ID)
 }

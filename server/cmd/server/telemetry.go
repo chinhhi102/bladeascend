@@ -33,12 +33,23 @@ const (
 
 // handleTelemetry nhận gói `tm` từ một client đang chơi.
 func (s *server) handleTelemetry(c *room.Client, ipHash string, data []byte) {
-	if s.telemetry == nil {
-		return // build/chạy không bật telemetry: bỏ qua trong im lặng
-	}
 	var tm netproto.Telemetry
 	if netproto.Decode(data, &tm) != nil {
+		c.NoteBadPacket(time.Now())
 		return
+	}
+	// Ping và FPS ghi lên kết nối TRƯỚC khi kiểm telemetry có bật không.
+	//
+	// Hai số này không phải là telemetry — chúng là cột "Ping · FPS" của bảng người chơi
+	// (§6), và bảng đó phải dùng được kể cả khi chạy với `-telemetry=false`. Để sau lần
+	// kiểm nil thì tắt telemetry là trang quản trị mất hai cột mà không ai hiểu vì sao.
+	if n := len(tm.Samples); n > 0 {
+		if m := tm.Samples[n-1]; m != nil {
+			c.NoteRTT(m.PingP50, m.FPSAvg)
+		}
+	}
+	if s.telemetry == nil {
+		return // build/chạy không bật telemetry: bỏ qua trong im lặng
 	}
 	if tm.Session != nil {
 		// guest_hash băm Ở SERVER từ guest_id mà client đã gửi lúc join, không nhận chuỗi

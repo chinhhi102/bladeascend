@@ -322,3 +322,86 @@ func (s *Store) BanOf(guestID, ip string) *Ban {
 	}
 	return &b
 }
+
+// ErrBanReason: cấm mà không nêu lý do thì người bị cấm không biết mình làm sai gì, và ba
+// tháng sau chính admin cũng không nhớ.
+var ErrBanReason = errors.New("phải nêu lý do cấm")
+
+// Ban cấm theo guest_id VÀ IP (§6.2). `until` nil = vĩnh viễn.
+//
+// Cấm cả hai là chủ ý của spec: chỉ cấm guest_id thì xoá localStorage là vào lại được ngay;
+// chỉ cấm IP thì đụng cả nhà người ta. Cấm cả hai thì gỡ cũng gỡ cả hai — xem `Unban`.
+func (s *Store) Ban(guestID, ip, reason string, until *int64, byIP string) error {
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return ErrBanReason
+	}
+	if len(reason) > 300 {
+		reason = reason[:300]
+	}
+	var u any
+	if until != nil {
+		u = *until
+	}
+	_, err := s.db.Exec(
+		`INSERT INTO bans (guest_id, ip, reason, from_at, until_at, by_ip) VALUES (?,?,?,?,?,?)`,
+		guestID, ip, reason, time.Now().Unix(), u, byIP)
+	return err
+}
+
+// Unban gỡ MỌI lệnh cấm đang áp lên guest_id này, kể cả lệnh cấm theo IP đi kèm.
+//
+// Xoá theo guest_id một mình là chưa đủ: `Ban` ghi cả IP vào cùng dòng, và nếu chỉ xoá dòng
+// khớp guest_id thì một dòng cũ khớp IP vẫn chặn người đó — admin bấm "gỡ cấm", thấy báo
+// thành công, mà người kia vẫn không vào được.
+func (s *Store) Unban(guestID string) error {
+	_, err := s.db.Exec(
+		`DELETE FROM bans WHERE guest_id = ? OR (ip <> '' AND ip IN (SELECT ip FROM bans WHERE guest_id = ?))`,
+		guestID, guestID)
+	return err
+}
+
+// ListBans liệt kê lệnh cấm CÒN HIỆU LỰC, mới nhất trước.
+func (s *Store) ListBans() ([]Ban, error) {
+	rs, err := s.db.Query(
+		`SELECT id, guest_id, ip, reason, from_at, until_at FROM bans
+		 WHERE until_at IS NULL OR until_at > ? ORDER BY from_at DESC LIMIT 500`, time.Now().Unix())
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	out := []Ban{}
+	for rs.Next() {
+		var b Ban
+		var until sql.NullInt64
+		if err := rs.Scan(&b.ID, &b.GuestID, &b.IP, &b.Reason, &b.From, &until); err != nil {
+			return nil, err
+		}
+		if until.Valid {
+			v := until.Int64
+			b.Until = &v
+		}
+		// IP không bao giờ gửi nguyên về trình duyệt, kể cả cho admin: danh sách cấm là thứ
+		// mở suốt ngày trong một tab, và nó không cần IP đầy đủ để dùng được.
+		b.IP = maskIPStore(b.IP)
+		out = append(out, b)
+	}
+	return out, rs.Err()
+}
+
+// maskIPStore che IP trước khi rời server. Giống `maskIP` bên cmd/server nhưng để ở đây để
+// package này không bao giờ trả ra IP thô, dù ai gọi.
+func maskIPStore(ip string) string {
+	if ip == "" {
+		return ""
+	}
+	if i := strings.LastIndex(ip, ":"); i > 0 && strings.Count(ip, ":") > 1 {
+		p := strings.Split(ip, ":")
+		return p[0] + ":" + p[1] + ":x:x"
+	}
+	p := strings.Split(ip, ".")
+	if len(p) == 4 {
+		return p[0] + "." + p[1] + ".x.x"
+	}
+	return "x.x.x.x"
+}

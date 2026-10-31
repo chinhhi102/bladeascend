@@ -64,6 +64,9 @@ type adminStats struct {
 	Rooms  []roomStat  `json:"rooms"`
 	// FeedbackNew: số góp ý chưa đọc, hiện ở thanh bên và dashboard (§3, §7.2).
 	FeedbackNew int `json:"feedback_new"`
+	// Flagged: số người thật đang mang ít nhất một cờ nghi hack (§6.1). Chỉ là con số ở
+	// thanh bên — không có gì chạy theo nó.
+	Flagged int `json:"flagged"`
 }
 
 func (s *server) handleAdminStats(w http.ResponseWriter, _ *http.Request) {
@@ -88,12 +91,22 @@ func (s *server) collectStats() adminStats {
 	st.Players.Rooms = len(rooms)
 	st.Rooms = make([]roomStat, 0, len(rooms))
 	for _, r := range rooms {
-		rs := roomStat{ID: r.ID, Humans: r.Humans(), Bots: r.Bots()}
+		// Gom TRÊN goroutine phòng: `zoneStat` duyệt `g.Players` và `g.Obstacles`, mà
+		// goroutine phòng ghi vào đúng hai thứ đó mỗi tick. Duyệt map trong lúc map bị ghi
+		// làm Go dừng hẳn chương trình ("concurrent map iteration and map write") — tức là
+		// một người bấm Vào trận đúng nhịp làm mới 2 giây của trang này là đủ sập server.
+		// Xem `room/query.go`.
+		var rs roomStat
+		if !r.Query(func() {
+			rs = roomStat{ID: r.ID, Humans: r.Humans(), Bots: r.Bots()}
+			for i := 0; i < r.ZoneCount(); i++ {
+				rs.Zones = append(rs.Zones, s.zoneStat(r, i, &st))
+			}
+		}) {
+			continue // phòng quá tải: bỏ qua một nhịp, không treo cả trang
+		}
 		st.Players.Humans += rs.Humans
 		st.Players.Bots += rs.Bots
-		for i := 0; i < r.ZoneCount(); i++ {
-			rs.Zones = append(rs.Zones, s.zoneStat(r, i, &st))
-		}
 		st.Rooms = append(st.Rooms, rs)
 	}
 	return st
@@ -122,6 +135,11 @@ func (s *server) zoneStat(r *room.Room, i int, st *adminStats) zoneStat {
 		}
 	}
 	// Cảnh giới cao nhất và phân bố: chỉ đếm NGƯỜI THẬT.
+	for _, c := range z.ClientList() {
+		if len(c.Flags.List(time.Now())) > 0 {
+			st.Flagged++
+		}
+	}
 	for _, p := range g.PlayerList() {
 		if p.IsBot || p.Dead {
 			continue

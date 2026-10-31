@@ -8,6 +8,14 @@ export const STR = {
   play: 'Vào chơi',
   leaderboard: 'Bảng xếp hạng',
   findingRoom: 'Đang tìm phòng...',
+  // ── Bị mời ra / bị cấm (ADMIN_SPEC §6.2) ──
+  kickedTitle: 'Bạn đã bị mời ra khỏi phòng',
+  bannedTitle: 'Bạn đang bị cấm vào trận',
+  kickedReason: 'Lý do: ',
+  kickedRejoin: 'Bạn vào lại được ngay.',
+  bannedUntil: 'Hết hạn: ',
+  bannedForever: 'Cấm vĩnh viễn.',
+  kickedBack: 'Về trang chủ',
   // ── Hòm thư góp ý (ADMIN_SPEC §7.1) ──
   feedbackTitle: 'Góp ý',
   feedbackKinds: {
