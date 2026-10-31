@@ -3,7 +3,7 @@ import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Rectangle, Spri
 import type { ClientWorld } from '../net/state';
 import type { GameMap, MapObstacle, Shape } from '../net/protocol';
 import { assets } from './assets';
-import { BIOME_TILES } from './catalog';
+import { BIOME_TILES, OBSTACLE_ALIAS } from './catalog';
 import { buildDecals, type DecalLayer, obstacleSkirt } from './decals';
 import { GATE_COLORS } from './palette';
 
@@ -194,6 +194,32 @@ function backgroundFilter(): ColorMatrixFilter {
   f.brightness(0.9, true);
   f.contrast(-0.2, true);
   return f;
+}
+
+/** obstacleTexture: art THẬT của một loại vật cản, null nếu chưa có. */
+function obstacleTexture(kind: string, vertical: boolean): Texture | null {
+  return assets.texture(`obstacles/${kind}/intact${vertical ? '_vertical' : ''}.png`)
+    ?? (vertical ? null : assets.texture(`obstacles/${kind}/intact.png`));
+}
+
+/** grownShape: nở hình ra quanh TÂM theo hệ số `k`. */
+function grownShape(s: Shape, k: number): Shape {
+  if (s.c) {
+    return { ...s, r: (s.r ?? 0) * k };
+  }
+  const w = (s.w ?? 0) * k;
+  const h = (s.h ?? 0) * k;
+  return { ...s, x: s.x + ((s.w ?? 0) - w) / 2, y: s.y + ((s.h ?? 0) - h) / 2, w, h };
+}
+
+/** tintAll nhuộm mọi sprite con — `tiledObstacle` trả về Container nhiều mảnh. */
+function tintAll(node: Container, tint: number): void {
+  if (node instanceof Sprite || node instanceof TilingSprite) {
+    node.tint = tint;
+  }
+  for (const c of node.children) {
+    tintAll(c as Container, tint);
+  }
 }
 
 /**
@@ -720,15 +746,35 @@ export class MapView {
   private obstacleArt(o: MapObstacle): Container {
     const b = bounds(o.s);
     // Đoạn dọc cần art riêng: xoay sprite ngang 90° trông sai hẳn (bóng đổ, mặt đứng).
-    // Chưa có ảnh thì dùng placeholder dọc, và `assets:report` liệt kê để sinh sau.
     const vertical = !o.s.c && b.h > b.w;
-    const tex = assets.texture(`obstacles/${o.k}/intact${vertical ? '_vertical' : ''}.png`)
-      ?? (vertical ? null : assets.texture(`obstacles/${o.k}/intact.png`));
-    if (tex) {
-      return o.s.c ? fitSprite(tex, o.s) : tiledObstacle(tex, o.s, vertical);
+    const real = obstacleTexture(o.k, vertical);
+    if (real) {
+      return o.s.c ? fitSprite(real, o.s) : tiledObstacle(real, o.s, vertical);
     }
-    // Placeholder: màu theo loại vật cản. Bản cũ tô theo % máu còn lại; giờ không còn máu,
-    // nên màu chỉ nói "đây là loại gì".
+    // Chưa có art THẬT → MƯỢN art loại gần giống (`OBSTACLE_ALIAS`), có phóng cỡ và nhuộm
+    // màu. Thứ tự này quan trọng: art thật luôn thắng, nên artgen sinh xong là ảnh mới tự
+    // thay vào mà không phải sửa gì ở đây.
+    const al = OBSTACLE_ALIAS[o.k];
+    const lent = al ? obstacleTexture(al.from, vertical) : null;
+    if (al && lent) {
+      // Phóng cỡ bằng cách nới HÌNH VẼ trước khi xếp gạch, không phải `scale` của sprite:
+      // xếp gạch tính theo kích thước hình, scale sprite sau đó làm đường nối lệch ra.
+      const shape = al.scale && al.scale !== 1 ? grownShape(o.s, al.scale) : o.s;
+      const art = o.s.c ? fitSprite(lent, shape) : tiledObstacle(lent, shape, vertical);
+      if (al.tint !== undefined) {
+        tintAll(art, al.tint);
+      }
+      if (al.glow === undefined) {
+        return art;
+      }
+      // Quầng sáng vẽ DƯỚI vật, nở ra 18%: thạch bi "phù văn phát sáng" (§8.2).
+      const wrap = new Container();
+      const halo = new Graphics();
+      drawShape(halo, grownShape(o.s, 1.18)).fill({ color: al.glow, alpha: 0.3 });
+      wrap.addChild(halo, art);
+      return wrap;
+    }
+    // Không art, không alias: ô màu theo loại. Nhìn là biết chưa xong — đúng ý placeholder.
     const g = new Graphics();
     drawShape(g, o.s).fill(OBSTACLE_COLOR[o.k] ?? 0x5b6b5b).stroke({ color: 0x000000, width: 6 });
     return g;

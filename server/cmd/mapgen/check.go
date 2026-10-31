@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -35,7 +36,7 @@ const checkCell = 50.0
 
 // Mục tiêu mật độ — §8.1b mục 5, cách đo của spec v6.12 (chủ dự án chốt 31/10/2026).
 //
-// 18–28% là **diện tích HÌNH VẼ**, tức phần đất bị sprite vật cản phủ lên. Không phải chân
+// 12–20% là **diện tích HÌNH VẼ**, tức phần đất bị sprite vật cản phủ lên. Không phải chân
 // đế: chân đế chỉ rộng 90% và cao 30% hình vẽ nên nó chỉ bằng ~27% — cùng một bản đồ, đo
 // theo chân đế ra 5–7,5% còn đo theo hình vẽ ra 18–28%.
 //
@@ -43,15 +44,15 @@ const checkCell = 50.0
 // vùng kiếm chém trúng, đúng với cái người chơi nhìn thấy"). Chân đế chỉ quyết định chân có
 // bị chặn không. Hỏi "khu này trông có đầy không" thì phải đo cái người ta nhìn.
 const (
-	densityMin = 0.18
-	densityMax = 0.28
+	densityMin = 0.12
+	densityMax = 0.20
 	// densityHardMax: vượt mức này là TRƯỢT, không phải cảnh báo.
 	//
 	// Hai hướng không đối xứng vì hậu quả không đối xứng: khu nhạt thì chơi vẫn được, chỉ
 	// kém hay; khu chật thì bắt đầu có người kẹt — và bộ kiểm liên thông không bắt được hết,
 	// nó đo "có đường đi không" chứ không đo "đường có hẹp tới mức đi một bước né ba lần
 	// không".
-	densityHardMax = 0.32
+	densityHardMax = 0.26
 )
 
 // checkResult là kết quả của một cảnh giới.
@@ -76,6 +77,17 @@ type checkResult struct {
 	// Nó TỤT khi cảnh giới lên vì vật cản bậc ≤ r coi như không có, và đó chính là thứ cần
 	// nhìn: Đại Thừa còn lại bao nhiêu địa hình.
 	Density float64
+	// Breathing: phần diện tích khu KHÔNG có vật cản nào trong bán kính `breathR`.
+	//
+	// §8.1b mục 6: địa hình phải có chỗ thở — những khoảng rộng để rượt đuổi, đánh nhau,
+	// và để mắt nghỉ. Mật độ tổng không nói được điều đó: rải đều 20% khắp nơi và dồn 20%
+	// vào vài cụm cho ra cùng một con số mật độ, nhưng bản đầu thì chỗ nào cũng vướng một
+	// tí và không chỗ nào dùng được.
+	Breathing float64
+	// LakeObstacle: phần diện tích MẶT HỒ (vùng `ice`/`water`) bị vật cản phủ. 0 nếu khu
+	// không có hồ. Băng Nguyệt Hồ phải ≤ 1%: mặt hồ là sân trượt băng để rượt nhau, đặt vật
+	// cản lên đó là xoá mất cái làm khu ấy khác các khu khác.
+	LakeObstacle float64
 	// FootDensity: phần diện tích bị CHÂN ĐẾ phủ — đất thật sự chặn chân, bằng ~27% hình vẽ
 	// (chân đế rộng 90% cao 30% sprite). Giữ lại để đối chiếu hai cách đo.
 	FootDensity float64
@@ -139,8 +151,8 @@ func runCheck(dir, pngDir string, cfg *config.Config, pngRealms []int) error {
 			if !res.ok() {
 				status, bad = "TRƯỢT", bad+1
 			}
-			fmt.Printf("  r=%-2d %-17s thân %3.0f · vật cản %4.1f%% (chân %4.1f%%) · trống %4.0f%% · nhốt %d ô (túi to nhất %d) · %s",
-				r, res.Name, res.BodyR, res.Density*100, res.FootDensity*100, res.OpenFrac*100, res.TrappedPx, res.BiggestTrap, status)
+			fmt.Printf("  r=%-2d %-17s thân %3.0f · vật cản %4.1f%% · thở %3.0f%% · trống %4.0f%% · nhốt %d ô (túi to nhất %d) · %s",
+				r, res.Name, res.BodyR, res.Density*100, res.Breathing*100, res.OpenFrac*100, res.TrappedPx, res.BiggestTrap, status)
 			if len(res.CutOff) > 0 {
 				fmt.Printf(" · KHÔNG TỚI ĐƯỢC: %s", strings.Join(res.CutOff, ", "))
 			}
@@ -151,6 +163,16 @@ func runCheck(dir, pngDir string, cfg *config.Config, pngRealms []int) error {
 			// liên thông không bắt được hết, nó đo "có đường đi không" chứ không đo "đường
 			// có hẹp tới mức đi một bước né ba lần không".
 			if r == 0 {
+				if want := breathFloorFor(m.ID); res.Breathing < want {
+					fmt.Printf("     ✗ khoảng thở %.0f%% < %.0f%% — vật cản rải đều, không có chỗ rượt nhau\n",
+						res.Breathing*100, want*100)
+					bad++
+				}
+				if res.LakeObstacle > lakeMaxObstacle {
+					fmt.Printf("     ✗ vật cản trên mặt hồ %.1f%% > %.0f%% — hồ là sân trượt, phải để trống\n",
+						res.LakeObstacle*100, lakeMaxObstacle*100)
+					bad++
+				}
 				switch {
 				case res.Density > densityHardMax:
 					fmt.Printf("     ✗ mật độ hình vẽ %.1f%% VƯỢT TRẦN %.0f%% — khu chật, người to kẹt\n",
@@ -234,6 +256,8 @@ type checkGrid struct {
 	// visual: tâm ô nằm trong HÌNH VẼ một vật cản (`Shape`, không phải `Block`). Đây là
 	// mật độ §8.1b nói tới.
 	visual []bool
+	// lake: ô nằm trên mặt hồ (vùng `ice` hoặc `water`).
+	lake   []bool
 	label  []int
 	main   int
 	sizes  []int
@@ -247,11 +271,21 @@ func checkRealm(m *world.Map, prog *game.Progression, cfg *config.Config, r int,
 	lo, hi := m.PlayMargin, m.Size-m.PlayMargin
 	n := int((hi - lo) / checkCell)
 	g := &checkGrid{n: n, lo: lo, solid: make([]bool, n*n), tight: make([]bool, n*n),
-		footprint: make([]bool, n*n), visual: make([]bool, n*n),
+		footprint: make([]bool, n*n), visual: make([]bool, n*n), lake: make([]bool, n*n),
 		label: make([]int, n*n), marks: marks}
 	for i := range g.label {
 		g.label[i] = -1
 	}
+	// Chỉ coi là HỒ những vùng băng/nước đủ lớn để là một mặt hồ, không phải vũng.
+	//
+	// Thiên Đình và Trúc Lâm cũng có vài vũng nước / mảng băng nhỏ, và luật "mặt hồ phải
+	// trống" áp lên chúng là vô nghĩa — đo được 42,9% và 26,4%, nhưng đó chỉ là mấy cái vũng
+	// nằm lọt giữa khu chứ không phải sân trượt băng của Băng Nguyệt Hồ.
+	lakes := bigLakes(m)
+	// ĐẢO giữa hồ không tính là mặt hồ. Đảo là vùng `snow` nhỏ nằm lọt trong mặt băng, và
+	// spec nói rõ "dồn vật cản lên đảo và bờ" — đếm đá trên đảo thành "vật cản trên mặt hồ"
+	// thì luật tự mâu thuẫn: đặt đúng chỗ spec bảo đặt lại làm bộ kiểm đỏ.
+	islands := iceIslands(m)
 	// Chỉ giữ vật cản cảnh giới này CHƯA chém được. Bậc ≤ r thì họ chạm là nó biến mất, nên
 	// với họ bức tường đó không tồn tại.
 	var walls []world.Obstacle
@@ -271,6 +305,7 @@ func checkRealm(m *world.Map, prog *game.Progression, cfg *config.Config, r int,
 		g.tight[i] = g.solid[i] && !blockedAt(walls, c, small)
 		g.footprint[i] = insideAny(walls, c, func(o world.Obstacle) world.Shape { return o.Block() })
 		g.visual[i] = insideAny(walls, c, func(o world.Obstacle) world.Shape { return o.Shape })
+		g.lake[i] = inAny(lakes, c) && !inAny(islands, c)
 	}
 	g.components()
 	res := checkResult{Realm: r, Name: prog.RealmName(r), BodyR: bodyR}
@@ -284,6 +319,7 @@ func checkRealm(m *world.Map, prog *game.Progression, cfg *config.Config, r int,
 		res.OpenFrac = float64(free) / float64(n*n)
 	}
 	covered, feet := 0, 0
+	lakeCells, lakeBlocked := 0, 0
 	for i := 0; i < n*n; i++ {
 		if g.visual[i] {
 			covered++
@@ -295,6 +331,18 @@ func checkRealm(m *world.Map, prog *game.Progression, cfg *config.Config, r int,
 	if n > 0 {
 		res.Density = float64(covered) / float64(n*n)
 		res.FootDensity = float64(feet) / float64(n*n)
+		res.Breathing = float64(g.breathingCells(m, r)) / float64(n*n)
+	}
+	for i := 0; i < n*n; i++ {
+		if g.lake[i] {
+			lakeCells++
+			if g.visual[i] {
+				lakeBlocked++
+			}
+		}
+	}
+	if lakeCells > 0 {
+		res.LakeObstacle = float64(lakeBlocked) / float64(lakeCells)
 	}
 	if free > 0 && g.main >= 0 {
 		res.MainFrac = float64(g.sizes[g.main]) / float64(free)
@@ -325,6 +373,121 @@ func insideAny(walls []world.Obstacle, c geom.Vec, pick func(world.Obstacle) wor
 		}
 	}
 	return false
+}
+
+// breathR: bán kính "khoảng thở" — ô nào không có vật cản nào trong ngần này đơn vị thì
+// tính là chỗ thở (§8.1b mục 6, chủ dự án chốt 31/10/2026).
+// minLakeFrac: vùng băng/nước phải chiếm ít nhất ngần này phần diện tích khu mới được coi
+// là "mặt hồ". Dưới mức đó là vũng nước trang trí.
+const minLakeFrac = 0.05
+
+// bigLakes lọc ra những vùng băng/nước đủ lớn để là mặt hồ thật.
+func bigLakes(m *world.Map) []world.Zone {
+	area := m.Size * m.Size
+	var out []world.Zone
+	for _, z := range m.Zones {
+		if z.Kind != "ice" && z.Kind != "water" {
+			continue
+		}
+		lo, hi := z.Shape.Bounds()
+		if (hi.X-lo.X)*(hi.Y-lo.Y) >= area*minLakeFrac {
+			out = append(out, z)
+		}
+	}
+	return out
+}
+
+// iceIslands: vùng tuyết NHỎ (đảo) — ngoại lệ của luật "mặt hồ phải trống".
+func iceIslands(m *world.Map) []world.Zone {
+	var out []world.Zone
+	for _, z := range m.Zones {
+		if z.Kind != "snow" {
+			continue
+		}
+		lo, hi := z.Shape.Bounds()
+		if hi.X-lo.X < 2600 && hi.Y-lo.Y < 2600 {
+			out = append(out, z)
+		}
+	}
+	return out
+}
+
+func inAny(zs []world.Zone, c geom.Vec) bool {
+	for _, z := range zs {
+		if z.Shape.Contains(c) {
+			return true
+		}
+	}
+	return false
+}
+
+const breathR = 400.0
+
+// breathMin / lakeMaxObstacle: hai ngưỡng của lượt bố cục 2 (chủ dự án chốt 31/10/2026).
+//
+//   - khoảng thở ≥ 30% diện tích khu: đủ chỗ rượt đuổi và đánh nhau. Mật độ tổng không nói
+//     được điều này — rải đều 20% khắp nơi và dồn 20% vào vài cụm cho ra cùng một con số.
+//   - vật cản trên mặt hồ ≤ 1%: mặt hồ Băng Nguyệt Hồ là sân trượt băng, đó là thứ làm khu
+//     ấy khác bốn khu kia.
+const (
+	breathMin       = 0.20
+	lakeMaxObstacle = 0.01
+	// breathMinLake: Băng Nguyệt Hồ phải thoáng hơn hẳn — mặt hồ là sân trượt băng để rượt
+	// nhau, đó là thứ làm khu ấy khác bốn khu kia (spec v6.13 §8.1b).
+	breathMinLake = 0.40
+)
+
+// breathFloorFor: ngưỡng khoảng thở của riêng khu này.
+func breathFloorFor(id string) float64 {
+	if id == "bang_nguyet_ho" {
+		return breathMinLake
+	}
+	return breathMin
+}
+
+// breathingCells đếm số ô cách MỌI vật cản ít nhất `breathR`.
+//
+// Làm ngược (đánh dấu ô GẦN vật cản rồi lấy phần còn lại) thay vì tính khoảng cách cho từng
+// ô: đánh dấu là quét quanh mỗi vật cản một lần, còn tính khoảng cách là mỗi ô dò hết vật
+// cản — 50 000 ô × 1 000 vật cản.
+func (g *checkGrid) breathingCells(m *world.Map, realm int) int {
+	near := make([]bool, g.n*g.n)
+	span := int(breathR/checkCell) + 2
+	for _, o := range m.Obstacles {
+		if o.Tier <= realm {
+			continue // cảnh giới này chém được nên nó không chắn tầm nhìn của ai
+		}
+		lo, hi := o.Shape.Bounds()
+		x0 := int((lo.X-breathR-g.lo)/checkCell) - 1
+		x1 := int((hi.X+breathR-g.lo)/checkCell) + 1
+		y0 := int((lo.Y-breathR-g.lo)/checkCell) - 1
+		y1 := int((hi.Y+breathR-g.lo)/checkCell) + 1
+		_ = span
+		for y := max(y0, 0); y <= min(y1, g.n-1); y++ {
+			cy := g.lo + (float64(y)+0.5)*checkCell
+			dy := math.Max(math.Max(lo.Y-cy, 0), cy-hi.Y)
+			if dy > breathR {
+				continue
+			}
+			for x := max(x0, 0); x <= min(x1, g.n-1); x++ {
+				if near[y*g.n+x] {
+					continue
+				}
+				cx := g.lo + (float64(x)+0.5)*checkCell
+				dx := math.Max(math.Max(lo.X-cx, 0), cx-hi.X)
+				if dx*dx+dy*dy <= breathR*breathR {
+					near[y*g.n+x] = true
+				}
+			}
+		}
+	}
+	free := 0
+	for _, b := range near {
+		if !b {
+			free++
+		}
+	}
+	return free
 }
 
 func blockedAt(walls []world.Obstacle, c geom.Vec, r float64) bool {

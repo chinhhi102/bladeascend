@@ -48,8 +48,10 @@ type gen struct {
 	// obs: bảng bậc vật cản (§8.2). Đảo cần nó để biết lõi bậc mấy và hành lang tối thiểu
 	// bao nhiêu — viết số vào mã là bảng đổi mà bản đồ không đổi theo.
 	obs config.Obstacles
-	// target: mật độ chân đế mục tiêu của khu đang dựng.
+	// target: mật độ hình vẽ mục tiêu của khu đang dựng.
 	target float64
+	// zoneID: id khu, để tra ngưỡng riêng của khu (khoảng thở của Băng Nguyệt Hồ cao hơn).
+	zoneID string
 }
 
 // seg is a road segment with a width; roads are a chain of these.
@@ -214,6 +216,12 @@ func (g *gen) addRoad(a, b Vec2, w float64) {
 
 // ---- bước 3+4: nội dung 1 góc, xoay 4 phía, vật cản theo biome -------------
 
+// clusterGlue: nội dung rải rác chỉ được đặt khi có vật cản trong ngần này đơn vị.
+//
+// Nhờ nó nhà/rào/sạp bám vào rìa các cụm đã dựng (§8.1b mục 6 "gom thành cụm có hình
+// dáng") thay vì trải đều khắp khu — và khoảng thở giữa các cụm được giữ nguyên.
+const clusterGlue = 420.0
+
 // quadrantContent fills quadrant 0 and mirrors it to the other three, each with its own
 // biome (spec §8.1 bước 3, 4).
 func (g *gen) quadrantContent() {
@@ -226,7 +234,7 @@ func (g *gen) quadrantContent() {
 			// Xê dịch nhỏ để 4 góc không lộ là bản sao.
 			j := g.cfg.Jitter
 			rp = rp.add(Vec2{g.b.rnd(-j, j), g.b.rnd(-j, j)})
-			if g.onRoad(rp, 200) {
+			if g.onRoad(rp, 200) || !g.b.nearSolid(rp.X, rp.Y, clusterGlue) {
 				continue
 			}
 			switch i % 4 {

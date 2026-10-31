@@ -24,9 +24,11 @@ type zoneDef struct {
 	biome  string
 	gateCo string
 	build  func(*gen) error
-	// density: mật độ chân đế mục tiêu của khu này (chủ dự án chốt 31/10/2026). Mỗi khu
-	// một mức vì mỗi khu một vai — Băng Nguyệt Hồ là mặt hồ để rượt nhau nên phải thoáng,
-	// Trúc Lâm là mê cung phục kích nên dày nhất. Khớp bảng trong `check.go`.
+	// density: mật độ HÌNH VẼ mục tiêu (§8.1b mục 5: 18–28%, cách đo spec v6.12).
+	//
+	// Trước đây đây là mật độ CHÂN ĐẾ, và khi `islandsStep` đổi sang đo hình vẽ thì mấy con
+	// số cũ (0,05–0,12) bỗng có nghĩa khác hẳn — bộ sinh dừng ở 8–11% hình vẽ trong khi mục
+	// tiêu là 18–28%. Cùng một trường, hai đơn vị: đúng loại lỗi im lặng.
 	density float64
 }
 
@@ -34,11 +36,13 @@ type zoneDef struct {
 var zoneDefs = []zoneDef{
 	// Nhắm GIỮA khoảng mục tiêu, không nhắm mép dưới: đảo đặt xong mới biết chồng mép bao
 	// nhiêu, nên nhắm mép là rơi xuống dưới mục tiêu ở vài seed.
-	{"thien_dinh", "Thiên Đình", "grass", "gold", (*gen).thienDinh, 0.10},
-	{"linh_son_coc", "Linh Sơn Cốc", "dirt", "slate", (*gen).linhSonCoc, 0.12},
-	{"truc_lam", "Trúc Lâm Mê Cung", "grass", "green", (*gen).trucLam, 0.12},
-	{"pham_tran", "Phàm Trấn", "concrete", "red", (*gen).phamTran, 0.10},
-	{"bang_nguyet_ho", "Băng Nguyệt Hồ", "snow", "cyan", (*gen).bangNguyetHo, 0.05},
+	{"thien_dinh", "Thiên Đình", "grass", "gold", (*gen).thienDinh, 0.23},
+	{"linh_son_coc", "Linh Sơn Cốc", "dirt", "slate", (*gen).linhSonCoc, 0.23},
+	{"truc_lam", "Trúc Lâm Mê Cung", "grass", "green", (*gen).trucLam, 0.24},
+	{"pham_tran", "Phàm Trấn", "concrete", "red", (*gen).phamTran, 0.23},
+	// Băng Nguyệt Hồ nhắm CAO HƠN vì mặt hồ (~1/4 khu) bị cấm đặt: toàn bộ mật độ phải dồn
+	// vào phần đất còn lại, nên nhắm theo cả khu thì phải nhắm cao mới chạm 18%.
+	{"bang_nguyet_ho", "Băng Nguyệt Hồ", "snow", "cyan", (*gen).bangNguyetHo, 0.26},
 }
 
 // gateNet là tên mạng cổng chung của CẢ THẾ GIỚI (spec §8.4: 20 cổng, một mạng).
@@ -129,7 +133,10 @@ func (g *gen) linhSonCoc() error {
 	// đường đi uốn thành hình rắn bò từ trên xuống dưới — vẫn ra hẻm núi, mà **không bao
 	// giờ nhốt kín một vùng nào**. Bản đầu cho vách chạy suốt từ mép này sang mép kia và
 	// chỉ dựa vào mấy cái đèo; bộ kiểm báo ngay 3,3% ô trống bị nhốt.
-	ridges := 5
+	// 3 dải thay vì 5: "dải vách núi là chính, thung lũng phần lớn trống" (chủ dự án chốt
+	// 31/10). 5 dải chạy suốt chiều ngang chia khu thành 6 tầng mỏng — đo được khoảng thở
+	// 20%, vì chỗ nào cũng cách một dải vách chưa tới 400.
+	ridges := 3
 	for i := 1; i <= ridges; i++ {
 		y := lo + (hi-lo)*float64(i)/float64(ridges+1) + g.b.rnd(-200, 200)
 		x0, x1 := lo+120, hi-900
@@ -143,7 +150,12 @@ func (g *gen) linhSonCoc() error {
 		g.plateau(c, 900, 2)
 	}
 	// Đá tảng rải rác trong lòng hẻm cho đỡ trống, nhưng thưa — khu này sống bằng địa hình.
+	// Bãi đá chỉ rải QUANH dải vách và các cụm, không khắp thung lũng: "dải vách núi là
+	// chính, thung lũng phần lớn trống, chỉ vài bãi đá" (chủ dự án chốt 31/10).
 	for _, p := range g.poisson(900, 500) {
+		if !g.b.nearSolid(p.X, p.Y, clusterGlue) {
+			continue
+		}
 		g.b.boulder(p.X, p.Y, g.b.rnd(90, 170), 160)
 	}
 	// §8.2: Linh Sơn Cốc = đá khổng lồ (bậc 9) ở các đèo.
@@ -255,7 +267,14 @@ func (g *gen) plateau(c Vec2, r float64, ways int) {
 func (g *gen) trucLam() error {
 	s := g.size
 	lo, hi := g.b.playable()
-	const cells = 11
+	// 7 ô thay vì 11: mê cung HỮU CƠ, không phải lưới ô vuông (chủ dự án chốt 31/10 —
+	// "lối đi quanh co giữa các lùm tre, hành lang ≥ 220").
+	//
+	// Lưới 11 cho ô rộng 1 015 và **120 bức tường tre phủ kín khu** — đo được khoảng thở
+	// 11%, tức gần như không có chỗ nào cách mọi rặng tre quá 400. Lưới 7 cho ô 1 594 và
+	// ~48 bức: lối đi rộng gấp rưỡi, còn chỗ thở giữa các lùm, mà vẫn ngoằn ngoèo vì thuật
+	// toán đào đường lùi dần không đổi.
+	const cells = 7
 	cell := (hi - lo) / cells
 	// Hai khoảng trống giữa mê cung để đặt đài: đục hẳn 2 ô liền nhau.
 	a := Vec2{lo + cell*2.5, hi - cell*2.5}
@@ -565,12 +584,26 @@ func (g *gen) bangNguyetHo() error {
 	// Cổng và đài vẫn phải đặt TRƯỚC đảo: chúng ghi vùng giữ trống, nên đảo tự tránh.
 	g.islandsStep(g.target)
 
-	// Đảo băng: vùng tuyết nhỏ giữa hồ (đứng được, không trượt) viền vài tảng băng.
+	// Đảo băng: vùng tuyết nhỏ giữa hồ (đứng được, không trượt).
+	//
+	// Mỗi đảo cắm 1–2 **tảng băng vạn năm** (bậc 9) hoặc đá khổng lồ ở GIỮA đảo. Giữa chứ
+	// không viền: viền đảo nằm đúng mép hồ, mà mép hồ là chỗ cấm đặt — bản trước rải 5 tảng
+	// ở bán kính 700 và cả 5 đều bị từ chối, nên 4 cái đảo đứng trơ không một vật cản.
+	//
+	// Bậc 9 là có chủ ý: đây là thứ duy nhất còn lại ở Băng Nguyệt Hồ khi người chơi lên
+	// Đại Thừa, tức chỗ nấp và chỗ bị ép vào tường duy nhất của cả khu (§8.2).
 	for _, is := range []Vec2{islandA, islandB, {c.X + 1500, c.Y - 1800}, {c.X - 1500, c.Y + 1800}} {
 		g.b.organicZone("snow", is.X, is.Y, 820, 0.85)
-		for i := 0; i < 5; i++ {
-			a := float64(i) / 5 * 2 * math.Pi
-			g.b.boulder(is.X+math.Cos(a)*700, is.Y+math.Sin(a)*700, g.b.rnd(70, 120), 200)
+		n := 1 + g.b.rng.Intn(2)
+		for i := 0; i < n; i++ {
+			a := g.b.rnd(0, 2*math.Pi)
+			d := g.b.rnd(0, 260)
+			kind := "ice_eternal"
+			if g.b.rng.Intn(3) == 0 {
+				kind = "boulder_huge"
+			}
+			w := g.b.rnd(240, 380)
+			g.b.obstacle(kind, is.X+math.Cos(a)*d-w/2, is.Y+math.Sin(a)*d-w/2, w, w, 160)
 		}
 	}
 	// Vật cản ngoài hồ: thưa, chỉ để bờ tuyết không trống trơn.
@@ -595,7 +628,7 @@ func generateZone(b *builder, cfg config.Mapgen, zone int) error {
 	if zone < 0 || zone >= len(zoneDefs) {
 		return fmt.Errorf("khu %d không có (chỉ có 0..%d)", zone, len(zoneDefs)-1)
 	}
-	g := &gen{b: b, cfg: cfg, size: b.size, obs: b.obs, target: zoneDefs[zone].density}
+	g := &gen{b: b, cfg: cfg, size: b.size, obs: b.obs, target: zoneDefs[zone].density, zoneID: zoneDefs[zone].id}
 	b.border()
 	if err := zoneDefs[zone].build(g); err != nil {
 		return err

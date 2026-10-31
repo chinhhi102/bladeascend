@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.13:** chốt mục tiêu bố cục theo lượt 2 (mật độ hình vẽ 12–20%, khoảng thở ≥ 20%, Băng Nguyệt ≥ 40%), mẫu cụm riêng từng khu, luật túi kín ≥ 4 ô (§8.1b).
+
 **Thay đổi v6.12:** mật độ đo theo hình vẽ (giữ mức hiện tại, không nới corridor_min); thêm luật nhịp cụm – khoảng thở, đa dạng hình khối, bản sắc từng khu (§8.1b).
 
 **Thay đổi v6.11:** sạp của Cô Ba có bậc = cảnh giới Cô Ba + 1, Cô Ba đi xuyên sạp của mình (§6.3).
@@ -671,16 +673,16 @@ Bậc = **chỉ số cảnh giới tối thiểu** (0 = Luyện Khí … 8 = Đ�
 2. **Vật cản xếp thành "đảo"** giữa các đường (cụm nhà, cụm đá, cụm tre), mỗi đảo tối đa ~1 200 × 1 200. **Không tường liền dài quá 800**; tường dài hơn phải có khe ≥ `corridor_min` của bậc đó.
 3. **Đảo phân tầng**: viền ngoài bậc thấp (rào, sạp), lõi bậc cao (gạch, đá) → người nhỏ chui vào nấp, người lớn chém thẳng vào.
 4. **Quanh cổng, Thiên Môn, Đài Tiên Khí, bến Thiên Môn**: trống bán kính ≥ 600, có ≥ 3 lối vào rộng ≥ 400.
-5. **Mật độ**: đo theo **diện tích hình vẽ** của vật cản (chân đế chỉ ≈ 27% hình vẽ). Mục tiêu hình vẽ: Băng Nguyệt Hồ 12–18%, các khu khác 18–28% (≈ chân đế 5–7,5% — mức hiện tại đã đạt). Không nới `corridor_min` để tăng mật độ.
-6. **Nhịp "cụm – khoảng thở"**, không rải đều: ≥ 30% diện tích khu là **khoảng trống** (không vật cản trong bán kính 400) để giao tranh; vật cản dồn thành cụm/đảo có hình dáng rõ (nhà, sân, lùm tre, bãi đá), giữa các cụm là khoảng trống. Cấm kiểu rải đều như giấy kẻ ô (Poisson đều khắp khu) — người chơi không có mốc để nhớ đường.
-7. **Đa dạng hình khối**: trộn kích thước (nhỏ/vừa/lớn), xoay, hướng (không toàn khối nằm ngang), chiều dài dãy khác nhau.
+5. **Mật độ**: đo theo **diện tích hình vẽ** của vật cản (chân đế chỉ ≈ 27% hình vẽ). Mục tiêu hình vẽ: Băng Nguyệt Hồ 6–12%, các khu khác **12–20%** (chỉnh theo lượt bố cục 2: khi đã gom cụm, 12–16% nhìn đã đủ dày). Không nới `corridor_min` để tăng mật độ.
+6. **Nhịp "cụm – khoảng thở"**, không rải đều: **≥ 20%** diện tích khu (Băng Nguyệt Hồ ≥ 40%) là **khoảng trống** (không vật cản trong bán kính 400) để giao tranh; vật cản dồn thành cụm/đảo có hình dáng rõ (nhà, sân, lùm tre, bãi đá), giữa các cụm là khoảng trống. Cấm kiểu rải đều như giấy kẻ ô (Poisson đều khắp khu) — người chơi không có mốc để nhớ đường.
+7. **Đa dạng hình khối & mẫu cụm riêng từng khu**: trộn kích thước, xoay, hướng. Mỗi khu có **mẫu cụm riêng**, không dùng chung một mẫu ô 2×2: Linh Sơn = bãi đá tròn/méo, xoay ngẫu nhiên; Trúc Lâm = lùm tre dài cong, xếp so le; Phàm Trấn = nhà chữ nhật có sân/cửa; Thiên Đình = điện/sân có tường bao; Băng Nguyệt = đá & băng tròn trên đảo và bờ.
 8. **Bản sắc từng khu là luật, không phải trang trí**: Thiên Đình = trục đường chữ X + vành đai + sân; Linh Sơn Cốc = dải vách núi là nhân vật chính, thung lũng giữa các dải phần lớn trống, chỉ vài bãi đá; Trúc Lâm = **lối đi quanh co giữa các lùm tre** (mê cung hữu cơ, hành lang ≥ 220, không phải lưới); Phàm Trấn = lưới phố + khối nhà (tường gạch thành nhà có sân/cửa); Băng Nguyệt Hồ = **mặt hồ gần như trống** (chỉ đảo có vật cản), vật cản dồn ở bờ và trên đảo.
 9. **Đối xứng** (xoay 4 phía hoặc gương) để mọi hướng vào công bằng.
 
 **Kiểm tra bắt buộc** — `cmd/mapgen --check` (CI fail nếu trượt): với **mỗi cảnh giới r = 0..13**, dùng thân to nhất của r (tầng 10) và **bỏ các vật cản bậc ≤ r** (vì r chém được), flood fill lưới 50:
 - Toàn bộ chỗ trống phải **liên thông** (không túi bị nhốt).
 - Mọi cổng, Thiên Môn, Đài, bến, điểm spawn đều tới được.
-- Diện tích trống ≥ 60%; ≥ 30% diện tích là khoảng thở (không vật cản trong bán kính 400); vật cản trên mặt hồ Băng Nguyệt (ngoài đảo) ≤ 1%.
+- Diện tích trống ≥ 60%; khoảng thở (không vật cản trong bán kính 400) ≥ 20% (Băng Nguyệt Hồ ≥ 40%); vật cản trên mặt hồ Băng Nguyệt (ngoài đảo) ≤ 1%; **không túi kín nào ≥ 4 ô lưới 50** ở mọi cảnh giới.
 - Xuất ảnh `docs/map_check/{khu}_r{r}.png`: xám = vật cản, cam = chỗ thân không lọt, đỏ = vùng bị nhốt.
 
 ### 8.2a Di chuyển mượt khi chạm vật cản (sửa lỗi giật)

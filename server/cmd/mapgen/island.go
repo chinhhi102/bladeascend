@@ -86,74 +86,74 @@ type islandPlan struct {
 // Vòng lặp theo mật độ ĐO ĐƯỢC chứ không theo "đặt N cái đảo": mỗi khu đã có sẵn một lượng
 // vật cản riêng (Trúc Lâm 275 rặng tre, Băng Nguyệt Hồ 25 tảng đá), nên cùng một con số N
 // cho ra mật độ khác nhau hẳn. Đo rồi mới quyết là cách duy nhất để năm khu cùng về đích.
-// islandsStep lấp đảo cho tới khi mật độ chân đế chạm `target`.
+// islandsStep lấp vật cản cho tới khi mật độ HÌNH VẼ chạm `target`.
 //
-// Đặt theo **LƯỚI CÓ XÊ DỊCH**, không rải ngẫu nhiên. Lý do là số học chứ không phải thẩm
-// mỹ: rải ngẫu nhiên (random sequential adsorption) chỉ đạt khoảng một nửa mật độ xếp tối
-// ưu, vì mỗi đảo đặt xuống lại cắt nát chỗ trống còn lại thành những mảnh không đủ cho đảo
-// sau. Đo được: rải ngẫu nhiên kẹt ở 2,6–4,4% chân đế dù đã thử 30 000 lượt.
+// Đặt theo CỤM LỚN CÁCH XA NHAU, không rải đều. Đây là bài học đo được của lượt 1: rải đảo
+// nhỏ khắp khu cho đúng mật độ 18–28% thì **khoảng thở = 0%** — không có một điểm nào trên
+// cả năm khu cách mọi vật cản quá 400 đơn vị. Mật độ đúng mà bản đồ vẫn hỏng: chỗ nào cũng
+// vướng một tí, không chỗ nào rượt đuổi hay đánh nhau được.
 //
-// Lưới cũng chính là thứ §8.1b mục 1 và mục 6 mô tả: đường chính và đường phụ chia khu
-// thành ô, vật cản nằm trong ô — và "đối xứng để mọi hướng vào công bằng". Xê dịch mỗi đảo
-// ±25% bước lưới để không lộ ra bàn cờ (§8.6 cấm khối hình học lộ liễu).
+// Số học của cách làm mới: cụm rộng `L`, cách nhau `S`. Phần "thở" là phần nằm ngoài cụm đã
+// nở thêm 400 mỗi bên, tức `1 − (L+800)²/S²`. Phủ `L²/S² = 20%`. Hai phương trình ấy cho
+//
+//	(L+800)/L ≤ √(0,70/0,20) = 1,87  →  L ≥ 920
+//
+// Nghĩa là **cụm phải rộng ít nhất ~920 đơn vị**. Rải đảo 500 thì dù xếp thế nào cũng không
+// bao giờ có 30% khoảng thở — biên 400 quanh mỗi đảo nuốt hết chỗ trống. Cụm 1 200 cách
+// nhau 2 700 cho ra thở 44%, phủ 20%.
 func (g *gen) islandsStep(target float64) {
 	lo, hi := g.b.playable()
-	// Quét nhiều vòng, mỗi vòng một cỡ đảo nhỏ dần: vòng đầu đặt đảo to vào chỗ rộng, các
-	// vòng sau nhét đảo nhỏ vào khe còn lại. Dừng ngay khi chạm mục tiêu.
-	// Cỡ đảo bắt đầu từ 250 chứ không 380: khe thật giữa các vật cản sẵn có chỉ ~645, mà
-	// một đảo bán kính 380 cần 760 + hành lang. Đảo to chỉ lọt được vài chỗ rồi thôi.
-	//
-	// Mỗi cỡ quét HAI lượt, lượt sau lệch nửa bước lưới. Lưới thẳng để lại một khoảng trống
-	// hình thoi ở giữa bốn đảo — đúng chỗ một đảo cỡ đó vừa vặn nằm vào. Không có lượt lệch
-	// thì mật độ dừng ở ~5,7% dù còn chỗ nhìn thấy rõ trên ảnh.
-	// Lớp đảo bậc ≥ 5: xương sống của địa hình, còn lại tới Đại Thừa.
-	for _, r := range []float64{250, 200, 160, 125, 95} {
-		for _, off := range []float64{0, 0.5} {
-			if g.b.footprintDensity() >= target {
-				return
-			}
-			g.islandLattice(lo, hi, r, target, off, false)
-		}
-	}
-	// Lớp lấp cuối, lõi bậc thấp: hành lang chỉ 150–180 nên lọt được vào khe mà đảo bậc 5+
-	// không vào nổi. Không có lớp này thì mật độ dừng ở ~6–9% dù ảnh còn thấy rõ chỗ trống.
-	for _, r := range []float64{110, 85, 65} {
+	// Nhiều bước lưới nhỏ dần, dừng NGAY khi chạm mật độ mục tiêu. Bước thưa đặt trước nên
+	// các cụm lớn chiếm chỗ đẹp và khoảng thở hình thành sớm; bước dày chỉ chạy nếu còn
+	// thiếu mật độ, và mỗi lượt lại kiểm mục tiêu nên nó tự dừng ở chỗ vừa đủ.
+	for _, pitch := range []float64{clusterPitch, clusterPitch * 0.78, clusterPitch * 0.62, clusterPitch * 0.5} {
 		for _, off := range []float64{0, 0.5, 0.25} {
-			if g.b.footprintDensity() >= target {
+			if g.b.visualDensity() >= target || g.b.breathing() <= g.breathFloorOf() {
 				return
 			}
-			g.islandLattice(lo, hi, r, target, off, true)
+			g.clusterLattice(lo, hi, pitch, off, target)
 		}
 	}
 }
 
-// islandLattice rải một lớp đảo bán kính `r` theo lưới.
-func (g *gen) islandLattice(lo, hi, r, target, off float64, low bool) {
-	c := g.size / 2
-	half := (hi - lo) / 2
-	// Bước lưới = đường kính đảo + hành lang của bậc cao nhất có thể. Cộng hành lang vào
-	// bước chứ không trông chờ `free` từ chối: trông chờ thì mỗi ô thử rồi trượt, còn cộng
-	// vào bước thì ô nào cũng dùng được.
-	// Bước lưới = đường kính đảo + hành lang bậc cao nhất + chỗ cho XÊ DỊCH.
-	//
-	// Cộng xê dịch vào bước, không chỉ cộng hành lang: hai đảo cạnh nhau cùng lệch về phía
-	// nhau thì khoảng cách thật ngắn đi gấp đôi biên xê dịch, `free` từ chối, và cả hàng ô
-	// trượt sạch. Lần đầu tôi xê dịch ±25% bước mà quên cộng vào, mật độ tụt từ 2,6% xuống
-	// 2,1% — thêm đảo mà ít đi.
-	coreTier := 5
-	if low {
-		coreTier = 2
+// clusterPitch: khoảng cách tâm-tâm giữa hai cụm. Xem phần số học ở `islandsStep`.
+const clusterPitch = 2700.0
+
+// breathFloor: bộ sinh ngừng thêm cụm khi khoảng thở xuống tới mức này.
+//
+// Để dư 4 điểm so với ngưỡng 30% của bộ kiểm: nội dung rải rác của từng khu (nhà, rào, bãi
+// đá) còn đặt SAU cụm và sẽ ăn thêm vài phần trăm nữa.
+const breathFloor = 0.24
+
+// breathFloorOf: sàn khoảng thở của khu đang dựng.
+//
+// Dư 12 điểm so với ngưỡng bộ kiểm, không phải 4: nội dung rải rác của khu (nhà, rào, bãi
+// đá, mê cung, dải vách) đặt SAU cụm và đo được là ăn mất ~12 điểm khoảng thở. Để dư 4 thì
+// cụm dừng ở 24%, nội dung rải rác kéo xuống 14%, và bộ kiểm đỏ.
+func (g *gen) breathFloorOf() float64 { return breathFloorFor(g.zoneID) + frameCost(g.zoneID) }
+
+// frameCost: BỘ KHUNG CỐ ĐỊNH của khu ăn mất bao nhiêu điểm khoảng thở sau khi cụm đã đặt
+// xong. Đo thực tế, không phải phỏng đoán.
+//
+// Khu thường mất ~12 điểm vì nhà/rào/bãi đá rải sau. Thiên Đình mất nhiều hơn hẳn vì khung
+// của nó là thứ đặt TRƯỚC và không bỏ được: vòng cột quanh Thiên Tiên Đài, bốn sân môn phái
+// có tường bao, cộng tám cổng với vùng giữ trống. Để chung 12 điểm thì nó dừng ở 32% rồi
+// tụt còn 17% — dưới ngưỡng.
+func frameCost(zoneID string) float64 {
+	if zoneID == "thien_dinh" {
+		return 0.18
 	}
-	pitch := 2*r + g.corridorFor(coreTier) + 2*islandJitter
+	return 0.12
+}
+
+// clusterLattice rải một lớp cụm theo lưới có xê dịch.
+func (g *gen) clusterLattice(lo, hi, pitch, off, target float64) {
 	n := int((hi - lo) / pitch)
 	if n < 1 {
 		return
 	}
-	// Duyệt ô theo thứ tự XA TÂM TRƯỚC: §8.1b mục 5 muốn "trống ở giữa, dày hơn ở rìa", và
-	// cách chắc chắn nhất là lấp rìa trước rồi mới vào trong.
-	type cell struct {
-		x, y, d float64
-	}
+	type cell struct{ x, y, d float64 }
+	c := g.size / 2
 	cells := make([]cell, 0, n*n)
 	for iy := 0; iy < n; iy++ {
 		for ix := 0; ix < n; ix++ {
@@ -162,82 +162,91 @@ func (g *gen) islandLattice(lo, hi, r, target, off float64, low bool) {
 			cells = append(cells, cell{x, y, math.Hypot(x-c, y-c)})
 		}
 	}
+	// Xa tâm trước: §8.1b mục 5 muốn trống ở giữa (chỗ đánh nhau), dày hơn ở rìa.
 	sort.Slice(cells, func(a, b int) bool { return cells[a].d > cells[b].d })
 	for _, cl := range cells {
-		if g.b.footprintDensity() >= target {
+		// Hai điều kiện dừng NGANG HÀNG nhau: đủ mật độ, hoặc hết chỗ thở. Khoảng thở là
+		// thứ lượt bố cục 1 làm hỏng (0%) dù mật độ đúng, nên nó phải là ràng buộc chứ không
+		// phải số đo hậu kiểm.
+		if g.b.visualDensity() >= target || g.b.breathing() <= g.breathFloorOf() {
 			return
 		}
-		// Vùng giữa khu để trống hơn (§8.1b mục 5): bỏ qua một phần ô gần tâm. 0.55 ở tâm
-		// chứ không 0.3 — mục tiêu mật độ tính trên CẢ khu, bỏ quá tay ở tâm thì rìa phải
-		// bù lại tới mức chật.
-		if g.b.rng.Float64() > 0.8+0.2*math.Min(cl.d/math.Max(half, 1), 1) {
-			continue
-		}
-		p := islandPlan{
-			cx:   cl.x + g.b.rnd(-islandJitter, islandJitter),
-			cy:   cl.y + g.b.rnd(-islandJitter, islandJitter),
-			r:    r * g.b.rnd(0.8, 1.0),
-			core: g.pickCoreFor(low),
-			rim:  islandRim[g.b.rng.Intn(len(islandRim))],
-		}
-		g.placeIsland(p)
+		g.placeCluster(
+			cl.x+g.b.rnd(-islandJitter, islandJitter),
+			cl.y+g.b.rnd(-islandJitter, islandJitter),
+			g.b.rnd(clusterMinSpan, clusterMaxSpan)/2)
 	}
 }
 
-// placeIsland đặt một đảo phân tầng: lõi bậc cao ở giữa, viền bậc thấp quanh ngoài.
+const (
+	// clusterMinSpan: dưới ~920 thì không bao giờ đạt 30% khoảng thở (xem `islandsStep`).
+	clusterMinSpan = 1000.0
+	clusterMaxSpan = 1500.0
+)
+
+// placeCluster dựng MỘT cụm: nhiều dải vật cản song song, dài ≤ 800, cách nhau đúng hành
+// lang tối thiểu — đủ để đi xuyên qua cụm chứ không phải đi vòng.
 //
-// Hành lang tối thiểu (§8.1b, bảng `obstacles.corridor_min`) áp giữa HAI ĐẢO, không giữa
-// từng khối trong cùng một đảo. Đây là điểm quyết định cả bài toán mật độ:
-//
-// Ép corridor giữa mọi khối thì một khối 400×400 bậc 9 thật ra chiếm 1 080 × 1 080 — gấp
-// 7,3 lần diện tích của nó, và trần mật độ là ~3% chân đế. Cho các khối trong một đảo chạm
-// nhau thì đảo thành một CỤM đặc, corridor chỉ phải giữ ở mép ngoài.
-//
-// Đó cũng là điều §8.1b mục 2 nói: "vật cản xếp thành đảo giữa các đường" — đảo là một
-// khối, không phải một đám khối cách đều nhau.
-func (g *gen) placeIsland(p islandPlan) {
-	// Hành lang lấy theo bậc CAO NHẤT của đảo: người không chém được lõi phải đi vòng, và
-	// khe họ đi là khe giữa đảo này với đảo bên cạnh.
-	gap := g.corridorFor(max(g.tierOf(p.core), g.tierOf(p.rim)))
-	// Kiểm chỗ cho CẢ ĐẢO một lần, với hành lang đầy đủ. Đặt từng khối rồi mới biết hụt thì
-	// đảo ra nham nhở — nửa cái lõi không có viền.
-	bbox := rect{p.cx - p.r, p.cy - p.r, p.cx + p.r, p.cy + p.r}
-	if !g.b.freeFor(bbox, max(g.tierOf(p.core), g.tierOf(p.rim)), g.corridorFor) {
+// Ba thứ làm cụm trông có HÌNH DÁNG chứ không phải một đám ô vuông (§8.1b mục 6):
+//   - dải chạy theo MỘT hướng chung cho cả cụm (ngang hoặc dọc), nên cụm có "thớ";
+//   - độ dài mỗi dải cắt theo đường bao TRÒN của cụm, nên mép cụm cong chứ không vuông;
+//   - lõi bậc cao nằm giữa, viền bậc thấp ở hai đầu dải (§8.1b mục 3 "đảo phân tầng").
+func (g *gen) placeCluster(cx, cy, r float64) {
+	core := g.pickCore()
+	rim := islandRim[g.b.rng.Intn(len(islandRim))]
+	if !g.b.freeFor(rect{cx - r, cy - r, cx + r, cy + r}, max(g.tierOf(core), g.tierOf(rim)), g.corridorFor) {
 		return
 	}
-	// Lát hộp bao bằng lưới k×k **KHÔNG CHỒNG MÉP**: ô giữa là lõi bậc cao, ô ngoài là viền
-	// bậc thấp (§8.1b mục 3 "đảo phân tầng").
+	vertical := g.b.rng.Intn(2) == 0
+	// Dải XEN KẼ bậc cao / bậc thấp, và khe giữa hai dải kề nhau lấy theo `corridor_min` của
+	// bậc THẤP HƠN (§8.1b: "khe giữa vật cản bậc A và bậc B ≥ corridor_min[min(A,B)]").
 	//
-	// Không chồng mép là điều kiện bắt buộc, không phải thẩm mỹ. Phép đẩy ra khỏi vật cản
-	// (`resolveBlocking`) lặp 3 lượt, mỗi lượt đẩy lần lượt ra khỏi từng khối. Với các khối
-	// RỜI nhau thì nó hội tụ và client tính ra đúng kết quả server; với các khối CHỒNG nhau
-	// thì kết quả phụ thuộc thứ tự và số lượt, mà server truy vấn theo lưới không gian quanh
-	// vị trí ĐANG DI CHUYỂN còn client duyệt cả mảng — hai bên ra hai danh sách khác nhau.
-	// Bản đầu cho chồng mép và bài đối chiếu 1 000 bước lệch ngay **18,4 đơn vị**.
-	k := 2 + g.b.rng.Intn(2) // 2×2 hoặc 3×3
-	cell := 2 * p.r / float64(k)
-	for iy := 0; iy < k; iy++ {
-		for ix := 0; ix < k; ix++ {
-			// GÓC là chỗ duy nhất được bỏ trống và cũng là chỗ duy nhất dùng bậc thấp.
-			//
-			// Bản đầu coi cả vành ngoài là "viền": với lưới 3×3 thì 8/9 ô thành bậc thấp,
-			// nên tới Đại Thừa cả đảo biến mất và mật độ ở r=8 tụt còn 0,6%. Góc thì chỉ
-			// 4/9, lõi vẫn là phần lớn đảo — đúng ý §8.1b mục 3 "viền ngoài bậc thấp, LÕI
-			// bậc cao".
-			corner := (ix == 0 || ix == k-1) && (iy == 0 || iy == k-1)
-			if corner && g.b.rng.Float64() < 0.3 {
-				continue // khe để người nhỏ chui vào nấp, và để đảo không ra hình vuông
-			}
-			kind := p.core
-			if k >= 3 && corner {
-				kind = p.rim
-			}
-			x := p.cx - p.r + float64(ix)*cell
-			y := p.cy - p.r + float64(iy)*cell
-			g.b.obstacleForce(kind, x, y, cell, cell)
+	// Đây là chỗ quyết định cụm đặc hay rỗng. Nếu mọi dải cùng bậc 9 thì khe phải 340, và
+	// với dải dày 200 thì cụm chỉ đặc 200/(200+340) = 37% — đo được mật độ cả khu 8–11%,
+	// không bao giờ chạm 18%. Xen kẽ thì khe chỉ cần 160–180, cụm đặc ~70%, và mật độ lên
+	// đúng tầm mà vẫn giữ nguyên luật đi lọt: ai không chém được dải bậc cao thì chém được
+	// dải bậc thấp ngay cạnh, hoặc đi qua khe 160 vốn đủ rộng cho họ.
+	lowGap := g.corridorFor(g.tierOf(rim))
+	thick := g.b.rnd(300, 450)
+	step := thick + lowGap
+	i := 0
+	for t := -r; t <= r; t += step {
+		half := math.Sqrt(math.Max(r*r-t*t, 0))
+		if half < 80 {
+			i++
+			continue
+		}
+		kind := core
+		if i%2 == 1 {
+			kind = rim
+		}
+		g.segmentedRun(cx, cy, t, half, thick, lowGap, vertical, kind)
+		i++
+	}
+}
+
+// maxRunLen: "Không tường liền dài quá 800" (§8.1b mục 2).
+const maxRunLen = 800.0
+
+// segmentedRun đặt một dải dài `2*half` thành từng khúc ≤ `maxRunLen`.
+func (g *gen) segmentedRun(cx, cy, t, half, thick, gap float64, vertical bool, kind string) {
+	total := 2 * half
+	segs := int(math.Ceil(total / maxRunLen))
+	if segs < 1 {
+		return
+	}
+	segLen := (total - float64(segs-1)*gap) / float64(segs)
+	if segLen < 80 {
+		return
+	}
+	for i := 0; i < segs; i++ {
+		a := -half + float64(i)*(segLen+gap)
+		if vertical {
+			g.b.obstacleForce(kind, cx+t-thick/2, cy+a, thick, segLen)
+		} else {
+			g.b.obstacleForce(kind, cx+a, cy+t-thick/2, segLen, thick)
 		}
 	}
-	_ = gap
 }
 
 // tierOf tra bậc của một loại vật cản từ config — không viết số vào mã.
