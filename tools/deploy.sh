@@ -48,18 +48,25 @@ restart_server() {
   local build="$1"
   pkill -f 'kxserver' 2>/dev/null || true
   sleep 2
-  # Mật khẩu quản trị đọc từ `server/data/admin.env` (ngoài git — xem .gitignore).
+  # Mật khẩu quản trị đọc từ `docs/private/admin.env` (thư mục riêng của chủ dự án, đã
+  # nằm trong .gitignore từ 22/10).
   #
   # Trước đây chỗ này truyền `KX_ADMIN_PASS`, một tên biến **server không bao giờ đọc**:
   # `admin.NewAuth` chỉ nhìn `ADMIN_PASSWORD_HASH`. Hậu quả là trang quản trị TẮT trên
   # `:9999` suốt từ lúc làm A1 — mọi thứ A1–A4 dựng lên đều không vào được, và dòng log
   # "trang quản trị: tắt" trôi qua mà không ai đọc.
-  local adminenv="$REPO/server/data/admin.env"
+  local adminenv="$REPO/docs/private/admin.env"
+  [ -f "$adminenv" ] || adminenv="$REPO/server/data/admin.env"
+  local adminhash=""
   if [ -f "$adminenv" ]; then
-    # shellcheck disable=SC1090
-    set -a; . "$adminenv"; set +a
+    # ĐỌC bằng `cut`, KHÔNG `source`.
+    #
+    # Hash bcrypt bắt đầu bằng `$2a$12$...`. Nạp tệp bằng `.` thì bash **khai triển** `$2`
+    # thành tham số vị trí thứ hai — và với `set -u` nó còn dừng hẳn script:
+    # "line 1: $2: unbound variable". Đã dính đúng vậy lúc 21:25.
+    adminhash=$(grep -m1 '^ADMIN_PASSWORD_HASH=' "$adminenv" | cut -d= -f2-)
   fi
-  ( cd "$REPO/server" && setsid env ADMIN_PASSWORD_HASH="${ADMIN_PASSWORD_HASH:-}" ./kxserver \
+  ( cd "$REPO/server" && setsid env ADMIN_PASSWORD_HASH="$adminhash" ./kxserver \
       -build "$build" \
       -client "$DEPLOY/client" \
       -assets "$DEPLOY/assets" \
@@ -72,8 +79,8 @@ restart_server() {
   # từ lâu. Chuyển hướng ở chính `./kxserver` là chưa đủ: subshell vẫn cầm bản sao.
   sleep 4
   if ! grep -q "trang quản trị: BẬT" "$REPO/server/data/kxserver.log" 2>/dev/null; then
-    echo "   ⚠ trang quản trị TẮT — chưa có server/data/admin.env." >&2
-    echo "     Tạo bằng:  cd server && go run ./cmd/adminpass" >&2
+    echo "   ⚠ trang quản trị TẮT — chưa có docs/private/admin.env." >&2
+    echo "     Tạo bằng:  cd server && go run ./cmd/adminpass > ../docs/private/admin.env" >&2
   fi
   if ! ss -ltn 2>/dev/null | grep -q ':9999'; then
     echo "LỖI: server không lên. Xem server/data/kxserver.log" >&2

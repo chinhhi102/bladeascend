@@ -16,10 +16,10 @@ Nó hỏi mật khẩu, rồi in ra một dòng như:
 ADMIN_PASSWORD_HASH=$2a$12$....
 ```
 
-Dán **nguyên dòng đó** vào tệp `server/data/admin.env` (tạo mới nếu chưa có):
+Dán **nguyên dòng đó** vào tệp `docs/private/admin.env` (tạo mới nếu chưa có):
 
 ```bash
-cd server && go run ./cmd/adminpass > data/admin.env
+cd server && go run ./cmd/adminpass > ../docs/private/admin.env
 ```
 
 Rồi deploy lại:
@@ -33,7 +33,8 @@ và đăng nhập bằng mật khẩu vừa đặt.
 
 ## Vài điều cần biết
 
-- `server/data/` nằm trong `.gitignore`, nên mật khẩu không bao giờ lọt vào git.
+- `docs/private/` nằm trong `.gitignore`, nên mật khẩu không bao giờ lọt vào git. Deploy đọc
+  `docs/private/admin.env` trước, rơi về `server/data/admin.env` nếu không có.
 - Trong tệp chỉ có **hash bcrypt**, không có mật khẩu. Ai đọc được tệp cũng không đăng nhập
   được — nhưng cũng đừng để lộ, vì hash dò được bằng máy mạnh.
 - Quên mật khẩu thì chạy lại `adminpass`, ghi đè tệp, deploy lại. Không mất dữ liệu gì.
