@@ -52,7 +52,13 @@ restart_server() {
       -build "$build" \
       -client "$DEPLOY/client" \
       -assets "$DEPLOY/assets" \
-      > data/kxserver.log 2>&1 < /dev/null & )
+      > data/kxserver.log 2>&1 < /dev/null & ) >/dev/null 2>&1 </dev/null
+  # Ba lần chuyển hướng trên subshell là CẦN, không thừa.
+  #
+  # Tiến trình server chạy nền kế thừa fd của subshell. Khi gọi deploy qua ống
+  # (`tools/deploy.sh | grep ...`) thì fd đó LÀ cái ống, và server giữ đầu ghi của ống mở
+  # suốt đời nó — `grep` ngồi chờ EOF không bao giờ tới, nên lệnh deploy "treo" dù đã xong
+  # từ lâu. Chuyển hướng ở chính `./kxserver` là chưa đủ: subshell vẫn cầm bản sao.
   sleep 4
   if ! ss -ltn 2>/dev/null | grep -q ':9999'; then
     echo "LỖI: server không lên. Xem server/data/kxserver.log" >&2
