@@ -10,19 +10,23 @@ export const STR = {
   findingRoom: 'Đang tìm phòng...',
   /** Chữ nổi khi kiếm chạm vật cản quá bậc (spec §8.2). */
   needRealm: (realm: string): string => `Cần ${realm}`,
+  /** Chữ nổi khi câu hát ru bị chém đứt (spec v6.9 §6.3). */
+  skillCancelled: 'Mất chiêu!',
+  /** Chữ nổi khi Hút Mì cướp được kiếm. */
+  swordsStolen: (n: number): string => `−${n} kiếm`,
   connecting: 'Đang kết nối máy chủ...',
   /** Tên 5 khu, khớp với room.ZoneNames bên server (spec §8.0). */
   /** Tên 10 kỹ năng (spec §6.3), khớp key nhân vật bên server. */
   skillNames: {
     a_hon: 'Bánh Bao Thần',
     ba_tam_loa: 'Loa Phường',
-    ong_ba_vong: 'Ru Ngủ',
+    ong_ba_vong: 'Ru Ngủ Trưa',
     dai_ca_dep: 'Gọi Đàn Em',
     map_tra_sua: 'Phun Trân Châu',
-    co_ba_ganh: 'Gánh Lướt',
-    su_phu_mi: 'Lưới Mì',
+    co_ba_ganh: 'Bày Hàng Chặn Lối',
+    su_phu_mi: 'Hút Mì Đoạt Kiếm',
     be_ti: 'Gồng Cơ',
-    shipper: 'Giao Hỏa Tốc',
+    shipper: 'Gom Đơn Hỏa Tốc',
     cu_rua: 'Rụt Cổ',
   } as Record<string, string>,
   /**
@@ -35,13 +39,13 @@ export const STR = {
   skillDesc: {
     a_hon: 'Ăn bánh bao, hồi ngay 20% số kiếm tối đa của cảnh giới.',
     ba_tam_loa: 'Hét một tiếng: đẩy văng địch phía trước 500 và làm vòng kiếm của họ quay ngược.',
-    ong_ba_vong: 'Hát ru: mọi địch quanh 500 chậm 40%, vòng kiếm quay chậm một nửa trong 3 giây.',
+    ong_ba_vong: 'Hát ru nửa giây (bị chém là mất chiêu): cả đám quanh mình ngủ gục 2,5 giây — đứng im, vòng kiếm ngừng quay, và kiếm đang ngủ KHÔNG đánh trả.',
     dai_ca_dep: 'Gọi 2 đàn em trong 10 giây, mỗi đứa mang nửa số kiếm của mình — mình không mất kiếm nào.',
     map_tra_sua: 'Phun trân châu bịt mắt địch 5 giây; trong 5 giây đó họ không nhặt được gì.',
-    co_ba_ganh: 'Lướt 600 và rơi trái cây: ai giẫm phải thì trượt và choáng 1 giây.',
-    su_phu_mi: 'Ném lưới mì trói chặt địch 5 giây — chúng đứng yên, chỉ còn kiếm quay.',
+    co_ba_ganh: 'Bày 5 cái sạp thành vòng cung chặn đường 6 giây — người ngang cấp hoặc kém hơn không chém được, mình thì đi xuyên. Dọc chân sạp rải vỏ chuối: ai giẫm thì trượt và choáng 1 giây.',
+    su_phu_mi: 'Hút một sợi mì vào địch gần nhất phía trước: cướp 25% số kiếm của họ về vòng của mình (tối đa 20% kiếm tối đa của mình, dư thì rơi xuống đất). Không ai phía trước thì hụt, vẫn mất lượt.',
     be_ti: 'Gồng 5 giây: kiếm cứng gấp đôi, miễn mọi đòn đẩy, chậm, trói và choáng.',
-    shipper: 'Chạy nhanh gấp 3 trong 5 giây và đi xuyên qua mọi vật cản.',
+    shipper: 'Chạy nhanh gấp 3 trong 4 giây: xuyên mọi vật cản (trừ biên khu), miễn và gỡ sạch khống chế, hút hết viên và vật phẩm quanh mình.',
     cu_rua: 'Rụt vào mai 5 giây: không bể kiếm, không bị chém; ra khỏi mai thì bật sóng đẩy.',
   } as Record<string, string>,
   skillLabel: 'Kỹ năng',
@@ -52,8 +56,8 @@ export const STR = {
     ong_ba_vong: 'À ơi… ngủ đi con…',
     dai_ca_dep: 'Tụi bay đâu, lên đây!',
     map_tra_sua: 'Nếm thử trân châu nhà tao!',
-    co_ba_ganh: 'Tránh đường, hàng nóng!',
-    su_phu_mi: 'Mì gói ba phút, trói mày ba giây!',
+    co_ba_ganh: 'Hàng về! Tránh ra cho cô bày!',
+    su_phu_mi: 'Sùn sụt… kiếm mày ngon đấy!',
     be_ti: 'Gồng! Không đứa nào đẩy nổi!',
     shipper: 'Đơn gấp, xin phép đi xuyên!',
     cu_rua: 'Thiền… các ngươi cứ chém đi.',

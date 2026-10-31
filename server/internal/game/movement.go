@@ -19,15 +19,19 @@ func (g *Game) MoveSpeed(p *Player) float64 {
 	if g.Burning(p) {
 		s *= g.Cfg.Burn.Mult
 	}
-	// Kỹ năng (spec §6.3): Ru Ngủ làm chậm, Giao Hỏa Tốc làm nhanh, Lưới Mì trói chết chân.
+	// Kỹ năng (spec §6.3): Gom Đơn Hỏa Tốc làm nhanh ×3; bùn và gió nghịch vẫn dùng StSlow.
 	if p.HasStatus(StSlow, g.Time) {
-		s *= g.Cfg.Skills.RuNguMove
+		s *= g.Cfg.Zones.MudMult
 	}
 	if p.HasStatus(StGhost, g.Time) {
 		s *= g.Cfg.Skills.GhostSpeed
 	}
-	if p.HasStatus(StRoot, g.Time) || p.HasStatus(StShell, g.Time) || p.HasStatus(StStun, g.Time) {
-		s = 0 // bị trói, đang rụt trong mai, hoặc đang choáng
+	// Đang hát ru thì đứng yên (spec v6.9 §6.3: "đứng yên 0.5s"). Đọc qua `StSing` chứ
+	// không qua `p.channel`: client chỉ thấy được bit trạng thái, và hai bên phải dùng
+	// CÙNG một điều kiện, nếu không thì dự đoán lệch đúng nửa giây mỗi lần dùng kỹ năng.
+	if p.HasStatus(StRoot, g.Time) || p.HasStatus(StShell, g.Time) || p.HasStatus(StStun, g.Time) ||
+		p.HasStatus(StSleep, g.Time) || p.HasStatus(StSing, g.Time) {
+		s = 0 // bị trói, rụt trong mai, choáng, ngủ gục, hoặc đang hát ru
 	}
 	return s
 }
@@ -247,7 +251,10 @@ func (g *Game) resolveBlockingFor(p *Player, pos Vec, r float64) Vec {
 		return g.clampToPlay(pos, r)
 	}
 	if !p.HasStatus(StGhost, g.Time) {
-		return g.resolveBlocking(pos, r)
+		// Hai tầng: vật cản tĩnh của bản đồ, rồi dãy sạp tạm của Cô Ba. Sạp xét SAU để một
+		// người bị kẹp giữa sạp và tường vẫn được đẩy ra khỏi sạp — thứ biến mất sau 6 giây
+		// thì nhường chỗ cho thứ còn đó mãi.
+		return g.stallBlocking(p, g.resolveBlocking(pos, r), r)
 	}
 	return g.resolveBorders(pos, r)
 }

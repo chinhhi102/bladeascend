@@ -139,12 +139,13 @@ func TestSkillDurationsMatchSpec(t *testing.T) {
 		got  float64
 		want float64
 	}{
-		{"Lưới Mì trói", sc.LuoiMiSecs, 5},
 		{"Gồng Cơ", sc.BraceSecs, 5},
 		{"Rụt Cổ", sc.ShellSecs, 5},
 		{"Gọi Đàn Em", sc.DanEmSecs, 10},
 		{"Phun Trân Châu bịt mắt", sc.TranChauSecs, 5},
-		{"Giao Hỏa Tốc", sc.GhostSecs, 5},
+		{"Gom Đơn Hỏa Tốc", g.skillNum("gom_don_secs"), 4},
+		{"Ru Ngủ Trưa ngủ", g.skillNum("ru_ngu_secs"), 2.5},
+		{"Ru Ngủ Trưa hát", g.skillNum("ru_ngu_channel"), 0.5},
 		{"Giao Hỏa Tốc tốc độ", sc.GhostSpeed, 3},
 	} {
 		if c.got != c.want {

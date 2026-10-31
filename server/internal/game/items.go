@@ -84,6 +84,14 @@ func (g *Game) PickupRadius(p *Player) float64 {
 	if p.HasBuff(BuffMagnet, g.Time) {
 		r *= g.Cfg.Buffs["magnet"].Mult
 	}
+	// Gom Đơn Hỏa Tốc hút sạch mọi thứ trong 3 U (spec v6.9 §6.3).
+	//
+	// Lấy MAX chứ không nhân: `gom_don_r` đã tính theo U, mà U = `pickup_r × scale` chính
+	// là `r` lúc chưa buff. Nhân vào là 3 × (bán kính đã có cả Hút Linh) — tức Shipper cầm
+	// Hút Linh hút cả 1 350 đơn vị ở Đại Thừa, gần một phần tám bản đồ.
+	if p.HasStatus(StGhost, g.Time) {
+		r = math.Max(r, g.skillRange(p, "gom_don_r"))
+	}
 	return r
 }
 
@@ -95,6 +103,12 @@ func (g *Game) PickupRadius(p *Player) float64 {
 func (g *Game) CanPickUp(p *Player) bool {
 	if p.IsMinion {
 		return false // đàn em không nhặt đồ (spec v5.4 §6.3)
+	}
+	// Gom Đơn hút được **kể cả lúc đang bị bịt mắt** (spec v6.9 §6.3). Xét trước Trân Châu
+	// vì đó đúng là ngoại lệ spec ghi tên: Shipper lao qua Đài đang phun thì trân châu
+	// không cản được.
+	if p.HasStatus(StGhost, g.Time) {
+		return true
 	}
 	if g.Cfg.Skills.TranChauNoPickup && p.HasStatus(StBlind, g.Time) {
 		return false

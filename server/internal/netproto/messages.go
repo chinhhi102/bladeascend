@@ -77,7 +77,7 @@ type ObstacleState struct {
 // Thêm hẳn một LOẠI gói mới (như `tm` telemetry) thì không phải đổi hình dạng gói cũ, nên
 // không tăng số: client cũ chỉ là không bao giờ gửi `tm`, còn server cũ gặp `tm` thì rơi vào
 // nhánh `default` và bỏ qua. Cả hai chiều đều an toàn, không ai đọc rác.
-const ProtocolVersion = 4
+const ProtocolVersion = 5
 
 // Telemetry chở thông tin phiên, mẫu 10 giây và sự kiện (TELEMETRY_SPEC §2, §3).
 //

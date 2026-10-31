@@ -10,6 +10,7 @@ import {
   itemKind,
   type MonsterState,
   type PlayerState,
+  type Shape,
   type Snapshot,
   statusOn,
   type Welcome,
@@ -72,6 +73,13 @@ export class ClientWorld {
   readonly monsters = new Map<number, Timed<MonsterState>[]>();
   readonly items = new Map<number, ItemState>();
   readonly brokenObstacles = new Map<number, boolean>();
+  /**
+   * stalls: dãy sạp tạm của Cô Ba (spec v6.10 §6.3), theo id sạp.
+   *
+   * Không nằm trong `map.obstacles` vì chúng chỉ sống 6 giây và là của một phòng cụ thể —
+   * xem `server/internal/game/stall.go` để biết vì sao server cũng tách chúng ra.
+   */
+  readonly stalls = new Map<number, { owner: number; tier: number; shape: Shape }>();
   /** goneAt: lần đầu một entity vắng mặt khỏi snapshot — xem `expire`. */
   private readonly goneAt = new Map<number, number>();
   /** deletedAt: lúc một entity bị xoá hẳn, để nhận ra nó quay lại ngay sau đó (nhấp nháy). */
@@ -353,8 +361,45 @@ export class ClientWorld {
         this.brokenObstacles.set(id, true);
       } else if (e.k === 'ObstacleRegrow' && e.s !== 'warn') {
         this.brokenObstacles.set(id, false);
+      } else if (e.k === 'StallUp') {
+        // `f` là bề rộng một cái sạp; `x`/`y` là TÂM sạp, nên lùi nửa bề rộng ra góc.
+        const w = e.f ?? 0;
+        this.stalls.set(e.b ?? -1, {
+          owner: e.a ?? 0,
+          tier: e.n ?? 0,
+          shape: { x: (e.x ?? 0) - w / 2, y: (e.y ?? 0) - w / 2, w, h: w },
+        });
+      } else if (e.k === 'StallDown') {
+        this.stalls.delete(e.b ?? -1);
       }
     }
+  }
+
+  /**
+   * blockingStalls: những cái sạp của Cô Ba đang chặn `me` — bản port của `Game.stallBlocking`.
+   *
+   * Ba trường hợp đi xuyên, phải khớp y nguyên server, nếu không client dự đoán bị chặn
+   * trong khi server cho qua (hoặc ngược lại) và nhân vật giật ở đúng miệng dãy sạp:
+   *   1. chủ sạp (`bay_sap_owner_passes`);
+   *   2. người chém được bậc đó;
+   *   3. Shipper đang Gom Đơn (`ghost`) — xuyên hết, không cần xét gì.
+   */
+  private blockingStalls(me: PlayerState): Shape[] {
+    if (this.stalls.size === 0 || statusOn(me.st, 'ghost')) {
+      return [];
+    }
+    const ownerPasses = (this.cfg.skills.ranges_u?.bay_sap_owner_passes ?? 0) !== 0;
+    const out: Shape[] = [];
+    for (const st of this.stalls.values()) {
+      if (ownerPasses && st.owner === this.myId) {
+        continue;
+      }
+      if (this.canCutObstacle(st.tier)) {
+        continue;
+      }
+      out.push(st.shape);
+    }
+    return out;
   }
 
   /**
@@ -463,7 +508,11 @@ export class ClientWorld {
     }
     // Trói / rụt mai / choáng: server đặt tốc độ 0, nên client cũng phải đứng yên — dự đoán
     // là mình đang chạy trong lúc server giữ tại chỗ thì mỗi tick bị kéo về một lần.
-    const frozen = statusOn(me.st, 'root') || statusOn(me.st, 'shell') || statusOn(me.st, 'stun');
+    // Phải khớp DANH SÁCH của `Game.MoveSpeed` bên server: trói, rụt mai, choáng, ngủ gục,
+    // hát ru. Thiếu một cái là client dự đoán mình đang chạy trong lúc server giữ tại chỗ,
+    // và mỗi tick bị kéo về một lần — đúng cái giật §8.2a.
+    const frozen = statusOn(me.st, 'root') || statusOn(me.st, 'shell') || statusOn(me.st, 'stun')
+      || statusOn(me.st, 'sleep') || statusOn(me.st, 'sing');
     let mult = 1;
     if (me.bf & (1 << BUFFS.indexOf('haste'))) {
       mult *= this.cfg.buffs.haste.mult;
@@ -474,7 +523,7 @@ export class ClientWorld {
       mult *= this.cfg.burn.mult;
     }
     if (statusOn(me.st, 'slow')) {
-      mult *= this.cfg.skills.ru_ngu_move;
+      mult *= this.cfg.zones.mud_mult; // bùn và gió nghịch; Ru Ngủ v6.9 không còn làm chậm
     }
     if (statusOn(me.st, 'ghost')) {
       mult *= this.cfg.skills.ghost_speed;
@@ -484,7 +533,7 @@ export class ClientWorld {
     }
     return moveStep(this.cfg, map, from, inp.angle, me.sc, dt,
       (id: number) => this.brokenObstacles.get(id) === true, mult, vel, inp.moving,
-      statusOn(me.st, 'ghost'));
+      statusOn(me.st, 'ghost'), this.blockingStalls(me));
   }
 
 
@@ -551,6 +600,14 @@ function bracket<T>(buf: Timed<T>[], t: number): { a: Timed<T>; b: Timed<T>; t: 
  * lại là lãng phí 7 byte mỗi người mỗi gói, 20 lần mỗi giây.
  */
 export function omega(cfg: GameConfig, s: PlayerState): number {
+  // Ngủ gục thì vòng kiếm NGỪNG QUAY (spec v6.9 §6.3) — phải khớp `Game.Omega` bên server.
+  //
+  // Nếu client vẫn quay trong lúc server đã dừng thì hai bên lệch pha mỗi tick: người chơi
+  // thấy kiếm mình quét trúng địch nhưng không có gì xảy ra, và sau 2.5 giây vòng kiếm nhảy
+  // về đúng chỗ server giữ. Đây là cùng một lớp lỗi với §8.2a, chỉ là ở góc thay vì vị trí.
+  if (statusOn(s.st, 'sleep')) {
+    return 0;
+  }
   const spin = s.bf & (1 << BUFFS.indexOf('spin')) ? (cfg.buffs.spin?.mult ?? 1) : 1;
   return ((2 * Math.PI) / cfg.sword.rev_secs) * spin;
 }

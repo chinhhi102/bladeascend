@@ -216,6 +216,21 @@ const BorderKind = "border"
 // ObstacleTier trả về bậc của một loại vật cản. Loại không khai báo coi như bậc 0 (ai cũng
 // chém được) — thà để người chơi phá được một thứ lẽ ra không phá được, còn hơn dựng một
 // bức tường vô hình không ai hiểu vì sao không qua nổi.
+// MaxTier là bậc cao nhất CÓ THẬT trong khu (không tính biên khu).
+//
+// Dùng để chốt trần bậc sạp của Cô Ba: spec nói "tối đa 13", mà 13 là bậc thạch bi — tức
+// "cao nhất trong bảng". Đọc từ bảng thay vì viết 13 vào mã: đổi bảng mà quên đổi mã là
+// sạp của Đạo Tổ bỗng thành bất khả phá với chính Đạo Tổ.
+func (o Obstacles) MaxTier() int {
+	top := 0
+	for _, t := range o.MinRealm {
+		if t < TierBorder && t > top {
+			top = t
+		}
+	}
+	return top
+}
+
 func (o Obstacles) ObstacleTier(kind string) int {
 	if kind == BorderKind {
 		return TierBorder
@@ -240,6 +255,41 @@ type Ice struct {
 	Friction float64 `json:"friction"`
 	Accel    float64 `json:"accel"`
 }
+
+// SkillU là một giá trị trong `skills.ranges_u`.
+//
+// Khối đó trong spec §16 trộn ba kiểu: hệ số nhân với U (`ru_ngu_r: 4`), số thuần không
+// nhân (`ru_ngu_secs: 2.5`, `bay_sap_count: 5`) và **một boolean** (`bay_sap_owner_passes:
+// true`). Giữ nguyên hình dạng đó thay vì đổi `true` thành `1.0` trong config: `config/
+// game.json` phải dán khớp được với spec, nếu không thì mỗi lần chủ dự án sửa spec rồi chép
+// sang là server từ chối nạp và không ai biết vì sao.
+//
+// Việc phân biệt "nhân với U hay không" nằm ở CHỖ DÙNG (`Game.skillRange` vs đọc thẳng),
+// không nằm ở kiểu dữ liệu — tên khoá đã nói rõ: `_r`, `_cone`, `_len`, `_dist`, `_w`,
+// `_wave`, `_push`, `_follow`, `_seek` là khoảng cách; `_secs`, `_count`, `_steal`,
+// `_channel`, `_bonus`, `_of_own_max`, `_passes` thì không.
+type SkillU float64
+
+func (u *SkillU) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "true":
+		*u = 1
+		return nil
+	case "false":
+		*u = 0
+		return nil
+	}
+	var f float64
+	if err := json.Unmarshal(b, &f); err != nil {
+		return fmt.Errorf("ranges_u: %q không phải số hay boolean: %w", b, err)
+	}
+	*u = SkillU(f)
+	return nil
+}
+
+func (u SkillU) Float() float64 { return float64(u) }
+func (u SkillU) Int() int       { return int(u) }
+func (u SkillU) Bool() bool     { return u != 0 }
 
 // Skills: mọi con số của 10 kỹ năng nhân vật (spec §6.3). Bán kính và tầm xa còn được
 // nhân theo scale người dùng lúc thi hành.
@@ -268,8 +318,8 @@ type Skills struct {
 	// PushSecs: mọi đòn đẩy của kỹ năng diễn ra trong ngần này giây (spec: 0.3s), trượt dọc
 	// vật cản, không xuyên. Khác `KnockSecs` (0.25) của đòn đẩy khi bể kiếm — hai thứ khác
 	// nhau nên để hai khoá, đừng gộp.
-	PushSecs float64            `json:"push_secs"`
-	RangesU  map[string]float64 `json:"ranges_u"`
+	PushSecs float64           `json:"push_secs"`
+	RangesU  map[string]SkillU `json:"ranges_u"`
 
 	// BanhBaoMaxShare: hồi ngay ngần này phần của số kiếm TỐI ĐA ở cảnh giới hiện tại
 	// (spec v5.5 §6.3). Bản v5.0 hồi theo số kiếm vừa bể trong 10s — đổi rồi, không còn
@@ -277,10 +327,6 @@ type Skills struct {
 	BanhBaoMaxShare float64 `json:"banh_bao_max_share"`
 
 	LoaConeDeg float64 `json:"loa_cone_deg"`
-
-	RuNguSecs float64 `json:"ru_ngu_secs"`
-	RuNguMove float64 `json:"ru_ngu_move"`
-	RuNguSpin float64 `json:"ru_ngu_spin"`
 
 	DanEmCount int     `json:"dan_em_count"`
 	DanEmSecs  float64 `json:"dan_em_secs"`
@@ -301,12 +347,9 @@ type Skills struct {
 	SlickSecs  float64 `json:"slick_secs"`
 	SlipSecs   float64 `json:"slip_secs"`
 
-	LuoiMiSecs float64 `json:"luoi_mi_secs"`
-
 	BraceSecs       float64 `json:"brace_secs"`
 	BraceDurability float64 `json:"brace_durability"`
 
-	GhostSecs  float64 `json:"ghost_secs"`
 	GhostSpeed float64 `json:"ghost_speed"`
 	// GhostUnstickSecs: hết Giao Hỏa Tốc mà đang đứng trong vật cản thì được đẩy mượt ra
 	// chỗ trống gần nhất trong ngần này giây (spec v5.5 §6.3) — không dịch tức thời, vì

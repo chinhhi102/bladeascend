@@ -28,8 +28,22 @@ func (g *Game) SkillU(p *Player) float64 {
 // "tàm tạm" thì sống trong game nhiều tuần mà không ai biết nó sai.
 // `config.Validate` đã chặn từ lúc nạp nên đường này gần như không bao giờ chạy tới.
 func (g *Game) skillRange(p *Player, key string) float64 {
-	return g.Cfg.Skills.RangesU[key] * g.SkillU(p)
+	return g.Cfg.Skills.RangesU[key].Float() * g.SkillU(p)
 }
+
+// skillNum đọc một con số trong `ranges_u` **không** nhân với U: số giây, số lượng, tỉ lệ.
+//
+// Spec §16 gom cả ba kiểu vào một khối (`ru_ngu_r: 4` cạnh `ru_ngu_secs: 2.5`), nên phải có
+// hai cửa đọc. Lẫn hai cửa này là lỗi nặng và im lặng: `ru_ngu_secs` nhân với U thành 225
+// giây ngủ ở Luyện Khí.
+func (g *Game) skillNum(key string) float64 {
+	return g.Cfg.Skills.RangesU[key].Float()
+}
+
+// skillInt và skillBool: cùng khối, cho số nguyên (`bay_sap_count`) và cờ bật/tắt
+// (`bay_sap_owner_passes`).
+func (g *Game) skillInt(key string) int   { return g.Cfg.Skills.RangesU[key].Int() }
+func (g *Game) skillBool(key string) bool { return g.Cfg.Skills.RangesU[key].Bool() }
 
 // pushAway đẩy `o` ra xa `p` đúng `dist` trong `skills.push_secs` (spec §6.3).
 //

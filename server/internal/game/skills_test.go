@@ -111,8 +111,9 @@ func TestLoaPhuongPushesOnlyInsideCone(t *testing.T) {
 	}
 }
 
-// Ru Ngủ làm chậm cả chân lẫn vòng kiếm (spec §6.3).
-func TestRuNguSlowsFeetAndRing(t *testing.T) {
+// Ru Ngủ Trưa (spec v6.9 §6.3): hát 0.5s rồi mọi địch trong 4 U ngủ gục 2.5s — đứng im,
+// vòng kiếm NGỪNG QUAY.
+func TestRuNguSleepsAfterChannel(t *testing.T) {
 	g := skillGame(t)
 	a := put(g, "ong_ba_vong", Vec{X: 3000, Y: 3000}, 10, 20)
 	b := put(g, "cu_rua", Vec{X: 3100, Y: 3000}, 10, 20)
@@ -121,35 +122,141 @@ func TestRuNguSlowsFeetAndRing(t *testing.T) {
 	g.AddSkillCharge(a)
 	g.CastSkill(a)
 
-	if g.MoveSpeed(b) >= fastMove {
-		t.Fatal("trúng Ru Ngủ mà chân không chậm")
+	// Chưa hát xong thì CHƯA ai ngủ — đây là nửa giây để địch chạy ra khỏi vòng.
+	if b.HasStatus(StSleep, g.Time) {
+		t.Fatal("vừa bấm đã ngủ — giai đoạn hát 0.5s không chạy")
 	}
-	if g.Omega(b) >= fastSpin {
-		t.Fatal("trúng Ru Ngủ mà vòng kiếm không chậm")
+	if g.MoveSpeed(a) != 0 {
+		t.Error("đang hát ru mà Ông Ba Võng vẫn đi được — spec nói đứng yên 0.5s")
 	}
-	g.Time += g.Cfg.Skills.RuNguSecs + 0.01
+	g.Time += g.skillNum("ru_ngu_channel") + 1e-9
+	g.updateSkillState(1.0 / 30)
+
+	if !b.HasStatus(StSleep, g.Time) {
+		t.Fatal("hát xong mà địch không ngủ")
+	}
+	if g.MoveSpeed(b) != 0 {
+		t.Errorf("đang ngủ mà vẫn đi được %.1f", g.MoveSpeed(b))
+	}
+	if g.Omega(b) != 0 {
+		t.Errorf("đang ngủ mà vòng kiếm vẫn quay %.2f rad/s — spec nói NGỪNG QUAY", g.Omega(b))
+	}
+	g.Time += g.skillNum("ru_ngu_secs") + 0.01
 	if g.MoveSpeed(b) != fastMove || g.Omega(b) != fastSpin {
-		t.Fatal("hết giờ rồi mà vẫn còn chậm")
+		t.Fatal("hết giờ rồi mà vẫn còn ngủ")
 	}
 }
 
-// Lưới Mì trói chết chân nhưng kiếm vẫn quay (spec §6.3).
-func TestLuoiMiRootsButRingKeepsSpinning(t *testing.T) {
+// Checklist §17: "Ông Ba Võng bị chém trong 0.5s hát → mất chiêu."
+//
+// Mất chiêu nghĩa là KHÔNG ai ngủ và lượt Bí Kíp cũng không được hoàn — nếu hoàn thì việc
+// bị chém chỉ làm chậm, và kỹ năng không còn cách nào chống lại.
+func TestRuNguCancelledByBodyHit(t *testing.T) {
 	g := skillGame(t)
-	a := put(g, "su_phu_mi", Vec{X: 3000, Y: 3000}, 10, 20)
+	a := put(g, "ong_ba_vong", Vec{X: 3000, Y: 3000}, 10, 20)
+	b := put(g, "cu_rua", Vec{X: 3100, Y: 3000}, 10, 20)
+	g.AddSkillCharge(a)
+	g.CastSkill(a)
+	if a.SkillCharges != 0 {
+		t.Fatalf("lượt còn %d sau khi dùng", a.SkillCharges)
+	}
+
+	g.applyBodyHit(b, a) // bị chém giữa câu hát
+	g.Time += g.skillNum("ru_ngu_channel") + 1e-9
+	g.updateSkillState(1.0 / 30)
+
+	if b.HasStatus(StSleep, g.Time) {
+		t.Fatal("bị chém giữa câu hát mà chiêu vẫn phát")
+	}
+	if a.SkillCharges != 0 {
+		t.Error("mất chiêu mà được hoàn lượt — vậy thì không có rủi ro nào")
+	}
+}
+
+// Checklist §17: "2 người đang mài kiếm, Ông Ba Võng ru → trong 2.5s CHỈ người ngủ bị bể kiếm."
+func TestSleepingSwordsDoNotFightBack(t *testing.T) {
+	g := skillGame(t)
+	// Hai người CÙNG cảnh giới, cùng số kiếm: không ngủ thì mài nhau mất đúng bằng nhau.
+	a := put(g, "cu_rua", Vec{X: 3000, Y: 3000}, 10, 30)
+	b := put(g, "be_ti", Vec{X: 3500, Y: 3000}, 10, 30)
+	// Đặt sau khi cả hai đã có hình vòng: hai vòng chồng lên nhau một chút để chắc chắn va.
+	b.Pos.X = a.Pos.X + (a.Geom.Reach+b.Geom.Reach)*0.8
+
+	g.ApplyStatus(b, StSleep, 2.5)
+	beforeA, beforeB := a.Ring.Count, b.Ring.Count
+	for i := 0; i < 20; i++ {
+		g.resolveSwordSword()
+		g.Time += 1.0 / 30
+	}
+	if b.Ring.Count >= beforeB {
+		t.Fatal("người ngủ không bị bể kiếm nào — hai vòng không chạm nhau, bài test vô nghĩa")
+	}
+	if a.Ring.Count != beforeA {
+		t.Errorf("người THỨC mất %d kiếm — spec nói kiếm đang ngủ không đánh trả",
+			beforeA-a.Ring.Count)
+	}
+}
+
+// Hút Mì Đoạt Kiếm (spec v6.9 §6.3) — checklist §17: "địch 100 kiếm → Sư Phụ cướp 25
+// (không vượt 20% tối đa của mình, dư rơi Bó Kiếm); không ai trong nón → hụt, mất lượt."
+func TestHutMiStealsQuarterOfTargetSwords(t *testing.T) {
+	g := skillGame(t)
+	// Sư Phụ cấp 50 để trần 20%-kiếm-tối-đa-của-mình KHÔNG phải là thứ chặn ở đây — bài
+	// này đo đúng phép "25% của địch". Trần có bài riêng ngay dưới.
+	a := put(g, "su_phu_mi", Vec{X: 3000, Y: 3000}, 50, 5)
 	a.Facing = 0
-	// Đặt nạn nhân đúng TÂM lưới: tầm ném giờ là 4,5 U của người ném (spec v6.5 §6.3).
-	b := put(g, "cu_rua", Vec{X: 3000 + g.skillRange(a, "luoi_mi_range"), Y: 3000}, 10, 20)
-	spin := g.Omega(b)
+	b := put(g, "cu_rua", Vec{X: 3000 + g.skillRange(a, "hut_mi_cone")*0.5, Y: 3000}, 10, 40)
+	if lim := int(float64(g.Prog.MaxSwords(g.Prog.Realm(a.Level))) * g.skillNum("hut_mi_cap_of_own_max")); lim < 10 {
+		t.Fatalf("trần của Sư Phụ chỉ %d — bài này cần trần ≥ 10 mới đo được phép 25%%", lim)
+	}
 
 	g.AddSkillCharge(a)
 	g.CastSkill(a)
 
-	if g.MoveSpeed(b) != 0 {
-		t.Fatalf("bị trói mà vẫn đi được %.1f", g.MoveSpeed(b))
+	if got := 40 - b.Ring.Count; got != 10 {
+		t.Errorf("địch mất %d kiếm, muốn 10 (25%% của 40)", got)
 	}
-	if g.Omega(b) != spin {
-		t.Fatal("bị trói mà vòng kiếm cũng dừng — spec nói kiếm vẫn quay")
+	if got := a.Ring.Count - 5; got != 10 {
+		t.Errorf("Sư Phụ nhận %d kiếm, muốn 10", got)
+	}
+}
+
+// Trần "20% kiếm tối đa của MÌNH": không thì một Sư Phụ cấp thấp hút một Đạo Tổ là nhảy
+// vọt lên trăm kiếm mà không tu luyện gì.
+func TestHutMiCappedByOwnMax(t *testing.T) {
+	g := skillGame(t)
+	a := put(g, "su_phu_mi", Vec{X: 3000, Y: 3000}, 0, 1) // Luyện Khí: kiếm tối đa nhỏ
+	a.Facing = 0
+	b := put(g, "cu_rua", Vec{X: 3000 + g.skillRange(a, "hut_mi_cone")*0.5, Y: 3000}, 89, 200)
+	ownMax := g.Prog.MaxSwords(g.Prog.Realm(a.Level))
+	cap := int(float64(ownMax) * g.skillNum("hut_mi_cap_of_own_max"))
+
+	before := b.Ring.Count
+	g.AddSkillCharge(a)
+	g.CastSkill(a)
+
+	if got := before - b.Ring.Count; got != cap {
+		t.Errorf("cướp %d kiếm, trần phải là %d (20%% của %d)", got, cap, ownMax)
+	}
+}
+
+// Hụt thì VẪN mất lượt (§6.3 mục 3: "Hút Mì chỉ 1 mục tiêu, hụt vẫn mất lượt").
+func TestHutMiMissStillSpendsCharge(t *testing.T) {
+	g := skillGame(t)
+	a := put(g, "su_phu_mi", Vec{X: 3000, Y: 3000}, 10, 20)
+	a.Facing = 0
+	// Đứng sau lưng: ngoài nón.
+	put(g, "cu_rua", Vec{X: 3000 - 200, Y: 3000}, 10, 40)
+
+	g.AddSkillCharge(a)
+	if !g.CastSkill(a) {
+		t.Fatal("không dùng được kỹ năng")
+	}
+	if a.SkillCharges != 0 {
+		t.Error("hụt mà được giữ lượt")
+	}
+	if a.Ring.Count != 20 {
+		t.Errorf("hụt mà vẫn được %d kiếm", a.Ring.Count-20)
 	}
 }
 
@@ -330,7 +437,7 @@ func TestGhostUnsticksSmoothly(t *testing.T) {
 	stuck := Vec{X: 3400, Y: 3100}
 	p.Pos = stuck
 	dt := 1.0 / 30
-	g.Time += g.Cfg.Skills.GhostSecs + 0.01
+	g.Time += g.skillNum("gom_don_secs") + 0.01
 	g.updateSkillState(dt)
 
 	if p.unstickUntil <= g.Time {

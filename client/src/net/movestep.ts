@@ -1,6 +1,6 @@
 import { contains, pushOut } from './geom.ts';
 import type { GameConfig } from '../config.ts';
-import type { GameMap, MapObstacle } from './protocol.ts';
+import { TIER_BORDER, type GameMap, type MapObstacle, type Shape } from './protocol.ts';
 
 /**
  * Va chạm khi di chuyển — spec §8.2a.
@@ -74,6 +74,8 @@ export function resolveBlocking(
   r: number,
   map: Pick<GameMap, 'obstacles' | 'size'> & { play_margin?: number },
   broken: (id: number) => boolean,
+  /** only: lọc vật cản nào được xét. Dùng cho Gom Đơn — chỉ còn biên khu chặn. */
+  only?: (o: MapObstacle) => boolean,
 ): Vec {
   const margin = map.play_margin ?? 0;
   let pos = clampPlay(p, r, map.size, margin);
@@ -85,7 +87,7 @@ export function resolveBlocking(
   for (let iter = 0; iter < MAX_ITER; iter++) {
     let moved = false;
     for (const o of byId) {
-      if (broken(o.id)) {
+      if (broken(o.id) || (only && !only(o))) {
         continue;
       }
       const np = pushOut(blockShape(o), pos, r);
@@ -198,13 +200,38 @@ export function moveStep(
   vel: Vec = { x: 0, y: 0 },
   moving = true,
   ghost = false,
+  /** stalls: dãy sạp tạm của Cô Ba đang chặn NGƯỜI NÀY (spec v6.10 §6.3). */
+  stalls: Shape[] = [],
 ): { pos: Vec; vel: Vec } {
   const r = cfg.player.body_r * scale;
-  // Giao Hỏa Tốc (spec v5.5 §6.3): xuyên MỌI vật cản, chỉ còn biên khu chặn. Phải có ở
-  // đây chứ không chỉ ở server — client dự đoán bị tường chặn trong khi server cho đi
+  // Gom Đơn Hỏa Tốc (spec v6.9 §6.3): xuyên MỌI vật cản, chỉ còn **biên khu** chặn. Phải
+  // có ở đây chứ không chỉ ở server — client dự đoán bị tường chặn trong khi server cho đi
   // xuyên là lệch vị trí mỗi tick, đúng loại lỗi giật mà §8.2a vừa sửa xong.
-  const settle = (p: Vec): Vec =>
-    ghost ? clampPlay(p, r, map.size, map.play_margin ?? 0) : resolveBlocking(p, r, map, broken);
+  //
+  // `clampPlay` một mình KHÔNG đủ: nó chỉ kẹp vào rìa bản đồ, còn biên khu là vật cản loại
+  // `border` nằm bên trong. Bản đầu chỉ kẹp rìa, nên server đẩy Shipper ra khỏi biên khu mà
+  // client cho đi xuyên — lệch đúng bề dày bức tường.
+  const settle = (p: Vec): Vec => {
+    let out = ghost
+      ? resolveBlocking(p, r, map, broken, (o) => o.t >= TIER_BORDER)
+      : resolveBlocking(p, r, map, broken);
+    // Sạp xét SAU vật cản tĩnh, cùng thứ tự với `Game.resolveBlockingFor`: ai bị kẹp giữa
+    // sạp và tường thì được đẩy ra khỏi sạp, vì sạp mới là thứ biến mất sau 6 giây.
+    for (let iter = 0; iter < MAX_ITER && stalls.length > 0; iter++) {
+      let moved = false;
+      for (const sh of stalls) {
+        const np = pushOut(sh, out, r);
+        if (np) {
+          out = np;
+          moved = true;
+        }
+      }
+      if (!moved) {
+        break;
+      }
+    }
+    return out;
+  };
   if (onIce(map, from)) {
     const step = iceStep(cfg, from, vel, angle, moving, dt, speedMult);
     return { pos: settle(step.pos), vel: step.vel };

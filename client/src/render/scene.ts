@@ -22,6 +22,7 @@ import { Breakthrough, HITSTOP_SECS } from './breakthrough';
 import { autoQuality, autoQualityByMemory, quality } from './quality';
 import { AURA_FAR_PX, TienAura } from './tienaura';
 import { FloatTextLayer } from './floattext';
+import { StallView } from './stallview';
 import { VfxLayer } from './vfxlayer';
 import { PlayerSprite } from './player';
 import { ringGeom } from './ringgeom';
@@ -92,6 +93,8 @@ export class GameScene {
   private readonly players = new Map<number, PlayerSprite>();
   /** Chữ nổi trong thế giới: "Cần {cảnh giới}" khi chém vật cản quá bậc (§8.2). */
   private readonly floatText = new FloatTextLayer();
+  /** Dãy sạp tạm của Cô Ba (§6.3 v6.10) — vòng đời 6 giây, tách khỏi MapView. */
+  private readonly stallView = new StallView();
   private readonly monsters = new Map<number, MonsterSprite>();
   private readonly items = new Map<number, ItemSprite>();
   // Items picked up this snapshot: itemId → who grabbed it, so we can fly them in.
@@ -178,6 +181,7 @@ export class GameScene {
     // Viên EXP luôn nằm dưới mọi thứ khác nên xếp ngay trên mặt đất, không cần y-sort.
     // Lớp phát sáng nằm dưới nhân vật (hào quang ở sau lưng) nhưng trên vòng kiếm, để
     // hàng trăm thanh kiếm không che mất hào quang.
+    this.entities.addChild(this.stallView.layer);
     this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.glow.root, this.entities, this.mapView.over, this.ambient.root, this.skillFx.layer, this.vfx.layer, this.floatText.layer);
     this.ambient.setBiome(w.map.id);
   }
@@ -185,6 +189,7 @@ export class GameScene {
   clear(): void {
     this.skillFx.clear();
     this.floatText.clear();
+    this.stallView.clear();
     this.camera.removeChildren();
     // Pool phải dọn theo: view trong pool thuộc về khu CŨ, giữ lại là giữ texture của một
     // bản đồ không còn dùng — đúng kiểu rò rỉ bộ nhớ mang tên "tối ưu".
@@ -270,6 +275,7 @@ export class GameScene {
       me ? { x: me.x, y: me.y, w: vs.w, h: vs.h } : undefined);
     this.vfx.update(now);
     this.floatText.update(now);
+    this.stallView.sync(w);
     this.skillFx.update(now);
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
     this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;
@@ -892,23 +898,63 @@ export class GameScene {
       case 'tran_chau':
         this.skillFx.cone(e.x, e.y, e.f ?? 0, sc, 'tran_chau_cone', sk.tran_chau_cone_deg, 0x6b4a2f, now);
         break;
+      case 'ru_ngu_hat': {
+        // Vòng BÁO TRƯỚC trong lúc hát: ai còn nửa giây để chạy ra khỏi 4 U thì thoát.
+        // Không vẽ nó là kỹ năng thành "bỗng dưng cả đám ngủ", không ai học được cách tránh.
+        const at = this.casterAt(e.a ?? 0);
+        if (at) {
+          this.skillFx.circle(at.x, at.y, sc, 'ru_ngu_r', 0x8ea9ff, now);
+        }
+        sound.play('skill_hat_ru', 0.6);
+        break;
+      }
       case 'ru_ngu': {
+        // Server gửi một event cho MỖI người ngủ; vòng thì chỉ vẽ một lần.
         const key = `ru:${e.a}:${Math.round(now * 1000)}`;
         if (this.lastCone !== key) {
           this.lastCone = key;
           const at = this.casterAt(e.a ?? 0);
           if (at) {
-            this.skillFx.circle(at.x, at.y, sc, 'ru_ngu_radius', 0x8ea9ff, now);
+            this.skillFx.circle(at.x, at.y, sc, 'ru_ngu_r', 0x8ea9ff, now);
           }
+        }
+        this.vfx.play('stun_stars', e.x, e.y, 80, now);
+        sound.play('skill_sleep', 0.5);
+        break;
+      }
+      case 'ru_ngu_huy':
+        this.floatText.show(STR.skillCancelled, e.x, e.y, now, 0xffb3b3);
+        break;
+      case 'hut_mi': {
+        // Sợi mì: tia từ Sư Phụ tới nạn nhân, kèm số kiếm vừa bị cướp.
+        const at = this.casterAt(e.a ?? 0);
+        if (at) {
+          this.skillFx.beam(at.x, at.y, e.x, e.y, 0xf2c14e, now);
+        }
+        this.floatText.show(STR.swordsStolen(e.n ?? 0), e.x, e.y, now, 0xffe14d);
+        sound.play('skill_hut_mi', 0.7);
+        break;
+      }
+      case 'hut_mi_miss': {
+        const at = this.casterAt(e.a ?? 0);
+        if (at) {
+          this.skillFx.cone(at.x, at.y, e.f ?? 0, sc, 'hut_mi_cone', sk.loa_cone_deg, 0xf2c14e, now);
         }
         break;
       }
-      case 'luoi_mi':
-        // `e.x/e.y` là TÂM LƯỚI (server gửi điểm ném), không phải chỗ người ném đứng.
-        this.skillFx.circle(e.x, e.y, sc, 'luoi_mi_radius', 0xf2c14e, now);
+      case 'bay_hang': {
+        // Vòng cung sạp nằm cách `bay_sap_dist` U — vẽ vòng đó để thấy ngay nó chặn ở đâu.
+        this.skillFx.circle(e.x, e.y, sc, 'bay_sap_dist', 0xe08f3c, now);
+        sound.play('skill_bay_hang', 0.7);
+        break;
+      }
+      case 'gom_don':
+        // Vòng hút 3 U của Shipper.
+        this.skillFx.circle(e.x, e.y, sc, 'gom_don_r', 0x7ad7ff, now);
+        sound.play('skill_gom_don', 0.6);
         break;
       case 'rut_co_burst':
-        this.skillFx.circle(e.x, e.y, sc, 'shell_wave', 0x7ad7b0, now);
+        this.skillFx.circle(e.x, e.y, sc, 'rut_co_wave', 0x7ad7b0, now);
         break;
       default:
         break;

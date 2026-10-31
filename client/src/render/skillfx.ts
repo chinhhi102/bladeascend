@@ -46,7 +46,7 @@ export class SkillFx {
     this.add(g, now);
   }
 
-  /** circle vẽ vòng tròn: Ru Ngủ, Lưới Mì, sóng Rụt Cổ. */
+  /** circle vẽ vòng tròn: Ru Ngủ Trưa, vòng hút Gom Đơn, cung sạp, sóng Rụt Cổ. */
   circle(x: number, y: number, scale: number, key: string, color: number, now: number): void {
     const r = skillRange(this.cfg, scale, key);
     if (r <= 0) {
@@ -55,6 +55,18 @@ export class SkillFx {
     const g = new Graphics();
     g.circle(0, 0, r).fill({ color, alpha: 0.14 }).stroke({ color, width: Math.max(3, r * 0.02), alpha: 0.75 });
     g.position.set(x, y);
+    this.add(g, now);
+  }
+
+  /**
+   * beam vẽ một đoạn thẳng giữa hai điểm: sợi mì của Sư Phụ.
+   *
+   * Khác `cone`/`circle` ở chỗ nó KHÔNG đọc `ranges_u`: đây không phải chỉ báo phạm vi mà
+   * là đường đi của một thứ đã trúng rồi — hai đầu là hai người thật, server gửi kèm.
+   */
+  beam(x0: number, y0: number, x1: number, y1: number, color: number, now: number): void {
+    const g = new Graphics();
+    g.moveTo(x0, y0).lineTo(x1, y1).stroke({ color, width: 10, alpha: 0.85 });
     this.add(g, now);
   }
 

@@ -77,8 +77,10 @@ func (g *Game) updateSkillState(dt float64) {
 		}
 	}
 	g.slicks = keep
+	g.updateStalls()
 
 	for _, p := range g.PlayerList() {
+		g.updateChannel(p)
 		g.updateUnstick(p, dt)
 		// Cụ Rùa vừa ra khỏi mai → sóng đẩy. Dùng cờ riêng chứ không so thời gian, vì tick
 		// có thể nhảy qua đúng khoảnh khắc hết hạn.
@@ -95,6 +97,46 @@ func (g *Game) updateSkillState(dt float64) {
 			g.RemovePlayer(p.ID)
 		}
 	}
+}
+
+// updateChannel lo chiêu đang "hát" dở: tới hạn thì phát, đi khỏi chỗ thì mất.
+//
+// Huỷ vì DỊCH CHUYỂN cũng tính, không chỉ vì bị chém: `MoveSpeed` đã đặt tốc 0 trong lúc
+// hát, nhưng đẩy lùi (Loa Phường, đòn bể kiếm), trượt trên băng và vỏ chuối đều dịch người
+// mà không qua `MoveSpeed`. Spec nói "đứng yên 0.5s" — ai đẩy được Ông Ba Võng ra khỏi chỗ
+// thì cũng phá được câu hát.
+func (g *Game) updateChannel(p *Player) {
+	if p.channel.kind == "" {
+		return
+	}
+	if p.Dead || p.InTransit(g.Time) || p.Pos.Dist(p.channel.at) > g.BodyR(p) {
+		g.cancelChannel(p, "moved")
+		return
+	}
+	if g.Time < p.channel.until {
+		return
+	}
+	kind := p.channel.kind
+	p.channel = channelState{}
+	p.Status[StSing] = 0
+	if kind == "ru_ngu" {
+		g.finishRuNgu(p)
+	}
+}
+
+// cancelChannel ngắt câu hát. **Lượt Bí Kíp không được hoàn** — đã trừ lúc `CastSkill`.
+//
+// Mất lượt là cả giá trị của việc có giai đoạn hát: nếu huỷ mà được trả lượt thì không có
+// rủi ro nào, và "bị chém là mất chiêu" của §6.3 chỉ còn là một chút chậm trễ.
+func (g *Game) cancelChannel(p *Player, why string) {
+	if p.channel.kind == "" {
+		return
+	}
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: p.channel.kind + "_huy", To: p.ID,
+		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+	_ = why
+	p.channel = channelState{}
+	p.Status[StSing] = 0
 }
 
 // updateUnstick lo khoảnh khắc Giao Hỏa Tốc hết hạn khi Shipper đang đứng TRONG vật cản

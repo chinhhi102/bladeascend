@@ -11,20 +11,34 @@ import (
 
 // Spec v6.5 §6.3: mọi phạm vi kỹ năng là `hệ số × U`, `U = pickup_r × scale người dùng`.
 
-// Hệ số lấy THẲNG từ bảng spec — đây là bản dịch của spec, không phải bản chụp của config.
+// Hệ số lấy THẲNG từ bảng spec §16 — đây là bản dịch của spec, không phải bản chụp config.
+//
+// Khối `ranges_u` của spec trộn ba kiểu (hệ số × U, số thuần như `_secs`, và một boolean
+// `bay_sap_owner_passes`), nên bảng này để `float64` với quy ước `true → 1`, đúng như
+// `config.SkillU` nạp.
 var specRangesU = map[string]float64{
-	"loa_cone":       6,
-	"loa_push":       6,
-	"ru_ngu_radius":  5,
-	"dan_em_follow":  3,
-	"dan_em_seek":    8,
-	"tran_chau_cone": 8,
-	"dash":           7,
-	"slick_width":    1,
-	"luoi_mi_range":  4.5,
-	"luoi_mi_radius": 3,
-	"shell_wave":     2,
-	"shell_push":     3,
+	"loa_cone":              6,
+	"loa_push":              6,
+	"ru_ngu_r":              4,
+	"ru_ngu_secs":           2.5,
+	"ru_ngu_channel":        0.5,
+	"dan_em_follow":         3,
+	"dan_em_seek":           8,
+	"tran_chau_cone":        8,
+	"bay_sap_dist":          3,
+	"bay_sap_len":           6,
+	"bay_sap_count":         5,
+	"bay_sap_secs":          6,
+	"bay_sap_tier_bonus":    1,
+	"bay_sap_owner_passes":  1,
+	"vo_chuoi_w":            1,
+	"hut_mi_cone":           5,
+	"hut_mi_steal":          0.25,
+	"hut_mi_cap_of_own_max": 0.2,
+	"gom_don_r":             3,
+	"gom_don_secs":          4,
+	"rut_co_wave":           2,
+	"rut_co_push":           3,
 }
 
 func TestSkillRangesMatchSpec(t *testing.T) {
@@ -37,7 +51,7 @@ func TestSkillRangesMatchSpec(t *testing.T) {
 		t.Errorf("push_secs = %g, spec nói 0.3", sc.PushSecs)
 	}
 	for key, want := range specRangesU {
-		if got := sc.RangesU[key]; got != want {
+		if got := sc.RangesU[key].Float(); got != want {
 			t.Errorf("ranges_u[%q] = %g, spec nói %g", key, got, want)
 		}
 	}

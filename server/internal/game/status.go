@@ -11,7 +11,11 @@ package game
 // ở đây phần lớn là thứ người khác giáng lên mình.
 
 const (
-	// StSlow: chậm chân và chậm cả vòng kiếm (Ru Ngủ của Ông Ba Võng).
+	// StSlow: chậm chân và chậm cả vòng kiếm.
+	//
+	// Từ v6.9 không còn kỹ năng nào giáng nó (Ru Ngủ đổi sang `StSleep`), nhưng giữ lại:
+	// bùn và gió nghịch vẫn dùng, và đánh số lại cả bảng là đổi `StatusBits` trên dây —
+	// client cũ sẽ đọc sai mọi trạng thái.
 	StSlow = iota
 	// StRoot: không di chuyển được, kiếm vẫn quay (Lưới Mì của Sư Phụ Mì Gói).
 	StRoot
@@ -34,18 +38,34 @@ const (
 	// tính), choáng là CẤM di chuyển. Gộp lại thì không nói được "trượt mà vẫn lái được"
 	// nếu sau này spec đổi ý.
 	StStun
+	// StSleep: ngủ gục (Ru Ngủ Trưa của Ông Ba Võng, spec v6.9 §6.3).
+	//
+	// Khác `StStun` ở ba điểm, và đó là cả lý do nó phải là một trạng thái riêng:
+	//  1. **Vòng kiếm NGỪNG QUAY** (choáng thì kiếm vẫn quay).
+	//  2. **Kiếm đang ngủ không đánh trả**: va kiếm thì chỉ người ngủ bị bể, người thức
+	//     không mất gì. Đây là điểm làm kỹ năng này đáng chọn — nó đổi kết quả cuộc mài
+	//     kiếm, không chỉ làm địch đứng im.
+	//  3. **Chém trúng thân là tỉnh ngay**, nên không khoá cứng được ai quá một nhịp đánh.
+	StSleep
+	// StSing: đang hát ru dở (Ru Ngủ Trưa, 0.5s). Trạng thái TỰ MÌNH, không ai giáng lên.
+	//
+	// Vì sao phải là một bit trên dây chứ không chỉ là `p.channel` phía server: client dự
+	// đoán chuyển động của chính mình mỗi khung hình. Server đặt tốc 0 trong lúc hát, nên
+	// nếu client không biết thì nó dự đoán mình đang chạy, server kéo về, và người chơi
+	// thấy nhân vật giật tại chỗ đúng nửa giây mỗi lần dùng kỹ năng.
+	StSing
 	StatusCount
 )
 
 // StatusNames dùng cho log và event gửi xuống client.
-var StatusNames = [StatusCount]string{"slow", "root", "blind", "slip", "brace", "ghost", "shell", "dash", "stun"}
+var StatusNames = [StatusCount]string{"slow", "root", "blind", "slip", "brace", "ghost", "shell", "dash", "stun", "sleep", "sing"}
 
 // HasStatus: trạng thái này còn hiệu lực không.
 func (p *Player) HasStatus(s int, now float64) bool { return p.Status[s] > now }
 
 // controlStatuses là những trạng thái bị người khác giáng lên; Gồng miễn hết nhóm này
 // (spec §6.3: "không bị đẩy lùi/chậm/trói").
-var controlStatuses = []int{StSlow, StRoot, StSlip, StBlind, StStun}
+var controlStatuses = []int{StSlow, StRoot, StSlip, StBlind, StStun, StSleep}
 
 // ApplyStatus giáng một trạng thái lên người chơi trong `secs` giây.
 //

@@ -133,6 +133,8 @@ type Player struct {
 	SkillReadyAt float64
 	// shellOn: đang trong mai rùa — dùng để bắt đúng khoảnh khắc RA khỏi mai.
 	shellOn bool
+	// channel: chiêu đang "hát" dở (Ru Ngủ Trưa, spec v6.9 §6.3). Xem `channelState`.
+	channel channelState
 	// ghostOn + unstick*: Giao Hỏa Tốc hết hạn giữa lòng vật cản thì trượt mượt ra chỗ
 	// trống trong 0,3 giây (spec v5.5 §6.3). Xem `updateUnstick`.
 	ghostOn      bool
@@ -214,6 +216,20 @@ type Item struct {
 	slot int
 	// slotIdx: chỉ số dày đặc toàn cục (xem Game.itemSlots), để client nhớ bằng slice.
 	slotIdx int
+}
+
+// channelState: một kỹ năng cần ĐỨNG YÊN mấy phần giây trước khi phát.
+//
+// Giữ `at` (chỗ bắt đầu hát) để biết người chơi có dịch đi không: §6.3 nói Ông Ba Võng phải
+// "đứng yên 0.5s". Không chốt vị trí thì chỉ cần nhích một bước là vừa hát vừa chạy, và
+// "đứng yên" thành câu chữ suông.
+//
+// `kind` rỗng = không hát gì. Dùng chuỗi rỗng làm trạng thái nghỉ thay vì một cờ `active`
+// riêng: hai nguồn sự thật cho cùng một việc là chỗ để lỗi trốn vào.
+type channelState struct {
+	until float64
+	kind  string
+	at    Vec
 }
 
 // ObstacleState is the dynamic state of a destructible obstacle (spec §8.2).

@@ -33,13 +33,13 @@ type Skill struct {
 var Skills = map[string]*Skill{
 	"a_hon":       {Char: "a_hon", Name: "Bánh Bao Thần", Line: "Ăn miếng bánh bao, kiếm về như mới!", cast: castBanhBao},
 	"ba_tam_loa":  {Char: "ba_tam_loa", Name: "Loa Phường", Line: "A lô a lô, tránh ra cho bà đi!", cast: castLoaPhuong},
-	"ong_ba_vong": {Char: "ong_ba_vong", Name: "Ru Ngủ", Line: "À ơi… ngủ đi con…", cast: castRuNgu},
+	"ong_ba_vong": {Char: "ong_ba_vong", Name: "Ru Ngủ Trưa", Line: "À ơi… ngủ đi con…", cast: castRuNgu},
 	"dai_ca_dep":  {Char: "dai_ca_dep", Name: "Gọi Đàn Em", Line: "Tụi bay đâu, lên đây!", cast: castGoiDanEm},
 	"map_tra_sua": {Char: "map_tra_sua", Name: "Phun Trân Châu", Line: "Nếm thử trân châu nhà tao!", cast: castTranChau},
-	"co_ba_ganh":  {Char: "co_ba_ganh", Name: "Gánh Lướt", Line: "Tránh đường, hàng nóng!", cast: castGanhLuot},
-	"su_phu_mi":   {Char: "su_phu_mi", Name: "Lưới Mì", Line: "Mì gói ba phút, trói mày ba giây!", cast: castLuoiMi},
+	"co_ba_ganh":  {Char: "co_ba_ganh", Name: "Bày Hàng Chặn Lối", Line: "Hàng về! Tránh ra cho cô bày!", cast: castBayHang},
+	"su_phu_mi":   {Char: "su_phu_mi", Name: "Hút Mì Đoạt Kiếm", Line: "Sùn sụt… kiếm mày ngon đấy!", cast: castHutMi},
 	"be_ti":       {Char: "be_ti", Name: "Gồng Cơ", Line: "Gồng! Không đứa nào đẩy nổi!", cast: castGongCo},
-	"shipper":     {Char: "shipper", Name: "Giao Hỏa Tốc", Line: "Đơn gấp, xin phép đi xuyên!", cast: castGiaoHoaToc},
+	"shipper":     {Char: "shipper", Name: "Gom Đơn Hỏa Tốc", Line: "Đơn gấp, xin phép đi xuyên!", cast: castGomDon},
 	"cu_rua":      {Char: "cu_rua", Name: "Rụt Cổ", Line: "Thiền… các ngươi cứ chém đi.", cast: castRutCo},
 }
 
@@ -108,26 +108,33 @@ func (g *Game) CastSkill(p *Player) bool {
 
 // inCone: q có nằm trong hình nón đỉnh tại p.Pos, hướng dir, góc mở `deg`, dài `reach`?
 //
-// Tầm xa nhân theo scale người dùng (spec §6.3) — người to thì tay dài, đó cũng là cách duy
-// nhất để kỹ năng của Đạo Tổ không thành vô dụng khi vòng kiếm của họ đã rộng 1 900.
+// `reach` là khoảng cách THẬT, đã tính scale xong — đừng nhân thêm ở đây.
+//
+// Bản v6.5 nhân `reach * p.Scale` tại chỗ này, từ thời `reach` còn là số thuần trong config.
+// Sau khi phạm vi chuyển sang `ranges_u × U` thì U đã chứa scale, nên hai lần nhân thành
+// **scale bình phương**: nón của Bà Tám ở Đạo Tổ (scale 6) dài 6 × 3 240 = 19 440, tức dài
+// hơn cả bản đồ 12 000 — mọi người trong khu đều bị đẩy lùi cùng lúc.
 func inCone(p *Player, q Vec, dir Vec, deg, reach float64) bool {
 	to := q.Sub(p.Pos)
 	d := to.Len()
-	if d > reach*p.Scale || d < 1e-6 {
+	if d > reach || d < 1e-6 {
 		return false
 	}
 	cos := geom.Clamp(to.Mul(1/d).Dot(dir), -1, 1)
 	return math.Acos(cos)*180/math.Pi <= deg/2
 }
 
-// targetsNear trả về đối thủ còn sống trong bán kính r (đã nhân scale).
+// targetsNear trả về đối thủ còn sống trong bán kính `r`.
+//
+// `r` là khoảng cách THẬT (`skillRange` đã nhân U vào) — xem `inCone` để biết vì sao chỗ này
+// không được nhân scale lần nữa.
 func (g *Game) targetsNear(p *Player, r float64) []*Player {
 	var out []*Player
 	for _, o := range g.PlayerList() {
 		if o.ID == p.ID || o.Dead || o.InTransit(g.Time) {
 			continue
 		}
-		if o.Pos.Dist(p.Pos) <= r*p.Scale {
+		if o.Pos.Dist(p.Pos) <= r {
 			out = append(out, o)
 		}
 	}
@@ -173,12 +180,36 @@ func castLoaPhuong(g *Game, p *Player, dir Vec) {
 	}
 }
 
-// Ru Ngủ — địch trong bán kính 5 U chậm 40% và vòng kiếm chậm 50% trong 3 giây (§6.3).
+// Ru Ngủ Trưa (spec v6.9 §6.3) — hát ru 0.5s rồi mọi địch trong 4 U ngủ gục 2.5s.
+//
+// Hát ru là một **chiêu phải chờ**: Ông Ba Võng đứng yên `ru_ngu_channel` giây, bị chém
+// trúng thân trong lúc đó là mất chiêu (lượt đã trừ rồi, không hoàn). Đó là "cách chống
+// lại" mà §6.3 mục 3 đòi mỗi kỹ năng phải có — nếu ru được tức thì thì người mở giao tranh
+// luôn thắng và không ai chọn nhân vật khác.
+//
+// Bản cũ chỉ làm CHẬM 40% + chậm vòng kiếm 50%: địch vẫn mài kiếm bình thường nên không đổi
+// kết quả trận, đúng cái §6.3 "Nguyên tắc thiết kế" mục 1 gọi là hiệu ứng phụ.
 func castRuNgu(g *Game, p *Player, _ Vec) {
-	sc := g.Cfg.Skills
-	for _, o := range g.targetsNear(p, g.skillRange(p, "ru_ngu_radius")) {
-		g.ApplyStatus(o, StSlow, sc.RuNguSecs)
-		g.emit(Event{Kind: "SkillEffect", A: p.ID, B: o.ID, S: "ru_ngu", X: float32(o.Pos.X), Y: float32(o.Pos.Y)})
+	secs := g.skillNum("ru_ngu_channel")
+	p.channel = channelState{until: g.Time + secs, kind: "ru_ngu", at: p.Pos}
+	// Đặt thẳng `Status` chứ không qua `ApplyStatus`: `ApplyStatus` lấy mốc XA HƠN giữa cũ
+	// và mới (chống khoá cứng), nhưng hát ru phải khớp CHÍNH XÁC với `p.channel.until` —
+	// lệch nhau là client giữ chân người chơi lâu hơn server, hoặc ngược lại.
+	p.Status[StSing] = p.channel.until
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "ru_ngu_hat", F: float32(secs),
+		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+}
+
+// finishRuNgu chạy khi câu hát xong — bán kính tính lúc KẾT THÚC, không lúc bắt đầu.
+//
+// Khác biệt quan trọng: ai chạy ra khỏi 4 U trong nửa giây hát thì thoát được. Đó là phần
+// "nhìn thấy trước mà tránh" của kỹ năng, và client vẽ vòng báo trước đúng bán kính này.
+func (g *Game) finishRuNgu(p *Player) {
+	secs := g.skillNum("ru_ngu_secs")
+	for _, o := range g.targetsNear(p, g.skillRange(p, "ru_ngu_r")) {
+		g.ApplyStatus(o, StSleep, secs)
+		g.emit(Event{Kind: "SkillEffect", A: p.ID, B: o.ID, S: "ru_ngu", F: float32(secs),
+			X: float32(o.Pos.X), Y: float32(o.Pos.Y)})
 	}
 }
 
@@ -208,36 +239,80 @@ func castTranChau(g *Game, p *Player, dir Vec) {
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "tran_chau", X: float32(p.Pos.X), Y: float32(p.Pos.Y), F: float32(p.Facing)})
 }
 
-// Gánh Lướt — lướt 7 U theo hướng đi trong 0,3 giây, rơi trái cây tạo vệt trơn 4 giây (§6.3).
-func castGanhLuot(g *Game, p *Player, dir Vec) {
-	sc := g.Cfg.Skills
-	dash := g.skillRange(p, "dash")
-	slickR := g.skillRange(p, "slick_width")
-	p.KnockVel = dir.Mul(dash / math.Max(sc.DashSecs, 1e-6))
-	p.KnockUntil = g.Time + sc.DashSecs
-	g.ApplyStatus(p, StDash, sc.DashSecs)
-	// Vệt trơn: một dãy vũng nhỏ dọc đường lướt.
-	for i := 1; i <= sc.SlickCount; i++ {
-		at := p.Pos.Add(dir.Mul(dash * float64(i) / float64(sc.SlickCount)))
-		g.slicks = append(g.slicks, slick{at: at, until: g.Time + sc.SlickSecs, owner: p.ID, r: slickR})
-	}
-	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "ganh_luot", X: float32(p.Pos.X), Y: float32(p.Pos.Y), F: float32(p.Facing)})
-}
-
-// Lưới Mì — ném lưới tới điểm cách 4,5 U phía trước, bán kính 3 U, trói 5 giây (§6.3).
-func castLuoiMi(g *Game, p *Player, dir Vec) {
-	sc := g.Cfg.Skills
-	at := p.Pos.Add(dir.Mul(g.skillRange(p, "luoi_mi_range")))
-	radius := g.skillRange(p, "luoi_mi_radius")
-	for _, o := range g.PlayerList() {
-		if o.ID == p.ID || o.Dead || o.InTransit(g.Time) {
+// Hút Mì Đoạt Kiếm (spec v6.9 §6.3) — cướp 25% kiếm của MỘT địch gần nhất trong nón 60°
+// dài 5 U; trần cướp là 20% kiếm tối đa của Sư Phụ, phần dư rơi xuống đất thành Bó Kiếm.
+//
+// Bản cũ (Lưới Mì) trói 5 giây: địch đứng im nhưng vòng kiếm vẫn quay, nên hai người vẫn
+// mài nhau y như không có kỹ năng. Bản này đụng thẳng vào **số kiếm** — thứ quyết định mọi
+// cuộc mài — nên nó mới đáng một lượt Bí Kíp.
+//
+// Hụt thì vẫn mất lượt (§6.3 mục 3): không ai trong nón → chỉ có sợi mì bay ra rồi rụng.
+func castHutMi(g *Game, p *Player, dir Vec) {
+	reach := g.skillRange(p, "hut_mi_cone")
+	var target *Player
+	best := math.Inf(1)
+	for _, o := range g.targetsNear(p, reach) {
+		if !inCone(p, o.Pos, dir, g.Cfg.Skills.LoaConeDeg, reach) {
 			continue
 		}
-		if o.Pos.Dist(at) <= radius {
-			g.ApplyStatus(o, StRoot, sc.LuoiMiSecs)
+		if d := o.Pos.Dist(p.Pos); d < best {
+			target, best = o, d
 		}
 	}
-	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "luoi_mi", X: float32(at.X), Y: float32(at.Y)})
+	if target == nil {
+		g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "hut_mi_miss",
+			X: float32(p.Pos.X), Y: float32(p.Pos.Y), F: float32(p.Facing)})
+		return
+	}
+	g.stealSwords(p, target)
+}
+
+// stealSwords chuyển kiếm từ `from` sang `to` theo luật Hút Mì.
+//
+// Thứ tự ba phép cắt ở đây không đổi được:
+//  1. cướp `hut_mi_steal` phần số kiếm HIỆN CÓ của địch (làm tròn xuống, tối thiểu 1 nếu
+//     họ còn kiếm) — tỉ lệ theo địch nên càng đông kiếm càng mất nhiều;
+//  2. cắt theo trần `hut_mi_cap_of_own_max` × kiếm tối đa của MÌNH — không thì Sư Phụ cấp
+//     thấp hút một Đạo Tổ là nhảy vọt lên 100 kiếm mà không tu luyện gì;
+//  3. phần vượt trần vòng của mình thì RƠI XUỐNG ĐẤT thành Bó Kiếm, không bốc hơi — người
+//     khác tranh được, nên hút đầy tay vẫn có cái giá.
+func (g *Game) stealSwords(to, from *Player) {
+	if from.Ring.Count <= 0 {
+		return
+	}
+	ownMax := g.Prog.MaxSwords(g.Prog.Realm(to.Level))
+	want := int(float64(from.Ring.Count) * g.skillNum("hut_mi_steal"))
+	if want < 1 {
+		want = 1
+	}
+	if lim := int(float64(ownMax) * g.skillNum("hut_mi_cap_of_own_max")); want > lim {
+		want = lim
+	}
+	// `LoseSwords` không bao giờ hạ địch xuống dưới `sword.min_count`, nên số cướp THẬT
+	// phải lấy từ nó, không phải từ ý muốn của mình: cướp 25 mà địch chỉ nhả 18 thì không
+	// được tạo ra 7 thanh kiếm từ không khí.
+	got := g.LoseSwords(from, want)
+	if got <= 0 {
+		return
+	}
+	// `LoseSwords` bỏ từ cuối mảng vòng, tức **vòng ngoài cùng** (spec) — vòng ngoài là
+	// vòng đang chạm địch, nên mất nó là mất tầm chém ngay, thấy được liền.
+	//
+	// Phần vượt trần vòng của mình thì RƠI XUỐNG ĐẤT thành Bó Kiếm, không bốc hơi: người
+	// khác tranh được, nên hút đầy tay vẫn có cái giá. Dùng `dropBundles` chứ không
+	// `AddSwords` cho phần dư, vì `AddSwords` quy đổi phần thừa thành EXP — mà §6.3 cấm
+	// kỹ năng đổi EXP trực tiếp.
+	room := ownMax - to.Ring.Count
+	gain := min(got, max(room, 0))
+	if gain > 0 {
+		to.Ring.Count += gain
+		g.refreshDerived(to)
+	}
+	if over := got - gain; over > 0 {
+		g.dropBundles(to.Pos, over, to.Geom.Reach)
+	}
+	g.emit(Event{Kind: "SkillEffect", A: to.ID, B: from.ID, S: "hut_mi", N: got,
+		X: float32(from.Pos.X), Y: float32(from.Pos.Y)})
 }
 
 // Gồng Cơ — 4 giây độ bền kiếm ×2 và miễn mọi khống chế.
@@ -251,15 +326,28 @@ func castGongCo(g *Game, p *Player, _ Vec) {
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "gong_co", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 
-// Giao Hỏa Tốc — tốc chạy ×2 trong 3 giây và đi xuyên vật cản PHÁ ĐƯỢC.
-func castGiaoHoaToc(g *Game, p *Player, _ Vec) {
-	sc := g.Cfg.Skills
-	g.ApplyStatus(p, StGhost, sc.GhostSecs)
+// Gom Đơn Hỏa Tốc (spec v6.9 §6.3) — 4s: tốc chạy ×3, xuyên mọi vật cản trừ biên khu,
+// MIỄN mọi khống chế, và hút sạch mọi viên / vật phẩm / Bó Kiếm trong 3 U dọc đường chạy.
+//
+// Ba thứ v6.9 thêm so với bản cũ, mỗi thứ sửa một lỗ hổng thật:
+//   - **Miễn và XOÁ khống chế**: bản cũ Shipper đang chạy bị trói là đứng chết tại chỗ với
+//     cờ "đi xuyên vật cản" — tức đứng trong lòng một bức tường, vô hình, không làm gì
+//     được. Giờ dùng được cả lúc đang trói/ngủ/choáng và thoát ngay (checklist §17).
+//   - **Hút đồ 3 U**: cho Shipper một việc để LÀM khi chạy, chứ không chỉ chạy nhanh.
+//   - **Xuyên trừ biên khu**: xem `resolveBorders` — không thì Shipper đi tắt sang khu
+//     cảnh giới cao hơn mà không qua cổng.
+func castGomDon(g *Game, p *Player, _ Vec) {
+	g.ApplyStatus(p, StGhost, g.skillNum("gom_don_secs"))
+	// Xoá khống chế TRƯỚC khi đặt cờ: thứ tự không quan trọng ở đây nhưng việc xoá thì có —
+	// §17 đòi "đang bị trói/ngủ/choáng dùng được và thoát ngay".
+	for _, st := range controlStatuses {
+		p.Status[st] = 0
+	}
 	// Bật cờ ngay tại đây chứ không đợi updateSkillState — y hệt lý do của `shellOn`: nếu
 	// kỹ năng hết hạn trước tick kế tiếp (hoặc test nhảy thẳng thời gian) thì cờ chưa kịp
 	// bật, và việc đẩy ra khỏi vật cản không bao giờ chạy.
 	p.ghostOn = true
-	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "giao_hoa_toc", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "gom_don", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 
 // Rụt Cổ — 2,5 giây đứng yên, không bị bể kiếm và không bị chém thân; ra khỏi mai bật sóng đẩy.
@@ -275,8 +363,8 @@ func castRutCo(g *Game, p *Player, _ Vec) {
 // shellBurst là sóng đẩy khi Cụ Rùa ra khỏi mai (sóng 2 U, đẩy 3 U — §6.3), gọi lúc
 // StShell vừa hết hạn.
 func (g *Game) shellBurst(p *Player) {
-	push := g.skillRange(p, "shell_push")
-	for _, o := range g.targetsNear(p, g.skillRange(p, "shell_wave")) {
+	push := g.skillRange(p, "rut_co_push")
+	for _, o := range g.targetsNear(p, g.skillRange(p, "rut_co_wave")) {
 		if o.HasStatus(StBrace, g.Time) {
 			continue
 		}

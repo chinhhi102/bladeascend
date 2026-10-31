@@ -59,6 +59,12 @@ func (g *Game) resolveSwordBody() {
 
 func (g *Game) applyBodyHit(a, b *Player) {
 	pc := g.Cfg.Player
+	// Chém trúng thân → TỈNH NGAY (spec v6.9 §6.3) và câu hát ru của chính mình thì mất.
+	//
+	// Nhờ hai dòng này mà Ru Ngủ Trưa không khoá cứng được ai: một nhịp chém là tỉnh, nên
+	// 2.5 giây ngủ chỉ có giá khi cả đám đang mài kiếm chứ không ai rảnh để chém thân.
+	b.Status[StSleep] = 0
+	g.cancelChannel(b, "hit")
 	a.Buffs[BuffStealth] = 0 // Ẩn Thân ends as soon as the owner's sword hits someone
 	if g.HiddenInBush(b) {
 		g.emote(b, "revealed") // spec §12: bubble when knocked out of hiding
@@ -376,8 +382,26 @@ func (g *Game) clash(a, b *Player, at Vec) {
 		ClashSide{Realm: ra, Count: a.Ring.Count, Crack: a.Ring.Crack, DurMult: g.hardMult(a, "durability")},
 		ClashSide{Realm: rb, Count: b.Ring.Count, Crack: b.Ring.Crack, DurMult: g.hardMult(b, "durability")})
 	a.Ring.Crack, b.Ring.Crack = out.CrackA, out.CrackB
-	g.breakSwords(a, out.LostA)
-	g.breakSwords(b, out.LostB)
+	// **Kiếm đang ngủ không đánh trả** (spec v6.9 §6.3): bên nào ngủ thì chịu hết, bên thức
+	// không mất gì. Một chiều, không phải "ngủ thì mất gấp đôi".
+	//
+	// Đây là toàn bộ sức mạnh của Ru Ngủ Trưa. Không có nó, kỹ năng chỉ làm địch đứng im —
+	// mà hai vòng kiếm chạm nhau thì vẫn mài nhau đều, nên 2.5 giây ngủ không đổi ai thắng
+	// cuộc mài. Có nó: ru đúng lúc hai bên đang mài là địch mất sạch vòng ngoài, mình
+	// nguyên vẹn, và đó là khoảnh khắc thắng nhìn thấy được mà §6.3 mục 5 đòi.
+	//
+	// Cả hai cùng ngủ thì cả hai cùng chịu — hai người ngủ mài nhau là chuyện tấu hài,
+	// không phải một ngoại lệ cần luật riêng.
+	aSleep, bSleep := a.HasStatus(StSleep, g.Time), b.HasStatus(StSleep, g.Time)
+	lostA, lostB := out.LostA, out.LostB
+	if aSleep && !bSleep {
+		lostB = 0
+	}
+	if bSleep && !aSleep {
+		lostA = 0
+	}
+	g.breakSwords(a, lostA)
+	g.breakSwords(b, lostB)
 }
 
 // pushApart knocks both players away from each other so their rings separate (spec §5.2).
@@ -435,6 +459,7 @@ func (g *Game) resolveSwordWorld() {
 		}
 		g.hitMonsters(a)
 		g.hitObstacles(a)
+		g.hitStalls(a)
 	}
 }
 

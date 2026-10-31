@@ -8,6 +8,9 @@ const SFX = [
   'shield_break', 'chest_incoming', 'chest_open', 'obstacle_hit', 'obstacle_break', 'obstacle_regrow',
   'gate_in', 'gate_out', 'gate_warn', 'monster_hurt', 'monster_pop', 'levelup', 'breakthrough', 'realm_drop',
   'death', 'respawn',
+  // Kỹ năng v6.9/v6.10. Thiếu tệp thì `sound.play` im lặng bỏ qua, nên thêm tên vào đây
+  // trước khi có âm thanh là an toàn — và `assets:report` sẽ liệt kê chúng là còn thiếu.
+  'skill_hat_ru', 'skill_sleep', 'skill_hut_mi', 'skill_gom_don', 'skill_bay_hang',
 ] as const;
 
 export type SfxName = (typeof SFX)[number];

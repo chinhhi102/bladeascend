@@ -67,7 +67,11 @@ type Game struct {
 	itemRespawns []float64
 	orbRespawns  []pendingOrb
 	itemGrid     *itemGrid
-	orbCount     int
+	// stalls: dãy sạp tạm của Cô Ba (spec v6.10 §6.3). Xem `stall.go` để biết vì sao chúng
+	// là một tầng va chạm riêng chứ không nằm trong `Map.Obstacles`.
+	stalls   []tempStall
+	stallSeq uint32
+	orbCount int
 	// expiring: id các viên CÓ HẠN (Tiên khí). Giữ riêng để `expireItems` khỏi quét cả
 	// bản đồ vật phẩm mỗi tick — xem ghi chú ở đó.
 	expiring  []uint32
@@ -255,10 +259,13 @@ func (g *Game) Omega(p *Player) float64 {
 	if p.HasBuff(BuffSpin, g.Time) {
 		w *= g.Cfg.Buffs["spin"].Mult
 	}
-	// Ru Ngủ làm vòng kiếm quay chậm 50% (spec §6.3) — khác Ru Ngủ làm chậm CHÂN, đây là
-	// chậm KIẾM, nên người bị ru vừa khó chạy vừa mài yếu hẳn.
-	if p.HasStatus(StSlow, g.Time) {
-		w *= g.Cfg.Skills.RuNguSpin
+	// Ngủ gục thì vòng kiếm **NGỪNG QUAY** hẳn (spec v6.9 §6.3), không phải chậm lại.
+	//
+	// Dừng hẳn chứ không 0.0001 rad/s: `updateRing` cộng góc theo omega, nên chỉ cần nó
+	// khác 0 là kiếm vẫn nhích và vẫn quét trúng người khác. Mà cái làm kỹ năng này đáng
+	// chọn chính là "trong 2.5s đó địch không mài được ai".
+	if p.HasStatus(StSleep, g.Time) {
+		return 0
 	}
 	return w
 }
