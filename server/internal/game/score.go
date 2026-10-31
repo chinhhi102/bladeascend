@@ -118,11 +118,28 @@ func (g *Game) ChestMarker() (pos Vec, warning, ok bool) {
 
 // updateTitles hands out the Top 1–3 room titles with an anti-flicker hold: a player must
 // keep the new rank for title_hold_secs before the title actually changes (spec §11.3).
+//
+// Hạng tính theo CẢ PHÒNG (5 khu), không theo khu — GAME_SPEC v6.19 §11.3.
+//
+// Trước đây nó dùng `g.Ranking()`, tức là xếp hạng trong KHU NÀY. Hậu quả: một phòng 5 khu
+// có **năm người cùng mang danh hiệu Top 1**, và khi hai người trong số đó gặp nhau qua
+// cổng thì cả hai đều đeo vương miện. Không có lỗi nào được ném ra; nó chỉ sai.
+//
+// `RoomRank` do `Room` cắm vào (xem `room.Step`). nil = chạy một khu đơn lẻ (test, `cmd/sim`)
+// → rơi về xếp hạng trong khu, đúng như cũ.
 func (g *Game) updateTitles() {
 	rank := map[uint32]int{}
-	for i, p := range g.Ranking() {
-		if i < len(g.Cfg.Titles) {
-			rank[p.ID] = i + 1
+	if g.RoomRank != nil {
+		for _, p := range g.PlayerList() {
+			if r := g.RoomRank(p.ID); r >= 1 && r <= len(g.Cfg.Titles) {
+				rank[p.ID] = r
+			}
+		}
+	} else {
+		for i, p := range g.Ranking() {
+			if i < len(g.Cfg.Titles) {
+				rank[p.ID] = i + 1
+			}
 		}
 	}
 	for _, p := range g.PlayerList() {

@@ -53,10 +53,18 @@ type Game struct {
 	// slicks: vệt trơn do Gánh Lướt rơi lại (spec §6.3).
 	slicks    []slick
 	Obstacles []ObstacleState
+	// RoomRank trả hạng Uy Danh của một người trong CẢ PHÒNG (5 khu), 1 là cao nhất; 0 nếu
+	// không biết. `Room` cắm vào mỗi tick (GAME_SPEC v6.19 §11.3).
+	//
+	// Là một HÀM chứ không phải map: `Game` không được biết gì về `Room`, và chép map sang
+	// năm khu mỗi tick là năm lần cấp phát cho một thứ đọc xong là bỏ.
+	RoomRank func(id uint32) int
 	Grid      *world.Grid
 	Events    []Event
 
 	nextID       uint32
+	// idBase: bit cao của id, riêng cho từng khu (xem SetIDBase + newID).
+	idBase uint32
 	order        []uint32 // player ids in join order, for deterministic iteration
 	cooldowns    map[uint64]float64
 	obsIndex     *staticIndex
@@ -99,9 +107,31 @@ func New(cfg *config.Config, m *world.Map, seed int64) *Game {
 	return g
 }
 
+// newID cấp id cho một entity mới.
+//
+// Id phải duy nhất trong CẢ PHÒNG, không chỉ trong khu. Trước đây `nextID` bắt đầu từ 0 ở
+// MỌI khu, mà năm khu sinh ra cùng số quái và cùng số vật phẩm theo config — nên khu 0 và
+// khu 1 cấp ra đúng những con số giống nhau. Đo thật: **79 id trùng** trong một phòng 5 khu
+// ngay ở tick đầu tiên.
+//
+// Hậu quả không hề im lặng cho lắm, chỉ là khó lần ra:
+//   - `Room.rankAt[p.ID]` là bảng CẢ PHÒNG → hai người khác khu cùng id ghi đè hạng của
+//     nhau, nên danh hiệu phát sai (đúng thứ GAME_SPEC v6.19 §11.3 nói tới);
+//   - bảng xếp hạng gửi `id`, client so `e.id === myId` để tô vàng dòng của mình → tô
+//     nhầm người;
+//   - người đi qua cổng mang theo id của mình sang khu mới, va vào một con quái đang dùng
+//     đúng id đó.
+//
+// Cách sửa: mỗi khu một KHOẢNG id riêng, đặt ở bit cao. 5 khu × 16 triệu id mỗi khu, mà
+// một khu đông nhất cũng chỉ ~7 000 entity — không có đường nào chạm trần.
 func (g *Game) newID() uint32 {
 	g.nextID++
-	return g.nextID
+	return g.idBase | g.nextID
+}
+
+// SetIDBase đặt khoảng id cho khu này. Gọi MỘT LẦN lúc dựng, trước khi sinh entity nào.
+func (g *Game) SetIDBase(zoneIndex int) {
+	g.idBase = uint32(zoneIndex) << 24
 }
 
 func (g *Game) emit(e Event) { g.Events = append(g.Events, e) }

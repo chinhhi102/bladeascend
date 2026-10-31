@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.19:** bảng xếp hạng phòng mới — tên, danh hiệu, khu đang đứng, cảnh giới; danh hiệu tính theo cả phòng (5 khu); Top 1/2/3 thiết kế bục vinh danh riêng (§11.3, §11.5).
+
 **Thay đổi v6.18:** tên Tiếng Việt chốt **Đạo Hữu Xin Dừng Bước** + mô tả/khẩu hiệu/giới thiệu; bỏ hẳn "Kiếm Xoay Tu Tiên"; đổi tên project (§20).
 
 **Thay đổi v6.17:** chốt tên game quốc tế **BladeAscend** (§20).
@@ -870,7 +872,7 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 
 ### 11.2 Các bảng xếp hạng
 
-- **Trong phòng** (realtime, 1 lần/giây): top 10 xếp theo **Uy Danh** của mạng hiện tại, mỗi dòng hiện kèm cảnh giới + tầng (để biết ai mạnh mà né/săn). Top 1–10 có danh hiệu (§11.3).
+- **Trong phòng** (realtime, 1 lần/giây): top 10 xếp theo **Uy Danh** của mạng hiện tại, tính **chung cả phòng (5 khu)**. Thiết kế bảng ở §11.5.
 - **Toàn cục**, tab **Hôm nay / Tuần này / Mọi thời đại**, 3 bảng:
   - **Uy Danh** (bảng chính): điểm Uy Danh cao nhất trong 1 mạng.
   - **Sát Thần**: số lần chém trúng người nhiều nhất trong 1 mạng.
@@ -888,9 +890,61 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 | Top 3 | **Chỗ này nhiều máu nè** | Đồng |
 | Top 4–10 | Theo mảng `titles` trong config (giữ đúng bộ danh hiệu đang chạy trong code) | Trắng |
 
-- Danh hiệu hiện **phía trên tên** nhân vật trong trận và cạnh tên trong bảng phòng.
+- **Danh hiệu tính theo cả PHÒNG, không theo khu**: xếp hạng Uy Danh của mọi người thật + bot trong cả 5 khu của phòng, Top 1 của phòng chỉ có **1 người**. Người ở khu khác vẫn thấy đúng danh hiệu của họ khi gặp. (Bất kỳ chỗ nào trong code đang tính hạng trong 1 khu → sửa.)
+- Danh hiệu hiện **phía trên tên** nhân vật trong trận và trong bảng phòng (§11.5).
 - Chống nhấp nháy: giữ hạng mới liên tục 3s mới đổi danh hiệu.
 - Kill feed khi lên ngôi / mất Top 1 (như cũ). Người Ẩn Thân / trong bụi: danh hiệu ẩn theo.
+
+### 11.5 Thiết kế bảng xếp hạng phòng (góc trên phải)
+
+**Mỗi người hiển thị**: tên · danh hiệu · **khu đang đứng** · **cảnh giới + tầng** · Uy Danh. Chân dung nhân vật cho Top 3.
+
+**Bố cục — "bục vinh danh" cho Top 3, danh sách gọn cho 4–10**
+
+```
+┌─────────────────────────────────┐
+│ ★ TOP PHÒNG            19 người │
+├─────────────────────────────────┤
+│ 👑 ┌────┐ Mít Tơ Bean      4 931 │  ← TOP 1: thẻ to, viền vàng kim chuyển sắc,
+│    │chân│ Bần tăng chưa ngán…    │    vệt sáng lướt 3s/lần, vương miện, chân dung 40px
+│    │dung│ [KIM ĐAN ⁵] ⛩Thiên Đình │
+│    └────┘                         │
+├────────────────┬────────────────┤
+│ 🥈 ┌──┐ Nhỏ Bông│ 🥉 ┌──┐ Tí Sún │  ← TOP 2 & 3: hai thẻ nửa chiều rộng,
+│    └──┘ 1 420  │    └──┘ 1 070  │    viền bạc / đồng, chân dung 28px,
+│ Ngon thì nhào vô│ Chỗ này nhiều… │    danh hiệu 1 dòng (cắt "…")
+│ [TRÚC CƠ ⁹] 🏔LS│ [TRÚC CƠ ³] 🎋TL│
+├────────────────┴────────────────┤
+│ 4  Thằng Cu Đất   [LK⁸] 🏘PT   970│  ← 4–10: mỗi người 1 dòng gọn,
+│    Chưa gặp đối thủ xứng tầm      │    danh hiệu dòng phụ chữ nhỏ mờ
+│ 5  …                              │
+├─────────────────────────────────┤
+│ ▶ 14  Bạn (Cô Ba)  [LK²] ❄BN   120│  ← dòng của mình luôn ghim cuối (nếu ngoài top 10),
+└─────────────────────────────────┘    nền nổi bật
+```
+
+**Top 1 / 2 / 3 phải khác hẳn nhau và khác hẳn phần còn lại**
+
+| | Top 1 | Top 2 | Top 3 | 4–10 |
+|---|---|---|---|---|
+| Khung | Thẻ to cả chiều rộng, nền tối ánh vàng | Thẻ nửa rộng | Thẻ nửa rộng | 1 dòng |
+| Viền | Vàng kim **chuyển sắc động** + vệt sáng lướt 3s/lần | Bạc, vệt sáng 5s/lần | Đồng, tĩnh | Không |
+| Biểu tượng | 👑 vương miện vẽ (không dùng emoji hệ thống) | Huy chương bạc | Huy chương đồng | Số hạng |
+| Chân dung | 40 px, viền màu cảnh giới | 28 px | 28 px | Không |
+| Tên | 16 px đậm, vàng | 14 px đậm, bạc | 14 px đậm, đồng | 13 px trắng |
+| Danh hiệu | Dòng riêng, chữ trang trí, vàng | 1 dòng, bạc | 1 dòng, đồng | Dòng phụ nhỏ, mờ 70% |
+| Uy Danh | 18 px | 14 px | 14 px | 13 px |
+| Hiệu ứng | Vài đốm lấp lánh quanh thẻ | – | – | – |
+
+- **Cảnh giới**: viên thuốc nhỏ cùng màu với huy hiệu cảnh giới §12.3 (`KIM ĐAN ⁵`; Tiên giới viền chảy). Hẹp quá thì viết tắt (`KĐ⁵`).
+- **Khu đang đứng**: icon khu + tên ngắn (Thiên Đình · Linh Sơn · Trúc Lâm · Phàm Trấn · Băng Nguyệt), màu icon theo khu; người cùng khu với mình được đánh dấu chấm nhỏ "cùng khu". Người đang **Ẩn Thân** → khu hiện "???".
+- **Hoạt ảnh khi đổi hạng**: dòng trượt lên/xuống 0.25s; lên hạng có mũi tên ▲ xanh 2s, xuống ▼ đỏ 2s. Ai mới vào Top 1: thẻ Top 1 lật (flip) sang người mới + chớp vàng. Top 1 bị hạ: thẻ rung nhẹ trước khi đổi.
+- **Dòng của mình**: nếu trong top 10 → nền sáng hơn + viền mảnh; nếu ngoài → ghim dòng cuối kèm hạng thật.
+- **Không tràn màn hình**: rộng tối đa 300 px (PC), neo góc trên phải có lề 12 px; tên/danh hiệu dài cắt "…" (rê chuột/nhấn giữ thấy đủ).
+- **Điện thoại**: mặc định **thu gọn** = 1 hàng: 3 chân dung tròn Top 1–3 (vương miện trên Top 1) + "Bạn #14". Chạm để mở bảng đầy đủ, chạm ngoài để đóng.
+- Đa ngôn ngữ (§19): tên khu, cảnh giới, danh hiệu theo ngôn ngữ người xem.
+- **Hiệu năng**: cập nhật 1 lần/giây, chỉ vẽ lại dòng thay đổi; thẻ Top 1–3 cache, hiệu ứng động là lớp chồng; chất lượng Thấp tắt vệt sáng/lấp lánh.
+- **Dữ liệu từ server** (gói Leaderboard 1 Hz): mỗi dòng `{id, name, character, title_id, rank, zone_id, realm, tier, score, stealth}` + hạng thật của người nhận. Server tính hạng 1 lần/giây cho cả phòng.
 
 ### 11.4 Tin loan toàn server
 - Khi một người **đang trong Top 5 phòng** bị chém trúng (rớt cảnh giới hoặc chết), **mọi phòng trên server** đều nhận tin trên kill feed, ví dụ: `"[Phòng 3] {A} vừa hạ {B} — 'Ngon thì nhào vô' — rớt xuống {realm}!"`.
@@ -1400,6 +1454,10 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - Việc chủ dự án cần làm: mua tên miền `bladeascend.io` (và nên giữ thêm `bladeascend.com`), kiểm tra trùng tên trên các cổng game .io lớn và cửa hàng ứng dụng, tra nhãn hiệu (WIPO Global Brand Database).
 
 ## 17. Checklist test chấp nhận
+
+- [ ] 2 người ở 2 khu khác nhau: chỉ 1 người có danh hiệu Top 1 trong cả phòng; bảng phòng hiện đúng khu + cảnh giới từng người.
+- [ ] Top 1 thẻ to viền vàng động + vương miện + chân dung; Top 2/3 thẻ nửa rộng bạc/đồng; 4–10 dạng dòng; dòng của mình ghim cuối khi ngoài top 10.
+- [ ] Bảng không tràn ở 1366×768 và iPhone dọc; điện thoại mặc định thu gọn, chạm để mở.
 
 - [ ] Cô Ba Kim Đan bày sạp (bậc 3): người Kim Đan và thấp hơn không chém được, phải đi vòng; người Nguyên Anh chém được; Cô Ba đi xuyên sạp của mình; dẫm vỏ chuối → trượt + choáng 1s; sau 6s sạp biến mất; Shipper đang Gom Đơn đi xuyên qua.
 

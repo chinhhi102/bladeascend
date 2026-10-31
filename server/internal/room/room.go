@@ -542,7 +542,17 @@ func (r *Room) snapshotRanks() {
 	for i, p := range r.Ranking() {
 		r.rankAt[p.ID] = i + 1
 	}
+	// Cắm hạng CẢ PHÒNG vào từng khu, để `updateTitles` phát danh hiệu theo phòng chứ
+	// không theo khu (GAME_SPEC v6.19 §11.3). Cắm lại mỗi tick thay vì một lần lúc dựng:
+	// khu có thể được thay bản đồ giữa chừng, và một con trỏ hàm cũ trỏ vào phòng cũ là
+	// kiểu hỏng không ai tìm ra.
+	for _, z := range r.zones {
+		z.G.RoomRank = r.rankOf2
+	}
 }
+
+// rankOf2 trả hạng theo id, cho `game.RoomRank`. 0 = không có trong bảng.
+func (r *Room) rankOf2(id uint32) int { return r.rankAt[id] }
 
 // rankOf is the player's 1-based rank in the room board (spec §11.2: Uy Danh, then exp).
 // Xếp hạng tính CHUNG CẢ THẾ GIỚI, không theo khu (spec §8.0); đọc từ bản chụp đầu tick.

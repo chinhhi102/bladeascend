@@ -29,6 +29,8 @@ export class Conn {
   private bytesAt = performance.now();
   kbPerSec = 0;
   lastSnapBytes = 0;
+  /** decodeMs: thời gian giải mã một snapshot, trung bình trượt. Xem chỗ gán. */
+  decodeMs = 0;
   /**
    * snap giải mã snapshot NHỊ PHÂN (Protocol v2).
    *
@@ -69,8 +71,15 @@ export class Conn {
       let msg: ServerMsg;
       if (isBinarySnapshot(u8)) {
         this.lastSnapBytes = bytes;
+        const t0 = performance.now();
         try {
           msg = this.snap.decode(u8);
+          // Đo thời gian GIẢI MÃ riêng ra.
+          //
+          // Trước khi chuyển việc này sang Web Worker (CHANGES_v4 mục 25) thì phải biết nó
+          // có đáng không: nếu giải mã tốn 0,2 ms còn vòng vẽ tốn 45 ms thì chuyển nó đi
+          // chẳng sửa được gì, chỉ thêm một luồng và một lớp sao chép bộ nhớ.
+          this.decodeMs = this.decodeMs * 0.9 + (performance.now() - t0) * 0.1;
         } catch (err) {
           // Gói hỏng: BỎ QUA gói đó, đừng để lỗi nổ ra vòng vẽ.
           //
