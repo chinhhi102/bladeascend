@@ -1,4 +1,4 @@
-# CLAUDE.md — Kiếm Xoay Tu Tiên
+# CLAUDE.md — BladeAscend · Đạo Hữu Xin Dừng Bước
 
 Game multiplayer .io 2D trên trình duyệt: kiếm bay vòng quanh nhân vật, tu luyện 9 cảnh giới.
 Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích ngắn gọn bằng tiếng Việt, đưa lệnh cụ thể để chạy.

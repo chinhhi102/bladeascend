@@ -21,4 +21,6 @@ Làm sau khi xong lượt Protocol v2 đang chạy. Luật chung như các lư�
 12. SEO: trang chủ tĩnh theo ngôn ngữ (/, /en/, /pt/, /es/, /id/, /th/), title/description/OG, hreflang, sitemap.xml, đoạn giới thiệu + 3 ảnh chụp dưới khung game.
 
 ## D. Tên game (GAME_SPEC §20)
-13. Thêm `config.brand` (tên quốc tế + phụ đề Việt), thay mọi chỗ hiển thị tên game bằng giá trị này. Chưa đổi tên thật cho tới khi tôi chốt — giữ tên hiện tại làm giá trị mặc định.
+13. **Tên đã chốt** (GAME_SPEC v6.18 §20): quốc tế **BladeAscend**, Tiếng Việt **"Đạo Hữu Xin Dừng Bước"**. `config.brand = { name: "BladeAscend", domain: "bladeascend.io", name_vi: "Đạo Hữu Xin Dừng Bước", tagline_vi: "Kiếm bay vòng vòng, đạo hữu chạy vòng vòng." }`. Dùng đúng `<title>`, mô tả, khẩu hiệu, đoạn giới thiệu trong §20. Thay mọi chỗ hiển thị tên game (trang chủ, màn hình tải, tiêu đề tab, OG, manifest PWA, admin, ảnh chia sẻ). Khẩu hiệu ngôn ngữ khác trong i18n. Logo chữ: tạm render bằng font, thêm job artgen logo.
+14. **Bỏ hẳn "Kiếm Xoay Tu Tiên"** ở mọi nơi người chơi thấy. CI: grep chuỗi "Kiếm Xoay" / "kiem-xoay" trong client, server, assets → fail (trừ CHANGELOG/lịch sử).
+15. **Đổi tên project**: repo + thư mục gốc → `bladeascend`, module Go, `package.json` name, tiêu đề tài liệu trong `docs/` (GAME_SPEC, ADMIN_SPEC, CLAUDE.md…), service/systemd/Caddy nếu có tên cũ. Đổi tên repo GitHub (giữ redirect tự động của GitHub), cập nhật remote + `tools/deploy.sh`. Làm riêng 1 commit cuối lượt, deploy + self-check sau khi đổi.

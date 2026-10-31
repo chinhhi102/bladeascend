@@ -6,7 +6,14 @@ const sizes = [
   { name: 'dien thoai ngang 800x360', w: 800, h: 360, dpr: 3, mobile: true },
   { name: 'dien thoai nho 320x568', w: 320, h: 568, dpr: 2, mobile: true },
   { name: 'cua so hep PC 420x900', w: 420, h: 900, dpr: 1, mobile: false },
+  // Màn RỘNG: ba luật kích thước chủ dự án chốt 31/10 chỉ lộ ra ở đây. Ảnh chụp báo lỗi
+  // hôm đó là 960×540; thêm cả 1920×1080 vì đó là cỡ hay gặp nhất.
+  { name: 'PC 960x540', w: 960, h: 540, dpr: 1, mobile: false },
+  { name: 'PC 1920x1080', w: 1920, h: 1080, dpr: 1, mobile: false },
 ];
+
+/** Vượt luật kích thước thì cả bài TRƯỢT — đếm ở đây. */
+let viPham = 0;
 
 const b = await chromium.launch({ headless: true, args: ['--use-gl=angle','--use-angle=gl','--enable-gpu','--ignore-gpu-blocklist'] });
 for (const s of sizes) {
@@ -31,10 +38,14 @@ for (const s of sizes) {
       d.textContent = '[Băng Nguyệt Hồ] Thím Ba Bầu nằm xuống, Cô Út Mắm phủi tay đi tiếp';
       feed.append(d);
     }
-    const big = document.createElement('div');
-    big.className = 'server-line';
-    big.textContent = '📢 TOÀN CÕI TU CHÂN · hạ Top 5: Ông Kẹ dịch chuyển hết một vòng để tới chỗ Tám Chuyện chết';
-    sf.append(big);
+    // Nhét BA tin loan để kiểm luật "chỉ một cái tại một thời điểm" (chủ dự án chốt
+    // 31/10). Nhét một cái thì không bao giờ biết luật có chạy không.
+    for (let i = 0; i < 3; i++) {
+      const big = document.createElement('div');
+      big.className = 'server-line';
+      big.textContent = '📢 TOÀN CÕI TU CHÂN · hạ Top 5: Ông Kẹ dịch chuyển hết một vòng để tới chỗ Tám Chuyện chết';
+      sf.append(big);
+    }
     const bn = document.querySelector('.banner');
     bn.textContent = 'Rương Báu sắp xuất hiện trong 10s!';
     bn.style.display = 'block';
@@ -83,12 +94,42 @@ for (const s of sizes) {
       soDongBangXepHang: document.querySelectorAll('.room-board .lb-line').length,
       soTinKillFeed: document.querySelectorAll('.feed-line').length,
       minimapPx: Math.round(document.querySelector('.minimap')?.getBoundingClientRect().width ?? 0),
+      // Ba luật kích thước (chủ dự án chốt 31/10).
+      soTinLoan: document.querySelectorAll('.server-line').length,
+      rongChatPhanTram: Math.round(((document.querySelector('.feed')?.getBoundingClientRect().width ?? 0) / W) * 100),
+      caoBangPhanTram: Math.round(((document.querySelector('.room-board')?.getBoundingClientRect().height ?? 0) / H) * 100),
+      dangDoc: H > W,
+      bangBiCat: (() => {
+        const b = document.querySelector('.room-board');
+        return b ? b.scrollHeight - b.clientHeight : 0;
+      })(),
     };
   });
   console.log(`\n=== ${s.name} ===`);
   console.log(`  HUD phu ${res.phanTramManHinhBiHudPhu}% man hinh · bang ${res.soDongBangXepHang} dong · feed ${res.soTinKillFeed} tin · minimap ${res.minimapPx}px`);
   console.log(res.chongLan.length ? '  CHONG LAN:\n    ' + res.chongLan.join('\n    ') : '  khong khoi nao chong len nhau');
+
+  // ── Ba luật kích thước, chủ dự án chốt 31/10 ──────────────────────────────────────────
+  const tranChat = res.dangDoc ? 33 : 25;
+  const kiem = (ok, nhan) => {
+    console.log(`  ${ok ? 'OK ' : 'VI PHAM'} ${nhan}`);
+    if (!ok) viPham++;
+  };
+  // +1% dung sai: `getBoundingClientRect` trả số lẻ, và 25vw của 963px ra 240.75px.
+  kiem(res.soTinLoan <= 1, `tin loan cung luc: ${res.soTinLoan} (toi da 1)`);
+  kiem(res.rongChatPhanTram <= tranChat + 1,
+    `khung chat rong ${res.rongChatPhanTram}% be ngang (toi da ${tranChat}% — man ${res.dangDoc ? 'doc' : 'ngang'})`);
+  kiem(res.caoBangPhanTram <= 51,
+    `bang xep hang cao ${res.caoBangPhanTram}% chieu cao (toi da 50%)`);
+  // Giữ đúng 50% mà cắt ngang một dòng thì vẫn là hỏng: người chơi thấy nửa chữ.
+  kiem(res.bangBiCat <= 1, `bang xep hang khong bi cat ngang (thua ${res.bangBiCat}px)`);
   await p.screenshot({ path: `${OUT}/ui_${s.w}x${s.h}.png` });
   await ctx.close();
 }
-await b.close(); process.exit(0);
+await b.close();
+if (viPham > 0) {
+  console.error(`\nTRUOT: ${viPham} lan vi pham luat kich thuoc HUD.`);
+  process.exit(1);
+}
+console.log('\nDAT: HUD khong khoi nao vuot luat kich thuoc.');
+process.exit(0);

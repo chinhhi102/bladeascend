@@ -1,8 +1,12 @@
-# KIẾM XOAY TU TIÊN — Game Design & Technical Spec (v2)
+# BLADEASCEND · ĐẠO HỮU XIN DỪNG BƯỚC — Game Design & Technical Spec (v2)
 
 > Tên tạm (working title). File này dành cho Claude Code: đặt tại `docs/GAME_SPEC.md`.
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
+
+**Thay đổi v6.18:** tên Tiếng Việt chốt **Đạo Hữu Xin Dừng Bước** + mô tả/khẩu hiệu/giới thiệu; bỏ hẳn "Kiếm Xoay Tu Tiên"; đổi tên project (§20).
+
+**Thay đổi v6.17:** chốt tên game quốc tế **BladeAscend** (§20).
 
 **Thay đổi v6.16:** thêm đa ngôn ngữ đợt 1 (vi, en, pt-BR, es, id, th) + SEO đa ngôn ngữ (§19); tên game & thương hiệu (§20).
 
@@ -1377,9 +1381,23 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 
 ## 20. Tên game & thương hiệu
 
-- Tên hiện tại "Kiếm Xoay Tu Tiên" là tên tạm, khó tìm thấy với người nước ngoài. Tên mới chốt ở `config.brand` (tên quốc tế + phụ đề Tiếng Việt), mọi nơi hiển thị lấy từ đây.
+- **Tên đã chốt: BladeAscend** (tên miền dự kiến `bladeascend.io`).
+  - **Tên Tiếng Việt: "Đạo Hữu Xin Dừng Bước"** — tên game cho người chơi Việt (logo trang `/`, màn hình tải, tiêu đề tab, ảnh chia sẻ). Chế từ câu kinh điển của truyện tu tiên: một bên chạy, một bên đuổi theo gọi với — đúng y gameplay.
+  - **Bỏ hẳn cụm "Kiếm Xoay Tu Tiên"** ở mọi nơi người chơi thấy (tên, tiêu đề, mô tả, màn hình tải, admin).
+  - `<title>` Việt: `Đạo Hữu Xin Dừng Bước — Game tu tiên .io chơi ngay trên trình duyệt`.
+  - **Mô tả ngắn** (`<meta description>`, ≤ 160 ký tự): *"Tu tiên bằng cả trăm thanh kiếm bay. Chém người cướp tu vi, phi thăng tới Đạo Tổ — nếu chạy kịp. Chơi miễn phí ngay trên trình duyệt."*
+  - **Khẩu hiệu dưới logo:** *"Kiếm bay vòng vòng, đạo hữu chạy vòng vòng."*
+  - **Đoạn giới thiệu trên trang chủ** (HTML tĩnh dưới khung game):
+    > Ngươi là một tu sĩ mới nhập môn, trong tay chỉ có một thanh kiếm. Nhặt linh khí, gom thêm kiếm, xếp thành vòng vòng quanh người — càng nhiều vòng càng chém xa. Gặp đạo hữu yếu hơn thì đuổi theo cướp tu vi; gặp đạo hữu mạnh hơn thì… chạy, kèm một câu thật lịch sự: *"Đạo hữu xin dừng bước!"*.
+    > Chín đại cảnh giới từ Luyện Khí tới Đại Thừa, năm tầng Tiên giới tới Đạo Tổ. Năm khu vực, cổng dịch chuyển ngẫu nhiên, mười nhân vật dở hơi với mười bí kíp riêng. Không cần tải, không cần đăng ký — nhập tên là vào.
+  - Từ khoá tìm kiếm (đặt tự nhiên trong mô tả/giới thiệu, không nhồi): "game io", "tu tiên", "chơi trên trình duyệt", "không cần tải".
+  - Ngôn ngữ khác: `BladeAscend.io — {khẩu hiệu theo ngôn ngữ}` (vd en: *Spin your swords, ascend to immortality*; agent soạn khẩu hiệu cho từng ngôn ngữ trong i18n, người bản ngữ duyệt).
+  - Cách viết: luôn **BladeAscend** (chữ B và A hoa, viết liền); dạng thường `bladeascend` cho tên miền, tên repo, id kỹ thuật.
+  - Lưu ở `config.brand` = `{ "name": "BladeAscend", "domain": "bladeascend.io", "name_vi": "Đạo Hữu Xin Dừng Bước", "tagline_vi": "Kiếm bay vòng vòng, đạo hữu chạy vòng vòng." }`; mọi chỗ hiển thị tên game (trang chủ, màn hình tải, tiêu đề tab, OG, manifest PWA, trang admin, ảnh chia sẻ) lấy từ đây.
+  - **Tên project / mã nguồn**: repo, thư mục gốc, module Go, `package.json`, tiêu đề các tài liệu trong `docs/` đổi thành `bladeascend` / "BladeAscend". Không còn chỗ nào trong code hay tài liệu dùng "kiem-xoay" / "Kiếm Xoay Tu Tiên" (trừ lịch sử thay đổi).
+  - Có một game PC tên gần giống (*Darkblade Ascent*, roguelike góc nhìn thứ nhất) — khác thể loại, không trùng tên, nhưng nên luôn viết liền "BladeAscend" để phân biệt.
 - Tiêu chí: ngắn (≤ 12 ký tự trước `.io`), dễ đánh vần bằng tiếng Anh, gợi "kiếm xoay" + "tu tiên", **không đụng thương hiệu có sẵn** (vd tránh "Halo" — thương hiệu Microsoft; tránh "Tiên Kiếm" — tên một dòng game nổi tiếng), còn tên miền `.io` và tên trên các cổng game.
-- Trước khi chốt: kiểm tên miền, tra trùng tên trên các cổng game .io lớn và cửa hàng ứng dụng, tra nhãn hiệu (WIPO Global Brand Database).
+- Việc chủ dự án cần làm: mua tên miền `bladeascend.io` (và nên giữ thêm `bladeascend.com`), kiểm tra trùng tên trên các cổng game .io lớn và cửa hàng ứng dụng, tra nhãn hiệu (WIPO Global Brand Database).
 
 ## 17. Checklist test chấp nhận
 

@@ -32,13 +32,34 @@ const narrow = narrowScreen;
 function feedKeep(): number {
   return narrow() ? 1 : 5;
 }
-/** Số dòng bảng xếp hạng phòng: màn hẹp Top 3, màn rộng Top 10. */
+/**
+ * Số dòng bảng xếp hạng phòng — tính theo CHIỀU CAO CÒN LẠI, không phải một con số cố định.
+ *
+ * Chủ dự án chốt 31/10: **bảng không bao giờ cao quá nửa màn hình**. Một con số cố định
+ * không giữ được lời hứa đó: 10 dòng vừa trên màn 1080p nhưng tràn trên 720p, và trên điện
+ * thoại nằm ngang thì tràn hẳn. Nên đếm ngược từ chỗ còn trống.
+ *
+ * Mỗi dòng ~2 hàng chữ (tên + danh hiệu) nên tốn khoảng 2.9em; trừ sẵn tiêu đề và dòng
+ * "hạng của mình".
+ */
 function boardRows(): number {
-  return narrow() ? 3 : 10;
+  if (narrow()) {
+    return 3;
+  }
+  const em = Math.min(Math.max(window.innerWidth * 0.0115, 12), 17); // khớp clamp() trong CSS
+  const room = window.innerHeight * 0.5 - 24 /* đệm */ - em * 1.06 /* tiêu đề */ - em /* hạng mình */;
+  return Math.max(3, Math.min(10, Math.floor(room / (em * 2.9))));
 }
-/** Tin loan toàn server: ít dòng hơn nhưng ở lại lâu hơn vì nó là chuyện lớn (spec §11.4). */
+/**
+ * Tin loan toàn server: **LUÔN LUÔN một cái tại một thời điểm** (chủ dự án chốt 31/10).
+ *
+ * Trước đây màn rộng giữ 3 cái chồng lên nhau, mỗi cái chữ 20px — ảnh chụp 31/10 cho thấy
+ * ba dải đỏ che gần hết khu vực chơi, người chơi không nhìn thấy nhân vật của mình nữa.
+ * Tin loan là thứ CHEN NGANG; chen ngang ba lần cùng lúc thì nó không còn là tin, nó là
+ * một bức tường.
+ */
 function serverFeedKeep(): number {
-  return narrow() ? 1 : 3;
+  return 1;
 }
 
 /**
@@ -473,6 +494,37 @@ export class Hud {
       return line;
     });
     this.board.replaceChildren(h('div', 'board-title', STR.roomTop), ...rows, h('div', 'my-rank', STR.yourRank(lb.rank, lb.total)));
+    this.trimBoardToHalfScreen();
+  }
+
+  /**
+   * trimBoardToHalfScreen bỏ bớt dòng cuối cho tới khi bảng vừa trong nửa màn hình.
+   *
+   * `boardRows()` đã ước lượng số dòng, nhưng ước lượng là ước lượng: chiều cao một dòng
+   * phụ thuộc cỡ chữ thật, độ dài danh hiệu (có cái xuống hai hàng), và ngôn ngữ. Ảnh chụp
+   * 960×540 cho thấy nó hụt đúng một dòng — "Hạng của bạn 45/45" bị cắt ngang.
+   *
+   * Nên đo thật rồi cắt: `scrollHeight > clientHeight` là câu hỏi duy nhất đáng tin, và nó
+   * đúng với mọi cỡ chữ, mọi ngôn ngữ, mọi độ dài tên.
+   *
+   * Cắt từ CUỐI lên: dòng cuối là hạng thấp nhất, mất nó ít tiếc nhất. Luôn chừa lại dòng
+   * "hạng của mình" — đó là dòng người chơi tìm trước tiên.
+   */
+  private trimBoardToHalfScreen(): void {
+    // 12 vòng là trần chống treo: nhiều nhất 10 dòng xếp hạng + tiêu đề + hạng mình.
+    for (let i = 0; i < 12 && this.board.scrollHeight > this.board.clientHeight; i++) {
+      // `querySelectorAll(...).at(-1)` chứ KHÔNG `.lb-line:last-of-type`.
+      //
+      // `:last-of-type` xét theo TÊN THẺ, không theo class: phần tử cuối trong bảng là
+      // `div.my-rank`, cũng là một `div`, nên `.lb-line:last-of-type` không khớp gì cả —
+      // vòng lặp thoát ngay và bảng vẫn bị cắt. Bài đo bắt được: thừa 17px ở 960×540.
+      const lines = this.board.querySelectorAll('.lb-line');
+      const last = lines[lines.length - 1];
+      if (!last) {
+        break;
+      }
+      last.remove();
+    }
   }
 
   /** popScore floats a "+800 LẬT KÈO!" number up when Uy Danh is earned (spec §11.1). */
