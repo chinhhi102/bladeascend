@@ -153,7 +153,9 @@ func (r *Room) spawnBotIn(z *Zone, level, swords int) *game.Player {
 		Char:  r.pickBotChar(),
 		IsBot: true, Level: level, Swords: swords,
 	})
-	z.brains[p.ID] = bot.New(p.ID, r.rng.Int63(), z.G)
+	br := bot.New(p.ID, r.rng.Int63(), z.G)
+	br.MaybeIdleOnJoin(z.G, z.G.Time)
+	z.brains[p.ID] = br
 	return p
 }
 
@@ -255,6 +257,9 @@ func (r *Room) processRespawns() {
 				continue
 			}
 			z.G.Respawn(p, level, swords)
+			if br := z.brains[p.ID]; br != nil {
+				br.MaybeIdleOnJoin(z.G, z.G.Time)
+			}
 		}
 		z.respawns = keep
 	}

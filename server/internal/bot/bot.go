@@ -57,7 +57,27 @@ type Brain struct {
 	stuckAt      float64
 	stuckPos     Vec
 	unstickUntil float64
+	// idleUntil: đứng yên tới mốc này — người thật vừa vào trận hay ngồi nhìn quanh vài
+	// giây (spec v6.1 §9.4, `bots.idle_after_join_*`). Bot nào cũng chạy ngay từ tick đầu
+	// là một dấu hiệu lộ bot.
+	idleUntil float64
 }
+
+// MaybeIdleOnJoin: với xác suất `bots.idle_after_join_chance`, cho bot đứng yên một khoảng
+// ngẫu nhiên trong `bots.idle_after_join_secs` kể từ `now`. Gọi khi bot vừa vào trận hoặc
+// vừa hồi sinh ("Chơi tiếp").
+func (b *Brain) MaybeIdleOnJoin(g *game.Game, now float64) bool {
+	bc := g.Cfg.Bots
+	if len(bc.IdleAfterJoinSecs) != 2 || b.rng.Float64() >= bc.IdleAfterJoinChance {
+		return false
+	}
+	lo, hi := bc.IdleAfterJoinSecs[0], bc.IdleAfterJoinSecs[1]
+	b.idleUntil = now + lo + b.rng.Float64()*(hi-lo)
+	return true
+}
+
+// Idle: bot đang trong khoảng đứng yên sau khi vào không.
+func (b *Brain) Idle(now float64) bool { return now < b.idleUntil }
 
 // trySkill: bot dùng kỹ năng của nhân vật mình theo luật đơn giản (spec §6.3).
 //
@@ -177,6 +197,10 @@ func (b *Brain) farmDecide(g *game.Game, me *game.Player) {
 func (b *Brain) Update(g *game.Game) {
 	me, ok := g.Players[b.ID]
 	if !ok || me.Dead {
+		return
+	}
+	if b.Idle(g.Time) {
+		g.SetInput(b.ID, 0, me.Facing, false, false)
 		return
 	}
 	if g.Time >= b.nextDecide {
