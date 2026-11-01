@@ -31,6 +31,16 @@ html, body { margin: 0; min-height: 100%; overflow: hidden; background: #2b2b2b;
    đen ngay dưới chân trang. Đặt ở đây thì nền "kéo hết trang" đúng nghĩa. */
 html:has(body:not(.in-game) .home) { overflow-y: auto; touch-action: pan-y; background: var(--paper); }
 body:not(.in-game):has(.home) { overflow: visible; touch-action: pan-y; user-select: text; -webkit-user-select: text; }
+/* Ảnh nền trang chủ kéo HẾT TRANG: lớp `fixed` nằm sau mọi thứ (không dùng
+   `background-attachment: fixed` — Safari iOS bỏ qua nó). `--home-bg` do home.ts đặt; chưa có
+   ảnh thì lớp này trong suốt và nền giấy của `html` lộ ra như cũ. */
+/* body trong suốt ở trang chủ: nền xám của body vẽ ĐÈ lên lớp z-index âm này. */
+body:not(.in-game):has(.home) { background: transparent; }
+/* Canvas Pixi (nền tối, fixed) cũng nằm trên lớp đó; ở trang chủ nó không vẽ gì người chơi cần
+   → ẩn (visibility, không display:none — WebGL vẫn sống, vào trận khỏi dựng lại). */
+body:not(.in-game):has(.home) #stage { visibility: hidden; }
+body:not(.in-game):has(.home)::before { content: ''; position: fixed; inset: 0; z-index: -1;
+  background: var(--home-bg, none) center / cover no-repeat, radial-gradient(circle at 50% 30%, #4a3b2a, #1d1a16); }
 #stage, #stage canvas { position: fixed; inset: 0; display: block; }
 #overlay { position: fixed; inset: 0; pointer-events: none; }
 #overlay > * { pointer-events: auto; }
@@ -65,7 +75,9 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
 .btn.primary { background: var(--gold); font-size: 18px; }
 
-.char-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+/* `minmax(0, 1fr)` chứ không `1fr`: cột `1fr` không co nhỏ hơn nội dung dài nhất, nên một tên
+   hay dòng hồi chiêu không ngắt được là đẩy cột 5 ra ngoài panel (ảnh 1/11: "Thằng M…" bị cắt). */
+.char-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .char-card { font: inherit; font-size: 11px; font-weight: 700; color: var(--ink); border: 3px solid transparent; border-radius: 12px; background: rgba(0,0,0,.05); padding: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .char-card.selected { border-color: var(--accent); background: #fff; }
 /* Tên trên thẻ: MỘT DÒNG, luôn luôn. Thẻ trong lưới 5 cột rộng ~100px trên PC và ~60px
@@ -73,9 +85,10 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
    ngắn (`STR.charactersShort`) vừa một dòng, còn `ellipsis` là lưới an toàn cho ngôn ngữ
    khác: chữ bị cắt thì còn đọc được phần đầu, chứ không đẩy vỡ cả hàng. */
 .char-card .card-name { display: block; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* Hồi chiêu ngay trên thẻ (v6.25 §6.3): chữ nhỏ, một dòng. */
-.char-card .card-cd { display: block; width: 100%; font-size: 10px; font-weight: 600; opacity: .8;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Hồi chiêu ngay trên thẻ (v6.25 §6.3): chữ nhỏ, tối đa HAI dòng ("Hồi 30s ·" / "tích 2 lượt")
+   — thẻ điện thoại chỉ ~60 px, một dòng thì bị cắt mất số lượt. */
+.char-card .card-cd { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  width: 100%; font-size: 10px; font-weight: 600; opacity: .8; line-height: 1.15; min-height: 2.3em; }
 /* Ảnh nhân vật ở MÀN CHỌN. Phải khoanh theo thẻ cha, không để `.portrait` trần:
    ô đại diện trên HUD cũng dùng class `.portrait`, và luật rộng 64px ở đây từng rò sang
    đó — ô HUD chỉ 40px nên ảnh tràn hẳn ra ngoài khung tròn và đè lên chữ "Kiếm x/y"
@@ -460,7 +473,7 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
    Mục tiêu: HUD chiếm càng ít màn hình càng tốt — người chơi vào để xem trận đấu, không
    phải để đọc bảng biểu. */
 @media (max-width: 720px), (max-height: 480px) {
-  .char-grid { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .char-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
   .char-card { font-size: 9px; padding: 3px; }
   .char-grid .portrait { width: 40px; height: 40px; }
   .char-grid .portrait.placeholder { width: 34px; height: 34px; margin: 3px; }
@@ -765,6 +778,8 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
   background: var(--paper); color: var(--ink);
   border-radius: 16px 16px 0 0;
   box-shadow: 0 -8px 32px rgba(0, 0, 0, .45);
+  /* Thẻ giấy ở GIỮA, ảnh nền lộ hai bên trên màn rộng (nền kéo hết trang). */
+  max-width: 76em; margin-left: auto; margin-right: auto;
 }
 #below > section, #below > footer { max-width: 46em; margin: 0 auto; padding: 28px 20px; }
 #below > section + section, #below > footer { border-top: 2px dashed rgba(29, 26, 22, .18); }
@@ -818,3 +833,9 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 #foot .foot-brand { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
 
 body.in-game #below { display: none; }
+/* PC (rộng ≥ 1000 px): khung trang chủ rộng hơn để "Hồi 30s · tích 2 lượt" nằm gọn MỘT dòng
+   trên thẻ — rớt chữ "lượt" xuống dòng làm mỗi thẻ cao thêm ~13 px và đẩy khung chạm đáy
+   màn 1366×768. */
+@media (min-width: 1000px) {
+  .screen.home .panel { width: min(660px, 100%); }
+}

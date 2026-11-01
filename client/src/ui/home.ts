@@ -74,6 +74,9 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     const bg = assets.url('ui/home_bg.png');
     if (bg) {
       root.style.backgroundImage = `url(${bg})`;
+      // Cùng ảnh làm nền CẢ TRANG (lớp cố định sau `#below`) — cuộn xuống phần giới thiệu vẫn
+      // thấy phố chợ hai bên, không hụt sang màu giấy trơn.
+      document.documentElement.style.setProperty('--home-bg', `url(${bg})`);
     }
   };
   applyBg();
