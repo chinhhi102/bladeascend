@@ -14,5 +14,13 @@ networks:
   caddy:
     name: docker_default
     external: true
+# Volume đặt TÊN CỐ ĐỊNH và `external`, vì hai lý do (docs/RENAME_STAGING.md):
+#  - Không có `name:` thì compose tự thêm tiền tố dự án: khai `kiemtien-data` nhưng volume thật
+#    là `kiemtien_kiemtien-data`. Tài liệu đổi tên bản đầu chép từ cái tên KHAI BÁO, nên lệnh
+#    chép sẽ tạo một volume rỗng mới, chép rỗng sang, và vẫn in "CHEP-XONG".
+#  - `external` làm compose TỪ CHỐI chạy khi volume chưa có, thay vì lặng lẽ tạo một volume
+#    rỗng — tức là mất bảng xếp hạng mà không có dòng lỗi nào.
 volumes:
   bladeascend-data:
+    name: bladeascend-data
+    external: true
