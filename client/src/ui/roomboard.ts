@@ -25,6 +25,8 @@ const SLIDE_MS = 250;
 const SHAKE_MS = 320;
 /** Nhấn giữ bao lâu thì hiện đủ tên/danh hiệu bị cắt "…" (§11.5). */
 const HOLD_MS = 450;
+/** Điện thoại: bảng đang mở mà không ai chạm vào ngần này thì tự đóng (chủ dự án chốt 1/11). */
+const IDLE_CLOSE_MS = 8000;
 
 /** SelfInfo: cái gói bảng không chở về chính mình nhưng dòng ghim cần (§11.5). */
 interface SelfInfo {
@@ -59,16 +61,43 @@ export class RoomBoard {
   private open = false;
   private holdTimer = 0;
 
-  constructor(private readonly cfg: GameConfig) {
-    this.el.append(this.mini, this.head, this.top1, this.pair, this.list, this.me);
-    this.el.addEventListener('click', () => this.toggleOpen());
-    document.addEventListener('pointerdown', (e) => this.closeIfOutside(e));
-    this.el.addEventListener('pointerdown', (e) => this.startHold(e));
+  private idleTimer = 0;
+  private readonly closeBtn = h('button', 'rb-close', '✕');
+
+  /** onOpenChange: báo HUD để ẩn nút kỹ năng/🔥, hoãn thông báo khi bảng mở (§11.5, duyệt 1/11). */
+  constructor(private readonly cfg: GameConfig, private readonly onOpenChange: (open: boolean) => void = () => {}) {
+    this.closeBtn.title = STR.board.close;
+    this.closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.setOpen(false);
+    });
+    this.el.append(this.closeBtn, this.mini, this.head, this.top1, this.pair, this.list, this.me);
+    this.el.addEventListener('click', () => this.openIfCompact());
+    // Pha BẮT (capture): chạm joystick trên canvas cũng phải đóng bảng, kể cả khi bộ điều
+    // khiển chặn sự kiện lan tiếp.
+    document.addEventListener('pointerdown', (e) => this.closeIfOutside(e), true);
+    this.el.addEventListener('pointerdown', (e) => {
+      this.armIdle();
+      this.startHold(e);
+    });
     this.el.addEventListener('pointerup', () => window.clearTimeout(this.holdTimer));
+  }
+
+  /** isOpen: bảng đang mở to trên điện thoại. */
+  get isOpen(): boolean {
+    return this.open;
+  }
+
+  /** close đóng bảng (vd. vừa bị chém trúng — chủ dự án chốt 1/11). */
+  close(): void {
+    this.setOpen(false);
   }
 
   update(msg: RoomBoardMsg, ctx: Ctx): void {
     const compact = narrowScreen();
+    if (!compact && this.open) {
+      this.setOpen(false);
+    }
     this.el.classList.toggle('compact', compact);
     this.el.classList.toggle('open', compact && this.open);
     this.el.classList.toggle('lowfx', quality() === 'low');
@@ -150,9 +179,12 @@ export class RoomBoard {
   private podiumCard(row: RoomBoardRow, ctx: Ctx): HTMLElement {
     const rank = row.rank === 2 ? 2 : 3;
     const card = h('div', `rb-pod p${rank}${row.id === ctx.myId ? ' me' : ''}`);
+    // Tên lên dòng RIÊNG, đủ cả bề rộng thẻ (duyệt 1/11: chung dòng với chân dung thì tên
+    // chỉ còn 4 ký tự). Dòng trên: huy chương + chân dung bên trái, Uy Danh góc phải.
     card.append(
       h('i', 'rb-shine'),
-      h('div', 'rb-line', medal(rank), face(this.cfg, row, 28), h('div', 'rb-pod-txt', clip('rb-name', row.name), h('span', 'rb-score', fmtScore(row.score)))),
+      h('div', 'rb-line', medal(rank), face(this.cfg, row, 28), h('span', 'rb-score', fmtScore(row.score))),
+      clip('rb-name', row.name),
       clip('rb-title', titleText(row)),
       h('div', 'rb-tags', realmPill(this.cfg, row, true), zoneChip(row, ctx.myZone)),
     );
@@ -229,7 +261,7 @@ export class RoomBoard {
     el.querySelector('.rb-line')?.append(h('span', `rb-arrow ${up ? 'up' : 'down'}`, up ? '▲' : '▼'));
   }
 
-  /** setMe: dòng của mình ghim cuối khi ngoài top 10 — "▶ 14 Bạn (Cô Ba) [LK²] ❄ 120". */
+  /** setMe: dòng của mình ghim cuối khi ngoài top 10 — "▶ 14 Cô Ba [LK²] ❄ 120". */
   private setMe(msg: RoomBoardMsg, ctx: Ctx): void {
     const inTop = msg.rows.some((r) => r.id === ctx.myId);
     this.me.style.display = inTop || msg.rank <= 0 ? 'none' : '';
@@ -238,7 +270,8 @@ export class RoomBoard {
       id: ctx.myId, name: self?.name ?? '', character: 255, titleId: 0, rank: msg.rank,
       zoneId: ctx.myZone, realm: self?.realm ?? 0, tier: self?.tier ?? 1, score: msg.ms, stealth: false,
     };
-    const who = self?.name ? `${STR.board.you} (${self.name})` : STR.board.you;
+    // Chỉ ▶ + hạng + TÊN, nền nổi bật đã nói "đây là bạn" (duyệt 1/11: bỏ "Bạn (…)").
+    const who = self?.name || STR.board.you;
     this.paint(this.me, `${rowSig(row, ctx)}|${who}`, () => [
       h('div', 'rb-line', h('span', 'rb-rank', `▶ ${msg.rank}`), clip('rb-name', who),
         realmPill(this.cfg, row, true), zoneChip(row, -1),
@@ -282,19 +315,38 @@ export class RoomBoard {
     el.classList.add(cls);
   }
 
-  private toggleOpen(): void {
-    if (!this.el.classList.contains('compact')) {
+  private openIfCompact(): void {
+    if (this.open || !this.el.classList.contains('compact')) {
       return;
     }
-    this.open = !this.open;
-    this.el.classList.toggle('open', this.open);
+    this.setOpen(true);
+  }
+
+  private setOpen(open: boolean): void {
+    if (open === this.open) {
+      return;
+    }
+    this.open = open;
+    this.el.classList.toggle('open', open);
+    window.clearTimeout(this.idleTimer);
+    if (open) {
+      this.armIdle();
+    }
     this.trimToScreen();
+    this.onOpenChange(open);
+  }
+
+  /** armIdle: đếm lại 8 s không tương tác thì tự đóng. */
+  private armIdle(): void {
+    window.clearTimeout(this.idleTimer);
+    if (this.open) {
+      this.idleTimer = window.setTimeout(() => this.setOpen(false), IDLE_CLOSE_MS);
+    }
   }
 
   private closeIfOutside(e: PointerEvent): void {
     if (this.open && !this.el.contains(e.target as Node)) {
-      this.open = false;
-      this.el.classList.remove('open');
+      this.setOpen(false);
     }
   }
 

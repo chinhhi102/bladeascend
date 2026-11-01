@@ -434,14 +434,12 @@ func (z *Zone) nameOf(id uint32) string {
 // được — năm khu không nối nhau bằng đường đi.
 func (r *Room) sendLeaderboards() {
 	ranking := r.Ranking()
-	rankOf := make(map[uint32]int, len(ranking))
-	for i, p := range ranking {
-		rankOf[p.ID] = i + 1
-	}
-	// Top 10 đi gói NHỊ PHÂN trong schema v2 (proto/schema.txt LbHead/LbRow, spec §11.5).
+	// Top 10 đi gói NHỊ PHÂN trong schema v2 (proto/schema.txt LbHead/LbRow, spec §11.5),
+	// theo thứ tự ĐÃ GIỮ 3 s — cùng nguồn với danh hiệu, nên thẻ và chữ không bao giờ lệch.
 	// Gói msgpack "lb" giờ chỉ còn dấu minimap và số người mỗi khu.
-	rows := r.lbRows(ranking[:min(len(ranking), leaderboardTop)])
-	count := uint8(min(len(ranking), leaderboardTop))
+	top := r.heldTop(ranking)
+	rows := r.lbRows(top)
+	count := uint8(len(top))
 	// Số người mỗi khu cho bảng M (spec §8.0) — ai cũng thấy giống nhau.
 	counts := make([]int, len(r.zones))
 	for i, z := range r.zones {
@@ -470,7 +468,7 @@ func (r *Room) sendLeaderboards() {
 		}
 		for id, c := range z.clients {
 			c.send(base)
-			head := wire.LbHead{Rank: clampU16(rankOf[id]), Total: clampU16(len(ranking)), Count: count}
+			head := wire.LbHead{Rank: clampU16(r.shownRank(id, len(top))), Total: clampU16(len(ranking)), Count: count}
 			if p, ok := z.G.Players[id]; ok {
 				head.MyScore = roundU32(p.Score)
 			}

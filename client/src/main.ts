@@ -658,7 +658,9 @@ class App {
     this.scene.render(dt);
     const me = this.world.me();
     this.hud.update(me, this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
-    if (this.debug) {
+    // F3 mở được bảng đo ở MỌI trang (spec §13.6), không chỉ khi `?debug=true` — trước đây
+    // mở F3 trên trang thường thì bảng hiện ra nhưng số không bao giờ cập nhật.
+    if (this.debug || this.hud.perfVisible) {
       this.hud.setPerf(this.scene.perfLine(dt, {
         rttMs: this.conn.rttMs,
         kbPerSec: this.conn.kbPerSec,

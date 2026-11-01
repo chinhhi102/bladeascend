@@ -44,6 +44,35 @@ func (r *Room) lbRows(top []*game.Player) []byte {
 	return buf
 }
 
+// heldTop trả những người trong thứ tự đã giữ (heldboard.go), đúng thứ tự đó.
+func (r *Room) heldTop(ranking []*game.Player) []*game.Player {
+	byID := make(map[uint32]*game.Player, len(ranking))
+	for _, p := range ranking {
+		byID[p.ID] = p
+	}
+	top := make([]*game.Player, 0, len(r.board.held))
+	for _, id := range r.board.held {
+		if p, ok := byID[id]; ok {
+			top = append(top, p)
+		}
+	}
+	return top
+}
+
+// shownRank: hạng người nhận thấy ở dòng ghim. Trong bảng → hạng trên bảng. Ngoài bảng →
+// hạng thật, nhưng không nhỏ hơn "ngay sau bảng": người vừa vượt lên hạng 7 mà bảng chưa
+// kịp nhận (đang giữ 3 s) mà ghim "▶ 7" dưới một bảng đã có hạng 7 thì trông như lỗi.
+func (r *Room) shownRank(id uint32, shown int) int {
+	if k := r.board.rank(id); k > 0 {
+		return k
+	}
+	live := r.rankAt[id]
+	if live == 0 {
+		return 0
+	}
+	return max(live, shown+1)
+}
+
 // lbFrame ghép đầu gói riêng của một người nhận với phần dòng chung.
 func lbFrame(head wire.LbHead, rows []byte) []byte {
 	buf := make([]byte, 0, 16+len(rows))

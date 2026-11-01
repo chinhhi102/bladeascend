@@ -191,6 +191,7 @@ export const STR = {
     zoneHidden: '???',
     sameZone: 'Cùng khu với bạn',
     expand: 'Chạm để xem bảng xếp hạng',
+    close: 'Đóng bảng xếp hạng',
   },
   yourRank: (rank: number, total: number) => `Hạng của bạn: ${rank}/${total}`,
   ping: (ms: number) => `Ping ${ms}ms`,

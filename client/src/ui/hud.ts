@@ -3,6 +3,7 @@ import type { GameConfig } from '../config';
 import { maxSwords, realmName, realmOf, tienIndex, tierOf } from '../config';
 import type { FeedMsg, GameEvent, LeaderboardMsg, PlayerState, RoomBoardMsg } from '../net/protocol';
 import { RoomBoard } from './roomboard';
+import { crown } from './roomboard-parts';
 import { BUFFS, moodName } from '../net/protocol';
 import { assets } from '../render/assets';
 import { REALM_BADGE } from '../render/palette';
@@ -138,6 +139,8 @@ export class Hud {
   private myZone = 0;
   /** Trạng thái mới nhất của chính mình — cho dòng ghim "Bạn (tên) [cảnh giới] khu" (§11.5). */
   private meState: PlayerState | null = null;
+  /** Banner đến lúc bảng xếp hạng đang mở — hiện khi bảng đóng. */
+  private pendingBanner: { text: string; secs: number } | null = null;
   private readonly ping = h('div', 'ping');
   private readonly debugHelp = h('div', 'debug-help', STR.debugHelp);
   /** Đồng hồ đo hiệu năng, chỉ hiện khi ?debug=true — để biết lag nằm ở đâu (xem setPerf). */
@@ -187,7 +190,7 @@ export class Hud {
     this.badgeWrap.append(this.badge, this.badgeTag, this.crown);
     this.expBar = h('div', 'exp-bar', this.expFill);
     this.minimap = new Minimap(cfg, isTouch);
-    this.board = new RoomBoard(cfg);
+    this.board = new RoomBoard(cfg, (open) => this.onBoardOpen(open));
     this.burnBtn.title = STR.burnName;
     this.burnBtn.style.display = isTouch ? 'flex' : 'none';
     this.skillBtn.title = STR.skillBtnHint(isTouch);
@@ -259,6 +262,11 @@ export class Hud {
     this.debugHelp.style.display = on ? 'block' : 'none';
     this.perfOn = on;
     this.perf.style.display = on ? 'block' : 'none';
+  }
+
+  /** perfVisible: bảng đo F3 đang mở — `main` chỉ tính số đo khi có người xem. */
+  get perfVisible(): boolean {
+    return this.perfOn;
   }
 
   /** togglePerf bật/tắt bảng đo bằng phím F3 (spec §13.6). */
@@ -335,7 +343,9 @@ export class Hud {
     this.badgeTag.style.background = col;
     this.badgeTag.style.color = inkOnHex(REALM_BADGE[realm] ?? 0x8d99ae);
     this.crown.style.display = rank === 1 ? 'block' : 'none';
-    this.crown.textContent = rank === 1 ? '♚' : '';
+    if (rank === 1 && !this.crown.firstChild) {
+      this.crown.append(crown()); // vương miện vẽ, cùng hình với bảng tên và bảng xếp hạng
+    }
   }
 
   /**
@@ -414,6 +424,8 @@ export class Hud {
       } else if (e.k === 'BuffStart' && e.a === myId && e.s) {
         const total = (e.n ?? 0) / 1000;
         this.buffEnds.set(e.s, { end: now + total, total });
+      } else if (e.k === 'Hit' && e.b === myId) {
+        this.board.close(); // bị chém trúng thì phải thấy trận đấu ngay (duyệt 1/11)
       } else if (e.k === 'ChestIncoming') {
         this.showBanner(STR.chestIncoming(e.n ?? this.cfg.items.chest_warn_secs), 4);
       }
@@ -456,7 +468,25 @@ export class Hud {
     this.zoneBox.style.display = name ? 'block' : 'none';
   }
 
+  /**
+   * onBoardOpen: bảng xếp hạng mở to trên điện thoại (duyệt 1/11). Ẩn nút kỹ năng + 🔥 và
+   * mọi thông báo nổi, để không có chữ nào chồng lên bảng; thông báo lớn (banner) đến lúc bảng
+   * mở thì HOÃN, bảng đóng mới hiện.
+   */
+  private onBoardOpen(open: boolean): void {
+    this.root.classList.toggle('board-open', open);
+    if (!open && this.pendingBanner) {
+      const b = this.pendingBanner;
+      this.pendingBanner = null;
+      this.showBanner(b.text, b.secs);
+    }
+  }
+
   showBanner(text: string, secs: number): void {
+    if (this.board.isOpen) {
+      this.pendingBanner = { text, secs };
+      return;
+    }
     this.banner.textContent = text;
     this.banner.style.display = 'block';
     this.bannerUntil = performance.now() / 1000 + secs;

@@ -142,6 +142,12 @@ func (g *Game) updateTitles() {
 			}
 		}
 	}
+	// Có `RoomRank` thì phòng đã giữ 3 s cho CẢ THỨ TỰ (room/heldboard.go) — giữ thêm một
+	// lần nữa ở đây là trễ 6 s và lại lệch nhịp với bảng xếp hạng. Đổi ngay theo phòng.
+	hold := g.Cfg.TitleHold
+	if g.RoomRank != nil {
+		hold = 0
+	}
 	for _, p := range g.PlayerList() {
 		want := rank[p.ID]
 		if p.Dead {
@@ -154,7 +160,7 @@ func (g *Game) updateTitles() {
 		if p.pendingTitle != want || p.titleSince == 0 {
 			p.pendingTitle, p.titleSince = want, g.Time
 		}
-		if g.Time-p.titleSince < g.Cfg.TitleHold {
+		if g.Time-p.titleSince < hold {
 			continue
 		}
 		old := p.Title

@@ -65,6 +65,8 @@ type Room struct {
 	// làm việc đó trong goroutine của một khu là đọc dữ liệu đúng lúc khu khác đang sửa.
 	// Hạng trên bảng Tổng kết chậm một tick thì không ai nhận ra; đua dữ liệu thì có.
 	rankAt map[uint32]int
+	// board: thứ tự top 10 đã giữ 3 s — chung cho bảng xếp hạng VÀ danh hiệu (heldboard.go).
+	board heldBoard
 }
 
 // transfer: chuyển một nhân vật sang khu khác ở ranh giới tick, giữ nguyên mọi trạng thái.
@@ -539,9 +541,17 @@ func (r *Room) snapshotRanks() {
 		r.rankAt = map[uint32]int{}
 	}
 	clear(r.rankAt)
-	for i, p := range r.Ranking() {
+	ranking := r.Ranking()
+	present := make(map[uint32]bool, len(ranking))
+	live := make([]uint32, 0, leaderboardTop)
+	for i, p := range ranking {
 		r.rankAt[p.ID] = i + 1
+		present[p.ID] = true
+		if i < min(leaderboardTop, len(r.cfg.Titles)) {
+			live = append(live, p.ID)
+		}
 	}
+	r.board.step(live, present, r.zones[0].G.Time, r.cfg.TitleHold)
 	// Cắm hạng CẢ PHÒNG vào từng khu, để `updateTitles` phát danh hiệu theo phòng chứ
 	// không theo khu (GAME_SPEC v6.19 §11.3). Cắm lại mỗi tick thay vì một lần lúc dựng:
 	// khu có thể được thay bản đồ giữa chừng, và một con trỏ hàm cũ trỏ vào phòng cũ là
@@ -551,8 +561,9 @@ func (r *Room) snapshotRanks() {
 	}
 }
 
-// rankOf2 trả hạng theo id, cho `game.RoomRank`. 0 = không có trong bảng.
-func (r *Room) rankOf2(id uint32) int { return r.rankAt[id] }
+// rankOf2 trả hạng ĐANG HIỆN (đã giữ 3 s) theo id, cho `game.RoomRank`. 0 = ngoài bảng.
+// Danh hiệu đọc từ đây nên luôn khớp đúng thứ tự bảng xếp hạng (heldboard.go).
+func (r *Room) rankOf2(id uint32) int { return r.board.rank(id) }
 
 // rankOf is the player's 1-based rank in the room board (spec §11.2: Uy Danh, then exp).
 // Xếp hạng tính CHUNG CẢ THẾ GIỚI, không theo khu (spec §8.0); đọc từ bản chụp đầu tick.
