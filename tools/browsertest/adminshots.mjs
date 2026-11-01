@@ -9,7 +9,12 @@ if (!base || !out || !pwFile) {
   console.error('dùng: node adminshots.mjs <base-url> <outdir> <tệp-mật-khẩu>');
   process.exit(2);
 }
+// Trang có thể hiện tên người chơi thật, guest_id, IP hay nội dung góp ý → ảnh KHÔNG được
+// vào repo công khai (CLAUDE.md quy tắc 15). Ghi vào `docs/private/` (đã gitignore).
+const PRIVATE_PAGES = new Set(['board', 'audit', 'players', 'feedback', 'bans']);
+const privateOut = process.env.PRIVATE_OUT || 'docs/private/review/11-admin';
 mkdirSync(out, { recursive: true });
+mkdirSync(privateOut, { recursive: true });
 const pages = process.env.PAGES ? process.env.PAGES.split(',') : ['dashboard', 'rooms', 'feedback', 'map', 'players', 'errors', 'bans', 'chars', 'board', 'audit'];
 
 async function shoot(browserType, ctxOpts, suffix) {
@@ -31,7 +36,7 @@ async function shoot(browserType, ctxOpts, suffix) {
       await p.waitForFunction(() => !document.querySelector('.ant-btn-loading'), null, { timeout: 45000 }).catch(() => {});
     }
     await p.waitForTimeout(name === 'map' ? 3000 : 1500);
-    const f = `${out}/${name}_${suffix}.png`;
+    const f = `${PRIVATE_PAGES.has(name) ? privateOut : out}/${name}_${suffix}.png`;
     await p.screenshot({ path: f });
     shots.push(f);
   }

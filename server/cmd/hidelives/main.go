@@ -2,7 +2,7 @@
 // `docs/LEADERBOARD_AUDIT.md`.
 //
 //	cd server && go run ./cmd/hidelives            # xem trước, KHÔNG đổi gì
-//	cd server && go run ./cmd/hidelives --apply    # ẩn thật
+//	cd server && go run ./cmd/hidelives --apply --keep <guest_id>   # ẩn thật
 //
 // ── Vì sao có công cụ này thay vì bấm nút ở trang quản trị ──────────────────────────────
 //
@@ -42,11 +42,10 @@ const (
 // biệt được người chơi thật với máy chủ mà không phải đoán theo tên.
 var lanID = regexp.MustCompile(`^\d{13}-[0-9a-f]+$`)
 
-// keepGuest: mạng chơi chủ dự án quyết GIỮ LẠI (LEADERBOARD_AUDIT §4).
-//
-// "Người chơi A" đạt tầng 100 trong 164 giây — nhanh bất thường, nhưng có 15 đòn đánh
-// ra và 5 lần hạ người. Ngờ không phải bằng chứng.
-const keepGuest = "guest-a1b2c3 (đã ẩn)"
+// --keep: `guest_id` của mạng chơi chủ dự án quyết GIỮ LẠI (LEADERBOARD_AUDIT §4,
+// "Người chơi A": tầng 100 trong 164 giây, nhanh bất thường nhưng có 15 đòn đánh ra và 5
+// lần hạ người — ngờ không phải bằng chứng). Không ghi cứng trong code vì repo công khai
+// (CLAUDE.md quy tắc 15): `guest_id` đầy đủ nằm trong `docs/private/LEADERBOARD_AUDIT.md`.
 
 const reason = "Duyệt theo LEADERBOARD_AUDIT 31/10 — lệnh test khi cửa debug còn mở"
 
@@ -66,7 +65,13 @@ func suspectWhy(level int, secs float64) string {
 func main() {
 	dbPath := flag.String("db", "", "file SQLite (rỗng = server/data/leaderboard.db)")
 	apply := flag.Bool("apply", false, "ẩn THẬT; không có cờ này thì chỉ xem trước")
+	keep := flag.String("keep", "", "guest_id được GIỮ LẠI (xem docs/private/LEADERBOARD_AUDIT.md)")
 	flag.Parse()
+	keepGuest := *keep
+	// Thiếu --keep mà --apply thì sẽ ẩn luôn mạng chủ dự án đã quyết giữ — dừng hẳn.
+	if *apply && keepGuest == "" {
+		log.Fatal("--apply cần --keep <guest_id> (lấy trong docs/private/LEADERBOARD_AUDIT.md)")
+	}
 
 	path := *dbPath
 	if path == "" {

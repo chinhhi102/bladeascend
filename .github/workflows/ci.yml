@@ -15,6 +15,18 @@ on:
   pull_request:
 
 jobs:
+  # Repo công khai: không để guest_id đầy đủ hay IP người chơi lọt vào docs/ (CLAUDE.md quy
+  # tắc 15). Rẻ nhất trong mọi bài — chạy riêng để đỏ ngay, không chờ build.
+  privacy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: không có dữ liệu người chơi trong docs/
+        run: node tools/check-privacy.mjs
+
   server:
     runs-on: ubuntu-latest
     steps:
