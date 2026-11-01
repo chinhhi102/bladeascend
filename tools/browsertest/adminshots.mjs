@@ -10,10 +10,10 @@ if (!base || !out || !pwFile) {
   process.exit(2);
 }
 mkdirSync(out, { recursive: true });
-const pages = ['dashboard', 'rooms', 'feedback', 'map', 'players', 'errors', 'bans', 'chars', 'board', 'audit'];
+const pages = process.env.PAGES ? process.env.PAGES.split(',') : ['dashboard', 'rooms', 'feedback', 'map', 'players', 'errors', 'bans', 'chars', 'board', 'audit'];
 
 async function shoot(browserType, ctxOpts, suffix) {
-  const b = await browserType.launch();
+  const b = await browserType.launch(browserType === chromium ? { args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist'] } : {});
   const ctx = await b.newContext(ctxOpts);
   const pw = readFileSync(pwFile, 'utf8').trim();
   const res = await ctx.request.post(`${base}/api/admin/login`, { data: { password: pw } });
@@ -26,7 +26,11 @@ async function shoot(browserType, ctxOpts, suffix) {
   const shots = [];
   for (const name of pages) {
     await p.goto(`${base}/admin/#${name}`, { waitUntil: 'networkidle' }).catch(() => {});
-    await p.waitForTimeout(name === 'map' ? 4000 : 1500);
+    if (name === 'map') {
+      // Bộ vẽ thật của game nạp texture cả khu (vài giây trên WebKit): chờ nút "Xuất PNG" hết quay.
+      await p.waitForFunction(() => !document.querySelector('.ant-btn-loading'), null, { timeout: 45000 }).catch(() => {});
+    }
+    await p.waitForTimeout(name === 'map' ? 3000 : 1500);
     const f = `${out}/${name}_${suffix}.png`;
     await p.screenshot({ path: f });
     shots.push(f);
