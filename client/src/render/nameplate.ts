@@ -81,6 +81,8 @@ export class Nameplate {
   readonly root = new Container();
   private readonly panel = new Graphics();
   private readonly ribbon = new Graphics();
+  /** Vương miện Top 1 vẽ bằng hình (chủ dự án chốt 1/11) — xem `drawCrown`. */
+  private readonly crown = new Graphics();
   private readonly badge = new Graphics();
   private readonly fx = new Graphics(); // vệt sáng + đốm lấp lánh + viền chảy
   private readonly selfMark = new Graphics(); // ▼ chỉ vào cụm của chính mình
@@ -114,7 +116,7 @@ export class Nameplate {
     this.dangerText = mk(FONT_REALM);
     this.nameText = mk(FONT_NAME);
     this.nameText.tint = isMe ? 0xffd77a : 0xffffff; // tên mình vàng ấm (spec §12.3)
-    this.root.addChild(this.panel, this.ribbon, this.badge, this.titleText, this.realmText, this.dangerText, this.nameText, this.selfMark, this.fx);
+    this.root.addChild(this.panel, this.ribbon, this.crown, this.badge, this.titleText, this.realmText, this.dangerText, this.nameText, this.selfMark, this.fx);
     if (isMe) {
       // Mũi tên nhỏ ngay trên cụm: giữa đám đông thì tìm mình trong nửa giây (spec §12.3).
       this.selfMark.poly([-5, -5, 5, -5, 0, 3]).fill({ color: 0xffd77a, alpha: 0.95 });
@@ -159,7 +161,7 @@ export class Nameplate {
     this.titleText.visible = hasRibbon;
     this.ribbon.visible = hasRibbon;
     if (hasRibbon) {
-      this.titleText.text = (rank === 1 ? '♚ ' : '') + shortTitle(STR.titles[rank - 1] ?? '', this.mobile);
+      this.titleText.text = shortTitle(STR.titles[rank - 1] ?? '', this.mobile);
       fit(this.titleText, titlePx);
     }
 
@@ -189,7 +191,8 @@ export class Nameplate {
   private layout(realm: number, rank: number, hasRibbon: boolean, showExtras: boolean): void {
     const badgeW = showExtras ? this.realmText.width + (this.dangerText.visible ? this.dangerText.width + 4 : 0) + PAD_X * 2 : 0;
     const badgeH = showExtras ? this.realmText.height + PAD_Y : 0;
-    this.width = Math.max(this.nameText.width, badgeW, hasRibbon ? this.titleText.width + PAD_X * 2 : 0) + PAD_X * 2;
+    const crownW = hasRibbon && rank === 1 ? this.titleText.height * 1.2 + 4 : 0;
+    this.width = Math.max(this.nameText.width, badgeW, hasRibbon ? this.titleText.width + crownW + PAD_X * 2 : 0) + PAD_X * 2;
     const ribbonH = hasRibbon ? this.titleText.height + PAD_Y * 1.5 : 0;
 
     // Vẽ từ dưới lên: tên ở đáy (sát đầu nhân vật), danh hiệu trên cùng.
@@ -206,11 +209,19 @@ export class Nameplate {
       }
       y -= badgeH + GAP;
     }
+    this.crown.clear();
+    this.crown.visible = hasRibbon && rank === 1;
     if (hasRibbon) {
       const ry = y - ribbonH / 2;
-      const rw = this.titleText.width + PAD_X * 2.5;
+      // Top 1: chừa chỗ bên trái chữ cho vương miện.
+      const cw = this.crown.visible ? this.titleText.height * 1.2 : 0;
+      const gap = cw > 0 ? 4 : 0;
+      const rw = this.titleText.width + cw + gap + PAD_X * 2.5;
       this.ribbonBox = { x: -rw / 2, y: ry - ribbonH / 2, w: rw, h: ribbonH };
-      this.titleText.position.set(0, ry);
+      this.titleText.position.set((cw + gap) / 2, ry);
+      if (cw > 0) {
+        drawCrown(this.crown, -(this.titleText.width + gap) / 2 - cw / 2, ry, cw);
+      }
       y -= ribbonH;
     }
 
@@ -323,4 +334,22 @@ export class Nameplate {
   destroy(): void {
     this.root.destroy({ children: true });
   }
+}
+
+/**
+ * drawCrown vẽ vương miện Top 1 (tâm cx, cy; rộng w) — cùng hình với SVG trên bảng xếp hạng
+ * (`ui/roomboard-parts.ts`).
+ *
+ * Thay cho ký tự '♚' và ảnh `ui/crown_small.png`: ảnh đó (1/11) vẽ nhầm cả một nhân vật đội
+ * vương miện; đợi artgen vẽ lại đúng (job `plate_crown_small`) thì vẫn vẽ bằng hình như này.
+ */
+function drawCrown(g: Graphics, cx: number, cy: number, w: number): void {
+  const k = w / 24;
+  const x0 = cx - 12 * k;
+  const y0 = cy - 9 * k;
+  const pts = [3, 16, 1.5, 5, 7.5, 9.5, 12, 2, 16.5, 9.5, 22.5, 5, 21, 16];
+  g.poly(pts.map((v, i) => (i % 2 === 0 ? x0 + v * k : y0 + v * k)))
+    .fill({ color: 0xffd23f })
+    .stroke({ color: 0x8a5200, width: Math.max(1, 1.3 * k), join: 'round' });
+  g.circle(x0 + 12 * k, y0 + 12 * k, 2 * k).fill({ color: 0xe63946 });
 }

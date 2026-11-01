@@ -719,10 +719,13 @@ var plateParts = []struct {
 	{"ribbon_top1", "empty horizontal ribbon banner with forked tails, vermilion red with gold trim, no text", 1024, 256},
 	{"ribbon_top2", "empty horizontal ribbon banner with forked tails, dark navy with silver trim, no text", 1024, 256},
 	{"ribbon_top3", "empty horizontal ribbon banner with forked tails, brown with bronze trim, no text", 1024, 256},
-	{"crown_small", "tiny golden crown icon with red gems", 128, 128},
+	{"crown_small", "tiny golden crown icon with red gems, just the crown by itself, wider than it is tall", 128, 128},
 	{"realm_pill", "empty rounded pill-shaped badge, white with light grey bevel for tinting, no text", 512, 128},
 	{"shine_streak", "soft diagonal white light streak", 256, 64},
 }
+
+// plateOnly: chi tiết trang trí UI là MỘT đồ vật đơn lẻ (ART_PROMPTS §11.1).
+const plateOnly = ", a single isolated object only, centered, no person, no character, no face, no body, no hands"
 
 var portraitMoods = []struct{ id, desc string }{
 	{"neutral", "neutral smug face"},
@@ -748,8 +751,11 @@ func mapArtJobs() []Job {
 			Prompt: styleObject + " top-down zone border strip, " + e.desc + ", tileable left to right, soft muted colors" + negative})
 	}
 	for _, p := range plateParts {
+		// `styleObject`, KHÔNG `style`: `style` là luật vẽ NGƯỜI biếm hoạ ("huge head… full body
+		// visible"), nên "tiny golden crown icon" về tay là cả một nhân vật đội vương miện
+		// (phát hiện 1/11). Icon UI là đồ vật — và nói thẳng là không có người.
 		jobs = append(jobs, Job{Name: "plate_" + p.id, Priority: 3, Mode: modeSprite, Out: "ui/" + p.id + ".png",
-			W: p.w, H: p.h, Pivot: "center", Prompt: style + " " + p.desc + negative})
+			W: p.w, H: p.h, Pivot: "center", Prompt: styleObject + " " + p.desc + plateOnly + negative})
 	}
 	for _, ch := range characters {
 		for _, m := range portraitMoods {

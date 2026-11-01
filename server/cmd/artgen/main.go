@@ -25,7 +25,7 @@ const pollEvery = 6 * time.Second
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("usage: artgen plan|run|prep|normalize|jitter|preview|prompts|status [flags]")
+		fmt.Println("usage: artgen plan|run|prep|iconcheck|normalize|jitter|preview|prompts|status [flags]")
 		os.Exit(2)
 	}
 	fs := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
@@ -55,6 +55,12 @@ func main() {
 	switch os.Args[1] {
 	case "plan":
 		plan(jobs, assets)
+	case "iconcheck":
+		// Kiểm icon UI đã có: đúng 1 vật thể, không phải dáng người. Hỏng → vào danh sách
+		// sinh lại cho `artgen run`. Thoát mã 1 để dùng được trong script.
+		if iconCheckAll(jobs, assets) > 0 {
+			os.Exit(1)
+		}
 	case "run":
 		secrets := loadSecrets(config.FindRepoFile("docs/private/secret"))
 		mg, err := newMinigen(secrets)
@@ -217,6 +223,8 @@ var redoReasons = map[string]string{
 	"tile_grass":    "spec v3: nền nhạt, ít chi tiết (ART_PROMPTS §9.0)",
 	"tile_concrete": "spec v3: nền nhạt, ít chi tiết (ART_PROMPTS §9.0)",
 	"tile_dirt":     "spec v3: nền nhạt, ít chi tiết (ART_PROMPTS §9.0)",
+	// 1/11: bản cũ vẽ cả một NHÂN VẬT đội vương miện (prompt dùng nhầm phong cách vẽ người).
+	"plate_crown_small": "ART_PROMPTS §11.1: chỉ vương miện, không nhân vật (artgen iconcheck)",
 }
 
 func init() {

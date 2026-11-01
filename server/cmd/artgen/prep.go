@@ -113,6 +113,10 @@ func writeMiscut(assets string) error {
 		return err
 	}
 	log.Printf("%d sheet cắt sai, đã ghi vào %s", len(names), miscutPath(assets))
+	// `_raw/` là thư mục tạm, hay bị dọn sạch — thiếu thì tạo, đừng để mất danh sách sinh lại.
+	if err := os.MkdirAll(filepath.Dir(miscutPath(assets)), 0o755); err != nil {
+		return err
+	}
 	return os.WriteFile(miscutPath(assets), append(b, '\n'), 0o644)
 }
 
@@ -158,6 +162,7 @@ func prepJob(j Job, raw, assets string) error {
 	case modeSprite:
 		removeBackground(img)
 		_, _ = eraseGridLines(img)
+		checkIconJob(j, img)
 		box := alphaBBoxDense(img, img.Bounds())
 		if box.Empty() {
 			return fmt.Errorf("empty image after background removal")

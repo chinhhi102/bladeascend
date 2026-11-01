@@ -103,14 +103,21 @@ export function face(cfg: GameConfig, row: RoomBoardRow, size: number): HTMLElem
 }
 
 /**
- * crown: vương miện VẼ bằng SVG (§11.5 "không dùng emoji hệ thống").
+ * crown: vương miện vẽ (§11.5 "không dùng emoji hệ thống").
  *
- * KHÔNG dùng `ui/crown_small.png`: bản art hiện có (1/11) vẽ nhầm cả một nhân vật đội vương
- * miện, thu về 24px thì thành một hình người tí hon trên đầu chân dung. Có art đúng
- * (`tiny golden crown icon`, ART_PROMPTS §11.1) thì đổi lại.
+ * Ảnh `ui/crown_small.png` đã được artgen vẽ lại đúng 1/11 (bản cũ là cả một nhân vật đội
+ * vương miện; giờ `artgen iconcheck` chặn kiểu ảnh đó). Thiếu ảnh thì vẽ bằng SVG.
  */
 export function crown(): HTMLElement {
   const wrap = h('span', 'rb-crown');
+  const url = assets.url('ui/crown_small.png');
+  if (url) {
+    const img = h('img');
+    img.src = url;
+    img.alt = '';
+    wrap.append(img);
+    return wrap;
+  }
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 24 18');
   const band = document.createElementNS(SVG_NS, 'path');
