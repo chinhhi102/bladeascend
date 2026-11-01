@@ -3,6 +3,7 @@ import { mountButton } from './feedback';
 import { assets } from '../render/assets';
 import { charColor } from '../render/palette';
 import { button, h, portrait } from './dom';
+import { langPicker } from './langpick';
 import { STR } from './strings';
 
 const LS_NAME = 'kx_name';
@@ -106,7 +107,7 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
   const blocks = new Map<string, HTMLElement>();
   for (const c of cfg.characters) {
     blocks.set(c, h('div', 'preview-block',
-      h('div', 'preview-name', STR.characters[c] ?? c),
+      h('div', 'preview-name', STR.charNick[c] ? `${STR.characters[c] ?? c} — ${STR.charNick[c]}` : (STR.characters[c] ?? c)),
       h('div', 'preview-skill', `${STR.skillLabel}: ${STR.skillNames[c] ?? '—'}`),
       h('div', 'preview-cd', cooldownText(cfg, c)),
       h('div', 'preview-desc', STR.skillDesc[c] ?? '')));
@@ -184,6 +185,7 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     logo.append(h('span', 'logo-part', part));
   });
   panel.append(
+    langPicker(),
     logo,
     h('div', 'subtitle', STR.subtitle),
     input,

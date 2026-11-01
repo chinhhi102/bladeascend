@@ -1,5 +1,6 @@
 import { BitmapFont } from 'pixi.js';
 
+import { LANG } from '../i18n';
 import { assets } from './assets';
 
 /**
@@ -25,7 +26,10 @@ function charset(): string[] {
     'àáâãèéêìíòóôõùúýăđĩũơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ' + // i18n-ok: bộ ký tự font, không phải câu chữ
     'ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐĨŨƠƯẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼẾỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ'; // i18n-ok: bộ ký tự font, không phải câu chữ
   const marks = '▲▼●★☯♚'; // chỉ báo nguy hiểm và vài ký hiệu hạng
-  return [ascii + viet + marks];
+  // Tiếng Thái (spec §19): sinh sẵn cả khối U+0E00–0E7F chỉ khi đang chọn tiếng Thái —
+  // các ngôn ngữ khác không tốn texture cho 87 ký tự không bao giờ dùng.
+  const thai = LANG === 'th' ? Array.from({ length: 0x80 }, (_, i) => String.fromCharCode(0x0e00 + i)).join('') : '';
+  return [ascii + viet + marks + thai];
 }
 
 let ready: Promise<void> | null = null;
@@ -46,13 +50,22 @@ export function loadFonts(): Promise<void> {
       .map(([rel, weight]) => ({ url: assets.url(rel), weight }))
       .filter((f) => f.url)
       .map((f) => new FontFace('Be Vietnam Pro', `url(${f.url})`, { weight: f.weight }));
+    // Noto Sans Thai CHỈ tải khi chọn tiếng Thái ("chỉ tải font của ngôn ngữ đang chọn").
+    const thaiUrl = LANG === 'th' ? assets.url('fonts/NotoSansThai.ttf') : '';
+    if (thaiUrl) {
+      faces.push(new FontFace('Noto Sans Thai', `url(${thaiUrl})`, { weight: '100 900' }));
+      document.documentElement.classList.add('lang-th');
+    }
     try {
       await Promise.all(faces.map(async (f) => document.fonts.add(await f.load())));
     } catch {
       // Không tải được font thì vẫn chạy tiếp: BitmapFont rơi về font hệ thống, chữ hơi
       // khác nhưng không mất dấu (system-ui trên mọi hệ đều có bộ tiếng Việt).
     }
-    const family = 'Be Vietnam Pro, system-ui, sans-serif';
+    // Ký tự ngoài bộ (tên người chơi chữ Hán, emoji…): Pixi 8 DynamicBitmapFont tự vẽ thêm
+    // glyph lúc gặp (`ensureCharacters`), rơi về font hệ thống theo danh sách dưới — nên
+    // không mất chữ (spec §19 "vẽ bằng Text thường" đạt cùng kết quả, có cache sẵn).
+    const family = LANG === 'th' ? 'Be Vietnam Pro, Noto Sans Thai, system-ui, sans-serif' : 'Be Vietnam Pro, system-ui, sans-serif';
     const chars = charset();
     // Sinh ở cỡ lớn rồi thu nhỏ khi vẽ: chữ nét hơn trên màn hình độ phân giải cao.
     BitmapFont.install({ name: FONT_NAME, style: { fontFamily: family, fontSize: 36, fontWeight: '800', fill: 0xffffff }, chars });

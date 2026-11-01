@@ -116,6 +116,11 @@ export function plan(rel, ctx) {
   }
 
   if (top === 'fonts') {
+    // Font chữ Thái (GAME_SPEC §19): chỉ người chọn tiếng Thái mới tải — nhóm riêng, không
+    // nằm trong nhóm tải nào khác ("chỉ tải font của ngôn ngữ đang chọn").
+    if (/NotoSansThai/i.test(rel)) {
+      return { groups: ['lang_th'], kind: 'font' };
+    }
     // Font chặn khởi động (`loadFonts` await trước mọi thứ) → `home`, không đụng vào.
     return { groups: ['home'], kind: 'font' };
   }

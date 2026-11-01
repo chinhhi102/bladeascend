@@ -198,6 +198,19 @@ func spa(dir string) http.Handler {
 	fs := http.FileServer(http.Dir(dir))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := filepath.Join(dir, filepath.Clean("/"+r.URL.Path))
+		// Trang chủ theo ngôn ngữ (`/en/`, `/th/`… — GAME_SPEC §19 SEO): thư mục có
+		// `index.html` riêng thì trả đúng tệp đó, không rơi về trang tiếng Việt.
+		if st, err := os.Stat(p); err == nil && st.IsDir() {
+			if _, err := os.Stat(filepath.Join(p, "index.html")); err == nil {
+				if !strings.HasSuffix(r.URL.Path, "/") {
+					http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
+					return
+				}
+				w.Header().Set("Cache-Control", "no-store, must-revalidate")
+				http.ServeFile(w, r, filepath.Join(p, "index.html"))
+				return
+			}
+		}
 		if st, err := os.Stat(p); err != nil || st.IsDir() {
 			if _, err := os.Stat(filepath.Join(dir, "index.html")); err != nil {
 				http.Error(w, "Client chưa được build. Chạy: cd client && npm run build (hoặc dùng npm run dev)", http.StatusNotFound)
