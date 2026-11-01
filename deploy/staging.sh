@@ -12,7 +12,11 @@ rm -rf "$OUT" && mkdir -p "$OUT/bin" "$OUT/client"
 (cd client && npm run build)
 cp -r config maps "$OUT/"
 cp -r client/dist "$OUT/client/dist"
-rsync -a --exclude='_raw' assets/ "$OUT/assets/"
+# Chép `assets/dist` (bản phát hành do asset-pipeline dựng, spec §13.7), KHÔNG chép `assets/`.
+# `assets/` từ 1/11 chỉ còn `src/` (art gốc) và `dist/`; chép nguyên thì server tìm
+# `/app/assets/manifest.json` không thấy và staging chạy KHÔNG MỘT ẢNH nào.
+[ -f assets/dist/manifest.json ] || { echo "thiếu assets/dist/manifest.json — npm run build hỏng?"; exit 1; }
+rsync -a assets/dist/ "$OUT/assets/"
 cp deploy/Dockerfile deploy/docker-compose.yml "$OUT/"
 
 rsync -az --delete -e "ssh -i $DEPLOY_KEY" "$OUT/" "$DEPLOY_HOST:bladeascend/"

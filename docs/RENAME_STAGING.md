@@ -6,6 +6,15 @@ rsync vào một thư mục rỗng mới và để nguyên bản cũ đang chạ
 
 Mỗi lệnh có dòng **Mong đợi** — so từng chữ. Lệch thì **dừng lại**, đừng làm bước sau.
 
+> **Trạng thái: bước 0–7 ĐÃ CHẠY ngày 1/11/2026** (Claude chạy, chủ dự án duyệt). Mọi số đếm
+> khớp: `lives 167` ở bản sao lưu, volume cũ, volume mới, và volume đang chạy sau deploy;
+> ba bảng mới `0`. Bảng xếp hạng staging còn dữ liệu cũ. Sao lưu: `~/backup/bladeascend-20261101.db`
+> trên máy chủ và trên máy chủ dự án (61 440 byte).
+> **Còn lại: bước 8 — xoá volume cũ, sớm nhất 8/11/2026.**
+>
+> Lúc chạy lộ thêm một lỗi của `deploy/staging.sh`: nó chép `assets/` (art gốc) thay vì
+> `assets/dist/`, nên lần deploy đầu staging chạy không một ảnh nào. Đã sửa và deploy lại.
+
 ## Những cái tên phải đổi
 
 | Thứ | Tên cũ | Tên mới |
