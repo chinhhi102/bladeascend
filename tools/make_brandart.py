@@ -41,7 +41,7 @@ import json
 import math
 import pathlib
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 UI = ROOT / "client/public/brand"
@@ -234,6 +234,20 @@ def fit_char(cid: str, height: int) -> Image.Image | None:
     return im.resize((w, height), Image.LANCZOS)
 
 
+def fade_bottom(im: Image.Image, frac: float) -> Image.Image:
+    """Mờ dần mép dưới — chân dung bán thân bị cắt ngang ngực, để nguyên thì thành một
+    đường cắt thẳng giữa ảnh (lượt cuối 01/11 soi ra trên ảnh OG)."""
+    a = im.getchannel("A")
+    h0 = int(im.height * (1 - frac))
+    ramp = Image.new("L", (1, im.height), 255)
+    for y in range(h0, im.height):
+        ramp.putpixel((0, y), int(255 * (1 - (y - h0) / max(1, im.height - h0))))
+    a = ImageChops.multiply(a, ramp.resize(im.size))
+    out = im.copy()
+    out.putalpha(a)
+    return out
+
+
 def share_card(w: int, h: int, name_vi: str, tag: str, foot: str) -> Image.Image:
     """Ảnh chia sẻ OG 1200×630 — chủ dự án chốt 1/11.
 
@@ -291,6 +305,7 @@ def share_card(w: int, h: int, name_vi: str, tag: str, foot: str) -> Image.Image
     base_y = int(h * 0.80)
     hero = fit_char(HERO, int(h * 0.40))
     if hero:
+        hero = fade_bottom(hero, 0.28)
         # Bán kính tính theo CHIỀU CAO NGƯỜI, và rộng hơn hẳn bóng người: lưỡi kiếm nằm
         # ngoài thân ở mọi hướng thay vì chồng lên đầu và vai.
         r = int(hero.height * 0.72)
@@ -364,7 +379,7 @@ def share_card(w: int, h: int, name_vi: str, tag: str, foot: str) -> Image.Image
 # Chủ dự án duyệt xong thì đổi một dòng này, chạy lại tool, rồi deploy.
 SHARE_CARD_APPROVED = False
 
-PREVIEW = ROOT / "docs/brand_preview"
+PREVIEW = ROOT / "docs/review/og"  # chủ dự án duyệt ở đây
 
 # JPEG chất lượng 85 cho `og:image`.
 #
@@ -409,7 +424,7 @@ def main() -> None:
         PREVIEW.mkdir(parents=True, exist_ok=True)
         card.save(PREVIEW / "share_card.png")
         pkb = save_jpeg(card, PREVIEW / "share_card.jpg")
-        print(f"  [XEM TRƯỚC] docs/brand_preview/share_card.jpg  {pkb} KB  — CHƯA phát hành")
+        print(f"  [XEM TRƯỚC] {PREVIEW.relative_to(ROOT)}/share_card.jpg  {pkb} KB  — CHƯA phát hành")
         print("  → duyệt xong: đặt SHARE_CARD_APPROVED = True rồi chạy lại.")
         # Bản đang phát hành giữ nguyên hình, chỉ đổi sang JPEG cho nhẹ.
         live = Image.open(UI / "share_card.png").convert("RGB")
