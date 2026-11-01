@@ -23,6 +23,7 @@ server/data/
 
 # Art pipeline scratch (raw downloads before post-processing)
 assets/src/_raw/
+assets/_raw/
 
 # Sản phẩm của `tools/asset-pipeline` (GAME_SPEC §13.7 mục 2). Dựng lại được từ
 # `assets/src/` bằng một lệnh, và chính nó là bản ĐÃ NÉN của thứ đã nằm trong repo —
