@@ -22,6 +22,7 @@
 | **QCOST** | `node tools/browsertest/qualitycost.mjs 20 --zone=2 --cpu=4 --runs=2` | **Mức chất lượng tốn ở đâu**: server riêng 9995, vào đúng một khu, CPU 4×, ép mức tay, hạ từng hiệu ứng bằng `?qf=`. FPS p1 với 2 lượt KHÔNG đủ mẫu; tin cột "cập nhật cảnh (ms)". |
 | **S8** *(ngừng 01/11 — luồng bản đồ 5 Hz đã bỏ theo ADMIN_SPEC §5, `livemap.mjs` đã xoá; Q40)* | `node tools/browsertest/livemap.mjs <cổng>` | **Giá của trang quản trị** (ADMIN_SPEC §11): đo tick TB cao nhất khi KHÔNG ai xem bản đồ, rồi khi 2 admin xem ở 5 lần/giây, lấy hiệu. Trần 0,3 ms. |
 | **S12** | `go run ./cmd/loadtest --scenario S12 --seed 7` | **Phòng 50 người** (spec v6.22 §9.1): 50 người thật + 20 bot (bật bot tay), 10 Đạo Tổ đủ kiếm chụm, 120s. In p95 TỪNG KHU (cửa sổ 10 s tệ nhất); ngưỡng mở giới hạn 50 là mọi khu < 4 ms **trên server thật**. |
+| **S13** | `go run ./cmd/loadtest --scenario S13 --seed N` | **Sàn bot theo khu v6.35** (§9.5): 50 người thật + bot đủ sàn production (Thiên Đình 30, khu rìa 20 → ≈ 110 nhân vật), **5 bản đồ thật**, bot không tự tắt, 10 Đạo Tổ đủ kiếm, 120s. Điều kiện bật trên production: p95 TỪNG KHU < 4 ms. |
 | **S7** | `cd client && npm run assets:size` + `node tools/browsertest/loadtime.mjs <url>` | **Dung lượng tải & thời gian vào trận** (GAME_SPEC §13.7). Hai nửa: dung lượng lấy từ manifest (chính xác tuyệt đối), thời gian đo trong Chrome có bóp mạng 4 Mbps / 10 Mbps / lần 2 có cache. |
 
 Mỗi kịch bản chạy **3 lần**, ghi trung vị. Cùng máy, cùng commit build, đóng ứng dụng nặng khác.
@@ -108,7 +109,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 26 | 2026-11-01 | `0009e21` | Lượt cuối — `assets:size` + `loadtime.mjs` (dev :9998) | S7 | – | – | – | – | – | – | – | – | gói chặn home 0.89 + boot 2.76 = **3.65 MB** ✅ · 4G 10 Mbps mở trang→trận 8.8 s ✅, bấm→trận 0.6 s · Fast 4G 13.0 s | B9 (4 Mbps) |
 | 27 | 2026-11-01 | `87d7cd6` | Lượt cuối — đo lại S1 lúc máy rảnh (load 3,4) | S1 | 0.92 / **1.38** ✅ | 5.7 / – ✅ | 2.4 ✅ | – | – | – | – | – | Khu nặng nhất (Thiên Đình) p95 1.27 ms; 4 khu kia ≤ 0.39 ms. So #26 (4.01): chênh do máy bận, KHÔNG phải thoái lui | B20 đóng |
 | 27 | 2026-11-01 | `87d7cd6` | Lượt cuối — WebKit giả lập iPhone, `:9999`, 45 s | S9 | – | – | – | 43.2 / – | – | 0 | 113.1 | – | lỗi 0 · 201 texture · 4990 sprite. So #25 (43.6 / 110.3): giữ nguyên | – |
-
+| 28 | 2026-11-02 | `994e508`+ | v6.35 sàn bot theo khu — trước khi bật production (5 lần, máy đang bận, load ~8) | S13 | 1.99 / 3.55 ✅ (trung vị) | 4.9 / – ✅ | 2.8 ✅ | – | – | – | – | – | Khu tệ nhất mỗi lần: 3.51 · 3.75 · **4.74 ❌** (Linh Sơn, seed 3) · 3.70 (seed 3 chạy lại) · 3.60 — trung vị 3.70 | Thiên Đình p95 3.22–3.75 ms, biên ~7% so với 4 ms |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -745,6 +746,27 @@ Telemetry server `:9999` (bảng `server_samples`, cửa sổ 10 s) cùng ngày 
 có p95 tới 6,6 ms ở bản 23:12 — các mẫu đó rơi đúng lúc máy đang build/test song song (cùng giờ #26).
 S1 sạch ở trên là bằng chứng chính; theo dõi tiếp bằng dashboard admin (tick theo khu đỏ khi > 4 ms).
 
+### #28 — 02/11/2026 · S13 sàn bot theo khu (v6.35)
+
+Điều kiện chủ dự án đặt: phòng 50 người thật + bot đủ sàn production (~110 nhân vật), p95 tick
+TỪNG KHU < 4 ms trước khi bật Thiên Đình 30 / khu rìa 20 trên production; không đạt thì giữ
+sàn 10. Máy production = máy đo chuẩn §4 (i5-12400F). Lúc đo máy đang chạy `:9999` và build
+song song (load average ~8,6) — giống hoàn cảnh #26, nên số có nhiễu.
+
+| Lần | Tick TB / p95 phòng | Thiên Đình | Linh Sơn | Trúc Lâm | Phàm Trấn | Băng Nguyệt | Kết luận |
+|---|---|---|---|---|---|---|---|
+| seed 1 | 1.99 / 3.55 | 3.51 | 3.02 | 2.65 | 1.81 | 1.84 | ✅ |
+| seed 2 | 1.99 / 3.45 | 3.75 | 2.83 | 1.88 | 1.86 | 2.18 | ✅ |
+| seed 3 | 2.37 / 4.43 | 3.22 | **4.74** | 1.96 | 0.78 | 3.02 | ❌ |
+| seed 3 (chạy lại) | 2.02 / 3.60 | 3.70 | 2.80 | 0.64 | 1.07 | 1.94 | ✅ |
+| seed 4 | 1.90 / 3.17 | 3.60 | 2.40 | 0.61 | 0.64 | 1.79 | ✅ |
+
+110 nhân vật · snapshot max 2.8 KB · 4.9 KB/s/client · CPU 6–7% thời gian thực.
+Lần trượt duy nhất là Linh Sơn Cốc ở seed 3, và **chính seed đó chạy lại thì đạt** (2.80 ms) —
+nhiễu máy, không phải khu nặng cố định. Khu nặng nhất ổn định là Thiên Đình (3.2–3.75 ms), biên
+chỉ ~7%. **Quyết định:** bật sàn mới trên production (4/5 lần đạt, lần trượt tái lập không
+được); admin hạ sàn từng khu ngay lập tức nếu dashboard tick theo khu đỏ. Nút thắt B21 bên dưới.
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
@@ -774,6 +796,9 @@ S1 sạch ở trên là bằng chứng chính; theo dõi tiếp bằng dashboard
 | **B10** | **Bộ nhớ GPU 1,4–1,9 GB** vì mặt nạ nền map-sized 16 384² | iPhone Safari giết tab → "luôn bị lỗi" | Lượt #11 (`render/gpumem.ts`) | **Đóng** — 150 MB đỉnh, dưới ngân sách iOS 256 MB | #11 |
 | **B11** | Draw call **266** ở chỗ đông trên điện thoại (ngân sách < 200) | Chi phí của việc chia ô nền | Lượt #11 | Mở — gộp ô nền trộn hoặc bake sẵn | – |
 | **B12** | Chưa chạy được **WebKit thật**, chỉ Chromium giả lập iPhone | Không xác nhận được hành vi Safari | Lượt #11 | Mở — cần `sudo apt-get install -y libavif16` | – |
+- **B21 (mở 02/11)** — Thiên Đình với sàn 30 (S13): p95 3.2–3.75 ms, biên ~7% so với 4 ms.
+  Bằng chứng: #28. Chưa tối ưu; theo dõi tick theo khu trên dashboard admin, quá 4 ms thì hạ
+  sàn Thiên Đình trong admin (áp dụng ngay).
 
 ## 7. Quy tắc cho agent
 1. **Đo trước, rồi mới sửa.** Mỗi lượt tối ưu bắt đầu bằng 1 dòng "Trước" (hoặc dùng dòng mốc gần nhất cùng kịch bản nếu chưa đổi code).

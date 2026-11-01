@@ -60,9 +60,9 @@ func TestBotFillToTarget(t *testing.T) {
 	}
 	stepSecs(r, 30)
 	// v6.28 §9.3: bot lấp khu (1 khu trong test) cho đủ sàn `zone_min_chars`.
-	wantBots := cfg.Room.ZoneMinChars - 5
+	wantBots := cfg.Room.ZoneMinChars.For("") - 5
 	if r.Humans() != 5 || r.Bots() != wantBots {
-		t.Fatalf("có %d người %d bot, muốn 5 và %d (sàn khu %d)", r.Humans(), r.Bots(), wantBots, cfg.Room.ZoneMinChars)
+		t.Fatalf("có %d người %d bot, muốn 5 và %d (sàn khu %d)", r.Humans(), r.Bots(), wantBots, cfg.Room.ZoneMinChars.For(""))
 	}
 	joinN(m, 3)
 	r.Step(1.0 / 30)
@@ -200,7 +200,7 @@ func TestRoomCapFollowsAdminSetting(t *testing.T) {
 		t.Fatalf("hạ trần 20: phòng 1 còn %d (không được đuổi ai), phòng 2 có %d (muốn 2)",
 			m.humansOf(rooms[0]), m.humansOf(rooms[1]))
 	}
-	if err := m.SetSettings(RoomSettings{MaxHumans: 0, ZoneMinChars: 10, BotAutoOffAt: 20}); err == nil {
+	if err := m.SetSettings(RoomSettings{MaxHumans: 0, ZoneMinChars: config.Uniform(10), BotAutoOffAt: 20}); err == nil {
 		t.Fatal("trần 0 người phải bị từ chối")
 	}
 }

@@ -20,7 +20,7 @@ func fiveZoneRoom(t *testing.T) (*Manager, *config.Config) {
 	cfg := config.MustLoadDefault()
 	cfg.Room.MonsterCount = 0
 	cfg.Items.CountPerRoom = 0
-	cfg.Room.ZoneMinChars = 0
+	cfg.Room.ZoneMinChars = config.Uniform(0)
 	cfg.TitleHold = 0 // kiểm AI được danh hiệu, không kiểm chống nhấp nháy
 	var maps []*world.Map
 	for i := 0; i < cfg.Room.Zones; i++ {

@@ -321,4 +321,5 @@ toả tròn 360°, Ông Ba Võng thêm Trộm Kiếm 4 s, ví dụ Uy Danh sửa
 | Q40 | ADMIN_SPEC "không thêm framework UI" vs React + antd | Anh đã sửa ADMIN_SPEC. Xong. |
 | Q41 | Font dự phòng cho tên lạ | Giữ như cũ (PixiJS tự vẽ thêm ký tự thiếu). Xong. |
 | Q42 | Lớp mặt nhân vật §12.5 A | **Hoãn** — ghi vào việc tiếp theo trong `PROGRESS.md`. |
-
+| Q37 | Số config chỉnh theo sim chưa có trong spec | Anh giữ config, đã ghi bảng số + thời gian farm vào spec §6.0 (v6.35); Nam Châm ghi dạng `bonus: 0.2`. |
+| Q38 | Spec còn sót luật "rớt cảnh giới" | Anh đã xoá trong spec v6.35 (14 dòng Claude liệt kê). |

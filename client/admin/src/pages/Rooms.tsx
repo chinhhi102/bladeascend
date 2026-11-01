@@ -6,14 +6,42 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { post } from '../api';
 import { BOT_LABEL, BOT_MODES, f1, LEVEL_COLOR, tickLevel } from '../format';
 import { go, useFetch, useStats } from '../hooks';
-import type { BotRoom, BotsResp, RoomSettings, RoomSettingsView, RoomStat, ZoneStat } from '../types';
+import type { BotRoom, BotsResp, RoomSettings, RoomSettingsView, RoomStat, ZoneInfo, ZoneStat } from '../types';
 import { tableBase, useAsk, useRun } from '../ui';
 
-const FIELDS: { key: keyof RoomSettings; label: string; hint: string }[] = [
+const FIELDS: { key: 'max_humans' | 'bot_auto_off_at'; label: string; hint: string }[] = [
   { key: 'max_humans', label: 'Trần người thật / phòng', hint: 'Bot không tính. Hạ trần không đuổi ai — phòng đang vượt chỉ ngừng nhận người mới.' },
-  { key: 'zone_min_chars', label: 'Sàn nhân vật mỗi khu', hint: 'Bot lấp mỗi khu cho đủ số này khi được phép sinh.' },
   { key: 'bot_auto_off_at', label: 'Tự tắt sinh bot khi người thật ≥', hint: 'Bật lại khi dưới ngưỡng − 5. 0 = không tự tắt.' },
 ];
+
+/** Sàn của một khu: số riêng nếu có, không thì "default". */
+function floorOf(f: Record<string, number> | undefined, zone: string): number {
+  return f?.[zone] ?? f?.default ?? 0;
+}
+
+/** "Thiên Đình 30 · Linh Sơn Cốc 20 · …" cho hộp xác nhận và dòng mặc định. */
+function floorText(zones: ZoneInfo[], f: Record<string, number> | undefined): string {
+  return zones.map((z) => `${z.name} ${floorOf(f, z.id)}`).join(' · ');
+}
+
+/** Form giữ sàn từng khu dưới khoá `floor_<id>` (antd không thích khoá lồng có dấu chấm). */
+type FormValues = { max_humans: number; bot_auto_off_at: number } & Record<string, number>;
+
+function toForm(v: RoomSettingsView): FormValues {
+  const out: FormValues = { max_humans: v.settings.max_humans, bot_auto_off_at: v.settings.bot_auto_off_at };
+  for (const z of v.zones) {
+    out[`floor_${z.id}`] = floorOf(v.settings.zone_min_chars, z.id);
+  }
+  return out;
+}
+
+function fromForm(v: FormValues, view: RoomSettingsView): RoomSettings {
+  const floors: Record<string, number> = { default: floorOf(view.settings.zone_min_chars, 'default') };
+  for (const z of view.zones) {
+    floors[z.id] = Math.round(v[`floor_${z.id}`]);
+  }
+  return { max_humans: Math.round(v.max_humans), zone_min_chars: floors, bot_auto_off_at: Math.round(v.bot_auto_off_at) };
+}
 
 function overLoadtest(v: RoomSettingsView, maxHumans: number): boolean {
   return v.loadtested_humans > 0 && maxHumans > v.loadtested_humans;
@@ -22,21 +50,21 @@ function overLoadtest(v: RoomSettingsView, maxHumans: number): boolean {
 /** RoomSettingsCard: nạp MỘT lần (không làm mới theo nhịp — đang gõ số thì bị ghi đè mất). */
 function RoomSettingsCard(): ReactNode {
   const { data, error, reload } = useFetch<RoomSettingsView>('/api/admin/room-settings');
-  const [form] = Form.useForm<RoomSettings>();
+  const [form] = Form.useForm<FormValues>();
   const maxHumans = Form.useWatch('max_humans', form) ?? 0;
   const ask = useAsk();
   const run = useRun();
   useEffect(() => {
     if (data) {
-      form.setFieldsValue(data.settings);
+      form.setFieldsValue(toForm(data));
     }
   }, [data, form]);
   if (!data) {
     return <Card title="Cấu hình phòng" loading={!error}>{error ? <Alert type="error" message={error} /> : null}</Card>;
   }
-  const save = async (v: RoomSettings): Promise<void> => {
-    const body = { max_humans: Math.round(v.max_humans), zone_min_chars: Math.round(v.zone_min_chars), bot_auto_off_at: Math.round(v.bot_auto_off_at) };
-    const reason = await ask({ title: 'Áp dụng cấu hình phòng ngay?', content: `Trần ${body.max_humans} · sàn ${body.zone_min_chars}/khu · tắt bot ở ${body.bot_auto_off_at}.`, okText: 'Lưu và áp dụng' });
+  const save = async (v: FormValues): Promise<void> => {
+    const body = fromForm(v, data);
+    const reason = await ask({ title: 'Áp dụng cấu hình phòng ngay?', content: `Trần ${body.max_humans} · sàn ${floorText(data.zones, body.zone_min_chars)} · tắt bot ở ${body.bot_auto_off_at}.`, okText: 'Lưu và áp dụng' });
     if (reason !== null && (await run(() => post('/api/admin/room-settings', { ...body, reason }), 'Đã lưu cấu hình phòng.'))) {
       reload();
     }
@@ -46,14 +74,25 @@ function RoomSettingsCard(): ReactNode {
   return (
     <Card title="Cấu hình phòng" size="small">
       <Typography.Paragraph type="secondary">
-        {`Môi trường: ${data.env} · mặc định ${d.max_humans} / ${d.zone_min_chars} / ${d.bot_auto_off_at} · đã qua loadtest: ${data.loadtested_humans} người/phòng`}
+        {`Môi trường: ${data.env} · mặc định trần ${d.max_humans} · sàn ${floorText(data.zones, d.zone_min_chars)} · tắt bot ở ${d.bot_auto_off_at} · đã qua loadtest: ${data.loadtested_humans} người/phòng`}
       </Typography.Paragraph>
       <Form form={form} layout="vertical" onFinish={(v) => void save(v)}>
         <Row gutter={16}>
           {FIELDS.map((f) => (
-            <Col key={f.key} xs={24} md={8}>
+            <Col key={f.key} xs={24} md={12}>
               <Form.Item name={f.key} label={f.label} extra={f.hint} rules={[{ required: true, message: 'Nhập một số' }]}>
                 <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          ))}
+        </Row>
+        <Typography.Text strong>Sàn nhân vật từng khu</Typography.Text>
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>Bot lấp mỗi khu cho đủ số này khi được phép sinh (người + bot).</Typography.Paragraph>
+        <Row gutter={12}>
+          {data.zones.map((z) => (
+            <Col key={z.id} xs={12} md={Math.max(4, Math.floor(24 / Math.max(1, data.zones.length)))}>
+              <Form.Item name={`floor_${z.id}`} label={z.name} rules={[{ required: true, message: 'Nhập một số' }]}>
+                <InputNumber min={0} max={60} precision={0} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
           ))}

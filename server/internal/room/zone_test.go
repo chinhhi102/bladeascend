@@ -17,7 +17,7 @@ func zoneManager(t *testing.T) (*Manager, *config.Config) {
 	cfg := config.MustLoadDefault()
 	cfg.Room.MonsterCount = 0
 	cfg.Items.CountPerRoom = 0
-	cfg.Room.ZoneMinChars = 0 // bot tự sinh sẽ làm nhiễu phép đếm người mỗi khu
+	cfg.Room.ZoneMinChars = config.Uniform(0) // bot tự sinh sẽ làm nhiễu phép đếm người mỗi khu
 	// Bản đồ rỗng mặc định KHÔNG có cổng, mà cổng chính là thứ cần thử ở đây — nên tự đặt
 	// 4 cổng mỗi khu đúng như spec §8.4.
 	var maps []*world.Map

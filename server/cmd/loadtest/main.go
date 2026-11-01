@@ -26,6 +26,7 @@ import (
 	"bladeascend/server/internal/netproto"
 	"bladeascend/server/internal/wire"
 	"bladeascend/server/internal/room"
+	"bladeascend/server/internal/world"
 )
 
 // client đóng vai một người chơi: đếm byte nhận và đo ping đúng cách — gửi `ping` rồi tính
@@ -212,9 +213,11 @@ func main() {
 	// Có cái này thì không ai phải nhớ "S1 là 40 người, 10 Đạo Tổ, 120 giây" — và quan
 	// trọng hơn: hai lần đo cách nhau một tuần chắc chắn cùng tham số. Quy tắc vàng của
 	// PERF_LOG là chỉ so các lần đo CÙNG kịch bản, mà gõ tay thì sớm muộn cũng lệch.
-	scenario := flag.String("scenario", "", "kịch bản chuẩn PERF_LOG: S1, S12")
+	scenario := flag.String("scenario", "", "kịch bản chuẩn PERF_LOG: S1, S12, S13")
 	// --bots N: ép đúng N bot bên cạnh người thật (bật bot tay, trần phòng = người + N).
 	// Không có cờ này thì phòng theo config: > 40 người là chế độ tự động tắt bot.
+	envFloors := flag.String("env-floors", "", "dùng sàn theo khu của môi trường (production/staging), bỏ qua -bots")
+	realMaps := flag.Bool("maps", false, "nạp 5 bản đồ thật trong maps/ (mặc định: bản đồ trống)")
 	bots := flag.Int("bots", -1, "số bot ép thêm (-1 = theo config)")
 	flag.Parse()
 	switch *scenario {
@@ -223,8 +226,10 @@ func main() {
 		*players, *tien, *secs = 40, 10, 120
 	case "S12": // spec v6.22 §9.1: 50 người thật + 20 bot trước khi mở giới hạn 50
 		*players, *bots, *tien, *secs = 50, 20, 10, 120
+	case "S13": // spec v6.35 §9.5: 50 người + bot đủ sàn production (≈110), 5 bản đồ thật
+		*players, *tien, *secs, *envFloors, *realMaps = 50, 10, 120, config.EnvProduction, true
 	default:
-		log.Fatalf("kịch bản %q không có; `loadtest` chạy S1, S12 (xem docs/PERF_LOG.md §1)", *scenario)
+		log.Fatalf("kịch bản %q không có; `loadtest` chạy S1, S12, S13 (xem docs/PERF_LOG.md §1)", *scenario)
 	}
 
 	if *cpuProf != "" {
@@ -243,10 +248,27 @@ func main() {
 	cfg.Room.MaxHumans = max(cfg.Room.MaxHumans, *players) // dồn hết vào MỘT phòng
 	if *bots >= 0 {
 		// Bot lấp THEO KHU (v6.28 §9.3): muốn tổng ≈ người + N thì nâng sàn mỗi khu.
-		cfg.Room.ZoneMinChars = (*players + *bots + cfg.Room.Zones - 1) / cfg.Room.Zones
+		cfg.Room.ZoneMinChars = config.Uniform((*players + *bots + cfg.Room.Zones - 1) / cfg.Room.Zones)
 		cfg.Bots.ModeDefault = room.BotOn
 	}
-	m := room.NewManager(cfg, nil, nil)
+	if *envFloors != "" {
+		// Sàn THEO KHU của một môi trường (v6.35: production Thiên Đình 30, khu rìa 20) —
+		// đúng phòng vắng người ngoài đời, thay cho sàn chia đều của `-bots`.
+		e := cfg.ApplyEnv(*envFloors)
+		cfg.Room.MaxHumans = max(e.MaxHumans, *players)
+		cfg.Bots.ModeDefault = room.BotOn
+		cfg.Bots.AutoOffAt = 0 // đo trường hợp xấu nhất: bot vẫn đủ sàn dù đã 50 người
+	}
+	var maps []*world.Map
+	if *realMaps {
+		var err error
+		maps, err = world.LoadDir(config.FindRepoFile("maps"), world.LoadOptions{Tier: cfg.Obstacles.ObstacleTier,
+			FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH})
+		if err != nil {
+			panic(err)
+		}
+	}
+	m := room.NewManager(cfg, maps, nil)
 	m.Start = func(*room.Room) {}
 	rng := rand.New(rand.NewSource(*seed))
 
@@ -308,7 +330,7 @@ func main() {
 		r.Step(dt)
 		full := true
 		for _, z := range r.Zones() {
-			full = full && z.Count() >= cfg.Room.ZoneMinChars
+			full = full && z.Count() >= cfg.Room.ZoneMinChars.For(z.Game().Map.ID)
 		}
 		if full {
 			break

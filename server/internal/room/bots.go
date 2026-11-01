@@ -32,9 +32,8 @@ func (r *Room) updateBots(dt float64) {
 	if !r.botsOn {
 		return // bot đang tắt (§9.5): không sinh mới; bot có sẵn vơi dần khi chết
 	}
-	floor := r.set.ZoneMinChars
 	for _, z := range r.zones {
-		n := min(floor-z.Count(), r.cfg.Bots.SpawnBatch)
+		n := min(r.floorOf(z)-z.Count(), r.cfg.Bots.SpawnBatch)
 		for i := 0; i < n; i++ {
 			level, swords := r.randomBotLevel()
 			r.spawnBotIn(z, level, swords)
@@ -54,15 +53,16 @@ func (r *Room) updateBots(dt float64) {
 func (r *Room) rebalanceZones() {
 	delta := make(map[*Zone]int, len(r.zones))
 	count := func(z *Zone) int { return z.Count() + delta[z] }
-	floor := r.set.ZoneMinChars
+	// gap: khu thiếu bao nhiêu so với sàn CỦA NÓ (v6.35: mỗi khu một sàn) — âm là đang dư.
+	gap := func(z *Zone) int { return r.floorOf(z) - count(z) }
 
 	for i := 0; i < len(r.zones); i++ {
 		var thin *Zone
 		for _, z := range r.zones {
-			if count(z) >= floor {
+			if gap(z) <= 0 {
 				continue
 			}
-			if thin == nil || count(z) < count(thin) {
+			if thin == nil || gap(z) > gap(thin) {
 				thin = z
 			}
 		}
@@ -74,15 +74,15 @@ func (r *Room) rebalanceZones() {
 			if z == thin || len(z.brains) == 0 {
 				continue
 			}
-			if fat == nil || count(z) > count(fat) {
+			if fat == nil || gap(z) < gap(fat) {
 				fat = z
 			}
 		}
-		// Hai điều kiện, hai lý do khác nhau:
-		//   - khu kia phải thật sự dư, nếu không bot chỉ nhấp nháy giữa hai khu cùng thiếu;
-		//   - cho đi xong nó không được tụt xuống dưới sàn, nếu không ta chỉ chuyển chỗ
-		//     thiếu chứ không chữa được gì.
-		if fat == nil || count(fat) <= count(thin)+1 || count(fat)-1 < floor {
+		// Khu cho phải DƯ so với sàn của chính nó (gap < 0): cho đi xong nó vẫn ≥ sàn. Khu
+		// đúng sàn mà cho đi thì chỉ chuyển chỗ thiếu chứ không chữa được gì. So theo sàn
+		// RIÊNG từng khu (v6.35) — Thiên Đình 30 không được rút bot cho khu rìa 20 chỉ vì
+		// nó "đông hơn".
+		if fat == nil || gap(fat) >= 0 {
 			return
 		}
 		id, ok := fat.spareBot()
@@ -121,7 +121,7 @@ func (z *Zone) spareBot() (uint32, bool) {
 func (r *Room) zoneBelowFloor() *Zone {
 	var worst *Zone
 	for _, z := range r.zones {
-		if z.Count() >= r.set.ZoneMinChars {
+		if z.Count() >= r.floorOf(z) {
 			continue
 		}
 		if worst == nil || z.Count() < worst.Count() {
@@ -202,7 +202,7 @@ func (r *Room) onBotDeath(z *Zone, p *game.Player) {
 	// Spec v6.28 §9.3: bot tắt, hoặc khu vẫn đủ sàn khi bớt con này → bỏ hẳn, không hồi
 	// sinh — bot vơi dần tự nhiên. `botsOn` và `r.set` chốt ở pha đơn luồng đầu tick;
 	// `z.Count()` chỉ đọc dữ liệu của CHÍNH khu này, nên gọi từ goroutine của khu là an toàn.
-	if !r.botsOn || z.Count()-1 >= r.set.ZoneMinChars {
+	if !r.botsOn || z.Count()-1 >= r.floorOf(z) {
 		z.departed = append(z.departed, p.Name)
 		z.G.RemovePlayer(p.ID)
 		delete(z.brains, p.ID)
@@ -250,7 +250,7 @@ func (r *Room) processRespawns() {
 			// Chỉ điều đi khi khu cũ có người để dư. Khu đang đúng sàn mà cho đi thì chỗ
 			// thiếu chỉ chạy sang chỗ khác chứ không mất — cùng một kiểu sai với
 			// `rebalanceZones` bản cũ.
-			if to := r.thinnestByCount(); to != nil && to != z && z.Count() > r.set.ZoneMinChars {
+			if to := r.thinnestByCount(); to != nil && to != z && z.Count() > r.floorOf(z) {
 				z.G.RemovePlayer(p.ID)
 				delete(z.brains, p.ID)
 				r.spawnBotIn(to, level, swords)

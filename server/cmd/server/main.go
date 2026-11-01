@@ -74,7 +74,7 @@ func main() {
 	// Mặc định trần phòng / sàn khu / ngưỡng tắt bot theo môi trường (spec v6.28 §9.5).
 	env := config.EnvName(os.Getenv("APP_ENV"))
 	envDefaults := cfg.ApplyEnv(env)
-	log.Printf("môi trường %s: trần %d người/phòng, sàn %d nhân vật/khu, tự tắt bot ở %d người",
+	log.Printf("môi trường %s: trần %d người/phòng, sàn theo khu [%s], tự tắt bot ở %d người",
 		env, cfg.Room.MaxHumans, cfg.Room.ZoneMinChars, cfg.Bots.AutoOffAt)
 	maps, err := world.LoadDir(*mapsDir, world.LoadOptions{Tier: cfg.Obstacles.ObstacleTier, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH})
 	if err != nil {

@@ -147,7 +147,10 @@ type Speed struct {
 }
 
 type Buff struct {
-	Mult    float64 `json:"mult"`
+	Mult float64 `json:"mult"`
+	// Bonus: khoản cộng trực tiếp theo §4.0 (vd Nam Châm +0.2 bán kính nhặt, spec v6.35).
+	// Có Bonus thì dùng Bonus; không có thì đổi từ Mult cũ (`mult − 1`).
+	Bonus   float64 `json:"bonus"`
 	Secs    float64 `json:"secs"`
 	RevealR float64 `json:"reveal_r"`
 	// Cương Kiếm only (spec v4.4 §6.2): kiếm cứng hơn khi va (DurabilityMult) và chém quái /
@@ -434,12 +437,12 @@ type Room struct {
 	// ZoneMinChars: sàn nhân vật mỗi khu — bot lấp TỪNG KHU cho đủ số này (spec v6.28 §9.3).
 	// MaxHumans: trần người thật/phòng, bot không tính. Cả hai là MẶC ĐỊNH của môi trường
 	// (`ApplyEnv` chép từ `room_env`); admin ghi đè lúc chạy (room.Manager.SetSettings).
-	ZoneMinChars   int     `json:"zone_min_chars"`
-	MaxHumans      int     `json:"max_humans"`
-	MapSize        float64 `json:"map_size"`
-	MonsterCount   int     `json:"monster_count"`
-	EmptyCloseSecs float64 `json:"empty_close_secs"`
-	SafeSpawnR     float64 `json:"safe_spawn_r"`
+	ZoneMinChars   ZoneFloors `json:"zone_min_chars"`
+	MaxHumans      int        `json:"max_humans"`
+	MapSize        float64    `json:"map_size"`
+	MonsterCount   int        `json:"monster_count"`
+	EmptyCloseSecs float64    `json:"empty_close_secs"`
+	SafeSpawnR     float64    `json:"safe_spawn_r"`
 }
 
 type Bots struct {
@@ -627,10 +630,10 @@ type Config struct {
 // mức người thật/phòng đã qua loadtest trên máy của môi trường đó (PERF_LOG) — trang admin
 // cảnh báo khi đặt trần cao hơn.
 type RoomEnv struct {
-	MaxHumans        int `json:"max_humans"`
-	ZoneMinChars     int `json:"zone_min_chars"`
-	BotAutoOffAt     int `json:"bot_auto_off_at"`
-	LoadtestedHumans int `json:"loadtested_humans"`
+	MaxHumans        int        `json:"max_humans"`
+	ZoneMinChars     ZoneFloors `json:"zone_min_chars"`
+	BotAutoOffAt     int        `json:"bot_auto_off_at"`
+	LoadtestedHumans int        `json:"loadtested_humans"`
 }
 
 // EnvStaging / EnvProduction: hai môi trường có khối `room_env` riêng.

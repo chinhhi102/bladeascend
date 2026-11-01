@@ -1,6 +1,7 @@
 package game
 
 import (
+	"bladeascend/server/internal/config"
 	"encoding/json"
 	"math"
 	"os"
@@ -95,5 +96,17 @@ func TestSpinCap(t *testing.T) {
 	want := math.Min(w*(1+0.10+(g.Cfg.Buffs["spin"].Mult-1)), w*g.Cfg.Stats.SpinCap)
 	if got := g.Omega(p); math.Abs(got-want) > 1e-9 {
 		t.Fatalf("Sư Phụ + Tốc Kiếm quay %.3f, muốn %.3f", got, want)
+	}
+}
+
+// Nam Châm ghi dạng `bonus: 0.2` (spec v6.35 §4.0) — giá trị bằng `mult 1.2` cũ; buff cũ còn
+// ghi `mult` vẫn đổi đúng `mult − 1`.
+func TestMagnetBonusForm(t *testing.T) {
+	cfg := config.MustLoadDefault()
+	if got := BuffTerm(cfg.Buffs["magnet"]); math.Abs(got-0.2) > 1e-12 {
+		t.Fatalf("Nam Châm +%.3f, cần +0.2", got)
+	}
+	if got := BuffTerm(config.Buff{Mult: 1.6}); math.Abs(got-0.6) > 1e-12 {
+		t.Fatalf("mult 1.6 phải ra +0.6, ra %.3f", got)
 	}
 }

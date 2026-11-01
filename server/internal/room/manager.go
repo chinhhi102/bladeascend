@@ -106,6 +106,22 @@ func (m *Manager) zoneMaps() []*world.Map {
 	return out
 }
 
+// ZoneInfo: id bản đồ + tên hiển thị của một khu — trang admin vẽ một ô sàn cho mỗi khu.
+type ZoneInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// ZoneList: các khu của một phòng, đúng thứ tự §8.0.
+func (m *Manager) ZoneList() []ZoneInfo {
+	maps := m.zoneMaps()
+	out := make([]ZoneInfo, len(maps))
+	for i, mp := range maps {
+		out[i] = ZoneInfo{ID: mp.ID, Name: ZoneName(i)}
+	}
+	return out
+}
+
 // release frees a human slot when a player leaves or dies.
 func (m *Manager) release(r *Room) {
 	m.mu.Lock()

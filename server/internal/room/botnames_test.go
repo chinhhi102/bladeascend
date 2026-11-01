@@ -35,7 +35,7 @@ func TestBotNamesUniqueInRoom(t *testing.T) {
 	// Chạy đủ lâu để phòng lấp đầy bot.
 	for i := 0; i < int(60/dt); i++ {
 		r.Step(dt)
-		if r.Humans()+r.Bots() >= cfg.Room.ZoneMinChars*cfg.Room.Zones {
+		if r.Humans()+r.Bots() >= cfg.Room.ZoneMinChars.For("")*cfg.Room.Zones {
 			break
 		}
 	}
@@ -65,6 +65,9 @@ func TestRecentNameNotReused(t *testing.T) {
 	m, _, _ := testManager(t)
 	m.Join(NewClient(&recConn{}, false), netproto.Join{Name: "P", Char: "a_hon"})
 	r := m.AllRooms()[0]
+	// Kiểm bộ nhớ tên trên MỘT danh sách (tiếng Việt): bỏ chọn theo ngôn ngữ (v6.34), nếu
+	// không 15% lần rút ra tên `intl` — đúng luật nhưng làm test này đỏ ngẫu nhiên.
+	r.cfg.Bots.NamesByLang = nil
 
 	// Giữ chỗ gần hết danh sách, chừa đúng một tên.
 	now := 100.0

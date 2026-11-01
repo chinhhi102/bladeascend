@@ -1,6 +1,7 @@
 package room
 
 import (
+	"bladeascend/server/internal/config"
 	"testing"
 
 	"bladeascend/server/internal/netproto"
@@ -134,7 +135,7 @@ func snapsOf(t *testing.T, sent [][]byte) []decodedSnap {
 // "loại message lạ"), nên test này chỉ cần chạy một trận thật rồi mở hết gói ra.
 func TestEverySnapshotDecodesCleanly(t *testing.T) {
 	m, _, cfg := testManager(t)
-	cfg.Room.ZoneMinChars = 0
+	cfg.Room.ZoneMinChars = config.Uniform(0)
 	conn := &recConn{}
 	c := NewClient(conn, false)
 	r := joinWith(m, c, "NguoiChoi")
@@ -167,7 +168,7 @@ func TestEverySnapshotDecodesCleanly(t *testing.T) {
 // tốn băng thông — nên không có bài kiểm nào khác bắt được.
 func TestStandingStillCostsNothing(t *testing.T) {
 	m, _, cfg := testManager(t)
-	cfg.Room.ZoneMinChars = 0
+	cfg.Room.ZoneMinChars = config.Uniform(0)
 	conn := &recConn{}
 	c := NewClient(conn, false)
 	r := joinWith(m, c, "DungYen")

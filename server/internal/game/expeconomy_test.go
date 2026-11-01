@@ -50,7 +50,7 @@ func TestPickupRadiusSqrtScaleAndMagnet(t *testing.T) {
 		t.Fatalf("bán kính hút %.1f, muốn %.1f (scale %.2f)", got, base, p.Scale)
 	}
 	g.ApplyBuff(p, "magnet")
-	want := g.Cfg.Player.PickupR * (1 + inn + scaleTerm + (g.Cfg.Buffs["magnet"].Mult - 1))
+	want := g.Cfg.Player.PickupR * (1 + inn + scaleTerm + g.Cfg.Buffs["magnet"].Bonus)
 	if got := g.PickupRadius(p); math.Abs(got-want) > 1e-6 {
 		t.Fatalf("Nam Châm: %.1f, muốn %.1f (cộng trên base, không nhân dồn)", got, want)
 	}

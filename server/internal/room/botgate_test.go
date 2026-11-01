@@ -1,6 +1,7 @@
 package room
 
 import (
+	"bladeascend/server/internal/config"
 	"testing"
 )
 
@@ -8,7 +9,7 @@ import (
 // sẽ quanh quẩn ở đó tới hết trận và cả một khu của thế giới thành vùng chết.
 func TestBotsEventuallyChangeZone(t *testing.T) {
 	m, cfg := zoneManager(t)
-	cfg.Room.ZoneMinChars = 2
+	cfg.Room.ZoneMinChars = config.Uniform(2)
 	joinN(m, 1)
 	r := m.AllRooms()[0]
 	settle(r, cfg)
@@ -60,18 +61,18 @@ func TestBotsEventuallyChangeZone(t *testing.T) {
 // còn trần tổng của cả phòng. 2 người, sàn 10 → mỗi khu ≥ 10, cả phòng ≈ 50.
 func TestZoneFloorPerZone(t *testing.T) {
 	m, cfg := zoneManager(t)
-	cfg.Room.ZoneMinChars = 10
+	cfg.Room.ZoneMinChars = config.Uniform(10)
 	joinN(m, 2)
 	r := m.AllRooms()[0]
 	dt := 1 / float64(cfg.Net.TickHz)
 	for i := 0; i < int(float64(cfg.Net.TickHz)*cfg.Bots.SpawnEverySecs*40); i++ {
 		r.Step(dt)
 	}
-	floorAll := cfg.Room.ZoneMinChars * len(r.Zones())
+	floorAll := cfg.Room.ZoneMinChars.For("") * len(r.Zones())
 	// Bot đi qua cổng có thể làm một khu dư vài con (vơi dần khi chết), nhưng không được
 	// nổ số: trần mềm = sàn × số khu + một nhịp sinh mỗi khu.
 	if total := r.Humans() + r.Bots(); total < floorAll || total > floorAll+cfg.Bots.SpawnBatch*len(r.Zones()) {
-		t.Fatalf("phòng có %d nhân vật, muốn ≈ %d (sàn %d × %d khu)", total, floorAll, cfg.Room.ZoneMinChars, len(r.Zones()))
+		t.Fatalf("phòng có %d nhân vật, muốn ≈ %d (sàn %d × %d khu)", total, floorAll, cfg.Room.ZoneMinChars.For(""), len(r.Zones()))
 	}
 	// Sàn mỗi khu là lời hứa "khu tụt xuống dưới sàn thì được vá lại NGAY", không phải
 	// "không khoảnh khắc nào dưới sàn". Hai thứ đó khác nhau, và chỉ cái thứ nhất là đúng:
@@ -87,7 +88,7 @@ func TestZoneFloorPerZone(t *testing.T) {
 		var bad *Zone
 		for _, q := range r.Zones() {
 			counts = append(counts, q.Count())
-			if bad == nil && q.Count() < cfg.Room.ZoneMinChars {
+			if bad == nil && q.Count() < cfg.Room.ZoneMinChars.For("") {
 				bad = q
 			}
 		}
@@ -101,6 +102,6 @@ func TestZoneFloorPerZone(t *testing.T) {
 	}
 	if bad, counts := below(); bad != nil {
 		t.Fatalf("sau %d tick vẫn có khu dưới sàn: %s chỉ %d nhân vật, sàn là %d (phân bố %v)",
-			settle, bad.Name, bad.Count(), cfg.Room.ZoneMinChars, counts)
+			settle, bad.Name, bad.Count(), cfg.Room.ZoneMinChars.For(""), counts)
 	}
 }

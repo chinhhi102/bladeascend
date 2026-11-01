@@ -17,7 +17,9 @@ export interface SpeedCfg {
 }
 
 export interface BuffCfg {
-  mult: number;
+  mult?: number;
+  /** Khoản cộng trực tiếp §4.0 (Nam Châm +0.2, v6.35); có thì dùng thay `mult − 1`. */
+  bonus?: number;
   secs: number;
   reveal_r?: number;
   visible_alpha?: number; // Ẩn Thân: độ đậm khi bị nhìn từ xa (spec §6.2)

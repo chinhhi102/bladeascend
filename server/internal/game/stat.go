@@ -63,7 +63,15 @@ func (g *Game) buffBonus(p *Player, kind int, id string) float64 {
 	if !p.HasBuff(kind, g.Time) {
 		return 0
 	}
-	return Bonus(g.Cfg.Buffs[id].Mult)
+	return BuffTerm(g.Cfg.Buffs[id])
+}
+
+// BuffTerm: khoản cộng của một buff — `bonus` nếu config ghi (dạng §4.0), không thì `mult − 1`.
+func BuffTerm(b config.Buff) float64 {
+	if b.Bonus != 0 {
+		return b.Bonus
+	}
+	return Bonus(b.Mult)
 }
 
 // scalePickupTerm: phần cảnh giới của bán kính nhặt `scale^e − 1` (e = 0.5 → √scale − 1),

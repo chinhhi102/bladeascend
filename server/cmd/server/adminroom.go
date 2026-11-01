@@ -23,7 +23,15 @@ const (
 func restoreRoomSettings(mgr *room.Manager, st *admin.Store) {
 	if raw, ok := st.Setting(settingRoom); ok {
 		var rs room.RoomSettings
-		if err := json.Unmarshal([]byte(raw), &rs); err != nil {
+		err := json.Unmarshal([]byte(raw), &rs)
+		if err == nil && legacyFloor(raw) {
+			// Lưu trước v6.35: một sàn chung cho mọi khu (thường là mặc định cũ 10). Spec v6.35
+			// đổi hẳn cách tính sàn (Thiên Đình riêng) — giữ con số cũ thì deploy này không có
+			// tác dụng gì. Giữ trần + ngưỡng tắt bot admin đã đặt, sàn về mặc định môi trường.
+			log.Printf("cấu hình phòng đã lưu dùng sàn chung %s (trước v6.35) → dùng sàn theo khu mặc định", rs.ZoneMinChars)
+			rs.ZoneMinChars = mgr.DefaultSettings().ZoneMinChars
+		}
+		if err != nil {
 			log.Printf("cấu hình phòng đã lưu hỏng, dùng mặc định: %v", err)
 		} else if err := mgr.SetSettings(rs); err != nil {
 			log.Printf("cấu hình phòng đã lưu không hợp lệ, dùng mặc định: %v", err)
@@ -35,11 +43,25 @@ func restoreRoomSettings(mgr *room.Manager, st *admin.Store) {
 		}
 	}
 	s := mgr.Settings()
-	log.Printf("cấu hình phòng: trần %d, sàn %d/khu, tắt bot ở %d, bot %s",
+	log.Printf("cấu hình phòng: trần %d, sàn theo khu [%s], tắt bot ở %d, bot %s",
 		s.MaxHumans, s.ZoneMinChars, s.BotAutoOffAt, mgr.BotMode())
 }
 
+// legacyFloor: bản lưu có `zone_min_chars` là MỘT con số (dạng trước v6.35).
+func legacyFloor(raw string) bool {
+	var probe struct {
+		Floor json.RawMessage `json:"zone_min_chars"`
+	}
+	if json.Unmarshal([]byte(raw), &probe) != nil {
+		return false
+	}
+	t := strings.TrimSpace(string(probe.Floor))
+	return t != "" && t[0] != '{'
+}
+
 type roomSettingsView struct {
+	// Zones: id + tên từng khu, để trang admin vẽ một ô sàn cho mỗi khu (v6.35).
+	Zones      []room.ZoneInfo   `json:"zones"`
 	Env        string            `json:"env"`
 	Settings   room.RoomSettings `json:"settings"`
 	Defaults   room.RoomSettings `json:"defaults"`
@@ -51,7 +73,7 @@ type roomSettingsView struct {
 func (s *server) roomSettingsView() roomSettingsView {
 	cur := s.mgr.Settings()
 	lt := s.envDefaults.LoadtestedHumans
-	return roomSettingsView{Env: s.env, Settings: cur, Defaults: s.mgr.DefaultSettings(),
+	return roomSettingsView{Zones: s.mgr.ZoneList(), Env: s.env, Settings: cur, Defaults: s.mgr.DefaultSettings(),
 		Loadtested: lt, Warn: lt > 0 && cur.MaxHumans > lt}
 }
 
@@ -59,7 +81,8 @@ func (s *server) handleAdminRoomSettings(w http.ResponseWriter, _ *http.Request)
 	adminJSON(w, http.StatusOK, s.roomSettingsView())
 }
 
-// handleAdminRoomSettingsSet: {"max_humans", "zone_min_chars", "bot_auto_off_at", "reason"}.
+// handleAdminRoomSettingsSet: {"max_humans", "zone_min_chars": {"<khu>": n, "default": n},
+// "bot_auto_off_at", "reason"}.
 // Vượt mức loadtest vẫn cho lưu (spec: cảnh báo vàng, không chặn).
 func (s *server) handleAdminRoomSettingsSet(w http.ResponseWriter, r *http.Request) {
 	var b struct {

@@ -172,11 +172,18 @@ export interface BotsResp {
 
 export interface RoomSettings {
   max_humans: number;
-  zone_min_chars: number;
+  /** Sàn nhân vật THEO KHU (v6.35): id bản đồ khu → số; "default" cho khu không ghi riêng. */
+  zone_min_chars: Record<string, number>;
   bot_auto_off_at: number;
 }
 
+export interface ZoneInfo {
+  id: string;
+  name: string;
+}
+
 export interface RoomSettingsView {
+  zones: ZoneInfo[];
   env: string;
   settings: RoomSettings;
   defaults: RoomSettings;
