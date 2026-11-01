@@ -1135,6 +1135,11 @@ export class GameScene {
       case 'MonsterHurt':
         sound.play('monster_hurt', 0.4);
         break;
+      case 'BotLeave':
+        // Admin "Rút bot ngay" (spec §9.5): bot rời phòng trong một làn khói, không biến
+        // mất trơn — người đang nhìn thấy một nhân vật "tắt máy" chứ không thấy lỗi hiển thị.
+        this.vfx.play('death_smoke', e.x, e.y, 180, now);
+        break;
       case 'MonsterDie':
         this.vfx.play('death_smoke', e.x, e.y, 120, now);
         sound.play('monster_pop', 0.6);

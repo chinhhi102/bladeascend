@@ -96,38 +96,6 @@ func TestBotsSpawnAtLuyenKhiWhenRoomIsSmall(t *testing.T) {
 	}
 }
 
-// Spec §9.3: đủ người thì bot sinh đúng ngang với người đang đứng hạng spawn_rank (11),
-// không còn trần cảnh giới nào cả.
-func TestBotsSpawnAtRank11NoRealmCap(t *testing.T) {
-	m, _, cfg := testManager(t)
-	joinN(m, 1)
-	r := m.AllRooms()[0]
-
-	// Dựng đủ người, hạng cao dần theo Uy Danh; hạng 11 rơi vào Nguyên Anh tầng 5 (level 34).
-	for i := 0; i < cfg.Bots.SpawnRank+3; i++ {
-		level := 34
-		if i < cfg.Bots.SpawnRank-1 {
-			level = 60 // Top 10 toàn người cảnh giới rất cao
-		}
-		p := r.Zone(0).G.AddPlayer(game.SpawnOptions{Name: "P", Level: level, Swords: 1, IsBot: true})
-		p.Score = float64(100 * (cfg.Bots.SpawnRank + 3 - i))
-	}
-	want := r.Zone(0).G.Ranking()[cfg.Bots.SpawnRank-1].Level
-	if r.Zone(0).G.Prog.Realm(want) <= 1 {
-		t.Fatalf("thiết lập sai: hạng 11 phải ở cảnh giới cao hơn Trúc Cơ, đang là level %d", want)
-	}
-	for i := 0; i < 50; i++ {
-		level, swords := r.randomBotLevel()
-		if level != want {
-			t.Fatalf("bot sinh ở level %d, muốn %d (ngang hạng %d, không bị chặn trần)",
-				level, want, cfg.Bots.SpawnRank)
-		}
-		if maxS := r.Zone(0).G.Prog.MaxSwords(r.Zone(0).G.Prog.Realm(level)); swords < 1 || swords > maxS {
-			t.Fatalf("bot sinh với %d kiếm, ngoài [1, %d]", swords, maxS)
-		}
-	}
-}
-
 // Spec §11.4: hạ một người trong Top 5 của phòng → dòng kill feed loan ra MỌI phòng.
 func TestTopFiveKillAnnouncedServerWide(t *testing.T) {
 	m, _, _ := testManager(t)

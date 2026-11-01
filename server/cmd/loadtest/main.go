@@ -212,14 +212,19 @@ func main() {
 	// Có cái này thì không ai phải nhớ "S1 là 40 người, 10 Đạo Tổ, 120 giây" — và quan
 	// trọng hơn: hai lần đo cách nhau một tuần chắc chắn cùng tham số. Quy tắc vàng của
 	// PERF_LOG là chỉ so các lần đo CÙNG kịch bản, mà gõ tay thì sớm muộn cũng lệch.
-	scenario := flag.String("scenario", "", "kịch bản chuẩn PERF_LOG: S1")
+	scenario := flag.String("scenario", "", "kịch bản chuẩn PERF_LOG: S1, S12")
+	// --bots N: ép đúng N bot bên cạnh người thật (bật bot tay, trần phòng = người + N).
+	// Không có cờ này thì phòng theo config: > 40 người là chế độ tự động tắt bot.
+	bots := flag.Int("bots", -1, "số bot ép thêm (-1 = theo config)")
 	flag.Parse()
 	switch *scenario {
 	case "":
 	case "S1":
 		*players, *tien, *secs = 40, 10, 120
+	case "S12": // spec v6.22 §9.1: 50 người thật + 20 bot trước khi mở giới hạn 50
+		*players, *bots, *tien, *secs = 50, 20, 10, 120
 	default:
-		log.Fatalf("kịch bản %q không có; `loadtest` chỉ chạy S1 (xem docs/PERF_LOG.md §1)", *scenario)
+		log.Fatalf("kịch bản %q không có; `loadtest` chạy S1, S12 (xem docs/PERF_LOG.md §1)", *scenario)
 	}
 
 	if *cpuProf != "" {
@@ -236,6 +241,10 @@ func main() {
 
 	cfg := config.MustLoadDefault()
 	cfg.Room.MaxHumans = max(cfg.Room.MaxHumans, *players) // dồn hết vào MỘT phòng
+	if *bots >= 0 {
+		cfg.Room.BotFillTarget = *players + *bots
+		cfg.Bots.ModeDefault = room.BotOn
+	}
 	m := room.NewManager(cfg, nil, nil)
 	m.Start = func(*room.Room) {}
 	rng := rand.New(rand.NewSource(*seed))
@@ -317,6 +326,7 @@ func main() {
 	}
 
 	ticks := int(*secs / dt)
+	zoneWorst := worstZones{}
 	durs := make([]float64, 0, ticks)
 	start := time.Now()
 	for k := 0; k < ticks; k++ {
@@ -340,6 +350,9 @@ func main() {
 		t0 := time.Now()
 		r.Step(dt)
 		durs = append(durs, float64(time.Since(t0).Microseconds())/1000)
+		if (k+1)%300 == 0 { // cửa sổ 10 s của từng khu (tickstats.go) — giữ p95 tệ nhất
+			zoneWorst.note(r)
+		}
 	}
 	wall := time.Since(start).Seconds()
 	report(cs, durs, wall, *secs, total)
@@ -349,6 +362,7 @@ func main() {
 	for _, z := range r.Zones() {
 		fmt.Printf("  %-20s %6.2f ms · %d nhân vật\n", z.Name, z.StepMs(), len(z.Game().Players))
 	}
+	zoneWorst.print()
 }
 
 func report(cs []*client, durs []float64, wall, secs float64, n int) {
@@ -413,4 +427,35 @@ func report(cs []*client, durs []float64, wall, secs float64, n int) {
 				k, float64(parts[k])/1024, float64(parts[k])*100/float64(maxSnap), n)
 		}
 	}
+}
+
+// worstZones: p95 tick TỆ NHẤT của từng khu qua các cửa sổ 10 s — ngưỡng spec §9.1 là
+// "tick p95 mỗi khu < 4 ms", nên phải nhìn từng khu chứ không chỉ cả phòng.
+type worstZones struct {
+	names []string
+	p95   []float64
+}
+
+func (w *worstZones) note(r *room.Room) {
+	for i, z := range r.Zones() {
+		if i >= len(w.p95) {
+			w.names, w.p95 = append(w.names, z.Name), append(w.p95, 0)
+		}
+		_, p := z.TickStats()
+		w.p95[i] = math.Max(w.p95[i], p)
+	}
+}
+
+func (w *worstZones) print() {
+	if len(w.p95) == 0 {
+		return
+	}
+	fmt.Println("\nTick p95 từng khu (cửa sổ 10 s tệ nhất) — ngưỡng spec §9.1 < 4 ms:")
+	pass := true
+	for i, n := range w.names {
+		ok := w.p95[i] < 4
+		pass = pass && ok
+		fmt.Printf("  %-20s p95 %6.2f ms %s\n", n, w.p95[i], map[bool]string{true: "✅", false: "❌"}[ok])
+	}
+	fmt.Printf("KẾT LUẬN §9.1: %s\n", map[bool]string{true: "ĐẠT — mở được giới hạn 50", false: "CHƯA ĐẠT — giữ 20"}[pass])
 }

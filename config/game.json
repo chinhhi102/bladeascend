@@ -407,8 +407,10 @@
       3.0,
       8.0
     ],
-    "spawn_rank": 11,
-    "max_spawn_realm": 6,
+    "mode_default": "auto",
+    "auto_off_above_humans": 40,
+    "auto_on_below_humans": 35,
+    "withdraw_idle_secs": 5,
     "decide_min": 0.3,
     "decide_max": 0.6,
     "reaction_min": 0.2,

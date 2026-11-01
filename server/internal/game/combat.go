@@ -64,6 +64,7 @@ func (g *Game) applyBodyHit(a, b *Player) {
 	// Nhờ hai dòng này mà Ru Ngủ Trưa không khoá cứng được ai: một nhịp chém là tỉnh, nên
 	// 2.5 giây ngủ chỉ có giá khi cả đám đang mài kiếm chứ không ai rảnh để chém thân.
 	b.Status[StSleep] = 0
+	a.CombatAt, b.CombatAt = g.Time, g.Time
 	g.cancelChannel(b, "hit")
 	a.Buffs[BuffStealth] = 0 // Ẩn Thân ends as soon as the owner's sword hits someone
 	if g.HiddenInBush(b) {
@@ -357,6 +358,7 @@ func (g *Game) hardMult(p *Player, which string) float64 {
 }
 
 func (g *Game) clash(a, b *Player, at Vec) {
+	a.CombatAt, b.CombatAt = g.Time, g.Time
 	ra, rb := g.Prog.Realm(a.Level), g.Prog.Realm(b.Level)
 	// Spec §5.2: va kiếm KHÔNG đẩy hai người ra nữa — vòng kiếm chỉ chặn không cho chém
 	// vào thân, hai bên đứng mài nhau cho tới khi một bên hết kiếm trước.

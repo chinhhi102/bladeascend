@@ -424,31 +424,28 @@ type Bots struct {
 	RejoinSameNameChance float64   `json:"rejoin_same_name_chance"`
 	IdleAfterJoinChance  float64   `json:"idle_after_join_chance"`
 	IdleAfterJoinSecs    []float64 `json:"idle_after_join_secs"`
-	// SpawnRank: bot sinh ra ngang với người đang đứng hạng này trong phòng (mặc định 11,
-	// tức ngay dưới Top 10). Phòng chưa đủ người để có hạng đó → sinh ở Luyện Khí.
-	SpawnRank int `json:"spawn_rank"`
-	// MaxSpawnRealm: trần cảnh giới của bot MỚI SINH (chủ dự án chốt 31/10/2026).
-	//
-	// Bot vẫn tu lên cao được trong lúc chơi; trần này chỉ chặn lúc SINH RA. Không có nó thì
-	// `SpawnRank` chép thẳng cảnh giới của người hạng N — phòng có một người lên Chân Tiên
-	// là bot mới cũng sinh thẳng ở Chân Tiên, tức người chơi vừa vào đã gặp cả phòng Tiên
-	// giới mà không ai tu lên được như thế.
-	//
-	// 6 = Hợp Thể: còn đủ cao để bot không thành bia tập bắn, mà vẫn dưới Độ Kiếp / Đại Thừa
-	// / Tiên giới — ba mức mà người chơi phải tự tu tới mới gặp.
-	MaxSpawnRealm int      `json:"max_spawn_realm"`
-	DecideMin     float64  `json:"decide_min"`
-	DecideMax     float64  `json:"decide_max"`
-	ReactionMin   float64  `json:"reaction_min"`
-	ReactionMax   float64  `json:"reaction_max"`
-	HuntR         float64  `json:"hunt_r"`
-	HuntRatio     float64  `json:"hunt_ratio"`
-	FleeR         float64  `json:"flee_r"`
-	FleeRatio     float64  `json:"flee_ratio"`
-	PathGrid      float64  `json:"path_grid"`
-	AmbushR       float64  `json:"ambush_r"`
-	AmbushSecs    float64  `json:"ambush_secs"`
-	Names         []string `json:"names"`
+	// Chế độ bot (spec v6.22 §9.5): "auto" | "on" | "off". Admin đổi lúc chạy; đây là giá
+	// trị khi server khởi động. Bot sinh ra như người chơi mới (Luyện Khí 1, 1 kiếm, không
+	// buff) — đã bỏ `spawn_rank` / `max_spawn_realm`.
+	ModeDefault string `json:"mode_default"`
+	// Tự động: > AutoOffAboveHumans người thật → ngừng sinh bot; < AutoOnBelowHumans → sinh
+	// lại. Trễ 5 người để phòng 38–42 người không bật/tắt liên tục.
+	AutoOffAboveHumans int `json:"auto_off_above_humans"`
+	AutoOnBelowHumans  int `json:"auto_on_below_humans"`
+	// WithdrawIdleSecs: "Rút bot ngay" chỉ rút bot không giao tranh trong ngần ấy giây.
+	WithdrawIdleSecs float64  `json:"withdraw_idle_secs"`
+	DecideMin        float64  `json:"decide_min"`
+	DecideMax        float64  `json:"decide_max"`
+	ReactionMin      float64  `json:"reaction_min"`
+	ReactionMax      float64  `json:"reaction_max"`
+	HuntR            float64  `json:"hunt_r"`
+	HuntRatio        float64  `json:"hunt_ratio"`
+	FleeR            float64  `json:"flee_r"`
+	FleeRatio        float64  `json:"flee_ratio"`
+	PathGrid         float64  `json:"path_grid"`
+	AmbushR          float64  `json:"ambush_r"`
+	AmbushSecs       float64  `json:"ambush_secs"`
+	Names            []string `json:"names"`
 }
 
 type Mood struct {

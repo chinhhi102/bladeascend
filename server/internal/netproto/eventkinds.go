@@ -43,6 +43,7 @@ var EventKinds = []string{
 	"TeleportIn",
 	"TeleportOut",
 	"TienKhiPicked",
+	"BotLeave", // bot rời phòng do admin rút (§9.5): client vẽ khói
 }
 
 // eventIndex tra ngược, dựng một lần lúc khởi động.

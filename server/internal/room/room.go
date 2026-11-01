@@ -11,8 +11,8 @@ import (
 	"bladeascend/server/internal/config"
 	"bladeascend/server/internal/game"
 	"bladeascend/server/internal/netproto"
-	"bladeascend/server/internal/wire"
 	"bladeascend/server/internal/store"
+	"bladeascend/server/internal/wire"
 	"bladeascend/server/internal/world"
 )
 
@@ -67,6 +67,11 @@ type Room struct {
 	rankAt map[uint32]int
 	// board: thứ tự top 10 đã giữ 3 s — chung cho bảng xếp hạng VÀ danh hiệu (heldboard.go).
 	board heldBoard
+	// Bật/tắt bot (botmode.go, spec §9.5). botsOn chốt đầu tick như charsAtTick.
+	botOverride string
+	botAutoOff  bool
+	botsOn      bool
+	withdraw    map[uint32]bool
 }
 
 // transfer: chuyển một nhân vật sang khu khác ở ranh giới tick, giữ nguyên mọi trạng thái.
@@ -331,6 +336,7 @@ func (r *Room) Step(dt float64) {
 	// Chốt một lần cũng ĐÚNG HƠN về luật: cả năm khu quyết định từ cùng một con số, thay vì
 	// mỗi khu thấy một con số khác tuỳ thứ tự chạy.
 	r.charsAtTick = r.Humans() + r.Bots()
+	r.updateBotSwitch()
 	// Mỗi khu một GOROUTINE (spec v5 mục 4). An toàn vì trong một tick không khu nào đọc
 	// dữ liệu của khu khác: việc duy nhất đi qua ranh giới là chuyển người, và nó gom vào
 	// hàng chờ riêng của từng khu rồi chạy SAU khi mọi khu đã xong.

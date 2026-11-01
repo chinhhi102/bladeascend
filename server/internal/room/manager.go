@@ -27,6 +27,8 @@ type Manager struct {
 	// ScoreMedian: Uy Danh/phút trung vị theo cảnh giới, cho cờ "Tăng điểm bất thường"
 	// (§6.1). `cmd/server` cắm vào; nil thì không gắn cờ loại này.
 	ScoreMedian func(realm int) float64
+	// botMode: chế độ bot toàn server (botmode.go). Guarded by mu.
+	botMode string
 }
 
 func NewManager(cfg *config.Config, maps []*world.Map, rec Recorder) *Manager {

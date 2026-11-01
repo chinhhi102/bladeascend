@@ -30,6 +30,7 @@ func (r *Room) updateBots(dt float64) {
 	// Phòng đã chạm trần thì không sinh thêm được, nên cách duy nhất là ĐIỀU bot từ khu đông
 	// sang — đó chính là việc `rebalanceZones` làm.
 	r.rebalanceZones()
+	r.withdrawIdle()
 	r.botTimer += dt
 	if r.botTimer < r.cfg.Bots.SpawnEverySecs {
 		return
@@ -39,6 +40,9 @@ func (r *Room) updateBots(dt float64) {
 	// trần thì phải bớt bot NGAY, không đợi bot chết. Chờ chết thì một phòng đông người có
 	// thể vượt trần suốt mấy phút.
 	r.trimOverCap()
+	if !r.botsOn {
+		return // bot đang tắt (§9.5): không sinh mới; bot có sẵn vơi dần khi chết
+	}
 	room := r.Humans() + r.Bots()
 	target := r.cfg.Room.BotFillTarget
 	// Chỉ `bot_fill_target` mới chặn việc sinh bot. `max_humans` là trần NGƯỜI THẬT, hai
@@ -213,35 +217,13 @@ func (r *Room) thinnestByCount() *Zone {
 	return best[r.rng.Intn(len(best))]
 }
 
-// randomBotLevel decides what a new bot spawns as (spec §9.3).
+// randomBotLevel: bot sinh ra NHƯ NGƯỜI CHƠI MỚI — Luyện Khí 1, 1 kiếm (spec v6.22 §9.3).
 //
-// Bots slot in at `spawn_rank` (11) — level with whoever sits just below the room's Top 10 —
-// so they never show up strong enough to bully the leaders. A room without that many players
-// yet has nobody to measure against, so its bots start at Luyện Khí instead. There is no
-// realm ceiling: in a room full of Nguyên Anh, rank 11 is Nguyên Anh and so are new bots.
-//
-// Xếp hạng lấy của CẢ PHÒNG, không phải của một khu: bot vào khu vắng vẫn phải vừa sức với
-// mặt bằng chung, nếu không thì khu vắng thành chỗ nuôi quân toàn bot yếu.
+// Bản trước chép cảnh giới người hạng 11 (trần Hợp Thể): người mới vào gặp cả khu bot Hợp
+// Thể, và một nhát chém trúng bot đó cho 21 760 EXP (EXP_AUDIT). Không buff, không Bí Kíp:
+// `AddPlayer` / `Respawn` đã xoá cả hai; 5 s bất tử lúc sinh cũng do đó lo, như người thật.
 func (r *Room) randomBotLevel() (int, int) {
-	prog := r.zones[0].G.Prog
-	level := r.rng.Intn(prog.Tiers()) // mặc định: Luyện Khí, tầng ngẫu nhiên
-	if n := r.cfg.Bots.SpawnRank; n >= 1 {
-		if ranking := r.Ranking(); len(ranking) >= n {
-			level = ranking[n-1].Level
-		}
-	}
-	// Trần cảnh giới lúc SINH (§9.4, chủ dự án chốt 31/10/2026): bot mới không bao giờ vượt
-	// `max_spawn_realm`. Chúng vẫn tu lên cao được trong lúc chơi — đây chỉ là điểm xuất phát.
-	//
-	// Không chặn thì `SpawnRank` chép thẳng cảnh giới của người hạng N: một người lên Chân
-	// Tiên là mọi bot mới cũng sinh thẳng ở Chân Tiên.
-	if maxR := r.cfg.Bots.MaxSpawnRealm; maxR >= 0 {
-		if top := (maxR+1)*prog.Tiers() - 1; level > top {
-			level = top
-		}
-	}
-	realm := prog.Realm(level)
-	return level, 1 + r.rng.Intn(prog.MaxSwords(realm))
+	return 0, 1
 }
 
 // onBotDeath bắt chước hành vi NGƯỜI THẬT khi chết (spec v6.1 §9.4).
@@ -259,7 +241,9 @@ func (r *Room) onBotDeath(z *Zone, p *game.Player) {
 	// tick xong.
 	// `charsAtTick` chứ không `r.Humans()+r.Bots()`: hàm này chạy trong goroutine của MỘT
 	// khu, còn hai hàm kia đọc map của cả năm khu. Xem ghi chú ở `Room.Step`.
-	if r.charsAtTick-1 >= r.cfg.Room.BotFillTarget {
+	// Bot đang tắt (§9.5): chết là rời, không hồi sinh — bot vơi dần tự nhiên. `botsOn`
+	// chốt ở pha đơn luồng đầu tick, đọc ở đây (goroutine của khu) là an toàn.
+	if !r.botsOn || r.charsAtTick-1 >= r.cfg.Room.BotFillTarget {
 		z.departed = append(z.departed, p.Name)
 		z.G.RemovePlayer(p.ID)
 		delete(z.brains, p.ID)

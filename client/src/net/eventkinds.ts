@@ -40,6 +40,7 @@ export const EVENT_KINDS = [
   'TeleportIn',
   'TeleportOut',
   'TienKhiPicked',
+  'BotLeave',
 ] as const;
 
 /** Khớp `netproto.MonsterKinds` và `config.monsters.kinds`. */

@@ -79,6 +79,9 @@ type Player struct {
 	Char    string
 	GuestID string
 	IsBot   bool
+	// CombatAt: lần cuối va kiếm / chém trúng / bị chém (spec §9.5 "Rút bot ngay" chỉ rút
+	// bot không giao tranh trong withdraw_idle_secs).
+	CombatAt float64
 
 	Pos        Vec
 	Facing     float64
