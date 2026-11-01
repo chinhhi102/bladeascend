@@ -55,3 +55,5 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 27,2026-11-01,87d7cd6,Lượt cuối — đo lại S1 lúc máy rảnh,S1,0.92,1.38,3,5.7,,2.4,0.00,,,,,,,,,,,,,,,,,"Thiên Đình p95 1.27 ms; B20 đóng (#26 do máy bận)",
 27,2026-11-01,87d7cd6,Lượt cuối — WebKit giả lập iPhone :9999,S9,,,,,,,,43.2,,,0,4990,113.1,,,,,,,,,,,"lỗi 0, 201 texture",
 28,2026-11-02,994e508,v6.35 sàn bot theo khu — 5 lần (máy bận),S13,1.99,3.55,6,4.9,,2.8,0.00,,,,,,,,,,,,,,,,,"trung vị 5 lần; khu tệ nhất 3.51/3.75/4.74❌(Linh Sơn seed3)/3.70/3.60; Thiên Đình 3.22–3.75",
+29,2026-11-02,bb1cd96,v6.36 hiển thị kỹ năng — 3 lần seed 7,S1,,,,,,,,,,,,,,,,,,,,,,,,"Thiên Đình p95 1.43/1.31/1.29 ms (trung vị 1.31); khu khác ≤0.92",
+29,2026-11-02,bb1cd96,v6.36 — WebKit giả lập iPhone :9999,S9,,,,,,,,42.4,,,0,2146,107.4,,,,,,,,,,,"lỗi 0, 166 texture",

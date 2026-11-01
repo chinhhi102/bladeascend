@@ -1,6 +1,6 @@
 # Tiến độ — BladeAscend (Đạo Hữu Xin Dừng Bước)
 
-_Cập nhật: 2026-11-02 (v6.31–v6.35, mở công khai, logo). Nhật ký đầy đủ các phiên trước (22/10 → 01/11, 1 677 dòng):
+_Cập nhật: 2026-11-02 (v6.31–v6.36, mở công khai, logo, hiển thị kỹ năng). Nhật ký đầy đủ các phiên trước (22/10 → 01/11, 1 677 dòng):
 `docs/history/PROGRESS_den_2026-11-01.md` — chuyển nguyên văn, không xoá._
 
 ## Cách chạy (máy dev)
@@ -22,6 +22,7 @@ node tools/browsertest/review.mjs <url> docs/review/<mục> <tên> [--full]   # 
 
 | Mảng | Trạng thái | Ghi chú |
 |---|---|---|
+| Hiển thị kỹ năng v6.36 | ✅ chờ duyệt ảnh | đủ 5 lớp × 10 kỹ năng, event StatusStart/End, icon vector 64 px, HUD + mũi tên — `docs/review/skills/`, `docs/SKILL_VFX_AUDIT.md` |
 | Luật chơi v6.30 | ✅ | chém trúng = chết (v6.26), chết = hết ván (v6.29), kỹ năng tự hồi (v6.25), Loa 360°, Trộm Kiếm |
 | Bot | ✅ | sàn theo khu v6.35 (production Thiên Đình 30 · rìa 20; staging 15/10, admin chỉnh từng khu), tên đa quốc gia v6.34, lấp theo khu (v6.28), 5% đứng yên sau khi vào, dùng kỹ năng theo luật v6.9, không lộ cờ bot |
 | Trang chủ | ✅ chờ duyệt ảnh | lưới 5 thẻ, nền kéo hết trang, ô chọn ngôn ngữ — `docs/review/06-…`, `07-…` |
@@ -50,13 +51,27 @@ CONTRIBUTING, SECURITY, CoC, CI cho fork, quét dữ liệu người chơi (`ebc
 (`47a62ba`) · giấy phép MIT + art CC BY-NC-SA + mục "Tên và logo" (`994e508`) · v6.35 sàn bot
 theo khu + loadtest S13 (PERF_LOG #28) + Nam Châm `bonus: 0.2`.
 
+**v6.36** — OG có logo đã duyệt + SECURITY chỉ qua GitHub private reporting + cảnh báo admin
+tick p95 > 3,5 ms suốt 5 phút (`bbba31f`) · bảng rà 10 kỹ năng (`0ba5c75`) · đủ 5 lớp hiển thị
+kỹ năng, event `StatusStart/StatusEnd`, icon trạng thái vector + job artgen `icon_status_*`,
+HUD icon + giây, rung, mũi tên mép màn hình, sạp Cô Ba có bạt/đếm/vỏ chuối, 12 tiếng kỹ năng
+tạm (`ca58995`) · ảnh duyệt + công cụ `tools/browsertest/skillshots.mjs` (`bb1cd96`).
+
+Chụp lại ảnh kỹ năng: `cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9998 -debug=true`
+rồi `node tools/browsertest/skillshots.mjs http://127.0.0.1:9998` (phím debug mới `U` = kéo
+người thật khác về cạnh mình, chỉ ở chế độ dev).
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở
   Linh Sơn (4,74 ms, máy bận), chạy lại đạt.
 - Lịch sử git còn tên/UUID người chơi + IP từ trước khi mở công khai (commit 0efc19c, 6cc900a,
-  cd777f8, 510ccd5, 87d7cd6) — viết lại lịch sử cần chủ dự án đồng ý.
-- `SECURITY.md` còn chỗ trống địa chỉ email liên hệ (chủ dự án điền).
+  cd777f8, 510ccd5, 87d7cd6). Đã sao lưu mirror (`~/backup/bladeascend-mirror-2026-11-02`),
+  danh sách tệp đã gửi chủ dự án — **chờ duyệt rồi mới chạy filter-repo + force push**.
+  Khôi phục nếu cần: `cd ~/backup/bladeascend-mirror-2026-11-02 && git push --mirror --force <url>`.
+- Kỹ năng: đàn em "chạy từ mép vào" và khung sạp "nhấp nháy trước khi bật" chỉ là lớp vẽ —
+  server vẫn đặt đàn em/sạp ngay lập tức (không đổi luật). Tiếng kỹ năng là tiếng tạm tổng hợp.
+- Icon trạng thái đang là vector; khi chạy job artgen `icon_status_*` thì ảnh thật tự thay.
 
 - Tick p95 S1: #26 = 4,01 ms lúc máy bận → **#27 máy rảnh = 1,38 ms** (đạt, B20 đóng). Telemetry
   `:9999` vẫn thấy Thiên Đình p95 tới 6,6 ms vào giờ máy build song song — theo dõi trên dashboard admin.

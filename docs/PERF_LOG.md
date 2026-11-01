@@ -110,6 +110,8 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 27 | 2026-11-01 | `87d7cd6` | Lượt cuối — đo lại S1 lúc máy rảnh (load 3,4) | S1 | 0.92 / **1.38** ✅ | 5.7 / – ✅ | 2.4 ✅ | – | – | – | – | – | Khu nặng nhất (Thiên Đình) p95 1.27 ms; 4 khu kia ≤ 0.39 ms. So #26 (4.01): chênh do máy bận, KHÔNG phải thoái lui | B20 đóng |
 | 27 | 2026-11-01 | `87d7cd6` | Lượt cuối — WebKit giả lập iPhone, `:9999`, 45 s | S9 | – | – | – | 43.2 / – | – | 0 | 113.1 | – | lỗi 0 · 201 texture · 4990 sprite. So #25 (43.6 / 110.3): giữ nguyên | – |
 | 28 | 2026-11-02 | `994e508`+ | v6.35 sàn bot theo khu — trước khi bật production (5 lần, máy đang bận, load ~8) | S13 | 1.99 / 3.55 ✅ (trung vị) | 4.9 / – ✅ | 2.8 ✅ | – | – | – | – | – | Khu tệ nhất mỗi lần: 3.51 · 3.75 · **4.74 ❌** (Linh Sơn, seed 3) · 3.70 (seed 3 chạy lại) · 3.60 — trung vị 3.70 | Thiên Đình p95 3.22–3.75 ms, biên ~7% so với 4 ms |
+| 29 | 2026-11-02 | `bb1cd96` | v6.36 lớp hiển thị kỹ năng + event StatusStart/End (3 lần seed 7, load ~6) | S1 | – (chỉ ghi p95 khu) | – | – | – | – | – | – | – | Thiên Đình p95 **1.43 · 1.31 · 1.29 ms** (trung vị 1.31) ✅; 4 khu kia ≤ 0.92 ms. So #27 (1.27): giữ nguyên | – |
+| 29 | 2026-11-02 | `bb1cd96` | v6.36 — WebKit giả lập iPhone, `:9999`, 45 s (load ~6–7) | S9 | – | – | – | 42.4 / – | – | 0 | **107.4** | – | lỗi 0 · 166 texture · 2146 sprite. So #27 (43.2 / 113.1 / 4990 sprite): không tăng | – |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -766,6 +768,19 @@ Lần trượt duy nhất là Linh Sơn Cốc ở seed 3, và **chính seed đó
 nhiễu máy, không phải khu nặng cố định. Khu nặng nhất ổn định là Thiên Đình (3.2–3.75 ms), biên
 chỉ ~7%. **Quyết định:** bật sàn mới trên production (4/5 lần đạt, lần trượt tái lập không
 được); admin hạ sàn từng khu ngay lập tức nếu dashboard tick theo khu đỏ. Nút thắt B21 bên dưới.
+
+### #29 — 02/11/2026 · v6.36 hiển thị kỹ năng
+
+Thay đổi có thể ảnh hưởng hiệu năng: server phát thêm event `StatusStart/StatusEnd` (chỉ khi
+trạng thái mới bật hoặc gia hạn ≥ 0,5 s); client thêm `StatusView` mỗi người (thoát sớm khi
+không có trạng thái), `SkillVfx` (trần 48 hiệu ứng, bỏ hiệu ứng trang trí ở mức Thấp), mũi tên mép.
+
+| Chỉ số | #27 | #29 | Ngưỡng |
+|---|---|---|---|
+| S1 p95 khu nặng nhất (Thiên Đình), trung vị 3 lần | 1.27 ms | 1.31 ms | < 4 ms |
+| S9 FPS / texMB / sprite | 43.2 / 113.1 / 4990 | 42.4 / 107.4 / 2146 | – / < 180 MB |
+
+Không có nút thắt mới. (Log S1 lần này chỉ giữ dòng p95 theo khu, không có tick TB phòng.)
 
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
