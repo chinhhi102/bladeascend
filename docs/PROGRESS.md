@@ -918,11 +918,20 @@ trang chủ **11 chân dung thật, 0 placeholder**; trong trận **0 placeholde
 404 đúng như phải thế. Header kiểm riêng: WebP có hash → `immutable`, font → `immutable` +
 gzip, `manifest.json` → `no-cache`.
 
-## Lỗi đã biết còn mở (thêm trong phiên 30/10 tối)
+## ~~Lỗi đã biết còn mở~~ ĐÃ SỬA (ghi 30/10 tối · đóng 1/11)
 
-Hai chỗ **art có trong repo mà game không bao giờ vẽ**. Cả hai có từ trước phiên này, tìm ra
-trong lúc chia nhóm tải (phải trả lời "tệp này của khu nào" mới lộ ra). **Chưa sửa** — nằm
-ngoài phần A, và sửa là đổi hình ảnh trong game nên cần anh xem trước.
+> **Cả hai lỗi dưới đây đã sửa xong.** Giữ lại phần mô tả vì nó giải thích vì sao
+> `BIOME_TILES` đánh khoá bằng tên biome chứ không bằng tên khu — người đọc sau mà không
+> biết chuyện này rất dễ "sửa lại cho dễ đọc" và làm hỏng lần nữa.
+>
+> - Nền 5 khu: `BIOME_TILES` nay đánh khoá `grass`/`dirt`/`concrete`/`snow`, khớp đúng
+>   `map.biome`. Xem `client/src/render/catalog.ts`.
+> - Trang trí: mapgen chỉ chọn decor có trong manifest, mỗi decor gắn tag khu.
+>
+> Câu hỏi tương ứng đã trả lời — xem `docs/QUESTIONS_DONE.md`.
+
+Hai chỗ **art có trong repo mà game không bao giờ vẽ**. Cả hai có từ trước phiên đó, tìm ra
+trong lúc chia nhóm tải (phải trả lời "tệp này của khu nào" mới lộ ra).
 
 1. **Nền 5 khu đều đang là cỏ.** `mapview.buildGround()` tra `BIOME_TILES[map.biome]`, nhưng
    `BIOME_TILES` đánh khoá bằng **tên khu** (`'Linh Sơn'`, `'Trúc Lâm'`, `'Phàm Trấn'`,
@@ -938,8 +947,9 @@ ngoài phần A, và sửa là đổi hình ảnh trong game nên cần anh xem 
    299 vật trang trí trong 5 bản đồ không hiện gì cả. `npm run check:assets` không bắt được
    vì nó chỉ đối chiếu vật cản, không đối chiếu decor.
 
-Hỏi anh (ghi cả vào `docs/QUESTIONS.md`): hai bộ tên decor này là **đổi mapgen cho khớp art
-đã có**, hay **vẽ thêm art theo tên mapgen đang dùng**?
+~~Hỏi anh: hai bộ tên decor này là đổi mapgen cho khớp art đã có, hay vẽ thêm art theo tên
+mapgen đang dùng?~~ → **Đã trả lời và đã sửa** (Q27, xem `QUESTIONS_DONE.md`): mapgen chỉ
+chọn decor có trong manifest.
 
 ## Phiên 31/10 — trả lời Q27 + trang chủ hiện ngay
 

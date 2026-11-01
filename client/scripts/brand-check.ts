@@ -30,14 +30,17 @@ const BANNED = [/Kiếm Xoay/u, /kiem[-_ ]?xoay/iu, /kiemxoaytutien/iu];
 
 // Miễn trừ, kèm LÝ DO. Mỗi dòng ở đây là một món nợ — không phải một chỗ trốn.
 //
-// Món nợ cũ đã trả: đường dẫn module Go (`kiemxoay/server`, 82 tệp import) — đổi ngay
-// trong lượt đổi tên này.
-const ALLOW: Array<{ path: string; why: string }> = [
-  {
-    path: 'deploy/staging.sh',
-    why: 'trỏ tới thư mục ~/kiemxoaytutien trên MÁY CHỦ staging. Đổi ở đây mà không đổi trên máy đó thì deploy ra một thư mục rỗng mới. Chủ dự án đổi tên thư mục trên máy chủ trước, rồi sửa dòng này.',
-  },
-];
+// Hai món nợ cũ, cả hai ĐÃ TRẢ:
+//
+//   - đường dẫn module Go (`kiemxoay/server`, 82 tệp import) — trả 31/10.
+//   - `deploy/staging.sh` trỏ `~/kiemxoaytutien` trên máy chủ staging — trả 1/11, sau khi
+//     chủ dự án đổi tên trên chính máy đó. Việc miễn trừ CẢ TỆP còn che thêm bốn tên cũ
+//     mà không ai nhắm tới: tệp Caddy `kiemtien-staging.caddy`, tên dự án compose
+//     `kiemtien`, container `kiemtien-web`, volume `kiemtien-data`. Đó là cái giá của
+//     miễn trừ theo tệp thay vì theo dòng — ghi lại ở đây phòng khi cần miễn trừ lần nữa.
+//
+// Danh sách rỗng là trạng thái ĐÚNG. Thêm vào đây thì phải kèm ngày và kế hoạch trả.
+const ALLOW: Array<{ path: string; why: string }> = [];
 
 const files: string[] = [];
 const walk = (p: string): void => {

@@ -46,7 +46,7 @@ fi
 
 restart_server() {
   local build="$1"
-  pkill -f 'kxserver' 2>/dev/null || true
+  pkill -f 'bladeascend' 2>/dev/null || true
   sleep 2
   # Mật khẩu quản trị đọc từ `docs/private/admin.env` (thư mục riêng của chủ dự án, đã
   # nằm trong .gitignore từ 22/10).
@@ -66,25 +66,25 @@ restart_server() {
     # "line 1: $2: unbound variable". Đã dính đúng vậy lúc 21:25.
     adminhash=$(grep -m1 '^ADMIN_PASSWORD_HASH=' "$adminenv" | cut -d= -f2-)
   fi
-  ( cd "$REPO/server" && setsid env ADMIN_PASSWORD_HASH="$adminhash" ./kxserver \
+  ( cd "$REPO/server" && setsid env ADMIN_PASSWORD_HASH="$adminhash" ./bladeascend \
       -build "$build" \
       -client "$DEPLOY/client" \
       -assets "$DEPLOY/assets" \
-      > data/kxserver.log 2>&1 < /dev/null & ) >/dev/null 2>&1 </dev/null
+      > data/bladeascend.log 2>&1 < /dev/null & ) >/dev/null 2>&1 </dev/null
   # Ba lần chuyển hướng trên subshell là CẦN, không thừa.
   #
   # Tiến trình server chạy nền kế thừa fd của subshell. Khi gọi deploy qua ống
   # (`tools/deploy.sh | grep ...`) thì fd đó LÀ cái ống, và server giữ đầu ghi của ống mở
   # suốt đời nó — `grep` ngồi chờ EOF không bao giờ tới, nên lệnh deploy "treo" dù đã xong
-  # từ lâu. Chuyển hướng ở chính `./kxserver` là chưa đủ: subshell vẫn cầm bản sao.
+  # từ lâu. Chuyển hướng ở chính `./bladeascend` là chưa đủ: subshell vẫn cầm bản sao.
   sleep 4
-  if ! grep -q "trang quản trị: BẬT" "$REPO/server/data/kxserver.log" 2>/dev/null; then
+  if ! grep -q "trang quản trị: BẬT" "$REPO/server/data/bladeascend.log" 2>/dev/null; then
     echo "   ⚠ trang quản trị TẮT — chưa có docs/private/admin.env." >&2
     echo "     Tạo bằng:  cd server && go run ./cmd/adminpass > ../docs/private/admin.env" >&2
   fi
   if ! ss -ltn 2>/dev/null | grep -q ':9999'; then
-    echo "LỖI: server không lên. Xem server/data/kxserver.log" >&2
-    tail -5 "$REPO/server/data/kxserver.log" >&2
+    echo "LỖI: server không lên. Xem server/data/bladeascend.log" >&2
+    tail -5 "$REPO/server/data/bladeascend.log" >&2
     return 1
   fi
 }
@@ -208,7 +208,7 @@ fi
 echo "   có telemetry ✓"
 
 echo "== 3/5 build server =="
-( cd server && go build -o kxserver ./cmd/server )
+( cd server && go build -o bladeascend ./cmd/server )
 
 echo "== 4/5 dựng thư mục deploy =="
 rm -rf "$STAGE"

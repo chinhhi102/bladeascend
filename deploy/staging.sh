@@ -15,18 +15,18 @@ cp -r client/dist "$OUT/client/dist"
 rsync -a --exclude='_raw' assets/ "$OUT/assets/"
 cp deploy/Dockerfile deploy/docker-compose.yml "$OUT/"
 
-rsync -az --delete -e "ssh -i $DEPLOY_KEY" "$OUT/" "$DEPLOY_HOST:kiemxoaytutien/"
-"${SSH[@]}" 'cd ~/kiemxoaytutien && docker compose up -d --build'
+rsync -az --delete -e "ssh -i $DEPLOY_KEY" "$OUT/" "$DEPLOY_HOST:bladeascend/"
+"${SSH[@]}" 'cd ~/bladeascend && docker compose up -d --build'
 
 # Caddy block: back up, install, validate the full config, reload — or roll back.
-scp -i "$DEPLOY_KEY" deploy/kiemtien-staging.caddy "$DEPLOY_HOST:/tmp/kiemtien-staging.caddy"
-"${SSH[@]}" 'set -e; D=/opt/astery/caddy/conf.d; F=$D/kiemtien-staging.caddy
-  [ -f $F ] && cp $F /tmp/kiemtien-staging.caddy.prev
-  cp /tmp/kiemtien-staging.caddy $F
-  if docker exec docker-caddy-1 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/tmp/kiemtien-caddy.log 2>&1; then
+scp -i "$DEPLOY_KEY" deploy/bladeascend-staging.caddy "$DEPLOY_HOST:/tmp/bladeascend-staging.caddy"
+"${SSH[@]}" 'set -e; D=/opt/astery/caddy/conf.d; F=$D/bladeascend-staging.caddy
+  [ -f $F ] && cp $F /tmp/bladeascend-staging.caddy.prev
+  cp /tmp/bladeascend-staging.caddy $F
+  if docker exec docker-caddy-1 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/tmp/bladeascend-caddy.log 2>&1; then
     docker exec docker-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
   else
-    if [ -f /tmp/kiemtien-staging.caddy.prev ]; then cp /tmp/kiemtien-staging.caddy.prev $F; else rm -f $F; fi
-    echo "caddy validate failed, rolled back (see /tmp/kiemtien-caddy.log)"; exit 1
+    if [ -f /tmp/bladeascend-staging.caddy.prev ]; then cp /tmp/bladeascend-staging.caddy.prev $F; else rm -f $F; fi
+    echo "caddy validate failed, rolled back (see /tmp/bladeascend-caddy.log)"; exit 1
   fi'
-echo "deployed: https://kiemtien.staging.maveragroups.com"
+echo "deployed: https://bladeascend.staging.maveragroups.com"

@@ -351,15 +351,70 @@ def share_card(w: int, h: int, name_vi: str, tag: str, foot: str) -> Image.Image
     return img.convert("RGB")
 
 
+# ── CỔNG DUYỆT cho ảnh chia sẻ ────────────────────────────────────────────────────────
+#
+# Ảnh chia sẻ là thứ người LẠ nhìn thấy đầu tiên, trước cả trang chủ, và mạng xã hội giữ
+# nó trong cache rất lâu — đẩy nhầm một bản chưa duyệt thì gỡ xuống không kịp. Nên bản
+# thiết kế mới KHÔNG tự động thành bản phát hành.
+#
+#   False → ghi ra `docs/brand_preview/` để chủ dự án xem; `client/public/brand/` giữ
+#           nguyên bản đang chạy.
+#   True  → ghi thẳng vào `client/public/brand/` (cả .jpg lẫn .png).
+#
+# Chủ dự án duyệt xong thì đổi một dòng này, chạy lại tool, rồi deploy.
+SHARE_CARD_APPROVED = False
+
+PREVIEW = ROOT / "docs/brand_preview"
+
+# JPEG chất lượng 85 cho `og:image`.
+#
+# Facebook, Zalo, Twitter/X và Discord đều nhận JPEG. Ảnh này là một cảnh vẽ nhiều màu —
+# PNG lưu nó mất hơn 1 MB, JPEG 85 còn dưới 300 KB mà mắt không phân biệt được ở cỡ hiển
+# thị. (Lý do cũ "Twitter không nhận WebP" vẫn đúng và vẫn là lý do KHÔNG dùng WebP ở đây;
+# nó không phải lý do để dùng PNG.)
+JPEG_QUALITY = 85
+JPEG_MAX_KB = 300
+
+
+def save_jpeg(img: Image.Image, path: pathlib.Path) -> int:
+    """Lưu JPEG và hạ chất lượng dần cho tới khi dưới ngân sách. Trả về KB."""
+    q = JPEG_QUALITY
+    while True:
+        img.convert("RGB").save(path, "JPEG", quality=q, optimize=True, progressive=True)
+        kb = path.stat().st_size // 1024
+        if kb <= JPEG_MAX_KB or q <= 60:
+            return kb
+        q -= 5
+
+
 def main() -> None:
     UI.mkdir(parents=True, exist_ok=True)
     name_vi, tag, name, domain = BRAND["name_vi"], BRAND["tagline_vi"], BRAND["name"], BRAND["domain"]
+    card = share_card(1200, 630, name_vi, tag, "Chơi miễn phí trên trình duyệt")
     out = {
         "logo_vi.png": wordmark(1024, 384, None, name_vi, tag),
         "icon_192.png": icon(192),
         "icon_512.png": icon(512),
-        "share_card.png": share_card(1200, 630, name_vi, tag, "Chơi miễn phí trên trình duyệt"),
     }
+    # `og:image` LUÔN trỏ `share_card.jpg`, duyệt hay chưa cũng vậy.
+    #
+    # Nếu để thẻ OG trỏ `.png` lúc chưa duyệt rồi đổi sang `.jpg` lúc duyệt, thì "duyệt
+    # ảnh" hoá ra là sửa HAI chỗ: cờ ở đây và thẻ trong `index.html`. Chỗ thứ hai là chỗ
+    # bị quên — dự án này đã trả giá đúng kiểu đó ở lần đổi tên (chín chỗ, sáu tệp).
+    # Nay địa chỉ cố định, cờ dưới đây chỉ quyết định ẢNH NÀO nằm ở địa chỉ đó.
+    if SHARE_CARD_APPROVED:
+        out["share_card.png"] = card
+        live = card
+    else:
+        PREVIEW.mkdir(parents=True, exist_ok=True)
+        card.save(PREVIEW / "share_card.png")
+        pkb = save_jpeg(card, PREVIEW / "share_card.jpg")
+        print(f"  [XEM TRƯỚC] docs/brand_preview/share_card.jpg  {pkb} KB  — CHƯA phát hành")
+        print("  → duyệt xong: đặt SHARE_CARD_APPROVED = True rồi chạy lại.")
+        # Bản đang phát hành giữ nguyên hình, chỉ đổi sang JPEG cho nhẹ.
+        live = Image.open(UI / "share_card.png").convert("RGB")
+    kb = save_jpeg(live, UI / "share_card.jpg")
+    print(f"  share_card.jpg     1200×630  {kb} KB   ← og:image trỏ tệp này")
     for fn, img in out.items():
         p = UI / fn
         img.save(p)

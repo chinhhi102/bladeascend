@@ -1,13 +1,13 @@
 # Staging: the shared edge Caddy (docker_default network) proxies
-# kiemtien.staging.maveragroups.com to this container; no host port is published.
-name: kiemtien
+# bladeascend.staging.maveragroups.com to this container; no host port is published.
+name: bladeascend
 services:
   web:
     build: .
-    container_name: kiemtien-web
+    container_name: bladeascend-web
     restart: unless-stopped
     volumes:
-      - kiemtien-data:/data
+      - bladeascend-data:/data
     networks:
       - caddy
 networks:
@@ -15,4 +15,4 @@ networks:
     name: docker_default
     external: true
 volumes:
-  kiemtien-data:
+  bladeascend-data:

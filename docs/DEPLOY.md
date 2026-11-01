@@ -1,6 +1,6 @@
 # Đưa game lên mạng (VPS + HTTPS bằng Caddy)
 
-Mục tiêu: bạn bè mở `https://kiemxoay.ten-mien-cua-ban.com` là chơi được.
+Mục tiêu: bạn bè mở `https://bladeascend.ten-mien-cua-ban.com` là chơi được.
 Tổng chi phí: VPS ~5 USD/tháng + tên miền ~10 USD/năm (hoặc subdomain miễn phí, xem bước 2).
 
 ## 0. Chơi thử trong mạng nhà (LAN) trước — không tốn tiền
@@ -18,36 +18,36 @@ Tổng chi phí: VPS ~5 USD/tháng + tên miền ~10 USD/năm (hoặc subdomain 
 
 ## 2. Trỏ tên miền về VPS
 - Mua tên miền (Namecheap, Cloudflare, Mắt Bão, PA Việt Nam…) → vào phần **DNS** → thêm bản ghi:
-  - Loại `A`, Tên `kiemxoay` (hoặc `@`), Giá trị = IP của VPS.
+  - Loại `A`, Tên `bladeascend` (hoặc `@`), Giá trị = IP của VPS.
 - Không muốn mua tên miền: dùng dịch vụ miễn phí như duckdns.org (tạo `tenban.duckdns.org` trỏ về IP).
-- Đợi 5–30 phút cho DNS cập nhật. Kiểm tra: `ping kiemxoay.ten-mien-cua-ban.com` ra đúng IP là được.
+- Đợi 5–30 phút cho DNS cập nhật. Kiểm tra: `ping bladeascend.ten-mien-cua-ban.com` ra đúng IP là được.
 
 ## 3. Build game trên máy của bạn
 Trong thư mục dự án:
 ```bash
 cd client && npm run build && cd ..
-cd server && GOOS=linux GOARCH=amd64 go build -o kiemxoay ./cmd/server && cd ..
+cd server && GOOS=linux GOARCH=amd64 go build -o bladeascend ./cmd/server && cd ..
 ```
 Windows PowerShell thay dòng thứ hai bằng:
 ```powershell
-cd server; $env:GOOS="linux"; $env:GOARCH="amd64"; go build -o kiemxoay ./cmd/server; Remove-Item Env:GOOS, Env:GOARCH; cd ..
+cd server; $env:GOOS="linux"; $env:GOARCH="amd64"; go build -o bladeascend ./cmd/server; Remove-Item Env:GOOS, Env:GOARCH; cd ..
 ```
 
 ## 4. Chép lên VPS
 ```bash
-ssh root@203.0.113.10 "mkdir -p /opt/kiemxoay/server/data /opt/kiemxoay/client"
-scp server/kiemxoay root@203.0.113.10:/opt/kiemxoay/server/
-scp -r config maps assets root@203.0.113.10:/opt/kiemxoay/
-scp -r client/dist root@203.0.113.10:/opt/kiemxoay/client/
+ssh root@203.0.113.10 "mkdir -p /opt/bladeascend/server/data /opt/bladeascend/client"
+scp server/bladeascend root@203.0.113.10:/opt/bladeascend/server/
+scp -r config maps assets root@203.0.113.10:/opt/bladeascend/
+scp -r client/dist root@203.0.113.10:/opt/bladeascend/client/
 ```
-(Lần sau cập nhật game: build lại rồi chạy lại 4 lệnh này, sau đó `systemctl restart kiemxoay`.)
+(Lần sau cập nhật game: build lại rồi chạy lại 4 lệnh này, sau đó `systemctl restart bladeascend`.)
 
 ## 5. Cài Caddy (tự lấy chứng chỉ HTTPS miễn phí)
 SSH vào VPS: `ssh root@203.0.113.10` rồi chạy:
 ```bash
 apt update && apt install -y caddy
 cat > /etc/caddy/Caddyfile <<'EOF'
-kiemxoay.ten-mien-cua-ban.com {
+bladeascend.ten-mien-cua-ban.com {
     encode gzip
     reverse_proxy 127.0.0.1:8080
 }
@@ -58,20 +58,20 @@ Caddy tự chuyển WebSocket (`/ws`) và tự gia hạn HTTPS. Nhớ thay tên 
 
 ## 6. Chạy game như một dịch vụ (tự khởi động lại khi VPS reboot)
 ```bash
-useradd --system --home /opt/kiemxoay kiemxoay || true
-chown -R kiemxoay:kiemxoay /opt/kiemxoay
-cat > /etc/systemd/system/kiemxoay.service <<'EOF'
+useradd --system --home /opt/bladeascend bladeascend || true
+chown -R bladeascend:bladeascend /opt/bladeascend
+cat > /etc/systemd/system/bladeascend.service <<'EOF'
 [Unit]
 Description=Kiem Xoay Tu Tien game server
 After=network.target
 
 [Service]
-User=kiemxoay
-WorkingDirectory=/opt/kiemxoay/server
-ExecStart=/opt/kiemxoay/server/kiemxoay -addr 127.0.0.1:8080 -debug=false \
-  -config /opt/kiemxoay/config/game.json -maps /opt/kiemxoay/maps \
-  -assets /opt/kiemxoay/assets -client /opt/kiemxoay/client/dist \
-  -db /opt/kiemxoay/server/data/leaderboard.db
+User=bladeascend
+WorkingDirectory=/opt/bladeascend/server
+ExecStart=/opt/bladeascend/server/bladeascend -addr 127.0.0.1:8080 -debug=false \
+  -config /opt/bladeascend/config/game.json -maps /opt/bladeascend/maps \
+  -assets /opt/bladeascend/assets -client /opt/bladeascend/client/dist \
+  -db /opt/bladeascend/server/data/leaderboard.db
 Restart=always
 RestartSec=2
 
@@ -79,8 +79,8 @@ RestartSec=2
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now kiemxoay
-systemctl status kiemxoay --no-pager
+systemctl enable --now bladeascend
+systemctl status bladeascend --no-pager
 ```
 `-debug=false` **tắt phím test** (E/R/K/X) để người chơi không gian lận.
 
@@ -91,18 +91,18 @@ ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw --force enable
 Không mở cổng 8080 — chỉ Caddy được nói chuyện với game.
 
 ## 8. Kiểm tra
-- Mở `https://kiemxoay.ten-mien-cua-ban.com` → thấy trang chủ, ổ khóa HTTPS xanh.
-- Xem log game: `journalctl -u kiemxoay -f` · log Caddy: `journalctl -u caddy -f`.
-- Xem có bao nhiêu phòng: `https://kiemxoay.ten-mien-cua-ban.com/api/rooms`.
+- Mở `https://bladeascend.ten-mien-cua-ban.com` → thấy trang chủ, ổ khóa HTTPS xanh.
+- Xem log game: `journalctl -u bladeascend -f` · log Caddy: `journalctl -u caddy -f`.
+- Xem có bao nhiêu phòng: `https://bladeascend.ten-mien-cua-ban.com/api/rooms`.
 
 ## 9. Sao lưu bảng xếp hạng
-Bảng xếp hạng nằm trong 1 file: `/opt/kiemxoay/server/data/leaderboard.db`. Thỉnh thoảng tải về:
-`scp root@203.0.113.10:/opt/kiemxoay/server/data/leaderboard.db ./backup-leaderboard.db`
+Bảng xếp hạng nằm trong 1 file: `/opt/bladeascend/server/data/leaderboard.db`. Thỉnh thoảng tải về:
+`scp root@203.0.113.10:/opt/bladeascend/server/data/leaderboard.db ./backup-leaderboard.db`
 
 ## Lỗi thường gặp
 | Triệu chứng | Cách sửa |
 |---|---|
 | Trình duyệt báo không an toàn / không vào được | DNS chưa trỏ đúng IP, hoặc chưa mở cổng 80/443. Xem `journalctl -u caddy` |
-| Vào được trang nhưng kẹt "Đang kết nối máy chủ" | Game server chưa chạy: `systemctl status kiemxoay` |
+| Vào được trang nhưng kẹt "Đang kết nối máy chủ" | Game server chưa chạy: `systemctl status bladeascend` |
 | "Client chưa được build" | Chưa chép `client/dist` (bước 3–4) |
 | Lag khi đông người | Nâng VPS lên 2 vCPU; chọn vị trí gần người chơi |

@@ -1,10 +1,10 @@
-# Kiếm Xoay Tu Tiên staging: site block for the shared edge Caddy on the staging host
+# BladeAscend staging: site block for the shared edge Caddy on the staging host
 # (/opt/astery/caddy/conf.d/). The edge is shared with other tenants, so deploy/staging.sh
 # validates the whole config before reloading.
 #
 # DNS: covered by the *.staging.maveragroups.com wildcard.
 
-kiemtien.staging.maveragroups.com {
+bladeascend.staging.maveragroups.com {
 	encode zstd gzip
 	header {
 		Strict-Transport-Security "max-age=31536000"
@@ -15,5 +15,5 @@ kiemtien.staging.maveragroups.com {
 		-Server
 	}
 	# Caddy proxies the /ws websocket upgrade as-is.
-	reverse_proxy kiemtien-web:8080
+	reverse_proxy bladeascend-web:8080
 }
