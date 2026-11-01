@@ -28,7 +28,7 @@ node tools/browsertest/review.mjs <url> docs/review/<mục> <tên> [--full]   # 
 | Logo thư pháp | 🟡 chờ duyệt | ứng viên `docs/review/08-logo/` — nghi sai dấu "Đạo", "Dừng"; trang vẫn dùng logo chữ |
 | Ảnh chia sẻ OG | 🟡 chờ duyệt | `docs/review/og/` (182 KB); og:image CHƯA đổi |
 | Góp ý 3 ảnh | ✅ | nén WebP/JPEG ≤ 300 KB, gỡ EXIF/GPS phía server, Playwright 4 thiết bị |
-| Admin React + antd | ✅ chưa xem trên staging | cần mật khẩu staging — `docs/ADMIN_STAGING.md` |
+| Admin React + antd | ✅ | đã chạy trên staging, ảnh 10 trang `docs/review/11-admin/` |
 | Đa ngôn ngữ | ✅ bản nháp | vi + en/pt-BR/es/id/th (`_draft`, cần người bản ngữ duyệt — `client/src/i18n/NOTES.md`) |
 | SEO | ✅ | `/`, `/en/`, `/pt/`, `/es/`, `/id/`, `/th/`, hreflang, `sitemap.xml` |
 | Hiệu năng | ✅ server/mạng · 🔴 thiết bị thật | `docs/reports/2026-11-01-hieu-nang/`; FPS/GPU iPhone thật chưa đo |
@@ -44,8 +44,11 @@ D13–D16 i18n, bản dịch nháp, chọn ngôn ngữ + font Thái, trang SEO �
 
 ## Lỗi / hạn chế đã biết
 
-- **Tick p95 S1 = 4,01 ms** ở lần đo #26 (sát trần 4 ms) — máy đang chạy 2 agent song song lúc đo;
-  #22 cùng máy là 2,37 ms. Cần đo lại khi máy rảnh trước khi kết luận là thoái lui.
+- Tick p95 S1: #26 = 4,01 ms lúc máy bận → **#27 máy rảnh = 1,38 ms** (đạt, B20 đóng). Telemetry
+  `:9999` vẫn thấy Thiên Đình p95 tới 6,6 ms vào giờ máy build song song — theo dõi trên dashboard admin.
+- Trang `/en/`, `/th/`…: trình duyệt máy tự chọn ngôn ngữ theo `navigator.languages` — smoke test
+  Playwright (tiếng Anh) phải thêm `?lang=vi`.
+- Thẻ hồi chiêu tiếng Bồ "Recarga 30s · 2 cargas" dài nhất — vừa thẻ trên ảnh, cần xem máy thật.
 - FPS điện thoại / bộ nhớ GPU iPhone thật **chưa đo** (B13b, B17) — cần máy thật.
 - Telemetry staging ghi vào ổ container, mất mỗi lần deploy (cần `-telemetry-db /data/...`, hỏi trước).
 - Lớp mặt nhân vật chưa làm (Q42). 1 anim lặp còn vượt ngưỡng giật 45 (`docs/JITTER_REPORT.md`).
@@ -57,6 +60,6 @@ D13–D16 i18n, bản dịch nháp, chọn ngôn ngữ + font Thái, trang SEO �
 ## Việc tiếp theo
 
 1. Anh duyệt ảnh trong `docs/review/` (trang chủ, logo, OG, góp ý) và trả lời Q37–Q42.
-2. Đưa mật khẩu admin lên staging (`docs/ADMIN_STAGING.md`) rồi xem trang admin mới.
+2. Xem ảnh trang admin mới trên staging (`docs/review/11-admin/`) rồi tự đăng nhập thử.
 3. Tìm người bản ngữ duyệt 5 bản dịch.
 4. Đo FPS/GPU trên điện thoại thật.
