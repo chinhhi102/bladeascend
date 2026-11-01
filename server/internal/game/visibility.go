@@ -41,14 +41,26 @@ func (g *Game) InViewRadius(viewer *Player, pos Vec, r float64) bool {
 // Ẩn Thân no longer hides anyone from the packet (spec §6.2 from v3.3): the target is still
 // sent, flagged, and drawn at visible_alpha. Use StealthFaded for that.
 func (g *Game) CanSee(viewer, target *Player) bool {
+	// Tính cả tầm kiếm: vòng kiếm của họ chạm tới màn hình là phải thấy người đó.
+	return g.Perceivable(viewer, target) &&
+		(viewer == target || g.InViewRadius(viewer, target.Pos, target.Geom.Reach))
+}
+
+// Perceivable là CanSee BỎ phép thử khung nhìn: người này có bị che (bụi rậm, đang qua cổng,
+// đã chết quá lâu) với người xem hay không, bất kể đứng xa gần.
+//
+// Tách ra cho vùng quan tâm có trễ (NETCODE_SPEC §4.4): server phải gửi tiếp trạng thái của
+// người vừa bước ra khỏi mép màn hình trong suốt lề ra + thời gian chờ, chứ không cắt đúng ở
+// mép — cắt ở mép là nguồn của "respawn trong 2 giây" (đo 1/11). Nhưng người ĐANG ẨN thì
+// vẫn không bao giờ được gửi, nên phép thử che khuất phải đứng riêng.
+func (g *Game) Perceivable(viewer, target *Player) bool {
 	if target.Dead && g.Time-target.DiedAt > g.Cfg.Player.DeathAnimSecs {
 		return false // corpses stay visible only while the death animation plays
 	}
 	if viewer == target {
 		return true
 	}
-	// Tính cả tầm kiếm: vòng kiếm của họ chạm tới màn hình là phải thấy người đó.
-	if target.Hidden(g.Time) || !g.InViewRadius(viewer, target.Pos, target.Geom.Reach) {
+	if target.Hidden(g.Time) {
 		return false
 	}
 	d := viewer.Pos.Dist(target.Pos)

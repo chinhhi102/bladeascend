@@ -312,3 +312,86 @@ func TestSnapshotSendsStealthFlaggedWithoutName(t *testing.T) {
 		t.Fatalf("Ẩn Thân mà vẫn lộ tên/danh hiệu: %q, title %d", got.Name, got.Title)
 	}
 }
+
+// Vùng quan tâm có trễ phải áp vào cả TRẠNG THÁI gửi đi, không chỉ `Despawn` (NETCODE_SPEC
+// §4.4). Đo 1/11: server cắt người ngay ở mép khung nhìn trong khi bộ theo dõi vẫn coi họ là
+// "đang giữ"; keyframe 2 giây sau client xoá họ, rồi họ bước vào lại = respawn (26/31 lần).
+func TestSnapshotKeepsSendingTrackedPlayerJustOutsideView(t *testing.T) {
+	m, _, _ := testManager(t)
+	cs := joinN(m, 2)
+	r := m.AllRooms()[0]
+	r.Step(1.0 / 30)
+	z := r.Zone(0)
+	viewer, other := z.G.Players[cs[0].PlayerID], z.G.Players[cs[1].PlayerID]
+	viewer.Pos, other.Pos = z.G.Vec(3000, 3000), z.G.Vec(3200, 3000)
+	has := func(s netproto.Snapshot) bool {
+		for _, p := range s.Players {
+			if p.ID == other.ID {
+				return true
+			}
+		}
+		return false
+	}
+	// Tick chẵn để không rơi vào nhịp 10 Hz bỏ người ở xa.
+	z.tick = 0
+	if !has(r.snapshotFor(z, cs[0], viewer, nil)) {
+		t.Fatal("thiết lập sai: người đứng cạnh phải có trong snapshot")
+	}
+	hw, _ := z.G.ViewHalfExtents(viewer)
+	// Ra khỏi khung nhìn (cả vòng kiếm) nhưng còn trong lề ra 900.
+	other.Pos = z.G.Vec(3000+hw+z.G.Geom(other).Reach+300, 3000)
+	if z.G.CanSee(viewer, other) {
+		t.Fatal("thiết lập sai: người thử phải ra ngoài khung nhìn")
+	}
+	if !has(r.snapshotFor(z, cs[0], viewer, nil)) {
+		t.Fatal("ra mép nhưng bộ theo dõi còn giữ mà KHÔNG gửi nữa: đây là nguồn respawn 2 giây")
+	}
+	// Trốn vào bụi thì dù còn trong hạn chờ cũng KHÔNG được gửi vị trí.
+	other.Bush, other.RevealedUntil = 0, 0
+	if has(r.snapshotFor(z, cs[0], viewer, nil)) {
+		t.Fatal("người trốn trong bụi vẫn bị gửi vị trí xuống")
+	}
+}
+
+// Quái cũng phải có trễ vào/ra (NETCODE_SPEC §4.4). Đo 1/11: 28/30 lần "respawn trong 2
+// giây" là quái lang thang qua lại mép màn hình.
+func TestSnapshotMonsterHysteresis(t *testing.T) {
+	m, _, _ := testManager(t)
+	cs := joinN(m, 1)
+	r := m.AllRooms()[0]
+	r.Step(1.0 / 30)
+	z := r.Zone(0)
+	viewer := z.G.Players[cs[0].PlayerID]
+	viewer.Pos = z.G.Vec(3000, 3000)
+	for id := range z.G.Monsters {
+		delete(z.G.Monsters, id) // chỉ giữ đúng con quái của bài thử
+	}
+	q := &game.Monster{ID: 999999, Kind: "slime", R: 20, HP: 5, MaxHP: 5, Pos: z.G.Vec(3100, 3000)}
+	z.G.Monsters[q.ID] = q
+	find := func() *netproto.MonsterState {
+		z.tick = 0 // tick chẵn: không rơi vào nhịp 10 Hz bỏ quái ở xa
+		s := r.snapshotFor(z, cs[0], viewer, nil)
+		for i := range s.Monsters {
+			if s.Monsters[i].ID == q.ID {
+				return &s.Monsters[i]
+			}
+		}
+		return nil
+	}
+	if got := find(); got == nil || got.Kind == "" {
+		t.Fatal("thiết lập sai: quái trong khung nhìn phải được gửi kèm loại")
+	}
+	hw, _ := z.G.ViewHalfExtents(viewer)
+	q.Pos = z.G.Vec(3000+hw+400, 3000) // ngoài khung, trong lề ra 900
+	if find() == nil {
+		t.Fatal("quái vừa ra mép mà thôi gửi ngay: client xoá sau 2 giây rồi hiện lại")
+	}
+	q.Pos = z.G.Vec(3000+hw+2000, 3000) // ra hẳn ngoài lề ra
+	if find() != nil {
+		t.Fatal("quái ra ngoài lề ra vẫn còn gửi: phí băng thông")
+	}
+	q.Pos = z.G.Vec(3100, 3000) // quay lại: client đã xoá nó, phải gửi lại đủ loại
+	if got := find(); got == nil || got.Kind == "" {
+		t.Fatal("quái quay lại sau khi đã quên mà không kèm loại: client không biết vẽ con gì")
+	}
+}

@@ -87,7 +87,8 @@ func (r *Room) snapshotFor(z *Zone, c *Client, viewer *game.Player, events []gam
 	// Ứng viên cho bộ theo dõi vòng đời (NETCODE_SPEC §4.3, §4.4) — xem `aoi.go`.
 	hw, hh := g.ViewHalfExtents(viewer)
 	cands := make([]entityIn, 0, len(g.Players))
-	for _, p := range g.PlayerList() {
+	players := g.PlayerList()
+	for _, p := range players {
 		// Ứng viên gồm MỌI người còn trong khu, kể cả người đang ngoài tầm nhìn.
 		//
 		// Bản đầu tôi lọc bằng `CanSee` trước rồi mới đưa vào đây, và nó làm respawn TỆ ĐI
@@ -98,32 +99,35 @@ func (r *Room) snapshotFor(z *Zone, c *Client, viewer *game.Player, events []gam
 		// Ẩn (bụi rậm, Ẩn Thân, đang qua cổng) thì cho khoảng cách VÔ CÙNG: vẫn đi qua hạn
 		// trễ như người đi xa, không bị xoá đột ngột.
 		dist := math.Inf(1)
-		if g.CanSee(viewer, p) {
+		if g.Perceivable(viewer, p) {
 			dist = chebyshevOutside(p.Pos.X-viewer.Pos.X, p.Pos.Y-viewer.Pos.Y, hw, hh)
 		}
 		cands = append(cands, entityIn{ID: p.ID, Dist: dist})
-		if !g.CanSee(viewer, p) {
+	}
+	// `Despawn` TƯỜNG MINH (§4.3): nói thẳng ai đã rời đi, thay vì để client đoán bằng cách
+	// đợi 2 giây im lặng.
+	for _, ev := range c.aoi.Step(g.Time, cands) {
+		if ev.Kind == LifeDespawn {
+			s.Despawn = append(s.Despawn, ev.ID)
+		}
+	}
+	for _, p := range players {
+		visible := g.CanSee(viewer, p)
+		if visible {
+			seen[p.ID] = true
+		}
+		// Gửi cho MỌI người bộ theo dõi còn giữ (lề ra 900 + chờ 2 s), không chỉ người trong
+		// khung nhìn — xem `aoiTracker.Tracks`. Người đang ẩn thì `Perceivable` sai, khoảng
+		// cách là vô cùng, nên dù còn trong hạn chờ cũng KHÔNG gửi vị trí của họ.
+		if !visible && !(c.aoi.Tracks(p.ID) && g.Perceivable(viewer, p)) {
 			continue
 		}
-		seen[p.ID] = true
 		known := c.knownPlayers[p.ID] && !asked[p.ID]
 		if known && slow && p.ID != viewer.ID && p.Pos.Dist(viewer.Pos) > half {
 			continue
 		}
 		s.Players = append(s.Players, playerState(g, viewer, p, resendNames || !known))
 		c.knownPlayers[p.ID] = true
-	}
-	// `Despawn` TƯỜNG MINH (§4.3): nói thẳng ai đã rời đi, thay vì để client đoán bằng cách
-	// đợi 2 giây im lặng. Đoán là cách duy nhất client có ở bước 2b, và nó không bao giờ
-	// phân biệt được "server bỏ qua ở tick lẻ" với "người đó đi thật" — đó là phần respawn
-	// còn sót (2/16 lượt có 1).
-	//
-	// Chỉ lấy `Despawn` từ bộ theo dõi; `Spawn`/`Update` vẫn đi bằng đường v1 cho tới khi
-	// bật hẳn Protocol v2. Làm từng bước thế này thì đo được tác dụng của riêng `Despawn`.
-	for _, ev := range c.aoi.Step(g.Time, cands) {
-		if ev.Kind == LifeDespawn {
-			s.Despawn = append(s.Despawn, ev.ID)
-		}
 	}
 	for id := range c.knownPlayers {
 		if _, alive := g.Players[id]; !alive {
@@ -133,7 +137,16 @@ func (r *Room) snapshotFor(z *Zone, c *Client, viewer *game.Player, events []gam
 	// Entity client hỏi mà KHÔNG còn trong tầm nhìn: bỏ qua trong im lặng. Hỏi về một người
 	// đã đi mất là chuyện bình thường (gói `dreq` và gói `Despawn` chạy ngược chiều nhau).
 	for _, m := range g.Monsters {
-		if !g.InView(viewer, m.Pos) {
+		// Trễ vào/ra cho quái, như người (NETCODE_SPEC §4.4): VÀO khi lọt khung nhìn, RA khi
+		// đã cách mép quá lề ra 900. Bản cũ cắt đúng ở mép: quái lang thang qua lại mép màn
+		// hình bị client xoá sau 2 giây vắng mặt rồi hiện lại — đo 1/11: 28/30 lần "respawn
+		// trong 2 giây" là quái. Ra khỏi lề ra thì quên luôn, để lần sau gặp lại được gửi đủ
+		// loại + máu tối đa như lần đầu (client đã xoá nó rồi, không còn nhớ loại).
+		_, tracked := c.knownMonsters[m.ID]
+		if !g.InView(viewer, m.Pos) && !(tracked && g.InViewRadius(viewer, m.Pos, aoiExitMargin)) {
+			if tracked {
+				delete(c.knownMonsters, m.ID)
+			}
 			continue
 		}
 		if slow && m.Pos.Dist(viewer.Pos) > half {

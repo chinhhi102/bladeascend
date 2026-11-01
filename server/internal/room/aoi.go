@@ -115,6 +115,17 @@ type aoiTracker struct {
 
 func newAOITracker() *aoiTracker { return &aoiTracker{seen: map[uint32]*tracked{}} }
 
+// Tracks: client này còn đang giữ entity `id` không — tức là đã `Spawn` và chưa `Despawn`.
+//
+// Snapshot phải gửi trạng thái cho ĐÚNG tập này, không phải cho tập "đang trong khung nhìn".
+// Gửi theo khung nhìn thì người vừa bước ra mép bị cắt ngay, keyframe 2 giây sau xoá họ khỏi
+// bộ giải mã của client, và lúc họ bước vào lại là một lần respawn — dù server vẫn coi họ
+// là "đang theo dõi" và chưa hề gửi `Despawn`.
+func (t *aoiTracker) Tracks(id uint32) bool {
+	_, ok := t.seen[id]
+	return ok
+}
+
 // entityIn mô tả một entity ứng viên và khoảng cách của nó tới người xem.
 type entityIn struct {
 	ID   uint32

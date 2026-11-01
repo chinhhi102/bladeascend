@@ -95,7 +95,7 @@ export class ClientWorld {
    */
   readonly whyGone = new Map<number, string>();
   /** respawnBy: đếm nhấp nháy theo nguyên nhân, cho bài đo đọc. */
-  readonly respawnBy = { ds: 0, hethan: 0 };
+  readonly respawnBy = { ds: 0, hethan: 0, quai: 0 };
   /** despawnTold: số lần server báo `Despawn` (§4.3). */
   despawnTold = 0;
   /**
@@ -279,6 +279,7 @@ export class ClientWorld {
             this.respawn2s++;
             const why = this.whyGone.get(id) ?? 'hethan';
             if (why === 'ds') { this.respawnBy.ds++; } else { this.respawnBy.hethan++; }
+            if (m === (this.monsters as unknown)) { this.respawnBy.quai++; }
           }
           this.deletedAt.delete(id);
         }

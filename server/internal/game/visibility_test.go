@@ -25,3 +25,25 @@ func TestPlayerVisibleWhenOnlyTheirRingReachesTheView(t *testing.T) {
 		t.Fatal("ra ngoài hẳn tầm kiếm rồi vẫn còn gửi: phí băng thông")
 	}
 }
+
+// Perceivable là CanSee bỏ phép thử khung nhìn (NETCODE_SPEC §4.4): đứng xa vẫn "cảm nhận
+// được" nếu không bị che, còn trốn trong bụi thì xa bao nhiêu cũng không.
+func TestPerceivableIgnoresViewButKeepsBushHiding(t *testing.T) {
+	g := quietGame(t, nil)
+	viewer := g.AddPlayer(SpawnOptions{Name: "V", Level: 0, Swords: 1})
+	other := g.AddPlayer(SpawnOptions{Name: "O", Level: 0, Swords: 1})
+	place(g, viewer, Vec{X: 6000, Y: 6000}, 0)
+	hw, _ := g.ViewHalfExtents(viewer)
+	place(g, other, Vec{X: 6000 + hw + 600, Y: 6000}, 0)
+	if g.CanSee(viewer, other) {
+		t.Fatal("thiết lập sai: người thử phải nằm NGOÀI khung nhìn")
+	}
+	if !g.Perceivable(viewer, other) {
+		t.Fatal("ngoài khung nhìn nhưng không bị che thì Perceivable phải đúng")
+	}
+	other.Bush = 0
+	other.RevealedUntil = 0
+	if g.Perceivable(viewer, other) {
+		t.Fatal("trốn trong bụi ở xa mà Perceivable vẫn đúng: server sẽ lộ vị trí")
+	}
+}
