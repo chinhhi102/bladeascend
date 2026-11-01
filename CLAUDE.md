@@ -58,6 +58,9 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
     kỹ năng…) — cập nhật `docs/PERF_LOG.md` (bảng §3, chi tiết §5, nút thắt §6) và
     `docs/perf_log.csv`, theo đúng kịch bản chuẩn S1–S5. **Đo trước rồi mới sửa**; nút thắt
     phải có số đo làm bằng chứng, không ghi phỏng đoán. Chỉ so các lần đo CÙNG kịch bản.
+    Xong lượt đo thì sinh báo cáo: `cd client && npm run perf:report` → `docs/reports/<ngày>-hieu-nang/`
+    (biểu đồ PNG + README, tự đọc `docs/perf_log.csv`). Đây là báo cáo chuẩn; bản làm tay
+    01/11 (`docs/_raw/README.md`) chỉ để đối chiếu.
 13. **Không bao giờ xoá art đã sinh** (tài nguyên trả tiền). Art không dùng nữa → chuyển vào
     `assets/library/<nhóm>/` (giữ nguyên tên + ghi lý do, ngày, job/prompt gốc trong
     `assets/library/INDEX.md`). `assets/library/` không bao giờ được build vào `assets/dist`,

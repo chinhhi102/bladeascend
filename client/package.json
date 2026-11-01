@@ -20,7 +20,8 @@
     "check:dead": "node --no-warnings --experimental-strip-types scripts/assets-dead.ts",
     "check:brand": "node --no-warnings --experimental-strip-types scripts/brand-check.ts",
     "check:decode": "node --no-warnings --experimental-strip-types scripts/decode-fuzz.ts",
-    "check:quality": "node --no-warnings --experimental-strip-types scripts/quality-check.ts"
+    "check:quality": "node --no-warnings --experimental-strip-types scripts/quality-check.ts",
+    "perf:report": "python3 ../tools/perf-report/report.py"
   },
   "dependencies": {
     "@msgpack/msgpack": "3.1.3",

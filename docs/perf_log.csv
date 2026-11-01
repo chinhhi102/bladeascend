@@ -49,3 +49,5 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 25,2026-11-01,5447e31,"Mục 1.3 — giả lập iPhone WebKit, máy rảnh",S9,,,,,,,,43.6,,,,,110.3,,,,,,,,,,,"lỗi JS 0; FPS chỉ tham khảo",
 25,2026-11-01,f8bbb8e,"Mục 1.3 — mức Vừa (khu 2, CPU 4x, RTX 3060)",QCOST,,,,,,,,59.9,29.9,,,,,,,,,,,,,,,"Cao 59.9/29.9; Thấp 59.9/29.9; ĐT Thấp 59.9/59.5; bước cuối timeout",
 25,2026-11-01,f8bbb8e,"Mục 1.3 — respawn 60 bot, 4 tab x 120s",WANDER,,,,,,,,,,,,,,,0.13,,,,,,,,,"1 respawn do Despawn đúng luật; lỗi JS 0",
+26,2026-11-01,0009e21,Lượt cuối — S1 local (máy đang chạy 2 agent song song),S1,1.75,4.01,5,5.7,,2.4,0.00,,,,,,,,,,,,,,,,,"p95 sát trần 4 ms; #22 cùng máy là 2.37 — máy bận (2 agent build/test song song), cần đo lại khi rảnh",
+26,2026-11-01,0009e21,Lượt cuối — loadtime.mjs dev :9998,S7,,,,,,,,,,,,,,,,,,,3.65,,8.8,13.0,7.9,home 0.89 + boot 2.76 MB; chờ thực sau khi bấm: 0.6 s (10 Mbps) / 2.6 s (4 Mbps),
