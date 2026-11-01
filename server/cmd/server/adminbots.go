@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"bladeascend/server/internal/admin"
+	"bladeascend/server/internal/game"
 	"bladeascend/server/internal/room"
 )
 
@@ -105,7 +106,8 @@ func (s *server) handleAdminCharacters(w http.ResponseWriter, r *http.Request) {
 	if err != nil || days <= 0 {
 		days = 2
 	}
-	rows, err := s.store.CharacterStats(time.Now().Add(-time.Duration(days) * 24 * time.Hour).Unix())
+	prog := game.NewProgression(s.cfg.Cultivation, s.cfg.Sword.MaxSwords)
+	rows, err := s.store.CharacterStats(time.Now().Add(-time.Duration(days)*24*time.Hour).Unix(), prog.Realm)
 	if err != nil {
 		adminJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

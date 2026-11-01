@@ -13,6 +13,7 @@
   <a href="#players">Người chơi <span id="flagcount" class="pill warn" hidden>0</span></a>
   <a href="#errors">Lỗi người chơi <span id="errcount" class="pill bad" hidden>0</span></a>
   <a href="#bans">Danh sách cấm</a>
+  <a href="#chars">Nhân vật</a>
   <a href="#board">Bảng xếp hạng</a>
   <a href="#audit">Nhật ký</a>
   <button id="logout">Đăng xuất</button>
@@ -105,6 +106,14 @@
       <th>Kết thúc</th><th>Tên</th><th>Uy Danh</th><th>Tầng</th><th>Sống</th><th>Vì sao ngờ</th><th></th>
     </tr></thead><tbody></tbody></table>
   </section>
+  <section id="chars" hidden>
+    <h2>Nhân vật (trận thật)</h2>
+    <p class="hint">Cân bằng theo số liệu người chơi thật ≥ 2 ngày (GAME_SPEC v6.30 §6.3). Bỏ mạng &lt; 30 s và mạng đã ẩn.</p>
+    <div class="filters"><label>Số ngày <select id="chdays"><option>1</option><option selected>2</option><option>7</option><option>30</option></select></label></div>
+    <table id="chtbl"><thead><tr>
+      <th>Nhân vật</th><th>Số mạng</th><th>Tỉ lệ chọn</th><th>Uy Danh/phút</th><th>Sống TB</th><th>Cảnh giới cao nhất TB</th><th>Dùng kỹ năng/phút</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
   <section id="audit" hidden>
     <h2>Nhật ký thao tác</h2>
     <table id="audittbl"><thead><tr>
@@ -116,4 +125,5 @@
 <script src="/admin/map.js"></script>
 <script src="/admin/bots.js"></script>
 <script src="/admin/roomcfg.js"></script>
+<script src="/admin/chars.js"></script>
 </body></html>
