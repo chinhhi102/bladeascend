@@ -1,7 +1,7 @@
 # KIẾM XOAY TU TIÊN — Thu thập số liệu từ người chơi thật (Real User Monitoring)
 
 > Đặt tại `docs/_raw/TELEMETRY_SPEC.md`. Bổ sung kịch bản **S6** cho `PERF_LOG.md`.
-> Bối cảnh: server LAN `http://192.168.1.74:9999` có người chơi thật vào bất kỳ lúc nào. Mục tiêu: **tự động** ghi lại số liệu hiệu năng thật của họ (máy thật, mạng thật, trận thật) mà không cần ai ngồi đo, rồi phân tích được bằng 1 lệnh.
+> Bối cảnh: server LAN `http://<LAN_IP>:9999` có người chơi thật vào bất kỳ lúc nào. Mục tiêu: **tự động** ghi lại số liệu hiệu năng thật của họ (máy thật, mạng thật, trận thật) mà không cần ai ngồi đo, rồi phân tích được bằng 1 lệnh.
 
 ---
 
@@ -72,7 +72,7 @@ Khi chết/thoát/đóng tab: gửi tóm tắt phiên (thời lượng, số m�
 7. **Lỗi**: gom theo thông điệp, đếm số lần, số phiên bị ảnh hưởng.
 
 ### 4.2 Trang xem nhanh
-`http://192.168.1.74:9999/admin/perf` — chỉ mở được từ LAN + mật khẩu trong biến môi trường. Hiện các bảng ở §4.1 + biểu đồ FPS/ping theo thời gian của 24h gần nhất. Không cần đẹp, cần đúng.
+`http://<LAN_IP>:9999/admin/perf` — chỉ mở được từ LAN + mật khẩu trong biến môi trường. Hiện các bảng ở §4.1 + biểu đồ FPS/ping theo thời gian của 24h gần nhất. Không cần đẹp, cần đúng.
 
 ### 4.3 Ngưỡng cảnh báo (in đỏ trong báo cáo)
 - > 10% mẫu có `fps_p1` < 30 ở bất kỳ nhóm thiết bị nào.

@@ -7,7 +7,7 @@
    b. `git filter-repo` xoá/thay các tệp chứa tên, UUID đầy đủ, IP người chơi trong lịch sử (liệt kê tệp trước, gửi tôi danh sách rồi mới chạy).
    c. Force push main; báo tôi để tôi kiểm trên GitHub. Ghi vào PROGRESS cách khôi phục từ bản mirror.
 3. **SECURITY.md**: không dùng email — bật GitHub **Private vulnerability reporting** (Settings → Code security) và ghi trong SECURITY.md: "báo qua tab Security → Report a vulnerability".
-4. IP LAN 192.168.1.74 trong docs/_raw: thay bằng `<LAN_IP>` khi tôi gửi spec bản sau (tôi sẽ sửa bản _raw). Agent sửa các tệp ngoài _raw.
+4. IP LAN <LAN_IP> trong docs/_raw: thay bằng `<LAN_IP>` khi tôi gửi spec bản sau (tôi sẽ sửa bản _raw). Agent sửa các tệp ngoài _raw.
 5. B21 (Thiên Đình p95 3,5–3,75 ms, sát 4 ms): giữ sàn mới. Thêm cảnh báo trên dashboard admin khi tick p95 khu > 3,5 ms trong 5 phút.
 
 ## Hiển thị kỹ năng (§6.5)

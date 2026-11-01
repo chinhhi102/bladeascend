@@ -1,6 +1,6 @@
 # Việc cần làm — v6.2: Số liệu người chơi thật (TELEMETRY_SPEC.md)
 
-Anh đặt `docs/_raw/TELEMETRY_SPEC.md`. Làm như **hướng C**, song song với A (netcode) và B (anim) — nhánh riêng `telemetry`, worktree `../kx-telemetry`. Phần này độc lập, nên **merge sớm** để bắt đầu thu số liệu từ người thật trên `192.168.1.74:9999` càng sớm càng tốt (mỗi ngày chậm là mất dữ liệu).
+Anh đặt `docs/_raw/TELEMETRY_SPEC.md`. Làm như **hướng C**, song song với A (netcode) và B (anim) — nhánh riêng `telemetry`, worktree `../kx-telemetry`. Phần này độc lập, nên **merge sớm** để bắt đầu thu số liệu từ người thật trên `<LAN_IP>:9999` càng sớm càng tốt (mỗi ngày chậm là mất dữ liệu).
 
 1. Client: module `telemetry/` — phiên, mẫu 10s, sự kiện, sendBeacon khi đóng. **Không** có thông báo hay công tắc (đội test). Đặt sau cờ build `TELEMETRY=on` — build release tắt hẳn. Đo: có/không telemetry FPS chênh ≤ 1.
 2. Server: message `Telemetry` + `POST /telemetry/end`, ghi `data/telemetry.db` (WAL, ghi theo lô, ngoài vòng tick); server tự ghi số liệu tick/khu, KB/s, CPU/RAM mỗi 10s.
