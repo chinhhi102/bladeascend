@@ -32,3 +32,6 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
 8. Làm xong 1 bước nhỏ chạy được → git commit với message tiếng Việt rõ ràng.
 9. Cuối phiên: cập nhật `docs/PROGRESS.md` (đã làm gì, còn gì, lỗi đã biết).
 12. Sau mỗi lượt tối ưu hoặc thay đổi có thể ảnh hưởng hiệu năng: cập nhật `docs/PERF_LOG.md` (bảng §3, chi tiết §5, nút thắt §6) và `docs/perf_log.csv` theo đúng kịch bản chuẩn S1–S5. Đo trước rồi mới sửa; nút thắt phải có số đo làm bằng chứng.
+13. **Không bao giờ xoá art đã sinh** (tài nguyên trả tiền). Art không dùng nữa → chuyển vào `assets/library/<nhóm>/` (giữ nguyên tên + ghi lý do, ngày, job/prompt gốc trong `assets/library/INDEX.md`). `assets/library/` không bao giờ được build vào `assets/dist`, không nạp cho người chơi. Muốn dùng lại thì chuyển ngược ra `assets/src/`.
+14. Không bao giờ tự đặt, lưu, hay ghi mật khẩu/token vào tệp hoặc báo cáo.
+

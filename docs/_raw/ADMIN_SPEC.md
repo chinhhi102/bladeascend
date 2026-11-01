@@ -1,4 +1,8 @@
-# ADMIN CONSOLE — Spec v1.2
+# ADMIN CONSOLE — Spec v1.4
+
+**v1.4:** cấu hình trần phòng / sàn khu / ngưỡng tự tắt bot ngay trên trang admin (§4).
+
+**v1.3:** điều khiển bot toàn server + từng phòng (§4).
 
 **v1.2:** bản đồ admin = bản đồ thật trong game để xem toàn cảnh (bỏ chấm người chơi live); giao diện admin dùng Ant Design; góp ý cho phép tải ảnh lên (§5, §2.1, §7).
 
@@ -64,7 +68,7 @@ Dữ liệu live đi qua 1 kết nối **`/api/admin/ws`** (WebSocket, xác th�
 
 | Nhóm | Chỉ số |
 |---|---|
-| Người chơi | Người thật online · bot · số phòng · người vào / phút · người rời / phút · phiên đang chạy theo thiết bị (PC / Android / iPhone) |
+| Người chơi | Người thật online · bot · số phòng · chế độ bot toàn server · người vào / phút · người rời / phút · phiên đang chạy theo thiết bị (PC / Android / iPhone) |
 | Server | Tick ms TB / p95 **theo từng khu** (tô đỏ nếu > 4 ms) · CPU % · RAM MB · số goroutine · uptime · build đang chạy |
 | Mạng | KB/s tổng gửi đi · KB/s TB mỗi client · snapshot TB / lớn nhất (KB) · ping người chơi p50 / p95 · số client đang nghẽn (bỏ snapshot) |
 | Client | FPS TB / p10 (từ telemetry) · lỗi client / phút · số lần mất WebGL / phút · thời gian chờ vào trận p50 |
@@ -90,6 +94,17 @@ Bảng phòng → bấm mở ra 5 khu:
 | Lượt qua cổng / phút (vào, ra), lượt qua Thiên Môn / phút | |
 | Seed bản đồ + phiên bản mapgen | |
 | Nút **"Xem bản đồ"** → §5 | |
+
+**Cấu hình phòng** (GAME_SPEC §9.5) — thẻ ở đầu trang Phòng & Khu, chỉnh được ngay:
+- Trần người thật/phòng (mặc định production 50, staging 20), sàn nhân vật/khu (10), ngưỡng tự tắt bot (production 40, staging 20).
+- Hiện môi trường đang chạy + mức đã qua loadtest; đặt cao hơn → cảnh báo vàng nhưng vẫn cho lưu.
+- Lưu → `Modal.confirm` + lý do + audit; áp dụng ngay, sống qua deploy.
+
+**Điều khiển bot** (GAME_SPEC §9.5):
+- Ở đầu trang: công tắc **toàn server** Tự động / Bật / Tắt.
+- Mỗi phòng: chế độ đang áp dụng (vd "Tự động — đang tắt vì 43 người"), nút đổi riêng cho phòng (Tự động / Bật / Tắt / Theo toàn server), nút **"Rút bot ngay"**.
+- Cột người thật / bot / tổng và "giới hạn 50" cho từng phòng.
+- Mọi thay đổi: `Modal.confirm` + ghi `admin_audit`.
 
 ---
 
