@@ -110,6 +110,9 @@ func (s *server) handleAdminFeedbackPatch(w http.ResponseWriter, r *http.Request
 	var b struct {
 		Status string `json:"status"`
 		Note   string `json:"note"`
+		// Reason: lý do admin gõ ở hộp xác nhận (có thể trống). Trống thì giữ cách ghi cũ:
+		// cột lý do = trạng thái mới.
+		Reason string `json:"reason"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192)).Decode(&b); err != nil {
 		adminJSON(w, http.StatusBadRequest, map[string]string{"error": "nội dung không hợp lệ"})
@@ -119,7 +122,11 @@ func (s *server) handleAdminFeedbackPatch(w http.ResponseWriter, r *http.Request
 		adminJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	s.adminAuth.Store().Audit("feedback_update", strconv.FormatInt(id, 10), b.Status,
+	reason := sanitizeReason(b.Reason)
+	if reason == "" {
+		reason = b.Status
+	}
+	s.adminAuth.Store().Audit("feedback_update", strconv.FormatInt(id, 10), reason,
 		admin.ClientIP(r), map[string]any{"status": b.Status, "has_note": b.Note != ""})
 	adminJSON(w, http.StatusOK, map[string]int{"ok": 1})
 }

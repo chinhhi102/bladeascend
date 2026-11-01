@@ -45,7 +45,6 @@ func (s *server) adminRoutes(mux *http.ServeMux, adminDir string) {
 	mux.HandleFunc("POST /api/admin/clearflag", s.adminGuard(s.handleAdminClearFlag))
 	mux.HandleFunc("GET /api/admin/errors", s.adminGuard(s.handleAdminErrors))
 	mux.HandleFunc("GET /api/admin/check", s.adminGuard(s.handleAdminCheck))
-	mux.HandleFunc("GET /api/admin/live", s.adminGuard(s.handleAdminLive))
 	mux.HandleFunc("GET /api/admin/lives", s.adminGuard(s.handleAdminLives))
 	mux.HandleFunc("GET /api/admin/hidden", s.adminGuard(s.handleAdminHidden))
 	mux.HandleFunc("POST /api/admin/hide", s.adminGuard(s.handleAdminHide))
