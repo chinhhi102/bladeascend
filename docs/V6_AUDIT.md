@@ -16,6 +16,31 @@ Theo file: v6 (4/5/0) · v6.1 (4/5/0) · v6.2 (5/1/0) · v6.4 (11/0/0) · v6.5 (
 
 **Vì sao chủ dự án "không thấy gì":** phần lớn v6.0/v6.2/v6.4/v6.5/v6.6/v6.7 là thứ **không nhìn thấy trực tiếp** (giao thức mạng, telemetry, dung lượng tải, đổi số Tiên khí, kiểm bản đồ). Những thứ người chơi THẤY RÕ nhất trong v6.16 (tải ảnh góp ý, admin antd, đa ngôn ngữ, SEO) và v6.19 (bảng xếp hạng mới) thì **chưa làm** — chỉ phần đổi tên (v6.16 D) và danh hiệu theo phòng (v6.19 §1) là xong.
 
+
+## Cập nhật lượt cuối 01/11/2026 (đè lên các dòng cũ bên dưới)
+
+| Mục | Trước | Nay | Commit / bằng chứng |
+|---|---|---|---|
+| v6.1 #2 — 5% bot đứng yên 3–8 s | CHƯA | XONG | E17a · `room/botidle_test.go` |
+| v6.1 #3 — font dự phòng tên | MỘT PHẦN | XONG (chờ Q41) | Pixi 8 `DynamicBitmapFont.ensureCharacters` + họ font dự phòng `render/fonts.ts` |
+| v6.1 #4 — lộ `FlagBot` | MỘT PHẦN | XONG | E17b · `room/flagbot_test.go` |
+| v6.1 #8 — lớp mặt | MỘT PHẦN | MỘT PHẦN | Q42 (art mới 3/10) |
+| v6.9 #4, #8 — bot dùng kỹ năng theo luật | MỘT PHẦN | XONG | E17e · `bot/skill_test.go` (6 test) |
+| Mệnh giá Tiên khí hằng số trong code | trái luật 2 | XONG | E17c · `cultivation.tien_drop_units` |
+| Vật cản bị chém còn khói | lệch spec | XONG | E17d |
+| v6 #6 — perfreport chỉ S1 | MỘT PHẦN | MỘT PHẦN | S2/S3 vẫn cần Chrome thật; thêm `npm run perf:report` (E19) |
+| v6 #2 bước 2/4/5/7 netcode | CHƯA | CHƯA | số đo hiện đạt ngân sách (gói 2,4 KB, 5,7 KB/s) → không phải nút thắt, để sau |
+| v6.16 #1–#4 — góp ý 3 ảnh, nén, EXIF, Playwright | CHƯA | XONG | merge `20822a0` · `admin/imgmeta_test.go`, `tools/browsertest/feedback-images.mjs` |
+| v6.16 #5–#7 — admin React + antd, bỏ luồng 5 Hz | CHƯA | XONG | merge `6420812` |
+| v6.16 #8 — `i18n/vi.json` + CI | CHƯA | XONG | D13 · `npm run check:i18n` trong build |
+| v6.16 #9 — server gửi mã | MỘT PHẦN | XONG | tên khu dịch theo `zn` (D13b) |
+| v6.16 #10 — 5 bản dịch | CHƯA | XONG (bản nháp) | `client/src/i18n/*.json` `_draft: true` + `NOTES.md` |
+| v6.16 #11 — chọn ngôn ngữ + Noto Sans Thai | CHƯA | XONG | D15 |
+| v6.16 #12 — SEO đa ngôn ngữ | MỘT PHẦN | XONG | D16 · `scripts/seo-pages.ts`, `sitemap.xml` |
+| v6.19 #5 — i18n bảng xếp hạng | MỘT PHẦN | XONG | chữ bảng trong `i18n/*.json → board` |
+
+Đối chiếu toàn bộ spec v6.30: `docs/SPEC_AUDIT_v630.md`.
+
 ### Danh sách MỘT PHẦN
 1. **v6 #2** — NETCODE §8: bước 1 (chống nhấp nháy) và 3 (Protocol v2 nhị phân, delta, keyframe) xong; **bước 2 Room Shared Cache, 4 encode-once, 5 ZoneReady + IndexedDB, 7 Service Worker: CHƯA**; bước 6 chỉ có cache nameplate, không có Web Worker, không có cache texture vòng kiếm dùng chung.
 2. **v6 #3** — v2 **thay hẳn** v1 (commit `e8717f1`), không qua giai đoạn chạy song song sau cờ `proto=1`; bài §7 chưa qua hết (không có ZoneReady/SW để kiểm).
