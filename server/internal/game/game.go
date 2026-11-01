@@ -32,6 +32,9 @@ type Game struct {
 	Map  *world.Map
 	Rng  *rand.Rand
 	Time float64
+	// ExpTrace (tuỳ chọn): gọi mỗi lần ai đó nhận EXP, kèm nguồn. Chỉ công cụ đo gắn vào
+	// (`cmd/sim --audit`); nil trên server thật.
+	ExpTrace func(p *Player, src ExpSource, amount float64)
 
 	altars   []altarState
 	Players  map[uint32]*Player
@@ -59,12 +62,12 @@ type Game struct {
 	// Là một HÀM chứ không phải map: `Game` không được biết gì về `Room`, và chép map sang
 	// năm khu mỗi tick là năm lần cấp phát cho một thứ đọc xong là bỏ.
 	RoomRank func(id uint32) int
-	Grid      *world.Grid
-	Events    []Event
+	Grid     *world.Grid
+	Events   []Event
 
-	nextID       uint32
+	nextID uint32
 	// idBase: bit cao của id, riêng cho từng khu (xem SetIDBase + newID).
-	idBase uint32
+	idBase       uint32
 	order        []uint32 // player ids in join order, for deterministic iteration
 	cooldowns    map[uint64]float64
 	obsIndex     *staticIndex
@@ -98,7 +101,7 @@ type Game struct {
 func New(cfg *config.Config, m *world.Map, seed int64, zoneIndex int) *Game {
 	g := &Game{
 		idBase: uint32(zoneIndex) << 24,
-		Cfg: cfg, Prog: NewProgression(cfg.Cultivation, cfg.Sword.MaxSwords), Map: m,
+		Cfg:    cfg, Prog: NewProgression(cfg.Cultivation, cfg.Sword.MaxSwords), Map: m,
 		Rng:       rand.New(rand.NewSource(seed)),
 		Players:   map[uint32]*Player{},
 		Monsters:  map[uint32]*Monster{},

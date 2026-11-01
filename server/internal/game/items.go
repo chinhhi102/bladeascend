@@ -196,7 +196,7 @@ func (g *Game) pickup(p *Player, it *Item) {
 	}
 	switch it.Kind {
 	case "orb":
-		g.GainExp(p, it.Value, true)
+		g.GainExpFrom(p, it.Value, true, it.Src)
 	case "sword":
 		g.AddSwords(p, g.Cfg.Items.SwordAmount)
 	case "bundle":
@@ -217,7 +217,7 @@ func (g *Game) pickup(p *Player, it *Item) {
 		if g.BanksTienKhi(p) {
 			g.GainTienKhi(p, g.Cfg.Skills.OvercapTien)
 		} else {
-			g.GainExp(p, p.TotalExp+g.Cfg.Skills.OvercapExp, false)
+			g.GainExpFrom(p, p.TotalExp+g.Cfg.Skills.OvercapExp, false, ExpOvercapScroll)
 		}
 	case "chest":
 		for i := 0; i < g.Cfg.Items.ChestItems; i++ {

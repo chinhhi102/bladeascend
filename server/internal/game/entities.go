@@ -209,7 +209,8 @@ type Item struct {
 	Pool       bool   // part of the room's count_per_room item pool, respawns respawn_secs after pickup
 	Owner      uint32 // only this player may pick it up until OwnerUntil
 	OwnerUntil float64
-	ExpireAt   float64 // > 0: viên tự tan vào lúc này (Tiên khí, spec §8.5)
+	ExpireAt   float64   // > 0: viên tự tan vào lúc này (Tiên khí, spec §8.5)
+	Src        ExpSource // viên EXP: sinh ra từ đâu (expsource.go)
 
 	// cell/slot: vị trí của viên này trong itemGrid, để xoá O(1) mà không phải dò.
 	cell int

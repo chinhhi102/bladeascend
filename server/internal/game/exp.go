@@ -4,6 +4,11 @@ import "math"
 
 // GainExp adds EXP (applying Song Bội Đan when boosted) and handles level-ups (spec §3).
 func (g *Game) GainExp(p *Player, amount float64, boosted bool) {
+	g.GainExpFrom(p, amount, boosted, ExpOther)
+}
+
+// GainExpFrom là GainExp có ghi nguồn: `ExpTrace` (nếu gắn) nhận đúng lượng EXP đã vào.
+func (g *Game) GainExpFrom(p *Player, amount float64, boosted bool, src ExpSource) {
 	// Hai đường tu tách hẳn (§3.4, anh chốt 2026-10-28): từ Đại Thừa tầng 10 trở lên chỉ
 	// hấp thụ Tiên khí, Linh khí không vào nữa.
 	if amount <= 0 || p.Dead || !g.CanAbsorbExp(p) {
@@ -12,7 +17,11 @@ func (g *Game) GainExp(p *Player, amount float64, boosted bool) {
 	if boosted && p.HasBuff(BuffExp2, g.Time) {
 		amount *= g.Cfg.Buffs["exp2"].Mult
 	}
+	before := p.TotalExp
 	g.setTotalExp(p, math.Min(p.TotalExp+amount, g.Prog.MaxExp()))
+	if g.ExpTrace != nil {
+		g.ExpTrace(p, src, p.TotalExp-before)
+	}
 }
 
 // setTotalExp updates total_exp and emits LevelUp / Breakthrough / RealmDrop as needed.
@@ -78,7 +87,7 @@ func (g *Game) Geom(p *Player) RingGeom { return p.Geom }
 func (g *Game) AddSwords(p *Player, n int) {
 	limit := g.Prog.MaxSwords(g.Prog.Realm(p.Level))
 	if p.Ring.Count >= limit {
-		g.GainExp(p, g.Cfg.Items.OvercapExp, true)
+		g.GainExpFrom(p, g.Cfg.Items.OvercapExp, true, ExpOvercapSword)
 		return
 	}
 	p.Ring.Count = min(limit, p.Ring.Count+max(n, 1))

@@ -34,9 +34,15 @@ func main() {
 	monsters := flag.Int("monsters", -1, "override room.monster_count (-1 = config)")
 	cell := flag.Float64("orb-cell", 0, "override exp_orbs.cell (0 = config)")
 	farm := flag.Bool("farm", false, "nobody can be hit: measures pure farming pace (spec §6.1 target 60–90s to Trúc Cơ)")
+	audit := flag.Bool("audit", false, "EXP theo nguồn cho docs/EXP_AUDIT.md (CHANGES v6.21)")
+	seeds := flag.Int("seeds", 3, "--audit: số seed mỗi phép đo")
 	flag.Parse()
 
 	cfg := config.MustLoadDefault()
+	if *audit {
+		auditMain(cfg, *mapID, *seed, *seeds)
+		return
+	}
 	if *farm {
 		cfg.Player.InvulnOnSpawn = 1e9
 	}

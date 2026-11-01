@@ -101,8 +101,8 @@ func (g *Game) applyBodyHit(a, b *Player) {
 	after := g.expAfterHit(b)
 	loss := b.TotalExp - after
 	g.setTotalExp(b, after)
-	g.GainExp(a, loss*pc.AttackerShare, true)
-	g.scatterOrbs(b.Pos, loss*pc.DropShare, a.ID) // viên thuộc người chém 1.5s, không thì nạn nhân hút lại ngay
+	g.GainExpFrom(a, loss*pc.AttackerShare, true, hitSource(b))
+	g.scatterOrbs(b.Pos, loss*pc.DropShare, a.ID, ExpOrbHitDrop) // viên thuộc người chém 1.5s, không thì nạn nhân hút lại ngay
 	if g.Prog.Realm(b.Level) < oldRealm {
 		g.emit(Event{Kind: "KillFeed", Global: true, S: "realm_drop", A: a.ID, B: b.ID, N: g.Prog.Realm(b.Level)})
 	}
@@ -125,8 +125,8 @@ func (g *Game) kill(a, b *Player) {
 	g.awardHit(a, b, g.Prog.Realm(b.Level), true)
 	// Spec §5.1: at Luyện Khí the "loss" is the victim's whole EXP, plus a kill bonus.
 	loss := b.TotalExp
-	g.GainExp(a, loss*pc.AttackerShare+pc.KillBonusExp, true)
-	g.scatterOrbs(b.Pos, loss*pc.DropShare, a.ID) // viên thuộc người chém 1.5s, không thì nạn nhân hút lại ngay
+	g.GainExpFrom(a, loss*pc.AttackerShare+pc.KillBonusExp, true, killSource(b))
+	g.scatterOrbs(b.Pos, loss*pc.DropShare, a.ID, ExpOrbHitDrop) // viên thuộc người chém 1.5s, không thì nạn nhân hút lại ngay
 	g.dropDeathSwords(b)
 	a.Kills++
 	victimRank := g.RankOf(b)
@@ -498,7 +498,7 @@ func (g *Game) killMonster(m *Monster, killer *Player) {
 		g.bossCount--
 	}
 	g.emit(Event{Kind: "MonsterDie", A: m.ID, S: m.Kind, X: float32(m.Pos.X), Y: float32(m.Pos.Y)})
-	g.scatterOrbs(m.Pos, m.Exp, killer.ID)
+	g.scatterOrbs(m.Pos, m.Exp, killer.ID, ExpOrbMonster)
 	k := g.Cfg.Monsters.Kinds[m.Kind]
 	if g.Rng.Float64() < k.Drop {
 		for i := 0; i < k.DropItems; i++ {
@@ -653,19 +653,24 @@ func (g *Game) dropBundles(pos Vec, n int, spread float64) {
 
 // scatterOrbs drops total EXP as orbs around pos, largest sizes first. A non-zero owner
 // reserves the orbs for that player for orb_owner_secs.
-func (g *Game) scatterOrbs(pos Vec, total float64, owner uint32) {
+func (g *Game) scatterOrbs(pos Vec, total float64, owner uint32, src ExpSource) {
 	vals := g.Cfg.Items.OrbValues
 	sizes := []float64{vals["large"], vals["medium"], vals["small"]}
 	remaining := math.Round(total)
 	for _, v := range sizes {
 		for remaining >= v && v > 0 && g.orbCount < g.Cfg.Items.MaxOrbs {
-			g.ownItem(g.spawnItemNear("orb", v, pos, g.Cfg.Items.ScatterR), owner)
+			g.ownOrb(g.spawnItemNear("orb", v, pos, g.Cfg.Items.ScatterR), owner, src)
 			remaining -= v
 		}
 	}
 	if remaining > 0 && g.orbCount < g.Cfg.Items.MaxOrbs {
-		g.ownItem(g.spawnItemNear("orb", remaining, pos, g.Cfg.Items.ScatterR), owner)
+		g.ownOrb(g.spawnItemNear("orb", remaining, pos, g.Cfg.Items.ScatterR), owner, src)
 	}
+}
+
+func (g *Game) ownOrb(it *Item, owner uint32, src ExpSource) {
+	it.Src = src
+	g.ownItem(it, owner)
 }
 
 func (g *Game) ownItem(it *Item, owner uint32) {

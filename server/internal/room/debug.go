@@ -25,7 +25,7 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 		}
 		switch d.Cmd {
 		case "exp":
-			z.G.GainExp(p, float64(d.N), false)
+			z.G.GainExpFrom(p, float64(d.N), false, game.ExpDebug)
 		case "realm":
 			// Jump to the start of the next realm. Từ Đại Thừa tầng 10 trở lên không hấp thụ
 			// Linh khí nữa (§3.4) nên phải cấp thẳng Tiên khí, không thì phím test tắc ở đó
