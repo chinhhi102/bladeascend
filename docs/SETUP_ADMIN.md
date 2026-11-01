@@ -48,3 +48,28 @@ và đăng nhập bằng mật khẩu vừa đặt.
 
 Từ 31/10 `deploy.sh` đọc `server/data/admin.env` và **in cảnh báo ở bước cuối** nếu trang
 vẫn tắt — để lần sau không ai phải đọc log mới biết.
+
+## Bật trang quản trị trên STAGING
+
+Staging đọc hash từ tệp `~/bladeascend-secrets/admin.env` **trên máy staging**. Tệp này nằm
+ngoài thư mục deploy, nên deploy không ghi đè và nó không lọt vào ảnh Docker. Anh tự làm,
+Claude không đụng vào mật khẩu hay hash (CLAUDE.md luật 14).
+
+1. Trên máy anh, tạo hash (nên dùng mật khẩu KHÁC với `:9999`):
+   ```bash
+   cd server && go run ./cmd/adminpass > /tmp/staging_admin.env
+   ```
+2. Đưa tệp lên staging rồi xoá bản trên máy mình:
+   ```bash
+   set -a; . docs/private/deploy; set +a
+   ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST" 'mkdir -p ~/bladeascend-secrets && chmod 700 ~/bladeascend-secrets'
+   scp -i "$DEPLOY_KEY" /tmp/staging_admin.env "$DEPLOY_HOST:bladeascend-secrets/admin.env"
+   ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST" 'chmod 600 ~/bladeascend-secrets/admin.env'
+   rm /tmp/staging_admin.env
+   ```
+3. Khởi động lại để container đọc tệp:
+   ```bash
+   ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST" 'cd ~/bladeascend && docker compose up -d --force-recreate'
+   ```
+   Hoặc chạy lại `deploy/staging.sh`. Dòng "CẢNH BÁO … /admin TẮT" ở cuối phải biến mất.
+4. Vào `https://bladeascend.staging.maveragroups.com/admin` và đăng nhập.

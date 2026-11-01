@@ -24,6 +24,8 @@ cp deploy/Dockerfile deploy/docker-compose.yml "$OUT/"
 
 rsync -az --delete -e "ssh -i $DEPLOY_KEY" "$OUT/" "$DEPLOY_HOST:bladeascend/"
 "${SSH[@]}" 'cd ~/bladeascend && docker compose up -d --build'
+"${SSH[@]}" 'test -s ~/bladeascend-secrets/admin.env' ||
+  echo "CẢNH BÁO: staging chưa có ~/bladeascend-secrets/admin.env → trang /admin TẮT (docs/SETUP_ADMIN.md)"
 
 # Caddy block: back up, install, validate the full config, reload — or roll back.
 scp -i "$DEPLOY_KEY" deploy/bladeascend-staging.caddy "$DEPLOY_HOST:/tmp/bladeascend-staging.caddy"

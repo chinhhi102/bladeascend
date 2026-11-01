@@ -6,6 +6,12 @@ services:
     build: .
     container_name: bladeascend-web
     restart: unless-stopped
+    # Trang quản trị (docs/SETUP_ADMIN.md): ADMIN_PASSWORD_HASH nằm trong tệp NGOÀI thư mục
+    # deploy — `staging.sh` rsync --delete sẽ xoá mọi thứ lạ trong ~/bladeascend, và tệp cũng
+    # không được lọt vào ảnh Docker. Chưa có tệp thì trang /admin tắt, game vẫn chạy.
+    env_file:
+      - path: ../bladeascend-secrets/admin.env
+        required: false
     volumes:
       - bladeascend-data:/data
     networks:
