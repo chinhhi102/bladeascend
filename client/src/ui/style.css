@@ -90,7 +90,10 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 .preview-art { flex: none; width: 84px; height: 84px; display: flex; align-items: center; justify-content: center; }
 .preview-art .portrait { width: 84px; height: 84px; }
 .preview-art .portrait.placeholder { width: 68px; height: 68px; margin: 0; }
-.preview-text { flex: 1; min-width: 0; }
+.preview-text { flex: 1; min-width: 0; display: grid; }
+/* Mọi khối chồng vào ô (1,1): ô cao bằng khối dài nhất → khung không đổi chiều cao. */
+.preview-block { grid-area: 1 / 1; visibility: hidden; }
+.preview-block.on { visibility: visible; }
 .preview-name { font-size: 18px; font-weight: 900; }
 .preview-skill { font-size: 15px; font-weight: 800; color: #9a3412; margin-top: 2px; }
 .preview-desc { font-size: 13px; line-height: 1.4; color: #4a4036; margin-top: 3px; }

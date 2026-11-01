@@ -90,18 +90,26 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
   // lưới chỉ có ảnh nhỏ + tên thì người chơi chọn mù hoàn toàn. Đưa kỹ năng ra đây là chỗ
   // DUY NHẤT họ đọc được trước khi vào trận.
   const previewArt = h('div', 'preview-art');
-  const previewName = h('div', 'preview-name');
-  const previewSkill = h('div', 'preview-skill');
-  const previewDesc = h('div', 'preview-desc');
+  // Chữ của CẢ MƯỜI nhân vật nằm chồng lên nhau trong cùng một ô lưới, chỉ hiện cái đang
+  // chọn. Ô lưới cao bằng khối DÀI NHẤT, nên khung xem trước có MỘT chiều cao cố định —
+  // rê chuột qua các thẻ không làm nút "Vào chơi" bên dưới nhảy lên nhảy xuống (chủ dự án
+  // báo 1/11: mô tả Sư Phụ 4 dòng, Bé Tí 2 dòng). Đo theo chữ thật nên đúng ở mọi cỡ màn hình.
+  const blocks = new Map<string, HTMLElement>();
+  for (const c of cfg.characters) {
+    blocks.set(c, h('div', 'preview-block',
+      h('div', 'preview-name', STR.characters[c] ?? c),
+      h('div', 'preview-skill', `${STR.skillLabel}: ${STR.skillNames[c] ?? '—'}`),
+      h('div', 'preview-desc', STR.skillDesc[c] ?? '')));
+  }
   const preview = h('div', 'char-preview',
     previewArt,
-    h('div', 'preview-text', previewName, previewSkill, previewDesc));
+    h('div', 'preview-text', ...blocks.values()));
 
   const showPreview = (c: string): void => {
     previewArt.replaceChildren(portrait(c, (p) => assets.url(p), toHex(charColor(c)[0])));
-    previewName.textContent = STR.characters[c] ?? c;
-    previewSkill.textContent = `${STR.skillLabel}: ${STR.skillNames[c] ?? '—'}`;
-    previewDesc.textContent = STR.skillDesc[c] ?? '';
+    for (const [id, el] of blocks) {
+      el.classList.toggle('on', id === c);
+    }
   };
 
   for (const c of cfg.characters) {
