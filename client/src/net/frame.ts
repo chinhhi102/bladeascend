@@ -79,7 +79,7 @@ export function decodeFrame(u8: Uint8Array, snap: SnapshotDecoder): FrameResult 
   // Mọi `ServerMsg` đều có trường `t` dạng chuỗi (snap, welcome, pong, kicked…). Đó là
   // cửa rẻ nhất và chặt nhất.
   if (typeof v !== 'object' || v === null || typeof (v as { t?: unknown }).t !== 'string') {
-    return { fail: describe('msgpack', u8, `giải mã ra ${Array.isArray(v) ? 'mảng' : typeof v}, không phải message có trường "t"`) };
+    return { fail: describe('msgpack', u8, `giải mã ra ${Array.isArray(v) ? 'mảng' : typeof v}, không phải message có trường "t"`) }; // i18n-ok: báo lỗi giải mã cho dev
   }
   return { msg: v as ServerMsg };
 }

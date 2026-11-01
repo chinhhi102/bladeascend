@@ -1,431 +1,89 @@
-// Every piece of text shown to players lives here (CLAUDE.md rule 5).
+// Mọi chữ người chơi thấy (CLAUDE.md luật 5). Từ GAME_SPEC §19 chữ nằm trong
+// `src/i18n/{lang}.json`; file này chỉ DỰNG `STR` từ từ điển đã chọn — mẫu câu có `{tên}`
+// thành hàm, còn lại giữ nguyên. Thêm chữ mới: thêm khoá vào `i18n/vi.json` (và để trống ở
+// các ngôn ngữ khác — `npm run check:i18n` nhắc), rồi dùng `STR.khoá` như cũ.
 import { splitName } from '../../brand-split';
+import { DICT as d, LANG, fmt, num, pickFmt } from '../i18n';
 
 /** Thương hiệu do Vite cắm vào lúc build từ `config/game.json` — GAME_SPEC §20. */
 declare const __BRAND__: { name: string; domain: string; name_vi: string; tagline_vi: string };
 
 export const BRAND = __BRAND__;
 
+const IS_VI = LANG === 'vi';
+
+type Rec = Record<string, string>;
+
 export const STR = {
-  title: BRAND.name_vi,
+  ...d,
+  /** Tên game: người Việt thấy "Đạo Hữu Xin Dừng Bước", ngôn ngữ khác thấy "BladeAscend" (§20). */
+  title: IS_VI ? BRAND.name_vi : BRAND.name,
   /**
-   * Tên game chia thành hai cụm để NGẮT DÒNG CÓ KIỂM SOÁT (chủ dự án chốt 1/11).
-   *
-   * Để trình duyệt tự ngắt thì "Đạo Hữu Xin Dừng Bước" trong panel rộng 560 px rớt đúng
-   * một chữ "Bước" xuống dòng dưới — đo được ở 5 trong 7 cỡ màn hình. Chữ lẻ một mình
-   * trông như lỗi hiển thị, không như một cái tên.
-   *
-   * Hai cụm là hai `<span>` không-ngắt, nên chỗ ngắt DUY NHẤT có thể xảy ra là khoảng
-   * giữa chúng: màn rộng ra một dòng, màn hẹp ra "Đạo Hữu" / "Xin Dừng Bước". Không bao
-   * giờ có chữ lẻ, ở bất cứ bề rộng nào.
-   *
-   * Cắt theo SỐ CHỮ chứ không ghi cứng hai cụm: tên game lấy từ `config.brand` (§20), ghi
-   * cứng ở đây là chỗ thứ hai lưu tên game — đúng loại chỗ mà lần đổi tên vừa rồi bỏ sót.
+   * Tên game chia hai cụm để NGẮT DÒNG CÓ KIỂM SOÁT (chủ dự án chốt 1/11): hai `<span>`
+   * không-ngắt nên không bao giờ có chữ lẻ một mình. Cắt theo số chữ từ `config.brand`.
    */
-  titleParts: splitName(BRAND.name_vi),
-  subtitle: BRAND.tagline_vi,
-  namePlaceholder: 'Nhập tên (2–16 ký tự)',
-  pickCharacter: 'Chọn nhân vật',
-  play: 'Vào chơi',
-  leaderboard: 'Bảng xếp hạng',
-  findingRoom: 'Đang tìm phòng...',
-  // ── Bị mời ra / bị cấm (ADMIN_SPEC §6.2) ──
-  kickedTitle: 'Bạn đã bị mời ra khỏi phòng',
-  bannedTitle: 'Bạn đang bị cấm vào trận',
-  kickedReason: 'Lý do: ',
-  kickedRejoin: 'Bạn vào lại được ngay.',
-  bannedUntil: 'Hết hạn: ',
-  bannedForever: 'Cấm vĩnh viễn.',
-  kickedBack: 'Về trang chủ',
-  // ── Hòm thư góp ý (ADMIN_SPEC §7.1) ──
-  feedbackTitle: 'Góp ý',
-  feedbackKinds: {
-    bug: 'Báo lỗi',
-    balance: 'Cân bằng',
-    idea: 'Ý tưởng',
-    other: 'Khác',
-  } as Record<string, string>,
-  feedbackPlaceholder: 'Kể rõ chuyện gì xảy ra, bạn đang làm gì lúc đó...',
-  feedbackAttachShot: 'Kèm ảnh chụp màn hình',
-  feedbackWillSend: 'Sẽ gửi kèm: phiên bản, thiết bị, khu, cảnh giới, ping, FPS.',
-  feedbackWillSendBug: ' Kèm 20 dòng lỗi gần nhất.',
-  feedbackSend: 'Gửi',
-  feedbackCancel: 'Đóng',
-  feedbackSending: 'Đang gửi...',
-  feedbackThanks: 'Cảm ơn! Đã nhận góp ý.',
-  feedbackTooShort: 'Viết thêm vài chữ nữa nhé (ít nhất 5 ký tự).',
-  feedbackFailed: 'Chưa gửi được. Thử lại sau một lát.',
-  feedbackAddImage: '🖼 Thêm ảnh',
-  feedbackImageHint: 'Tối đa 3 ảnh (tính cả ảnh chụp màn hình). Kéo-thả hoặc dán (Ctrl+V) cũng được.',
-  feedbackImageMax: 'Tối đa 3 ảnh mỗi góp ý.',
-  feedbackImageUnsupported: 'Chưa hỗ trợ định dạng này. Hãy chọn ảnh JPG, PNG hoặc WebP.',
-  feedbackImageTooBig: 'Ảnh này nặng quá, chưa nén được. Thử ảnh khác nhé.',
-  feedbackImageBusy: 'Đang xử lý ảnh...',
-  feedbackImageRemove: 'Xoá ảnh',
-  feedbackShotBadge: 'Màn hình',
-  feedbackShotFailed: 'Không chụp được màn hình — vẫn gửi được phần chữ.',
-  /** Chữ nổi khi kiếm chạm vật cản quá bậc (spec §8.2). */
-  needRealm: (realm: string): string => `Cần ${realm}`,
-  /** Chữ nổi khi câu hát ru bị chém đứt (spec v6.9 §6.3). */
-  skillCancelled: 'Mất chiêu!',
-  /** Chữ nổi khi Hút Mì cướp được kiếm. */
-  swordsStolen: (n: number): string => `−${n} kiếm`,
-  connecting: 'Đang kết nối máy chủ...',
-  /** Tên 5 khu, khớp với room.ZoneNames bên server (spec §8.0). */
-  /** Tên 10 kỹ năng (spec §6.3), khớp key nhân vật bên server. */
-  skillNames: {
-    a_hon: 'Bánh Bao Thần',
-    ba_tam_loa: 'Loa Phường',
-    ong_ba_vong: 'Ru Ngủ Trưa — Trộm Kiếm',
-    dai_ca_dep: 'Gọi Đàn Em',
-    map_tra_sua: 'Phun Trân Châu',
-    co_ba_ganh: 'Bày Hàng Chặn Lối',
-    su_phu_mi: 'Hút Mì Đoạt Kiếm',
-    be_ti: 'Gồng Cơ',
-    shipper: 'Gom Đơn Hỏa Tốc',
-    cu_rua: 'Rụt Cổ',
-  } as Record<string, string>,
-  /**
-   * Mô tả kỹ năng ở màn chọn nhân vật — người chơi phải biết mình chọn gì trước khi vào trận.
-   *
-   * Viết theo LỢI ÍCH chứ không theo cơ chế: "chạy xuyên tường" dễ hiểu hơn "StGhost 5s".
-   * Con số lấy đúng spec v5.4/v5.5 §6.3; đổi spec thì sửa ở đây luôn, nếu không người chơi
-   * chọn theo một bảng mô tả đã cũ.
-   */
-  skillDesc: {
-    a_hon: 'Ăn bánh bao, hồi ngay 20% số kiếm tối đa của cảnh giới.',
-    ba_tam_loa: 'Hét vào loa: sóng âm toả tròn quanh mình, đẩy văng mọi địch xung quanh và làm vòng kiếm của họ quay ngược.',
-    ong_ba_vong: 'Hát ru nửa giây (bị chém là mất chiêu) rồi nằm võng 4 giây: địch quanh mình ngủ gục 2,5 giây, kiếm của ông không mẻ, và kiếm địch bể khi va với ông bay về vòng của ông.',
-    dai_ca_dep: 'Gọi 2 đàn em trong 8 giây, mỗi đứa mang 30% số kiếm của mình — mình không mất kiếm nào.',
-    map_tra_sua: 'Phun trân châu bịt mắt địch 5 giây: không nhặt được gì, và kiếm của họ không chém chết được ai (va kiếm vẫn tính).',
-    co_ba_ganh: 'Bày 5 cái sạp thành vòng cung chặn đường 6 giây — người ngang cấp hoặc kém hơn không chém được, mình thì đi xuyên. Dọc chân sạp rải vỏ chuối: ai giẫm thì trượt và choáng 1 giây.',
-    su_phu_mi: 'Hút một sợi mì vào địch gần nhất phía trước: cướp 25% số kiếm của họ về vòng của mình (tối đa 20% kiếm tối đa của mình, dư thì rơi xuống đất). Không ai phía trước thì hụt, vẫn mất lượt.',
-    be_ti: 'Gồng 4 giây: kiếm cứng gấp đôi, miễn mọi đòn đẩy, chậm, trói và choáng.',
-    shipper: 'Chạy nhanh gấp 3 trong 4 giây: xuyên mọi vật cản (trừ biên khu), miễn và gỡ sạch khống chế, hút hết viên và vật phẩm quanh mình.',
-    cu_rua: 'Rụt vào mai 5 giây: không bể kiếm, không bị chém; ra khỏi mai thì bật sóng đẩy.',
-  } as Record<string, string>,
-  skillLabel: 'Kỹ năng',
-  /** Hồi chiêu + lượt tích ở thẻ nhân vật (spec v6.25 §6.3). */
-  skillCooldown: (secs: number, n: number): string => `Hồi ${secs}s · tích ${n} lượt`,
-  /** Nút kỹ năng hết lượt: số giây còn lại. */
-  skillWait: (secs: number): string => `${secs}s`,
-  /** Câu thoại tấu hài khi dùng kỹ năng (spec §6.3). */
-  skillLines: {
-    a_hon: 'Ăn miếng bánh bao, kiếm về như mới!',
-    ba_tam_loa: 'A lô a lô, tránh ra cho bà đi!',
-    ong_ba_vong: 'À ơi… ngủ đi con…',
-    dai_ca_dep: 'Tụi bay đâu, lên đây!',
-    map_tra_sua: 'Nếm thử trân châu nhà tao!',
-    co_ba_ganh: 'Hàng về! Tránh ra cho cô bày!',
-    su_phu_mi: 'Sùn sụt… kiếm mày ngon đấy!',
-    be_ti: 'Gồng! Không đứa nào đẩy nổi!',
-    shipper: 'Đơn gấp, xin phép đi xuyên!',
-    cu_rua: 'Thiền… các ngươi cứ chém đi.',
-  } as Record<string, string>,
-  zoneNames: ['Thiên Đình', 'Linh Sơn Cốc', 'Trúc Lâm Mê Cung', 'Phàm Trấn', 'Băng Nguyệt Hồ'],
-  zoneListTitle: 'Khu vực',
-  zoneEntered: (name: string): string => `— ${name} —`,
-  glLost: 'Card màn hình vừa bị gián đoạn. Đang khôi phục, bạn sẽ vào lại phòng ngay…',
-  glLostManual: 'Đồ hoạ lỗi liên tục. Hãy hạ chất lượng bằng phím V rồi tải lại trang (Ctrl+F5).',
-  versionMismatch: 'Đã có bản mới — bấm để tải lại.',
-  versionReload: 'Tải lại',
-  disconnected: 'Mất kết nối với máy chủ. Đang thử lại...',
-  badName: 'Tên phải dài 2–16 ký tự.',
-
-  // ——— Màn hình tải (GAME_SPEC §13.7 mục 4) ———
-  // Khung, tên game, khẩu hiệu và hai chữ đầu tiên ("Đang khởi động…", "Thử lại") nằm
-  // trong `index.html`, không nằm đây: chúng phải hiện trước khi bundle JS về, nên bắt
-  // buộc là HTML tĩnh. Tên game ở đó là token `%BRAND_NAME_VI%`, plugin `kx-brand` thay
-  // lúc build từ cùng `config.brand` mà `BRAND` phía trên đọc. Mọi chữ ĐỔI THEO BƯỚC thì
-  // ở đây.
-  loadUi: 'Đang tải giao diện…',
-  loadChar: (name: string): string => `Đang gọi ${name}…`,
-  loadZone: (zone: string): string => `Đang dựng ${zone}…`,
-  loadRoom: 'Đang tìm phòng…',
-  loadMB: (done: number, total: number): string => `${done.toFixed(1)} / ${total.toFixed(1)} MB`,
-  loadCached: 'Đã có sẵn trong máy — vào ngay!',
-  loadFailed: 'Mạng bị ngắt giữa lúc tải. Bấm "Thử lại" để tải tiếp phần còn thiếu.',
-  loadBg: (pct: number): string => `⬇ ${Math.round(pct * 100)}%`,
-  /** Mẹo + câu bựa đổi mỗi 4 giây trong lúc chờ (§13.7 mục 4). */
-  loadTips: [
-    'Không có nút đánh. Kiếm tự xoay — việc của bạn là đi đúng chỗ.',
-    'Bị chém trúng thân là chết, cảnh giới nào cũng vậy. Còn 1 vòng kiếm thì đừng tham.',
-    'Kiếm thừa rơi ra thành Bó Kiếm. Bó của người khác cũng nhặt được.',
-    'Giữ Shift để Thiêu Đốt Tinh Huyết: chạy nhanh hơn, đổi bằng EXP.',
-    'Kỹ năng tự hồi theo thời gian và tích được lượt — để dành cho lúc cần.',
-    'Cổng đưa bạn tới một khu ngẫu nhiên. Không ai biết trước, kể cả bạn.',
-    'Thiên Môn ở giữa khu đi thẳng lên Thiên Đình. Một chiều, không có đường về.',
-    'Đài Tiên Khí phun Tiên khí theo chu kỳ. Đứng đúng lúc, đừng đứng đúng chỗ.',
-    'Vòng kiếm càng nhiều lớp thì càng dài tay, nhưng người ta cũng thấy bạn từ xa hơn.',
-    'Mặt hồ băng trơn: vẫn chạy được, chỉ là không phanh được.',
-    'Thằng Mập phun trân châu kín màn hình. 5 giây đó bạn cũng không nhặt được gì.',
-    'Đại Ca Dép gọi hai đàn em mang nửa số kiếm của hắn. Đừng xông vào giữa.',
-    'Chém chết ai thì hút 30% Linh khí của họ, nhưng không vọt quá 2 đại cảnh giới.',
-    'Vật cản phá được sẽ mọc lại. Chỗ vừa trống không có nghĩa là sẽ còn trống.',
-  ] as string[],
-  controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Thiêu Đốt Tinh Huyết: giữ Shift, hoặc nháy đúp chuột rồi giữ. Kỹ năng: Space. Không có nút đánh — kiếm tự xoay!',
-  animInfoOn: 'Hiện số liệu hoạt ảnh (J): tên anim · frame · pha · điểm độ giật',
-  animInfoOff: 'Tắt số liệu hoạt ảnh',
-  qualitySet: (name: string) => `Chất lượng đồ họa: ${name} (phím V để đổi)`,
-  qualityAuto: (name: string) => `Tự động (đang ${name})`,
-  controlsMobile: 'Kéo ngón tay để di chuyển. Thiêu Đốt Tinh Huyết: chạm 2 lần rồi giữ, hoặc giữ nút 🔥. Kiếm tự xoay!',
-
-  // Thiêu Đốt Tinh Huyết (spec §4.1c)
-  burnName: 'Thiêu Đốt Tinh Huyết',
-  burnHint: (mult: number) => `Giữ Shift hoặc nháy đúp rồi giữ: chạy nhanh ×${mult}, đốt tu vi mỗi giây`,
-  skillBtnHint: (isTouch: boolean) => (isTouch ? 'Kỹ năng — chạm để dùng' : 'Kỹ năng — bấm Space hoặc nhấn vào đây'),
-  burnSpent: 'Tu vi đã thiêu đốt',
-  burnEmpty: 'Cạn tinh huyết rồi!',
-  debugHelp: 'Phím test: E +100 EXP · R lên cảnh giới · K +10 kiếm · G +1 lượt kỹ năng · B thả 1 bot cạnh mình · 1–7 buff · X tự chết · H xem hitbox kiếm',
-
-  // HUD
-  realmTier: (realm: string, tier: number) => `${realm} tầng ${tier}`,
-  // Thanh tiến độ đổi tên theo cảnh giới (spec §3.4): phàm = Linh khí, Tiên giới = Tiên khí.
-  linhKhi: 'Linh khí',
-  // Có dấu phân cách nghìn từ v6.4: Tiên khí ×20 nên thanh Đạo Tổ ghi `9999/10000` —
-  // năm chữ số dính liền thì đọc nhầm hàng là chuyện chắc chắn xảy ra.
-  tienKhi: (have: number, need: number) =>
-    `Tiên khí ${Math.floor(have).toLocaleString('vi-VN')}/${Math.round(need).toLocaleString('vi-VN')}`,
-  tienMax: 'Đỉnh cao Tiên giới',
-  /** Đạo Tổ đã nạp đầy 30 000: từ đây Tiên khí nhặt thêm mới đổi Uy Danh (spec v6.4 §3.4). */
-  tienOverflow: 'Tiên khí dư → Uy Danh',
-  swords: (n: number, max: number) => `Kiếm ${n}/${max}`,
-  roomTop: 'Top phòng',
-  /** Bảng xếp hạng phòng v6.19 (spec §11.5). */
+  titleParts: IS_VI ? splitName(BRAND.name_vi) : [BRAND.name],
+  subtitle: d.tagline || BRAND.tagline_vi,
+  feedbackKinds: d.feedbackKinds as Rec,
+  skillNames: d.skillNames as Rec,
+  skillDesc: d.skillDesc as Rec,
+  skillLines: d.skillLines as Rec,
+  characters: d.characters as Rec,
+  charactersShort: d.charactersShort as Rec,
+  charNick: d.charNick as Rec,
+  buffs: d.buffs as Rec,
+  scoreSources: d.scoreSources as Rec,
+  emotes: d.emotes as Record<string, string[]>,
+  /** Tên cảnh giới đã dịch; rỗng = dùng tên trong config (tiếng Việt). */
+  realmNames: d.realmNames as string[],
+  needRealm: (realm: string): string => fmt(d.needRealm, { realm }),
+  swordsStolen: (n: number): string => fmt(d.swordsStolen, { n }),
+  skillCooldown: (secs: number, n: number): string => fmt(d.skillCooldown, { secs, n }),
+  skillWait: (secs: number): string => fmt(d.skillWait, { secs }),
+  zoneEntered: (name: string): string => fmt(d.zoneEntered, { name }),
+  loadChar: (name: string): string => fmt(d.loadChar, { name }),
+  loadZone: (zone: string): string => fmt(d.loadZone, { zone }),
+  loadMB: (done: number, total: number): string => fmt(d.loadMB, { done: done.toFixed(1), total: total.toFixed(1) }),
+  loadBg: (pct: number): string => fmt(d.loadBg, { pct: Math.round(pct * 100) }),
+  qualitySet: (name: string): string => fmt(d.qualitySet, { name }),
+  qualityAuto: (name: string): string => fmt(d.qualityAuto, { name }),
+  burnHint: (mult: number): string => fmt(d.burnHint, { mult }),
+  skillBtnHint: (isTouch: boolean): string => (isTouch ? d.skillBtnHintTouch : d.skillBtnHintPc),
+  realmTier: (realm: string, tier: number): string => fmt(d.realmTier, { realm, tier }),
+  // Có dấu phân cách nghìn (v6.4): Tiên khí ×20, năm chữ số dính liền thì đọc nhầm hàng.
+  tienKhi: (have: number, need: number): string => fmt(d.tienKhi, { have: num(Math.floor(have)), need: num(need) }),
+  swords: (n: number, max: number): string => fmt(d.swords, { n, max }),
   board: {
-    title: 'TOP PHÒNG',
-    players: (n: number): string => `${n} người`,
-    you: 'Bạn',
+    ...d.board,
+    players: (n: number): string => fmt(d.board.players, { n }),
     /** Dòng ghim của mình khi ngoài top 10, và hàng thu gọn trên điện thoại: "Bạn #14". */
-    youRank: (rank: number): string => (rank > 0 ? `Bạn #${rank}` : 'Bạn —'),
-    /** Tên ngắn 5 khu, theo đúng thứ tự `zoneNames`. */
-    zoneShort: ['Thiên Đình', 'Linh Sơn', 'Trúc Lâm', 'Phàm Trấn', 'Băng Nguyệt'],
-    /** Khu của người đang Ẩn Thân. */
-    zoneHidden: '???',
-    sameZone: 'Cùng khu với bạn',
-    expand: 'Chạm để xem bảng xếp hạng',
-    close: 'Đóng bảng xếp hạng',
+    youRank: (rank: number): string => (rank > 0 ? fmt(d.board.youRank, { rank }) : d.board.youNoRank),
   },
-  yourRank: (rank: number, total: number) => `Hạng của bạn: ${rank}/${total}`,
-  ping: (ms: number) => `Ping ${ms}ms`,
-  chestIncoming: (secs: number) => `Rương Báu sắp xuất hiện trong ${secs}s!`,
-  maxLevel: 'Đỉnh cao tu vi',
-
-  // Death / summary screen (spec §7)
-  summaryTitle: 'Tổng kết',
-  killedBy: (name: string) => `Bị ${name} chém`,
-  killedByUnknown: 'Bị chém bởi một cao thủ vô danh',
-  peakRealm: 'Cảnh giới cao nhất',
-  peakExp: 'Tổng EXP đỉnh',
-  kills: 'Số người đã chém',
-  survive: 'Thời gian sống',
-  roomRank: 'Hạng trong phòng',
-  playAgain: 'Chơi tiếp',
-  changeCharacter: 'Đổi nhân vật',
-  back: 'Quay lại',
-  deathJokes: [
-    'Bạn đã được tiễn về quê nuôi cá.',
-    'Kiếm gãy, người bay, mộng tu tiên tạm hoãn.',
-    'Tu tiên không thành, về bán bánh bao tiếp.',
-    'Ăn một nhát kiếm, ngộ ra chân lý: chạy nhanh hơn.',
-    'Đạo tâm vỡ vụn như bánh tráng.',
-    'Thôi thì kiếp sau làm quái cho đỡ khổ.',
-    'Tu được ba hôm, nằm viện ba tháng.',
-    'Cảnh giới cao nhất bạn đạt được: cảnh giới nằm.',
-    'Người ta phi thăng, bạn phi ra khỏi bản đồ.',
-    'Sư phụ dặn né, bạn đứng lại ngắm.',
-    'Độ kiếp thất bại ngay tại tầng gửi xe.',
-    'Tu vi của bạn: đang trong quá trình tích lũy lại từ đầu.',
-    'Kiếm người ta xoay, kiếm bạn xoay xuống đất.',
-    'Linh khí trời đất không cứu nổi tốc độ phản xạ của bạn.',
-    'Chốt đơn: một vé về quê, không hoàn không huỷ.',
-    'Bạn đi rồi, bản đồ thoáng hẳn ra.',
-    'Thọ nguyên còn dài, nhưng kiếm người ta dài hơn.',
-    'Có cái nịt, không có cái mạng.',
-    'Đạo hữu nằm xuống, nhạc nền nổi lên.',
-    'Hẹn gặp lại ở quán trà đá cuối thôn.',
-    'Thiên đạo nhắn: "Thử lại sau nhé."',
-    'Bế quan mãi mãi, không ai làm phiền nữa.',
-  ],
-  secs: (s: number) => {
+  yourRank: (rank: number, total: number): string => fmt(d.yourRank, { rank, total }),
+  ping: (ms: number): string => fmt(d.ping, { ms }),
+  chestIncoming: (secs: number): string => fmt(d.chestIncoming, { secs }),
+  killedBy: (name: string): string => fmt(d.killedBy, { name }),
+  secs: (s: number): string => {
     const m = Math.floor(s / 60);
     const r = Math.floor(s % 60);
-    return m > 0 ? `${m} phút ${r} giây` : `${r} giây`;
+    return m > 0 ? fmt(d.secsMin, { m, s: r }) : fmt(d.secsOnly, { s: r });
   },
-
-  // Global leaderboard (spec §11.2)
-  lbTitle: 'Bảng xếp hạng',
-  lbToday: 'Hôm nay',
-  lbWeek: 'Tuần này',
-  lbAll: 'Mọi thời đại',
-  lbScore: 'Uy Danh',
-  lbKills: 'Sát Thần',
-  lbSpeed: 'Thần Tốc',
-  lbEmpty: 'Chưa có ai ghi danh. Vào chém đi!',
-  lbEmptySpeed: 'Chưa ai lên tới Đại Thừa. Cơ hội của bạn đây!',
-  lbName: 'Tên',
-  lbRealm: 'Cảnh giới',
-  lbLoading: 'Đang tải...',
-  lbError: 'Không tải được bảng xếp hạng.',
-
-  // Uy Danh (spec §11.1)
-  score: 'Uy Danh',
-  scoreHud: (n: number) => `Uy Danh ${Math.round(n).toLocaleString('vi-VN')}`,
-  scorePop: (n: number) => `+${Math.round(n).toLocaleString('vi-VN')}`,
-  scoreUpset: 'LẬT KÈO!',
-  scoreSources: {
-    hit: 'Chém trúng người',
-    kill: 'Chém chết',
-    breakthrough: 'Đột phá cảnh giới',
-    top1: 'Giữ ngôi Top 1',
-  } as Record<string, string>,
-  hits: 'Số lần chém trúng',
-  toDaiThua: 'Thời gian lên Đại Thừa',
-  top1Held: 'Thời gian giữ Top 1',
-  notReached: 'Chưa đạt',
-
-  // Danh hiệu Top 1–10 trong phòng (spec §11.3). Thứ tự khớp config `titles`.
-  titles: [
-    'Bần tăng chưa ngán ai bao giờ',
-    'Ngon thì nhào vô',
-    'Chỗ này nhiều máu nè',
-    'Chưa gặp đối thủ xứng tầm',
-    'Đi nhẹ nói khẽ, chém hơi mạnh',
-    'Cũng có số má đấy chứ',
-    'Tạm gọi là biết múa kiếm',
-    'Đang cố gắng từng ngày',
-    'Thấy ai cũng chào trước',
-    'Nấp giỏi nên còn sống',
-  ],
-
-  // Kill feed (spec §7) — mỗi dòng bốc ngẫu nhiên một cách nói cho đỡ nhàm
+  scoreHud: (n: number): string => fmt(d.scoreHud, { n: num(n) }),
+  scorePop: (n: number): string => fmt(d.scorePop, { n: num(n) }),
+  // Kill feed (spec §7) — server gửi MÃ + tham số, client dịch theo ngôn ngữ người xem (§19).
   feed: {
-    /** Top 3 bước qua Thiên Môn (spec §8.4a). */
-    heaven_gate: (a: string, title: string): string => `${a} (${title}) vừa bước qua Thiên Môn — Thiên Đình dậy sóng!`,
-    kill: (a: string, b: string) => pick([
-      `${a} vừa tiễn ${b} về quê nuôi cá`,
-      `${a} tặng ${b} một vé về quê, không hoàn không huỷ`,
-      `${b} bị ${a} chém bay cả giấc mộng tu tiên`,
-      `${a} dọn dẹp ${b} gọn gàng sạch sẽ`,
-      `${b} nằm xuống, ${a} phủi tay đi tiếp`,
-      `${a} vừa cho ${b} bế quan vĩnh viễn`,
-    ]),
-    realm_drop: (a: string, b: string, realm: string) => pick([
-      `${b} bị ${a} chém rớt xuống ${realm}`,
-      `${a} đạp ${b} về lại ${realm}`,
-      `${b} tu bao ngày, về ${realm} trong một nhát của ${a}`,
-      `${a} dạy ${b} một bài: ${realm} thôi nhé`,
-      `${b} rớt xuống ${realm}, công sức bay theo gió`,
-    ]),
-    breakthrough: (a: string, realm: string) => pick([
-      `${a} đột phá ${realm}, cả phòng run rẩy`,
-      `${a} lên ${realm} rồi, ai nhanh chân thì chạy`,
-      `Linh khí dồn về một chỗ: ${a} chạm ${realm}`,
-      `${a} bước vào ${realm}, trời đất đổi màu`,
-      `${a} vừa lên ${realm} — tuyệt đối điện ảnh`,
-    ]),
-    // Tin loan toàn server khi hạ một người trong Top 5 của phòng họ (spec §11.4).
-    serverTag: (rank: number) => `📢 TOÀN CÕI TU CHÂN · hạ Top ${rank}: `,
-    tien_ascend: (a: string, realm: string) => `${a} vượt Thiên Kiếp, phi thăng ${realm}!`,
-    title_gain: (a: string) => `${a} đã lên ngôi "Bần tăng chưa ngán ai bao giờ"!`,
-    title_lose: (a: string) => `${a} bị hạ bệ, bần tăng giờ đã ngán`,
-    gate_kill: (a: string, b: string) => pick([
-      `${b} chui cổng ra liền bị ${a} chém, đen thôi đỏ quên đi`,
-      `${b} vừa ló đầu khỏi cổng đã ăn kiếm của ${a}`,
-      `${a} ngồi canh cổng, ${b} xui xẻo bước ra`,
-      `${b} dịch chuyển hết một vòng để tới chỗ ${a} chết`,
-    ]),
+    heaven_gate: (a: string, title: string): string => fmt(d.feed.heaven_gate, { a, title }),
+    kill: (a: string, b: string): string => pickFmt(d.feed.kill, { a, b }),
+    realm_drop: (a: string, b: string, realm: string): string => pickFmt(d.feed.realm_drop, { a, b, realm }),
+    breakthrough: (a: string, realm: string): string => pickFmt(d.feed.breakthrough, { a, realm }),
+    serverTag: (rank: number): string => fmt(d.feed.serverTag, { rank }),
+    tien_ascend: (a: string, realm: string): string => fmt(d.feed.tien_ascend, { a, realm }),
+    title_gain: (a: string): string => fmt(d.feed.title_gain, { a }),
+    title_lose: (a: string): string => fmt(d.feed.title_lose, { a }),
+    gate_kill: (a: string, b: string): string => pickFmt(d.feed.gate_kill, { a, b }),
   },
-
-  // Emote bubbles (ART_PROMPTS §10). Khoá = tên sự kiện emote của server hoặc tên mood (§12).
-  // Giữ câu ngắn: bong bóng chỉ hiện 1.8s và xuống dòng ở 220px.
-  // Cố tình KHÔNG có khoá 'idle': người chơi dừng/đi liên tục nên sẽ lải nhải quá nhiều.
-  emotes: {
-    sword_lost: ['Kiếm của taaa!', 'Trả kiếm đây!', 'Kiếm mới mua mà!', 'Rụng mất một cây rồi!', 'Ai nhặt là mất dạy đó!'],
-    shield_break: ['Khiên ơi!', 'Vỡ rồi!', 'Khiên giấy à trời!', 'Mới đeo được 3 giây!', 'Bảo hành đâu?!'],
-    chest: ['Trúng mánh!', 'Giàu rồi!', 'Đổi đời rồi bà con!', 'Hôm nay số đỏ!', 'Toàn đồ xịn!', 'Ét ô ét, giàu quá!'],
-    revealed: ['Lộ rồi!', 'Ối!', 'Sao thấy tui hay vậy?', 'Chưa núp xong mà!', 'Thôi xong, lộ hàng!'],
-    run: ['AAAAA!', 'Tránh ra!', 'Xe tui không phanh!', 'Dô dô dô!', 'Chân ơi cố lên!', 'Nhanh nhanh nhanh!'],
-    chase: ['Hehehe...', 'Đứng lại đó!', 'Chạy đâu cho thoát!', 'Lại đây cưng!', 'Đứng im một nhát thôi!', 'Ngon, con mồi kìa!', 'Đạo hữu, dừng bước!'],
-    flee: ['Cứu tôi với!', 'Mẹ ơi!', 'Tui còn nhỏ lắm!', 'Nhầm người rồi!', 'Tha cho đệ!', 'Đệ xin hàng!', 'Không đánh nhau, hoà bình!'],
-    hit: ['Ối giời!', 'Đau quá!', 'Á đù!', 'Chơi bẩn!', 'Hự!', 'Ai đánh lén đó?!', 'Nhẹ tay coi!'],
-    breakthrough: ['Ta đã ngộ rồi!!!', 'Thiên địa chứng giám!', 'Lên cảnh giới rồi nha!', 'Nhìn ta đây này!', 'Cảm tạ trời đất!'],
-    levelup: ['Lên tầng!', 'Thơm quá!', 'Tiến bộ rồi nha!', 'Thêm tí tu vi!', 'Mượt!'],
-    realm_drop: ['Mất cảnh giới rồi!', 'Công sức bao ngày...', 'Tụt hạng đau quá!', 'Làm lại từ đầu vậy!', 'Trời không thương tui!'],
-    teleport_in: ['Đây là đâu???', 'Ủa? Lạc rồi!', 'Cổng gì chóng mặt vậy!', 'Ai đưa tui tới đây?', 'Về nhầm nhà rồi!'],
-    teleport_out: ['Tui biến đây!', 'Bái bai nha!', 'Hẹn gặp bên kia!', 'Chui cổng cái đã!'],
-    death: ['Thôi xong...', 'Tui đi trước nha!', 'Hẹn kiếp sau!', 'Tin được không trời!'],
-    respawn: ['Tui lại về rồi!', 'Chưa hết đâu nha!', 'Hồi sinh, chém tiếp!', 'Nghỉ tí rồi tu lại!'],
-    no_swords: ['Hết kiếm rồi!', 'Tui tay không nè!', 'Ai cho mượn cây kiếm...', 'Thôi chạy đã!'],
-    bush: ['Suỵt...', 'Không có ai ở đây đâu.', 'Tui là cái bụi cỏ.', 'Đừng nhìn, đừng nhìn...'],
-    shocked: ['Hả???', 'Trời đất ơi!', 'Ghê vậy!', 'Gì cơ?!', 'Ông này ghê quá!', 'Tuyệt đối điện ảnh!'],
-  } as Record<string, string[]>,
-
-  characters: {
-    a_hon: 'A Hớn Bánh Bao',
-    ba_tam_loa: 'Bà Tám Loa',
-    ong_ba_vong: 'Ông Ba Võng',
-    dai_ca_dep: 'Đại Ca Dép Tổ Ong',
-    map_tra_sua: 'Thằng Mập Trà Sữa',
-    co_ba_ganh: 'Cô Ba Gánh Hàng',
-    su_phu_mi: 'Sư Phụ Mì Gói',
-    be_ti: 'Bé Tí Cơ Bắp',
-    shipper: 'Anh Shipper Tia Chớp',
-    cu_rua: 'Cụ Rùa Thiền',
-  } as Record<string, string>,
-
-  /**
-   * Tên NGẮN cho THẺ CHỌN trong lưới 5 cột (chủ dự án chốt 1/11).
-   *
-   * Thẻ rộng ~100 px ở cỡ PC và ~60 px trên điện thoại. "Đại Ca Dép Tổ Ong" ở đó xuống
-   * ba dòng và đẩy cả hàng thẻ cao lên, còn "Anh Shipper Tia Chớp" thì vỡ chữ giữa từ.
-   * Tên ngắn giữ MỌI thẻ đúng một dòng, nên hàng thẻ cao đều nhau.
-   *
-   * Tên ĐẦY ĐỦ không mất đi: nó hiện ở khung chi tiết bên dưới ngay khi rê chuột hoặc
-   * chọn — tức là người chơi vẫn đọc được tên thật trước khi bấm "Vào chơi".
-   */
-  charactersShort: {
-    a_hon: 'A Hớn',
-    ba_tam_loa: 'Bà Tám',
-    ong_ba_vong: 'Ông Ba',
-    dai_ca_dep: 'Đại Ca',
-    map_tra_sua: 'Thằng Mập',
-    co_ba_ganh: 'Cô Ba',
-    su_phu_mi: 'Sư Phụ',
-    be_ti: 'Bé Tí',
-    shipper: 'Shipper',
-    cu_rua: 'Cụ Rùa',
-  } as Record<string, string>,
-
-  buffs: {
-    spin: 'Tốc Kiếm',
-    haste: 'Thần Hành',
-    magnet: 'Nam Châm',
-    hard: 'Cương Kiếm',
-    shield: 'Kim Cang',
-    exp2: 'Song Bội Đan',
-    stealth: 'Ẩn Thân Phù',
-  } as Record<string, string>,
-
-  rotateHint: 'Xoay ngang điện thoại để nhìn rộng hơn',
-  minimapToggle: 'Phím M: phóng to bản đồ',
-
-  // Bảng điều khiển mờ hiện vài giây đầu khi vào trận (spec §18.1). Chỉ các nút, không
-  // giải thích luật — người chơi tự khám phá nhanh hơn đọc.
-  guideTitle: 'Điều khiển',
-  guideKeys: (isTouch: boolean): { key: string; what: string }[] =>
-    isTouch
-      ? [
-          { key: 'Kéo', what: 'Di chuyển' },
-          { key: 'Chạm 2 lần rồi giữ · 🔥', what: 'Thiêu Đốt' },
-          { key: '✦', what: 'Kỹ năng (tự hồi)' },
-        ]
-      : [
-          { key: 'W A S D', what: 'Di chuyển' },
-          { key: 'Shift · nháy đúp giữ', what: 'Thiêu Đốt' },
-          { key: 'Space', what: 'Kỹ năng (tự hồi)' },
-          { key: 'M', what: 'Bản đồ' },
-        ],
+  // Bảng điều khiển mờ vài giây đầu trận (spec §18.1).
+  guideKeys: (isTouch: boolean): { key: string; what: string }[] => (isTouch ? d.guideKeysTouch : d.guideKeysPc),
 };
 
 export function pick<T>(list: T[]): T {

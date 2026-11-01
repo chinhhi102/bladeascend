@@ -1,3 +1,4 @@
+// i18n-ok-file: bộ xem animation chỉ có trong chế độ debug J
 // Bộ xem animation của chế độ debug `J` (ANSWERS "Trả lời bảng điểm độ giật" mục 1).
 //
 // Chủ dự án cần chốt ngưỡng đỏ bằng MẮT, mà xem bằng cách chạy quanh bản đồ chờ nhân vật

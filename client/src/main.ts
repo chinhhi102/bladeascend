@@ -23,7 +23,7 @@ import { isMobile } from './render/device';
 import { loadFonts } from './render/fonts';
 import { GameScene } from './render/scene';
 import { loadJitter } from './render/jitter';
-import { cycleQuality, quality, QUALITY_NAME } from './render/quality';
+import { cycleQuality, quality } from './render/quality';
 import { ringGeom } from './render/ringgeom';
 import type { Telemetry, TelemetryContext } from './telemetry';
 import { Screens, button, h } from './ui/dom';
@@ -173,7 +173,7 @@ class App {
       if (this.playing && e.code === 'KeyV' && !e.repeat) {
         // Spec §13.6 mục 8 (v6.20): Tự động → Cao → Vừa → Thấp → Tự động.
         const pick = cycleQuality();
-        const name = QUALITY_NAME[pick.q];
+        const name = STR.quality[pick.q];
         this.hud.showBanner(STR.qualitySet(pick.auto ? STR.qualityAuto(name) : name), 2.5);
         return;
       }
@@ -792,7 +792,7 @@ class App {
       zoning: this.joining,
       placeholderNow: draw.placeholder,
       respawn2s: this.world.takeRespawn2s(),
-      quality: QUALITY_NAME[quality()] ?? '',
+      quality: STR.quality[quality()] ?? '',
       qualityAuto: false,
     };
   }

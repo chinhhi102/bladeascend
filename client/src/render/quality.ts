@@ -20,7 +20,8 @@ export type Quality = 'high' | 'medium' | 'low';
 const KEY = 'kx.quality.manual';
 const ORDER: Quality[] = ['high', 'medium', 'low'];
 
-export const QUALITY_NAME: Record<Quality, string> = { high: 'Cao', medium: 'Vừa', low: 'Thấp' };
+// Tên hiển thị (Cao/Vừa/Thấp) nằm trong i18n — `STR.quality[q]`. File này phải chạy được
+// trong Node (`scripts/quality-check.ts`) nên không được import `ui/strings`.
 
 /** Số đốt thần thú theo chất lượng (spec §3.5: Cao 16 · Vừa 10 · Thấp 6). */
 export const BEAST_SEGMENTS: Record<Quality, number> = { high: 16, medium: 10, low: 6 };

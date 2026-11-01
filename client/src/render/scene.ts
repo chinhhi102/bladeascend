@@ -780,15 +780,15 @@ export class GameScene {
     }
     const aoi = this.players.size + this.monsters.size + this.items.size + this.orbs.ids().length;
     return [
-      `${this.fps.toFixed(0)} fps · ${(1000 / Math.max(this.fps, 1)).toFixed(1)} ms/khung · vẽ ${this.lastRenderMs.toFixed(1)} ms`,
+      `${this.fps.toFixed(0)} fps · ${(1000 / Math.max(this.fps, 1)).toFixed(1)} ms/khung · vẽ ${this.lastRenderMs.toFixed(1)} ms`, // i18n-ok: lớp số liệu debug
       `server ${net.srvMs.toFixed(2)} ms/tick · ping ${net.rttMs.toFixed(0)} ms`,
-      `mạng ${net.kbPerSec.toFixed(1)} KB/s · snapshot ${(net.snapBytes / 1024).toFixed(1)} KB`,
+      `mạng ${net.kbPerSec.toFixed(1)} KB/s · snapshot ${(net.snapBytes / 1024).toFixed(1)} KB`, // i18n-ok: lớp số liệu debug
       `sprite ${countNodes(this.app.stage)} · draw call ${drawCalls.ready ? drawCalls.perFrame.toFixed(0) : '—'}`,
-      `AOI ${aoi} · người ${this.players.size} · kiếm ${swords} · quái ${this.monsters.size}`,
-      `EXP ${this.orbs.ids().length} · vật phẩm ${this.items.size} · giãn kiếm 1/${this.detail}`,
+      `AOI ${aoi} · người ${this.players.size} · kiếm ${swords} · quái ${this.monsters.size}`, // i18n-ok: lớp số liệu debug
+      `EXP ${this.orbs.ids().length} · vật phẩm ${this.items.size} · giãn kiếm 1/${this.detail}`, // i18n-ok: lớp số liệu debug
       // Spec §8.2a: số lần server kéo nhân vật về chỗ khác. Dự đoán đúng thì ~0; lệch thì
       // nó chạy lên bằng tần số snapshot và người chơi thấy rung khi đi sát vật cản.
-      `hiệu chỉnh ${(this.world?.fixPerSec ?? 0).toFixed(1)}/giây · lệch nhất ${(this.world?.fixMax ?? 0).toFixed(1)}`,
+      `hiệu chỉnh ${(this.world?.fixPerSec ?? 0).toFixed(1)}/giây · lệch nhất ${(this.world?.fixMax ?? 0).toFixed(1)}`, // i18n-ok: lớp số liệu debug
     ].join('\n');
   }
 

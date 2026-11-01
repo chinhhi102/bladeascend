@@ -1,3 +1,5 @@
+import { STR } from './ui/strings';
+
 // Subset of config/game.json the client needs. Fetched from GET /api/config — never hardcode numbers.
 
 export interface SpeedCfg {
@@ -173,6 +175,11 @@ export function tienIndex(cfg: GameConfig, realm: number): number {
 
 /** realmName gộp cả 9 cảnh giới phàm và 5 cảnh giới Tiên. */
 export function realmName(cfg: GameConfig, realm: number): string {
+  // Bản dịch (spec §19 bảng thuật ngữ) đè tên tiếng Việt trong config; rỗng = dùng config.
+  const tr = STR.realmNames[realm];
+  if (tr) {
+    return tr;
+  }
   const c = cfg.cultivation;
   if (realm < c.realms.length) {
     return c.realms[realm] ?? '';

@@ -22,8 +22,8 @@ export const FONT_TITLE = 'kx-title';
 function charset(): string[] {
   const ascii = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i)).join('');
   const viet =
-    'àáâãèéêìíòóôõùúýăđĩũơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ' +
-    'ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐĨŨƠƯẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼẾỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ';
+    'àáâãèéêìíòóôõùúýăđĩũơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ' + // i18n-ok: bộ ký tự font, không phải câu chữ
+    'ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐĨŨƠƯẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼẾỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ'; // i18n-ok: bộ ký tự font, không phải câu chữ
   const marks = '▲▼●★☯♚'; // chỉ báo nguy hiểm và vài ký hiệu hạng
   return [ascii + viet + marks];
 }

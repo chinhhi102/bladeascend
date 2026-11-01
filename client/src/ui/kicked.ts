@@ -1,5 +1,6 @@
 import { button, h } from './dom';
 import { STR } from './strings';
+import { LOCALE } from '../i18n';
 
 /**
  * Màn hình "bị mời ra khỏi phòng" / "đang bị cấm" — ADMIN_SPEC §6.2.
@@ -26,7 +27,7 @@ export function kickedScreen(reason: string, until: number | undefined, onBack: 
   } else if (until === -1) {
     panel.append(h('p', 'hint', STR.bannedForever));
   } else {
-    panel.append(h('p', 'hint', STR.bannedUntil + new Date(until * 1000).toLocaleString('vi-VN')));
+    panel.append(h('p', 'hint', STR.bannedUntil + new Date(until * 1000).toLocaleString(LOCALE)));
   }
 
   const row = h('div', 'row');

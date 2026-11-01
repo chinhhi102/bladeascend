@@ -1,3 +1,4 @@
+// i18n-ok-file: nhãn danh mục art cho công cụ dev / npm run assets:report
 // Every asset the game can use, named exactly as in docs/ART_PROMPTS.md §13.
 // Shared by the renderer (labels for placeholders) and `npm run assets:report`.
 // Keep this file free of browser/Pixi imports so Node can run the report directly.

@@ -4,6 +4,7 @@ import type { DeadMsg } from '../net/protocol';
 import { assets } from '../render/assets';
 import { button, h } from './dom';
 import { pick, STR } from './strings';
+import { num as fmtNum } from '../i18n';
 
 export interface SummaryActions {
   playAgain: () => void;
@@ -54,7 +55,7 @@ export function summaryScreen(cfg: GameConfig, d: DeadMsg, myChar: string, act: 
   const realm = cfg.cultivation.realms[realmOf(cfg, d.peak_level)] ?? '';
   const stat = (label: string, value: string): HTMLElement => h('div', 'stat', h('span', '', label), h('b', '', value));
   const killer = d.killer ? `${STR.killedBy(d.killer)} (${STR.characters[d.killer_char] ?? d.killer_char})` : STR.killedByUnknown;
-  const num = (n: number): string => Math.round(n).toLocaleString('vi-VN');
+  const num = (n: number): string => fmtNum(n);
   panel.append(
     h('h2', '', STR.summaryTitle),
     ...(ghost ? [ghost] : []),

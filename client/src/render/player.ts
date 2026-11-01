@@ -168,7 +168,7 @@ export class PlayerSprite {
     const phase = frames > 0 ? (cur / frames) : 0;
     const jit = animJitter(this.char, this.mood);
     this.animInfo.text = `${this.mood || '?'} ${cur + 1}/${frames} pha ${phase.toFixed(2)}`
-      + (jit === null ? '' : ` giật ${jit.toFixed(0)}`);
+      + (jit === null ? '' : ` giật ${jit.toFixed(0)}`); // i18n-ok: số liệu hoạt ảnh chế độ debug J
     this.animInfo.style.fill = jit !== null && jit >= JITTER_RED ? 0xff6b6b : 0x8ef58e;
   }
 

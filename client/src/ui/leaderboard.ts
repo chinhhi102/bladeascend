@@ -3,6 +3,7 @@ import { realmOf, tierOf } from '../config';
 import { assets } from '../render/assets';
 import { button, h } from './dom';
 import { STR } from './strings';
+import { num } from '../i18n';
 
 interface Row {
   name: string;
@@ -73,7 +74,7 @@ function renderRows(cfg: GameConfig, table: HTMLElement, rows: Row[], metric: st
     const value =
       metric === 'hits' ? String(r.hits)
       : metric === 'speed' ? STR.secs(r.dai_thua_secs)
-      : Math.round(r.score).toLocaleString('vi-VN');
+      : num(r.score);
     return h('div', 'lb-row', rank, h('span', 'nm', r.name), h('span', 'realm', STR.realmTier(realm, tierOf(cfg, r.peak_level))), h('span', 'val', value));
   });
   table.replaceChildren(...list);

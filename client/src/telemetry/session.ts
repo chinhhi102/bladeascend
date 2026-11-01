@@ -93,12 +93,12 @@ function parseUA(ua: string): { br: string; os: string } {
     /Firefox\/([\d.]+)/.exec(ua)?.[0] ??
     /Chrome\/([\d.]+)/.exec(ua)?.[0] ??
     /Version\/([\d.]+).*Safari/.exec(ua)?.[0] ??
-    'khác';
+    'khác'; // i18n-ok: nhãn dữ liệu telemetry, không hiển thị
   const os = /Windows NT [\d.]+/.exec(ua)?.[0]
     ?? /Android [\d.]+/.exec(ua)?.[0]
     ?? /iPhone OS [\d_]+/.exec(ua)?.[0]
     ?? /Mac OS X [\d_]+/.exec(ua)?.[0]
-    ?? (/Linux/.test(ua) ? 'Linux' : 'khác');
+    ?? (/Linux/.test(ua) ? 'Linux' : 'khác'); // i18n-ok: nhãn dữ liệu telemetry, không hiển thị
   return { br: br.split(' ')[0], os };
 }
 
