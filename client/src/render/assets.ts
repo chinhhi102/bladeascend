@@ -80,6 +80,8 @@ class AssetStore {
   private man: Manifest | null = null;
   private readonly textures = new Map<string, Texture>();
   private readonly atlases = new Map<string, AnimSet>();
+  /** atlasImg: atlas → địa chỉ ảnh đã đưa cho `Assets.load`, để nhả đúng qua `Assets.unload`. */
+  private readonly atlasImg = new Map<string, string>();
   /** loaded: đường dẫn logic đã tải xong. Dùng để không tải lại khi nhóm chồng nhau. */
   private readonly loaded = new Set<string>();
   private readonly inflight = new Map<string, Promise<void>>();
@@ -370,20 +372,24 @@ class AssetStore {
     if (!set) {
       return;
     }
-    const seen = new Set<unknown>();
     for (const anim of set.anims.values()) {
       for (const tex of anim.textures) {
-        const src = (tex as unknown as { source?: unknown }).source;
-        if (src && !seen.has(src)) {
-          seen.add(src);
-        }
         tex.destroy(false); // khung hình chỉ là cửa sổ vào ảnh nguồn
       }
     }
-    // Huỷ ảnh NGUỒN đúng một lần: mọi khung của một atlas dùng chung một ảnh.
-    for (const src of seen) {
-      (src as { destroy?: () => void }).destroy?.();
+    // Trả ảnh NGUỒN qua `Assets.unload`, KHÔNG gọi `source.destroy()` tay.
+    //
+    // Ảnh nạp bằng `Assets.load` nằm trong bộ đệm của Pixi. Huỷ tay thì bộ đệm vẫn giữ
+    // cái xác: lần sau nhân vật này quay lại, `Assets.load` trả về ĐÚNG ảnh đã huỷ (console
+    // báo "[Cache] already has key" và "TextureSource managed by Assets was destroyed instead
+    // of unloaded"), atlas mới dựng trên nguồn có `style = null`, và lần vẽ đầu tiên ném
+    // "reading 'addressModeU'" — game đơ hẳn (chủ dự án chụp màn hình 1/11 15:58).
+    const imgUrl = this.atlasImg.get(rel);
+    if (imgUrl) {
+      void Assets.unload(imgUrl).catch((err: unknown) => console.warn('unload atlas', rel, err));
+      this.atlasImg.delete(rel);
     }
+    this.textures.delete(`${rel}/atlas.png`);
     this.atlases.delete(rel);
     this.charIdleSince.delete(char);
     // Bỏ dấu "đã tải" của MỌI tệp thuộc nhân vật này, không chỉ tên nhóm: `loaded` chứa
@@ -436,7 +442,14 @@ class AssetStore {
       if (!imgUrl) {
         return;
       }
-      const base = (await Assets.load(imgUrl)) as Texture;
+      let base = (await Assets.load(imgUrl)) as Texture;
+      // Chốt chặn: bộ đệm còn giữ ảnh đã huỷ (nạp lại trước khi `Assets.unload` kịp xong)
+      // thì bỏ nó ra rồi nạp lại — dựng atlas trên nguồn đã huỷ là đơ game (xem releaseChar).
+      if (base.destroyed || base.source.destroyed) {
+        await Assets.unload(imgUrl);
+        base = (await Assets.load(imgUrl)) as Texture;
+      }
+      this.atlasImg.set(dir, imgUrl);
       this.textures.set(imgRel, base);
       this.loaded.add(imgRel);
       const set: AnimSet = { anims: new Map(), pivotX: atlas.pivot_x, pivotY: atlas.pivot_y };
