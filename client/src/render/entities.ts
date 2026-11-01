@@ -156,15 +156,7 @@ function itemTexture(it: ItemState): Texture | null {
   if (it.k === 'chest') {
     return assets.frames('items/chest', 'idle')[0] ?? null;
   }
-  // Bí Kíp nằm trong `items/`, KHÔNG phải `buffs/`.
-  //
-  // Dòng cuối hàm này đoán đường dẫn từ tên loại (`buffs/<loại>.png`), đúng cho 7 loại buff
-  // nhưng sai cho Bí Kíp — và sai trong im lặng: không tìm thấy ảnh thì rơi về placeholder,
-  // y như lúc chưa vẽ xong art. Ảnh đã có từ lâu ở `items/skill_scroll.png`, chỉ là không ai
-  // nhìn tới. Chủ dự án phát hiện bằng mắt trong game ngày 30/10.
-  if (it.k === 'skill_scroll') {
-    return assets.texture('items/skill_scroll.png');
-  }
+  // Bí Kíp đã bỏ (v6.25): server không còn sinh `skill_scroll`, art chuyển vào thư viện.
   return assets.texture(`buffs/${it.k}.png`);
 }
 

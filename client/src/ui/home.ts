@@ -26,6 +26,12 @@ function lsSet(k: string, v: string): void {
 }
 
 /** guestId is the anonymous leaderboard identity kept in localStorage (spec §11). */
+/** cooldownText: "Hồi 18s · tích 2 lượt" từ config (spec v6.25 §6.3). */
+function cooldownText(cfg: GameConfig, char: string): string {
+  const cd = cfg.skills.cooldowns[char];
+  return cd ? STR.skillCooldown(cd[0], cd[1]) : '';
+}
+
 export function guestId(): string {
   let id = lsGet(LS_GUEST);
   if (!id) {
@@ -99,6 +105,7 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     blocks.set(c, h('div', 'preview-block',
       h('div', 'preview-name', STR.characters[c] ?? c),
       h('div', 'preview-skill', `${STR.skillLabel}: ${STR.skillNames[c] ?? '—'}`),
+      h('div', 'preview-cd', cooldownText(cfg, c)),
       h('div', 'preview-desc', STR.skillDesc[c] ?? '')));
   }
   const preview = h('div', 'char-preview',
@@ -116,7 +123,8 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     // Thẻ dùng tên NGẮN (một dòng); tên đầy đủ nằm ở khung chi tiết bên dưới. `title` giữ
     // tên đầy đủ để rê chuột trên PC vẫn đọc được ngay tại thẻ.
     const card = h('button', 'char-card', portrait(c, (p) => assets.url(p), toHex(charColor(c)[0])),
-      h('span', 'card-name', STR.charactersShort[c] ?? STR.characters[c] ?? c));
+      h('span', 'card-name', STR.charactersShort[c] ?? STR.characters[c] ?? c),
+      h('span', 'card-cd', cooldownText(cfg, c)));
     card.title = STR.characters[c] ?? c;
     const pick = (): void => {
       selected = c;

@@ -326,14 +326,14 @@ func (u SkillU) Bool() bool     { return u != 0 }
 // Skills: mọi con số của 10 kỹ năng nhân vật (spec §6.3). Bán kính và tầm xa còn được
 // nhân theo scale người dùng lúc thi hành.
 type Skills struct {
-	MaxCharges int `json:"max_charges"`
-	// MaxChargesTien: ở Tiên giới (Chân Tiên trở lên) giữ được 3 lượt thay vì 2 (spec v6.5
-	// §6.3). Rớt về Đại Thừa đang có 3 thì cắt còn 2.
-	MaxChargesTien int     `json:"max_charges_tien"`
-	LockSecs       float64 `json:"lock_secs"`
-	OvercapExp     float64 `json:"overcap_exp"`
-	OvercapTien    float64 `json:"overcap_tien"`
-	KnockSecs      float64 `json:"knock_secs"`
+	// Cooldowns: hồi chiêu theo nhân vật (spec v6.25 §6.3) — `[giây hồi 1 lượt, lượt tối đa]`.
+	Cooldowns map[string][2]float64 `json:"cooldowns"`
+	// StartCharges: vào trận / hồi sinh có sẵn ngần này lượt (1).
+	StartCharges int `json:"start_charges"`
+	// TienExtraCharges: Tiên giới +1 lượt tích tối đa; rớt về Đại Thừa thì cắt bớt.
+	TienExtraCharges int     `json:"tien_extra_charges"`
+	LockSecs         float64 `json:"lock_secs"` // khoá giữa hai lần dùng (3 s)
+	KnockSecs        float64 `json:"knock_secs"`
 
 	// ——— Phạm vi kỹ năng theo đơn vị U (spec v6.5 §6.3) ———
 	//
@@ -610,7 +610,22 @@ func Load(path string) (*Config, []byte, error) {
 	if names := loadBotNames(filepath.Join(filepath.Dir(path), "bot_names.txt")); len(names) > 0 {
 		c.Bots.Names = names
 	}
+	if err := c.checkCooldowns(); err != nil {
+		return nil, nil, err
+	}
 	return &c, raw, nil
+}
+
+// checkCooldowns: mọi nhân vật phải có hồi chiêu > 0 và ≥ 1 lượt (spec v6.25 §6.3). Thiếu
+// một dòng thì nhân vật đó im lặng không bao giờ có lượt — chặn ngay lúc nạp config.
+func (c *Config) checkCooldowns() error {
+	for _, ch := range c.Characters {
+		cd, ok := c.Skills.Cooldowns[ch]
+		if !ok || cd[0] <= 0 || cd[1] < 1 {
+			return fmt.Errorf("config: skills.cooldowns[%q] thiếu hoặc sai (cần [giây > 0, lượt ≥ 1])", ch)
+		}
+	}
+	return nil
 }
 
 // loadBotNames đọc file tên bot: mỗi dòng một tên, bỏ dòng trống và dòng bắt đầu bằng `#`.

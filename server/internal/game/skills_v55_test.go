@@ -10,7 +10,7 @@ func TestMinionSwordsHalfOfBoss(t *testing.T) {
 	boss := put(g, "dai_ca_dep", Vec{X: 3000, Y: 3000}, 30, 40)
 	bossSwords := boss.Ring.Count
 
-	g.AddSkillCharge(boss)
+	giveCharge(boss)
 	g.CastSkill(boss)
 
 	want := int(float64(bossSwords) * g.Cfg.Skills.DanEmSwordShare)
@@ -40,7 +40,7 @@ func TestMinionSwordsHalfOfBoss(t *testing.T) {
 func TestMinionSwordsAtLeastOne(t *testing.T) {
 	g := skillGame(t)
 	boss := put(g, "dai_ca_dep", Vec{X: 3000, Y: 3000}, 30, 1)
-	g.AddSkillCharge(boss)
+	giveCharge(boss)
 	g.CastSkill(boss)
 
 	for _, p := range g.PlayerList() {
@@ -55,7 +55,7 @@ func TestMinionSwordsAtLeastOne(t *testing.T) {
 func TestMinionCannotPickUp(t *testing.T) {
 	g := skillGame(t)
 	boss := put(g, "dai_ca_dep", Vec{X: 3000, Y: 3000}, 30, 20)
-	g.AddSkillCharge(boss)
+	giveCharge(boss)
 	g.CastSkill(boss)
 
 	found := false
@@ -96,7 +96,7 @@ func TestSlickStuns(t *testing.T) {
 	co := put(g, "co_ba_ganh", Vec{X: 3000, Y: 3000}, 10, 20)
 	co.Facing = 0
 	victim := put(g, "cu_rua", Vec{X: 3000 + 200, Y: 3000}, 10, 20)
-	g.AddSkillCharge(co)
+	giveCharge(co)
 	g.CastSkill(co)
 	g.updateSkillState(1.0 / 30)
 
@@ -106,7 +106,7 @@ func TestSlickStuns(t *testing.T) {
 	if g.MoveSpeed(victim) != 0 {
 		t.Errorf("đang choáng mà tốc độ %.1f — phải là 0", g.MoveSpeed(victim))
 	}
-	g.AddSkillCharge(victim)
+	giveCharge(victim)
 	if g.CanCastSkill(victim) {
 		t.Error("đang choáng mà vẫn dùng được kỹ năng")
 	}
@@ -121,7 +121,7 @@ func TestSlickStuns(t *testing.T) {
 func TestBraceImmuneToStun(t *testing.T) {
 	g := skillGame(t)
 	p := put(g, "be_ti", Vec{X: 3000, Y: 3000}, 10, 20)
-	g.AddSkillCharge(p)
+	giveCharge(p)
 	g.CastSkill(p)
 	g.ApplyStatus(p, StStun, 1)
 	if p.HasStatus(StStun, g.Time) {
@@ -139,9 +139,9 @@ func TestSkillDurationsMatchSpec(t *testing.T) {
 		got  float64
 		want float64
 	}{
-		{"Gồng Cơ", sc.BraceSecs, 5},
+		{"Gồng Cơ", sc.BraceSecs, 4},
 		{"Rụt Cổ", sc.ShellSecs, 5},
-		{"Gọi Đàn Em", sc.DanEmSecs, 10},
+		{"Gọi Đàn Em", sc.DanEmSecs, 8},
 		{"Phun Trân Châu bịt mắt", sc.TranChauSecs, 5},
 		{"Gom Đơn Hỏa Tốc", g.skillNum("gom_don_secs"), 4},
 		{"Ru Ngủ Trưa ngủ", g.skillNum("ru_ngu_secs"), 2.5},

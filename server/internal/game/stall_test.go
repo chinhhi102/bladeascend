@@ -18,7 +18,7 @@ func coBaAt(t *testing.T, g *Game, level int) (*Player, []tempStall) {
 	t.Helper()
 	p := put(g, "co_ba_ganh", Vec{X: 3000, Y: 3000}, level, 20)
 	p.Facing = 0
-	g.AddSkillCharge(p)
+	giveCharge(p)
 	if !g.CastSkill(p) {
 		t.Fatal("Cô Ba không bày được hàng")
 	}
@@ -67,7 +67,7 @@ func TestStallTierCappedAtTableMax(t *testing.T) {
 	p := put(g, "co_ba_ganh", Vec{X: 3000, Y: 3000}, 10, 20)
 	p.Facing = 0
 	g.ForceState(p, g.Prog.TienLevel(4), 20, p.Pos) // Đạo Tổ = 13
-	g.AddSkillCharge(p)
+	giveCharge(p)
 	g.CastSkill(p)
 
 	maxTier := g.Cfg.Obstacles.MaxTier()
@@ -108,7 +108,7 @@ func TestStallGhostPassesThrough(t *testing.T) {
 	if got := g.resolveBlockingFor(sh, inside, g.BodyR(sh)); got.Dist(inside) < 1e-9 {
 		t.Fatal("Shipper chưa dùng kỹ năng mà đã xuyên được sạp")
 	}
-	g.AddSkillCharge(sh)
+	giveCharge(sh)
 	g.CastSkill(sh)
 	if got := g.resolveBlockingFor(sh, inside, g.BodyR(sh)); got.Dist(inside) > 1e-9 {
 		t.Error("Shipper đang Gom Đơn vẫn bị dãy sạp chặn")

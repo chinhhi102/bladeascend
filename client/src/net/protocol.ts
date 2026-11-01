@@ -23,6 +23,8 @@ export interface PlayerState {
   vy?: number;
   /** skc: số lượt kỹ năng đang giữ, chỉ gửi cho chính mình (spec §6.3). */
   skc?: number;
+  /** ska: giờ server (s) hồi xong lượt kế; 0/thiếu = đầy (v6.25 §6.3). Chỉ của mình. */
+  ska?: number;
   /** st: bit trạng thái do kỹ năng gây ra (spec §6.3) — xem STATUS. */
   st?: number;
   ti?: number; // room title badge 1..3 (spec §11.3)

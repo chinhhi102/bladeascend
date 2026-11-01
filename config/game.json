@@ -182,8 +182,7 @@
       "hard": 7,
       "shield": 7,
       "exp2": 5,
-      "stealth": 3,
-      "skill_scroll": 10
+      "stealth": 3
     },
     "sword_item_amount": 3,
     "bundle_amount": 15,
@@ -502,11 +501,21 @@
     "accel": 468.0
   },
   "skills": {
-    "max_charges": 2,
-    "max_charges_tien": 3,
+    "cooldowns": {
+      "a_hon": [30, 2],
+      "ba_tam_loa": [18, 2],
+      "ong_ba_vong": [25, 2],
+      "dai_ca_dep": [40, 1],
+      "map_tra_sua": [20, 2],
+      "co_ba_ganh": [22, 2],
+      "su_phu_mi": [30, 2],
+      "be_ti": [35, 1],
+      "shipper": [20, 2],
+      "cu_rua": [30, 2]
+    },
+    "start_charges": 1,
+    "tien_extra_charges": 1,
     "lock_secs": 3.0,
-    "overcap_exp": 20.0,
-    "overcap_tien": 2.0,
     "knock_secs": 0.25,
     "range_unit": "pickup_r",
     "push_secs": 0.3,
@@ -537,8 +546,8 @@
     "banh_bao_max_share": 0.2,
     "loa_cone_deg": 60.0,
     "dan_em_count": 2,
-    "dan_em_secs": 10.0,
-    "dan_em_sword_share": 0.5,
+    "dan_em_secs": 8.0,
+    "dan_em_sword_share": 0.3,
     "dan_em_scale": 0.7,
     "tran_chau_cone_deg": 45.0,
     "tran_chau_secs": 5.0,
@@ -548,7 +557,7 @@
     "slick_count": 5,
     "slick_secs": 4.0,
     "slip_secs": 1.0,
-    "brace_secs": 5.0,
+    "brace_secs": 4.0,
     "brace_durability": 2.0,
     "ghost_unstick_secs": 0.3,
     "shell_secs": 5.0

@@ -154,8 +154,6 @@ func (g *Game) canAbsorb(p *Player, it *Item) bool {
 	}
 }
 
-// ItemSkillScroll là vật phẩm Bí Kíp (spec §6.3).
-const ItemSkillScroll = "skill_scroll"
 
 // Viên Linh khí / Tiên khí **gộp thành một sự kiện mỗi người mỗi tick**, và chỉ gửi cho
 // chính người nhặt. Hai lớp, vì một lớp không đủ:
@@ -213,21 +211,6 @@ func (g *Game) pickup(p *Player, it *Item) {
 		g.GainTienKhi(p, it.Value)
 		g.emit(Event{Kind: "TienKhiPicked", A: p.ID, To: p.ID, N: int(it.Value), S: "khi",
 			X: float32(it.Pos.X), Y: float32(it.Pos.Y)})
-	case ItemSkillScroll:
-		// Bí Kíp: +1 lượt dùng kỹ năng của CHÍNH nhân vật mình (spec §6.3). Đủ 2 lượt rồi
-		// thì không bỏ phí — đổi sang tu vi, giống luật quá tay của các vật phẩm khác.
-		if g.AddSkillCharge(p) {
-			g.emit(Event{Kind: "SkillCharge", A: p.ID, To: p.ID, N: p.SkillCharges,
-				X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
-			break
-		}
-		if g.BanksTienKhi(p) {
-			g.GainTienKhi(p, g.Cfg.Skills.OvercapTien)
-		} else {
-			// +20, KHÔNG phải `TotalExp + 20`: GainExp tự cộng vào tổng. Bản cũ nhân đôi tu
-			// vi mỗi cuốn — nguyên nhân lạm phát EXP 1/11 (EXP_AUDIT, spec v6.24 §6.0).
-			g.GainExpFrom(p, g.Cfg.Skills.OvercapExp, false, ExpOvercapScroll)
-		}
 	case "chest":
 		for i := 0; i < g.Cfg.Items.ChestItems; i++ {
 			g.spawnItemNear(g.randomItemKind(), 0, it.Pos, g.Cfg.Items.ScatterR*2)

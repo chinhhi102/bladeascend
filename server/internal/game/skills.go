@@ -6,11 +6,10 @@ import (
 	"bladeascend/server/internal/geom"
 )
 
-// Kỹ năng nhân vật, mở bằng vật phẩm Bí Kíp (spec §6.3).
+// Kỹ năng nhân vật — tự hồi chiêu + tích lượt (spec v6.25 §6.3).
 //
-// Mỗi nhân vật có đúng MỘT kỹ năng và không tự dùng được: phải nhặt Bí Kíp mới có lượt.
-// Bí Kíp là vật phẩm chung, ai nhặt cũng được lượt kỹ năng của CHÍNH MÌNH — nên nó không
-// bao giờ rơi "sai người", và người ta vẫn phải tranh nhau một món đồ chung.
+// Mỗi nhân vật có đúng MỘT kỹ năng, `cooldowns[char] = [giây hồi 1 lượt, lượt tối đa]`.
+// Vật phẩm Bí Kíp đã bỏ (v6.25).
 //
 // Ba luật cân bằng của spec, áp cho mọi kỹ năng:
 //   - không trực tiếp đổi cảnh giới hay EXP;
@@ -46,38 +45,87 @@ var Skills = map[string]*Skill{
 // SkillOf trả về kỹ năng của nhân vật này, nil nếu nhân vật chưa có kỹ năng.
 func SkillOf(char string) *Skill { return Skills[char] }
 
-// MaxSkillCharges là trần số lượt Bí Kíp của người này (spec v6.5 §6.3).
-//
-// Người phàm giữ 2; **Tiên giới (Chân Tiên trở lên) giữ 3**.
+// skillCooldown: giây hồi 1 lượt và số lượt tích tối đa (thường) của nhân vật (spec v6.25
+// §6.3). Nhân vật thiếu trong bảng thì không có kỹ năng (0, 0).
+func (g *Game) skillCooldown(p *Player) (secs float64, maxC int) {
+	cd, ok := g.Cfg.Skills.Cooldowns[p.Char]
+	if !ok {
+		return 0, 0
+	}
+	return cd[0], int(cd[1])
+}
+
+// SkillCooldownSecs: giây hồi 1 lượt của người này (client vẽ vòng hồi chiêu).
+func (g *Game) SkillCooldownSecs(p *Player) float64 {
+	secs, _ := g.skillCooldown(p)
+	return secs
+}
+
+// MaxSkillCharges: trần lượt tích — theo nhân vật, Tiên giới +1 (spec v6.25 §6.3).
 func (g *Game) MaxSkillCharges(p *Player) int {
-	if g.TienRealmOf(p) >= 0 && g.Cfg.Skills.MaxChargesTien > 0 {
-		return g.Cfg.Skills.MaxChargesTien
+	_, maxC := g.skillCooldown(p)
+	if maxC > 0 && g.TienRealmOf(p) >= 0 {
+		maxC += g.Cfg.Skills.TienExtraCharges
 	}
-	return g.Cfg.Skills.MaxCharges
+	return maxC
 }
 
-// AddSkillCharge cộng một lượt dùng kỹ năng khi nhặt Bí Kíp (spec §6.3).
-//
-// Đã đủ trần mà nhặt thêm thì đổi sang tu vi, không bỏ phí: +20 Linh khí, hoặc +2 Tiên khí
-// với người đã lên Tiên giới. Trả về false khi đã đầy (người gọi lo phần quy đổi).
-func (g *Game) AddSkillCharge(p *Player) bool {
-	if p.SkillCharges >= g.MaxSkillCharges(p) {
-		return false
-	}
-	p.SkillCharges++
-	return true
+// startSkillCharges: vào trận / hồi sinh có sẵn `start_charges` lượt, đồng hồ hồi chạy ngay.
+func (g *Game) startSkillCharges(p *Player) {
+	p.SkillCharges = min(g.Cfg.Skills.StartCharges, g.MaxSkillCharges(p))
+	p.SkillRecharge = 0
+	g.armRecharge(p)
 }
 
-// clampSkillCharges cắt lượt thừa khi trần tụt xuống — tức khi rớt từ Tiên giới về Đại Thừa
-// đang cầm 3 lượt (spec v6.5 §6.3: "còn 2, lượt thứ 3 mất, hiệu ứng cuộn sách tan").
+// armRecharge bật đồng hồ hồi nếu còn chỗ trống mà đồng hồ đang dừng.
+func (g *Game) armRecharge(p *Player) {
+	if p.SkillRecharge <= 0 && p.SkillCharges < g.MaxSkillCharges(p) {
+		p.SkillRecharge = g.SkillCooldownSecs(p)
+	}
+}
+
+// rechargeSkills chạy mỗi tick: hồi lần lượt từng lượt, đầy thì dừng. Người chết hay đang
+// dịch chuyển giữa hai khu không có mặt trong `Players` nên tự đứng đồng hồ.
+func (g *Game) rechargeSkills(dt float64) {
+	for _, p := range g.PlayerList() {
+		if p.Dead || p.SkillRecharge <= 0 {
+			continue
+		}
+		p.SkillRecharge -= dt
+		if p.SkillRecharge > 0 {
+			continue
+		}
+		p.SkillCharges++
+		p.SkillRecharge = 0
+		g.armRecharge(p)
+		g.emit(Event{Kind: "SkillCharge", A: p.ID, To: p.ID, N: p.SkillCharges,
+			X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+	}
+}
+
+// FillSkillCharges: hồi đầy lượt ngay — CHỈ cho lệnh debug.
+func (g *Game) FillSkillCharges(p *Player) {
+	p.SkillCharges = g.MaxSkillCharges(p)
+	p.SkillRecharge = 0
+}
+
+// clampSkillCharges cắt lượt thừa khi trần tụt xuống — rớt từ Tiên giới về Đại Thừa.
 //
-// Gọi ở MỌI chỗ cảnh giới có thể tụt, không chỉ lúc bị chém: Thiêu Đốt cũng kéo Tiên khí
-// xuống, và cắt sót một đường là người chơi giữ được 3 lượt ở Đại Thừa mà không ai biết tại sao.
+// Gọi ở MỌI chỗ cảnh giới có thể tụt (qua `refreshDerived`): Thiêu Đốt cũng kéo Tiên khí
+// xuống. Trần tăng (lên Tiên giới) thì bật lại đồng hồ nếu đang đầy.
 func (g *Game) clampSkillCharges(p *Player) {
-	if maxC := g.MaxSkillCharges(p); p.SkillCharges > maxC {
+	maxC := g.MaxSkillCharges(p)
+	if p.SkillCharges > maxC {
 		p.SkillCharges = maxC
 		g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "charge_lost", N: maxC,
 			X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+	}
+	if p.SkillCharges >= maxC {
+		p.SkillRecharge = 0
+		return
+	}
+	if !p.Dead {
+		g.armRecharge(p)
 	}
 }
 
@@ -94,6 +142,8 @@ func (g *Game) CastSkill(p *Player) bool {
 	}
 	sk := SkillOf(p.Char)
 	p.SkillCharges--
+	p.SkillCasts++
+	g.armRecharge(p) // đang đầy thì đồng hồ dừng — dùng 1 lượt là nó chạy lại
 	p.SkillReadyAt = g.Time + g.Cfg.Skills.LockSecs
 	// Đang Ẩn Thân mà dùng kỹ năng thì lộ ngay (spec §6.3).
 	p.Buffs[BuffStealth] = 0

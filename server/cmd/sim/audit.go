@@ -107,8 +107,8 @@ func auditMain(cfg *config.Config, mapID string, seed int64, seeds int) {
 	fmt.Println("## Đo 1 — EXP/s theo nguồn, ghim cảnh giới (farm thuần, 60 s × " +
 		fmt.Sprint(seeds) + " seed, 19 đối thủ Luyện Khí)")
 	fmt.Println()
-	fmt.Println("| Cảnh giới | Nam Châm | Tổng EXP/s | " + strings.Join(game.ExpSourceNames[:game.ExpOther], " | ") + " | Bí Kíp đủ lượt (lần) | EXP cần cho 1 cảnh giới | Giây / cảnh giới | … nếu bỏ Bí Kíp đủ lượt |")
-	fmt.Println("|" + strings.Repeat("---|", int(game.ExpOther)+7))
+	fmt.Println("| Cảnh giới | Nam Châm | Tổng EXP/s | " + strings.Join(game.ExpSourceNames[:game.ExpOther], " | ") + " | EXP cần cho 1 cảnh giới | Giây / cảnh giới |")
+	fmt.Println("|" + strings.Repeat("---|", int(game.ExpOther)+5))
 	for _, r := range []int{0, 5, 8} {
 		for _, mag := range []bool{false, true} {
 			var sum auditResult
@@ -147,9 +147,8 @@ func printRateRow(r int, mag bool, sum auditResult) {
 	}
 	perSec := total / sum.simulated
 	need := prog.Threshold((r+1)*prog.Tiers()) - prog.Threshold(r*prog.Tiers())
-	noScroll := (total - sum.bySrc[game.ExpOvercapScroll]) / sum.simulated
-	fmt.Printf("| %s | %s | **%.1f** | %s | %d | %.0f | %s | %s |\n", prog.RealmName(r), onOff(mag), perSec,
-		strings.Join(cols, " | "), sum.events[game.ExpOvercapScroll], need, secsFor(need, perSec), secsFor(need, noScroll))
+	fmt.Printf("| %s | %s | **%.1f** | %s | %.0f | %s |\n", prog.RealmName(r), onOff(mag), perSec,
+		strings.Join(cols, " | "), need, secsFor(need, perSec))
 }
 
 func printRepro(mag bool, seed int, res auditResult) {
@@ -176,8 +175,8 @@ func printRepro(mag bool, seed int, res auditResult) {
 		}
 		return fmt.Sprintf("%.0f%%", 100*res.bySrc[s]/total)
 	}
-	fmt.Printf("- Nam Châm %s · seed %d: %s · EXP: Bí Kíp đủ lượt %s (%d lần), viên môi trường %s, quái %s, kiếm dư %s\n",
-		onOff(mag), seed, strings.Join(parts, " → "), share(game.ExpOvercapScroll), res.events[game.ExpOvercapScroll],
+	fmt.Printf("- Nam Châm %s · seed %d: %s · EXP: viên môi trường %s, quái %s, kiếm dư %s\n",
+		onOff(mag), seed, strings.Join(parts, " → "),
 		share(game.ExpOrbAmbient), share(game.ExpOrbMonster), share(game.ExpOvercapSword))
 }
 

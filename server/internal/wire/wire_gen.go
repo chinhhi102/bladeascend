@@ -13,7 +13,7 @@ import (
 
 // SchemaHash là băm của proto/schema.txt. Client gửi hash của nó lúc bắt tay;
 // lệch nghĩa là hai bên đang nói hai thứ tiếng — từ chối kết nối thay vì đọc rác (§4.9).
-const SchemaHash = "84af90e2ea6120a4"
+const SchemaHash = "8d7e643435704931"
 
 // SchemaVersion lấy từ dòng `version` trong schema.
 const SchemaVersion = 2
@@ -851,6 +851,7 @@ type SelfExtra struct {
 	Title uint8
 	TienHave float32
 	TienNeed float32
+	ChargeAt float32 // giờ game (s) hồi xong lượt kế; 0 = đầy (v6.25 §6.3)
 }
 
 // Encode nối SelfExtra vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
@@ -870,6 +871,9 @@ func (v SelfExtra) Encode(dst []byte) []byte {
 	}
 	if v.Has&(1<<4) != 0 {
 		dst = putF32(dst, v.TienNeed)
+	}
+	if v.Has&(1<<5) != 0 {
+		dst = putF32(dst, v.ChargeAt)
 	}
 	return dst
 }
@@ -909,6 +913,12 @@ func DecodeSelfExtra(src []byte) (SelfExtra, int, error) {
 	}
 	if v.Has&(1<<4) != 0 {
 		v.TienNeed, p, err = getF32(src, p)
+		if err != nil {
+			return v, p, err
+		}
+	}
+	if v.Has&(1<<5) != 0 {
+		v.ChargeAt, p, err = getF32(src, p)
 		if err != nil {
 			return v, p, err
 		}

@@ -27,6 +27,9 @@ type Life struct {
 	SurviveSecs float64 `json:"survive_secs"`
 	Map         string  `json:"map"`
 	EndedAt     int64   `json:"ended_at"`
+	// SkillCasts: số lần dùng kỹ năng trong mạng — để chỉnh hồi chiêu theo trận thật
+	// (spec v6.25 §6.3, telemetry ≥ 2 ngày).
+	SkillCasts int `json:"skill_casts"`
 }
 
 type Store struct {
@@ -87,6 +90,7 @@ var migrations = []string{
 	`CREATE INDEX IF NOT EXISTS lives_score ON lives(score)`,
 	`CREATE INDEX IF NOT EXISTS lives_hits ON lives(hits)`,
 	`CREATE INDEX IF NOT EXISTS lives_speed ON lives(dai_thua_secs)`,
+	`ALTER TABLE lives ADD COLUMN skill_casts INTEGER NOT NULL DEFAULT 0`, // v6.25 §6.3
 }
 
 // Open opens (or creates) the database at path. Use ":memory:" for tests.
@@ -118,10 +122,10 @@ func (s *Store) Close() error { return s.db.Close() }
 // Record saves a finished life. Callers must never pass bots (spec §9.3).
 func (s *Store) Record(l Life) error {
 	_, err := s.db.Exec(`INSERT INTO lives
-		(guest_id,name,character,score,hits,peak_exp,peak_level,kills,dai_thua_secs,top1_secs,survive_secs,map,ended_at)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		(guest_id,name,character,score,hits,peak_exp,peak_level,kills,dai_thua_secs,top1_secs,survive_secs,map,ended_at,skill_casts)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		l.GuestID, l.Name, l.Character, l.Score, l.Hits, l.PeakExp, l.PeakLevel, l.Kills,
-		l.DaiThuaSecs, l.Top1Secs, l.SurviveSecs, l.Map, l.EndedAt)
+		l.DaiThuaSecs, l.Top1Secs, l.SurviveSecs, l.Map, l.EndedAt, l.SkillCasts)
 	return err
 }
 

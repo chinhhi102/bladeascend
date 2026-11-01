@@ -162,12 +162,12 @@ func goldenCases() []Case {
 			"srvUs": h.SrvUs, "flags": h.Flags}, h.Encode(nil))
 	}
 	for _, e := range []wire.SelfExtra{
-		{}, {Has: 0x1F, Exp: 694960, Charges: 3, Title: 1, TienHave: 15000, TienNeed: 15000},
+		{}, {Has: 0x3F, Exp: 694960, Charges: 3, Title: 1, TienHave: 15000, TienNeed: 15000, ChargeAt: 1234.5},
 	} {
 		add("SelfExtra", maskFields(
 			map[string]any{"has": e.Has},
 			e.Has, []optField{{"exp", f32(e.Exp)}, {"charges", e.Charges}, {"title", e.Title},
-				{"tienHave", f32(e.TienHave)}, {"tienNeed", f32(e.TienNeed)}},
+				{"tienHave", f32(e.TienHave)}, {"tienNeed", f32(e.TienNeed)}, {"chargeAt", f32(e.ChargeAt)}},
 		), e.Encode(nil))
 	}
 	// Bảng xếp hạng phòng (spec §11.5 v6.19): hạng 0 (chưa có), số lớn nhất, tên Thái nhiều
@@ -308,13 +308,14 @@ func fuzzCases(r *rand.Rand, n int) []Case {
 				"tick": h.Tick, "ack": h.Ack, "timeMs": h.TimeMs, "srvUs": h.SrvUs, "flags": h.Flags,
 			}, Bytes: b64(h.Encode(nil))})
 		case 10:
-			e := wire.SelfExtra{Has: uint8(r.Intn(32)), Exp: float32(r.NormFloat64() * 1e6),
+			e := wire.SelfExtra{Has: uint8(r.Intn(64)), Exp: float32(r.NormFloat64() * 1e6),
 				Charges: uint8(r.Intn(256)), Title: uint8(r.Intn(256)),
-				TienHave: float32(r.NormFloat64() * 1e4), TienNeed: float32(r.NormFloat64() * 1e4)}
+				TienHave: float32(r.NormFloat64() * 1e4), TienNeed: float32(r.NormFloat64() * 1e4),
+				ChargeAt: float32(r.Float64() * 1e4)}
 			cs = append(cs, Case{Msg: "SelfExtra", Fields: maskFields(
 				map[string]any{"has": e.Has},
 				e.Has, []optField{{"exp", f32(e.Exp)}, {"charges", e.Charges}, {"title", e.Title},
-					{"tienHave", f32(e.TienHave)}, {"tienNeed", f32(e.TienNeed)}},
+					{"tienHave", f32(e.TienHave)}, {"tienNeed", f32(e.TienNeed)}, {"chargeAt", f32(e.ChargeAt)}},
 			), Bytes: b64(e.Encode(nil))})
 		case 11:
 			hd := wire.LbHead{Rank: uint16(r.Intn(65536)), Total: uint16(r.Intn(65536)),

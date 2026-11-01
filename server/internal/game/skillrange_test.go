@@ -129,46 +129,6 @@ func TestPushDistanceUsesCasterU(t *testing.T) {
 	}
 }
 
-// Bí Kíp: 2 lượt ở phàm giới, 3 ở Tiên giới; rớt về Đại Thừa đang cầm 3 thì còn 2.
-func TestSkillChargesCapByRealm(t *testing.T) {
-	g := skillGame(t)
-	p := put(g, "cu_rua", Vec{X: 3000, Y: 3000}, 10, 1)
-
-	if got := g.MaxSkillCharges(p); got != 2 {
-		t.Errorf("người phàm giữ được %d lượt, spec nói 2", got)
-	}
-	for i := 0; i < 5; i++ {
-		g.AddSkillCharge(p)
-	}
-	if p.SkillCharges != 2 {
-		t.Errorf("nhặt 5 Bí Kíp ở phàm giới còn %d lượt, trần là 2", p.SkillCharges)
-	}
-
-	// Lên Tiên giới: trần thành 3, nhặt thêm được đúng 1.
-	g.ForceState(p, g.Prog.TopMortalLevel(), 10, p.Pos)
-	p.TotalExp = g.Prog.MaxExp()
-	g.GainTienKhi(p, 1)
-	if got := g.MaxSkillCharges(p); got != 3 {
-		t.Fatalf("Tiên giới giữ được %d lượt, spec nói 3", got)
-	}
-	if !g.AddSkillCharge(p) || p.SkillCharges != 3 {
-		t.Errorf("Tiên giới nhặt thêm: còn %d lượt, muốn 3", p.SkillCharges)
-	}
-	if g.AddSkillCharge(p) {
-		t.Error("đã đủ 3 mà vẫn nhận thêm lượt")
-	}
-
-	// Rớt khỏi Tiên giới → cắt còn 2.
-	att := put(g, "be_ti", Vec{X: 3100, Y: 3000}, 10, 1)
-	g.robTienKhi(att, p)
-	if g.TienRealmOf(p) >= 0 {
-		t.Fatal("chém Chân Tiên mà vẫn còn ở Tiên giới")
-	}
-	if p.SkillCharges != 2 {
-		t.Errorf("rớt về Đại Thừa còn %d lượt, spec nói cắt còn 2", p.SkillCharges)
-	}
-}
-
 // Trong mã kỹ năng KHÔNG được còn một hằng số phạm vi nào (CHANGES_v6_5 mục 5).
 //
 // Kiểm bằng cách đọc chính tệp nguồn: phạm vi phải đi qua `skillRange` / `SkillU`. Một con

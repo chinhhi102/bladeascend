@@ -534,7 +534,7 @@ func (r *Room) record(z *Zone, p *game.Player) {
 	}
 	err := r.recorder.Record(store.Life{GuestID: p.GuestID, Name: p.Name, Character: p.Char,
 		Score: p.Score, Hits: p.Hits, PeakExp: p.PeakExp, PeakLevel: p.PeakLevel, Kills: p.Kills,
-		DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs,
+		DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs, SkillCasts: p.SkillCasts,
 		SurviveSecs: end - p.SpawnedAt, Map: z.G.Map.ID, EndedAt: time.Now().Unix()})
 	if err != nil {
 		log.Printf("record life: %v", err)

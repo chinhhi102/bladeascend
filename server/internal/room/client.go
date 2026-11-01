@@ -404,6 +404,11 @@ func playerState(g *game.Game, viewer, p *game.Player, withName bool) netproto.P
 		s.Exp = float32(p.TotalExp)
 		s.Vx, s.Vy = float32(p.Vel.X), float32(p.Vel.Y)
 		s.Charges = p.SkillCharges
+		if p.SkillRecharge > 0 {
+			// Làm tròn 0,1 s: Time + còn lại đứng yên về toán, nhưng cộng số thực mỗi tick
+			// lệch vài bit cuối và SelfExtra sẽ bị coi là "đổi" rồi gửi lại mỗi tick.
+			s.ChargeAt = float32(math.Round((g.Time+p.SkillRecharge)*10) / 10)
+		}
 		have, need := g.TienProgress(p)
 		s.TienHave, s.TienNeed = float32(have), float32(need)
 	}

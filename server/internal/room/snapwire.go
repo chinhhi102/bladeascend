@@ -253,10 +253,10 @@ func (c *Client) encodeSelf(buf []byte, s *netproto.Snapshot, keyframe bool) []b
 
 	ex := wire.SelfExtra{
 		Exp: me.Exp, Charges: clampU8(me.Charges), Title: clampU8(me.Title),
-		TienHave: me.TienHave, TienNeed: me.TienNeed,
+		TienHave: me.TienHave, TienNeed: me.TienNeed, ChargeAt: me.ChargeAt,
 	}
 	if keyframe || ex != c.lastSelfExtra {
-		ex.Has = 1 | 2 | 4 | 8 | 16
+		ex.Has = 1 | 2 | 4 | 8 | 16 | 32
 		buf = append(buf, wire.TypeSelfExtra)
 		buf = ex.Encode(buf)
 		c.lastSelfExtra = ex

@@ -16,7 +16,6 @@ const (
 	ExpKillPlayer                     // hạ người thật ở Luyện Khí (+ kill_bonus_exp)
 	ExpKillBot                        // hạ bot ở Luyện Khí
 	ExpOvercapSword                   // nhặt kiếm khi đã đủ kiếm tối đa
-	ExpOvercapScroll                  // nhặt Bí Kíp khi đã đủ lượt
 	ExpDebug                          // phím debug (chỉ server -debug)
 	ExpOther
 	ExpSourceCount
@@ -25,7 +24,7 @@ const (
 // ExpSourceNames: tên ngắn cho báo cáo (`cmd/sim --audit`).
 var ExpSourceNames = [ExpSourceCount]string{
 	"orb_ambient", "orb_monster", "orb_hit_drop", "hit_player", "hit_bot",
-	"kill_player", "kill_bot", "overcap_sword", "overcap_scroll", "debug", "other",
+	"kill_player", "kill_bot", "overcap_sword", "debug", "other",
 }
 
 // hitSource / killSource: nguồn khi chém trúng / hạ `b`.

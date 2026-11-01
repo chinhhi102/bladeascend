@@ -75,9 +75,10 @@ export interface GameConfig {
   skills: {
     ru_ngu_move: number;
     tran_chau_secs: number;
-    /** Trần lượt Bí Kíp: thường 2, Tiên giới 3 (spec v6.5 §6.3). Nút kỹ năng vẽ theo đây. */
-    max_charges: number;
-    max_charges_tien: number;
+    /** Hồi chiêu theo nhân vật: [giây hồi 1 lượt, lượt tích tối đa] (spec v6.25 §6.3). */
+    cooldowns: Record<string, [number, number]>;
+    /** Tiên giới +N lượt tích tối đa. */
+    tien_extra_charges: number;
     /** Góc nón của hai kỹ năng hình nón — chỉ báo phạm vi phải vẽ đúng góc server xét. */
     loa_cone_deg: number;
     tran_chau_cone_deg: number;

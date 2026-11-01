@@ -215,7 +215,7 @@ func (g *Game) resetPlayer(p *Player, level, swords int) {
 	p.Level = level
 	p.PeakExp, p.PeakLevel, p.Kills = p.TotalExp, level, 0
 	// A new life starts from zero Uy Danh (spec §11.1).
-	p.Score, p.Hits, p.Top1Secs, p.DaiThuaSecs = 0, 0, 0, 0
+	p.Score, p.Hits, p.Top1Secs, p.DaiThuaSecs, p.SkillCasts = 0, 0, 0, 0, 0
 	p.Burning, p.BurnedExp, p.TienKhi = false, 0, 0
 	// Đặt SAU khi xoá về 0: sinh thẳng ở một cảnh giới Tiên (bot chép cảnh giới người hạng
 	// N, hoặc hồi sinh ở Tiên giới) thì thanh Tiên khí phải ở mốc khởi điểm của cảnh giới
@@ -232,6 +232,8 @@ func (g *Game) resetPlayer(p *Player, level, swords int) {
 	p.InvulnUntil = g.Time + g.Cfg.Player.InvulnOnSpawn
 	g.setMood(p, MoodRespawn, g.Cfg.Mood.RespawnSecs)
 	g.refreshDerived(p)
+	// SAU refreshDerived: trần lượt phụ thuộc cảnh giới (Tiên giới +1) vừa tính xong.
+	g.startSkillCharges(p)
 }
 
 // Respawn puts a dead player back at Luyện Khí 1 with 1 sword.
@@ -338,6 +340,7 @@ func (g *Game) Tick(dt float64) {
 		}
 	}
 	g.updateSkillState(dt)
+	g.rechargeSkills(dt)
 	g.resolveSwordBody()
 	g.resolveSwordSword()
 	g.resolveSwordWorld()

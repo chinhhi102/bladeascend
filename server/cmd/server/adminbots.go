@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"bladeascend/server/internal/admin"
 	"bladeascend/server/internal/room"
@@ -93,3 +95,18 @@ func (s *server) handleAdminBotsWithdraw(w http.ResponseWriter, r *http.Request)
 }
 
 var errNoRoom = errors.New("không có phòng này (có thể vừa đóng)")
+
+// handleAdminCharacters: số liệu theo nhân vật từ trận thật (spec v6.25 §6.3) —
+// `?days=2` (mặc định 2). Để chỉnh hồi chiêu sau ≥ 2 ngày chơi thật.
+func (s *server) handleAdminCharacters(w http.ResponseWriter, r *http.Request) {
+	days, err := strconv.Atoi(r.URL.Query().Get("days"))
+	if err != nil || days <= 0 {
+		days = 2
+	}
+	rows, err := s.store.CharacterStats(time.Now().Add(-time.Duration(days) * 24 * time.Hour).Unix())
+	if err != nil {
+		adminJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	adminJSON(w, http.StatusOK, map[string]any{"days": days, "rows": rows})
+}

@@ -13,6 +13,16 @@ import { narrowScreen } from './layout';
 import { Minimap } from './minimap';
 import { STR } from './strings';
 
+/** SkillView: những gì nút kỹ năng cần để vẽ (spec v6.25 §6.3). */
+export interface SkillView {
+  char: string;
+  charges: number;
+  maxCharges: number;
+  /** remainSecs: giây còn lại tới lượt kế; 0 = đã đầy. */
+  remainSecs: number;
+  cooldownSecs: number;
+}
+
 const FEED_SECS = 6;
 const SERVER_FEED_SECS = 9;
 
@@ -160,17 +170,9 @@ export class Hud {
    */
   readonly skillBtn = h('button', 'skill-btn');
   private readonly skillCount = h('span', 'skill-count', '0');
-  /** skillDots: dãy chấm số lượt Bí Kíp — 2 chấm phàm giới, 3 chấm Tiên giới (§6.3). */
+  /** skillDots: chấm số lượt tích — theo nhân vật, Tiên giới +1 (spec v6.25 §6.3). */
   private readonly skillDots = h('div', 'skill-dots');
   private readonly skillIcon = h('span', 'skill-icon', '✦');
-  /**
-   * skillScroll: ảnh cuộn Bí Kíp cạnh số lượt.
-   *
-   * Lượt kỹ năng CHỈ đến từ Bí Kíp (spec v5 mục 11), nhưng nút chỉ hiện một con số trần —
-   * người chơi mới không nối được "3" với cuộn giấy vừa nhặt. Ảnh `ui/icon_skill_scroll.png`
-   * đã có từ lâu mà không nơi nào nạp; `npm run check:dead` tìm ra nó.
-   */
-  private readonly skillScroll = h('img', 'skill-scroll') as HTMLImageElement;
   private readonly guide = h('div', 'guide');
   private readonly isTouch: boolean;
 
@@ -433,25 +435,23 @@ export class Hud {
   }
 
   /**
-   * setSkill cập nhật nút kỹ năng: icon theo nhân vật, số lượt, và xám khi hết lượt.
+   * setSkill cập nhật nút kỹ năng (spec v6.25 §6.3): icon, **vòng hồi chiêu**, chấm số lượt
+   * (vd ●●○). Hết lượt thì xám và hiện số giây còn lại thay cho con số lượt.
    */
-  setSkill(char: string, charges: number, maxCharges = this.cfg.skills.max_charges): void {
+  setSkill(v: SkillView): void {
+    const { char, charges, maxCharges, remainSecs, cooldownSecs } = v;
     this.skillIcon.textContent = SKILL_ICONS[char] ?? '✦';
-    this.skillCount.textContent = String(charges);
-    this.skillBtn.classList.toggle('empty', charges <= 0);
+    const empty = charges <= 0;
+    this.skillCount.textContent = empty && remainSecs > 0 ? STR.skillWait(Math.ceil(remainSecs)) : String(charges);
+    this.skillBtn.classList.toggle('empty', empty);
     this.skillBtn.title = STR.skillNames[char] ?? '';
+    // Vòng hồi chiêu: phần đã hồi của lượt KẾ (0 → 1). Đầy lượt thì vòng tắt.
+    const done = remainSecs > 0 && cooldownSecs > 0 ? 1 - Math.min(1, remainSecs / cooldownSecs) : 0;
+    this.skillBtn.style.setProperty('--cd', done.toFixed(3));
+    this.skillBtn.classList.toggle('charging', remainSecs > 0);
     if (!this.skillBtn.firstChild) {
-      // Đường dẫn LOGIC qua `assets.url`, không ghép tay `/assets/...`: tên tệp mang hash
-      // nội dung nên ghép tay là 404 trong im lặng (CLAUDE.md).
-      this.skillScroll.src = assets.url('ui/icon_skill_scroll.png');
-      this.skillScroll.alt = '';
-      this.skillBtn.append(this.skillIcon, this.skillScroll, this.skillCount, this.skillDots);
+      this.skillBtn.append(this.skillIcon, this.skillCount, this.skillDots);
     }
-    // Chấm lượt: **3 chấm ở Tiên giới**, 2 ở phàm giới (spec v6.5 §6.3 mục 4).
-    //
-    // Con số bên cạnh icon đã nói số lượt rồi, nhưng chấm nói thêm một thứ con số không
-    // nói: còn CHỖ TRỐNG hay đã đầy. Người Tiên giới cầm 2 lượt mà không thấy ô thứ ba thì
-    // tưởng đã đầy và bỏ qua Bí Kíp đang nằm dưới chân.
     if (this.skillDots.childElementCount !== maxCharges) {
       this.skillDots.replaceChildren(...Array.from({ length: maxCharges }, () => h('i', 'skill-dot')));
     }

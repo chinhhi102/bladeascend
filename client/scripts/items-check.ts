@@ -23,7 +23,9 @@ function artFor(kind: string): string[] {
     case 'chest':
       return ['items/chest/idle_00.png'];
     case 'skill_scroll':
-      return ['items/skill_scroll.png'];
+      // Bí Kíp đã bỏ (v6.25 §6.3): chỉ số còn trong ITEM_KINDS vì thứ tự là giao thức, nhưng
+      // server không sinh nữa và art đã sang assets/library.
+      return [];
     case 'sword':
       // Kiếm rơi dùng ảnh thật, nhưng qua một nhánh RIÊNG trong `drawItem` chứ không qua
       // `itemTexture` (entities.ts ~dòng 175). Đừng tin chú thích cũ trong `itemTexture`

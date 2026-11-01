@@ -130,9 +130,15 @@ type Player struct {
 	Buffs       [BuffCount]float64 // expiry time; 0 = inactive
 	// Status: trạng thái có thời hạn do kỹ năng gây ra (spec §6.3, xem status.go).
 	Status [StatusCount]float64
-	// SkillCharges: số lượt dùng kỹ năng đang giữ, nhặt Bí Kíp mà có (§6.3). Tối đa 2.
+	// SkillCharges: số lượt kỹ năng đang tích (spec v6.25 §6.3 — tự hồi theo thời gian).
 	SkillCharges int
-	// SkillReadyAt: khoá 3 giây giữa hai lần dùng (§6.3 — không có hồi chiêu tự động).
+	// SkillRecharge: số giây còn lại tới khi hồi xong lượt kế; 0 = đã đầy, đồng hồ dừng.
+	// Lưu THỜI GIAN CÒN LẠI chứ không lưu mốc giờ: mỗi khu có đồng hồ game riêng, người qua
+	// cổng mang theo mốc giờ của khu cũ sẽ hồi nhanh/chậm bất thường.
+	SkillRecharge float64
+	// SkillCasts: số lần đã dùng kỹ năng trong mạng này (telemetry v6.25 §6.3).
+	SkillCasts int
+	// SkillReadyAt: khoá 3 giây giữa hai lần dùng (§6.3).
 	SkillReadyAt float64
 	// shellOn: đang trong mai rùa — dùng để bắt đúng khoảnh khắc RA khỏi mai.
 	shellOn bool

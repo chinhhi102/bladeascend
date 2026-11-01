@@ -52,7 +52,7 @@ const DEBUG_KEYS: Record<string, Record<string, unknown>> = {
   KeyK: { cmd: 'sword', n: 10 },
   KeyX: { cmd: 'die', n: 0 },
   KeyB: { cmd: 'bot', n: 0 }, // thả 1 bot cùng cảnh giới ngay cạnh mình
-  KeyG: { cmd: 'skill', n: 1 }, // +1 lượt kỹ năng, khỏi phải đi nhặt Bí Kíp
+  KeyG: { cmd: 'skill', n: 1 }, // hồi đầy lượt kỹ năng, khỏi chờ hồi chiêu
 };
 
 /** fpsCap: 60 on PC, 45 on phones to save battery; override with ?fps=30 (M7). */
@@ -368,11 +368,14 @@ class App {
     // Nút kỹ năng đọc số lượt từ chính snapshot của mình (spec §6.3).
     const me = this.world.me();
     if (me) {
-      // Trần lượt theo cảnh giới: Tiên giới 3, phàm giới 2 (spec v6.5 §6.3). Tính ở client
-      // chỉ để VẼ đủ số chấm — server vẫn là bên chặn khi nhặt thêm.
+      // Hồi chiêu + trần lượt theo nhân vật, Tiên giới +1 (spec v6.25 §6.3). Tính ở client
+      // chỉ để VẼ — server mới là bên đếm lượt.
       const sk = this.cfg.skills;
-      const maxC = tienIndex(this.cfg, realmOf(this.cfg, me.L)) >= 0 ? sk.max_charges_tien : sk.max_charges;
-      this.hud.setSkill(this.profile?.char ?? '', me.skc ?? 0, maxC);
+      const char = this.profile?.char ?? '';
+      const [cdSecs, baseMax] = sk.cooldowns[char] ?? [0, 0];
+      const maxC = baseMax + (tienIndex(this.cfg, realmOf(this.cfg, me.L)) >= 0 ? sk.tien_extra_charges : 0);
+      const remain = me.ska ? Math.max(0, me.ska - this.world.serverNow()) : 0;
+      this.hud.setSkill({ char, charges: me.skc ?? 0, maxCharges: maxC, remainSecs: remain, cooldownSecs: cdSecs });
     }
   }
 
@@ -428,7 +431,11 @@ class App {
     this.debug = w.debug;
     this.hud.setDebug(w.debug);
     this.hud.setChar(this.profile?.char ?? '');
-    this.hud.setSkill(this.profile?.char ?? '', 0);
+    {
+      const char = this.profile?.char ?? '';
+      const [cd, maxC] = this.cfg.skills.cooldowns[char] ?? [0, 0];
+      this.hud.setSkill({ char, charges: 0, maxCharges: maxC, remainSecs: 0, cooldownSecs: cd });
+    }
     const g = window as unknown as { kx?: unknown; __stats?: unknown; __playing?: unknown };
     // `__stats` KHÔNG khoá sau quyền debug: nó chỉ là số đo (FPS, bộ nhớ texture, số
     // sprite, ping) — không có một quyền nào lên luật chơi. Khoá nó lại thì bộ đo hiệu

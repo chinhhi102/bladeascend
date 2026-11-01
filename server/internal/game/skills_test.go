@@ -16,6 +16,13 @@ func skillGame(t *testing.T) *Game {
 }
 
 // put đặt một nhân vật ở đúng chỗ, bất tử tắt, để test điều khiển hoàn toàn.
+// giveCharge thêm một lượt kỹ năng cho test (v6.25 bỏ Bí Kíp; lượt tự hồi theo thời gian,
+// test không muốn chờ hồi chiêu thật).
+func giveCharge(p *Player) bool {
+	p.SkillCharges++
+	return true
+}
+
 func put(g *Game, char string, at Vec, level, swords int) *Player {
 	p := g.AddPlayer(SpawnOptions{Name: char, Char: char, Level: level, Swords: swords})
 	p.Pos = at
@@ -49,37 +56,11 @@ func TestEveryCharacterHasASkill(t *testing.T) {
 	}
 }
 
-// Không có Bí Kíp thì không bấm được; nhặt Bí Kíp mới có lượt, tối đa 2 (spec §6.3).
-func TestSkillNeedsScrollAndCapsAtTwo(t *testing.T) {
-	g := skillGame(t)
-	p := put(g, "cu_rua", Vec{X: 3000, Y: 3000}, 10, 20)
-	if g.CastSkill(p) {
-		t.Fatal("chưa có Bí Kíp mà vẫn dùng được kỹ năng")
-	}
-	for i := 0; i < 5; i++ {
-		g.AddSkillCharge(p)
-	}
-	if p.SkillCharges != g.Cfg.Skills.MaxCharges {
-		t.Fatalf("giữ %d lượt, trần là %d", p.SkillCharges, g.Cfg.Skills.MaxCharges)
-	}
-	if !g.CastSkill(p) {
-		t.Fatal("có lượt mà vẫn không dùng được")
-	}
-	// Khoá 3 giây giữa hai lần dùng, dù còn lượt.
-	if g.CastSkill(p) {
-		t.Fatal("bấm liên tiếp được — thiếu khoá 3 giây giữa hai lần dùng")
-	}
-	g.Time += g.Cfg.Skills.LockSecs + 0.01
-	if !g.CastSkill(p) {
-		t.Fatal("hết khoá rồi mà vẫn không dùng được")
-	}
-}
-
 // Chết là mất hết lượt (spec §6.3).
 func TestDeathClearsCharges(t *testing.T) {
 	g := skillGame(t)
 	p := put(g, "be_ti", Vec{X: 3000, Y: 3000}, 10, 20)
-	g.AddSkillCharge(p)
+	giveCharge(p)
 	g.ApplyStatus(p, StSlow, 5)
 	g.DebugKill(p)
 	if p.SkillCharges != 0 {
@@ -99,7 +80,7 @@ func TestLoaPhuongPushesOnlyInsideCone(t *testing.T) {
 	back := put(g, "cu_rua", Vec{X: 3000 - 300, Y: 3000}, 10, 20)
 	dirBefore := back.Ring.Dir
 
-	g.AddSkillCharge(a)
+	giveCharge(a)
 	if !g.CastSkill(a) {
 		t.Fatal("không dùng được Loa Phường")
 	}
@@ -119,7 +100,7 @@ func TestRuNguSleepsAfterChannel(t *testing.T) {
 	b := put(g, "cu_rua", Vec{X: 3100, Y: 3000}, 10, 20)
 	fastMove, fastSpin := g.MoveSpeed(b), g.Omega(b)
 
-	g.AddSkillCharge(a)
+	giveCharge(a)
 	g.CastSkill(a)
 
 	// Chưa hát xong thì CHƯA ai ngủ — đây là nửa giây để địch chạy ra khỏi vòng.
@@ -149,13 +130,13 @@ func TestRuNguSleepsAfterChannel(t *testing.T) {
 
 // Checklist §17: "Ông Ba Võng bị chém trong 0.5s hát → mất chiêu."
 //
-// Mất chiêu nghĩa là KHÔNG ai ngủ và lượt Bí Kíp cũng không được hoàn — nếu hoàn thì việc
+// Mất chiêu nghĩa là KHÔNG ai ngủ và lượt kỹ năng cũng không được hoàn — nếu hoàn thì việc
 // bị chém chỉ làm chậm, và kỹ năng không còn cách nào chống lại.
 func TestRuNguCancelledByBodyHit(t *testing.T) {
 	g := skillGame(t)
 	a := put(g, "ong_ba_vong", Vec{X: 3000, Y: 3000}, 10, 20)
 	b := put(g, "cu_rua", Vec{X: 3100, Y: 3000}, 10, 20)
-	g.AddSkillCharge(a)
+	// vào trận có sẵn đúng 1 lượt (v6.25)
 	g.CastSkill(a)
 	if a.SkillCharges != 0 {
 		t.Fatalf("lượt còn %d sau khi dùng", a.SkillCharges)
@@ -210,7 +191,7 @@ func TestHutMiStealsQuarterOfTargetSwords(t *testing.T) {
 		t.Fatalf("trần của Sư Phụ chỉ %d — bài này cần trần ≥ 10 mới đo được phép 25%%", lim)
 	}
 
-	g.AddSkillCharge(a)
+	giveCharge(a)
 	g.CastSkill(a)
 
 	if got := 40 - b.Ring.Count; got != 10 {
@@ -232,7 +213,7 @@ func TestHutMiCappedByOwnMax(t *testing.T) {
 	cap := int(float64(ownMax) * g.skillNum("hut_mi_cap_of_own_max"))
 
 	before := b.Ring.Count
-	g.AddSkillCharge(a)
+	giveCharge(a)
 	g.CastSkill(a)
 
 	if got := before - b.Ring.Count; got != cap {
@@ -248,7 +229,7 @@ func TestHutMiMissStillSpendsCharge(t *testing.T) {
 	// Đứng sau lưng: ngoài nón.
 	put(g, "cu_rua", Vec{X: 3000 - 200, Y: 3000}, 10, 40)
 
-	g.AddSkillCharge(a)
+	// vào trận có sẵn đúng 1 lượt (v6.25)
 	if !g.CastSkill(a) {
 		t.Fatal("không dùng được kỹ năng")
 	}
@@ -265,7 +246,7 @@ func TestGongCoBlocksControl(t *testing.T) {
 	g := skillGame(t)
 	p := put(g, "be_ti", Vec{X: 3000, Y: 3000}, 10, 20)
 	g.ApplyStatus(p, StRoot, 5)
-	g.AddSkillCharge(p)
+	giveCharge(p)
 	g.CastSkill(p)
 	if p.HasStatus(StRoot, g.Time) {
 		t.Fatal("gồng rồi mà vẫn bị trói")
@@ -290,7 +271,7 @@ func TestRutCoProtectsThenBursts(t *testing.T) {
 	g := skillGame(t)
 	p := put(g, "cu_rua", Vec{X: 3000, Y: 3000}, 10, 30)
 	other := put(g, "be_ti", Vec{X: 3000 + 120, Y: 3000}, 10, 20)
-	g.AddSkillCharge(p)
+	giveCharge(p)
 	g.CastSkill(p)
 
 	before := p.Ring.Count
@@ -314,7 +295,7 @@ func TestBanhBaoRestoresShareOfMax(t *testing.T) {
 	maxSw := g.Prog.MaxSwords(g.Prog.Realm(p.Level))
 
 	before := p.Ring.Count
-	g.AddSkillCharge(p)
+	giveCharge(p)
 	g.CastSkill(p)
 
 	want := int(float64(maxSw) * g.Cfg.Skills.BanhBaoMaxShare)
@@ -330,7 +311,7 @@ func TestBanhBaoNeverExceedsMax(t *testing.T) {
 	maxSw := g.Prog.MaxSwords(g.Prog.Realm(p.Level))
 	g.AddSwords(p, maxSw-p.Ring.Count-1) // còn thiếu đúng 1 kiếm
 
-	g.AddSkillCharge(p)
+	giveCharge(p)
 	g.CastSkill(p)
 
 	if p.Ring.Count != maxSw {
@@ -343,7 +324,7 @@ func TestMinionsCannotBodyHit(t *testing.T) {
 	g := skillGame(t)
 	boss := put(g, "dai_ca_dep", Vec{X: 3000, Y: 3000}, 20, 30)
 	victim := put(g, "cu_rua", Vec{X: 3000 + 60, Y: 3000}, 0, 1)
-	g.AddSkillCharge(boss)
+	giveCharge(boss)
 	g.CastSkill(boss)
 
 	minions := 0
@@ -370,7 +351,7 @@ func TestMinionsCannotBodyHit(t *testing.T) {
 func TestMinionsExpire(t *testing.T) {
 	g := skillGame(t)
 	boss := put(g, "dai_ca_dep", Vec{X: 3000, Y: 3000}, 20, 30)
-	g.AddSkillCharge(boss)
+	giveCharge(boss)
 	g.CastSkill(boss)
 	g.Time += g.Cfg.Skills.DanEmSecs + 0.1
 	g.updateSkillState(1.0 / 30)
@@ -393,7 +374,7 @@ func TestGhostPassesEverythingButBorder(t *testing.T) {
 	}
 	g := New(cfg, m, 1, 0)
 	p := put(g, "shipper", Vec{X: 3000, Y: 3000}, 10, 20)
-	g.AddSkillCharge(p)
+	giveCharge(p)
 	g.CastSkill(p)
 
 	for _, c := range []struct {
@@ -430,7 +411,7 @@ func TestGhostUnsticksSmoothly(t *testing.T) {
 	}
 	g := New(cfg, m, 1, 0)
 	p := put(g, "shipper", Vec{X: 3000, Y: 3000}, 10, 20)
-	g.AddSkillCharge(p)
+	giveCharge(p)
 	g.CastSkill(p)
 
 	// Đi vào giữa vách đá rồi để kỹ năng hết hạn.
@@ -465,7 +446,7 @@ func TestTranChauBlinds(t *testing.T) {
 	b := put(g, "cu_rua", Vec{X: 3000 + 400, Y: 3000}, 10, 20)
 	g.DrainEvents()
 
-	g.AddSkillCharge(a)
+	giveCharge(a)
 	g.CastSkill(a)
 
 	if !b.HasStatus(StBlind, g.Time) {
@@ -490,7 +471,7 @@ func TestGanhLuotLeavesSlickTrail(t *testing.T) {
 	g := skillGame(t)
 	a := put(g, "co_ba_ganh", Vec{X: 3000, Y: 3000}, 10, 20)
 	a.Facing = 0
-	g.AddSkillCharge(a)
+	giveCharge(a)
 	g.CastSkill(a)
 	if len(g.slicks) != g.Cfg.Skills.SlickCount {
 		t.Fatalf("rơi %d vũng, muốn %d", len(g.slicks), g.Cfg.Skills.SlickCount)

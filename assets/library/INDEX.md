@@ -11,7 +11,7 @@ Art không dùng nữa nằm ở đây, giữ nguyên tên.
   `assets/src/manifest.json`, rồi build như bình thường. Xoá dòng tương ứng ở đây.
 - Chuyển art mới vào: `git mv`, thêm một dòng vào bảng của nhóm (tạo nhóm mới nếu cần).
 
-**Tổng: 228 tệp** (cập nhật 2026-11-01).
+**Tổng: 230 tệp** (cập nhật 2026-11-01).
 
 | Nhóm | Số tệp | Lý do ngừng dùng | Spec |
 |---|---|---|---|
@@ -26,6 +26,7 @@ Art không dùng nữa nằm ở đây, giữ nguyên tên.
 | `char_frames_extra_2026-10-30` | 17 | Khung dư bị loại khi chuẩn hoá frame tự động (§12.5 B). | v6.3 §12.5 |
 | `q31_chua_khu_nao_dung` | 13 | Art có sẵn nhưng chưa khu nào dùng (Q31 nhóm 2). Trước nằm trong `assets/src` + NEVER_SHIP; nay chuyển hẳn vào thư viện. | §13.7-3b · Q31 |
 | `q31_dan_em` | 10 | Atlas riêng của Đàn Em — không nằm trong 10 nhân vật; đàn em vẽ bằng atlas Đại Ca thu nhỏ (spec v5.4 mục 19). | v5.4 · Q31 |
+| `bi_kip_v6.25` | 2 | Vật phẩm Bí Kíp + icon cuộn cạnh nút kỹ năng. Spec v6.25 bỏ Bí Kíp: kỹ năng tự hồi chiêu + tích lượt. | v6.25 §6.3 |
 
 ## obstacle_states_v6.7
 
@@ -331,6 +332,15 @@ Atlas riêng của Đàn Em — không nằm trong 10 nhân vật; đàn em vẽ
 | `characters/dan_em/frames/run_05.png` | 2026-11-01 | `char_dan_em_run` — prompt trong `server/cmd/artgen/catalog.go` hiện tại | chuyển từ assets/src (git mv) |
 | `characters/dan_em/frames/run_06.png` | 2026-11-01 | `char_dan_em_run` — prompt trong `server/cmd/artgen/catalog.go` hiện tại | chuyển từ assets/src (git mv) |
 | `characters/dan_em/frames/run_07.png` | 2026-11-01 | `char_dan_em_run` — prompt trong `server/cmd/artgen/catalog.go` hiện tại | chuyển từ assets/src (git mv) |
+
+## bi_kip_v6.25
+
+Spec v6.25 §6.3 bỏ vật phẩm Bí Kíp (kỹ năng tự hồi chiêu + tích lượt theo nhân vật).
+
+| Tệp | Ngày | Job / prompt gốc | Ghi chú |
+|---|---|---|---|
+| `items/skill_scroll.png` | 2026-11-01 | `item_skill_scroll` — prompt trong `server/cmd/artgen/catalog.go` | chuyển từ assets/src (git mv) |
+| `ui/icon_skill_scroll.png` | 2026-11-01 | `icon_skill_scroll` — prompt trong `server/cmd/artgen/catalog.go` | chuyển từ assets/src (git mv); trước nằm cạnh số lượt trên nút kỹ năng |
 
 ## Bản cũ của ảnh bị ghi đè — KHÔNG chuyển vào thư viện, lấy lại bằng git
 

@@ -12,7 +12,7 @@
  * Không có bước này thì client cũ gặp server mới sẽ đọc rác và đứng hình — đã dính
  * đúng một lần với trường `mood`.
  */
-export const SCHEMA_HASH = "84af90e2ea6120a4";
+export const SCHEMA_HASH = "8d7e643435704931";
 
 export const SCHEMA_VERSION = 2;
 
@@ -596,6 +596,7 @@ export interface SelfExtra {
   title?: number;
   tienHave?: number;
   tienNeed?: number;
+  chargeAt?: number; // giờ game (s) hồi xong lượt kế; 0 = đầy (v6.25 §6.3)
 }
 
 /** decodeSelfExtra đọc một SelfExtra từ `r`. */
@@ -617,6 +618,9 @@ export function decodeSelfExtra(r: Reader): SelfExtra {
   if ((v.has & (1 << 4)) !== 0) {
     v.tienNeed = r.f32();
   }
+  if ((v.has & (1 << 5)) !== 0) {
+    v.chargeAt = r.f32();
+  }
   return v;
 }
 
@@ -637,6 +641,9 @@ export function encodeSelfExtra(w: Writer, v: SelfExtra): void {
   }
   if ((v.has & (1 << 4)) !== 0) {
     w.putF32(v.tienNeed ?? 0);
+  }
+  if ((v.has & (1 << 5)) !== 0) {
+    w.putF32(v.chargeAt ?? 0);
   }
 }
 

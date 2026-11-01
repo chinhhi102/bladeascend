@@ -167,12 +167,13 @@ message SelfExtra 13
   doc Tách khỏi SelfState vì SelfState đi MỌI tick (vị trí để hiệu chỉnh dự đoán) còn mấy
   doc số này gần như không đổi. `status` và `crack` KHÔNG ở đây: chúng ở Spawn/Update vì
   doc người khác cũng phải thấy — client vẽ "zzz" trên đầu người đang ngủ.
-  has         u8      bitmask exp,charges,title,tien_have,tien_need
+  has         u8      bitmask exp,charges,title,tien_have,tien_need,charge_at
   exp         f32     if exp
   charges     u8      if charges
   title       u8      if title
   tien_have   f32     if tien_have
   tien_need   f32     if tien_need
+  charge_at   f32     if charge_at   # giờ game (s) hồi xong lượt kế; 0 = đầy (v6.25 §6.3)
 
 message LbHead 14
   doc Đầu gói BẢNG XẾP HẠNG PHÒNG, 1 lần/giây (GAME_SPEC §11.5, v6.19). Sau nó là `count`

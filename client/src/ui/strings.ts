@@ -87,15 +87,19 @@ export const STR = {
     a_hon: 'Ăn bánh bao, hồi ngay 20% số kiếm tối đa của cảnh giới.',
     ba_tam_loa: 'Hét một tiếng: đẩy văng địch phía trước 500 và làm vòng kiếm của họ quay ngược.',
     ong_ba_vong: 'Hát ru nửa giây (bị chém là mất chiêu): cả đám quanh mình ngủ gục 2,5 giây — đứng im, vòng kiếm ngừng quay, và kiếm đang ngủ KHÔNG đánh trả.',
-    dai_ca_dep: 'Gọi 2 đàn em trong 10 giây, mỗi đứa mang nửa số kiếm của mình — mình không mất kiếm nào.',
+    dai_ca_dep: 'Gọi 2 đàn em trong 8 giây, mỗi đứa mang 30% số kiếm của mình — mình không mất kiếm nào.',
     map_tra_sua: 'Phun trân châu bịt mắt địch 5 giây; trong 5 giây đó họ không nhặt được gì.',
     co_ba_ganh: 'Bày 5 cái sạp thành vòng cung chặn đường 6 giây — người ngang cấp hoặc kém hơn không chém được, mình thì đi xuyên. Dọc chân sạp rải vỏ chuối: ai giẫm thì trượt và choáng 1 giây.',
     su_phu_mi: 'Hút một sợi mì vào địch gần nhất phía trước: cướp 25% số kiếm của họ về vòng của mình (tối đa 20% kiếm tối đa của mình, dư thì rơi xuống đất). Không ai phía trước thì hụt, vẫn mất lượt.',
-    be_ti: 'Gồng 5 giây: kiếm cứng gấp đôi, miễn mọi đòn đẩy, chậm, trói và choáng.',
+    be_ti: 'Gồng 4 giây: kiếm cứng gấp đôi, miễn mọi đòn đẩy, chậm, trói và choáng.',
     shipper: 'Chạy nhanh gấp 3 trong 4 giây: xuyên mọi vật cản (trừ biên khu), miễn và gỡ sạch khống chế, hút hết viên và vật phẩm quanh mình.',
     cu_rua: 'Rụt vào mai 5 giây: không bể kiếm, không bị chém; ra khỏi mai thì bật sóng đẩy.',
   } as Record<string, string>,
   skillLabel: 'Kỹ năng',
+  /** Hồi chiêu + lượt tích ở thẻ nhân vật (spec v6.25 §6.3). */
+  skillCooldown: (secs: number, n: number): string => `Hồi ${secs}s · tích ${n} lượt`,
+  /** Nút kỹ năng hết lượt: số giây còn lại. */
+  skillWait: (secs: number): string => `${secs}s`,
   /** Câu thoại tấu hài khi dùng kỹ năng (spec §6.3). */
   skillLines: {
     a_hon: 'Ăn miếng bánh bao, kiếm về như mới!',
@@ -139,7 +143,7 @@ export const STR = {
     'Bị chém là rớt nguyên một cảnh giới, nhưng giữ tầng. Đừng tham.',
     'Kiếm thừa rơi ra thành Bó Kiếm. Bó của người khác cũng nhặt được.',
     'Giữ Shift để Thiêu Đốt Tinh Huyết: chạy nhanh hơn, đổi bằng EXP.',
-    'Nhặt Bí Kíp để dùng kỹ năng riêng của nhân vật mình. Tối đa 2 lượt.',
+    'Kỹ năng tự hồi theo thời gian và tích được lượt — để dành cho lúc cần.',
     'Cổng đưa bạn tới một khu ngẫu nhiên. Không ai biết trước, kể cả bạn.',
     'Thiên Môn ở giữa khu đi thẳng lên Thiên Đình. Một chiều, không có đường về.',
     'Đài Tiên Khí phun Tiên khí theo chu kỳ. Đứng đúng lúc, đừng đứng đúng chỗ.',
@@ -405,12 +409,12 @@ export const STR = {
       ? [
           { key: 'Kéo', what: 'Di chuyển' },
           { key: 'Chạm 2 lần rồi giữ · 🔥', what: 'Thiêu Đốt' },
-          { key: '✦', what: 'Kỹ năng (cần Bí Kíp)' },
+          { key: '✦', what: 'Kỹ năng (tự hồi)' },
         ]
       : [
           { key: 'W A S D', what: 'Di chuyển' },
           { key: 'Shift · nháy đúp giữ', what: 'Thiêu Đốt' },
-          { key: 'Space', what: 'Kỹ năng (cần Bí Kíp)' },
+          { key: 'Space', what: 'Kỹ năng (tự hồi)' },
           { key: 'M', what: 'Bản đồ' },
         ],
 };

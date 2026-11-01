@@ -154,6 +154,7 @@ export class SnapshotDecoder {
           if (me) {
             if (e.has & 1) me.xp = e.exp ?? 0;
             if (e.has & 2) me.skc = e.charges ?? 0;
+            if (e.has & 32) me.ska = e.chargeAt ?? 0;
             if (e.has & 4) me.ti = e.title ?? 0;
             if (e.has & 8) me.th = e.tienHave ?? 0;
             if (e.has & 16) me.tn = e.tienNeed ?? 0;
