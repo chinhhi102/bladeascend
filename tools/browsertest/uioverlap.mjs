@@ -32,6 +32,81 @@ const sizes = [
   { name: 'PC 1920x1080', w: 1920, h: 1080, dpr: 1, mobile: false },
 ];
 
+/**
+ * kiemBangMo — các ca 4–7 chủ dự án duyệt 1/11, CHỈ trên điện thoại (bảng thu gọn, chạm mở):
+ *  4. nền bảng mở đục ≥ 92% + làm mờ phía sau;
+ *  5. bảng mở không CHỒNG CHỮ lên khung HUD trái — hoặc nằm ngoài, hoặc che kín hẳn;
+ *  6. thông báo khi bảng mở: không hiện đè lên bảng, bảng đóng thì hiện;
+ *  7. bảng mở thì ẩn nút kỹ năng + 🔥;
+ * cộng: có nút ✕ đóng được, và 8 giây không chạm thì tự đóng.
+ */
+async function kiemBangMo(p, s, kiem) {
+  await p.locator('.room-board').tap();
+  await sleep(400);
+  // Thông báo đến LÚC bảng đang mở: phím V đổi chất lượng → banner "Chất lượng: …".
+  await p.keyboard.press('KeyV');
+  await sleep(200);
+  const mo = await p.evaluate(() => {
+    const b = document.querySelector('.room-board');
+    const st = getComputedStyle(b);
+    const alpha = Number((st.backgroundColor.match(/rgba?\(([^)]+)\)/)?.[1] ?? '').split(',')[3] ?? 1);
+    const blur = /blur/.test(st.backdropFilter || st.webkitBackdropFilter || '');
+    const br = b.getBoundingClientRect();
+    const shown = (sel) => {
+      const e = document.querySelector(sel);
+      if (!e) return false;
+      const c = getComputedStyle(e);
+      return c.display !== 'none' && c.visibility !== 'hidden' && e.getBoundingClientRect().width > 0;
+    };
+    // Mục 5: mọi khối HUD trái mà giao với bảng thì phải bị bảng che KÍN (thử 5 điểm).
+    const chongChu = ['.status', '.zone-name', '.minimap', '.buffs'].filter((sel) => {
+      const e = document.querySelector(sel);
+      if (!e || !shown(sel)) return false;
+      const r = e.getBoundingClientRect();
+      const giao = Math.min(r.right, br.right) > Math.max(r.left, br.left) && Math.min(r.bottom, br.bottom) > Math.max(r.top, br.top);
+      if (!giao) return false;
+      // Lùi vào trong 25%: góc bảng bo tròn 12px, điểm sát góc rơi ra NGOÀI nền bảng dù mắt
+      // nhìn vẫn thấy bị che — lần chạy đầu báo vi phạm giả đúng vì thế.
+      const ix = r.width / 4, iy = r.height / 4;
+      const pts = [[r.left + ix, r.top + iy], [r.right - ix, r.top + iy], [r.left + ix, r.bottom - iy], [r.right - ix, r.bottom - iy], [(r.left + r.right) / 2, (r.top + r.bottom) / 2]];
+      return pts.some(([x, y]) => {
+        const hitEl = document.elementFromPoint(Math.min(x, innerWidth - 1), Math.min(y, innerHeight - 1));
+        return hitEl && !b.contains(hitEl) && Math.min(r.right, br.right) > x && x > Math.max(r.left, br.left) && Math.min(r.bottom, br.bottom) > y && y > Math.max(r.top, br.top);
+      });
+    });
+    return {
+      open: b.classList.contains('open'), alpha, blur, chongChu,
+      banner: shown('.banner'), feed: shown('.hud-bottom-left'),
+      skill: shown('.skill-btn'), burn: shown('.burn-btn'), close: shown('.rb-close'),
+    };
+  });
+  kiem(mo.open, 'cham vao bang thu gon thi bang mo ra');
+  kiem(mo.alpha >= 0.92 && mo.blur, `nen bang mo duc ${Math.round(mo.alpha * 100)}% (>=92%), lam mo phia sau: ${mo.blur}`);
+  kiem(mo.chongChu.length === 0, `bang mo khong chong chu len HUD trai (${mo.chongChu.join(', ') || 'khong'})`);
+  kiem(!mo.banner && !mo.feed, `thong bao khong hien de len bang mo (banner ${mo.banner}, tin ${mo.feed})`);
+  kiem(!mo.skill && !mo.burn, `bang mo thi an nut ky nang + lua (ky nang ${mo.skill}, lua ${mo.burn})`);
+  kiem(mo.close, 'bang mo co nut ✕');
+  await p.screenshot({ path: `${OUT}/board_open_${s.w}x${s.h}.png` });
+  await p.locator('.rb-close').tap();
+  await sleep(200);
+  const dong = await p.evaluate(() => ({
+    open: document.querySelector('.room-board').classList.contains('open'),
+    banner: getComputedStyle(document.querySelector('.banner')).display !== 'none',
+  }));
+  kiem(!dong.open, 'bam ✕ thi bang dong');
+  kiem(dong.banner, 'thong bao bi hoan luc bang mo thi HIEN khi bang dong');
+  await p.locator('.room-board').tap();
+  await sleep(8600);
+  // Chờ 8,6 s giữa trận có bot: nhân vật có thể bị chém chết, HUD biến mất. Khi đó KHÔNG
+  // tính đạt mà cũng không tính trượt — ghi rõ là bỏ qua để người đọc biết ca này chưa chạy.
+  const idle = await p.evaluate(() => document.querySelector('.room-board')?.classList.contains('open') ?? null);
+  if (idle === null) {
+    console.log('  BO QUA bang tu dong sau 8 giay: nhan vat chet giua luc cho (chay lai de kiem)');
+    return;
+  }
+  kiem(!idle, 'bang mo 8 giay khong cham thi tu dong');
+}
+
 /** Vượt luật kích thước thì cả bài TRƯỢT — đếm ở đây. */
 let viPham = 0;
 
@@ -157,7 +232,7 @@ for (const s of sizes) {
 
   const res = await p.evaluate(() => {
     const SEL = ['.status', '.buffs', '.zone-name', '.minimap', '.room-board', '.feed',
-      '.server-feed', '.banner', '.burn-btn', '.skill-btn', '.corner', '.rotate-hint'];
+      '.server-feed', '.banner', '.burn-btn', '.skill-btn', '.corner', '.rotate-hint', '.fb-btn'];
     const boxes = [];
     for (const s of SEL) {
       const e = document.querySelector(s);
@@ -190,7 +265,7 @@ for (const s of sizes) {
     return {
       chongLan: over,
       phanTramManHinhBiHudPhu: Math.round((hit / total) * 100),
-      soDongBangXepHang: document.querySelectorAll('.room-board .lb-line').length,
+      soDongBangXepHang: document.querySelectorAll('.room-board .rb-row:not(.rb-me)').length,
       soTinKillFeed: document.querySelectorAll('.feed-line').length,
       minimapPx: Math.round(document.querySelector('.minimap')?.getBoundingClientRect().width ?? 0),
       // Ba luật kích thước (chủ dự án chốt 31/10).
@@ -198,6 +273,16 @@ for (const s of sizes) {
       rongChatPhanTram: Math.round(((document.querySelector('.feed')?.getBoundingClientRect().width ?? 0) / W) * 100),
       caoBangPhanTram: Math.round(((document.querySelector('.room-board')?.getBoundingClientRect().height ?? 0) / H) * 100),
       dangDoc: H > W,
+      // Ca 8 (duyệt 1/11): nút góp ý 💬 không được đè lên tin loan / kill feed.
+      tinBiNutGopYChe: (() => {
+        const fb = document.querySelector('.fb-btn')?.getBoundingClientRect();
+        if (!fb) return [];
+        return ['.server-line', '.feed-line'].flatMap((sel) => [...document.querySelectorAll(sel)].filter((e) => {
+          const r = e.getBoundingClientRect();
+          return r.width > 0 && Math.min(r.right, fb.right) - Math.max(r.left, fb.left) > 2 &&
+            Math.min(r.bottom, fb.bottom) - Math.max(r.top, fb.top) > 2;
+        }).map(() => sel));
+      })(),
       bangBiCat: (() => {
         const b = document.querySelector('.room-board');
         return b ? b.scrollHeight - b.clientHeight : 0;
@@ -221,7 +306,11 @@ for (const s of sizes) {
     `bang xep hang cao ${res.caoBangPhanTram}% chieu cao (toi da 50%)`);
   // Giữ đúng 50% mà cắt ngang một dòng thì vẫn là hỏng: người chơi thấy nửa chữ.
   kiem(res.bangBiCat <= 1, `bang xep hang khong bi cat ngang (thua ${res.bangBiCat}px)`);
+  kiem(res.tinBiNutGopYChe.length === 0, `nut gop y khong de len tin (${res.tinBiNutGopYChe.join(', ') || 'khong'})`);
   await p.screenshot({ path: `${OUT}/ui_${s.w}x${s.h}.png` });
+  if (s.mobile) {
+    await kiemBangMo(p, s, kiem);
+  }
 
   // Doan gioi thieu §20: phai DOC DUOC o trang chu.
   //

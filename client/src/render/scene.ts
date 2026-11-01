@@ -46,9 +46,19 @@ const SWORD_BUDGET = 1600;
  * số quan trọng nhất để biết nghẽn ở GPU hay ở CPU, nên bọc thẳng hàm vẽ của ngữ cảnh WebGL.
  * Chỉ bật ở chế độ debug (spec §13.6).
  */
-export const drawCalls = { perFrame: 0, acc: 0, frames: 0 };
+export const drawCalls = { perFrame: 0, acc: 0, frames: 0, on: false, ready: false };
 
+/**
+ * countDrawCalls bọc hàm vẽ — gọi một lần. Trước 1/11 chỉ gắn khi URL có `?debug=true`, còn
+ * phím F3 thì mở được overlay ở MỌI trang: overlay đọc một bộ đếm chưa bao giờ được gắn và
+ * ghi "draw call 0" giữa lúc đang vẽ 5 000 sprite (chủ dự án chụp được). Giờ mở overlay là
+ * gắn (`perfLine`), và chưa đo xong cửa sổ đầu thì ghi "—" chứ không ghi số 0 giả.
+ */
 export function countDrawCalls(gl: WebGL2RenderingContext): void {
+  if (drawCalls.on) {
+    return;
+  }
+  drawCalls.on = true;
   for (const name of ['drawElements', 'drawArrays', 'drawElementsInstanced', 'drawArraysInstanced'] as const) {
     const fn = gl[name] as (...a: unknown[]) => void;
     (gl as unknown as Record<string, unknown>)[name] = (...a: unknown[]): void => {
@@ -344,6 +354,7 @@ export class GameScene {
     drawCalls.frames += 1;
     if (drawCalls.frames >= 30) {
       drawCalls.perFrame = drawCalls.acc / drawCalls.frames;
+      drawCalls.ready = drawCalls.on;
       drawCalls.acc = 0;
       drawCalls.frames = 0;
     }
@@ -752,8 +763,17 @@ export class GameScene {
     }
   }
 
+  /** ensureDrawCount gắn bộ đếm draw call lần đầu overlay F3 cần tới nó. */
+  private ensureDrawCount(): void {
+    const gl = (this.app.renderer as unknown as { gl?: WebGL2RenderingContext }).gl;
+    if (gl) {
+      countDrawCalls(gl);
+    }
+  }
+
   perfLine(dt: number, net: { rttMs: number; kbPerSec: number; snapBytes: number; srvMs: number }): string {
     void dt; // FPS nay đếm trong vòng vẽ (xem sampleFps), không đếm ở đây nữa
+    this.ensureDrawCount();
     let swords = 0;
     for (const p of this.players.values()) {
       swords += p.swordCount;
@@ -763,7 +783,7 @@ export class GameScene {
       `${this.fps.toFixed(0)} fps · ${(1000 / Math.max(this.fps, 1)).toFixed(1)} ms/khung · vẽ ${this.lastRenderMs.toFixed(1)} ms`,
       `server ${net.srvMs.toFixed(2)} ms/tick · ping ${net.rttMs.toFixed(0)} ms`,
       `mạng ${net.kbPerSec.toFixed(1)} KB/s · snapshot ${(net.snapBytes / 1024).toFixed(1)} KB`,
-      `sprite ${countNodes(this.app.stage)} · draw call ${drawCalls.perFrame.toFixed(0)}`,
+      `sprite ${countNodes(this.app.stage)} · draw call ${drawCalls.ready ? drawCalls.perFrame.toFixed(0) : '—'}`,
       `AOI ${aoi} · người ${this.players.size} · kiếm ${swords} · quái ${this.monsters.size}`,
       `EXP ${this.orbs.ids().length} · vật phẩm ${this.items.size} · giãn kiếm 1/${this.detail}`,
       // Spec §8.2a: số lần server kéo nhân vật về chỗ khác. Dự đoán đúng thì ~0; lệch thì
