@@ -98,6 +98,33 @@ kiếm buộc ruy băng đỏ, xoè nhẹ, hào quang vàng). Đã sinh ảnh, v
 
 **Q30.** Làm **A** — nhả atlas nhân vật không còn ai trong khu dùng, trễ 10 giây trước khi nhả. Hạ chất lượng phải trả lại texture thật. Mục tiêu ≤ 180 MB lúc đông người. *(Làm 31/10: `assets.keepChars` + `releaseIdleCharsNow`.)*
 
+**Q33.** a. sửa Bí Kíp +20 ngay · b. phương án A (bảng nhịp là chuẩn) · c. 396 bản ảnh cũ không chuyển, ghi cách lấy bằng git. *(Làm 1/11: hệ số chốt orb 1,5 · √scale · Nam Châm 1,2 · ô viên 160 · bot 25 % — `docs/EXP_AUDIT.md` mục KẾT QUẢ; sim --farm vào CI.)*
+
+Nội dung câu hỏi gốc:
+
+## Q33 — Lạm phát EXP: nguyên nhân thật khác nghi phạm của §6.0 (v6.21)
+
+**Bối cảnh.** CHANGES v6.21 bước 1. Chi tiết và số đo nằm trong `docs/EXP_AUDIT.md`.
+Đo bằng `cd server && go run ./cmd/sim --audit`.
+
+- **Nguyên nhân chính là lỗi code.** Ở `server/internal/game/items.go:220`, nhặt Bí Kíp khi đã đủ
+  lượt cộng `TotalExp + 20` thay vì +20, tức nhân đôi tổng EXP mỗi lần nhặt. Bí Kíp chiếm 80–97 %
+  EXP. Tái hiện được: Luyện Hư → Đại Thừa 10 trong ~70 s khi có Nam Châm.
+- Viên EXP và quái trong code **không** nhân theo cảnh giới (spec nghi ×2^r).
+- Bỏ lỗi Bí Kíp đi thì farm thuần hiện tại chậm hơn bảng §6.0. Áp nguyên văn §6.0
+  (×1,5^r, √scale, Nam Châm ×1,5) thì Đại Thừa nhanh gấp đôi bảng, và Nam Châm vượt trần 1,5 lần.
+
+**Câu hỏi.**
+1. Sửa lỗi Bí Kíp về +20 như spec — đồng ý làm ngay?
+2. Bảng nhịp §6.0 và các hệ số §6.0 không thể cùng đạt. Chọn:
+   - **A (khuyên).** Giữ BẢNG làm chuẩn. Claude chỉnh `exp_economy` bằng `cmd/sim --farm` cho
+     trúng ±25 %, rồi anh sửa chữ §6.0 theo hệ số chốt.
+   - B. Giữ hệ số §6.0, nới bảng cho khớp số đo.
+   - C. Chỉ sửa Bí Kíp + 25 % khi chém bot, giữ nguyên phần còn lại.
+
+**Tạm dùng:** chưa sửa gì. Chờ anh trả lời.
+
+
 **Q31.** Nhóm 1 xoá · nhóm 2 giữ ở `assets/src` nhưng loại khỏi `assets/dist` · nhóm 3 nối dây. *(Làm 31/10: 71 tệp xoá, `NEVER_SHIP` nới rộng, `icon_skill_scroll` nối vào nút kỹ năng. Dist 462 → 373 tệp, 9,89 → 7,49 MB. `check:dead` nay sạch.)*
 
 Nội dung câu hỏi gốc:

@@ -127,3 +127,40 @@ của v6.21), không dùng phép đo ngắn này.
    LEADERBOARD_AUDIT, và không ẩn mạng nào khi chưa có anh duyệt. Bảng `lives` không lưu EXP
    theo nguồn, nên chỉ lọc được theo dấu hiệu, ví dụ thời gian từ Luyện Hư lên Đại Thừa dưới
    X phút.
+
+## KẾT QUẢ SAU KHI SỬA (1/11, Q33 phương án A) — hệ số chốt
+
+Chủ dự án chốt: bảng nhịp §6.0 là chuẩn. Hệ số do `cmd/sim --farm` chỉnh cho trúng. **Nhờ anh
+ghi các số này vào §6.0** (thay các "điểm xuất phát"):
+
+| Hệ số | Trước | **Chốt** | Ghi chú |
+|---|---|---|---|
+| Bí Kíp đủ lượt | + (tổng EXP + 20) ← lỗi | **+20 Linh khí / +2 Tiên khí** | đúng §6.3 |
+| `exp_economy.orb_value_mult` | (không có, viên cố định) | **1,5** | viên môi trường theo cảnh giới người nhặt; quái theo người chém (viên to lên, không đẻ thêm viên) |
+| `exp_economy.pickup_scale_exp` | 1 (× scale) | **0,5** (× √scale) | |
+| `buffs.magnet.mult` | 3 | **1,2** | 1,5 vượt trần ở cảnh giới thấp (×1,67); 1,3 và 1,25 sát ngưỡng, CI dễ đỏ ngẫu nhiên |
+| `exp_orbs.cell` | 140 | **160** | viên thưa hơn 1,3 lần: cảnh giới thấp trước nhanh hơn bảng ~30 %. §6.1 ghi 140 là "mặc định". Kèm lợi: 7 300 → ~5 600 viên/khu, nhẹ mạng và máy |
+| `exp_economy.bot_steal_share` | 0,5 (như người) | **0,25** | §6.0 luật 5 |
+
+Đo: `go run ./cmd/sim --farm --seed 1` và `--farm --magnet-always --seed 1`. 8 khu × 12 bot farm
+(bot chỉ farm, bất tử), trung vị thời gian TỪNG cảnh giới, đủ 96/96 bot đi trọn đường.
+
+| Cảnh giới | Bảng §6.0 | **Thường** | Lệch | **Nam Châm suốt** | Nhanh hơn bảng |
+|---|---|---|---|---|---|
+| Luyện Khí | 1.3 | 1.16 | -11 % | 1.04 | ×1.25 |
+| Trúc Cơ | 1.5 | 1.23 | -18 % | 1.10 | ×1.36 |
+| Kim Đan | 1.8 | 1.55 | -14 % | 1.39 | ×1.29 |
+| Nguyên Anh | 2.1 | 1.77 | -16 % | 1.66 | ×1.27 |
+| Hóa Thần | 2.6 | 2.26 | -13 % | 2.04 | ×1.27 |
+| Luyện Hư | 3.3 | 2.91 | -12 % | 2.66 | ×1.24 |
+| Hợp Thể | 4.1 | 3.66 | -11 % | 3.39 | ×1.21 |
+| Độ Kiếp | 5.2 | 4.51 | -13 % | 4.12 | ×1.26 |
+| Đại Thừa | 6.6 | 5.54 | -16 % | 5.10 | ×1.29 |
+| **Tổng** | **28.5** | **24.6** | -14 % | **22.5** | ×1.27 |
+
+- Luyện Hư 1 → Chân Tiên, Nam Châm suốt: **17.5 phút** (cần ≥ 15).
+- Mọi dòng thường nằm trong ±25 %; Nam Châm không dòng nào nhanh hơn bảng quá 1,5 lần.
+- Số giữa các lần chạy dao động ~±8 % (game duyệt map Go theo thứ tự ngẫu nhiên), nên chọn
+  Nam Châm 1,2 để biên an toàn ≥ 10 % ở mọi cảnh giới.
+- **CI**: hai bài trên chạy mỗi lần push (`.github/workflows/ci.yml`), trượt → đỏ.
+- Danh sách mạng chơi nghi lên cấp nhờ lỗi: `docs/LEADERBOARD_AUDIT.md` mục 2 (chưa ẩn gì).
