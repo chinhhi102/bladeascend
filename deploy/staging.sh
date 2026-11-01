@@ -9,7 +9,10 @@ SSH=(ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST")
 
 rm -rf "$OUT" && mkdir -p "$OUT/bin" "$OUT/client"
 (cd server && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -o "../$OUT/bin/server" ./cmd/server)
-(cd client && npm run build)
+# TELEMETRY=on: staging là máy đội test, phải thu số đo (chủ dự án chốt 1/11). Thiếu cờ này
+# server vẫn mở /telemetry nhưng client không gửi gì — 0 phiên mà không báo lỗi nào.
+BUILD_ID="$(date +%Y%m%d_%H%M)_$(git rev-parse --short HEAD)"
+(cd client && TELEMETRY=on BUILD_ID="$BUILD_ID" npm run build)
 cp -r config maps "$OUT/"
 cp -r client/dist "$OUT/client/dist"
 # Chép `assets/dist` (bản phát hành do asset-pipeline dựng, spec §13.7), KHÔNG chép `assets/`.
