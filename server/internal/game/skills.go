@@ -255,6 +255,7 @@ func castRuNgu(g *Game, p *Player, _ Vec) {
 	// và mới (chống khoá cứng), nhưng hát ru phải khớp CHÍNH XÁC với `p.channel.until` —
 	// lệch nhau là client giữ chân người chơi lâu hơn server, hoặc ngược lại.
 	p.Status[StSing] = p.channel.until
+	g.statusStart(nil, p, StSing, secs)
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "ru_ngu_hat", F: float32(secs),
 		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
@@ -267,11 +268,12 @@ func (g *Game) finishRuNgu(p *Player) {
 	// v6.30: hát xong thì nằm võng `ru_ngu_steal_secs` giây Trộm Kiếm (xem `clash`).
 	steal := g.skillNum("ru_ngu_steal_secs")
 	p.StealUntil = g.Time + steal
+	g.statusStart(nil, p, StSteal, steal)
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "trom_kiem", F: float32(steal),
 		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 	secs := g.skillNum("ru_ngu_secs")
 	for _, o := range g.targetsNear(p, g.skillRange(p, "ru_ngu_r")) {
-		g.ApplyStatus(o, StSleep, secs)
+		g.ApplyStatusFrom(p, o, StSleep, secs)
 		g.emit(Event{Kind: "SkillEffect", A: p.ID, B: o.ID, S: "ru_ngu", F: float32(secs),
 			X: float32(o.Pos.X), Y: float32(o.Pos.Y)})
 	}
@@ -297,7 +299,7 @@ func castTranChau(g *Game, p *Player, dir Vec) {
 	reach := g.skillRange(p, "tran_chau_cone")
 	for _, o := range g.targetsNear(p, reach) {
 		if inCone(p, o.Pos, dir, sc.TranChauConeDeg, reach) {
-			g.ApplyStatus(o, StBlind, sc.TranChauSecs)
+			g.ApplyStatusFrom(p, o, StBlind, sc.TranChauSecs)
 		}
 	}
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "tran_chau", X: float32(p.Pos.X), Y: float32(p.Pos.Y), F: float32(p.Facing)})

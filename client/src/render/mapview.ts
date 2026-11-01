@@ -277,6 +277,9 @@ const EDGE_GROW = 1.07;
  * MapView draws the static map. Obstacle nodes are handed to the scene's entity layer so they
  * y-sort with characters; chúng chỉ có hai vẻ — còn đó hoặc biến mất (spec §8.2).
  */
+/** Vật cản Shipper đang đi xuyên qua mờ còn ngần này (spec v6.36 §6.5). */
+const GHOST_PASS_ALPHA = 0.5;
+
 export class MapView {
   readonly ground = new Container();
   /** blendRoot chứa các ô nền trộn (lớp 2–3), dựng và huỷ theo khung nhìn. */
@@ -695,6 +698,9 @@ export class MapView {
       if (me && n.look === 'intact' && this.covers(n, me)) {
         n.node.alpha *= occlusionAlpha;
       }
+      if (this.ghostPass.length > 0 && this.ghostOver(n)) {
+        n.node.alpha *= GHOST_PASS_ALPHA;
+      }
     }
     for (const b of this.bushes) {
       // See-through canopy only for the bush I'm hiding in (ART_PROMPTS §9.2).
@@ -704,6 +710,17 @@ export class MapView {
       const warn = now < g.warnUntil;
       g.node.alpha = warn ? 0.6 + 0.4 * Math.sin(now * 40) : 1;
     }
+  }
+
+  /**
+   * ghostPass: Shipper đang Gom Đơn (đi xuyên vật cản) — vật cản nào họ đang đi qua thì mờ
+   * 50% cho thấy người bên trong (spec v6.36 §6.5). Scene đặt mỗi khung, rỗng là tắt.
+   */
+  ghostPass: { x: number; y: number; r: number }[] = [];
+
+  private ghostOver(n: ObstacleNode): boolean {
+    const b = n.box;
+    return this.ghostPass.some((g) => g.x + g.r > b.x && g.x - g.r < b.x + b.w && g.y + g.r > b.y && g.y - g.r < b.y + b.h);
   }
 
   // covers: the obstacle stands in front of me (its base is lower on screen) and overlaps my sprite.

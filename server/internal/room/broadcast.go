@@ -355,6 +355,11 @@ var playerEvents = map[string]bool{"LevelUp": true, "Breakthrough": true, "Realm
 	"SwordBreak": true, "BuffStart": true, "BuffEnd": true, "Emote": true, "TeleportIn": true}
 
 func (r *Room) eventVisible(z *Zone, viewer *game.Player, e game.Event, seen map[uint32]bool) bool {
+	// Event trạng thái (§6.5): X/Y là chỗ NGƯỜI GÂY đứng (cho mũi tên chỉ hướng), nên không
+	// lọc theo X/Y được — người xem cần nó khi thấy NGƯỜI BỊ để vẽ icon trên đầu họ.
+	if e.Kind == "StatusStart" || e.Kind == "StatusEnd" {
+		return seen[e.A]
+	}
 	if !z.G.InView(viewer, game.Vec{X: float64(e.X), Y: float64(e.Y)}) {
 		return false
 	}

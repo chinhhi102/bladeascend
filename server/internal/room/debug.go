@@ -2,6 +2,7 @@ package room
 
 import (
 	"log"
+	"sort"
 
 	"bladeascend/server/internal/game"
 	"bladeascend/server/internal/netproto"
@@ -68,6 +69,8 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			if d.N >= 0 && d.N < game.BuffCount {
 				z.G.ApplyBuff(p, game.BuffNames[d.N])
 			}
+		case "summon":
+			r.debugSummon(z, p, float64(d.N))
 		case "bot":
 			// Thả một bot ngay cạnh mình để thử đánh nhau; d.N = cảnh giới (0 = như mình).
 			realm := d.N
@@ -81,4 +84,44 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 		default:
 		}
 	})
+}
+
+// debugSummon kéo mọi NGƯỜI THẬT khác trong phòng (kể cả ở khu khác) về cạnh `p` — công cụ
+// chụp ảnh kỹ năng (`tools/browsertest/skillshots.mjs`, spec v6.36 §6.5). Người mới vào
+// phòng được thả vào khu ÍT người thật nhất, nên ba trình duyệt thử luôn nằm ba khu khác nhau.
+//
+// Xếp theo TÊN (id không so được giữa các khu): người đầu đứng bên phải cách 3,5 U — trong
+// tầm Ru Ngủ (4 U), Hút Mì (5 U), Loa (6 U), Trân Châu (8 U), mà hai vòng kiếm Luyện Khí
+// không chạm nhau (đứng 1,8 U thì chém chết nhau ngay trong ảnh). Người sau đứng phía trên.
+// dist > 0 = khoảng cách tự chọn. Chạy trong `r.Do` nên các khu đang không tick.
+func (r *Room) debugSummon(z *Zone, p *game.Player, dist float64) {
+	if dist <= 0 {
+		dist = 3.5 * z.G.SkillU(p)
+	}
+	type other struct {
+		o  *game.Player
+		at *Zone
+	}
+	var list []other
+	for _, oz := range r.zones {
+		for _, o := range oz.G.PlayerList() {
+			if o.ID != p.ID && !o.IsBot && !o.Dead {
+				list = append(list, other{o, oz})
+			}
+		}
+	}
+	sort.Slice(list, func(i, j int) bool { return list[i].o.Name < list[j].o.Name })
+	for k, it := range list {
+		off := z.G.Vec(dist, 0)
+		if k > 0 {
+			off = z.G.Vec(dist*0.5, -dist*0.8*float64(k))
+		}
+		to := p.Pos.Add(off)
+		it.o.Vel = game.Vec{}
+		if it.at == z {
+			it.o.Pos = to
+			continue
+		}
+		r.queueTransfer(transfer{playerID: it.o.ID, from: it.at, to: z, at: to})
+	}
 }

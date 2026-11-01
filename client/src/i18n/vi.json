@@ -577,5 +577,25 @@
     "flag": "🇻🇳",
     "locale": "vi-VN"
   },
-  "statLabels": {"speed": "Tốc", "pickup": "Nhặt", "spin": "Quay", "durability": "Bền"}
+  "statLabels": {
+    "speed": "Tốc",
+    "pickup": "Nhặt",
+    "spin": "Quay",
+    "durability": "Bền"
+  },
+  "swordsGained": "+{n} kiếm",
+  "skillBurp": "Ợ~",
+  "skillYawn": "Oáp~",
+  "skillShellOut": "À há!",
+  "minionBye": "Đại ca ơi em đi đây",
+  "statusNames": {
+    "sleep": "Ngủ",
+    "blind": "Mù",
+    "stun": "Choáng",
+    "push": "Bị đẩy",
+    "brace": "Gồng",
+    "ghost": "Gom đơn",
+    "shell": "Rụt cổ",
+    "steal": "Trộm kiếm"
+  }
 }

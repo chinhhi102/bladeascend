@@ -590,6 +590,23 @@ func skillArtJobs() []Job {
 			Prompt: styleObject + " Round skill icon, " + k.icon + ", bold simple shape, no text" + negative})
 	}
 
+	// Icon trạng thái dùng chung 64 px (spec v6.36 §6.5). Chưa có ảnh thì client vẽ icon
+	// vector cùng tên (`client/src/render/statusicons.ts`) — game không chờ art.
+	for _, k := range []struct{ id, icon string }{
+		{"sleep", "a sleepy blue cloud with three letter Z shapes"},
+		{"blind", "a cup of bubble tea with black tapioca pearls"},
+		{"stun", "a swirl of three yellow stars"},
+		{"push", "a red megaphone blasting sound waves"},
+		{"brace", "a flexed orange bicep"},
+		{"ghost", "a yellow lightning bolt"},
+		{"shell", "a glowing green turtle shell"},
+		{"steal", "a purple orb with a small sword inside"},
+	} {
+		jobs = append(jobs, Job{Name: "icon_status_" + k.id, Priority: 3, Mode: modeSprite,
+			Out: "ui/status/" + k.id + ".png", W: 64, H: 64, Pivot: "center",
+			Prompt: styleObject + " Round status effect badge icon, " + k.icon + ", bold simple silhouette readable at 24 pixels, no text" + negative})
+	}
+
 	// Sprite đàn em của Đại Ca (§11.3) — anim `run` 8 khung.
 	minionSegs := []Seg{{Anim: "run", Frames: 8, Out: "characters/dan_em/frames", W: 512, H: 512, Pivot: "feet",
 		HeightK: 0.88, Poses: charAnims["run"].poses}}

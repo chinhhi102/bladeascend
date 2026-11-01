@@ -45,6 +45,9 @@ export const STR = {
   zoneName: (index: number | undefined, fallback = ''): string => d.zoneNames[index ?? -1] ?? fallback,
   needRealm: (realm: string): string => fmt(d.needRealm, { realm }),
   swordsStolen: (n: number): string => fmt(d.swordsStolen, { n }),
+  swordsGained: (n: number): string => fmt(d.swordsGained, { n }),
+  /** Tên trạng thái trên HUD (spec v6.36 §6.5) — chú thích cho icon, không phải icon. */
+  statusNames: d.statusNames as Rec,
   skillCooldown: (secs: number, n: number): string => fmt(d.skillCooldown, { secs, n }),
   skillWait: (secs: number): string => fmt(d.skillWait, { secs }),
   zoneEntered: (name: string): string => fmt(d.zoneEntered, { name }),

@@ -593,5 +593,25 @@
     "flag": "🇪🇸",
     "locale": "es-ES"
   },
-  "statLabels": {"speed": "Veloc.", "pickup": "Recoger", "spin": "Giro", "durability": "Aguante"}
+  "statLabels": {
+    "speed": "Veloc.",
+    "pickup": "Recoger",
+    "spin": "Giro",
+    "durability": "Aguante"
+  },
+  "swordsGained": "+{n} espadas",
+  "skillBurp": "¡Burp!",
+  "skillYawn": "¡Bostezo!",
+  "skillShellOut": "¡Ajá!",
+  "minionBye": "¡Adiós, jefe!",
+  "statusNames": {
+    "sleep": "Dormido",
+    "blind": "Ciego",
+    "stun": "Aturdido",
+    "push": "Empujado",
+    "brace": "Firme",
+    "ghost": "Prisa",
+    "shell": "Caparazón",
+    "steal": "Robo"
+  }
 }

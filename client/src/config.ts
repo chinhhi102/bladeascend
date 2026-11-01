@@ -102,6 +102,8 @@ export interface GameConfig {
      * người chơi thấy và vùng thật sự ăn đòn là hai thứ khác nhau.
      */
     ranges_u: Record<string, number>;
+    /** Gom Đơn: +bán kính nhặt (v6.31) — client vẽ vòng nhặt mờ đúng cỡ (§6.5). */
+    gom_don_pickup?: number;
   };
   zones: { wind_with_max_deg: number; wind_against_min_deg: number };
   gates: { radius: number };

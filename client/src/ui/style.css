@@ -197,6 +197,16 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 .buff { width: 44px; height: 44px; border-radius: 50%; padding: 4px; position: relative; }
 .buff-inner { width: 100%; height: 100%; border-radius: 50%; background: #222 center / 120% no-repeat; display: flex; align-items: center; justify-content: center; font-size: 12px; }
 .buff-left { position: absolute; right: -4px; bottom: -4px; font-size: 12px; }
+/* Trạng thái của mình (spec v6.36 §6.5): icon vector 64 px thu về 40 px, vòng đếm ngược
+   bằng conic-gradient theo --left (0..1), số giây góc dưới phải. Không dùng emoji hệ thống. */
+.st-icons { display: flex; gap: 6px; margin-top: 4px; min-height: 0; }
+.st-chip { --left: 1; width: 44px; height: 44px; border-radius: 50%; padding: 3px; position: relative;
+  background: conic-gradient(#fff calc(var(--left) * 360deg), rgba(0,0,0,.45) 0); animation: st-pop .25s ease-out; }
+.st-chip img { width: 100%; height: 100%; display: block; border-radius: 50%; }
+.st-left { position: absolute; right: -4px; bottom: -4px; min-width: 18px; padding: 0 3px; border-radius: 9px;
+  background: rgba(0,0,0,.75); font-size: 12px; font-weight: 800; text-align: center; }
+.st-left:empty { display: none; }
+@keyframes st-pop { from { transform: scale(1.5); } to { transform: scale(1); } }
 .swords + .score { font-size: 14px; color: var(--gold); }
 
 /* Uy Danh pop-ups (spec §11.1): float up and fade next to the status bar. */

@@ -72,7 +72,15 @@ var controlStatuses = []int{StSlow, StRoot, StSlip, StBlind, StStun, StSleep}
 // Luôn lấy mốc hết hạn XA HƠN giữa cũ và mới, không cộng dồn: trúng Ru Ngủ hai lần liên
 // tiếp thì vẫn chỉ chậm 3 giây kể từ lần sau, chứ không thành 6 giây — nếu không, hai người
 // cùng kỹ năng có thể khoá cứng một người vô thời hạn.
-func (g *Game) ApplyStatus(p *Player, s int, secs float64) {
+func (g *Game) ApplyStatus(p *Player, s int, secs float64) { g.ApplyStatusFrom(nil, p, s, secs) }
+
+// statusRenotifySecs: gia hạn ít hơn mức này thì không báo lại `StatusStart` (lệch đồng
+// hồ trên icon tối đa nửa giây — mắt không thấy, đường truyền thì đỡ hẳn).
+const statusRenotifySecs = 0.5
+
+// ApplyStatusFrom: như `ApplyStatus`, kèm người gây ra (nil = tự thân / môi trường) để
+// event `StatusStart` chở theo — client vẽ mũi tên chỉ về phía người đó (spec v6.36 §6.5).
+func (g *Game) ApplyStatusFrom(src, p *Player, s int, secs float64) {
 	if p.Dead || secs <= 0 {
 		return
 	}
@@ -80,6 +88,11 @@ func (g *Game) ApplyStatus(p *Player, s int, secs float64) {
 		return // đang gồng: miễn khống chế
 	}
 	if until := g.Time + secs; until > p.Status[s] {
+		// Báo lại chỉ khi mới dính hoặc được gia hạn đáng kể: đứng trong vũng vỏ chuối thì
+		// mỗi tick gia hạn thêm 1/20 giây — báo từng lần là 20 event/giây cho một icon.
+		if old := p.Status[s]; old <= g.Time || until-old >= statusRenotifySecs {
+			g.statusStart(src, p, s, secs)
+		}
 		p.Status[s] = until
 	}
 	if s == StBlind {
@@ -111,6 +124,7 @@ func (g *Game) ClearStatuses(p *Player) {
 	for i := range p.Status {
 		p.Status[i] = 0
 	}
+	g.endShownStatuses(p, true)
 }
 
 // onDeathClear xoá những thứ chết là mất: lượt kỹ năng và mọi trạng thái (spec §6.3 —

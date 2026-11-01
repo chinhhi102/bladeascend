@@ -16,8 +16,13 @@ import { type GameConfig, skillRange } from '../config';
  * Vẽ bằng `Graphics` dựng một lần cho mỗi lần cast rồi mờ dần — không phải mỗi khung hình.
  */
 
-/** FADE_SECS: chỉ báo mờ dần trong ngần này. Đủ để kịp nhìn, chưa đủ để che màn hình. */
-const FADE_SECS = 0.45;
+/**
+ * FADE_SECS: chỉ báo loé lên rồi tan trong ngần này — spec v6.36 §6.5 lớp ②: "loé lên 0.3s,
+ * nét đứt sáng, màu riêng kỹ năng".
+ */
+const FADE_SECS = 0.3;
+/** Số nét đứt trên một vòng tròn — cố định theo góc nên vòng to hay nhỏ đều đọc ra "nét đứt". */
+const DASHES = 36;
 
 interface Mark {
   g: Graphics;
@@ -40,8 +45,12 @@ export class SkillFx {
     }
     const half = (deg * Math.PI) / 360;
     const g = new Graphics();
-    g.moveTo(0, 0).arc(0, 0, r, facing - half, facing + half).lineTo(0, 0);
-    g.fill({ color, alpha: 0.16 }).stroke({ color, width: Math.max(3, r * 0.012), alpha: 0.7 });
+    g.moveTo(0, 0).arc(0, 0, r, facing - half, facing + half).lineTo(0, 0).fill({ color, alpha: 0.16 });
+    const w = Math.max(3, r * 0.014);
+    dashedLine(g, 0, 0, Math.cos(facing - half) * r, Math.sin(facing - half) * r, r / 14);
+    dashedLine(g, 0, 0, Math.cos(facing + half) * r, Math.sin(facing + half) * r, r / 14);
+    dashedArc(g, r, facing - half, facing + half, Math.max(4, Math.round((DASHES * deg) / 360)));
+    g.stroke({ color: brighten(color), width: w, alpha: 0.95 });
     g.position.set(x, y);
     this.add(g, now);
   }
@@ -53,7 +62,9 @@ export class SkillFx {
       return;
     }
     const g = new Graphics();
-    g.circle(0, 0, r).fill({ color, alpha: 0.14 }).stroke({ color, width: Math.max(3, r * 0.02), alpha: 0.75 });
+    g.circle(0, 0, r).fill({ color, alpha: 0.14 });
+    dashedArc(g, r, 0, Math.PI * 2, DASHES);
+    g.stroke({ color: brighten(color), width: Math.max(3, r * 0.022), alpha: 0.95 });
     g.position.set(x, y);
     this.add(g, now);
   }
@@ -97,4 +108,30 @@ export class SkillFx {
     }
     this.marks.length = 0;
   }
+}
+
+/** dashedArc: cung nét đứt bán kính r từ a0 tới a1, `n` nét (nửa nét, nửa khoảng trống). */
+function dashedArc(g: Graphics, r: number, a0: number, a1: number, n: number): void {
+  const step = (a1 - a0) / n;
+  for (let i = 0; i < n; i++) {
+    const s = a0 + i * step;
+    g.moveTo(Math.cos(s) * r, Math.sin(s) * r).arc(0, 0, r, s, s + step * 0.55);
+  }
+}
+
+/** dashedLine: đoạn thẳng nét đứt, mỗi nét dài `dash`. */
+function dashedLine(g: Graphics, x0: number, y0: number, x1: number, y1: number, dash: number): void {
+  const len = Math.hypot(x1 - x0, y1 - y0);
+  const n = Math.max(1, Math.floor(len / (dash * 2)));
+  for (let i = 0; i < n; i++) {
+    const a = (i * 2 * dash) / len;
+    const b = Math.min(1, ((i * 2 + 1) * dash) / len);
+    g.moveTo(x0 + (x1 - x0) * a, y0 + (y1 - y0) * a).lineTo(x0 + (x1 - x0) * b, y0 + (y1 - y0) * b);
+  }
+}
+
+/** brighten: nét viền sáng hơn màu nền một bậc — spec "nét đứt sáng". */
+function brighten(c: number): number {
+  const ch = (sh: number): number => Math.min(255, (((c >> sh) & 0xff) * 1.35 + 40) | 0);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
 }

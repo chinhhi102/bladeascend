@@ -47,6 +47,7 @@ func (g *Game) spawnMinion(boss *Player, at Vec, secs float64) *Player {
 	m.IsMinion = true
 	m.MinionOf = boss.ID
 	m.MinionUntil = g.Time + secs
+	g.statusStart(boss, m, StMinion, secs)
 	m.InvulnUntil = 0
 	// Nhỏ hơn đại ca 30% (spec). Đặt SAU khi vào bàn cờ vì `AddPlayer` tự tính scale theo
 	// cảnh giới, mà đàn em thì cùng cảnh giới với đại ca nên sẽ to bằng nếu không chỉnh.
@@ -71,8 +72,9 @@ func (g *Game) updateSkillState(dt float64) {
 			if p.Pos.Dist(s.at) <= s.r {
 				// Trượt VÀ choáng cùng lúc (spec v5.5): trượt theo quán tính, đồng thời
 				// mất quyền điều khiển trong đúng khoảng đó.
-				g.ApplyStatus(p, StSlip, g.Cfg.Skills.SlipSecs)
-				g.ApplyStatus(p, StStun, g.Cfg.Skills.SlipSecs)
+				owner := g.Players[s.owner] // nil nếu Cô Ba đã rời phòng — vẫn trượt như thường
+				g.ApplyStatusFrom(owner, p, StSlip, g.Cfg.Skills.SlipSecs)
+				g.ApplyStatusFrom(owner, p, StStun, g.Cfg.Skills.SlipSecs)
 			}
 		}
 	}
@@ -91,6 +93,7 @@ func (g *Game) updateSkillState(dt float64) {
 		if p.HasStatus(StShell, g.Time) {
 			p.shellOn = true
 		}
+		g.endShownStatuses(p, false)
 		// Đàn em hết giờ thì biến mất.
 		if p.IsMinion && g.Time >= p.MinionUntil {
 			g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "dan_em_gone", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})

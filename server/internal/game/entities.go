@@ -144,6 +144,8 @@ type Player struct {
 	SkillReadyAt float64
 	// shellOn: đang trong mai rùa — dùng để bắt đúng khoảnh khắc RA khỏi mai.
 	shellOn bool
+	// statusShown: mã trạng thái đã báo `StatusStart` mà chưa báo `StatusEnd` (statusevents.go).
+	statusShown uint16
 	// channel: chiêu đang "hát" dở (Ru Ngủ Trưa, spec v6.9 §6.3). Xem `channelState`.
 	channel channelState
 	// ghostOn + unstick*: Giao Hỏa Tốc hết hạn giữa lòng vật cản thì trượt mượt ra chỗ

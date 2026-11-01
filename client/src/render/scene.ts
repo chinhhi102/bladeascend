@@ -1,17 +1,17 @@
 import { Application, Container } from 'pixi.js';
 import { AnimViewer } from './animviewer';
 import { assets } from './assets';
-import { SkillFx } from './skillfx';
+import { SkillPresenter, type StatusChip } from './skillpresent';
 import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuTextureCount, trackGpuMemory } from './gpumem';
 import { rendererResolution } from './device';
 import { FADE_OUT_SECS, ViewPool } from './viewpool';
 import { BobaOverlay } from './boba';
 
 import { sound } from '../audio/sound';
-import { absorbable, banksTienKhi, cameraViewHeight, type GameConfig, realmName, realmOf, tienIndex } from '../config';
+import { absorbable, banksTienKhi, cameraViewHeight, type GameConfig, realmName, realmOf, skillRange, tienIndex } from '../config';
 import type { ClientWorld } from '../net/state';
 import type { ItemState } from '../net/protocol';
-import { FLAG, type GameEvent, moodName } from '../net/protocol';
+import { FLAG, type GameEvent, moodName, statusOn } from '../net/protocol';
 import { pick, STR } from '../ui/strings';
 import { Beast, type BeastMode, TIEN_BEASTS } from './beast';
 import { ItemSprite, MonsterSprite } from './entities';
@@ -97,8 +97,8 @@ export class GameScene {
   private readonly auras = new Map<number, TienAura>();
   private readonly rings = new Container();
   private readonly vfx = new Vfx();
-  /** skillFx: chỉ báo phạm vi kỹ năng (nón / vòng tròn) — spec §6.3, CHANGES_v6_5 mục 3. */
-  private readonly skillFx: SkillFx;
+  /** skill: mọi thứ NHÌN THẤY của kỹ năng — lớp ①②⑤, rung, mũi tên (spec v6.36 §6.5). */
+  private readonly skill: SkillPresenter;
   private mapView: MapView | null = null;
   private readonly players = new Map<number, PlayerSprite>();
   /** Chữ nổi trong thế giới: "Cần {cảnh giới}" khi chém vật cản quá bậc (§8.2). */
@@ -141,7 +141,15 @@ export class GameScene {
   onMemoryPressure: ((mb: number) => void) | null = null;
 
   constructor(private readonly cfg: GameConfig) {
-    this.skillFx = new SkillFx(cfg);
+    this.skill = new SkillPresenter(cfg, {
+      myId: () => this.world?.myId ?? 0,
+      casterAt: (id) => this.casterAt(id),
+      sprite: (id) => this.players.get(id),
+      toScreen: (x, y) => ({ x: this.camera.x + x * this.zoom, y: this.camera.y + y * this.zoom }),
+      screen: () => ({ w: this.app.screen.width, h: this.app.screen.height }),
+      floatText: this.floatText,
+      vfx: this.vfx,
+    });
   }
 
   /** viewSize is the world-space rectangle currently on screen (used by the minimap, §12.1). */
@@ -182,7 +190,7 @@ export class GameScene {
     // yêu cầu "không che HUD" của spec §6.3.
     // Bộ xem animation nằm TRÊN CÙNG và ngoài camera: nó là khung xem cố định giữa màn
     // hình, không phải thứ nằm trong thế giới (ANSWERS mục 1).
-    this.app.stage.addChild(this.camera, this.breakthrough.overlay, this.boba.root, this.animViewer.root);
+    this.app.stage.addChild(this.camera, this.skill.arrows.root, this.breakthrough.overlay, this.boba.root, this.animViewer.root);
     this.boba.resize(this.app.screen.width, this.app.screen.height);
     this.app.renderer.on('resize', (w: number, h: number) => this.boba.resize(w, h));
   }
@@ -221,12 +229,12 @@ export class GameScene {
     // hàng trăm thanh kiếm không che mất hào quang.
     // Cổng nằm NGAY TRÊN vòng kiếm, dưới nhân vật: vòng kiếm không che được cổng.
     this.entities.addChild(this.stallView.layer);
-    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.mapView.gateLayer, this.glow.root, this.entities, this.mapView.over, this.ambient.root, this.skillFx.layer, this.vfx.layer, this.floatText.layer);
+    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.mapView.gateLayer, this.glow.root, this.entities, this.mapView.over, this.ambient.root, ...this.skill.layers, this.vfx.layer, this.floatText.layer);
     this.ambient.setBiome(w.map.id);
   }
 
   clear(): void {
-    this.skillFx.clear();
+    this.skill.clear();
     this.floatText.clear();
     this.stallView.clear();
     this.camera.removeChildren();
@@ -325,13 +333,21 @@ export class GameScene {
       this.ambient.update(me.x, me.y, v.w / 2, v.h / 2, now);
     }
     const vs = this.viewSize();
+    this.mapView.ghostPass = this.ghostRunners(frames);
     this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha,
       me ? { x: me.x, y: me.y, w: vs.w, h: vs.h } : undefined,
       me ? this.myReach : undefined);
     this.vfx.update(now);
     this.floatText.update(now);
-    this.stallView.sync(w);
-    this.skillFx.update(now);
+    this.stallView.sync(w, {
+      now,
+      secs: this.cfg.skills.ranges_u.bay_sap_secs ?? 0,
+      owner: (id) => {
+        const c = this.casterAt(id);
+        return c ? { x: c.x, y: c.y, peelR: skillRange(this.cfg, c.sc, 'vo_chuoi_w') } : null;
+      },
+    });
+    this.skill.update(now);
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
     this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;
     this.sampleFps(dt);
@@ -887,6 +903,9 @@ export class GameScene {
   }
 
   private handleEvent(e: GameEvent, now: number): void {
+    if (this.skill.handle(e, now)) {
+      return; // kỹ năng + trạng thái: SkillPresenter lo hết
+    }
     const mine = e.a === this.world?.myId;
     const size = 90 * this.playerScale(e.a);
     switch (e.k) {
@@ -938,15 +957,6 @@ export class GameScene {
         this.boba.hit(e.f ?? this.cfg.skills.tran_chau_secs, now, this.app.screen.width, this.app.screen.height);
         sound.play('sword_hit_body');
         break;
-      case 'SkillCast':
-        // Bong bóng thoại tấu hài khi dùng kỹ năng (spec §6.3).
-        if (e.s && STR.skillLines[e.s]) {
-          this.players.get(e.a ?? 0)?.showBubble(STR.skillLines[e.s], now);
-        }
-        break;
-      case 'SkillEffect':
-        this.onSkillEffect(e, now);
-        break;
       case 'RealmDrop':
         {
           const was = this.lastTien.get(e.a ?? 0) ?? -1;
@@ -964,114 +974,6 @@ export class GameScene {
   }
 
   /**
-   * onSkillEffect vẽ CHỈ BÁO PHẠM VI của kỹ năng (spec §6.3, CHANGES_v6_5 mục 3).
-   *
-   * Vùng vẽ ra phải trùng vùng server xét trúng, nên bán kính lấy từ `skills.ranges_u` ×
-   * U của **người dùng** — U suy từ `scale` của chính người đó trong snapshot. Không có
-   * người dùng trong khung nhìn thì bỏ qua: không biết scale thì thà không vẽ còn hơn vẽ
-   * một vòng tròn sai cỡ.
-   */
-  private onSkillEffect(e: GameEvent, now: number): void {
-    const sc = this.casterScale(e.a ?? 0);
-    if (sc <= 0) {
-      return;
-    }
-    const sk = this.cfg.skills;
-    switch (e.s) {
-      case 'loa': {
-        // Server gửi một event cho MỖI nạn nhân; sóng tròn (v6.30) chỉ cần vẽ một lần.
-        const key = `loa:${e.a}:${Math.round(now * 1000)}`;
-        if (this.lastCone !== key) {
-          this.lastCone = key;
-          const at = this.casterAt(e.a ?? 0);
-          if (at) {
-            this.skillFx.circle(at.x, at.y, sc, 'loa_radius', 0xffd23f, now);
-          }
-        }
-        break;
-      }
-      case 'tran_chau':
-        this.skillFx.cone(e.x, e.y, e.f ?? 0, sc, 'tran_chau_cone', sk.tran_chau_cone_deg, 0x6b4a2f, now);
-        break;
-      case 'ru_ngu_hat': {
-        // Vòng BÁO TRƯỚC trong lúc hát: ai còn nửa giây để chạy ra khỏi 4 U thì thoát.
-        // Không vẽ nó là kỹ năng thành "bỗng dưng cả đám ngủ", không ai học được cách tránh.
-        const at = this.casterAt(e.a ?? 0);
-        if (at) {
-          this.skillFx.circle(at.x, at.y, sc, 'ru_ngu_r', 0x8ea9ff, now);
-        }
-        sound.play('skill_hat_ru', 0.6);
-        break;
-      }
-      case 'ru_ngu': {
-        // Server gửi một event cho MỖI người ngủ; vòng thì chỉ vẽ một lần.
-        const key = `ru:${e.a}:${Math.round(now * 1000)}`;
-        if (this.lastCone !== key) {
-          this.lastCone = key;
-          const at = this.casterAt(e.a ?? 0);
-          if (at) {
-            this.skillFx.circle(at.x, at.y, sc, 'ru_ngu_r', 0x8ea9ff, now);
-          }
-        }
-        this.vfx.play('stun_stars', e.x, e.y, 80, now);
-        sound.play('skill_sleep', 0.5);
-        break;
-      }
-      case 'trom_kiem': {
-        // Nằm võng Trộm Kiếm 4 s (v6.30): vòng báo quanh Ông Ba để người khác biết đừng va.
-        const at = this.casterAt(e.a ?? 0);
-        if (at) {
-          this.skillFx.circle(at.x, at.y, sc, 'ru_ngu_r', 0xc9a227, now);
-        }
-        break;
-      }
-      case 'trom_kiem_hit':
-        this.floatText.show(STR.swordsStolen(e.n ?? 0), e.x, e.y, now, 0xffe14d);
-        break;
-      case 'ru_ngu_huy':
-        this.floatText.show(STR.skillCancelled, e.x, e.y, now, 0xffb3b3);
-        break;
-      case 'hut_mi': {
-        // Sợi mì: tia từ Sư Phụ tới nạn nhân, kèm số kiếm vừa bị cướp.
-        const at = this.casterAt(e.a ?? 0);
-        if (at) {
-          this.skillFx.beam(at.x, at.y, e.x, e.y, 0xf2c14e, now);
-        }
-        this.floatText.show(STR.swordsStolen(e.n ?? 0), e.x, e.y, now, 0xffe14d);
-        sound.play('skill_hut_mi', 0.7);
-        break;
-      }
-      case 'hut_mi_miss': {
-        const at = this.casterAt(e.a ?? 0);
-        if (at) {
-          this.skillFx.cone(at.x, at.y, e.f ?? 0, sc, 'hut_mi_cone', sk.hut_mi_cone_deg, 0xf2c14e, now);
-        }
-        break;
-      }
-      case 'bay_hang': {
-        // Vòng cung sạp nằm cách `bay_sap_dist` U — vẽ vòng đó để thấy ngay nó chặn ở đâu.
-        this.skillFx.circle(e.x, e.y, sc, 'bay_sap_dist', 0xe08f3c, now);
-        sound.play('skill_bay_hang', 0.7);
-        break;
-      }
-      case 'gom_don':
-        // v6.31: Gom Đơn không còn vòng hút 3 U (chỉ +0.1 bán kính nhặt) — không vẽ vòng phạm vi.
-        sound.play('skill_gom_don', 0.6);
-        break;
-      case 'rut_co_burst':
-        this.skillFx.circle(e.x, e.y, sc, 'rut_co_wave', 0x7ad7b0, now);
-        break;
-      default:
-        break;
-    }
-  }
-
-  /** casterScale lấy `scale` của người dùng kỹ năng từ snapshot; 0 nếu không thấy họ. */
-  private casterScale(id: number): number {
-    return this.casterAt(id)?.sc ?? 0;
-  }
-
-  /**
    * casterAt lấy vị trí + hướng mặt + scale của người dùng kỹ năng, từ SNAPSHOT.
    *
    * Lấy từ snapshot chứ không hỏi `PlayerSprite`: sprite chỉ giữ trạng thái vẽ (lật
@@ -1085,9 +987,6 @@ export class GameScene {
     }
     return null;
   }
-
-  /** lastCone gộp nhiều event cùng một lần cast (server gửi mỗi nạn nhân một event). */
-  private lastCone = '';
 
   private onBreakthrough(e: GameEvent, size: number, mine: boolean, now: number): void {
     if (e.s === 'tien') {
@@ -1202,6 +1101,23 @@ export class GameScene {
         break;
       default:
     }
+  }
+
+  /** ghostRunners: người đang Gom Đơn (bit `ghost`) — vật cản họ đi qua sẽ mờ (§6.5). */
+  private ghostRunners(frames: ReturnType<ClientWorld['playerFrames']>): { x: number; y: number; r: number }[] {
+    const out: { x: number; y: number; r: number }[] = [];
+    for (const f of frames) {
+      if (statusOn(f.s.st, 'ghost')) {
+        out.push({ x: f.x, y: f.y, r: this.cfg.player.body_r * f.s.sc * 1.5 });
+      }
+    }
+    return out;
+  }
+
+  /** myStatusChips: icon trạng thái + giây còn lại của chính mình cho HUD (§6.5). */
+  myStatusChips(now: number): StatusChip[] {
+    const me = this.world?.me();
+    return me ? this.skill.chips(this.world?.myId ?? 0, me.st ?? 0, now) : [];
   }
 
   /** realm of the local player for HUD. */

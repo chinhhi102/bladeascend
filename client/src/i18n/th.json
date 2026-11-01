@@ -593,5 +593,25 @@
     "flag": "🇹🇭",
     "locale": "th-TH"
   },
-  "statLabels": {"speed": "ความเร็ว", "pickup": "เก็บของ", "spin": "หมุน", "durability": "ทนทาน"}
+  "statLabels": {
+    "speed": "ความเร็ว",
+    "pickup": "เก็บของ",
+    "spin": "หมุน",
+    "durability": "ทนทาน"
+  },
+  "swordsGained": "+{n} ดาบ",
+  "skillBurp": "เอิ้ก~",
+  "skillYawn": "หาว~",
+  "skillShellOut": "อ๋อ!",
+  "minionBye": "ลาก่อนลูกพี่!",
+  "statusNames": {
+    "sleep": "หลับ",
+    "blind": "ตาบอด",
+    "stun": "มึน",
+    "push": "ถูกผลัก",
+    "brace": "เกร็ง",
+    "ghost": "ซิ่ง",
+    "shell": "หดหัว",
+    "steal": "ขโมย"
+  }
 }

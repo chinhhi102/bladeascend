@@ -593,5 +593,25 @@
     "flag": "🇮🇩",
     "locale": "id-ID"
   },
-  "statLabels": {"speed": "Laju", "pickup": "Ambil", "spin": "Putar", "durability": "Kuat"}
+  "statLabels": {
+    "speed": "Laju",
+    "pickup": "Ambil",
+    "spin": "Putar",
+    "durability": "Kuat"
+  },
+  "swordsGained": "+{n} pedang",
+  "skillBurp": "Sendawa~",
+  "skillYawn": "Menguap~",
+  "skillShellOut": "Aha!",
+  "minionBye": "Dadah bos!",
+  "statusNames": {
+    "sleep": "Tidur",
+    "blind": "Buta",
+    "stun": "Pusing",
+    "push": "Terdorong",
+    "brace": "Kuat",
+    "ghost": "Ngebut",
+    "shell": "Cangkang",
+    "steal": "Curi"
+  }
 }

@@ -139,6 +139,13 @@ export function statusOn(st: number | undefined, name: (typeof STATUS)[number]):
   return ((st ?? 0) & (1 << STATUS.indexOf(name))) !== 0;
 }
 
+/**
+ * STATUS_EV: mã trạng thái trong event `StatusStart/StatusEnd` (spec v6.36 §6.5) = `STATUS`
+ * + 3 mã chỉ để hiển thị. Khớp `game.EventStatusNames` bên server.
+ */
+export const STATUS_EV = [...STATUS, 'push', 'steal', 'minion'] as const;
+export type StatusEv = (typeof STATUS_EV)[number];
+
 export const PROTOCOL_VERSION = 6;
 
 export interface Welcome {

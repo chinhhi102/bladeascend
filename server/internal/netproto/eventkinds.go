@@ -43,7 +43,9 @@ var EventKinds = []string{
 	"TeleportIn",
 	"TeleportOut",
 	"TienKhiPicked",
-	"BotLeave", // bot rời phòng do admin rút (§9.5): client vẽ khói
+	"BotLeave",    // bot rời phòng do admin rút (§9.5): client vẽ khói
+	"StatusStart", // v6.36 §6.5: trạng thái bắt đầu {A bị, B gây, N mã, F giây}
+	"StatusEnd",   // v6.36 §6.5: trạng thái hết
 }
 
 // eventIndex tra ngược, dựng một lần lúc khởi động.

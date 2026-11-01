@@ -55,6 +55,7 @@ const DEBUG_KEYS: Record<string, Record<string, unknown>> = {
   KeyX: { cmd: 'die', n: 0 },
   KeyB: { cmd: 'bot', n: 0 }, // thả 1 bot cùng cảnh giới ngay cạnh mình
   KeyG: { cmd: 'skill', n: 1 }, // hồi đầy lượt kỹ năng, khỏi chờ hồi chiêu
+  KeyU: { cmd: 'summon', n: 0 }, // kéo người thật khác trong khu về cạnh mình (chụp ảnh kỹ năng)
 };
 
 /** fpsCap: 60 on PC, 45 on phones to save battery; override with ?fps=30 (M7). */
@@ -686,6 +687,7 @@ class App {
     this.scene.render(dt);
     const me = this.world.me();
     this.hud.update(me, this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
+    this.hud.setStatuses(this.scene.myStatusChips(performance.now() / 1000));
     // F3 mở được bảng đo ở MỌI trang (spec §13.6), không chỉ khi `?debug=true` — trước đây
     // mở F3 trên trang thường thì bảng hiện ra nhưng số không bao giờ cập nhật.
     if (this.debug || this.hud.perfVisible) {

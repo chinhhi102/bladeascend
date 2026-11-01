@@ -83,6 +83,13 @@ export class SwordRing {
   private readonly cracks = new Graphics();
   private readonly hitbox = new Graphics();
   private readonly pearl = new Graphics();
+  /** Viền màu quanh vòng kiếm theo kỹ năng (§6.5): Gồng cam, Trộm Kiếm tím, đàn em tím sẫm. */
+  private readonly halo = new Graphics();
+  private haloKey = '';
+  /** haloColor: PlayerSprite đặt mỗi khung; 0 = không viền. */
+  haloColor = 0;
+  /** reach: bán kính ngoài của vòng kiếm khung vừa vẽ (cho hiệu ứng kỹ năng bám theo). */
+  reach = 0;
   /** Bán kính lớp trân châu đang vẽ (0 = tắt) — chỉ vẽ lại khi bật/tắt hay vòng đổi cỡ. */
   private pearlR = 0;
   private blades: Blade[] = [];
@@ -100,7 +107,7 @@ export class SwordRing {
 
   constructor(private readonly cfg: GameConfig) {
     this.tints = cfg.sword.ring_tints.map(parseTint);
-    this.root.addChild(this.blur, this.tinted, this.skin, this.cracks, this.pearl, this.hitbox);
+    this.root.addChild(this.halo, this.blur, this.tinted, this.skin, this.cracks, this.pearl, this.hitbox);
   }
 
   update(f: PlayerFrame, now: number, showHitbox: boolean, detail = 1): void {
@@ -128,7 +135,25 @@ export class SwordRing {
     this.placeAll(f, t, s.tl, s.d);
     this.drawCracks(f, g);
     this.drawPearl(f, g);
+    this.drawHalo(g, now);
     this.drawHitbox(f, g, showHitbox);
+  }
+
+  /** drawHalo: vẽ lại chỉ khi màu/cỡ đổi; nhịp sáng bằng alpha, không vẽ lại mỗi khung. */
+  private drawHalo(g: RingGeom, now: number): void {
+    this.reach = g.reach;
+    const want = this.count > 0 ? this.haloColor : 0;
+    const key = `${want}:${g.reach}`;
+    if (key !== this.haloKey) {
+      this.haloKey = key;
+      this.halo.clear();
+      if (want) {
+        this.halo.circle(0, 0, g.reach * 1.04).stroke({ color: want, width: Math.max(4, g.reach * 0.05), alpha: 0.9 });
+        this.halo.circle(0, 0, g.reach * 1.04).fill({ color: want, alpha: 0.08 });
+      }
+    }
+    this.halo.visible = want !== 0;
+    this.halo.alpha = 0.7 + 0.3 * Math.sin(now * 8);
   }
 
   /**

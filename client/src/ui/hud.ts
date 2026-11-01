@@ -6,6 +6,8 @@ import { RoomBoard } from './roomboard';
 import { crown } from './roomboard-parts';
 import { BUFFS, moodName } from '../net/protocol';
 import { assets } from '../render/assets';
+import type { StatusChip } from '../render/skillpresent';
+import { statusIconUrl } from '../render/statusicons';
 import { REALM_BADGE } from '../render/palette';
 import { BUFF_COLORS } from '../render/palette';
 import { button, h } from './dom';
@@ -137,6 +139,9 @@ export class Hud {
   private readonly scoreBox = h('div', 'score');
   private readonly pops = h('div', 'score-pops');
   private readonly buffs = h('div', 'buffs');
+  /** Icon trạng thái của chính mình + giây còn lại, dưới ảnh đại diện (spec v6.36 §6.5). */
+  private readonly stIcons = h('div', 'st-icons');
+  private stKey = '';
   /** Bảng xếp hạng phòng §11.5 — dựng sau khi có `cfg` (constructor). */
   private readonly board: RoomBoard;
   private readonly feed = h('div', 'feed');
@@ -209,6 +214,7 @@ export class Hud {
       h('div', 'hud-left',
         h('div', 'status', this.badgeWrap, h('div', 'status-text', this.realm, this.expBar, this.expLabel, this.swords, this.scoreBox)),
         this.buffs,
+        this.stIcons,
         this.zoneBox,
         this.minimap.root),
       this.pops,
@@ -413,6 +419,37 @@ export class Hud {
       return icon;
     });
     this.buffs.replaceChildren(...nodes);
+  }
+
+  /**
+   * setStatuses: icon trạng thái của mình (ngủ, mù, choáng…) + số giây còn lại. Chạm DOM chỉ
+   * khi tập icon hoặc con số giây ĐỔI — gọi mỗi khung từ vòng chính.
+   */
+  setStatuses(chips: StatusChip[]): void {
+    const key = chips.map((c) => `${c.key}:${Math.ceil(c.secs)}`).join(',');
+    if (key === this.stKey) {
+      return;
+    }
+    const sameSet = chips.map((c) => c.key).join(',') === this.stKey.replace(/:\d+/g, '');
+    this.stKey = key;
+    if (sameSet && this.stIcons.children.length === chips.length) {
+      chips.forEach((c, i) => {
+        const el = this.stIcons.children[i] as HTMLElement;
+        el.style.setProperty('--left', String(c.frac));
+        (el.lastElementChild as HTMLElement).textContent = c.secs > 0 ? String(Math.ceil(c.secs)) : '';
+      });
+      return;
+    }
+    this.stIcons.replaceChildren(...chips.map((c) => {
+      const chip = h('div', 'st-chip');
+      chip.title = STR.statusNames[c.key] ?? c.key;
+      chip.style.setProperty('--left', String(c.frac));
+      const img = document.createElement('img');
+      img.src = statusIconUrl(c.key);
+      img.alt = chip.title;
+      chip.append(img, h('span', 'st-left', c.secs > 0 ? String(Math.ceil(c.secs)) : ''));
+      return chip;
+    }));
   }
 
   /** onEvents tracks my buff timers and the chest warning. */

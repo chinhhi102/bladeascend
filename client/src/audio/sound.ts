@@ -11,6 +11,8 @@ const SFX = [
   // Kỹ năng v6.9/v6.10. Thiếu tệp thì `sound.play` im lặng bỏ qua, nên thêm tên vào đây
   // trước khi có âm thanh là an toàn — và `assets:report` sẽ liệt kê chúng là còn thiếu.
   'skill_hat_ru', 'skill_sleep', 'skill_hut_mi', 'skill_gom_don', 'skill_bay_hang',
+  // v6.36 §6.5: mỗi kỹ năng một tiếng lúc dùng + một tiếng nhỏ lúc hiệu ứng tan.
+  'skill_banh_bao', 'skill_loa', 'skill_dan_em', 'skill_tran_chau', 'skill_gong_co', 'skill_rut_co', 'skill_end',
 ] as const;
 
 export type SfxName = (typeof SFX)[number];

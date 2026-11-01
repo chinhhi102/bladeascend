@@ -2,7 +2,7 @@ import { AnimatedSprite, Container, Graphics, Sprite, Text, type Texture } from 
 
 import type { GameConfig } from '../config';
 import type { PlayerFrame } from '../net/state';
-import { BUFFS, FLAG, statusOn } from '../net/protocol';
+import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { AnimController, type AnimOut } from './animctl';
 import { animJitter, JITTER_RED } from './jitter';
@@ -11,6 +11,7 @@ import { BUFF_COLORS, charColor } from './palette';
 import { moodName } from '../net/protocol';
 import { Input } from '../input';
 import { Nameplate, PLATE_FAR_PX } from './nameplate';
+import { StatusView } from './statusview';
 import { SwordRing } from './swordring';
 
 // Visual proportions relative to the body hitbox radius (not balance numbers).
@@ -47,7 +48,11 @@ const FALLBACK: Record<string, string[]> = {
   teleport_in: ['idle'],
   death: ['hit', 'idle'],
   respawn: ['idle'],
+  skill: ['levelup', 'idle'],
 };
+
+/** Anim `skill` phát bao lâu khi nhận `SkillCast` (lớp ① spec v6.36 §6.5) — chỉ để vẽ. */
+const SKILL_ANIM_SECS = 0.6;
 
 /** PlayerSprite draws one character: body, sword ring, aura, name tag, emote bubble. */
 export class PlayerSprite {
@@ -64,9 +69,10 @@ export class PlayerSprite {
   private bubble: Container | null = null;
   private readonly animLabel = new Text({ text: '', style: { fontSize: 40, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x000000, width: 6 } } });
   private bubbleUntil = 0;
-  /** Vòng icon trạng thái quanh nhân vật (🚫 khi không nhặt được đồ — spec v5.5 §6.3). */
-  private readonly statusIcons = new Container();
-  private statusKey = '';
+  /** Lớp ③④ của kỹ năng: dấu hiệu trạng thái, icon có vòng đếm (spec v6.36 §6.5). */
+  private readonly statusView: StatusView;
+  /** skillUntil: đang diễn anim `skill` tới lúc này (nhận `SkillCast`). */
+  private skillUntil = 0;
   /** bornAt: lúc view bắt đầu được vẽ, để mờ dần vào. */
   private bornAt = 0;
   /** fadeSecs: độ dài lần mờ-dần-vào đang chạy. Đổi theo nguyên nhân (xuất hiện / đổi art). */
@@ -101,6 +107,7 @@ export class PlayerSprite {
     this.usingFallback = got?.fallback ?? false;
     this.atlasChar = got?.drawn ?? '';
     this.swordRing = new SwordRing(cfg);
+    this.statusView = new StatusView(cfg);
     this.plate = new Nameplate(cfg, name, isMe, Input.isTouchDevice());
     // Hào quang Tiên giới KHÔNG còn nằm ở đây: nó chuyển sang `vfxLayer` dùng chung để ăn
     // một lượt bloom cho cả màn hình thay vì mỗi nhân vật một filter (spec §3.6).
@@ -114,7 +121,7 @@ export class PlayerSprite {
     // kiếm tím. Phía trên đầu là chỗ duy nhất luôn trống.
     this.animInfo.y = -2.6;
     this.animInfo.visible = false;
-    this.root.addChild(this.shadow, this.aura, this.bodyBox, this.statusIcons, this.plate.root, this.animInfo);
+    this.root.addChild(this.shadow, this.aura, this.statusView.under, this.bodyBox, this.statusView.over, this.plate.root, this.animInfo);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -256,8 +263,12 @@ export class PlayerSprite {
     const dt = this.lastAt > 0 ? Math.min(0.1, now - this.lastAt) : 0;
     let speed = 0;
     let turn = 0;
+    let vx = 0;
+    let vy = 0;
     if (dt > 0) {
-      speed = Math.hypot(f.x - this.lastPos.x, f.y - this.lastPos.y) / dt;
+      vx = (f.x - this.lastPos.x) / dt;
+      vy = (f.y - this.lastPos.y) / dt;
+      speed = Math.hypot(vx, vy);
       let df = s.f - this.lastFace;
       while (df > Math.PI) { df -= Math.PI * 2; }
       while (df < -Math.PI) { df += Math.PI * 2; }
@@ -267,7 +278,7 @@ export class PlayerSprite {
     this.lastFace = s.f;
     this.lastAt = now;
     this.ctl.setFacing(Math.cos(s.f) >= 0, now);
-    this.updateBody(moodName(s.md), r, dt, speed, turn, now);
+    this.updateBody(this.moodFor(moodName(s.md), now), r, dt, speed, turn, now);
     this.drawAura(s.bf, r, now);
     if (s.fl & FLAG.burning) {
       this.drawBurn(r, now); // vẽ đè lên aura buff
@@ -278,46 +289,28 @@ export class PlayerSprite {
     this.plate.update(s.L, s.ti ?? 0, myRealm, headY, zoom, now, r * 2.6 * zoom >= PLATE_FAR_PX, plateFade);
     this.swordRing.update(f, now, showHitbox, swordDetail);
     this.updateAnimInfo(headY, zoom);
-    this.updateStatusIcons(s.st ?? 0, r, now);
+    this.statusView.update({ id: this.id, st: s.st ?? 0, r, sc: s.sc, headY, zoom, now, vx, vy, wx: f.x, wy: f.y });
+    this.swordRing.haloColor = this.statusView.halo;
+    // Gồng phồng 10% rồi xẹp lại mượt (lớp ③/⑤) — lerp chứ không nhảy cỡ.
+    const k = this.bodyBox.scale.x + (this.statusView.bodyScale - this.bodyBox.scale.x) * Math.min(1, dt * 12);
+    this.bodyBox.scale.set(k);
     this.updateBubble(r, zoom, now);
   }
 
-  /**
-   * updateStatusIcons vẽ icon trạng thái bay quanh nhân vật.
-   *
-   * Hiện chỉ có 🚫 lúc bị Phun Trân Châu, vì spec v5.5 đòi **người xung quanh cũng thấy**
-   * nạn nhân đang không nhặt được gì — lớp trân châu thì chỉ nạn nhân nhìn thấy, nên nếu
-   * không có icon này thì từ ngoài nhìn vào không ai hiểu vì sao họ đứng cạnh viên Linh khí
-   * mà không nhặt.
-   *
-   * Dựng lại chỉ khi tập icon ĐỔI (so bằng `statusKey`): vẽ lại Text mỗi khung là tạo
-   * texture mới 30 lần/giây cho mỗi nhân vật trên màn hình.
-   */
-  private updateStatusIcons(st: number, r: number, now: number): void {
-    const icons: string[] = [];
-    if (statusOn(st, 'blind')) {
-      icons.push('🚫');
-    }
-    const key = icons.join('');
-    if (key !== this.statusKey) {
-      this.statusKey = key;
-      this.statusIcons.removeChildren().forEach((c) => c.destroy({ children: true }));
-      for (const ch of icons) {
-        this.statusIcons.addChild(new Text({ text: ch, style: { fontSize: 36 }, anchor: 0.5 }));
-      }
-    }
-    this.statusIcons.visible = icons.length > 0;
-    if (!this.statusIcons.visible) {
-      return;
-    }
-    // Bay vòng quanh người: thấy ngay cả khi nhân vật đứng im.
-    const orbit = r * 1.5;
-    const n = this.statusIcons.children.length;
-    this.statusIcons.children.forEach((c, i) => {
-      const a = now * 2 + (i * Math.PI * 2) / n;
-      c.position.set(Math.cos(a) * orbit, Math.sin(a) * orbit * 0.5 - r * 0.6);
-      c.scale.set(r / 40);
-    });
+  /** playSkill: diễn anim `skill` một nhịp (lớp ① — §6.5). */
+  playSkill(now: number): void {
+    this.skillUntil = now + SKILL_ANIM_SECS;
+  }
+
+  /** ringReach: bán kính vòng kiếm khung vừa vẽ — hiệu ứng kỹ năng bay "vào vòng" cần nó. */
+  get ringReach(): number {
+    return this.swordRing.reach;
+  }
+
+  /** moodFor: đang diễn anim `skill` thì nó thắng mọi tâm trạng trừ trúng đòn / chết / hồi sinh. */
+  private moodFor(mood: string, now: number): string {
+    const urgent = mood === 'hit' || mood === 'death' || mood === 'respawn';
+    return now < this.skillUntil && !urgent ? 'skill' : mood;
   }
 
   private drawShadow(r: number): void {
@@ -596,6 +589,9 @@ export class PlayerSprite {
     // mang mood giống entity cũ sẽ bị coi là "không đổi mood", `setMood` không chạy, và thân
     // (vừa bị `setCharacter` xoá) không bao giờ được dựng lại.
     this.ctl.reset();
+    this.statusView.reset(); // icon và vệt tia chớp là của entity CŨ
+    this.skillUntil = 0;
+    this.bodyBox.scale.set(1);
     this.plate.rename(name);
     this.root.visible = true;
     this.root.alpha = 1;

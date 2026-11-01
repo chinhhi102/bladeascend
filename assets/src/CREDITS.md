@@ -99,3 +99,9 @@ chọn giấy phép nào cho mã nguồn dự án cũng không vướng (xem `do
 Ảnh trong `characters/`, `monsters/`, `obstacles/`, `swords/`, `buffs/`, `beasts/`, `vfx/`,
 `ui/`, `tiles/`, `decor/`, `zones/`, `items/` do công cụ `server/cmd/artgen` sinh bằng AI
 theo prompt trong `docs/_raw/ART_PROMPTS.md`. Bản quyền thuộc dự án.
+
+## Âm thanh do dự án tự tổng hợp
+
+Mọi tệp trong `audio/sfx/` (kể cả 12 tiếng kỹ năng `skill_*.ogg` thêm 02/11/2026, spec v6.36
+§6.5) là tiếng tạm tổng hợp bằng ffmpeg từ công thức toán trong `tools/make_sfx.py` — không
+lấy mẫu từ đâu cả, bản quyền thuộc dự án. Thay bằng tiếng thật thì giữ nguyên tên tệp.

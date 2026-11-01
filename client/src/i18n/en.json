@@ -593,5 +593,25 @@
     "flag": "🇬🇧",
     "locale": "en-US"
   },
-  "statLabels": {"speed": "Speed", "pickup": "Pickup", "spin": "Spin", "durability": "Tough"}
+  "statLabels": {
+    "speed": "Speed",
+    "pickup": "Pickup",
+    "spin": "Spin",
+    "durability": "Tough"
+  },
+  "swordsGained": "+{n} swords",
+  "skillBurp": "Burp~",
+  "skillYawn": "Yawn~",
+  "skillShellOut": "Aha!",
+  "minionBye": "Bye boss!",
+  "statusNames": {
+    "sleep": "Asleep",
+    "blind": "Blinded",
+    "stun": "Stunned",
+    "push": "Pushed",
+    "brace": "Braced",
+    "ghost": "Rush",
+    "shell": "Shell",
+    "steal": "Steal"
+  }
 }
