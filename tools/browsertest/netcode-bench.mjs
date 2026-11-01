@@ -52,7 +52,10 @@ const WATCH_MS = 150000;
  * 11 giây ≈ 2 145 đơn vị ở `move_base` 195 → vượt hẳn bán kính ra. Đứng ngoài 3 giây để
  * qua hạn trễ `aoiLingerSecs` = 2 giây, rồi mới quay lại.
  */
-const DWELL_MS = 3000;
+const DWELL_MS = Number(process.env.KX_BENCH_DWELL_MS ?? 3000);
+// `KX_BENCH_DWELL_MS=12000` đứng ngoài quá hạn nhả atlas 10 s (QUESTIONS Q30): view nằm
+// trong pool lâu tới mức atlas của nó bị huỷ, rồi được lấy ra lại. Đó là đường tái hiện lỗi
+// "reading 'addressModeU'" — bài đo đếm lỗi JS của cả hai tab và in ở cuối.
 /** OUT_DIST: đi xa hơn ngần này thì chắc chắn vượt bán kính ra (830 + 900 = 1 730). */
 const OUT_DIST = 2400;
 /** BACK_DIST: về gần mốc hơn ngần này thì chắc chắn mọi entity cũ đã vào lại khung nhìn. */
@@ -86,7 +89,7 @@ cfg.room.zones = 1; // một khu: bỏ luôn yếu tố chuyển khu
 const cfgPath = join(dir, 'game.json');
 writeFileSync(cfgPath, JSON.stringify(cfg));
 
-const bin = join(REPO, 'server', 'kxserver');
+const bin = join(REPO, 'server', 'bladeascend');
 const srv = spawn(bin, [
   '-addr', `127.0.0.1:${PORT}`,
   '-config', cfgPath,
@@ -126,6 +129,10 @@ async function round(browser) {
     // và bài đo treo 30 giây rồi chết. `__playing` là số đo thuần, không khoá.
     await page.waitForFunction(() => window.__playing?.() === true, null, { timeout: 30000 });
   };
+  const errs = [];
+  for (const pg of [watcher, walker]) {
+    pg.on('pageerror', (e) => errs.push(String(e.message ?? e)));
+  }
   await join(watcher, 'QuanSat');
   await join(walker, 'NguoiDi');
   await sleep(1500);
@@ -230,6 +237,11 @@ async function round(browser) {
   if (!home) {
     throw new Error('không đọc được vị trí người quan sát');
   }
+  // Đi về phía GIỮA bản đồ. Bản trước luôn đi sang phải (D): sinh ra sát mép phải thì đi
+  // 2 400 đơn vị là không thể, `walkUntil` hết giờ, vòng đo dừng ngay — bài đo in
+  // "rời=0 · quay lại=0" (đo ngày 1/11, 2/3 lượt).
+  const OUT_KEY = home.x > cfg.room.map_size / 2 ? 'KeyA' : 'KeyD';
+  const BACK_KEY = OUT_KEY === 'KeyA' ? 'KeyD' : 'KeyA';
   /**
    * walkUntil đi theo hướng `key` cho tới khi `ok(khoảng cách tới mốc)` đúng, hoặc hết hạn.
    *
@@ -286,7 +298,7 @@ async function round(browser) {
   const t0 = Date.now();
   while (Date.now() - t0 < WATCH_MS) {
     // Ra xa hẳn bán kính ra (nửa khung nhìn + lề 900), cộng biên an toàn.
-    if (!(await walkUntil('KeyD', (d) => d > OUT_DIST, LEG_LIMIT_MS))) {
+    if (!(await walkUntil(OUT_KEY, (d) => d > OUT_DIST, LEG_LIMIT_MS))) {
       break;
     }
     await sleep(DWELL_MS); // qua hạn trễ `aoiLingerSecs` = 2 giây → server bắn `Despawn`
@@ -294,14 +306,14 @@ async function round(browser) {
       break;
     }
     // Quay lại cho tới khi vào hẳn trong khung nhìn.
-    if (!(await walkUntil('KeyA', (d) => d < BACK_DIST, LEG_LIMIT_MS))) {
+    if (!(await walkUntil(BACK_KEY, (d) => d < BACK_DIST, LEG_LIMIT_MS))) {
       break;
     }
     await sleep(1200);
   }
   const out = await watch;
   await ctx.close();
-  return out;
+  return { ...out, errs };
 }
 
 // ── 3. Chạy nhiều lượt rồi tổng hợp ─────────────────────────────────────────────────────
@@ -310,7 +322,7 @@ const rows = [];
 for (let i = 0; i < ROUNDS; i++) {
   rows.push(await round(browser));
   const r = rows[rows.length - 1];
-  console.log(`lượt ${i + 1}: respawn=${r.respawn2s} · quay lại=${r.quayLai} · rời=${r.gone} · placeholder=${r.placeholder} · thấy=${r.maxSeen}`);
+  console.log(`lượt ${i + 1}: respawn=${r.respawn2s} · quay lại=${r.quayLai} · rời=${r.gone} · placeholder=${r.placeholder} · thấy=${r.maxSeen} · lỗi JS=${r.errs.length}`);
 }
 await browser.close();
 srv.kill();
@@ -321,6 +333,8 @@ console.log('\n── tổng hợp ──');
 console.log(`respawn: tổng ${sum((r) => r.respawn2s)} · mỗi lượt ${vals.join(', ')}`);
 console.log(`placeholder: tổng ${sum((r) => r.placeholder)} khung / ${sum((r) => r.frames)}`);
 console.log(`rời khung ${sum((r) => r.gone)} lần · quay lại ${sum((r) => r.quayLai)} lần`);
+const allErrs = rows.flatMap((r) => r.errs);
+console.log(`lỗi JS: ${allErrs.length}${allErrs.length ? ` — ${[...new Set(allErrs)].slice(0, 3).join(' | ')}` : ''}`);
 console.log(`nhấp nháy do Despawn ${sum((r) => r.doDespawn)} · do luật hết hạn 2s ${sum((r) => r.doHetHan)}`);
 if (sum((r) => r.quayLai) === 0) {
   // Không có lần quay lại nào thì `respawn = 0` là hiển nhiên, không phải kết quả.

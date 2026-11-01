@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 
-import { quality } from './quality';
+import { qualityFor } from './quality';
 
 /**
  * Trân châu dính màn hình — kỹ năng Phun Trân Châu của Thằng Mập (spec §6.3).
@@ -87,7 +87,7 @@ export class BobaOverlay {
     const fresh = !this.root.visible;
     this.until = now + secs;
     this.root.visible = true;
-    const n = fresh ? COUNT[quality()] : EXTRA_ON_REFRESH;
+    const n = fresh ? COUNT[qualityFor('boba')] : EXTRA_ON_REFRESH;
     for (let i = 0; i < n; i++) {
       this.addBlob(now);
     }
@@ -103,7 +103,7 @@ export class BobaOverlay {
     sp.anchor.set(0.5);
     // Cỡ viên tính theo diện tích cần phủ, chia cho số viên — nhờ vậy ở màn hình nào cũng
     // phủ đúng tỉ lệ, không phải màn to thì thưa thớt.
-    const area = (this.w * this.h * COVER) / COUNT[quality()];
+    const area = (this.w * this.h * COVER) / COUNT[qualityFor('boba')];
     const r = Math.sqrt(area / Math.PI) * (0.7 + Math.random() * 0.7);
     sp.width = r * 2;
     sp.height = r * 2 * (0.85 + Math.random() * 0.3);

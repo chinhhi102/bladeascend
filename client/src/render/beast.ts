@@ -3,7 +3,7 @@ import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { assets } from './assets';
 import { hslToHex } from './palette';
 import { particle } from './particles';
-import { BEAST_SEGMENTS, quality, TRAIL_RATE } from './quality';
+import { BEAST_SEGMENTS, qualityFor, TRAIL_RATE } from './quality';
 
 /**
  * Thần thú Tiên giới (spec §3.5): mỗi cảnh giới Tiên một con, dựng bằng **chuỗi đốt** chứ
@@ -178,7 +178,7 @@ export class Beast {
     this.charH = charH;
     this.size = (mode === 'companion' ? 0.6 : 1) * bodyR * 0.85; // spec: bản thường trực 60% cỡ
     this.nextMoveAt = now + 8 + Math.random() * 7;
-    const n = Math.max(3, BEAST_SEGMENTS[quality()]);
+    const n = Math.max(3, BEAST_SEGMENTS[qualityFor('beast')]);
     this.histX = new Float64Array(n * SEG_FRAMES + 2);
     this.histY = new Float64Array(n * SEG_FRAMES + 2);
     for (let i = 0; i < n; i++) {
@@ -258,7 +258,7 @@ export class Beast {
       this.place(seg.back, px, py, w, rot, alpha, !front);
       this.place(seg.front, px, py, w, rot, alpha, front);
     }
-    const rate = TRAIL_RATE[quality()];
+    const rate = TRAIL_RATE[qualityFor('beast')];
     if (this.trailOn && rate > 0 && this.motes.length < MAX_TRAIL * rate) {
       this.emitMote(head.x, head.y, now);
     }

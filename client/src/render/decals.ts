@@ -1,7 +1,7 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 
 import { assets } from './assets';
-import { quality } from './quality';
+import { qualityFor } from './quality';
 
 /**
  * Decal mặt đất (spec §8.6 mục 3): vết nứt, khóm cỏ, lá rụng, sỏi, vũng nước nhỏ, rễ cây,
@@ -132,7 +132,7 @@ export class DecalLayer {
  */
 export function buildDecals(mapId: string, size: number, seed: number): DecalLayer {
   const layer = new DecalLayer();
-  const per = PER_CHUNK[quality()] ?? 0;
+  const per = PER_CHUNK[qualityFor('decals')] ?? 0;
   if (per <= 0) {
     return layer;
   }

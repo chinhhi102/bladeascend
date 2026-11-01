@@ -439,6 +439,8 @@ class App {
       kbPerSec: this.conn.kbPerSec,
       snapKB: this.conn.lastSnapBytes / 1024,
       srvMs: this.srvMs,
+      // Khu đang đứng: công cụ đo cần vào ĐÚNG một khu (khu tệ nhất) mới so được giữa các lần.
+      zone: this.zoneIndex,
     });
     g.__playing = (): boolean => this.playing;
     if (w.debug) {

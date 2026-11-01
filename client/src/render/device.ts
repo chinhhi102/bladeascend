@@ -53,3 +53,45 @@ export function rendererResolution(low: boolean): number {
   const dpr = window.devicePixelRatio || 1;
   return Math.min(dpr, low ? 1.5 : 2);
 }
+
+let gpuCache: string | null = null;
+
+/**
+ * gpuName là tên GPU (WEBGL_debug_renderer_info), rỗng nếu trình duyệt không cho biết.
+ *
+ * Hỏi trên một canvas RIÊNG rồi vứt ngay — giống `telemetry/session.ts` — vì phải biết TRƯỚC
+ * khi Pixi dựng ngữ cảnh của game (mức chất lượng quyết định cả `resolution`).
+ */
+export function gpuName(): string {
+  if (gpuCache !== null) {
+    return gpuCache;
+  }
+  gpuCache = '';
+  const cv = document.createElement('canvas');
+  const gl = (cv.getContext('webgl2') ?? cv.getContext('webgl')) as WebGLRenderingContext | null;
+  if (!gl) {
+    return gpuCache;
+  }
+  const ext = gl.getExtension('WEBGL_debug_renderer_info');
+  if (ext) {
+    gpuCache = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) ?? '');
+  }
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
+  return gpuCache;
+}
+
+/**
+ * isIntegratedGpu: GPU tích hợp / dựng hình bằng phần mềm.
+ *
+ * Cùng luật với `deviceClass` phía server (`internal/telemetry/report.go`), để nhóm "PC GPU
+ * tích hợp" trong báo cáo và nhóm được mặc định mức Thấp là MỘT nhóm. Sửa một bên thì sửa
+ * cả bên kia.
+ */
+export function isIntegratedGpu(gpu: string): boolean {
+  const g = gpu.toLowerCase();
+  return (
+    g.includes('intel') || g.includes('uhd') || g.includes('iris') ||
+    (g.includes('vega') && g.includes('graphics')) ||
+    g.includes('swiftshader') || g.includes('llvmpipe')
+  );
+}

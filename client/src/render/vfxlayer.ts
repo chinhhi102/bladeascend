@@ -1,7 +1,7 @@
 import { AdvancedBloomFilter } from 'pixi-filters';
 import { Container } from 'pixi.js';
 
-import { quality } from './quality';
+import { qualityFor } from './quality';
 
 /**
  * vfxLayer là container riêng cho MỌI thứ phát sáng: hào quang Tiên giới, Thiên Kiếp, Đài
@@ -24,7 +24,7 @@ export class VfxLayer {
 
   /** apply gắn lại filter theo mức chất lượng hiện tại; gọi mỗi khi người chơi đổi mức. */
   apply(): void {
-    const q = quality();
+    const q = qualityFor('bloom');
     if (q === this.applied) {
       return;
     }

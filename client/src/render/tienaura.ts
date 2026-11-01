@@ -3,7 +3,7 @@ import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { GameConfig } from '../config';
 import { hslToHex } from './palette';
 import { particle } from './particles';
-import { quality } from './quality';
+import { qualityFor } from './quality';
 
 /**
  * Hào quang Tiên giới (spec §3.6).
@@ -157,7 +157,7 @@ export class TienAura {
     ray.stroke({ color, width: r * 0.06, alpha: 0.4 });
 
     // Lớp 4 — hạt sáng bay lên từ chân
-    const n = MOTES_BY_QUALITY[quality()];
+    const n = MOTES_BY_QUALITY[qualityFor('motes')];
     const mg = this.motes.clear();
     for (let i = 0; i < n; i++) {
       const d = this.dust[i];
