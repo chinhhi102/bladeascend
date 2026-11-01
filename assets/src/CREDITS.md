@@ -9,7 +9,7 @@ Mọi thứ trong thư mục này đều dùng được cho mục đích thươn
 |---|---|---|
 | `fonts/BeVietnamPro-700.ttf`, `-800.ttf` | [Be Vietnam Pro](https://fonts.google.com/specimen/Be+Vietnam+Pro) — Google Fonts | SIL Open Font License 1.1 |
 | `fonts/NotoSansThai.ttf` (biến thiên độ đậm, tải 01/11/2026) | [Noto Sans Thai](https://fonts.google.com/noto/specimen/Noto+Sans+Thai) — github.com/google/fonts `ofl/notosansthai` | SIL Open Font License 1.1 |
-| Pattaya — dùng trong thiết kế logo (tệp nguồn logo `docs/_raw/logo.zip`; chưa có tệp font trong `assets/src/fonts/`) | [Pattaya](https://fonts.google.com/specimen/Pattaya) — Google Fonts | SIL Open Font License 1.1 |
+| `fonts/Pattaya-Regular.ttf` (+ `fonts/Pattaya-OFL.txt`) — chỉ để dựng logo bằng `tools/make_logo.py`; chữ đã vẽ vào `brand/logo_*.png`, tệp font **không** phát hành cho người chơi | [Pattaya](https://fonts.google.com/specimen/Pattaya) — Google Fonts (© 2015 Cadson Demak; © 2010 Pablo Impallari; © 2010–2011 Alexei Vanyashin) | SIL Open Font License 1.1 |
 
 Font tải về phục vụ tại chỗ thay vì nhúng từ Google: game chạy trong mạng LAN, máy người
 chơi có thể không ra được Internet, mà tên nhân vật mất dấu thì còn tệ hơn là xấu.

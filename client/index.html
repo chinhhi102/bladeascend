@@ -71,6 +71,8 @@
       /* Mỗi cụm tên không-ngắt: chỗ ngắt duy nhất là khoảng giữa chúng, nên không bề ngang
          nào làm rơi lẻ một chữ xuống dòng dưới. Xem `client/brand-split.ts`. */
       #boot .boot-part { white-space: nowrap; }
+      /* Logo ảnh (02/11): hai dòng, co theo bề ngang màn hình. */
+      #boot .boot-logo { display: block; width: min(520px, 86vw); height: auto; margin: 0 auto; }
       /* Khẩu hiệu dưới logo — §20. Nhỏ hơn tên game, không bao giờ xuống quá 2 dòng. */
       #boot .tagline {
         margin: -8px 0 0; font-size: clamp(13px, 3.4vw, 18px); color: #cbb68a;
@@ -143,7 +145,7 @@
         để `h1` ở cả hai chỗ là trang có hai `h1` cùng nội dung suốt cả phiên chơi.
         Đo được 1/11: "so h1: 2" ở cả 7 cỡ màn hình.
       -->
-      <div class="boot-name">%BRAND_NAME_VI_PARTS%</div>
+      <div class="boot-name">%BRAND_BOOT_LOGO%</div>
       <div class="tagline">%BRAND_TAGLINE_VI%</div>
       <div class="step" id="boot-step">Đang khởi động…</div>
       <div class="track">

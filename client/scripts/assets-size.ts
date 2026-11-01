@@ -126,13 +126,14 @@ console.log('Nhóm'.padEnd(22), 'Dung lượng'.padStart(11), 'Tệp'.padStart(6
 console.log('-'.repeat(22), '-'.repeat(11), '-'.repeat(6), ' ', '-'.repeat(28));
 const WHEN: Record<string, string> = {
   home: 'trước khi hiện trang chủ',
+  brand: 'trang chủ, đúng 1 logo theo màn hình/ngôn ngữ',
   boot: 'khi bấm "Vào chơi"',
   fx_high: 'nền, trong trận',
   audio: 'nền, trong trận',
   debug: 'chỉ khi bấm phím J',
   legal: 'không bao giờ (giấy phép)',
 };
-const order = ['home', 'boot', ...man.zones.map((z) => `zone_${z}`), ...man.chars.map((c) => `char_${c}`), 'fx_high', 'audio', 'debug', 'legal'];
+const order = ['home', 'brand', 'boot', ...man.zones.map((z) => `zone_${z}`), ...man.chars.map((c) => `char_${c}`), 'fx_high', 'audio', 'debug', 'legal'];
 for (const g of order.filter((g) => man.groups[g])) {
   const when = WHEN[g] ?? (g.startsWith('zone_') ? 'khi vào khu đó' : 'nền (nhân vật mình: ngay)');
   console.log(g.padEnd(22), `${mb(man.groups[g].bytes)} MB`.padStart(11), String(man.groups[g].files.length).padStart(6), ' ', when);

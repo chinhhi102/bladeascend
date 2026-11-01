@@ -35,6 +35,15 @@ interface Seo {
 }
 type J = Record<string, unknown>;
 
+const MANIFEST = join(ROOT, '../assets/dist/manifest.json');
+const manFiles = existsSync(MANIFEST) ? (JSON.parse(readFileSync(MANIFEST, 'utf8')) as { files: Record<string, { url: string }> }).files : {};
+
+/** Logo tiếng Anh cho màn tải các trang ngoại ngữ (02/11); chưa dựng asset → chỉ chữ. */
+function enLogo(alt: string): string {
+  const f = manFiles['brand/logo_en.png'];
+  return f ? `<img class="boot-logo" src="/assets/${f.url}" width="1288" height="372" alt="${attr(alt)}" fetchpriority="high" />` : alt;
+}
+
 const brand = (JSON.parse(readFileSync(join(ROOT, '../config/game.json'), 'utf8')) as { brand: { name: string; name_vi: string; domain: string; tagline_vi: string } }).brand;
 
 function readJson(code: string): J | null {
@@ -130,7 +139,7 @@ function page(base: string, d: J, lang: Lang, have: Lang[]): string {
   if (lang.code !== 'vi') {
     // Màn hình tải hiện TRƯỚC khi JS nạp từ điển: không đổi thì trang /th/ chớp chữ Việt
     // vài giây trên mạng chậm (đo 1/11: iPhone WebKit ~5 s).
-    h = h.replace(/(<div class="boot-name">)[\s\S]*?(<\/div>)/, `$1${name}$2`);
+    h = h.replace(/(<div class="boot-name">)[\s\S]*?(<\/div>)/, `$1${enLogo(name)}$2`);
     h = h.replace(/(<div class="tagline">)[^<]*(<\/div>)/, `$1${attr(tagline)}$2`);
     h = h.replace(/(<div class="step" id="boot-step">)[^<]*(<\/div>)/, `$1${attr(d.loadUi as string)}$2`);
   }

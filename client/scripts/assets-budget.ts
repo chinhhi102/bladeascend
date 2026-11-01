@@ -43,7 +43,8 @@ const bytesOfGroup = (g: string): number => man.groups[g]?.bytes ?? 0;
 
 const worstZone = man.zones.map((z) => ({ name: `zone_${z}`, b: bytesOfGroup(`zone_${z}`) })).sort((a, b) => b.b - a.b)[0] ?? { name: '—', b: 0 };
 const worstChar = man.chars.map((c) => ({ name: `char_${c}`, b: bytesOfGroup(`char_${c}`) })).sort((a, b) => b.b - a.b)[0] ?? { name: '—', b: 0 };
-const blockingGroups = ['home', 'boot', worstZone.name, worstChar.name];
+// `brand`: logo trang chủ — mỗi người chỉ tải 1 bản, nhưng đếm cả 3 cho chắc.
+const blockingGroups = ['home', 'brand', 'boot', worstZone.name, worstChar.name];
 /** Hợp các nhóm, bỏ trùng: một tệp vật cản nằm trong nhiều nhóm khu, đếm hai lần là sai. */
 const blockingFiles = [...new Set(blockingGroups.flatMap((g) => man.groups[g]?.files ?? []))];
 const blocking = blockingFiles.reduce((s, f) => s + (man.files[f]?.bytes ?? 0), 0);

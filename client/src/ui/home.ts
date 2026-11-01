@@ -3,6 +3,7 @@ import { mountButton } from './feedback';
 import { assets } from '../render/assets';
 import { charColor } from '../render/palette';
 import { button, h, portrait } from './dom';
+import { LANG } from '../i18n';
 import { langPicker } from './langpick';
 import { STR } from './strings';
 
@@ -93,6 +94,59 @@ function toHex(n: number): string {
  * Vá tại chỗ chứ không dựng lại cả màn hình: người chơi đang gõ tên, dựng lại là xoá mất
  * chữ họ vừa gõ.
  */
+/** Ngưỡng "điện thoại" của logo — trùng `@media (max-width: 600px)` trong style.css. */
+const LOGO_MOBILE_MQ = '(max-width: 600px)';
+
+/**
+ * Logo tên game (chủ dự án chốt 02/11): PC → `logo_vi_1dong`, điện thoại → `logo_vi_2dong`,
+ * mọi ngôn ngữ khác → `logo_en`. `<picture>` để trình duyệt chỉ tải ĐÚNG MỘT bản.
+ * `alt` = tên game theo ngôn ngữ, nên `<h1>` vẫn có chữ cho máy tìm kiếm và trình đọc màn hình.
+ * Manifest chưa có logo (máy dev chưa dựng asset) → chữ như cũ.
+ */
+function gameLogo(): HTMLElement {
+  const logo = h('h1', 'logo');
+  const isVi = LANG === 'vi';
+  const main = assets.url(isVi ? 'brand/logo_vi_1dong.png' : 'brand/logo_en.png');
+  if (!main) {
+    return textLogo(logo);
+  }
+  const pic = document.createElement('picture');
+  const mobile = isVi ? assets.url('brand/logo_vi_2dong.png') : '';
+  if (mobile) {
+    const src = document.createElement('source');
+    src.media = LOGO_MOBILE_MQ;
+    src.srcset = mobile;
+    src.width = 1288;
+    src.height = 539;
+    pic.append(src);
+  }
+  const img = document.createElement('img');
+  img.className = 'logo-img';
+  img.src = main;
+  img.alt = STR.title;
+  img.width = 1288;
+  img.height = 372;
+  img.decoding = 'async';
+  pic.append(img);
+  logo.classList.add('has-img');
+  logo.append(pic);
+  return logo;
+}
+
+/**
+ * Tên game bằng chữ: mỗi cụm một `<span>` không-ngắt (xem `STR.titleParts`). Khoảng trắng
+ * giữa hai span là NÚT VĂN BẢN THẬT, để màn rộng nối liền thành một dòng.
+ */
+function textLogo(logo: HTMLElement): HTMLElement {
+  STR.titleParts.forEach((part, i) => {
+    if (i > 0) {
+      logo.append(document.createTextNode(' '));
+    }
+    logo.append(h('span', 'logo-part', part));
+  });
+  return logo;
+}
+
 export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLeaderboard: () => void, artReady?: Promise<void>): HTMLElement {
   const profile = savedProfile(cfg);
   const root = h('div', 'screen home');
@@ -200,16 +254,7 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
       play();
     }
   });
-  // Tên game: mỗi cụm một `<span>` không-ngắt, nên chỗ ngắt duy nhất là khoảng giữa hai
-  // cụm — xem `STR.titleParts`. Khoảng trắng giữa hai span phải là NÚT VĂN BẢN THẬT, không
-  // phải lề CSS: có thế thì màn rộng mới nối liền thành một dòng đọc đúng như tên gốc.
-  const logo = h('h1', 'logo');
-  STR.titleParts.forEach((part, i) => {
-    if (i > 0) {
-      logo.append(document.createTextNode(' '));
-    }
-    logo.append(h('span', 'logo-part', part));
-  });
+  const logo = gameLogo();
   panel.append(
     langPicker(),
     logo,

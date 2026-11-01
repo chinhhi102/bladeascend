@@ -89,6 +89,10 @@ const NEVER_SHIP = [
   /^anim_overrides\.json$/,
   /^jitter_exceptions\.json$/,
   /(^|\/)LICENSE[^/]*$/,
+  // Logo (02/11): khung gốc 2752 px và font Pattaya chỉ là NGUYÊN LIỆU của `tools/make_logo.py`
+  // — chữ đã vẽ sẵn vào PNG, người chơi không cần tải font 410 KB hay khung trơn.
+  /^brand\/brand_logo_frame\.png$/,
+  /^fonts\/Pattaya/,
 ];
 
 export function neverShip(rel) {
@@ -113,6 +117,13 @@ export function plan(rel, ctx) {
     return seg.at(-1) === 'atlas.json'
       ? { groups: [group], kind: 'atlas-json' }
       : { groups: [group], kind: 'image', maxPx: 0, quality: 82 };
+  }
+
+  if (top === 'brand') {
+    // Logo tên game (02/11): trang chủ nạp bằng <picture>, trình duyệt chỉ tải ĐÚNG MỘT bản
+    // (PC 1 dòng / điện thoại 2 dòng / tiếng nước ngoài) — nên không nằm trong nhóm tải nào.
+    // 1288 px = gấp đôi cỡ hiển thị lớn nhất (~640 px) cho màn Retina.
+    return { groups: ['brand'], kind: 'image', maxPx: 1288, quality: 82 };
   }
 
   if (top === 'fonts') {

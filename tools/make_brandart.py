@@ -326,19 +326,31 @@ def share_card(w: int, h: int, name_vi: str, tag: str, foot: str) -> Image.Image
     d = ImageDraw.Draw(img)
     x0 = int(w * 0.055)
     col = int(w * 0.52)  # bề ngang dành cho chữ; phần còn lại là của vòng kiếm
-    lines = split_name(name_vi)
-    # Cỡ chữ lấy theo dòng DÀI NHẤT, để hai dòng cùng cỡ. Đo từng dòng rồi lấy min, chứ
-    # tính theo số ký tự thì "Xin Dừng Bước" và "Đạo Hữu" ra hai cỡ lệch hẳn.
-    f_name = min((fit(d, ln, col, int(h * 0.165)) for ln in lines), key=lambda f: f.size)
-    y = int(h * 0.17)
-    for ln in lines:
-        bb = d.textbbox((0, 0), ln, font=f_name)
-        # Viền tối dày quanh chữ: ảnh chia sẻ hiện trên nền trắng (Facebook) lẫn nền tối
-        # (Discord), và ngay dưới chữ là cảnh chợ nhiều màu.
-        for dx, dy in ((0, 4), (4, 0), (-4, 0), (0, -4), (3, 3), (-3, 3)):
-            d.text((x0 - bb[0] + dx, y - bb[1] + dy), ln, font=f_name, fill=(38, 22, 6, 255))
-        d.text((x0 - bb[0], y - bb[1]), ln, font=f_name, fill=GOLD)
-        y += int(f_name.size * 1.04)
+    logo_path = ART / "brand/logo_vi_2dong.png"
+    if logo_path.exists():
+        # Logo Pattaya trong khung vàng (chủ dự án chốt 02/11) thay cho chữ tên game. Bản
+        # HAI DÒNG: cột chữ hẹp (52% bề ngang), bản một dòng thu vào đó thì chữ còn ~40 px
+        # cao — qua Zalo thu 400 px là 13 px, đọc không ra.
+        logo = Image.open(logo_path).convert("RGBA")
+        lw = col + int(w * 0.03)
+        logo = logo.resize((lw, round(logo.height * lw / logo.width)), Image.LANCZOS)
+        img.alpha_composite(logo, (max(0, x0 - int(w * 0.03)), int(h * 0.04)))
+        d = ImageDraw.Draw(img)
+        y = int(h * 0.04) + logo.height - int(h * 0.02)
+    else:
+        lines = split_name(name_vi)
+        # Cỡ chữ lấy theo dòng DÀI NHẤT, để hai dòng cùng cỡ. Đo từng dòng rồi lấy min, chứ
+        # tính theo số ký tự thì "Xin Dừng Bước" và "Đạo Hữu" ra hai cỡ lệch hẳn.
+        f_name = min((fit(d, ln, col, int(h * 0.165)) for ln in lines), key=lambda f: f.size)
+        y = int(h * 0.17)
+        for ln in lines:
+            bb = d.textbbox((0, 0), ln, font=f_name)
+            # Viền tối dày quanh chữ: ảnh chia sẻ hiện trên nền trắng (Facebook) lẫn nền tối
+            # (Discord), và ngay dưới chữ là cảnh chợ nhiều màu.
+            for dx, dy in ((0, 4), (4, 0), (-4, 0), (0, -4), (3, 3), (-3, 3)):
+                d.text((x0 - bb[0] + dx, y - bb[1] + dy), ln, font=f_name, fill=(38, 22, 6, 255))
+            d.text((x0 - bb[0], y - bb[1]), ln, font=f_name, fill=GOLD)
+            y += int(f_name.size * 1.04)
 
     # Khẩu hiệu và dòng chân đặt trên DẢI NỀN RIÊNG, không chỉ viền chữ.
     #

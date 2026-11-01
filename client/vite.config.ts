@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { splitName } from './brand-split';
 
 // Thương hiệu lấy từ `config/game.json` — GAME_SPEC §20 yêu cầu MỘT nguồn duy nhất.
@@ -50,6 +50,21 @@ const telemetryOn = process.env.TELEMETRY === 'on';
 // BUILD_ID để mọi số liệu truy được về đúng bản build đã deploy (§5).
 const buildId = process.env.BUILD_ID ?? new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '').replace(/(\d{8})(\d{4})/, '$1_$2');
 
+/**
+ * Logo hai dòng cho màn hình tải (chủ dự án chốt 02/11). Màn tải là HTML TĨNH hiện trước khi
+ * JS chạy, nên không gọi được `assets.url()` — lấy địa chỉ có hash thẳng từ manifest lúc
+ * build. Chưa dựng asset (máy dev mới) → '' và màn tải dùng chữ như cũ.
+ */
+function bootLogo(): string {
+  const p = new URL('../assets/dist/manifest.json', import.meta.url);
+  if (!existsSync(p)) {
+    return '';
+  }
+  const man = JSON.parse(readFileSync(p, 'utf8')) as { files: Record<string, { url: string }> };
+  const f = man.files['brand/logo_vi_2dong.png'];
+  return f ? `<img class="boot-logo" src="/assets/${f.url}" width="1288" height="539" alt="${brand.name_vi}" fetchpriority="high" />` : '';
+}
+
 export default defineConfig({
   define: {
     __TELEMETRY__: JSON.stringify(telemetryOn),
@@ -93,7 +108,7 @@ export default defineConfig({
         // nên hai chỗ ngắt dòng ở ĐÚNG một chỗ.
         const parts = splitName(brand.name_vi);
         const map: Record<string, string> = {
-          '%BRAND_NAME_VI_PARTS%': parts.map((p) => `<span class="boot-part">${p}</span>`).join(' '),
+          '%BRAND_BOOT_LOGO%': bootLogo() || parts.map((p) => `<span class="boot-part">${p}</span>`).join(' '),
           '%BRAND_NAME_VI%': brand.name_vi,
           '%BRAND_NAME%': brand.name,
           '%BRAND_TAGLINE_VI%': brand.tagline_vi,
