@@ -25,9 +25,9 @@ func purgeStore(t *testing.T) (*Store, string) {
 // addWithImage thêm một lá thư có ảnh, với thời điểm và trạng thái cho trước.
 func addWithImage(t *testing.T, s *Store, dir, name, status string, at time.Time) string {
 	t.Helper()
-	// PNG tối thiểu: `AddFeedback` kiểm CHỮ KÝ BYTE, không kiểm đuôi tệp.
-	png := append([]byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}, make([]byte, 64)...)
-	id, err := s.AddFeedback(dir, "g-"+name, name, "bug", "nội dung thử nghiệm", nil, png)
+	// PNG thật (nhỏ): `AddFeedback` kiểm chữ ký byte VÀ đi qua cấu trúc chunk.
+	id, err := s.AddFeedback(dir, "g-"+name, name, "bug", "nội dung thử nghiệm", nil,
+		[][]byte{testPNG(t)})
 	if err != nil {
 		t.Fatal(err)
 	}

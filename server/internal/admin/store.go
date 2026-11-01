@@ -65,6 +65,9 @@ func New(db *sql.DB) (*Store, error) {
 			return nil, fmt.Errorf("dựng bảng admin: %w", err)
 		}
 	}
+	if err := migrateFeedback(db); err != nil {
+		return nil, fmt.Errorf("nâng cấp bảng feedback: %w", err)
+	}
 	return &Store{db: db}, nil
 }
 
