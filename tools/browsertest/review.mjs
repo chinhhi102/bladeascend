@@ -23,6 +23,8 @@ async function shoot(browserType, ctxOpts, suffix) {
   const errs = [];
   page.on('pageerror', (e) => errs.push(String(e)));
   await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 }).catch(() => {});
+  // WebKit nạp chunk ngôn ngữ + font Thái chậm hơn Chromium vài giây: chờ màn hình thật hiện.
+  await page.waitForSelector('.screen', { timeout: 20000 }).catch(() => {});
   await page.waitForTimeout(1500);
   if (full) {
     // Ảnh `loading="lazy"` chỉ tải khi cuộn tới: cuộn hết trang trước rồi mới chụp.

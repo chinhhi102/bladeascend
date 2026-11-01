@@ -1,0 +1,596 @@
+{
+  "_draft": true,
+  "tagline": "Pedang muter-muter, Daois lari muter-muter.",
+  "namePlaceholder": "Masukkan nama (2–16 huruf)",
+  "pickCharacter": "Pilih karakter",
+  "play": "Main",
+  "leaderboard": "Papan peringkat",
+  "findingRoom": "Mencari room...",
+  "kickedTitle": "Kamu dikeluarkan dari room",
+  "bannedTitle": "Kamu sedang diblokir dari pertandingan",
+  "kickedReason": "Alasan: ",
+  "kickedRejoin": "Kamu bisa masuk lagi sekarang.",
+  "bannedUntil": "Berakhir: ",
+  "bannedForever": "Blokir permanen.",
+  "kickedBack": "Kembali ke beranda",
+  "feedbackTitle": "Masukan",
+  "feedbackKinds": {
+    "bug": "Lapor bug",
+    "balance": "Keseimbangan",
+    "idea": "Ide",
+    "other": "Lainnya"
+  },
+  "feedbackPlaceholder": "Ceritakan apa yang terjadi dan apa yang sedang kamu lakukan saat itu...",
+  "feedbackAttachShot": "Lampirkan tangkapan layar",
+  "feedbackWillSend": "Juga dikirim: versi, perangkat, zona, alam, ping, FPS.",
+  "feedbackWillSendBug": " Ditambah 20 baris error terakhir.",
+  "feedbackSend": "Kirim",
+  "feedbackCancel": "Tutup",
+  "feedbackSending": "Mengirim...",
+  "feedbackThanks": "Terima kasih! Masukan sudah diterima.",
+  "feedbackTooShort": "Tulis sedikit lagi ya (minimal 5 karakter).",
+  "feedbackFailed": "Gagal mengirim. Coba lagi sebentar lagi.",
+  "feedbackAddImage": "🖼 Tambah gambar",
+  "feedbackImageHint": "Maksimal 3 gambar (termasuk tangkapan layar). Bisa juga seret-lepas atau tempel (Ctrl+V).",
+  "feedbackImageMax": "Maksimal 3 gambar per masukan.",
+  "feedbackImageUnsupported": "Format ini belum didukung. Pilih gambar JPG, PNG, atau WebP.",
+  "feedbackImageTooBig": "Gambar ini terlalu berat untuk dikompres. Coba gambar lain ya.",
+  "feedbackImageBusy": "Memproses gambar...",
+  "feedbackImageRemove": "Hapus gambar",
+  "feedbackShotBadge": "Layar",
+  "feedbackShotFailed": "Gagal menangkap layar — teksnya tetap bisa dikirim.",
+  "needRealm": "Butuh {realm}",
+  "skillCancelled": "Skill batal!",
+  "swordsStolen": "−{n} pedang",
+  "connecting": "Menghubungkan ke server...",
+  "skillNames": {
+    "a_hon": "Bakpao Sakti",
+    "ba_tam_loa": "Toa Kampung",
+    "ong_ba_vong": "Nina Bobo — Curi Pedang",
+    "dai_ca_dep": "Panggil Anak Buah",
+    "map_tra_sua": "Semprot Boba",
+    "co_ba_ganh": "Lapak Penghadang",
+    "su_phu_mi": "Seruput Mi Rampas Pedang",
+    "be_ti": "Mode Kekar",
+    "shipper": "Kurir Kilat",
+    "cu_rua": "Masuk Tempurung"
+  },
+  "skillDesc": {
+    "a_hon": "Makan bakpao, langsung pulihkan 20% jumlah pedang maksimal alammu.",
+    "ba_tam_loa": "Teriak di toa: gelombang suara menyebar di sekitarmu, mendorong semua musuh di dekatmu dan membalik putaran pedang mereka.",
+    "ong_ba_vong": "Nyanyi nina bobo setengah detik (kena serang = batal) lalu rebahan di hammock 4 detik: musuh di sekitar tertidur 2,5 detik, pedangmu tidak gompal, dan pedang musuh yang patah saat menabrakmu terbang ke cincinmu.",
+    "dai_ca_dep": "Panggil 2 anak buah selama 8 detik, masing-masing membawa 30% pedangmu — kamu tidak kehilangan satu pun.",
+    "map_tra_sua": "Semprot boba untuk membutakan musuh 5 detik: mereka tidak bisa memungut apa pun dan pedang mereka tidak bisa membunuh siapa pun (benturan pedang tetap dihitung).",
+    "co_ba_ganh": "Pasang 5 lapak melengkung yang menghadang jalan selama 6 detik — pemain sealam atau di bawahmu tidak bisa menebasnya, kamu bisa tembus. Kulit pisang di depan lapak: siapa yang menginjak terpeleset dan pingsan 1 detik.",
+    "su_phu_mi": "Seruput seutas mi ke musuh terdekat di depan: rampas 25% pedangnya ke cincinmu (maks. 20% pedang maksimalmu, sisanya jatuh ke tanah). Tidak ada orang di depan = meleset, tetap habis satu muatan.",
+    "be_ti": "Pamer otot 4 detik: pedang dua kali lebih keras, kebal dorongan, lambat, ikat, dan pingsan.",
+    "shipper": "Lari 3× lebih cepat selama 4 detik: tembus semua rintangan (kecuali batas zona), kebal dan bersihkan semua kontrol, sedot semua orb dan item di sekitar.",
+    "cu_rua": "Masuk tempurung 5 detik: pedang tidak patah, tidak bisa ditebas; keluar dari tempurung memicu gelombang dorong."
+  },
+  "skillLabel": "Skill",
+  "skillCooldown": "CD {secs}d · {n} muatan",
+  "skillWait": "{secs}d",
+  "skillLines": {
+    "a_hon": "Sekali gigit, pedang balik kayak baru!",
+    "ba_tam_loa": "TES, TES! Minggir, emak mau lewat!",
+    "ong_ba_vong": "Nina bobo… oh nina bobo…",
+    "dai_ca_dep": "Anak-anak, sini semua!",
+    "map_tra_sua": "Cobain boba spesial gue!",
+    "co_ba_ganh": "Barang baru! Minggir, mau gelar lapak!",
+    "su_phu_mi": "*sluuurp*… pedangmu enak juga!",
+    "be_ti": "OTOT! Nggak ada yang bisa dorong!",
+    "shipper": "Paket urgent, permisi tembus tembok!",
+    "cu_rua": "Ommm… silakan tebas saja."
+  },
+  "zoneNames": [
+    "Istana Langit",
+    "Lembah Gunung Roh",
+    "Labirin Bambu",
+    "Kota Fana",
+    "Danau Bulan Beku"
+  ],
+  "zoneListTitle": "Zona",
+  "zoneEntered": "— {name} —",
+  "glLost": "Kartu grafis sempat terganggu. Sedang memulihkan, kamu akan segera kembali ke room…",
+  "glLostManual": "Grafis terus error. Turunkan kualitas dengan tombol V lalu muat ulang halaman (Ctrl+F5).",
+  "versionMismatch": "Ada versi baru — klik untuk memuat ulang.",
+  "versionReload": "Muat ulang",
+  "disconnected": "Koneksi ke server terputus. Mencoba lagi...",
+  "badName": "Nama harus 2–16 karakter.",
+  "loadUi": "Memuat antarmuka…",
+  "loadChar": "Memanggil {name}…",
+  "loadZone": "Membangun {zone}…",
+  "loadRoom": "Mencari room…",
+  "loadMB": "{done} / {total} MB",
+  "loadCached": "Sudah ada di perangkatmu — langsung masuk!",
+  "loadFailed": "Internet putus saat mengunduh. Klik \"Coba lagi\" untuk melanjutkan sisanya.",
+  "loadBg": "⬇ {pct}%",
+  "loadTips": [
+    "Tidak ada tombol serang. Pedang berputar sendiri — tugasmu cuma berada di tempat yang tepat.",
+    "Kena tebas di badan = mati, di alam mana pun. Tinggal 1 cincin? Jangan serakah.",
+    "Pedang berlebih jatuh jadi Ikat Pedang. Ikat milik orang lain juga bisa dipungut.",
+    "Tahan Shift untuk Bakar Darah: lari lebih cepat, dibayar pakai EXP.",
+    "Skill terisi sendiri seiring waktu dan bisa ditabung — simpan untuk saat genting.",
+    "Portal membawamu ke zona acak. Tidak ada yang tahu ke mana, termasuk kamu.",
+    "Gerbang Langit di tengah zona langsung menuju Istana Langit. Satu arah, tidak bisa balik.",
+    "Altar Qi Abadi menyembur secara berkala. Datang di waktu yang tepat, bukan cuma di tempat yang tepat.",
+    "Makin banyak cincin pedang = jangkauan makin jauh, tapi orang juga melihatmu dari makin jauh.",
+    "Danau es itu licin: masih bisa lari, cuma nggak bisa ngerem.",
+    "Si Gendut Boba menutupi layarmu dengan boba. Selama 5 detik itu kamu juga nggak bisa mungut apa-apa.",
+    "Bos Sandal Jepit memanggil dua anak buah yang bawa setengah pedangnya. Jangan nyelonong ke tengah.",
+    "Bunuh seseorang dan kamu menyerap 30% Qi Roh-nya, tapi tidak bisa naik lebih dari 2 alam besar.",
+    "Rintangan yang bisa dihancurkan akan tumbuh lagi. Kosong sekarang belum tentu kosong nanti."
+  ],
+  "controlsPc": "Gerak: WASD / tombol panah / tahan mouse. Bakar Darah: tahan Shift, atau klik dua kali lalu tahan. Skill: Space. Tidak ada tombol serang — pedang berputar sendiri!",
+  "animInfoOn": "Tampilkan info animasi (J): nama anim · frame · fase · skor getar",
+  "animInfoOff": "Sembunyikan info animasi",
+  "qualitySet": "Kualitas grafis: {name} (tombol V untuk ganti)",
+  "qualityAuto": "Otomatis (sekarang {name})",
+  "controlsMobile": "Geser jari untuk bergerak. Bakar Darah: ketuk 2 kali lalu tahan, atau tahan tombol 🔥. Pedang berputar sendiri!",
+  "burnName": "Bakar Darah",
+  "burnHint": "Tahan Shift atau klik dua kali lalu tahan: lari ×{mult}, membakar kultivasi tiap detik",
+  "burnSpent": "Kultivasi terbakar",
+  "burnEmpty": "Esensi darah habis!",
+  "debugHelp": "Tombol tes: E +100 EXP · R naik alam · K +10 pedang · G +1 muatan skill · B munculkan bot di dekatmu · 1–7 buff · X bunuh diri · H lihat hitbox pedang",
+  "realmTier": "{realm} tk {tier}",
+  "linhKhi": "Qi Roh",
+  "tienKhi": "Qi Abadi {have}/{need}",
+  "tienMax": "Puncak Alam Abadi",
+  "tienOverflow": "Qi Abadi lebih → Ketenaran",
+  "swords": "Pedang {n}/{max}",
+  "roomTop": "Top room",
+  "board": {
+    "title": "TOP ROOM",
+    "players": "{n} pemain",
+    "you": "Kamu",
+    "youRank": "Kamu #{rank}",
+    "zoneShort": [
+      "Istana Langit",
+      "Gunung Roh",
+      "Bambu",
+      "Kota Fana",
+      "Bulan Beku"
+    ],
+    "zoneHidden": "???",
+    "sameZone": "Satu zona denganmu",
+    "expand": "Ketuk untuk lihat peringkat",
+    "close": "Tutup peringkat",
+    "youNoRank": "Kamu —"
+  },
+  "yourRank": "Peringkatmu: {rank}/{total}",
+  "ping": "Ping {ms}ms",
+  "chestIncoming": "Peti Harta muncul dalam {secs}d!",
+  "maxLevel": "Puncak kultivasi",
+  "summaryTitle": "Ringkasan",
+  "killedBy": "Ditebas oleh {name}",
+  "killedByUnknown": "Ditebas oleh pendekar tanpa nama",
+  "peakRealm": "Alam tertinggi",
+  "peakExp": "Total EXP puncak",
+  "kills": "Pemain ditebas",
+  "survive": "Waktu bertahan",
+  "roomRank": "Peringkat di room",
+  "playAgain": "Main lagi",
+  "changeCharacter": "Ganti karakter",
+  "back": "Kembali",
+  "deathJokes": [
+    "Kamu dipulangkan ke kampung buat ternak lele.",
+    "Pedang patah, badan terbang, mimpi jadi dewa ditunda.",
+    "Gagal jadi abadi. Balik jualan bakpao lagi.",
+    "Kena satu tebasan, dapat pencerahan: larilah lebih cepat.",
+    "Hati Dao-mu remuk kayak kerupuk kena angin.",
+    "Kehidupan berikutnya jadi monster aja, lebih santai.",
+    "Kultivasi tiga hari, opname tiga bulan.",
+    "Alam tertinggi yang dicapai: Alam Rebahan.",
+    "Orang lain naik ke langit. Kamu naik keluar peta.",
+    "Guru bilang menghindar. Kamu malah berhenti foto-foto.",
+    "Gagal lewati kesengsaraan. Di parkiran mal.",
+    "Kultivasimu sedang dikumpulkan ulang dari nol.",
+    "Pedang orang berputar. Pedangmu berputar ke tanah.",
+    "Seluruh Qi di dunia nggak bisa nolong refleksmu.",
+    "Pesanan dikonfirmasi: satu tiket pulang. Tanpa refund.",
+    "Kamu pergi, petanya jadi lega banget.",
+    "Umurmu panjang. Pedang dia lebih panjang.",
+    "Nggak dapat apa-apa. Nyawa pun nggak.",
+    "Seorang Daois tumbang. Lagu galau mulai diputar.",
+    "Sampai jumpa di warkop ujung kampung.",
+    "Langit berpesan: \"Silakan coba lagi nanti.\"",
+    "Bertapa selamanya. Jangan diganggu."
+  ],
+  "lbTitle": "Papan peringkat",
+  "lbToday": "Hari ini",
+  "lbWeek": "Minggu ini",
+  "lbAll": "Sepanjang masa",
+  "lbScore": "Ketenaran",
+  "lbKills": "Penjagal",
+  "lbSpeed": "Kilat",
+  "lbEmpty": "Belum ada yang tercatat. Ayo tebas!",
+  "lbEmptySpeed": "Belum ada yang mencapai Mahayana. Ini kesempatanmu!",
+  "lbName": "Nama",
+  "lbRealm": "Alam",
+  "lbLoading": "Memuat...",
+  "lbError": "Gagal memuat papan peringkat.",
+  "score": "Ketenaran",
+  "scoreHud": "Ketenaran {n}",
+  "scorePop": "+{n}",
+  "scoreUpset": "COMEBACK!",
+  "scoreSources": {
+    "hit": "Tebasan kena badan",
+    "kill": "Membunuh",
+    "breakthrough": "Terobosan alam",
+    "top1": "Bertahan di Top 1"
+  },
+  "hits": "Tebasan kena badan",
+  "toDaiThua": "Waktu mencapai Mahayana",
+  "top1Held": "Waktu di Top 1",
+  "notReached": "Belum tercapai",
+  "titles": [
+    "Biksu Ini Tak Takut Siapa Pun",
+    "Sini maju kalau berani",
+    "Darahku masih banyak nih",
+    "Belum ketemu lawan sepadan",
+    "Bicara pelan, tebas keras",
+    "Lumayan punya nama",
+    "Bisa lah ayun pedang",
+    "Berusaha tiap hari",
+    "Selalu nyapa duluan",
+    "Hidup karena jago ngumpet"
+  ],
+  "feed": {
+    "heaven_gate": "{a} ({title}) baru saja melewati Gerbang Langit — Istana Langit gempar!",
+    "kill": [
+      "{a} memulangkan {b} ke kampung buat ternak lele",
+      "{a} kasih {b} tiket pulang sekali jalan, tanpa refund",
+      "{a} menebas mimpi kultivasi {b} jadi dua",
+      "{a} membereskan {b} sampai bersih",
+      "{b} tumbang, {a} tepuk-tepuk tangan lalu lanjut",
+      "{a} bikin {b} bertapa selamanya"
+    ],
+    "realm_drop": [
+      "{a} menebas {b} sampai turun ke {realm}",
+      "{a} menendang {b} balik ke {realm}",
+      "{b} kultivasi berhari-hari, balik ke {realm} cuma sekali tebas {a}",
+      "{a} kasih pelajaran ke {b}: {realm} aja ya",
+      "{b} turun ke {realm}, kerja kerasnya terbawa angin"
+    ],
+    "breakthrough": [
+      "{a} menembus {realm}, seisi room gemetar",
+      "{a} sudah {realm} — yang bisa lari, larilah",
+      "Qi berkumpul di satu titik: {a} mencapai {realm}",
+      "{a} memasuki {realm}, langit berubah warna",
+      "{a} baru saja naik ke {realm} — sinematik parah"
+    ],
+    "serverTag": "📢 SELURUH ALAM · Top {rank} tumbang: ",
+    "tien_ascend": "{a} melewati Kesengsaraan Langit, naik ke {realm}!",
+    "title_gain": "{a} kini menyandang gelar \"Biksu Ini Tak Takut Siapa Pun\"!",
+    "title_lose": "{a} dilengserkan — biksunya sekarang takut",
+    "gate_kill": [
+      "{b} keluar portal langsung kena pedang {a}. Apes",
+      "{b} baru nongol dari portal sudah dimakan pedang {a}",
+      "{a} jaga portal, {b} sial keluar pas di depannya",
+      "{b} teleport keliling dunia cuma buat mati di tangan {a}"
+    ]
+  },
+  "emotes": {
+    "sword_lost": [
+      "Pedangkuuu!",
+      "Balikin pedangku!",
+      "Baru beli itu!",
+      "Copot satu!",
+      "Yang mungut, dosa!"
+    ],
+    "shield_break": [
+      "Perisaiku!",
+      "Pecah!",
+      "Perisai kertas?!",
+      "Baru 3 detik!",
+      "Garansinya mana?!"
+    ],
+    "chest": [
+      "Jackpot!",
+      "Kaya mendadak!",
+      "Sultan, bestie!",
+      "Lagi hoki!",
+      "Isinya mantap!",
+      "Cuan cuan cuan!"
+    ],
+    "revealed": [
+      "Ketahuan!",
+      "Waduh!",
+      "Kok bisa lihat aku?",
+      "Belum selesai ngumpet!",
+      "Yah, ketahuan!"
+    ],
+    "run": [
+      "AAAAA!",
+      "Minggir!",
+      "Rem blong!",
+      "Wusss!",
+      "Kaki, kuatlah!",
+      "Cepet cepet cepet!"
+    ],
+    "chase": [
+      "Hehehe...",
+      "Berhenti di situ!",
+      "Mau lari ke mana?",
+      "Sini, sayang!",
+      "Diam, sekali aja!",
+      "Wah, mangsa segar!",
+      "Daois, berhenti!"
+    ],
+    "flee": [
+      "Tolong!",
+      "Mamaaa!",
+      "Aku masih kecil!",
+      "Salah orang!",
+      "Ampun, bang!",
+      "Aku nyerah!",
+      "Damai aja, damai!"
+    ],
+    "hit": [
+      "Aduh!",
+      "Sakit!",
+      "Anjir!",
+      "Curang!",
+      "Ugh!",
+      "Siapa yang nyerang?!",
+      "Pelan-pelan dong!"
+    ],
+    "breakthrough": [
+      "Aku tercerahkan!!!",
+      "Langit jadi saksi!",
+      "Naik alam nih!",
+      "Lihat aku!",
+      "Terima kasih, langit!"
+    ],
+    "levelup": [
+      "Naik tingkat!",
+      "Mantap!",
+      "Makin kuat!",
+      "Tambah dikit!",
+      "Mulus!"
+    ],
+    "realm_drop": [
+      "Alamku turun!",
+      "Kerja keras...",
+      "Turun kasta!",
+      "Mulai dari nol!",
+      "Langit benci aku!"
+    ],
+    "teleport_in": [
+      "Ini di mana???",
+      "Lho? Nyasar!",
+      "Portal bikin pusing!",
+      "Kok aku di sini?",
+      "Salah rumah!"
+    ],
+    "teleport_out": [
+      "Cabut dulu!",
+      "Dadah!",
+      "Ketemu di sana!",
+      "Masuk portal dulu!"
+    ],
+    "death": [
+      "Tamat...",
+      "Duluan ya!",
+      "Sampai jumpa!",
+      "Nggak percaya!"
+    ],
+    "respawn": [
+      "Aku kembali!",
+      "Belum selesai!",
+      "Hidup lagi, tebas!",
+      "Rehat bentar, lanjut!"
+    ],
+    "no_swords": [
+      "Pedang habis!",
+      "Tangan kosong nih!",
+      "Pinjam pedang dong...",
+      "Lari dulu!"
+    ],
+    "bush": [
+      "Ssst...",
+      "Nggak ada orang.",
+      "Aku semak-semak.",
+      "Jangan lihat..."
+    ],
+    "shocked": [
+      "Hah???",
+      "Ya ampun!",
+      "Gila!",
+      "Apa?!",
+      "Orang ini gila!",
+      "Sinematik parah!"
+    ]
+  },
+  "characters": {
+    "a_hon": "A Hớn Bánh Bao",
+    "ba_tam_loa": "Bà Tám Loa",
+    "ong_ba_vong": "Ông Ba Võng",
+    "dai_ca_dep": "Đại Ca Dép Tổ Ong",
+    "map_tra_sua": "Thằng Mập Trà Sữa",
+    "co_ba_ganh": "Cô Ba Gánh Hàng",
+    "su_phu_mi": "Sư Phụ Mì Gói",
+    "be_ti": "Bé Tí Cơ Bắp",
+    "shipper": "Anh Shipper Tia Chớp",
+    "cu_rua": "Cụ Rùa Thiền"
+  },
+  "charactersShort": {
+    "a_hon": "A Hớn",
+    "ba_tam_loa": "Bà Tám",
+    "ong_ba_vong": "Ông Ba",
+    "dai_ca_dep": "Đại Ca",
+    "map_tra_sua": "Thằng Mập",
+    "co_ba_ganh": "Cô Ba",
+    "su_phu_mi": "Sư Phụ",
+    "be_ti": "Bé Tí",
+    "shipper": "Shipper",
+    "cu_rua": "Cụ Rùa"
+  },
+  "buffs": {
+    "spin": "Pedang Kilat",
+    "haste": "Langkah Dewa",
+    "magnet": "Magnet",
+    "hard": "Pedang Baja",
+    "shield": "Perisai Intan",
+    "exp2": "Pil EXP Ganda",
+    "stealth": "Jimat Halimun"
+  },
+  "rotateHint": "Putar HP ke posisi miring untuk tampilan lebih luas",
+  "minimapToggle": "Tombol M: perbesar peta",
+  "guideTitle": "Kontrol",
+  "secsMin": "{m} mnt {s} dtk",
+  "secsOnly": "{s} dtk",
+  "skillBtnHintTouch": "Skill — ketuk untuk pakai",
+  "skillBtnHintPc": "Skill — tekan Space atau klik di sini",
+  "guideKeysTouch": [
+    {
+      "key": "Geser",
+      "what": "Bergerak"
+    },
+    {
+      "key": "Ketuk 2× lalu tahan · 🔥",
+      "what": "Bakar Darah"
+    },
+    {
+      "key": "✦",
+      "what": "Skill (isi sendiri)"
+    }
+  ],
+  "guideKeysPc": [
+    {
+      "key": "W A S D",
+      "what": "Bergerak"
+    },
+    {
+      "key": "Shift · klik 2× tahan",
+      "what": "Bakar Darah"
+    },
+    {
+      "key": "Space",
+      "what": "Skill (isi sendiri)"
+    },
+    {
+      "key": "M",
+      "what": "Peta"
+    }
+  ],
+  "realmNames": [
+    "Pemurnian Qi",
+    "Pembentukan Fondasi",
+    "Inti Emas",
+    "Jiwa Baru Lahir",
+    "Transformasi Dewa",
+    "Pemurnian Kehampaan",
+    "Penyatuan Tubuh",
+    "Melampaui Kesengsaraan",
+    "Mahayana",
+    "Abadi Sejati",
+    "Abadi Emas",
+    "Abadi Giok Taiyi",
+    "Abadi Emas Daluo",
+    "Leluhur Dao"
+  ],
+  "charNick": {
+    "a_hon": "si Tukang Bakpao",
+    "ba_tam_loa": "Emak Toa",
+    "ong_ba_vong": "Kakek Hammock",
+    "dai_ca_dep": "Bos Sandal Jepit",
+    "map_tra_sua": "si Gendut Boba",
+    "co_ba_ganh": "Mbak Pedagang",
+    "su_phu_mi": "Suhu Mi Instan",
+    "be_ti": "Bocil Kekar",
+    "shipper": "Kurir Kilat",
+    "cu_rua": "Kakek Kura Zen"
+  },
+  "lang": {
+    "label": "Bahasa",
+    "auto": "Otomatis"
+  },
+  "quality": {
+    "high": "Tinggi",
+    "medium": "Sedang",
+    "low": "Rendah"
+  },
+  "seo": {
+    "title": "{name} — Game .io kultivasi, main gratis di browser",
+    "description": "Berkultivasi dengan ratusan pedang terbang. Tebas lawan, rampas kultivasinya, naik sampai Leluhur Dao — kalau sempat kabur. Main gratis di browser.",
+    "intro": [
+      "Kamu adalah murid baru yang cuma punya satu pedang. Kumpulkan Qi Roh, tambah pedang, susun jadi cincin yang berputar di sekelilingmu — makin banyak cincin, makin jauh tebasanmu. Ketemu Daois yang lebih lemah? Kejar dan rampas kultivasinya. Ketemu yang lebih kuat? Lari… sambil teriak dengan sangat sopan: <em>\"Wahai Daois, mohon berhenti sejenak!\"</em>",
+      "Sembilan alam besar dari Pemurnian Qi sampai Mahayana, lalu lima alam abadi hingga Leluhur Dao. Lima zona, portal acak, sepuluh karakter kocak dengan sepuluh jurus andalan. Tanpa unduh, tanpa daftar — ketik nama langsung main."
+    ],
+    "shotsTitle": "Seperti apa di dalam game",
+    "shots": [
+      {
+        "alt": "Karakter alam rendah dengan beberapa pedang terbang di sekitarnya, sedang memungut Qi Roh di tanah",
+        "caption": "Baru mulai: beberapa pedang. Pungut Qi Roh di tanah untuk menambah pedang."
+      },
+      {
+        "alt": "Karakter alam lebih tinggi dengan puluhan pedang tersusun dalam cincin di sekelilingnya",
+        "caption": "Naik alam: pedang membentuk cincin — makin tebal cincinnya, makin jauh tebasannya."
+      },
+      {
+        "alt": "Dua pemain dengan cincin pedang besar saling mendekat, papan peringkat room di sebelah kanan",
+        "caption": "Ketemu Daois lain: pedang beradu pedang, cincin yang lebih tipis pecah duluan."
+      }
+    ],
+    "howtoTitle": "Cara bermain",
+    "howto": [
+      {
+        "b": "Bergerak:",
+        "t": "di PC pakai WASD, tombol panah, atau tahan mouse. Di HP geser jari."
+      },
+      {
+        "b": "Kumpulkan pedang:",
+        "t": "pungut Qi Roh di tanah untuk menambah pedang. Pedang berputar di sekelilingmu dan menebas sendiri."
+      },
+      {
+        "b": "Rampas kultivasi:",
+        "t": "kikis cincin pedang pemain yang lebih lemah sampai badannya terbuka, lalu tebas — kultivasinya kamu serap. Ketemu yang lebih kuat? Lari."
+      },
+      {
+        "b": "Naik alam:",
+        "t": "kultivasi cukup, kamu menembus ke tingkat berikutnya — badan membesar, pedang bertambah, tebasan makin jauh."
+      },
+      {
+        "b": "Skill:",
+        "t": "tiap karakter punya skill khusus (tombol Space atau tombol bulat) yang terisi sendiri seiring waktu dan bisa ditabung."
+      },
+      {
+        "b": "Hati-hati:",
+        "t": "tinggal satu cincin lalu badan kena tebas = permainan selesai, di alam mana pun — klik \"Main lagi\" untuk mulai lagi dari Pemurnian Qi."
+      }
+    ],
+    "faqTitle": "Pertanyaan umum",
+    "faq": [
+      {
+        "q": "Apakah game ini gratis?",
+        "a": "Gratis sepenuhnya. Tidak ada top up, tidak ada toko item, dan tidak ada yang bisa dibeli supaya lebih kuat dari pemain lain."
+      },
+      {
+        "q": "Bisa main di HP?",
+        "a": "Bisa, langsung di browser HP — geser jari untuk bergerak. Sebaiknya putar HP ke posisi miring supaya tampilan lebih luas."
+      },
+      {
+        "q": "Perlu akun?",
+        "a": "Tidak. Ketik nama langsung main. Tanpa email, tanpa kata sandi. Nama dan karakter pilihanmu diingat di perangkatmu untuk lain kali."
+      },
+      {
+        "q": "Bisa main bareng teman?",
+        "a": "Bisa — kalau masuk bersamaan hampir pasti ketemu, karena pemain baru selalu dimasukkan ke room yang paling ramai. Belum ada kode room pribadi, jadi supaya pasti, tekan \"Main\" bersamaan."
+      },
+      {
+        "q": "Bisa jalan di HP kentang atau internet lambat?",
+        "a": "Bisa. Tidak perlu unduh atau instal apa pun. Kalau patah-patah, tekan <b>V</b> untuk menurunkan kualitas grafis."
+      }
+    ],
+    "langLabel": "Bahasa:",
+    "feedback": "Masukan / lapor bug",
+    "privacy": "Kebijakan privasi"
+  },
+  "_meta": {
+    "lang": "id",
+    "name": "Bahasa Indonesia",
+    "flag": "🇮🇩",
+    "locale": "id-ID"
+  }
+}

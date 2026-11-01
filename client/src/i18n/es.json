@@ -1,0 +1,596 @@
+{
+  "_draft": true,
+  "tagline": "Las espadas dan vueltas, y los taoístas, vueltas y vueltas.",
+  "namePlaceholder": "Escribe un nombre (2–16 letras)",
+  "pickCharacter": "Elige personaje",
+  "play": "Jugar",
+  "leaderboard": "Clasificación",
+  "findingRoom": "Buscando sala...",
+  "kickedTitle": "Te han sacado de la sala",
+  "bannedTitle": "Tienes prohibido jugar partidas",
+  "kickedReason": "Motivo: ",
+  "kickedRejoin": "Puedes volver a entrar ya mismo.",
+  "bannedUntil": "Caduca: ",
+  "bannedForever": "Prohibición permanente.",
+  "kickedBack": "Volver al inicio",
+  "feedbackTitle": "Sugerencias",
+  "feedbackKinds": {
+    "bug": "Error",
+    "balance": "Equilibrio",
+    "idea": "Idea",
+    "other": "Otro"
+  },
+  "feedbackPlaceholder": "Cuéntanos qué pasó y qué estabas haciendo en ese momento...",
+  "feedbackAttachShot": "Adjuntar captura de pantalla",
+  "feedbackWillSend": "También enviaremos: versión, dispositivo, zona, reino, ping, FPS.",
+  "feedbackWillSendBug": " Y las últimas 20 líneas de error.",
+  "feedbackSend": "Enviar",
+  "feedbackCancel": "Cerrar",
+  "feedbackSending": "Enviando...",
+  "feedbackThanks": "¡Gracias! Sugerencia recibida.",
+  "feedbackTooShort": "Escribe un poco más (al menos 5 caracteres).",
+  "feedbackFailed": "No se pudo enviar. Inténtalo de nuevo en un rato.",
+  "feedbackAddImage": "🖼 Añadir imagen",
+  "feedbackImageHint": "Hasta 3 imágenes (contando la captura). También puedes arrastrar y soltar o pegar (Ctrl+V).",
+  "feedbackImageMax": "Hasta 3 imágenes por sugerencia.",
+  "feedbackImageUnsupported": "Formato aún no compatible. Elige una imagen JPG, PNG o WebP.",
+  "feedbackImageTooBig": "Esta imagen pesa demasiado para comprimirla. Prueba con otra.",
+  "feedbackImageBusy": "Procesando imagen...",
+  "feedbackImageRemove": "Quitar imagen",
+  "feedbackShotBadge": "Pantalla",
+  "feedbackShotFailed": "No se pudo capturar la pantalla — el texto se puede enviar igual.",
+  "needRealm": "Requiere {realm}",
+  "skillCancelled": "¡Habilidad perdida!",
+  "swordsStolen": "−{n} espadas",
+  "connecting": "Conectando con el servidor...",
+  "skillNames": {
+    "a_hon": "Bollo Divino",
+    "ba_tam_loa": "Megáfono del Barrio",
+    "ong_ba_vong": "Nana de Siesta — Robo de Espadas",
+    "dai_ca_dep": "Llamar a los Colegas",
+    "map_tra_sua": "Ráfaga de Perlas",
+    "co_ba_ganh": "Puesto en Medio",
+    "su_phu_mi": "Sorbo Ladrón",
+    "be_ti": "Modo Músculo",
+    "shipper": "Pedido Exprés",
+    "cu_rua": "Al Caparazón"
+  },
+  "skillDesc": {
+    "a_hon": "Cómete un bollo y recupera al instante el 20% del máximo de espadas de tu reino.",
+    "ba_tam_loa": "Grita por el megáfono: una onda sonora se expande a tu alrededor, empuja a todos los enemigos cercanos e invierte el giro de sus espadas.",
+    "ong_ba_vong": "Canta medio segundo de nana (si te golpean, la pierdes) y túmbate en la hamaca 4s: los enemigos cercanos se duermen 2,5s, tus espadas no se mellan, y las espadas enemigas que se rompen contra ti vuelan a tu anillo.",
+    "dai_ca_dep": "Invoca 2 secuaces durante 8s, cada uno con el 30% de tus espadas — tú no pierdes ninguna.",
+    "map_tra_sua": "Escupe perlas de tapioca y ciega a los enemigos 5s: no pueden recoger nada y sus espadas no matan a nadie (los choques de espadas sí cuentan).",
+    "co_ba_ganh": "Monta 5 puestos en arco que bloquean el paso 6s — quien sea de tu reino o inferior no puede cortarlos, tú pasas a través. Pieles de plátano delante: quien las pise resbala y queda aturdido 1s.",
+    "su_phu_mi": "Sorbe un fideo hacia el enemigo más cercano delante: le robas el 25% de sus espadas para tu anillo (máx. 20% de tu máximo, el resto cae al suelo). Si no hay nadie delante, fallas y gastas la carga igual.",
+    "be_ti": "Saca músculo 4s: espadas el doble de duras, inmune a empujones, ralentización, inmovilización y aturdimiento.",
+    "shipper": "Corre 3× más rápido 4s: atraviesa todos los obstáculos (salvo el borde de la zona), elimina e ignora el control, y aspira todos los orbes y objetos cercanos.",
+    "cu_rua": "Métete en el caparazón 5s: no se rompen espadas, nadie te corta; al salir, sueltas una onda de empuje."
+  },
+  "skillLabel": "Habilidad",
+  "skillCooldown": "Rec. {secs}s · {n} cargas",
+  "skillWait": "{secs}s",
+  "skillLines": {
+    "a_hon": "¡Un mordisco y mis espadas como nuevas!",
+    "ba_tam_loa": "¡PROBANDO, PROBANDO! ¡Apártense, que paso yo!",
+    "ong_ba_vong": "A la nanita nana… a dormir…",
+    "dai_ca_dep": "¡Chavales! ¡Venid aquí!",
+    "map_tra_sua": "¡Prueba las perlas de la casa!",
+    "co_ba_ganh": "¡Mercancía fresca! ¡Hagan sitio!",
+    "su_phu_mi": "*sluuurp*… ¡qué rica tu espada!",
+    "be_ti": "¡MÚSCULO! ¡Nadie me mueve!",
+    "shipper": "¡Pedido urgente, paso por la pared!",
+    "cu_rua": "Ommm… vosotros cortad, tranquilos."
+  },
+  "zoneNames": [
+    "Corte Celestial",
+    "Valle del Pico Espiritual",
+    "Laberinto de Bambú",
+    "Pueblo Mortal",
+    "Lago de la Luna Helada"
+  ],
+  "zoneListTitle": "Zonas",
+  "zoneEntered": "— {name} —",
+  "glLost": "La tarjeta gráfica ha tenido un hipo. Recuperando, volverás a la sala enseguida…",
+  "glLostManual": "Los gráficos siguen fallando. Baja la calidad con la tecla V y recarga la página (Ctrl+F5).",
+  "versionMismatch": "Hay una versión nueva — pulsa para recargar.",
+  "versionReload": "Recargar",
+  "disconnected": "Conexión con el servidor perdida. Reintentando...",
+  "badName": "El nombre debe tener de 2 a 16 caracteres.",
+  "loadUi": "Cargando interfaz…",
+  "loadChar": "Llamando a {name}…",
+  "loadZone": "Construyendo {zone}…",
+  "loadRoom": "Buscando sala…",
+  "loadMB": "{done} / {total} MB",
+  "loadCached": "Ya está en tu dispositivo — ¡a jugar!",
+  "loadFailed": "Se cortó la red durante la descarga. Pulsa \"Reintentar\" para bajar lo que falta.",
+  "loadBg": "⬇ {pct}%",
+  "loadTips": [
+    "No hay botón de atacar. Las espadas giran solas — tu trabajo es estar en el sitio correcto.",
+    "Un golpe en el cuerpo es la muerte, en cualquier reino. ¿Te queda 1 anillo? No te pases de listo.",
+    "Las espadas sobrantes caen como Haces de Espadas. Puedes coger los de los demás también.",
+    "Mantén Shift para la Quema de Sangre: corres más rápido, lo pagas con EXP.",
+    "Las habilidades se recargan con el tiempo y acumulan cargas — guárdalas para cuando importe.",
+    "Los portales te llevan a una zona aleatoria. Nadie sabe cuál, ni siquiera tú.",
+    "La Puerta Celestial en el centro de la zona lleva directo a la Corte Celestial. Solo ida, sin vuelta.",
+    "Los Altares de Qi Inmortal estallan por ciclos. Estate en el momento justo, no solo en el sitio justo.",
+    "Más anillos de espadas = más alcance, pero también te ven desde más lejos.",
+    "El lago helado resbala: puedes correr, lo que no puedes es frenar.",
+    "El Gordo del Té te llena la pantalla de perlas. Esos 5 segundos tampoco puedes recoger nada.",
+    "El Jefe de la Chancla llama a dos secuaces con la mitad de sus espadas. No te metas en medio.",
+    "Si matas a alguien absorbes el 30% de su Qi Espiritual, pero no saltas más de 2 grandes reinos.",
+    "Los obstáculos rompibles vuelven a crecer. Vacío ahora no significa vacío luego."
+  ],
+  "controlsPc": "Mover: WASD / flechas / mantener ratón. Quema de Sangre: mantén Shift, o doble clic y mantén. Habilidad: Espacio. No hay botón de atacar — ¡las espadas giran solas!",
+  "animInfoOn": "Mostrar datos de animación (J): nombre · frame · fase · nota de tirones",
+  "animInfoOff": "Ocultar datos de animación",
+  "qualitySet": "Calidad gráfica: {name} (tecla V para cambiar)",
+  "qualityAuto": "Automática (ahora {name})",
+  "controlsMobile": "Arrastra el dedo para moverte. Quema de Sangre: toca dos veces y mantén, o mantén el botón 🔥. ¡Las espadas giran solas!",
+  "burnName": "Quema de Sangre",
+  "burnHint": "Mantén Shift o doble clic y mantén: corres ×{mult}, quema cultivo cada segundo",
+  "burnSpent": "Cultivo quemado",
+  "burnEmpty": "¡Sin esencia de sangre!",
+  "debugHelp": "Teclas de prueba: E +100 EXP · R subir reino · K +10 espadas · G +1 carga · B soltar un bot cerca · 1–7 mejoras · X morir · H ver hitbox de espadas",
+  "realmTier": "{realm} nv {tier}",
+  "linhKhi": "Qi Espiritual",
+  "tienKhi": "Qi Inmortal {have}/{need}",
+  "tienMax": "Cima del Reino Inmortal",
+  "tienOverflow": "Qi Inmortal sobrante → Renombre",
+  "swords": "Espadas {n}/{max}",
+  "roomTop": "Top de la sala",
+  "board": {
+    "title": "TOP DE LA SALA",
+    "players": "{n} jugadores",
+    "you": "Tú",
+    "youRank": "Tú #{rank}",
+    "zoneShort": [
+      "Cielo",
+      "Pico Espiritual",
+      "Bambú",
+      "Pueblo",
+      "Luna Helada"
+    ],
+    "zoneHidden": "???",
+    "sameZone": "En tu misma zona",
+    "expand": "Toca para ver la clasificación",
+    "close": "Cerrar clasificación",
+    "youNoRank": "Tú —"
+  },
+  "yourRank": "Tu puesto: {rank}/{total}",
+  "ping": "Ping {ms}ms",
+  "chestIncoming": "¡Cofre del Tesoro en {secs}s!",
+  "maxLevel": "Cima del cultivo",
+  "summaryTitle": "Resumen",
+  "killedBy": "Cortado por {name}",
+  "killedByUnknown": "Cortado por un maestro anónimo",
+  "peakRealm": "Reino más alto",
+  "peakExp": "EXP total máximo",
+  "kills": "Jugadores cortados",
+  "survive": "Tiempo vivo",
+  "roomRank": "Puesto en la sala",
+  "playAgain": "Jugar otra vez",
+  "changeCharacter": "Cambiar personaje",
+  "back": "Volver",
+  "deathJokes": [
+    "Te han mandado de vuelta al pueblo a criar gallinas.",
+    "Espada rota, cuerpo volando, inmortalidad aplazada.",
+    "No has ascendido. Vuelve a vender churros.",
+    "Te comiste una espada y aprendiste el Dao: corre más.",
+    "Tu corazón del Dao se rompió como un polvorón.",
+    "En la próxima vida, renace de monstruo. Menos estrés.",
+    "Tres días cultivando, tres meses en el hospital.",
+    "Reino más alto alcanzado: Horizontal.",
+    "Otros ascienden al cielo. Tú ascendiste fuera del mapa.",
+    "El maestro dijo esquiva. Tú te paraste a mirar el paisaje.",
+    "Tribulación fallida. En el parking del súper.",
+    "Tu cultivo se está volviendo a acumular desde cero.",
+    "Sus espadas giran. Las tuyas giran por el suelo.",
+    "Ni todo el Qi del universo arregla tus reflejos.",
+    "Pedido confirmado: un billete a casa. Sin devoluciones.",
+    "Te has ido y el mapa se ve más amplio.",
+    "Tu vida era larga. Su espada, más.",
+    "Te quedaste sin nada. Ni con lo puesto.",
+    "Cae un taoísta. Empieza a sonar el violín triste.",
+    "Nos vemos en el bar del final del pueblo.",
+    "El Dao Celestial dice: \"Inténtalo más tarde.\"",
+    "Meditación a puerta cerrada eterna. No molestar."
+  ],
+  "lbTitle": "Clasificación",
+  "lbToday": "Hoy",
+  "lbWeek": "Esta semana",
+  "lbAll": "Histórico",
+  "lbScore": "Renombre",
+  "lbKills": "Matador",
+  "lbSpeed": "Speedrun",
+  "lbEmpty": "Aún no hay nadie. ¡Entra a cortar!",
+  "lbEmptySpeed": "Nadie ha llegado a Mahayana todavía. ¡Es tu oportunidad!",
+  "lbName": "Nombre",
+  "lbRealm": "Reino",
+  "lbLoading": "Cargando...",
+  "lbError": "No se pudo cargar la clasificación.",
+  "score": "Renombre",
+  "scoreHud": "Renombre {n}",
+  "scorePop": "+{n}",
+  "scoreUpset": "¡REMONTADA!",
+  "scoreSources": {
+    "hit": "Golpe al cuerpo",
+    "kill": "Muerte",
+    "breakthrough": "Avance de reino",
+    "top1": "Mantener el Top 1"
+  },
+  "hits": "Golpes al cuerpo",
+  "toDaiThua": "Tiempo hasta Mahayana",
+  "top1Held": "Tiempo en el Top 1",
+  "notReached": "No alcanzado",
+  "titles": [
+    "Este Monje No Teme a Nadie",
+    "Ven si te atreves",
+    "Aquí hay mucha vida, eh",
+    "Buscando un rival digno",
+    "Habla bajito, pega fuerte",
+    "Tiene su fama, ojo",
+    "Sabe menear la espada",
+    "Mejorando cada día",
+    "Saluda a todos primero",
+    "Vivo de tanto esconderse"
+  ],
+  "feed": {
+    "heaven_gate": "{a} ({title}) acaba de cruzar la Puerta Celestial — ¡la Corte Celestial tiembla!",
+    "kill": [
+      "{a} mandó a {b} de vuelta al pueblo a criar gallinas",
+      "{a} le regaló a {b} un billete solo de ida a casa",
+      "{a} partió en dos el sueño inmortal de {b}",
+      "{a} dejó a {b} limpito y ordenado",
+      "{b} cae, {a} se sacude el polvo y sigue",
+      "{a} mandó a {b} a meditar para siempre"
+    ],
+    "realm_drop": [
+      "{a} tumbó a {b} hasta {realm}",
+      "{a} devolvió a {b} de una patada a {realm}",
+      "{b} sudó días para volver a {realm} de un tajo de {a}",
+      "{a} le dio una lección a {b}: {realm} y gracias",
+      "{b} bajó a {realm}, todo el esfuerzo se lo llevó el viento"
+    ],
+    "breakthrough": [
+      "{a} avanzó a {realm}, toda la sala tiembla",
+      "{a} llegó a {realm} — sálvese quien pueda",
+      "El Qi se concentra en un punto: {a} alcanza {realm}",
+      "{a} entra en {realm}, el cielo cambia de color",
+      "{a} acaba de llegar a {realm} — cine absoluto"
+    ],
+    "serverTag": "📢 TODOS LOS REINOS · cae el Top {rank}: ",
+    "tien_ascend": "¡{a} superó la Tribulación Celestial y ascendió a {realm}!",
+    "title_gain": "¡{a} se ha coronado \"Este Monje No Teme a Nadie\"!",
+    "title_lose": "{a} ha sido destronado — ahora el monje sí tiene miedo",
+    "gate_kill": [
+      "{b} salió del portal directo a la espada de {a}. Mala suerte",
+      "{b} apenas asomó la cabeza del portal y se comió la espada de {a}",
+      "{a} campeaba el portal y {b} salió justo delante",
+      "{b} se teletransportó al otro lado del mundo solo para morir ante {a}"
+    ]
+  },
+  "emotes": {
+    "sword_lost": [
+      "¡Mi espadaaa!",
+      "¡Devuélvemela!",
+      "¡Si era nueva!",
+      "¡Se me cayó una!",
+      "¡El que la coja, caca!"
+    ],
+    "shield_break": [
+      "¡Mi escudo!",
+      "¡Se rompió!",
+      "¿Escudo de papel?",
+      "¡Duró 3 segundos!",
+      "¿Y la garantía?"
+    ],
+    "chest": [
+      "¡Premio!",
+      "¡Soy rico!",
+      "¡Me tocó el Gordo!",
+      "¡Día de suerte!",
+      "¡Todo de calidad!",
+      "¡Olé, qué riqueza!"
+    ],
+    "revealed": [
+      "¡Me pillaron!",
+      "¡Uy!",
+      "¿Cómo me ves?",
+      "¡Aún no me escondí!",
+      "¡Ups, cazado!"
+    ],
+    "run": [
+      "¡AAAAA!",
+      "¡Apartad!",
+      "¡Sin frenos!",
+      "¡Fiuuum!",
+      "¡Piernas, no falléis!",
+      "¡Vamos vamos!"
+    ],
+    "chase": [
+      "Jejeje...",
+      "¡Quieto ahí!",
+      "¡No te escapas!",
+      "¡Ven aquí, guapo!",
+      "¡Quieto, solo uno!",
+      "¡Uh, presa fresca!",
+      "¡Taoísta, detente!"
+    ],
+    "flee": [
+      "¡Socorro!",
+      "¡Mamáaa!",
+      "¡Soy solo un bebé!",
+      "¡Te equivocas!",
+      "¡Perdóname!",
+      "¡Me rindo!",
+      "¡Paz y amor!"
+    ],
+    "hit": [
+      "¡Ay!",
+      "¡Duele!",
+      "¡Pero qué—!",
+      "¡Juego sucio!",
+      "¡Uf!",
+      "¿Quién ha sido?",
+      "¡Con cuidado!"
+    ],
+    "breakthrough": [
+      "¡¡¡Me iluminé!!!",
+      "¡Que el cielo lo vea!",
+      "¡Reino nuevo!",
+      "¡Miradme!",
+      "¡Gracias, cielo!"
+    ],
+    "levelup": [
+      "¡Subo de nivel!",
+      "¡Qué rico!",
+      "¡Voy mejorando!",
+      "¡Un poquito más!",
+      "¡Fino!"
+    ],
+    "realm_drop": [
+      "¡Perdí el reino!",
+      "Tanto esfuerzo...",
+      "¡Descenso, ay!",
+      "¡A empezar de cero!",
+      "¡El cielo me odia!"
+    ],
+    "teleport_in": [
+      "¿¿¿Dónde estoy???",
+      "¿Eh? ¡Me perdí!",
+      "¡Qué portal más loco!",
+      "¿Quién me trajo aquí?",
+      "¡Casa equivocada!"
+    ],
+    "teleport_out": [
+      "¡Me piro!",
+      "¡Chao chao!",
+      "¡Nos vemos allá!",
+      "¡Al portal!"
+    ],
+    "death": [
+      "Pues nada...",
+      "¡Me adelanto!",
+      "¡Hasta otra vida!",
+      "¡No me lo creo!"
+    ],
+    "respawn": [
+      "¡He vuelto!",
+      "¡Esto no acaba!",
+      "¡Revivo, a cortar!",
+      "¡Siestita y a seguir!"
+    ],
+    "no_swords": [
+      "¡Sin espadas!",
+      "¡A mano limpia!",
+      "¿Alguien me presta?",
+      "¡Primero, correr!"
+    ],
+    "bush": [
+      "Chsss...",
+      "Aquí no hay nadie.",
+      "Soy un arbusto.",
+      "No mires, no mires..."
+    ],
+    "shocked": [
+      "¿¿Qué??",
+      "¡Madre mía!",
+      "¡Hala!",
+      "¿Cómo dices?",
+      "¡Este tío está loco!",
+      "¡Cine absoluto!"
+    ]
+  },
+  "characters": {
+    "a_hon": "A Hớn Bánh Bao",
+    "ba_tam_loa": "Bà Tám Loa",
+    "ong_ba_vong": "Ông Ba Võng",
+    "dai_ca_dep": "Đại Ca Dép Tổ Ong",
+    "map_tra_sua": "Thằng Mập Trà Sữa",
+    "co_ba_ganh": "Cô Ba Gánh Hàng",
+    "su_phu_mi": "Sư Phụ Mì Gói",
+    "be_ti": "Bé Tí Cơ Bắp",
+    "shipper": "Anh Shipper Tia Chớp",
+    "cu_rua": "Cụ Rùa Thiền"
+  },
+  "charactersShort": {
+    "a_hon": "A Hớn",
+    "ba_tam_loa": "Bà Tám",
+    "ong_ba_vong": "Ông Ba",
+    "dai_ca_dep": "Đại Ca",
+    "map_tra_sua": "Thằng Mập",
+    "co_ba_ganh": "Cô Ba",
+    "su_phu_mi": "Sư Phụ",
+    "be_ti": "Bé Tí",
+    "shipper": "Shipper",
+    "cu_rua": "Cụ Rùa"
+  },
+  "buffs": {
+    "spin": "Hojas Veloces",
+    "haste": "Paso Divino",
+    "magnet": "Imán",
+    "hard": "Hojas de Acero",
+    "shield": "Escudo Diamante",
+    "exp2": "Píldora EXP Doble",
+    "stealth": "Talismán Invisible"
+  },
+  "rotateHint": "Gira el móvil en horizontal para ver más",
+  "minimapToggle": "Tecla M: ampliar mapa",
+  "guideTitle": "Controles",
+  "secsMin": "{m} min {s} s",
+  "secsOnly": "{s} s",
+  "skillBtnHintTouch": "Habilidad — toca para usar",
+  "skillBtnHintPc": "Habilidad — pulsa Espacio o haz clic aquí",
+  "guideKeysTouch": [
+    {
+      "key": "Arrastrar",
+      "what": "Mover"
+    },
+    {
+      "key": "Toca 2× y mantén · 🔥",
+      "what": "Quema"
+    },
+    {
+      "key": "✦",
+      "what": "Habilidad (se recarga)"
+    }
+  ],
+  "guideKeysPc": [
+    {
+      "key": "W A S D",
+      "what": "Mover"
+    },
+    {
+      "key": "Shift · doble clic mantener",
+      "what": "Quema"
+    },
+    {
+      "key": "Espacio",
+      "what": "Habilidad (se recarga)"
+    },
+    {
+      "key": "M",
+      "what": "Mapa"
+    }
+  ],
+  "realmNames": [
+    "Refinamiento de Qi",
+    "Establecimiento de Fundación",
+    "Núcleo Dorado",
+    "Alma Naciente",
+    "Transformación Divina",
+    "Refinamiento del Vacío",
+    "Integración Corporal",
+    "Trascendencia de la Tribulación",
+    "Mahayana",
+    "Inmortal Verdadero",
+    "Inmortal Dorado",
+    "Inmortal de Jade Taiyi",
+    "Inmortal Dorado Daluo",
+    "Ancestro del Dao"
+  ],
+  "charNick": {
+    "a_hon": "el del Bollo",
+    "ba_tam_loa": "Tía Megáfono",
+    "ong_ba_vong": "Abuelo Hamaca",
+    "dai_ca_dep": "Jefe de la Chancla",
+    "map_tra_sua": "el Gordo del Té",
+    "co_ba_ganh": "la Vendedora",
+    "su_phu_mi": "Maestro Fideo",
+    "be_ti": "Mini Musculitos",
+    "shipper": "Repartidor Rayo",
+    "cu_rua": "Tortuga Zen"
+  },
+  "lang": {
+    "label": "Idioma",
+    "auto": "Automático"
+  },
+  "quality": {
+    "high": "Alta",
+    "medium": "Media",
+    "low": "Baja"
+  },
+  "seo": {
+    "title": "{name} — Juego .io de cultivo, gratis en el navegador",
+    "description": "Cultiva con cientos de espadas voladoras. Corta rivales, róbales el cultivo y asciende a Ancestro del Dao — si corres a tiempo. Gratis en el navegador.",
+    "intro": [
+      "Eres un discípulo novato con una sola espada. Recoge Qi Espiritual, junta más espadas y fórmalas en anillos que giran a tu alrededor — cuantos más anillos, más alcance. ¿Te cruzas con un taoísta más débil? Persíguelo y róbale el cultivo. ¿Con uno más fuerte? Corre… gritando con mucha educación: <em>\"¡Estimado taoísta, deténgase, por favor!\"</em>",
+      "Nueve grandes reinos desde el Refinamiento de Qi hasta Mahayana, y cinco reinos inmortales hasta Ancestro del Dao. Cinco zonas, portales aleatorios, diez personajes chiflados con diez habilidades propias. Sin descargas, sin registro — escribe un nombre y a jugar."
+    ],
+    "shotsTitle": "Así se ve el juego",
+    "shots": [
+      {
+        "alt": "Personaje de reino bajo con unas pocas espadas volando alrededor, recogiendo Qi Espiritual del suelo",
+        "caption": "Al empezar: unas pocas espadas. Recoge Qi Espiritual del suelo para conseguir más."
+      },
+      {
+        "alt": "Personaje de reino superior con decenas de espadas en anillos a su alrededor",
+        "caption": "Sube de reino: las espadas forman anillos — cuanto más gruesos, más lejos cortas."
+      },
+      {
+        "alt": "Dos jugadores con grandes anillos de espadas acercándose, con la clasificación de la sala a la derecha",
+        "caption": "Choca con otro taoísta: espada contra espada, y el anillo más fino se rompe antes."
+      }
+    ],
+    "howtoTitle": "Cómo jugar",
+    "howto": [
+      {
+        "b": "Moverse:",
+        "t": "en PC usa WASD, las flechas o mantén el ratón. En el móvil, arrastra el dedo."
+      },
+      {
+        "b": "Juntar espadas:",
+        "t": "recoge Qi Espiritual del suelo para sumar espadas. Giran a tu alrededor y cortan solas."
+      },
+      {
+        "b": "Robar cultivo:",
+        "t": "desgasta el anillo de espadas de alguien más débil hasta dejar su cuerpo al descubierto y córtalo — absorbes su cultivo. ¿Alguien más fuerte? Corre."
+      },
+      {
+        "b": "Subir de reino:",
+        "t": "con suficiente cultivo avanzas — te haces más grande, tienes más espadas y cortas más lejos."
+      },
+      {
+        "b": "Habilidades:",
+        "t": "cada personaje tiene una habilidad única (tecla Espacio o botón redondo) que se recarga con el tiempo y acumula cargas."
+      },
+      {
+        "b": "Cuidado:",
+        "t": "con un solo anillo, un golpe en el cuerpo acaba la partida en cualquier reino — pulsa \"Jugar otra vez\" para empezar de nuevo desde el Refinamiento de Qi."
+      }
+    ],
+    "faqTitle": "Preguntas frecuentes",
+    "faq": [
+      {
+        "q": "¿El juego es gratis?",
+        "a": "Totalmente gratis. Sin recargas, sin tienda de objetos y nada que puedas comprar para ser más fuerte que los demás."
+      },
+      {
+        "q": "¿Se puede jugar en el móvil?",
+        "a": "Sí, directamente en el navegador del móvil — arrastra el dedo para moverte. Gira el móvil en horizontal para ver más."
+      },
+      {
+        "q": "¿Necesito una cuenta?",
+        "a": "No. Escribe un nombre y juega. Sin correo, sin contraseña. Tu nombre y personaje se recuerdan en tu dispositivo para la próxima vez."
+      },
+      {
+        "q": "¿Puedo jugar con amigos?",
+        "a": "Sí — si entráis a la vez casi seguro que os encontráis, porque los nuevos jugadores siempre van a la sala más llena. Aún no hay códigos de sala privada, así que, para ir sobre seguro, pulsad \"Jugar\" al mismo tiempo."
+      },
+      {
+        "q": "¿Funciona en equipos modestos o con internet lento?",
+        "a": "Sí. No hay nada que descargar ni instalar. Si va a tirones, pulsa <b>V</b> para bajar la calidad gráfica."
+      }
+    ],
+    "langLabel": "Idioma:",
+    "feedback": "Sugerencias / informar de un error",
+    "privacy": "Política de privacidad"
+  },
+  "_meta": {
+    "lang": "es",
+    "name": "Español",
+    "flag": "🇪🇸",
+    "locale": "es-ES"
+  }
+}

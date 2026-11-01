@@ -869,6 +869,8 @@ body.in-game #below { display: none; }
 .screen.home .panel { position: relative; }
 .lang-pick { position: absolute; top: 8px; right: 10px; font: inherit; font-size: 12px; color: var(--ink);
   background: rgba(255, 255, 255, .7); border: 2px solid var(--ink); border-radius: 8px; padding: 2px 4px; cursor: pointer; max-width: 9.5em; }
-@media (max-width: 600px) { .lang-pick { top: 4px; right: 6px; font-size: 11px; } }
+/* Điện thoại: khung hẹp, "อัตโนมัติ" dài đè lên tên game (ảnh 14-ngon-ngu 1/11) → ô nằm
+   trong dòng chảy, một hàng riêng sát phải phía trên tên game. */
+@media (max-width: 600px) { .lang-pick { position: static; align-self: flex-end; margin: -6px -4px 2px auto; display: block; font-size: 11px; } }
 /* Chữ Thái trên giao diện DOM: Noto Sans Thai chỉ được tải khi chọn tiếng Thái (fonts.ts). */
 html.lang-th body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; }

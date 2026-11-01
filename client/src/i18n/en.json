@@ -1,0 +1,596 @@
+{
+  "_draft": true,
+  "tagline": "Swords go round and round, Daoists run around and around.",
+  "namePlaceholder": "Enter a name (2–16 chars)",
+  "pickCharacter": "Pick a character",
+  "play": "Play",
+  "leaderboard": "Leaderboard",
+  "findingRoom": "Finding a room...",
+  "kickedTitle": "You were removed from the room",
+  "bannedTitle": "You are banned from matches",
+  "kickedReason": "Reason: ",
+  "kickedRejoin": "You can rejoin right away.",
+  "bannedUntil": "Expires: ",
+  "bannedForever": "Permanent ban.",
+  "kickedBack": "Back to home",
+  "feedbackTitle": "Feedback",
+  "feedbackKinds": {
+    "bug": "Bug",
+    "balance": "Balance",
+    "idea": "Idea",
+    "other": "Other"
+  },
+  "feedbackPlaceholder": "Tell us what happened and what you were doing at the time...",
+  "feedbackAttachShot": "Attach a screenshot",
+  "feedbackWillSend": "We'll also send: version, device, zone, realm, ping, FPS.",
+  "feedbackWillSendBug": " Plus the last 20 error lines.",
+  "feedbackSend": "Send",
+  "feedbackCancel": "Close",
+  "feedbackSending": "Sending...",
+  "feedbackThanks": "Thanks! Feedback received.",
+  "feedbackTooShort": "Write a few more words (at least 5 characters).",
+  "feedbackFailed": "Couldn't send. Try again in a moment.",
+  "feedbackAddImage": "🖼 Add image",
+  "feedbackImageHint": "Up to 3 images (screenshot included). Drag-and-drop or paste (Ctrl+V) works too.",
+  "feedbackImageMax": "Up to 3 images per feedback.",
+  "feedbackImageUnsupported": "Format not supported yet. Please pick a JPG, PNG or WebP image.",
+  "feedbackImageTooBig": "This image is too heavy to compress. Try another one.",
+  "feedbackImageBusy": "Processing image...",
+  "feedbackImageRemove": "Remove image",
+  "feedbackShotBadge": "Screen",
+  "feedbackShotFailed": "Couldn't capture the screen — your text can still be sent.",
+  "needRealm": "Needs {realm}",
+  "skillCancelled": "Skill lost!",
+  "swordsStolen": "−{n} swords",
+  "connecting": "Connecting to server...",
+  "skillNames": {
+    "a_hon": "Divine Bun",
+    "ba_tam_loa": "Loudspeaker Blast",
+    "ong_ba_vong": "Nap Lullaby — Blade Heist",
+    "dai_ca_dep": "Call the Boys",
+    "map_tra_sua": "Boba Barrage",
+    "co_ba_ganh": "Stall Blockade",
+    "su_phu_mi": "Noodle Slurp Heist",
+    "be_ti": "Flex Mode",
+    "shipper": "Express Pickup",
+    "cu_rua": "Shell Retreat"
+  },
+  "skillDesc": {
+    "a_hon": "Eat a bun and instantly restore 20% of your realm's max swords.",
+    "ba_tam_loa": "Yell into the loudspeaker: a sound wave bursts around you, knocking back every nearby enemy and reversing their sword rings.",
+    "ong_ba_vong": "Sing a half-second lullaby (getting hit cancels it), then lie in the hammock for 4s: nearby enemies fall asleep for 2.5s, your swords don't chip, and enemy swords that break on you fly into your ring.",
+    "dai_ca_dep": "Summon 2 minions for 8s, each carrying 30% of your swords — you don't lose a single one.",
+    "map_tra_sua": "Spray boba to blind enemies for 5s: they can't pick anything up and their swords can't kill anyone (sword clashes still count).",
+    "co_ba_ganh": "Set up 5 stalls in an arc to block the way for 6s — players of your realm or lower can't cut them, you walk right through. Banana peels along the stalls: step on one and slip, stunned for 1s.",
+    "su_phu_mi": "Slurp a noodle at the nearest enemy in front: steal 25% of their swords into your ring (max 20% of your max swords, the rest drops). Nobody in front = miss, charge still used.",
+    "be_ti": "Flex for 4s: swords twice as tough, immune to knockback, slow, root and stun.",
+    "shipper": "Run 3× faster for 4s: pass through all obstacles (except zone edges), cleanse and ignore crowd control, vacuum up every orb and item nearby.",
+    "cu_rua": "Hide in your shell for 5s: no sword breaks, can't be cut; popping out releases a knockback wave."
+  },
+  "skillLabel": "Skill",
+  "skillCooldown": "CD {secs}s · {n} charges",
+  "skillWait": "{secs}s",
+  "skillLines": {
+    "a_hon": "One bite and my swords are brand new!",
+    "ba_tam_loa": "TESTING, TESTING! Out of my way!",
+    "ong_ba_vong": "Hush now… go to sleep…",
+    "dai_ca_dep": "Boys! Get over here!",
+    "map_tra_sua": "Taste my house special boba!",
+    "co_ba_ganh": "Fresh stock! Make room, make room!",
+    "su_phu_mi": "*sluuurp*… tasty swords you got!",
+    "be_ti": "FLEX! Nobody moves me!",
+    "shipper": "Urgent delivery, coming through walls!",
+    "cu_rua": "Om… go ahead, swing away."
+  },
+  "zoneNames": [
+    "Heavenly Court",
+    "Spirit Peak Valley",
+    "Bamboo Maze",
+    "Mortal Town",
+    "Frozen Moon Lake"
+  ],
+  "zoneListTitle": "Zones",
+  "zoneEntered": "— {name} —",
+  "glLost": "Your graphics card hiccuped. Recovering, you'll be back in the room in a moment…",
+  "glLostManual": "Graphics keep crashing. Lower quality with the V key, then reload the page (Ctrl+F5).",
+  "versionMismatch": "A new version is out — click to reload.",
+  "versionReload": "Reload",
+  "disconnected": "Lost connection to the server. Retrying...",
+  "badName": "Name must be 2–16 characters.",
+  "loadUi": "Loading interface…",
+  "loadChar": "Summoning {name}…",
+  "loadZone": "Building {zone}…",
+  "loadRoom": "Finding a room…",
+  "loadMB": "{done} / {total} MB",
+  "loadCached": "Already on your device — jumping in!",
+  "loadFailed": "Network dropped mid-download. Click \"Retry\" to fetch the rest.",
+  "loadBg": "⬇ {pct}%",
+  "loadTips": [
+    "There's no attack button. Your swords spin on their own — your job is to be in the right place.",
+    "A hit to the body is death at any realm. Down to 1 ring? Don't get greedy.",
+    "Extra swords drop as Sword Bundles. You can grab other people's bundles too.",
+    "Hold Shift for Blood Burn: run faster, paid for with EXP.",
+    "Skills recharge over time and stack charges — save them for when it counts.",
+    "Portals send you to a random zone. Nobody knows where, not even you.",
+    "The Heaven Gate in the middle of a zone leads straight to the Heavenly Court. One way only, no refunds.",
+    "Immortal Qi Altars erupt on a cycle. Be there at the right time, not just the right place.",
+    "More sword rings = longer reach, but people can spot you from farther away too.",
+    "The frozen lake is slippery: you can still run, you just can't brake.",
+    "Boba Big Boy covers your whole screen in boba. For those 5 seconds you can't pick anything up either.",
+    "Flip-Flop Boss calls two minions carrying half his swords. Don't charge into the middle.",
+    "Kill someone and you absorb 30% of their Spirit Qi, but you can't jump more than 2 major realms.",
+    "Breakable obstacles grow back. Empty now doesn't mean empty later."
+  ],
+  "controlsPc": "Move: WASD / arrow keys / hold mouse. Blood Burn: hold Shift, or double-click and hold. Skill: Space. No attack button — swords spin on their own!",
+  "animInfoOn": "Show animation info (J): anim name · frame · phase · jitter score",
+  "animInfoOff": "Hide animation info",
+  "qualitySet": "Graphics quality: {name} (press V to change)",
+  "qualityAuto": "Auto (currently {name})",
+  "controlsMobile": "Drag your finger to move. Blood Burn: double-tap and hold, or hold the 🔥 button. Swords spin on their own!",
+  "burnName": "Blood Burn",
+  "burnHint": "Hold Shift or double-click and hold: run ×{mult}, burns cultivation every second",
+  "burnSpent": "Cultivation burned",
+  "burnEmpty": "Out of blood essence!",
+  "debugHelp": "Test keys: E +100 EXP · R next realm · K +10 swords · G +1 skill charge · B spawn a bot nearby · 1–7 buffs · X suicide · H show sword hitboxes",
+  "realmTier": "{realm} lv {tier}",
+  "linhKhi": "Spirit Qi",
+  "tienKhi": "Immortal Qi {have}/{need}",
+  "tienMax": "Peak of the Immortal Realm",
+  "tienOverflow": "Extra Immortal Qi → Renown",
+  "swords": "Swords {n}/{max}",
+  "roomTop": "Room top",
+  "board": {
+    "title": "ROOM TOP",
+    "players": "{n} players",
+    "you": "You",
+    "youRank": "You #{rank}",
+    "zoneShort": [
+      "Heaven",
+      "Spirit Peak",
+      "Bamboo",
+      "Mortal Town",
+      "Frozen Moon"
+    ],
+    "zoneHidden": "???",
+    "sameZone": "Same zone as you",
+    "expand": "Tap to see the leaderboard",
+    "close": "Close leaderboard",
+    "youNoRank": "You —"
+  },
+  "yourRank": "Your rank: {rank}/{total}",
+  "ping": "Ping {ms}ms",
+  "chestIncoming": "Treasure Chest appears in {secs}s!",
+  "maxLevel": "Peak cultivation",
+  "summaryTitle": "Summary",
+  "killedBy": "Cut down by {name}",
+  "killedByUnknown": "Cut down by a nameless master",
+  "peakRealm": "Highest realm",
+  "peakExp": "Peak total EXP",
+  "kills": "Players cut down",
+  "survive": "Time survived",
+  "roomRank": "Room rank",
+  "playAgain": "Play again",
+  "changeCharacter": "Change character",
+  "back": "Back",
+  "deathJokes": [
+    "You've been sent back to the village to farm fish.",
+    "Swords broken, body airborne, immortality postponed.",
+    "Didn't ascend. Back to selling buns.",
+    "Took one sword to the face, learned the Dao: run faster.",
+    "Your Dao heart shattered like a cheap rice cracker.",
+    "Maybe respawn as a monster next life. Less stress.",
+    "Cultivated for three days, hospitalized for three months.",
+    "Highest realm achieved: Horizontal.",
+    "Others ascend to the heavens. You ascended off the map.",
+    "Master said dodge. You stopped to admire the view.",
+    "Tribulation failed. In the parking garage.",
+    "Your cultivation is now being re-accumulated from zero.",
+    "Their swords spin. Yours spin into the ground.",
+    "All the Spirit Qi in the world can't fix your reaction time.",
+    "Order confirmed: one ticket home. No refunds, no cancellations.",
+    "You're gone, and the map feels so roomy now.",
+    "Your lifespan was long. Their sword was longer.",
+    "Got nothing. Not even a pulse.",
+    "A Daoist falls. The sad violin starts playing.",
+    "See you at the tea stall at the end of the village.",
+    "The Heavenly Dao says: \"Please try again later.\"",
+    "Eternal closed-door meditation. Do not disturb."
+  ],
+  "lbTitle": "Leaderboard",
+  "lbToday": "Today",
+  "lbWeek": "This week",
+  "lbAll": "All time",
+  "lbScore": "Renown",
+  "lbKills": "Slayer",
+  "lbSpeed": "Speedrun",
+  "lbEmpty": "Nobody here yet. Go cut someone!",
+  "lbEmptySpeed": "Nobody has reached Mahayana yet. Your chance!",
+  "lbName": "Name",
+  "lbRealm": "Realm",
+  "lbLoading": "Loading...",
+  "lbError": "Couldn't load the leaderboard.",
+  "score": "Renown",
+  "scoreHud": "Renown {n}",
+  "scorePop": "+{n}",
+  "scoreUpset": "UPSET!",
+  "scoreSources": {
+    "hit": "Body hit",
+    "kill": "Kill",
+    "breakthrough": "Realm breakthrough",
+    "top1": "Holding Top 1"
+  },
+  "hits": "Body hits landed",
+  "toDaiThua": "Time to Mahayana",
+  "top1Held": "Time held Top 1",
+  "notReached": "Not reached",
+  "titles": [
+    "This Monk Fears No One",
+    "Come at me, bro",
+    "Plenty of HP over here",
+    "Still looking for a worthy rival",
+    "Walks softly, swings hard",
+    "Kind of a big deal",
+    "Can wave a sword, sort of",
+    "Getting better every day",
+    "Says hi to everyone first",
+    "Alive thanks to hiding skills"
+  ],
+  "feed": {
+    "heaven_gate": "{a} ({title}) just stepped through the Heaven Gate — the Heavenly Court is shaking!",
+    "kill": [
+      "{a} sent {b} back to the village to farm fish",
+      "{a} gave {b} a one-way ticket home, no refunds",
+      "{a} sliced {b}'s immortal dreams clean in half",
+      "{a} tidied {b} up nice and neat",
+      "{b} goes down, {a} dusts off and moves on",
+      "{a} put {b} into permanent meditation"
+    ],
+    "realm_drop": [
+      "{a} knocked {b} down to {realm}",
+      "{a} kicked {b} back to {realm}",
+      "{b} grinded for ages, back to {realm} after one swing from {a}",
+      "{a} taught {b} a lesson: {realm}, that's all",
+      "{b} dropped to {realm}, all that effort gone with the wind"
+    ],
+    "breakthrough": [
+      "{a} broke through to {realm}, the whole room trembles",
+      "{a} hit {realm} — run while you can",
+      "Spirit Qi gathers in one spot: {a} reaches {realm}",
+      "{a} enters {realm}, the sky changes color",
+      "{a} just reached {realm} — absolute cinema"
+    ],
+    "serverTag": "📢 ALL REALMS · Top {rank} down: ",
+    "tien_ascend": "{a} survived the Heavenly Tribulation and ascended to {realm}!",
+    "title_gain": "{a} has claimed the title \"This Monk Fears No One\"!",
+    "title_lose": "{a} was dethroned — this monk now fears someone",
+    "gate_kill": [
+      "{b} popped out of a portal straight into {a}'s swords. Unlucky.",
+      "{b} barely poked their head out of the portal and ate {a}'s sword",
+      "{a} camped the portal, {b} walked right out",
+      "{b} teleported across the world just to die to {a}"
+    ]
+  },
+  "emotes": {
+    "sword_lost": [
+      "My swooord!",
+      "Give it back!",
+      "I just bought that!",
+      "One fell off!",
+      "Finders NOT keepers!"
+    ],
+    "shield_break": [
+      "My shield!",
+      "It broke!",
+      "Paper shield?!",
+      "Lasted 3 seconds!",
+      "Where's the warranty?!"
+    ],
+    "chest": [
+      "Jackpot!",
+      "I'm rich!",
+      "Life changed, folks!",
+      "Lucky day!",
+      "All the good loot!",
+      "Money money money!"
+    ],
+    "revealed": [
+      "Spotted!",
+      "Oops!",
+      "How'd you see me?",
+      "I wasn't done hiding!",
+      "Welp, busted!"
+    ],
+    "run": [
+      "AAAAA!",
+      "Move!",
+      "No brakes!",
+      "Zoom zoom zoom!",
+      "Legs, don't fail me!",
+      "Go go go!"
+    ],
+    "chase": [
+      "Hehehe...",
+      "Stop right there!",
+      "You can't escape!",
+      "C'mere, sweetie!",
+      "Hold still, just one!",
+      "Ooh, fresh prey!",
+      "Daoist, please stop!"
+    ],
+    "flee": [
+      "Help me!",
+      "Mommy!",
+      "I'm just a baby!",
+      "Wrong guy!",
+      "Spare me!",
+      "I surrender!",
+      "Peace, not war!"
+    ],
+    "hit": [
+      "Ouch!",
+      "That hurts!",
+      "What the—!",
+      "Cheap shot!",
+      "Oof!",
+      "Who did that?!",
+      "Easy there!"
+    ],
+    "breakthrough": [
+      "I'm enlightened!!!",
+      "Heaven be my witness!",
+      "New realm, baby!",
+      "Look at me now!",
+      "Thank the heavens!"
+    ],
+    "levelup": [
+      "Level up!",
+      "Smells good!",
+      "Getting stronger!",
+      "A bit more power!",
+      "Smooth!"
+    ],
+    "realm_drop": [
+      "Lost my realm!",
+      "All that grinding...",
+      "Demoted, ouch!",
+      "Back to square one!",
+      "Heaven hates me!"
+    ],
+    "teleport_in": [
+      "Where am I???",
+      "Huh? I'm lost!",
+      "Dizzy portal!",
+      "Who brought me here?",
+      "Wrong house!"
+    ],
+    "teleport_out": [
+      "I'm outta here!",
+      "Bye bye!",
+      "See ya over there!",
+      "Portal time!"
+    ],
+    "death": [
+      "Welp...",
+      "I'll go first!",
+      "See you next life!",
+      "Unbelievable!"
+    ],
+    "respawn": [
+      "I'm back!",
+      "Not over yet!",
+      "Respawn, slash again!",
+      "Quick nap, back to it!"
+    ],
+    "no_swords": [
+      "Out of swords!",
+      "Bare hands here!",
+      "Anyone got a sword?",
+      "Run first!"
+    ],
+    "bush": [
+      "Shhh...",
+      "Nobody here.",
+      "I am a bush.",
+      "Don't look at me..."
+    ],
+    "shocked": [
+      "Huh???",
+      "Oh my heavens!",
+      "Whoa!",
+      "Say what?!",
+      "This guy is nuts!",
+      "Absolute cinema!"
+    ]
+  },
+  "characters": {
+    "a_hon": "A Hớn Bánh Bao",
+    "ba_tam_loa": "Bà Tám Loa",
+    "ong_ba_vong": "Ông Ba Võng",
+    "dai_ca_dep": "Đại Ca Dép Tổ Ong",
+    "map_tra_sua": "Thằng Mập Trà Sữa",
+    "co_ba_ganh": "Cô Ba Gánh Hàng",
+    "su_phu_mi": "Sư Phụ Mì Gói",
+    "be_ti": "Bé Tí Cơ Bắp",
+    "shipper": "Anh Shipper Tia Chớp",
+    "cu_rua": "Cụ Rùa Thiền"
+  },
+  "charactersShort": {
+    "a_hon": "A Hớn",
+    "ba_tam_loa": "Bà Tám",
+    "ong_ba_vong": "Ông Ba",
+    "dai_ca_dep": "Đại Ca",
+    "map_tra_sua": "Thằng Mập",
+    "co_ba_ganh": "Cô Ba",
+    "su_phu_mi": "Sư Phụ",
+    "be_ti": "Bé Tí",
+    "shipper": "Shipper",
+    "cu_rua": "Cụ Rùa"
+  },
+  "buffs": {
+    "spin": "Swift Blades",
+    "haste": "Godspeed",
+    "magnet": "Magnet",
+    "hard": "Steel Blades",
+    "shield": "Diamond Ward",
+    "exp2": "Double EXP Pill",
+    "stealth": "Stealth Talisman"
+  },
+  "rotateHint": "Turn your phone sideways for a wider view",
+  "minimapToggle": "M key: enlarge map",
+  "guideTitle": "Controls",
+  "secsMin": "{m}m {s}s",
+  "secsOnly": "{s}s",
+  "skillBtnHintTouch": "Skill — tap to use",
+  "skillBtnHintPc": "Skill — press Space or click here",
+  "guideKeysTouch": [
+    {
+      "key": "Drag",
+      "what": "Move"
+    },
+    {
+      "key": "Double-tap & hold · 🔥",
+      "what": "Blood Burn"
+    },
+    {
+      "key": "✦",
+      "what": "Skill (recharges)"
+    }
+  ],
+  "guideKeysPc": [
+    {
+      "key": "W A S D",
+      "what": "Move"
+    },
+    {
+      "key": "Shift · double-click hold",
+      "what": "Blood Burn"
+    },
+    {
+      "key": "Space",
+      "what": "Skill (recharges)"
+    },
+    {
+      "key": "M",
+      "what": "Map"
+    }
+  ],
+  "realmNames": [
+    "Qi Refining",
+    "Foundation Establishment",
+    "Golden Core",
+    "Nascent Soul",
+    "Deity Transformation",
+    "Void Refinement",
+    "Body Integration",
+    "Tribulation Transcendence",
+    "Mahayana",
+    "True Immortal",
+    "Golden Immortal",
+    "Taiyi Jade Immortal",
+    "Daluo Golden Immortal",
+    "Dao Ancestor"
+  ],
+  "charNick": {
+    "a_hon": "the Bun Guy",
+    "ba_tam_loa": "Megaphone Auntie",
+    "ong_ba_vong": "Hammock Grandpa",
+    "dai_ca_dep": "Flip-Flop Boss",
+    "map_tra_sua": "Boba Big Boy",
+    "co_ba_ganh": "the Street Vendor",
+    "su_phu_mi": "Noodle Master",
+    "be_ti": "Tiny Muscles",
+    "shipper": "Lightning Courier",
+    "cu_rua": "Zen Turtle"
+  },
+  "lang": {
+    "label": "Language",
+    "auto": "Auto"
+  },
+  "quality": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "seo": {
+    "title": "{name} — Cultivation .io game, play free in your browser",
+    "description": "Cultivate with hundreds of flying swords. Cut down rivals, steal their power, ascend to Dao Ancestor — if you can run fast enough. Free browser game.",
+    "intro": [
+      "You are a fresh disciple with just one sword to your name. Collect Spirit Qi, gather more swords, and stack them into rings orbiting around you — the more rings, the longer your reach. Meet a weaker Daoist? Chase them down and steal their cultivation. Meet a stronger one? Run… while shouting very politely: <em>\"Fellow Daoist, please stop!\"</em>",
+      "Nine great realms from Qi Refining to Mahayana, then five Immortal realms up to Dao Ancestor. Five zones, random portals, ten ridiculous characters with ten signature skills. No download, no sign-up — type a name and you're in."
+    ],
+    "shotsTitle": "What it looks like in game",
+    "shots": [
+      {
+        "alt": "A low-realm character with a few flying swords orbiting, picking up Spirit Qi from the ground",
+        "caption": "Just starting: a few swords. Pick up Spirit Qi from the ground to get more."
+      },
+      {
+        "alt": "A higher-realm character with dozens of swords arranged in rings around them",
+        "caption": "Climb realms: swords form rings around you — thicker rings, longer reach."
+      },
+      {
+        "alt": "Two players with big sword rings closing in on each other, room leaderboard on the right",
+        "caption": "Meet another Daoist: swords clash, and the thinner ring breaks first."
+      }
+    ],
+    "howtoTitle": "How to play",
+    "howto": [
+      {
+        "b": "Move:",
+        "t": "on PC use WASD, arrow keys, or hold the mouse. On phones, drag your finger."
+      },
+      {
+        "b": "Collect swords:",
+        "t": "pick up Spirit Qi on the ground to add swords. They orbit you and strike on their own."
+      },
+      {
+        "b": "Steal cultivation:",
+        "t": "grind down a weaker player's sword ring until their body is exposed, then strike — you absorb their cultivation. Meet someone stronger? Run."
+      },
+      {
+        "b": "Level up realms:",
+        "t": "enough cultivation and you break through — you grow bigger, get more swords, and reach farther."
+      },
+      {
+        "b": "Skills:",
+        "t": "each character has a unique skill (Space key or round button) that recharges over time and stacks charges."
+      },
+      {
+        "b": "Careful:",
+        "t": "with only one ring left, a hit to the body ends your run at any realm — press \"Play again\" to restart from Qi Refining."
+      }
+    ],
+    "faqTitle": "FAQ",
+    "faq": [
+      {
+        "q": "Is the game free?",
+        "a": "Completely free. No top-ups, no item shop, and nothing you can buy to be stronger than other players."
+      },
+      {
+        "q": "Can I play on my phone?",
+        "a": "Yes, right in your mobile browser — drag your finger to move. Turn your phone sideways for a wider view."
+      },
+      {
+        "q": "Do I need an account?",
+        "a": "No. Type a name and play. No email, no password. Your name and character are remembered on your device for next time."
+      },
+      {
+        "q": "Can I play with friends?",
+        "a": "Yes — if you join at the same time you'll almost certainly meet, because new players always go into the busiest room. There are no private room codes yet, so to be sure, press \"Play\" at the same moment."
+      },
+      {
+        "q": "Does it run on weak devices or slow internet?",
+        "a": "Yes. Nothing to download or install. If it stutters, press <b>V</b> to lower the graphics quality."
+      }
+    ],
+    "langLabel": "Language:",
+    "feedback": "Feedback / report a bug",
+    "privacy": "Privacy policy"
+  },
+  "_meta": {
+    "lang": "en",
+    "name": "English",
+    "flag": "🇬🇧",
+    "locale": "en-US"
+  }
+}

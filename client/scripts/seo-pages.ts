@@ -127,12 +127,20 @@ function page(base: string, d: J, lang: Lang, have: Lang[]): string {
   const alt = have.map((l) => `    <link rel="alternate" hreflang="${l.code}" href="https://${brand.domain}${l.path}" />`).join('\n');
   const head = `    <link rel="canonical" href="${url}" />\n${alt}\n    <link rel="alternate" hreflang="x-default" href="https://${brand.domain}/" />\n    <meta property="og:locale" content="${lang.og}" />\n`;
   h = h.replace('</head>', `${head}  </head>`);
+  if (lang.code !== 'vi') {
+    // Màn hình tải hiện TRƯỚC khi JS nạp từ điển: không đổi thì trang /th/ chớp chữ Việt
+    // vài giây trên mạng chậm (đo 1/11: iPhone WebKit ~5 s).
+    h = h.replace(/(<div class="boot-name">)[\s\S]*?(<\/div>)/, `$1${name}$2`);
+    h = h.replace(/(<div class="tagline">)[^<]*(<\/div>)/, `$1${attr(tagline)}$2`);
+    h = h.replace(/(<div class="step" id="boot-step">)[^<]*(<\/div>)/, `$1${attr(d.loadUi as string)}$2`);
+  }
   const start = h.indexOf('<!--seo-below');
   const end = h.indexOf('<!--/seo-below-->');
   if (start < 0 || end < 0) {
     throw new Error('seo-pages: thiếu cặp chú thích <!--seo-below--> … <!--/seo-below--> trong index.html');
   }
-  return h.slice(0, start) + below(seo, lang, have) + '\n    ' + h.slice(end + '<!--/seo-below-->'.length);
+  // Giữ cặp chú thích trong trang ra: chạy lại `seo:pages` (không qua vite build) vẫn được.
+  return `${h.slice(0, start)}<!--seo-below-->\n    ${below(seo, lang, have)}\n    <!--/seo-below-->${h.slice(end + '<!--/seo-below-->'.length)}`;
 }
 
 const base = readFileSync(join(DIST, 'index.html'), 'utf8');
