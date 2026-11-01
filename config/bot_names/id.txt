@@ -1,0 +1,442 @@
+# Tên bot kiểu người chơi Indonesia — spec v6.34 §9.4.
+# Mỗi dòng 1 tên, 2–16 ký tự. Dòng bắt đầu bằng # là chú thích. Người bản ngữ duyệt: i18n/NOTES.md.
+Ucok
+Asep
+Ujang
+Cecep
+Udin
+Mamat
+Jajang
+Encep
+Otong
+Kang Dadang
+Mas Bro
+Bang Jago
+Neng Geulis
+Cici
+Koko
+Dek Ayu
+Mbak Sri
+Kak Rara
+Om Jack
+Tante Lina
+Bocil
+Bang Rizky
+Mas Joko
+Teh Euis
+Akang
+Abang
+Nyai
+Ndut
+Gendut
+Cimol
+Cilok
+Seblak
+Bakso
+Martabak
+Tahu Bulat
+Cireng
+Klepon
+Rendang
+Sate Ayam
+Es Teh
+Kopi Susu
+Pisang Goreng
+Mie Telor
+Krupuk
+Tempe Mendoan
+Ayam Geprek
+Nasi Uduk
+Lontong
+Combro
+Batagor
+jangan bunuh
+numpang lewat
+santuy aja
+gas terus
+mabar yuk
+pemula nih
+wifi tetangga
+mama manggil
+sinyal ilang
+lagi lapar
+bentar lagi
+sabar ya
+ampun bang
+ayo mabar
+nggak jago
+ngantuk berat
+bucin akut
+jomblo abadi
+kaum rebahan
+anak senja
+mager parah
+gabut doang
+lagi galau
+santai kawan
+nyasar nih
+pedang ilang
+kabur dulu
+jalan jalan
+tobat dulu
+sekali lagi
+anak kos
+healing dulu
+lagi puasa
+kuota habis
+cari makan
+tidur aja
+ojol santai
+tukang parkir
+pak RT
+bu kantin
+anak baik
+kalem bro
+gak ngerti
+tolong dong
+wkwkwk
+sultan kecil
+raja rebahan
+ratu galau
+pejuang skripsi
+mahasiswa telat
+guru les
+calon sultan
+pecinta kucing
+sobat misqueen
+duta santai
+panglima gabut
+akbar.88
+Dewi
+Satria_T
+gendut09
+elang_lucu
+KucingCepat9
+xJokox
+Nur_9
+KancilJago
+Mega.321
+fitri.7
+Rafi12
+MonyetKalem
+^Indah^
+SyifaMDN
+suci.23
+Encep.321
+Lontong9
+Gilang_77
+~Koko
+LeleImut
+Citra~
+Vina
+PandaGalau
+AyamKalem11
+Andi_13
+PandaSakti10
+Otong_R
+Dewi11
+Jajang_23
+Alya
+LeleSangar
+Anisa98
+Aulia
+Dafa.01
+LeleLucu123
+Andi.27
+FarhanBDG
+satria.10
+Ujang09
+GajahKalem
+kancil_cepat
+Cireng17
+Zahra B
+Laras22
+Sari
+kambing_lambat
+Ayu
+Tasya
+Asep_R
+MonyetGemoy
+Made.G
+Aulia101
+Intan.33
+Cireng K
+KancilKalem123
+Dewi.2009
+KerbauLambat21
+bebek_kalem
+Novi_2004
+Indah64
+Arif.2008
+nabila_9
+Putri_2005
+seblak13
+PandaJago99
+elang_gemoy
+Syifa27
+Krupuk_00
+Jajang_x
+kucing_sangar
+Krisna1999
+udin11
+kambing_lucu
+Suci~
+Rara_21
+Rangga_2005
+bocil.00
+Syifa_19
+yoga.14
+klepon17
+rendy_05
+Ilham
+Rizal
+salsa_21
+irfan.7
+Gilang_22
+Hendra_D
+gajah_malas
+Gendut_98
+Andi.ganteng
+xRezax
+Batagor.ganteng
+Kirana
+Kirana.BDG
+made9
+Aulia.N
+Koko.manis
+fadil_04
+Eko2005
+Ndut.11
+TupaiGalau
+Laras_x
+bocil_13
+jajang_22
+Batagor.SMG
+wahyu_06
+KambingLapar
+KancilSangar10
+Cecep_A
+Putri_11
+lontong_12
+Syifa_x
+KerbauJago
+~Sari
+JokoBDG
+Nyai_2011
+Rina.manis
+abang.12
+HarimauKalem
+KambingLambat
+Bayu K
+Nabila
+Ratna
+Rendy_13
+bayu_12
+Ilham.ganteng
+Mamat_33
+rendy12
+Bagas_2006
+Rendy_42
+Koko_2012
+Akang.17
+Rendy_2010
+PandaKecil77
+Krisna_98
+Dewi.19
+kucing_lambat
+Bayu
+siti_10
+ayam_gemoy
+Nur
+GajahNgantuk98
+ElangNgantuk42
+GajahGalau00
+dimas_101
+Fikri
+AndiID
+Asep_D
+Budi_05
+Bayu_05
+ElangKalem
+Melati_K
+nadia99
+MadeSBY
+Lestari A
+Ujang_2003
+abang_24
+Joko.2012
+teguh21
+Nabila.S
+Intan77
+Abang11
+xGendutx
+mamat_98
+Ujang.12
+Anisa
+rehan.321
+dewi.321
+Mega_2003
+Zahra
+Komang.ganteng
+Farhan01
+Cireng.T
+DaniJKT
+lele_imut
+BebekCepat
+Cecep.321
+Yoga
+rangga.55
+aulia.64
+Dewi_007
+Nyai2008
+Amel Y
+Galih
+Bagas2004
+Hafiz.18
+Aulia.cantik
+~Udin
+Intan
+Mega_JKT
+nisa11
+Bunga24
+kirana.123
+Ratna.B
+KambingCepat
+WatiSBY
+Dimas_99
+Klepon_13
+martabak42
+GajahCepat
+Indah
+kerbau_lucu
+Reza.ganteng
+BagasBDG
+xLestarix
+NisaBDG
+kerbau_imut
+Cici~
+Andi
+Dani.V
+KodokMalas
+Ucok_09
+Koko11
+Nisa.07
+Rangga_M
+Jajang10
+Udin_03
+Dinda_G
+Indah_09
+hafiz.33
+suci08
+Encep64
+Syifa
+RendangBDG
+Krupuk_MDN
+ElangLucu11
+Ningsih~
+xIrfanx
+Keisha.A
+MonyetSakti08
+.Udin.
+Amel_ID
+Melati.cantik
+KambingSakti07
+GajahNgantuk33
+Ningsih.manis
+Putu_321
+Reza
+sari_45
+rangga_9
+Martabak_S
+Fitri
+irfan13
+Agus_E
+Nabila.05
+Kirana.2012
+Tiara.ID
+Ndut_55
+~Cimol
+Rara.R
+TupaiKecil
+rizal_13
+Putri_BALI
+Budi42
+Salsa
+Fadil.MDN
+Rara
+Udin17
+Melati.SBY
+nadia.11
+Otong1999
+Amel99
+dewi.55
+Rehan.K
+BebekSantai
+TupaiNgantuk
+Alif27
+Gilang.ID
+Rizal_BDG
+tasya_99
+rizky.21
+krupuk_22
+jajang_11
+_Koko_
+Krupuk.10
+Farhan
+AyamSantai
+Krisna_08
+Agus_x
+TupaiSakti10
+Combro_MDN
+Rizal.2005
+KucingNgantuk00
+Nisa_D
+elang_sakti
+Rendang_19
+Rina.11
+Akbar_22
+ElangLapar
+Yanti_321
+Cimol_BDG
+wati321
+LeleSakti
+Nur V
+CicakLapar
+KancilMalas
+alya101
+yoga04
+_Martabak_
+Melati_64
+xPutux
+Reza_MDN
+lele_sakti
+Andi_101
+tiara19
+Nur_99
+Laras_JOGJA
+panda_lambat
+krisna_18
+klepon_11
+Rehan P
+Syifa7
+MonyetSangar03
+Nyai_9
+.Wati.
+FadilJKT
+jajang_14
+Yoga.MDN
+Ilham.A
+Made_2006
+Anisa.A
+MonyetLapar101
+dafa.55
+LeleLucu
+Udin.2006
+PandaSangar
+Krupuk_99
+PandaNgantuk
+dimas_88
+Budi_07
+^Rehan^
+Wahyu.99
+Dimas.08

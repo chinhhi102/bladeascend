@@ -1,0 +1,33 @@
+# Kata kasar bahasa Indonesia — menyensor nama pemain dengan ***; CI cek config/bot_names/id.txt (spec v6.34 §9.4).
+# Satu kata huruf kecil per baris. Cocok substring: hindari token pendek ("asu", "tai", "coli").
+anjing
+anjir
+bangsat
+babi
+kontol
+memek
+ngentot
+ngewe
+jancok
+jancuk
+bajingan
+keparat
+goblok
+goblog
+tolol
+kampret
+perek
+lonte
+pelacur
+pepek
+titit
+bencong
+banci
+brengsek
+sialan
+idiot
+bego
+dongo
+colmek
+toket
+silit

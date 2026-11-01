@@ -1388,3 +1388,52 @@ Emote: bong bóng chữ trên đầu nhân vật (người và bot), ≤ 22 ký 
 | `shocked[5]` | ″ | Tuyệt đối điện ảnh! | ระดับภาพยนตร์! |
 
 
+
+---
+
+# Tên bot (v6.34 §9.4)
+
+Agent soạn ngày 02/11/2026. Mỗi ngôn ngữ có 1 tệp tên bot `config/bot_names/<lang>.txt`
+(vi = 1 000 tên cũ chép nguyên; en, pt, es, id, th mỗi tệp 440 tên; `intl.txt` 440 gamer tag
+trung tính) và 1 tệp từ tục `config/bad_words/<lang>.txt` (intl dùng chung `en.txt`).
+Người bản ngữ duyệt **cùng đợt** với bản dịch json của ngôn ngữ mình.
+
+**Luật của tệp tên (CI sẽ kiểm):** ≥ 400 tên (intl ≥ 300), 2–16 ký tự (đếm code point —
+tiếng Thái tính cả dấu), chỉ chữ Latin (có dấu), chữ Thái, chữ số và `_ . ~ ^ -` dấu cách;
+không ★ ♥ ✿ emoji; không trùng; không chứa từ nào trong `bad_words/<lang>.txt` hoặc
+`bad_words/en.txt` (so chuỗi con, không phân biệt hoa thường). Dòng `#` là chú thích.
+
+## Người duyệt cần xem gì trong `bot_names/<lang>.txt`
+1. **Có giống nickname người thật nước mình không?** Tên ghép tự động (tên + số/năm, tên +
+   mã vùng như `_BR` `_MX` `.BDG` `_CNX`, ghép tính từ + con vật) — tên nào nghe như máy
+   sinh thì xoá hoặc sửa. Giữ tỉ lệ pha trộn: tên thật, tên ở nhà, câu đùa, teencode chữ thường.
+2. **Không có người nổi tiếng / streamer / thương hiệu / nhân vật có bản quyền** của nước mình
+   mà agent không biết (vd ca sĩ, diễn viên, YouTuber địa phương trùng nickname).
+3. **Không có nghĩa xấu, tục, phân biệt** theo tiếng lóng địa phương (agent không bắt hết được).
+4. Câu đùa (vd `lag is real`, `não me mata`, `numpang lewat`, `ขอเกิดใหม่`) có tự nhiên không.
+5. Sửa xong: số tên vẫn ≥ 400, không thêm ký tự ngoài danh sách trên.
+
+## Người duyệt cần xem gì trong `bad_words/<lang>.txt`
+- Thiếu từ tục/miệt thị phổ biến nào thì thêm (viết thường, 1 từ/dòng).
+- **Tránh từ quá ngắn** vì lọc theo chuỗi con sẽ che nhầm tên thường (vd en `ass` dính
+  `Cassie`, es `culo` dính `vehículo`, th `หี` dính `หีบ`, `สัด` dính `สัดส่วน`). Agent đã cố ý bỏ các từ đó.
+- en đã cố ý **không** đưa `kike` (miệt thị) vì trùng biệt danh Tây Ban Nha rất phổ biến `Kike`
+  (Enrique) — nếu server gộp mọi tệp từ tục để lọc tên người chơi thì sẽ che nhầm.
+
+## ⚠ Tên agent không chắc
+- **en**: `ok boomer jk` (có thể bị coi là khiếm nhã nhẹ), `free real estate` (meme — ổn không?).
+- **pt**: ghép tính từ + con vật (`GatoDoido`, `QuatiSortudo`, `BodeRápido`) — đã chỉ dùng
+  danh từ giống đực để khỏi lệch giống; xem có tự nhiên không. Đã bỏ `Babi` (trùng từ tục id `babi`).
+- **es**: `Güero`, `Flaco`, `Gordi`, `Chula` (biệt danh thân mật kiểu Mexico/Tây Ban Nha — có bị
+  coi là chê ngoại hình không?), `Kike`. Pha trộn từ lóng nhiều nước (`qué onda`, `bacán`,
+  `mola mucho`, `re piola`) — chấp nhận được vì bot là "người nhiều nước". Đã bỏ `Begoña`
+  (dính từ tục id `bego` nếu gộp bộ lọc).
+- **id**: `Gendut`, `Ndut` (béo — thân mật hay chê?), `Bocil` (bé con — có bị coi là chế giễu?),
+  `Nyai` (có thể mang nghĩa cổ/khó chịu), `sobat misqueen`, `jomblo abadi`.
+- **th**: `Earth`, `New`, `Ohm` (nickname phổ biến nhưng trùng tên diễn viên nổi tiếng — agent đã
+  bỏ `Mew`, `Bright`, `Win`, `Gulf`, `Tay`, `Off`, `Toon`, `Lisa`, `BamBam`); tiền tố `ไอ้`
+  (`ไอ้ตาล`, `ไอ้ทองหยอด`) có thể nghe suồng sã; tên Latin kiểu `Isan Girl`, `Sao Chiang Mai`,
+  `Bkk Boy` có tự nhiên không.
+- **intl**: một số từ chung trùng tên nhân vật game (`Echo`, `Rogue`, `VoidWalker`, `Nova`) —
+  agent coi là từ thông thường, đã bỏ `Apex`, `Jinx`, `Taz`, `FirstBlood`, `BladeRunner`.
+- **vi.txt**: chép nguyên `config/bot_names.txt` (tệp gốc không có dòng chú thích đầu tệp).

@@ -1,0 +1,39 @@
+# Groserías en español — enmascara nombres con ***; CI revisa config/bot_names/es.txt (spec v6.34 §9.4).
+# Una entrada en minúsculas por línea. Coincide por subcadena: evitar tokens que caen en palabras normales ("culo" → "vehículo").
+puta
+puto
+mierda
+coño
+cabrón
+cabron
+pendejo
+joder
+gilipollas
+polla
+verga
+chingada
+chingar
+culero
+maricón
+maricon
+marica
+hijo de puta
+hdp
+mamón
+pinche
+malparido
+gonorrea
+huevón
+weón
+boludo
+pelotudo
+conchatumadre
+carajo
+ojete
+panocha
+follar
+mamada
+zorra
+imbécil
+imbecil
+subnormal

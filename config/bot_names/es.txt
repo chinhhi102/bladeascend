@@ -1,0 +1,442 @@
+# Tên bot kiểu người chơi nói tiếng Tây Ban Nha (Tây Ban Nha + Mỹ Latinh) — spec v6.34 §9.4.
+# Mỗi dòng 1 tên, 2–16 ký tự. Dòng bắt đầu bằng # là chú thích. Người bản ngữ duyệt: i18n/NOTES.md.
+Pablito
+Javi
+Álex
+Nacho
+Santi
+Seba
+Tomi
+Nico
+Rodri
+Fer
+Pepe
+Paco
+Manolo
+Juanma
+Chema
+Quique
+Kike
+Toni
+Edu
+Luchito
+Panchito
+Chuy
+Memo
+Beto
+Lalo
+Pancho
+Güero
+Flaco
+Gordi
+Chiqui
+Lupita
+Vale
+Pau
+Lu
+Cami
+Majo
+Maite
+Rocí
+Juli
+Flor
+Agus
+Coni
+Sofi
+Caro
+Pili
+Charo
+Nena
+Chula
+Peque
+Chato
+Tito
+Nachito
+Moni
+Churro
+Tortilla
+Paella
+Tapita
+Empanada
+Mate
+Alfajor
+Tamal
+Pozole
+Chicle
+Croqueta
+Gazpacho
+Turrón
+no me mates
+solo de paso
+tranqui tío
+vamos al lío
+qué pasa tío
+mi mamá llama
+se fue el wifi
+soy nuevo
+perdí la espada
+ayuda porfa
+una más y ya
+ni modo
+qué onda
+órale pues
+no manches
+ya valió
+a darle
+qué chévere
+de una
+bacán
+está chido
+qué guay
+mola mucho
+a tope
+dale nomás
+re piola
+tengo hambre
+me da igual
+voy a mi bola
+sin ping
+me perdí
+corre corre
+pa la casa
+yo no fui
+nadie me quiere
+hoy no
+déjame vivir
+aquí ando
+todo bien
+con calma
+soy de paz
+la siesta
+sin batería
+el que corre
+fuera de mi
+tío listo
+el novato
+la abuela gamer
+chiringuito
+vecino wifi
+madrugador
+dormilón
+despistado
+perezoso
+el tranquilo
+la jefa
+el profe
+sin prisa
+Martín
+Gordi.2010
+manuel.22
+guadalupe42
+Constanza
+Esteban77
+Esteban.H
+SapoEnojado
+Abril_x
+Aitana
+Óscar
+el.Chicle
+Agustín.12
+SebastiánES
+Mateo.2011
+Jimena.05
+Fernando27
+Ainhoa
+xManuelx
+RatónPerezoso
+santiago_03
+Fernanda.ES
+valeria.101
+sebastián99
+Edu_VE
+pau.27
+elena06
+Antonella
+Fernanda_1999
+Memo06
+tigre_perezoso
+Marcos11
+Antonio
+Santiago_2005
+Daniela
+ZorroListo
+el.Óscar
+Álex.99
+Renata
+Bruno_MX
+rocío9
+Beto.2012
+~Alba
+Sara
+oscar.02
+Francisco_UY
+Valeria_2009
+ToroGordito
+Inés.98
+pez_pequeño
+Cami.ES
+~Mateo
+GatoValiente08
+Irene2009
+SapoTravieso
+SapoSuertudo
+Manuel
+paloma19
+Mateo
+Nacho_A
+.Rodrigo.
+GonzaloCO
+Paloma_00
+sapo_loco
+ToroRápido
+Santiago_55
+SantiagoCL
+Antonella_007
+diego_23
+sapo_suertudo
+Fernanda
+Rodrigo.2012
+Esteban_MX
+Sebastián77
+Nena_05
+Camila_01
+ConejoFeliz
+Sebastián45
+Marcos_64
+Vale_007
+SapoHambriento
+Toni19
+alfajor.19
+pablo_7
+ximena.10
+Adrián_27
+Daniela_19
+la.Itziar
+rodrigo_03
+Maite.03
+Santiago05
+Manolo_55
+Florencia.08
+Ximena_98
+Óscar_AR
+Guadalupe
+Chato18
+Javier.S
+Churro_x
+Rodrigo_13
+Tito.CO
+Joaquín
+Santi_x
+gato_suertudo
+ZorroDormido
+Jimena_88
+Lucía_11
+ConejoGordito
+MateoEC
+Camila.77
+Martina_42
+iker98
+Agus.F
+ratón_pequeño
+lucia55
+Carmen06
+ElenaVE
+ZorroTímido77
+Manolo A
+ZorroEnojado
+noelia10
+Adrián_x
+Mariana.2007
+RatónValiente
+Elena_2008
+Hugo S
+~Peque
+agustin_18
+Esteban.2011
+CarmenEC
+RenataPE
+Miguel.101
+~Joaquín
+Pablo.12
+GalloLento
+Claudia.21
+camila.09
+pez_travieso
+toro_feliz
+ToroPerezoso17
+Fer.2008
+Rubén
+Andrés
+Sergio_7
+Mate_2012
+maite33
+GuadalupeEC
+Luciana_22
+la.Fernanda
+toro_tímido
+xInésx
+Julián
+Iker
+LoboListo
+Samuel.2005
+Raúl.2008
+guadalupe.101
+Santiago.2005
+Santiago2007
+Paula_2005
+nerea.18
+PatoDormido
+rubén.45
+Valentina.2003
+RatónGordito
+Vale_D
+CamilaVE
+ConejoDormido06
+sara321
+MonoLoco
+el.Pozole
+carmen_08
+Juli.CO
+Álex_x
+GalloSuertudo
+Óscar_45
+Fernando.UY
+sebastián.98
+SapoLoco123
+paula.21
+Itziar007
+~Agustina
+Antonio_03
+Sebastián
+PolloPequeño33
+Diego
+^Fernanda^
+Martín_03
+Pablo.18
+daniela.03
+Sara23
+laura321
+Beto.VE
+nerea.08
+ZorroTímido
+chato02
+Tito42
+Bruno_M
+Diego.10
+PolloGordito
+^Güero^
+Irene.06
+GalloFeliz
+ToroLoco
+RatónPerezoso99
+Noelia_M
+PolloLoco321
+irene321
+Julián_07
+Iker.10
+Martina_AR
+chula12
+paco_05
+tomás12
+Tortilla C
+xElenax
+álvaro_02
+natalia.27
+_Miguel_
+PolloFeliz
+Andrés_77
+panchito09
+Paula_123
+lobo_travieso
+OsoHambriento02
+GatoTímido99
+Sergio
+Inés_12
+TigreTravieso
+OsoEnojado007
+la.Peque
+Bruno_101
+romina_64
+Laura.22
+ratón_feliz
+Mariana_09
+javier05
+Juli_45
+AntonellaMX
+Florencia_PE
+hugo.24
+la.Valeria
+Lucía
+inés64
+IkerPE
+LoboRápido
+MonoRápido17
+Iván_L
+ZorroLoco
+Itziar~
+Carmen_EC
+_Agustina_
+valeria_05
+Iker_21
+Agustín
+Paula_A
+.Diego.
+Hugo.EC
+Itziar_12
+Tomás.MX
+LoboLento
+Seba17
+Alejandro_123
+ToroValiente
+irene_09
+Nicolás.01
+Joaquín.23
+Constanza_03
+Paula.UY
+Miguel
+abril77
+Peque.14
+Lupita_07
+PatoFeliz03
+itziar19
+OsoRápido
+PolloRápido
+SapoPerezoso14
+Fernanda.CL
+churro_12
+Chula.22
+el.Manuel
+Jimena
+pez_listo
+lucia11
+Nerea_19
+Rodri17
+renata_10
+Nerea.AR
+Andrea
+julián.98
+Sara.42
+xGordix
+Ignacio
+Agustina.03
+OsoLento
+_Emiliano_
+chula.13
+Carlos_MX
+Sergio.10
+dani_13
+Martín03
+Claudia
+pollo_listo
+nachito12
+Lucía_2008
+Paloma
+Raúl.2011
+PolloSuertudo98
+BurroPequeño03
+Luciana.I
+Antonella_MX
+Luciana_12
+PolloValiente02
+_Pablo_
+Tortilla_07

@@ -1,0 +1,442 @@
+# Tên bot kiểu người chơi Brasil (pt-BR) — spec v6.34 §9.4.
+# Mỗi dòng 1 tên, 2–16 ký tự. Dòng bắt đầu bằng # là chú thích. Người bản ngữ duyệt: i18n/NOTES.md.
+Gui
+Joãozinho
+Pedrinho
+Tatá
+Dudu
+Juju
+Lulu
+Nanda
+Rafa
+Gabi
+Bia
+Mari
+Malu
+Lelê
+Cacá
+Tetê
+Zezinho
+Juninho
+Neto
+Binho
+Léo
+Teteu
+Caiquinho
+Fefê
+Mimi
+Dani
+Lari
+Nina
+Pipoca
+Paçoca
+Bolinha
+Fofinho
+Xuxu
+Docinho
+Brigadeiro
+Coxinha
+Pastel
+Tapioca
+Pão de Queijo
+Guaraná
+Açaí
+Feijão
+Pudim
+Farofa
+Biscoito
+Quindim
+Sorvete
+não me mata
+só farmando
+tô de boa
+ajuda aí
+mãe chamou
+net caiu
+deixa eu viver
+é nóis
+tamo junto
+sou novato
+perdi a espada
+corre que dá
+vixe maria
+oxe que isso
+eita lasqueira
+bora jogar
+calma aí
+só mais uma
+fé no pai
+tá pegando fogo
+nem vem
+agora vai
+pode vir
+tô com fome
+hoje não
+me erra
+que isso meu
+ixi deu ruim
+sai da frente
+vou de base
+liga não
+sou da paz
+carregador pls
+lag do capeta
+sem ping
+modo turista
+tô perdidinho
+wifi do vizinho
+segura peão
+bagunceiro
+preguiçoso
+zé ninguém
+chá de sumiço
+partiu ranked
+dorminhoco
+sossegado
+aprendiz
+muleke doido
+mó paz
+só observo
+vem tranquilo
+cadê meu pão
+esqueci a janta
+LoboFeliz
+.Dani.
+~Heitor
+duda05
+tucano_brabo
+Mimi_27
+quati_sortudo
+camila04
+Amanda_12
+Vitor
+Beatriz_x
+clara_9
+Rafa.L
+Carol.11
+duda_9
+Larissa64
+Guaraná_MG
+GaloFeliz
+Priscila.BR
+Bruno
+Maria.17
+Fernando.2005
+Dudu_T
+Lucas_27
+Bruna_08
+Tainá
+Lorena
+João42
+sapo_lento
+^Manuela^
+Binho_RJ
+Kamila.88
+~Luana
+Fefê_45
+thaís.12
+Sorvete_06
+MariaxD
+gustavo_03
+Henrique_1999
+^Camila^
+_Lari_
+ana.06
+Gabriela
+Maria.MG
+caiquinho_22
+SapoRápido
+natalia11
+BiscoitoxD
+KauãSP
+arthur_23
+clara11
+wesley.06
+Dani.13
+gato_tímido
+Vitor.CE
+Cauã
+vitória27
+Caiquinho.2005
+Bruna
+LoboSortudo
+Bianca.2005
+SamuelxD
+Vinícius_M
+Clara_02
+RafaelPE
+macaquinho_doido
+Malu_21
+jéssica17
+Rafael
+Igor_2008
+QuatiZangado
+GaloLento
+.Amanda.
+bruna27
+leonardo_98
+Bruna2003
+natália12
+fofinho_04
+PatoEsperto
+lulu9
+Rafaela
+Gabriel
+SapoFeliz
+Vinícius_1999
+Leonardo_88
+Caiquinho_42
+Igor.03
+Mariana_77
+Davi22
+Camila_12
+Luan.2004
+Bolinha_2005
+lelê42
+Kamila99
+_Açaí_
+Lorena27
+.Bianca.
+Lucas_SP
+Rebeca.2009
+Pedro_23
+Leonardo
+Débora_11
+Natália_BR
+Márcio
+GaloSonolento10
+LoboBravo
+Thiago_x
+MicoTímido
+Igor.RS
+Duda.D
+Bernardo_RS
+Heitor_18
+AlicexD
+QuatiDoido
+^Yasmin^
+pedro.06
+Duda
+Breno
+wesley.10
+Isabela.9
+debora123
+Gabi.2007
+Márcio.04
+Sorvete_M
+Tapioca G
+^Melissa^
+samuel.99
+leticia.21
+Tatá.MG
+xAlicex
+Thaís14
+Jéssica_BA
+UrsoEsperto
+Paçoca23
+.Tapioca.
+LoboDoido
+Mariana_123
+Xuxu_99
+ryan.11
+farofa_18
+BichoEsperto
+danilo.101
+felipe10
+QuatiSortudo
+Fernanda123
+YurixD
+João
+Giovanna_C
+Alice
+Leonardo_19
+Leonardo.10
+Vitória
+~Lulu
+Sorvete.PR
+Gui.09
+Tetê.2009
+Wesley_98
+Guaraná_7
+Mari_10
+~Henrique
+Lucas.24
+QuatiSortudo101
+Pedro_A
+BiaxD
+Otávio007
+UrsoDoido55
+leticia99
+xDudax
+~Duda
+Vinícius.2004
+Alan
+PeixeGrande
+Débora.2006
+Juninho.B
+GatoSortudo
+Xuxu A
+TatuSortudo
+mico_grande
+BichoEsperto12
+Lívia.64
+Fernanda_007
+YasminPE
+SofiaPR
+rodrigo_27
+Júlia_04
+tatu_zangado
+Pedro03
+livia_77
+BodeRápido
+Jéssica
+Lulu_BA
+alice_88
+EduardoxD
+Marcelo
+mico_bravo
+JoãoxD
+GaloMalandro24
+GaloBravo
+Eduardo_03
+tucano_faminto
+Leonardo.A
+Bruno2004
+enzo11
+Bianca_42
+SapoSonolento
+Fofinho_RJ
+Bianca_BA
+Melissa.1999
+GaloEsperto09
+.Vinícius.
+DaniloPE
+tatu_sortudo
+Melissa_A
+galo_malandro
+Diego M
+Matheus42
+TatuZangado33
+tucano_esperto
+Samuel
+taina_04
+_Lelê_
+Davi.CE
+_Sofia_
+maria_17
+MicoDoido
+davi09
+Fofinho_2005
+Caiquinho.02
+Davi.99
+Heitor.1999
+heitor_21
+Bolinha.BR
+debora_13
+Júlia
+Ana_27
+Tapioca_x
+Gabriela_MG
+Kamila
+Otávio98
+gustavo.01
+MacaquinhoBravo
+_Farofa_
+TatuEsperto
+Lara.W
+RenanSP
+.Melissa.
+TucanoLento
+TaináRS
+YasminPR
+Luana.V
+_Biscoito_
+fofinho27
+Wesley.2006
+Larissa.00
+QuatiBravo
+Maria.06
+HenriquexD
+PatoFaminto
+pedrinho99
+Jéssica_02
+gui.21
+UrsoMalandro
+bia.18
+sorvete.19
+Luana.R
+PeixeEsperto27
+Felipe
+tatá.77
+Rafaela_12
+Renan22
+Alan M
+PatoLento
+Clara.45
+otávio_12
+Cauã_V
+Helena_x
+Vitor_2006
+julia_10
+Fernando
+FefêPE
+Thaís_18
+sapo_grande
+Guaraná_D
+GiovannaPE
+Nanda_321
+MicoSonolento33
+Renan_10
+manuela.13
+Pedro12
+Sofia_M
+Açaí19
+GaloBrabo08
+Mariana
+Lari.SP
+Mari.13
+fernando03
+breno19
+helena_99
+sofia_321
+CauãxD
+Brigadeiro_01
+Raíssa
+Rodrigo.RJ
+Fefê.D
+biscoito77
+Camila_RJ
+isabela10
+Clara
+gustavo.45
+TatuZangado
+vinícius12
+^Alan^
+JacaréBrabo
+Kamila_SP
+Heitor
+Brigadeiro_64
+Zezinho.P
+^Kauã^
+ValentinaPR
+Nanda_10
+Enzo
+MacaquinhoFeliz
+isabela.24
+Rebeca12
+Renan.13
+_Rodrigo_
+heitor10
+natalia_99
+GaloMalandro
+Rebeca
+Márcio_101
+enzo.9
+~Rafa
+valentina.01
+Priscila_09
+Nina.2009
+^Binho^
+João_01
+GatoFaminto
+isabela08

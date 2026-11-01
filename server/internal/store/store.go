@@ -30,6 +30,8 @@ type Life struct {
 	// SkillCasts: số lần dùng kỹ năng trong mạng — để chỉnh hồi chiêu theo trận thật
 	// (spec v6.25 §6.3, telemetry ≥ 2 ngày).
 	SkillCasts int `json:"skill_casts"`
+	// Lang: ngôn ngữ giao diện của người chơi ("vi", "pt"…) — tỉ lệ tên bot spec v6.34 §9.4.
+	Lang string `json:"-"`
 }
 
 type Store struct {
@@ -39,6 +41,8 @@ type Store struct {
 	cache    map[string]cached
 	// medians: mốc trung vị Uy Danh theo cảnh giới, cache 5 phút (xem median.go).
 	medians medianCache
+	// langs: phân bố ngôn ngữ 7 ngày, cache 10 phút (xem langshares.go).
+	langs langCache
 }
 
 type cached struct {
@@ -91,6 +95,7 @@ var migrations = []string{
 	`CREATE INDEX IF NOT EXISTS lives_hits ON lives(hits)`,
 	`CREATE INDEX IF NOT EXISTS lives_speed ON lives(dai_thua_secs)`,
 	`ALTER TABLE lives ADD COLUMN skill_casts INTEGER NOT NULL DEFAULT 0`, // v6.25 §6.3
+	`ALTER TABLE lives ADD COLUMN lang TEXT NOT NULL DEFAULT ''`,          // v6.34 §9.4
 }
 
 // Open opens (or creates) the database at path. Use ":memory:" for tests.
@@ -122,10 +127,10 @@ func (s *Store) Close() error { return s.db.Close() }
 // Record saves a finished life. Callers must never pass bots (spec §9.3).
 func (s *Store) Record(l Life) error {
 	_, err := s.db.Exec(`INSERT INTO lives
-		(guest_id,name,character,score,hits,peak_exp,peak_level,kills,dai_thua_secs,top1_secs,survive_secs,map,ended_at,skill_casts)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		(guest_id,name,character,score,hits,peak_exp,peak_level,kills,dai_thua_secs,top1_secs,survive_secs,map,ended_at,skill_casts,lang)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		l.GuestID, l.Name, l.Character, l.Score, l.Hits, l.PeakExp, l.PeakLevel, l.Kills,
-		l.DaiThuaSecs, l.Top1Secs, l.SurviveSecs, l.Map, l.EndedAt, l.SkillCasts)
+		l.DaiThuaSecs, l.Top1Secs, l.SurviveSecs, l.Map, l.EndedAt, l.SkillCasts, l.Lang)
 	return err
 }
 

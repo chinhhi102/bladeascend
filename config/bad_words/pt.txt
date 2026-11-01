@@ -1,0 +1,38 @@
+# Palavrões pt-BR — mascara nomes de jogador com ***; CI checa config/bot_names/pt.txt (spec v6.34 §9.4).
+# Uma entrada minúscula por linha. Casa por substring: evitar tokens curtos ("cu", "rola", "pica").
+porra
+caralho
+buceta
+boceta
+puta
+merda
+foda-se
+fodase
+fodido
+viado
+arrombado
+cacete
+cuzão
+cuzao
+piroca
+filho da puta
+vagabunda
+desgraçado
+desgracado
+bosta
+punheta
+xoxota
+xereca
+fdp
+pqp
+vsf
+krl
+corno
+babaca
+retardado
+otário
+otario
+safado
+vadia
+sapatão
+broxa

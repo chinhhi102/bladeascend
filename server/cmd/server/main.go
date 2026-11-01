@@ -98,6 +98,8 @@ func main() {
 		v, _ := st.ScoreMedianPerMin(realm, prog.Realm, time.Now())
 		return v
 	}
+	// Phân bố ngôn ngữ 7 ngày cho tên bot (spec v6.34 §9.4) — cùng kiểu cắm hàm có cache.
+	mgr.LangShares = func() map[string]float64 { return st.LangShares(time.Now()) }
 	tel := startTelemetry(telemetryPath(*telemetryDB), buildIDOrNow(*buildID), *telemetryOn)
 	// Trang quản trị (ADMIN_SPEC §1). Dùng CHUNG file SQLite với bảng xếp hạng, như spec §8
 	// nói — tên bảng đều có tiền tố `admin_` nên không đụng dữ liệu đã có.
@@ -117,7 +119,7 @@ func main() {
 	srv := &server{cfg: cfg, rawCfg: raw, mgr: mgr, store: st, maps: maps, debug: *debug,
 		adminAuth: adminAuth, debugGate: admin.NewDebugGate(adminAuth),
 		buildID: buildIDOrNow(*buildID), startedAt: time.Now(), dbPath: dbFile, mapsDir: *mapsDir,
-		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words.txt")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP),
+		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP),
 		telemetry: tel, env: env, envDefaults: envDefaults}
 	stopSampler := make(chan struct{})
 	// Dọn dẹp hằng ngày (Q28): xoá ảnh góp ý của thư đã khép quá 90 ngày, giữ chữ mãi.

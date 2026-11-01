@@ -407,6 +407,7 @@
     "staging": { "max_humans": 20, "zone_min_chars": 10, "bot_auto_off_at": 20, "loadtested_humans": 20 }
   },
   "bots": {
+    "name_lang_mix": { "room": 0.60, "server": 0.25, "intl": 0.15 },
     "spawn_every_secs": 2,
     "spawn_batch": 2,
     "respawn_secs": 3,

@@ -30,6 +30,8 @@ type LossyConn interface {
 type Client struct {
 	Conn    Conn
 	GuestID string
+	// Lang: mã ngôn ngữ đã chuẩn hoá ("vi", "pt"…; "" = không rõ) — tỉ lệ tên bot §9.4.
+	Lang string
 	// Debug: kết nối này được dùng lệnh test không (ADMIN_SPEC §1.1).
 	//
 	// KHÔNG lấy từ `?debug=true` trên URL. Server tự quyết định lúc bắt tay (phiên admin,

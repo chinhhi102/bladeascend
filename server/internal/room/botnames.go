@@ -2,6 +2,7 @@ package room
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -47,7 +48,10 @@ func (r *Room) rememberName(name string, now float64) {
 // nên xác suất trùng rất thấp, vài lần thử là xong. Trộn cả danh sách mỗi lần sinh bot thì
 // tốn hơn hẳn mà không được gì.
 func (r *Room) pickBotName(now float64) string {
-	names := r.cfg.Bots.Names
+	names := r.cfg.Bots.NamesByLang[r.pickBotLang()]
+	if len(names) == 0 {
+		names = r.cfg.Bots.Names
+	}
 	if len(names) == 0 {
 		return fmt.Sprintf("Khach%03d", r.rng.Intn(1000))
 	}
@@ -89,6 +93,76 @@ func (r *Room) pickBotName(now float64) string {
 	// Hết sạch tên: gắn thêm số cho chắc chắn không trùng. Thà một cái tên hơi nhạt còn hơn
 	// hai nhân vật cùng tên đứng cạnh nhau trong bảng xếp hạng.
 	return fmt.Sprintf("%s%d", names[r.rng.Intn(len(names))], r.rng.Intn(90)+10)
+}
+
+// pickBotLang chọn ngôn ngữ tên cho một bot mới (spec v6.34 §9.4): 15% `intl`, 25% theo
+// người chơi toàn server 7 ngày, 60% theo người thật đang trong phòng.
+//
+// Vì sao theo người TRONG PHÒNG: phòng toàn người Việt mà nửa bảng xếp hạng là tên Thái thì
+// người chơi biết ngay đó là máy — người thật không tự nhiên kéo nhau vào phòng nước khác.
+// Phòng chưa có ai → theo toàn server; toàn server chưa có số liệu → theo phòng; không có
+// gì cả → tiếng Việt (thị trường chính).
+func (r *Room) pickBotLang() string {
+	mix := r.cfg.Bots.NameLangMix
+	u := r.rng.Float64()
+	if u < mix.Intl {
+		return "intl"
+	}
+	room := r.humanLangs()
+	var server map[string]float64
+	if r.LangShares != nil {
+		server = r.LangShares()
+	}
+	first, second := room, server
+	if u < mix.Intl+mix.Server || len(room) == 0 {
+		first, second = server, room
+	}
+	if l := weightedPick(first, r.rng.Float64()); l != "" {
+		return l
+	}
+	if l := weightedPick(second, r.rng.Float64()); l != "" {
+		return l
+	}
+	return "vi"
+}
+
+// humanLangs đếm ngôn ngữ của người thật đang trong phòng (mọi khu); người không rõ ngôn
+// ngữ (client cũ) không tính.
+func (r *Room) humanLangs() map[string]float64 {
+	out := map[string]float64{}
+	for _, z := range r.zones {
+		for _, c := range z.clients {
+			if c.Lang != "" {
+				out[c.Lang]++
+			}
+		}
+	}
+	return out
+}
+
+// weightedPick chọn một khoá theo trọng số (u ∈ [0,1)); map rỗng → "". Duyệt theo thứ tự
+// khoá đã sắp để cùng u luôn ra cùng kết quả (test lặp lại được).
+func weightedPick(w map[string]float64, u float64) string {
+	keys := make([]string, 0, len(w))
+	total := 0.0
+	for k, v := range w {
+		if v > 0 {
+			keys = append(keys, k)
+			total += v
+		}
+	}
+	if total == 0 {
+		return ""
+	}
+	sort.Strings(keys)
+	x := u * total
+	for _, k := range keys {
+		if x < w[k] {
+			return k
+		}
+		x -= w[k]
+	}
+	return keys[len(keys)-1]
 }
 
 // varyName thêm biến thể nhỏ: đổi `_` ↔ `.` hoặc gắn 1–2 chữ số (spec §9.4).

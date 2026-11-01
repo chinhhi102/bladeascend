@@ -253,15 +253,18 @@ func TestEmptyRoomCloses(t *testing.T) {
 
 func TestNameFilter(t *testing.T) {
 	cfg := config.MustLoadDefault()
-	f := LoadNameFilter(cfg, config.FindRepoFile("config/bad_words.txt"))
-	if f.Clean("A") != "" || f.Clean("Một cái tên rất là dài quá") != "" {
+	f := LoadNameFilter(cfg, config.FindRepoFile("config/bad_words"))
+	if f.Clean("A", "vi") != "" || f.Clean("Một cái tên rất là dài quá", "vi") != "" {
 		t.Fatal("length limits not enforced")
 	}
-	if got := f.Clean("  Tèo   Kiếm  "); got != "Tèo Kiếm" {
+	if got := f.Clean("  Tèo   Kiếm  ", "vi"); got != "Tèo Kiếm" {
 		t.Fatalf("got %q", got)
 	}
-	if got := f.Clean("fuckboy"); got != "****boy" {
+	if got := f.Clean("fuckboy", "th"); got != "****boy" {
 		t.Fatalf("profanity not masked: %q", got)
+	}
+	if got := f.Clean("ĐỊT con", "en"); got != "*** con" {
+		t.Fatalf("vi profanity must apply to every player (upper case too): %q", got)
 	}
 }
 

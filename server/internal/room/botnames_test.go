@@ -10,11 +10,11 @@ import (
 // Luật đặt tên bot (spec v6.1 §9.4). Mục đích của cả nhóm test này chỉ có một: **không
 // được nhìn là biết đâu là bot**.
 
-// Nguồn tên phải lấy từ `config/bot_names.txt`, không phải danh sách ngắn trong game.json.
+// Nguồn tên phải lấy từ `config/bot_names/vi.txt`, không phải danh sách ngắn trong game.json.
 func TestBotNamesLoadedFromFile(t *testing.T) {
 	_, _, cfg := testManager(t)
 	if n := len(cfg.Bots.Names); n < 500 {
-		t.Fatalf("chỉ nạp được %d tên bot; `config/bot_names.txt` phải có khoảng 1 000", n)
+		t.Fatalf("chỉ nạp được %d tên bot; `config/bot_names/vi.txt` phải có khoảng 1 000", n)
 	}
 	for _, bad := range []string{"bot", "Bot", "BOT"} {
 		for _, n := range cfg.Bots.Names {

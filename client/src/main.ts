@@ -33,6 +33,7 @@ import { guestId, homeScreen, type Profile, savedProfile } from './ui/home';
 import { Hud } from './ui/hud';
 import { leaderboardScreen } from './ui/leaderboard';
 import * as feedback from './ui/feedback';
+import { LANG } from './i18n';
 import { STR } from './ui/strings';
 import { clearEndedRun, endedRun, saveEndedRun } from './ui/runend';
 import { summaryScreen } from './ui/summary';
@@ -332,7 +333,7 @@ class App {
         // Không có phiên admin thì game chạy BÌNH THƯỜNG, không báo lỗi gì — người lạ gõ
         // `?debug=true` không được biết là có chế độ debug tồn tại.
         const wantDebug = new URLSearchParams(location.search).get('debug') === 'true';
-        this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId(), debug: wantDebug });
+        this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId(), lang: LANG, debug: wantDebug });
       };
       send();
     })();

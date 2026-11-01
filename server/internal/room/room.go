@@ -46,6 +46,8 @@ type Room struct {
 	// Là một HÀM chứ không phải con số: mốc tính từ 24 giờ dữ liệu thật và làm mới mỗi 5
 	// phút (xem `store.ScoreMedianPerMin`), mà gói này không được chạm vào SQLite giữa tick.
 	ScoreMedian func(realm int) float64
+	// LangShares: phân bố ngôn ngữ toàn server 7 ngày (xem Manager.LangShares).
+	LangShares func() map[string]float64
 	// transfers: người chờ sang khu khác, gom lại rồi chuyển một lượt ở RANH GIỚI TICK —
 	// lúc không khu nào đang chạy, nên không cần khoá (xem Zone).
 	transfers []transfer
@@ -519,8 +521,13 @@ func (r *Room) record(z *Zone, p *game.Player) {
 	// Xét theo KẾT NỐI, không theo nhân vật: người chơi có thể chết rồi hồi sinh nhiều lần
 	// trong một kết nối, và lệnh debug ở mạng trước vẫn ảnh hưởng số liệu mạng sau (kiếm,
 	// cảnh giới mang theo).
-	if c := z.clients[p.ID]; c != nil && c.DebugUsed {
+	c := z.clients[p.ID]
+	if c != nil && c.DebugUsed {
 		return
+	}
+	lang := ""
+	if c != nil {
+		lang = c.Lang
 	}
 	end := p.DiedAt
 	if !p.Dead {
@@ -529,7 +536,7 @@ func (r *Room) record(z *Zone, p *game.Player) {
 	err := r.recorder.Record(store.Life{GuestID: p.GuestID, Name: p.Name, Character: p.Char,
 		Score: p.Score, Hits: p.Hits, PeakExp: p.PeakExp, PeakLevel: p.PeakLevel, Kills: p.Kills,
 		DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs, SkillCasts: p.SkillCasts,
-		SurviveSecs: end - p.SpawnedAt, Map: z.G.Map.ID, EndedAt: time.Now().Unix()})
+		SurviveSecs: end - p.SpawnedAt, Map: z.G.Map.ID, EndedAt: time.Now().Unix(), Lang: lang})
 	if err != nil {
 		log.Printf("record life: %v", err)
 	}

@@ -36,6 +36,9 @@ type Join struct {
 	Name    string `msgpack:"name"`
 	Char    string `msgpack:"char"`
 	GuestID string `msgpack:"guest_id"`
+	// Lang: ngôn ngữ giao diện người chơi ("vi", "pt-BR"…) — chọn bộ lọc từ tục và tỉ lệ
+	// ngôn ngữ tên bot (spec v6.34 §9.4).
+	Lang string `msgpack:"lang,omitempty"`
 	// Debug: client mở bằng ?debug=true nên muốn bật bảng phím test. Server chỉ chấp nhận
 	// khi chính nó cũng chạy với -debug, và chỉ người tự thêm tham số mới thấy bảng này.
 	Debug bool `msgpack:"debug,omitempty"`

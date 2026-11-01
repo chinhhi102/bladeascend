@@ -10,6 +10,7 @@ import (
 	"github.com/coder/websocket"
 
 	"bladeascend/server/internal/admin"
+	"bladeascend/server/internal/config"
 	"bladeascend/server/internal/netproto"
 	"bladeascend/server/internal/room"
 	"bladeascend/server/internal/telemetry"
@@ -203,7 +204,7 @@ func (s *server) handleJoin(c *room.Client, data []byte) {
 	if netproto.Decode(data, &j) != nil {
 		return
 	}
-	j.Name = s.names.Clean(j.Name)
+	j.Name = s.names.Clean(j.Name, j.Lang)
 	if j.Name == "" {
 		sendErr(c, "bad_name")
 		return
@@ -215,6 +216,7 @@ func (s *server) handleJoin(c *room.Client, data []byte) {
 		j.GuestID = j.GuestID[:64]
 	}
 	c.GuestID = j.GuestID
+	c.Lang = config.NormLang(j.Lang)
 	// Người bị cấm không vào được (§6.2) — và ĐƯỢC BIẾT vì sao, cùng thời điểm hết hạn.
 	//
 	// Chặn ở đây chứ không ở lúc bắt tay WebSocket: lúc bắt tay chưa có `guest_id` (nó nằm

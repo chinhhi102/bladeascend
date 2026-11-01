@@ -478,6 +478,18 @@ type Bots struct {
 	AmbushR          float64  `json:"ambush_r"`
 	AmbushSecs       float64  `json:"ambush_secs"`
 	Names            []string `json:"names"`
+	// NamesByLang: tên bot theo ngôn ngữ (spec v6.34 §9.4), nạp từ `config/bot_names/<lang>.txt`.
+	NamesByLang map[string][]string `json:"-"`
+	// NameLangMix: tỉ lệ chọn ngôn ngữ tên bot — theo người thật trong phòng / toàn server
+	// 7 ngày / intl (spec §9.4: 0.60 / 0.25 / 0.15).
+	NameLangMix NameLangMix `json:"name_lang_mix"`
+}
+
+// NameLangMix: ba phần của tỉ lệ chọn ngôn ngữ tên bot (tổng = 1).
+type NameLangMix struct {
+	Room   float64 `json:"room"`
+	Server float64 `json:"server"`
+	Intl   float64 `json:"intl"`
 }
 
 type Mood struct {
@@ -659,14 +671,12 @@ func Load(path string) (*Config, []byte, error) {
 	if err := json.Unmarshal(raw, &c); err != nil {
 		return nil, nil, fmt.Errorf("parse config: %w", err)
 	}
-	// Tên bot nằm ở FILE RIÊNG `config/bot_names.txt` (spec v6.1 §9.4), không nằm trong
-	// game.json: một nghìn dòng tên nhét vào JSON thì mỗi lần sửa một con số cân bằng là
-	// phải cuộn qua chúng, và ai cũng ngại mở file.
-	//
-	// Thiếu file thì giữ danh sách trong game.json làm dự phòng — máy dev chưa kéo file mới
-	// vẫn chạy được, chỉ là bot có ít tên hơn.
-	if names := loadBotNames(filepath.Join(filepath.Dir(path), "bot_names.txt")); len(names) > 0 {
-		c.Bots.Names = names
+	// Tên bot nằm ở THƯ MỤC RIÊNG `config/bot_names/<lang>.txt` (spec v6.34 §9.4), không nằm
+	// trong game.json: vài nghìn dòng tên nhét vào JSON thì mỗi lần sửa một con số cân bằng là
+	// phải cuộn qua chúng. `Bots.Names` giữ danh sách tiếng Việt làm dự phòng.
+	c.Bots.NamesByLang = LoadBotNameDir(filepath.Join(filepath.Dir(path), "bot_names"))
+	if vi := c.Bots.NamesByLang["vi"]; len(vi) > 0 {
+		c.Bots.Names = vi
 	}
 	if err := c.checkCooldowns(); err != nil {
 		return nil, nil, err
@@ -731,6 +741,35 @@ func (c *Config) checkInnate() error {
 }
 
 // loadBotNames đọc file tên bot: mỗi dòng một tên, bỏ dòng trống và dòng bắt đầu bằng `#`.
+// BotNameLangs: các tệp tên bot đang dùng (spec v6.34 §9.4). Đợt 2 thêm ru, tr, ja, ko.
+var BotNameLangs = []string{"vi", "en", "pt", "es", "id", "th", "intl"}
+
+// LoadBotNameDir nạp mọi tệp `<lang>.txt` có trong dir; tệp thiếu thì bỏ qua.
+func LoadBotNameDir(dir string) map[string][]string {
+	out := map[string][]string{}
+	for _, l := range BotNameLangs {
+		if names := loadBotNames(filepath.Join(dir, l+".txt")); len(names) > 0 {
+			out[l] = names
+		}
+	}
+	return out
+}
+
+// NormLang đổi mã ngôn ngữ client gửi ("pt-BR", "EN") thành mã tệp tên bot ("pt", "en");
+// mã lạ (hoặc "intl" — không phải ngôn ngữ người chơi) ra "".
+func NormLang(code string) string {
+	code = strings.ToLower(strings.TrimSpace(code))
+	if i := strings.IndexAny(code, "-_"); i >= 0 {
+		code = code[:i]
+	}
+	for _, l := range BotNameLangs {
+		if l == code && l != "intl" {
+			return l
+		}
+	}
+	return ""
+}
+
 func loadBotNames(path string) []string {
 	b, err := os.ReadFile(path)
 	if err != nil {

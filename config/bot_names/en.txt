@@ -1,0 +1,442 @@
+# Tên bot kiểu người chơi nói tiếng Anh (Mỹ/Anh/Úc) — spec v6.34 §9.4.
+# Mỗi dòng 1 tên, 2–16 ký tự. Dòng bắt đầu bằng # là chú thích. Người bản ngữ duyệt: i18n/NOTES.md.
+Bubba
+Scooter
+Buddy
+Champ
+Sport
+Kiddo
+Peanut
+Pumpkin
+Muffin
+Biscuit
+Nugget
+Pickle
+Sprout
+Bean
+Tater
+Doodle
+Cookie
+Sunny
+Ziggy
+Boomer
+Moose
+Tank
+Rocket
+Gizmo
+Waffles
+Noodle
+Pip
+Taco
+dont shoot pls
+lag is real
+brb mom calls
+just vibing
+im new here
+wifi pls work
+one more game
+carry me pls
+zero skill
+not a tryhard
+mom said 1 game
+need a nap
+send help
+oops my bad
+lowkey cracked
+no thoughts
+touch grass
+aim assist pls
+why me
+ok boomer jk
+sword go brrr
+cant stop now
+homework later
+bad at this
+stop chasing me
+spin to win
+panic mode
+lost my sword
+i come in peace
+just passing by
+free real estate
+its my first day
+plz no kill
+running away
+snack break
+cereal first
+pizza time
+sorry not sorry
+on my way
+too slow lol
+its giving lag
+chill guy
+big brain time
+ok then
+uh oh
+rip me
+gg ez jk
+gg no re
+hi friends
+be nice pls
+im lost help
+spicy noodle
+cozy gamer
+sleepy head
+lazy sunday
+hungry again
+nap champion
+sweaty palms
+vibe check
+main character
+side quest
+Gavin.2010
+boomer99
+Declan L
+Kiddo.22
+Jack~
+Hannah
+SaltyPanda19
+toby_12
+Gabe_321
+Kenzie.14
+Skye321
+Ryan2011
+Pip98
+Emily10
+Drew.2009
+pickle.99
+Nate
+Kiddo_55
+SaltyBadger
+Sport_10
+ConnorNZ
+toby.10
+Owen33
+Holly.2011
+ziggy_07
+Brett
+grumpy_gecko
+TommyUK
+Jonah_K
+macy.99
+Wes24
+Picklexx
+Tyler.09
+mason_07
+LazyPanda13
+CrispyGecko
+jack_101
+KatieTV
+hunter.02
+jamie.45
+FluffyPancake10
+chase21
+grace_19
+mighty_beaver
+JessUK
+isla_123
+holly_98
+MollyUK
+Waffles_YT
+Harper.K
+Champ12
+~Caleb
+angry_potato
+chase9
+Biscuit.12
+Liam
+Aiden
+SweatyDonut42
+ryan03
+sam_02
+SweatyNacho
+^Ziggy^
+Colton_YT
+Travis_x
+leah_321
+Emily.2011
+BraveTurtle
+Jaxon.US
+Kylie
+Brett_M
+Jonah_27
+Lauren
+sam23
+kiddo_23
+Lily11
+Logan
+AngryRaccoon
+Josie
+Callum_C
+GrumpyNacho
+SleepyWolf
+turbo.99
+ziggy19
+Lexi_A
+Lily.04
+ruby24
+Brody_x
+Tessa2012
+emily.99
+_Emily_
+Harper_NZ
+Chloe
+Buddy_2003
+angry_otter
+SpeedyPickle23
+Bean.UK
+Kiddo_YT
+Taco2007
+Gavin99
+Bobby
+Reid
+SpeedyHamster13
+Lily27
+mia07
+Quinn.US
+Josh
+Ryan
+Zoe33
+HungryLlama
+cooper.19
+NoraNZ
+Jayden.42
+ShyGoose
+Haley.27
+Liam_9
+Peanut_M
+Austin
+chunky_turtle
+Brandon_98
+^Kenny^
+Paige.YT
+fuzzy_potato
+LazyBurrito11
+Cookiexx
+lucky_nacho
+Ruby
+Ziggy~
+FluffyOtter
+caleb_42
+^Chase^
+^Danny^
+~Mason
+Ethan
+Kylie10
+Charlie.M
+Moose_21
+gavin06
+sneaky_walrus
+TinyDuck77
+grace.02
+xXPickleXx
+max.03
+Alfie2012
+FluffyWaffle
+^Colton^
+Waffles99
+Bryce98
+SweatyWaffle
+sprout_09
+HungryRaccoon9
+FuzzyBiscuit99
+SweatyPancake
+SneakyBiscuit
+Cody_AU
+Quinn_UK
+Garrett_2005
+clumsy_nacho
+SweatyBiscuit
+turbo_321
+SleepyRaccoon
+spicy_otter
+Turbo05
+Kyle_12
+xKennyx
+Toby33
+ChunkyToast
+Nugget_21
+zach.10
+clumsy_turtle
+lachlan00
+Megan27
+GraceYT
+crispy_nacho
+Bella.AU
+Owen_2007
+happy_gecko
+Riley21
+HappyPotato
+_Turbo_
+ryan.101
+Charlie
+Kieran.23
+Nate24
+Chase_99
+SleepyBadger
+rhys11
+Sprout.27
+Quinn_99
+Boomer_05
+Caleb
+Cody.US
+FrostyBiscuit
+ben_77
+ava_10
+Brett_2006
+dani55
+Cody
+^Bean^
+Mason02
+Macy_00
+SleepyTurtle
+Haley~
+gizmo_99
+Tessa~
+SillyHippo7
+xPipx
+Boomer_L
+Travis321
+Scooter_P
+Bubba D
+Nora_2012
+Wes2009
+Abby_2009
+Charlie02
+Darren007
+kenzie13
+Gavin
+sweaty_raccoon
+freya.88
+Harry
+Abby
+Noah10
+shy_bagel
+FreyaUS
+CozyGoose
+Leah.UK
+Bryce
+Jaxon19
+Tater.33
+max_06
+_Rhys_
+Nugget H
+gabe.007
+bella10
+Kiddo_2010
+Charlie T
+muffin33
+Emily_13
+sweaty_donut
+bella_22
+madison101
+Tommy
+Maddie
+Finn_2007
+.Hunter.
+garrett.99
+Sadie_YT
+WildPancake45
+Logan2006
+Jayden.O
+_Isla_
+Jess_US
+Kieran
+Kieran.10
+Aiden_YT
+Jamie2012
+Darren
+liam.01
+Zach_TV
+madison23
+bean_11
+Bubba.2004
+Poppy
+_Ryan_
+Travis
+katie_13
+Kenzie
+Gabe_AU
+Trevor
+Grace42
+Alfie22
+wes45
+Nora
+Gabe_x
+.Ruby.
+FrostyToast13
+~Luke
+Gizmo7
+Sunny W
+Rocket_TV
+Ashley18
+bean07
+SneakyPossum
+MoodyNacho
+Travis D
+bubba.12
+peanut27
+Chloe.2012
+speedy_moose
+Alfie
+moody_muffin
+cole.07
+Brett_99
+~Wes
+archie123
+rusty_gecko
+rusty_turtle
+Tank_2007
+Brett17
+grumpy_panda
+LazyPossum
+ShyDuck
+Tyler
+Kayla45
+_Chloe_
+Jess_x
+_Megan_
+Logan.99
+ShyHamster
+Ava C
+Jayden_J
+_Rocket_
+Bubba123
+Biscuit24
+FuzzyFerret
+Tessa
+Colton24
+HungryWolf
+Nugget.TV
+brave_turtle
+Kiddo D
+Noodle_M
+Pickle.18
+.Turbo.
+GrumpyPossum
+Mitch_2012
+stormy_panda
+Jaxon.06
+ClumsyBison18
+Lexi D
+Becca_TV
+LazyToast
+Bobby55
+Pip13
+Noah_27
+SpicyWolf02
+Dani_J
+harper123
+RustyBagel
+~Toby
+muffin_06
+AngryBiscuit
+^Noodle^
+^Josh^
+Quinn.98
+salty_gecko
+Pickle2003
+Rocket_88
+Brett2003
+Sadie_US
+ShyBadger

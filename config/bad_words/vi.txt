@@ -1,0 +1,33 @@
+# Từ tục tiếng Việt — che bằng *** trong tên người chơi; CI dùng để lọc config/bot_names/vi.txt (spec v6.34 §9.4).
+# Mỗi dòng 1 từ (viết thường). Khớp chuỗi con nên tránh từ quá ngắn dễ dính tên thường.
+địt
+đụ
+đéo
+lồn
+buồi
+cặc
+đĩ
+fuck
+shit
+bitch
+dit me
+địt mẹ
+đụ má
+đù má
+đéo mẹ
+lìn
+loz
+vãi lồn
+vcl
+vkl
+clgt
+đmm
+dmm
+cmnr
+óc chó
+chó đẻ
+mẹ mày
+con đĩ
+thằng chó
+đồ chó
+ngu như bò

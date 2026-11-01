@@ -27,6 +27,9 @@ type Manager struct {
 	// ScoreMedian: Uy Danh/phút trung vị theo cảnh giới, cho cờ "Tăng điểm bất thường"
 	// (§6.1). `cmd/server` cắm vào; nil thì không gắn cờ loại này.
 	ScoreMedian func(realm int) float64
+	// LangShares: phân bố ngôn ngữ người chơi toàn server 7 ngày (mã → tỉ lệ), cho tên bot
+	// §9.4. `cmd/server` cắm vào; nil = chưa có số liệu, dùng người thật đang online.
+	LangShares func() map[string]float64
 	// settings: cấu hình phòng admin đã đặt (settings.go), nil = mặc định môi trường. Guarded by mu.
 	settings *RoomSettings
 	// botMode: chế độ bot toàn server (botmode.go). Guarded by mu.
@@ -70,6 +73,7 @@ func (m *Manager) createLocked() *Room {
 	// Mốc trung vị dùng chung cho mọi phòng (§6.1) — cắm từ Manager để phòng mới sinh ra
 	// giữa chừng cũng có, không phải nhớ gắn tay.
 	r.ScoreMedian = m.ScoreMedian
+	r.LangShares = m.LangShares
 	m.rooms = append(m.rooms, r)
 	m.Start(r)
 	return r
