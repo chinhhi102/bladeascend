@@ -63,6 +63,9 @@ Claude không đụng vào mật khẩu hay hash (CLAUDE.md luật 14).
    ```bash
    set -a; . docs/private/deploy; set +a
    ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST" 'mkdir -p ~/bladeascend-secrets && chmod 700 ~/bladeascend-secrets'
+   # Bọc hash trong nháy đơn: docker compose coi `$2a$12$…` trong env_file là biến và
+   # nuốt mất → server báo "không phải hash bcrypt hợp lệ" (đã dính 1/11).
+   sed -i -E "s/^ADMIN_PASSWORD_HASH=(.*)$/ADMIN_PASSWORD_HASH='\1'/" /tmp/staging_admin.env
    scp -i "$DEPLOY_KEY" /tmp/staging_admin.env "$DEPLOY_HOST:bladeascend-secrets/admin.env"
    ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST" 'chmod 600 ~/bladeascend-secrets/admin.env'
    rm /tmp/staging_admin.env
@@ -73,3 +76,7 @@ Claude không đụng vào mật khẩu hay hash (CLAUDE.md luật 14).
    ```
    Hoặc chạy lại `deploy/staging.sh`. Dòng "CẢNH BÁO … /admin TẮT" ở cuối phải biến mất.
 4. Vào `https://bladeascend.staging.maveragroups.com/admin` và đăng nhập.
+
+Đã làm 1/11 theo yêu cầu chủ dự án: mật khẩu staging nằm trong
+`docs/private/staging-admin-password.txt`, còn hash trong `docs/private/staging-admin.env`.
+Cả hai được gitignore và chmod 600. Đổi mật khẩu thì xoá hai tệp đó rồi làm lại từ bước 1.
