@@ -6,6 +6,9 @@ services:
     build: .
     container_name: bladeascend-web
     restart: unless-stopped
+    # Môi trường (GAME_SPEC v6.28 §9.5): staging dùng mặc định phòng 20 người / sàn 10 / tắt bot ở 20.
+    environment:
+      APP_ENV: staging
     # Trang quản trị (docs/SETUP_ADMIN.md): ADMIN_PASSWORD_HASH nằm trong tệp NGOÀI thư mục
     # deploy — `staging.sh` rsync --delete sẽ xoá mọi thứ lạ trong ~/bladeascend, và tệp cũng
     # không được lọt vào ảnh Docker. Chưa có tệp thì trang /admin tắt, game vẫn chạy.

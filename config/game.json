@@ -393,17 +393,20 @@
   },
   "room": {
     "zones": 5,
-    "max_humans": 20,
-    "bot_fill_target": 60,
+    "max_humans": 50,
     "zone_min_chars": 10,
     "map_size": 12000,
     "monster_count": 150,
     "empty_close_secs": 60,
     "safe_spawn_r": 800
   },
+  "room_env": {
+    "production": { "max_humans": 50, "zone_min_chars": 10, "bot_auto_off_at": 40, "loadtested_humans": 50 },
+    "staging": { "max_humans": 20, "zone_min_chars": 10, "bot_auto_off_at": 20, "loadtested_humans": 20 }
+  },
   "bots": {
     "spawn_every_secs": 2,
-    "spawn_batch": 4,
+    "spawn_batch": 2,
     "respawn_secs": 3,
     "respawn_secs_range": [
       4.0,
@@ -416,8 +419,8 @@
       8.0
     ],
     "mode_default": "auto",
-    "auto_off_above_humans": 40,
-    "auto_on_below_humans": 35,
+    "auto_off_at": 40,
+    "auto_off_hysteresis": 5,
     "withdraw_idle_secs": 5,
     "decide_min": 0.3,
     "decide_max": 0.6,

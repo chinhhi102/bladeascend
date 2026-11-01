@@ -14,9 +14,8 @@ import (
 
 // Điều khiển bot — ADMIN_SPEC §4 "Điều khiển bot", GAME_SPEC §9.5.
 //
-// Mọi thao tác ghi `admin_audit` (kèm lý do nếu có). Chế độ toàn server sống trong bộ nhớ:
-// khởi động lại thì về `bots.mode_default` của config — cố ý, để một lần "Tắt" quên bật lại
-// không theo server qua các lần cập nhật.
+// Mọi thao tác ghi `admin_audit` (kèm lý do nếu có). Chế độ toàn server lưu SQLite và sống
+// qua deploy (spec v6.28 §9.5); ghi đè từng phòng chỉ sống theo phòng.
 
 type botRoomRow struct {
 	ID string `json:"id"`
@@ -64,7 +63,10 @@ func (s *server) handleAdminBotsSet(w http.ResponseWriter, r *http.Request) {
 func (s *server) applyBotMode(roomID, mode string) (string, error) {
 	if roomID == "" {
 		before := s.mgr.BotMode()
-		return before, s.mgr.SetBotMode(mode)
+		if err := s.mgr.SetBotMode(mode); err != nil {
+			return before, err
+		}
+		return before, s.adminAuth.Store().SetSetting(settingBotMode, mode)
 	}
 	rm := s.mgr.RoomByID(roomID)
 	if rm == nil {

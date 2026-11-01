@@ -127,18 +127,19 @@ func (r *Room) botModeNow() string {
 }
 
 // updateBotSwitch chốt `botsOn` cho tick này — ở pha ĐƠN LUỒNG, trước khi các khu chạy song
-// song (`onBotDeath` đọc nó từ goroutine của khu). Trễ 40/35 của chế độ tự động nằm ở đây.
+// song (`onBotDeath` đọc nó từ goroutine của khu). Trễ của chế độ tự động nằm ở đây.
 func (r *Room) updateBotSwitch() {
 	r.applyBotSwitch(r.Humans())
 }
 
-// applyBotSwitch: phần luật của `updateBotSwitch`, nhận số người để test được trễ 40/35 mà
-// không phải dựng 41 kết nối thật.
+// applyBotSwitch: phần luật của `updateBotSwitch`, nhận số người để test được trễ mà không
+// phải dựng 40 kết nối thật. Spec v6.28 §9.3: người thật ≥ ngưỡng → tắt; < ngưỡng − 5 → bật.
 func (r *Room) applyBotSwitch(humans int) {
+	at := r.set.BotAutoOffAt
 	switch {
-	case humans > r.cfg.Bots.AutoOffAboveHumans && r.cfg.Bots.AutoOffAboveHumans > 0:
+	case at > 0 && humans >= at:
 		r.botAutoOff = true
-	case humans < r.cfg.Bots.AutoOnBelowHumans:
+	case at <= 0 || humans < at-r.cfg.Bots.AutoOffHysteresis:
 		r.botAutoOff = false
 	default:
 	}
@@ -211,7 +212,7 @@ type BotStatus struct {
 func (r *Room) BotStatusNow() (BotStatus, bool) {
 	return ask(r, func() BotStatus {
 		return BotStatus{Override: r.botOverride, Effective: r.botModeNow(), AutoOff: r.botAutoOff,
-			Spawning: r.botsOn, Humans: r.Humans(), Bots: r.Bots(), MaxHumans: r.cfg.Room.MaxHumans,
+			Spawning: r.botsOn, Humans: r.Humans(), Bots: r.Bots(), MaxHumans: r.set.MaxHumans,
 			Withdraw: len(r.withdraw)}
 	})
 }

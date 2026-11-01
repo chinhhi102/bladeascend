@@ -44,6 +44,9 @@ type server struct {
 	dbPath string
 	// mapsDir: thư mục bản đồ, để đọc `check.json` cho trang xem bố cục (§5.2).
 	mapsDir string
+	// env / envDefaults: môi trường đang chạy (APP_ENV) và mặc định phòng của nó (§9.5).
+	env         string
+	envDefaults config.RoomEnv
 }
 
 func (s *server) routes(assetsDir, clientDir string) http.Handler {

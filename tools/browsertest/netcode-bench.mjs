@@ -76,7 +76,7 @@ const cfg = JSON.parse(readFileSync(join(REPO, 'config', 'game.json'), 'utf8'));
 // nó **chém chết tab đứng yên** — người chết hồi sinh với id mới, nên với người quan sát đó
 // là một entity khác, không phải "quay lại". Bài đo vì thế báo `respawn=0` mà kèm cảnh báo
 // "chưa chạm tới thứ nó định đo": con số 0 đẹp đẽ nhưng không chứng minh gì.
-cfg.room.bot_fill_target = 0;
+// Sàn 0 nhân vật/khu (bên dưới) thay cho `bot_fill_target = 0` cũ (bỏ ở v6.28).
 // KHÔNG quái. Quái giết chết mấy con bot mà bài đo đang theo dõi, và người chết **hồi sinh
 // với id mới** — với người quan sát đó là một entity khác, nên lần quay lại không bao giờ
 // được đếm. Triệu chứng: "rời khung 2 lần · quay lại 0 lần" kèm cảnh báo cuối bài.

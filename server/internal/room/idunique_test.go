@@ -21,7 +21,7 @@ import (
 func idRoom(t *testing.T) (*Manager, *config.Config) {
 	t.Helper()
 	cfg := config.MustLoadDefault()
-	cfg.Room.BotFillTarget = 0
+	cfg.Room.ZoneMinChars = 0
 	var maps []*world.Map
 	for i := 0; i < cfg.Room.Zones; i++ {
 		mp := world.EmptyMap(cfg.Room.MapSize)

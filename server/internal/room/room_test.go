@@ -59,10 +59,10 @@ func TestBotFillToTarget(t *testing.T) {
 		r.Zone(0).G.Players[c.PlayerID].InvulnUntil = 1e9 // keep humans alive while bots fill
 	}
 	stepSecs(r, 30)
-	// Trần cả phòng là `room.bot_fill_target`; bot lấp cho đủ phần còn lại.
-	wantBots := cfg.Room.BotFillTarget - 5
+	// v6.28 §9.3: bot lấp khu (1 khu trong test) cho đủ sàn `zone_min_chars`.
+	wantBots := cfg.Room.ZoneMinChars - 5
 	if r.Humans() != 5 || r.Bots() != wantBots {
-		t.Fatalf("có %d người %d bot, muốn 5 và %d (trần phòng %d)", r.Humans(), r.Bots(), wantBots, cfg.Room.BotFillTarget)
+		t.Fatalf("có %d người %d bot, muốn 5 và %d (sàn khu %d)", r.Humans(), r.Bots(), wantBots, cfg.Room.ZoneMinChars)
 	}
 	joinN(m, 3)
 	r.Step(1.0 / 30)
@@ -70,10 +70,9 @@ func TestBotFillToTarget(t *testing.T) {
 		p.InvulnUntil = 1e9 // v3 swords are lethal to Luyện Khí: keep everyone alive for this check
 	}
 	stepSecs(r, 5)
-	// Người thật được ƯU TIÊN trong trần phòng: thêm người thì bot phải nhường chỗ dần
-	// (bot chết thì không hồi sinh nữa), nhưng tổng số nhân vật không bao giờ vượt trần.
-	if total := r.Humans() + r.Bots(); total > cfg.Room.BotFillTarget {
-		t.Fatalf("phòng có %d nhân vật, vượt trần %d", total, cfg.Room.BotFillTarget)
+	// Người vào KHÔNG xoá bot (v6.28 §9.3): bot dư chỉ vơi dần khi chết.
+	if r.Bots() != wantBots {
+		t.Fatalf("thêm người mà bot còn %d, muốn giữ nguyên %d", r.Bots(), wantBots)
 	}
 	if r.Humans() != 8 {
 		t.Fatalf("có %d người thật, muốn 8", r.Humans())
@@ -178,16 +177,31 @@ func (s *feedSpy) Send(b []byte) bool {
 	return true
 }
 
-func TestTwentyFirstHumanGetsNewRoom(t *testing.T) {
+// Spec v6.28 §9.1–9.2: trần người thật/phòng là giá trị admin đang đặt (mặc định production
+// 50). Hạ trần không đuổi ai — phòng đang vượt chỉ ngừng nhận người mới.
+func TestRoomCapFollowsAdminSetting(t *testing.T) {
 	m, _, cfg := testManager(t)
+	if m.Settings().MaxHumans != 50 {
+		t.Fatalf("mặc định production = %d, muốn 50", m.Settings().MaxHumans)
+	}
 	joinN(m, cfg.Room.MaxHumans)
 	joinN(m, 1)
 	rooms := m.AllRooms()
-	if len(rooms) != 2 {
-		t.Fatalf("rooms = %d, want 2", len(rooms))
+	if len(rooms) != 2 || m.humansOf(rooms[0]) != 50 || m.humansOf(rooms[1]) != 1 {
+		t.Fatalf("%d phòng, người %d / %d — muốn 2 phòng 50 / 1", len(rooms), m.humansOf(rooms[0]), m.humansOf(rooms[1]))
 	}
-	if m.humansOf(rooms[0]) != 20 || m.humansOf(rooms[1]) != 1 {
-		t.Fatalf("humans = %d / %d", m.humansOf(rooms[0]), m.humansOf(rooms[1]))
+	s := m.Settings()
+	s.MaxHumans = 20
+	if err := m.SetSettings(s); err != nil {
+		t.Fatal(err)
+	}
+	joinN(m, 1)
+	if m.humansOf(rooms[0]) != 50 || m.humansOf(rooms[1]) != 2 {
+		t.Fatalf("hạ trần 20: phòng 1 còn %d (không được đuổi ai), phòng 2 có %d (muốn 2)",
+			m.humansOf(rooms[0]), m.humansOf(rooms[1]))
+	}
+	if err := m.SetSettings(RoomSettings{MaxHumans: 0, ZoneMinChars: 10, BotAutoOffAt: 20}); err == nil {
+		t.Fatal("trần 0 người phải bị từ chối")
 	}
 }
 

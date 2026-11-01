@@ -71,6 +71,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Mặc định trần phòng / sàn khu / ngưỡng tắt bot theo môi trường (spec v6.28 §9.5).
+	env := config.EnvName(os.Getenv("APP_ENV"))
+	envDefaults := cfg.ApplyEnv(env)
+	log.Printf("môi trường %s: trần %d người/phòng, sàn %d nhân vật/khu, tự tắt bot ở %d người",
+		env, cfg.Room.MaxHumans, cfg.Room.ZoneMinChars, cfg.Bots.AutoOffAt)
 	maps, err := world.LoadDir(*mapsDir, world.LoadOptions{Tier: cfg.Obstacles.ObstacleTier, FootprintW: cfg.Obstacles.FootprintW, FootprintH: cfg.Obstacles.FootprintH})
 	if err != nil {
 		log.Fatal(err)
@@ -106,13 +111,14 @@ func main() {
 		log.Fatal(err) // hash sai định dạng hoặc cost quá thấp: dừng hẳn, không chạy nửa vời
 	}
 	adminStore.PurgeExpired()
+	restoreRoomSettings(mgr, adminStore)
 	log.Print(adminEnabledNote(adminAuth))
 
 	srv := &server{cfg: cfg, rawCfg: raw, mgr: mgr, store: st, maps: maps, debug: *debug,
 		adminAuth: adminAuth, debugGate: admin.NewDebugGate(adminAuth),
 		buildID: buildIDOrNow(*buildID), startedAt: time.Now(), dbPath: dbFile, mapsDir: *mapsDir,
 		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words.txt")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP),
-		telemetry: tel}
+		telemetry: tel, env: env, envDefaults: envDefaults}
 	stopSampler := make(chan struct{})
 	// Dọn dẹp hằng ngày (Q28): xoá ảnh góp ý của thư đã khép quá 90 ngày, giữ chữ mãi.
 	// Chạy kể cả khi tắt telemetry — nó dọn DB quản trị, không liên quan telemetry.

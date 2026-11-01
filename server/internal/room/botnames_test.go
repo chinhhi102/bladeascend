@@ -35,7 +35,7 @@ func TestBotNamesUniqueInRoom(t *testing.T) {
 	// Chạy đủ lâu để phòng lấp đầy bot.
 	for i := 0; i < int(60/dt); i++ {
 		r.Step(dt)
-		if r.Humans()+r.Bots() >= cfg.Room.BotFillTarget {
+		if r.Humans()+r.Bots() >= cfg.Room.ZoneMinChars*cfg.Room.Zones {
 			break
 		}
 	}

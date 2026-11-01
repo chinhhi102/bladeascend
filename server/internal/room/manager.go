@@ -27,6 +27,8 @@ type Manager struct {
 	// ScoreMedian: Uy Danh/phút trung vị theo cảnh giới, cho cờ "Tăng điểm bất thường"
 	// (§6.1). `cmd/server` cắm vào; nil thì không gắn cờ loại này.
 	ScoreMedian func(realm int) float64
+	// settings: cấu hình phòng admin đã đặt (settings.go), nil = mặc định môi trường. Guarded by mu.
+	settings *RoomSettings
 	// botMode: chế độ bot toàn server (botmode.go). Guarded by mu.
 	botMode string
 }
@@ -39,12 +41,14 @@ func NewManager(cfg *config.Config, maps []*world.Map, rec Recorder) *Manager {
 		Start: func(r *Room) { go r.Run() }}
 }
 
-// Join matches a client into a room: the fullest room below max_humans, ties → oldest.
+// Join matches a client into a room: the fullest room below room_max_humans (giá trị admin
+// đang đặt, spec v6.28 §9.2), ties → oldest.
 func (m *Manager) Join(c *Client, j netproto.Join) *Room {
 	m.mu.Lock()
 	var best *Room
+	limit := m.settingsLocked().MaxHumans
 	for _, r := range m.rooms {
-		if r.closed || r.reserved >= m.cfg.Room.MaxHumans {
+		if r.closed || r.reserved >= limit {
 			continue
 		}
 		if best == nil || r.reserved > best.reserved {

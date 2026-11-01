@@ -424,12 +424,11 @@ type Gates struct {
 type Room struct {
 	// Zones: số khu mỗi phòng (spec §8.0). Để 1 là quay về thế giới một bản đồ như trước.
 	Zones int `json:"zones"`
-	// ZoneMinChars: sàn nhân vật mỗi khu. Bot được thả thêm cho tới khi khu nào cũng đạt
-	// sàn này, nhưng không bao giờ vượt `BotFillTarget` của cả phòng — nếu không thì một
-	// khu đông người sẽ kéo tổng số vượt trần.
+	// ZoneMinChars: sàn nhân vật mỗi khu — bot lấp TỪNG KHU cho đủ số này (spec v6.28 §9.3).
+	// MaxHumans: trần người thật/phòng, bot không tính. Cả hai là MẶC ĐỊNH của môi trường
+	// (`ApplyEnv` chép từ `room_env`); admin ghi đè lúc chạy (room.Manager.SetSettings).
 	ZoneMinChars   int     `json:"zone_min_chars"`
 	MaxHumans      int     `json:"max_humans"`
-	BotFillTarget  int     `json:"bot_fill_target"`
 	MapSize        float64 `json:"map_size"`
 	MonsterCount   int     `json:"monster_count"`
 	EmptyCloseSecs float64 `json:"empty_close_secs"`
@@ -450,10 +449,11 @@ type Bots struct {
 	// trị khi server khởi động. Bot sinh ra như người chơi mới (Luyện Khí 1, 1 kiếm, không
 	// buff) — đã bỏ `spawn_rank` / `max_spawn_realm`.
 	ModeDefault string `json:"mode_default"`
-	// Tự động: > AutoOffAboveHumans người thật → ngừng sinh bot; < AutoOnBelowHumans → sinh
-	// lại. Trễ 5 người để phòng 38–42 người không bật/tắt liên tục.
-	AutoOffAboveHumans int `json:"auto_off_above_humans"`
-	AutoOnBelowHumans  int `json:"auto_on_below_humans"`
+	// Tự động (spec v6.28 §9.3): người thật ≥ AutoOffAt → ngừng sinh bot; < AutoOffAt −
+	// AutoOffHysteresis → sinh lại. Trễ để phòng quanh ngưỡng không bật/tắt liên tục.
+	// AutoOffAt là mặc định môi trường (`room_env.bot_auto_off_at`), admin ghi đè lúc chạy.
+	AutoOffAt         int `json:"auto_off_at"`
+	AutoOffHysteresis int `json:"auto_off_hysteresis"`
 	// WithdrawIdleSecs: "Rút bot ngay" chỉ rút bot không giao tranh trong ngần ấy giây.
 	WithdrawIdleSecs float64  `json:"withdraw_idle_secs"`
 	DecideMin        float64  `json:"decide_min"`
@@ -569,33 +569,71 @@ type Brand struct {
 }
 
 type Config struct {
-	Brand       Brand           `json:"brand"`
-	Skills      Skills          `json:"skills"`
-	Ice         Ice             `json:"ice"`
-	Cultivation Cultivation     `json:"cultivation"`
-	Sword       Sword           `json:"sword"`
-	Player      Player          `json:"player"`
-	Speed       Speed           `json:"speed"`
-	Burn        Burn            `json:"burn"`
-	Buffs       map[string]Buff `json:"buffs"`
-	Items       Items           `json:"items"`
-	ExpOrbs     ExpOrbs         `json:"exp_orbs"`
-	ExpEconomy  ExpEconomy      `json:"exp_economy"`
-	Monsters    Monsters        `json:"monsters"`
-	Obstacles   Obstacles       `json:"obstacles"`
-	Zones       Zones           `json:"zones"`
-	Gates       Gates           `json:"gates"`
-	Room        Room            `json:"room"`
-	Bots        Bots            `json:"bots"`
-	Characters  []string        `json:"characters"`
-	Mood        Mood            `json:"mood"`
-	Titles      []string        `json:"titles"`
-	TitleHold   float64         `json:"title_hold_secs"`
-	Minimap     Minimap         `json:"minimap"`
-	Altars      Altars          `json:"altars"`
-	Mapgen      Mapgen          `json:"mapgen"`
-	Score       Score           `json:"score"`
-	Net         Net             `json:"net"`
+	Brand       Brand              `json:"brand"`
+	Skills      Skills             `json:"skills"`
+	Ice         Ice                `json:"ice"`
+	Cultivation Cultivation        `json:"cultivation"`
+	Sword       Sword              `json:"sword"`
+	Player      Player             `json:"player"`
+	Speed       Speed              `json:"speed"`
+	Burn        Burn               `json:"burn"`
+	Buffs       map[string]Buff    `json:"buffs"`
+	Items       Items              `json:"items"`
+	ExpOrbs     ExpOrbs            `json:"exp_orbs"`
+	ExpEconomy  ExpEconomy         `json:"exp_economy"`
+	Monsters    Monsters           `json:"monsters"`
+	Obstacles   Obstacles          `json:"obstacles"`
+	Zones       Zones              `json:"zones"`
+	Gates       Gates              `json:"gates"`
+	Room        Room               `json:"room"`
+	RoomEnv     map[string]RoomEnv `json:"room_env"`
+	Bots        Bots               `json:"bots"`
+	Characters  []string           `json:"characters"`
+	Mood        Mood               `json:"mood"`
+	Titles      []string           `json:"titles"`
+	TitleHold   float64            `json:"title_hold_secs"`
+	Minimap     Minimap            `json:"minimap"`
+	Altars      Altars             `json:"altars"`
+	Mapgen      Mapgen             `json:"mapgen"`
+	Score       Score              `json:"score"`
+	Net         Net                `json:"net"`
+}
+
+// RoomEnv: mặc định phòng/bot của một môi trường (spec v6.28 §9.5). LoadtestedHumans là
+// mức người thật/phòng đã qua loadtest trên máy của môi trường đó (PERF_LOG) — trang admin
+// cảnh báo khi đặt trần cao hơn.
+type RoomEnv struct {
+	MaxHumans        int `json:"max_humans"`
+	ZoneMinChars     int `json:"zone_min_chars"`
+	BotAutoOffAt     int `json:"bot_auto_off_at"`
+	LoadtestedHumans int `json:"loadtested_humans"`
+}
+
+// EnvStaging / EnvProduction: hai môi trường có khối `room_env` riêng.
+const (
+	EnvStaging    = "staging"
+	EnvProduction = "production"
+)
+
+// EnvName: `APP_ENV` → tên khối `room_env`. Chỉ "staging" dùng khối staging; mọi giá trị
+// khác (production, dev, rỗng) dùng production — máy :9999 là máy đã qua loadtest 50 người.
+func EnvName(appEnv string) string {
+	if strings.EqualFold(strings.TrimSpace(appEnv), EnvStaging) {
+		return EnvStaging
+	}
+	return EnvProduction
+}
+
+// ApplyEnv chép mặc định của môi trường `env` vào Room/Bots, trả khối đã dùng. Không có
+// khối thì giữ nguyên số trong `room` / `bots`.
+func (c *Config) ApplyEnv(env string) RoomEnv {
+	e, ok := c.RoomEnv[env]
+	if !ok {
+		return RoomEnv{MaxHumans: c.Room.MaxHumans, ZoneMinChars: c.Room.ZoneMinChars,
+			BotAutoOffAt: c.Bots.AutoOffAt, LoadtestedHumans: c.Room.MaxHumans}
+	}
+	c.Room.MaxHumans, c.Room.ZoneMinChars, c.Bots.AutoOffAt = e.MaxHumans, e.ZoneMinChars, e.BotAutoOffAt
+	return e
 }
 
 // Load reads and parses a config file. It returns the parsed config and raw bytes

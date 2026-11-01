@@ -2,15 +2,13 @@ package room
 
 import (
 	"testing"
-
-	"bladeascend/server/internal/game"
 )
 
 // Bot phải biết dùng cổng (spec v5 mục 8). Không có luật này thì bot nào rơi vào khu vắng
 // sẽ quanh quẩn ở đó tới hết trận và cả một khu của thế giới thành vùng chết.
 func TestBotsEventuallyChangeZone(t *testing.T) {
 	m, cfg := zoneManager(t)
-	cfg.Room.BotFillTarget = 10
+	cfg.Room.ZoneMinChars = 2
 	joinN(m, 1)
 	r := m.AllRooms()[0]
 	settle(r, cfg)
@@ -58,30 +56,10 @@ func TestBotsEventuallyChangeZone(t *testing.T) {
 	}
 }
 
-// Trần người + bot vẫn tính cho CẢ PHÒNG (spec v5 mục 8) — thế giới 5 khu là để bớt bị dí,
-// không phải để nhân năm số nhân vật.
-func TestBotFillCountsWholeRoomNotPerZone(t *testing.T) {
+// Spec v6.28 §9.3 (Q34): bot lấp THEO KHU — mỗi khu đủ `zone_min_chars` nhân vật, không
+// còn trần tổng của cả phòng. 2 người, sàn 10 → mỗi khu ≥ 10, cả phòng ≈ 50.
+func TestZoneFloorPerZone(t *testing.T) {
 	m, cfg := zoneManager(t)
-	cfg.Room.BotFillTarget = 20
-	joinN(m, 2)
-	r := m.AllRooms()[0]
-	dt := 1 / float64(cfg.Net.TickHz)
-	for i := 0; i < int(float64(cfg.Net.TickHz)*cfg.Bots.SpawnEverySecs*30); i++ {
-		r.Step(dt)
-	}
-	if total := r.Humans() + r.Bots(); total > cfg.Room.BotFillTarget {
-		t.Fatalf("phòng có %d nhân vật, trần là %d — đang đếm theo khu chứ không theo phòng",
-			total, cfg.Room.BotFillTarget)
-	}
-	var _ = game.Vec{}
-}
-
-// Trần phòng và sàn mỗi khu (chủ dự án chốt 29/10/2026): tối đa 20 người thật, tổng nhân
-// vật cả phòng không quá `bot_fill_target`, và mỗi khu phải đạt sàn `zone_min_chars` để
-// không khu nào trống trơn.
-func TestZoneFloorAndRoomCap(t *testing.T) {
-	m, cfg := zoneManager(t)
-	cfg.Room.BotFillTarget = 60
 	cfg.Room.ZoneMinChars = 10
 	joinN(m, 2)
 	r := m.AllRooms()[0]
@@ -89,12 +67,11 @@ func TestZoneFloorAndRoomCap(t *testing.T) {
 	for i := 0; i < int(float64(cfg.Net.TickHz)*cfg.Bots.SpawnEverySecs*40); i++ {
 		r.Step(dt)
 	}
-	total := r.Humans() + r.Bots()
-	if total > cfg.Room.BotFillTarget {
-		t.Fatalf("phòng có %d nhân vật, trần là %d", total, cfg.Room.BotFillTarget)
-	}
-	if total < cfg.Room.BotFillTarget {
-		t.Fatalf("phòng mới có %d nhân vật, chưa lấp đủ trần %d", total, cfg.Room.BotFillTarget)
+	floorAll := cfg.Room.ZoneMinChars * len(r.Zones())
+	// Bot đi qua cổng có thể làm một khu dư vài con (vơi dần khi chết), nhưng không được
+	// nổ số: trần mềm = sàn × số khu + một nhịp sinh mỗi khu.
+	if total := r.Humans() + r.Bots(); total < floorAll || total > floorAll+cfg.Bots.SpawnBatch*len(r.Zones()) {
+		t.Fatalf("phòng có %d nhân vật, muốn ≈ %d (sàn %d × %d khu)", total, floorAll, cfg.Room.ZoneMinChars, len(r.Zones()))
 	}
 	// Sàn mỗi khu là lời hứa "khu tụt xuống dưới sàn thì được vá lại NGAY", không phải
 	// "không khoảnh khắc nào dưới sàn". Hai thứ đó khác nhau, và chỉ cái thứ nhất là đúng:

@@ -242,7 +242,8 @@ func main() {
 	cfg := config.MustLoadDefault()
 	cfg.Room.MaxHumans = max(cfg.Room.MaxHumans, *players) // dồn hết vào MỘT phòng
 	if *bots >= 0 {
-		cfg.Room.BotFillTarget = *players + *bots
+		// Bot lấp THEO KHU (v6.28 §9.3): muốn tổng ≈ người + N thì nâng sàn mỗi khu.
+		cfg.Room.ZoneMinChars = (*players + *bots + cfg.Room.Zones - 1) / cfg.Room.Zones
 		cfg.Bots.ModeDefault = room.BotOn
 	}
 	m := room.NewManager(cfg, nil, nil)
@@ -300,16 +301,16 @@ func main() {
 	fmt.Printf("Phòng: %d nhân vật (%d bot) rải %d khu, %d người Đạo Tổ %d kiếm, %d phòng\n",
 		total, total-*players, len(r.Zones()), i, maxSwords, len(rooms))
 
-	// Chờ phòng lấp đủ bot rồi mới bấm giờ: trần phòng là `room.bot_fill_target` (60), mà
-	// bot sinh theo nhịp `bots.spawn_every_secs` nên cần tới vài chục giây game. Đo lúc
-	// phòng mới có người thật thì con số đẹp mà vô nghĩa.
+	// Chờ mọi khu lấp đủ sàn `zone_min_chars` rồi mới bấm giờ: bot sinh theo nhịp
+	// `bots.spawn_every_secs` nên cần vài chục giây game. Đo lúc phòng mới có người thật thì
+	// con số đẹp mà vô nghĩa.
 	for k := 0; k < int(120/dt); k++ {
 		r.Step(dt)
 		full := true
 		for _, z := range r.Zones() {
 			full = full && z.Count() >= cfg.Room.ZoneMinChars
 		}
-		if full && r.Humans()+r.Bots() >= cfg.Room.BotFillTarget {
+		if full {
 			break
 		}
 	}

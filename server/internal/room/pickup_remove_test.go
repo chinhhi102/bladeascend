@@ -24,7 +24,7 @@ func TestItemDisappearsAfterPickup(t *testing.T) {
 	// Tắt bot: phòng giờ lấp tới 60 nhân vật, và một con bot đi ngang có thể nhặt mất viên
 	// trước người chơi — test thành đỏ ngẫu nhiên vì lý do chẳng liên quan gì tới luật xoá
 	// vật phẩm mà nó đang kiểm.
-	cfg.Room.BotFillTarget = 0
+	cfg.Room.ZoneMinChars = 0
 	conn := &recConn{}
 	c := NewClient(conn, false)
 	m.Join(c, netproto.Join{Name: "P0", Char: "a_hon"})
@@ -81,7 +81,7 @@ func TestRemovalReportedEvenWhenSlotReused(t *testing.T) {
 	// Tắt bot: phòng giờ lấp tới 60 nhân vật, và một con bot đi ngang có thể nhặt mất viên
 	// trước người chơi — test thành đỏ ngẫu nhiên vì lý do chẳng liên quan gì tới luật xoá
 	// vật phẩm mà nó đang kiểm.
-	cfg.Room.BotFillTarget = 0
+	cfg.Room.ZoneMinChars = 0
 	conn := &recConn{}
 	c := NewClient(conn, false)
 	m.Join(c, netproto.Join{Name: "P0", Char: "a_hon"})

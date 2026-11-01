@@ -41,20 +41,20 @@ func forceTopPlayer(t *testing.T, r *Room, id uint32, level int) {
 	p.Score = 1e9
 }
 
-// §9.5 / §17: chế độ tự động tắt khi > 40 người, bật lại khi < 35 — ở giữa thì giữ trạng
-// thái cũ (trễ), để phòng 38–40 người không bật/tắt bot liên tục.
+// §9.3 v6.28: tự động tắt khi người thật ≥ ngưỡng (production 40), bật lại khi < ngưỡng − 5
+// — ở giữa thì giữ trạng thái cũ (trễ), để phòng quanh ngưỡng không bật/tắt bot liên tục.
 func TestBotAutoHysteresis(t *testing.T) {
 	m, _, cfg := testManager(t)
 	joinN(m, 1)
 	r := m.AllRooms()[0]
-	hi, lo := cfg.Bots.AutoOffAboveHumans, cfg.Bots.AutoOnBelowHumans
-	if hi != 40 || lo != 35 {
-		t.Fatalf("config 40/35 đã đổi: %d/%d", hi, lo)
+	r.latchSettings()
+	if r.set.BotAutoOffAt != 40 || cfg.Bots.AutoOffHysteresis != 5 {
+		t.Fatalf("mặc định production 40, trễ 5 đã đổi: %d / %d", r.set.BotAutoOffAt, cfg.Bots.AutoOffHysteresis)
 	}
 	steps := []struct {
 		humans int
 		want   bool
-	}{{10, true}, {40, true}, {41, false}, {38, false}, {35, false}, {34, true}, {38, true}}
+	}{{10, true}, {39, true}, {40, false}, {38, false}, {35, false}, {34, true}, {38, true}}
 	for _, s := range steps {
 		r.applyBotSwitch(s.humans)
 		if r.botsOn != s.want {

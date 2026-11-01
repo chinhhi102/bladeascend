@@ -53,6 +53,8 @@ func (s *server) adminRoutes(mux *http.ServeMux, adminDir string) {
 	mux.HandleFunc("GET /api/admin/characters", s.adminGuard(s.handleAdminCharacters))
 	mux.HandleFunc("POST /api/admin/bots/mode", s.adminGuard(s.handleAdminBotsSet))
 	mux.HandleFunc("POST /api/admin/bots/withdraw", s.adminGuard(s.handleAdminBotsWithdraw))
+	mux.HandleFunc("GET /api/admin/room-settings", s.adminGuard(s.handleAdminRoomSettings))
+	mux.HandleFunc("POST /api/admin/room-settings", s.adminGuard(s.handleAdminRoomSettingsSet))
 	mux.HandleFunc("GET /api/admin/feedback/{id}/image", s.adminGuard(s.handleAdminFeedbackImage))
 	// CÔNG KHAI: người chơi gửi góp ý (§9). Có rate limit trong `AddFeedback`.
 	mux.HandleFunc("POST /api/feedback", s.handleFeedback)

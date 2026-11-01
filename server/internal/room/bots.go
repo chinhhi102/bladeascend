@@ -5,14 +5,11 @@ import (
 	"bladeascend/server/internal/game"
 )
 
-// updateBots implements the bot fill rules of spec §9.3.
+// updateBots implements the bot fill rules of spec v6.28 §9.3: bot lấp THEO KHU.
 //
-// Hai con số, hai mục đích khác nhau:
-//   - `room.bot_fill_target` là **trần của cả phòng** (người + bot). Thế giới 5 khu là để
-//     bớt cảnh vừa vào đã bị dí, nhưng tổng số nhân vật vẫn phải có trần, nếu không mỗi
-//     phòng thành năm phòng và tick server tăng gấp năm.
-//   - `room.zone_min_chars` là **sàn của từng khu**. Không có nó thì bot dồn vào vài khu
-//     và vẫn có khu trống trơn — người chơi qua cổng sang đó thấy một thế giới chết.
+// Mỗi `spawn_every_secs`, khu nào có người + bot < `zone_min_chars` thì được thả thêm tối đa
+// `spawn_batch` bot. Không còn trần tổng của cả phòng (`bot_fill_target` đã bỏ — Q34), và
+// người vào/rời KHÔNG xoá bot: bot dư vơi dần khi chết (`onBotDeath`).
 func (r *Room) updateBots(dt float64) {
 	r.processRespawns()
 	// Gom tên vừa rời của mọi khu — chạy ở pha ĐƠN LUỒNG, sau khi các khu đã tick xong.
@@ -22,13 +19,9 @@ func (r *Room) updateBots(dt float64) {
 		}
 		z.departed = z.departed[:0]
 	}
-	// Vá sàn chạy MỖI TICK, không theo nhịp sinh bot. Bot đi lại giữa các khu bất cứ lúc
-	// nào (qua cổng, hồi sinh), nên một khu có thể tụt xuống dưới sàn ngay giữa hai nhịp
-	// sinh bot — mà nhịp đó là 2 giây. Buộc phải chờ hết nhịp mới sửa thì người chơi vừa
+	// Vá sàn chạy MỖI TICK bằng cách ĐIỀU bot từ khu dư sang khu thiếu: bot đi lại giữa các
+	// khu bất cứ lúc nào (qua cổng, hồi sinh), chờ hết nhịp 2 s mới sinh bot thì người vừa
 	// bước qua cổng có thể rơi vào một khu gần như trống. Việc này rẻ: 5 khu, vài phép so.
-	//
-	// Phòng đã chạm trần thì không sinh thêm được, nên cách duy nhất là ĐIỀU bot từ khu đông
-	// sang — đó chính là việc `rebalanceZones` làm.
 	r.rebalanceZones()
 	r.withdrawIdle()
 	r.botTimer += dt
@@ -36,50 +29,15 @@ func (r *Room) updateBots(dt float64) {
 		return
 	}
 	r.botTimer = 0
-	// Người thật được ưu tiên trong trần phòng: họ vào bất cứ lúc nào, nên nếu tổng vượt
-	// trần thì phải bớt bot NGAY, không đợi bot chết. Chờ chết thì một phòng đông người có
-	// thể vượt trần suốt mấy phút.
-	r.trimOverCap()
 	if !r.botsOn {
 		return // bot đang tắt (§9.5): không sinh mới; bot có sẵn vơi dần khi chết
 	}
-	room := r.Humans() + r.Bots()
-	target := r.cfg.Room.BotFillTarget
-	// Chỉ `bot_fill_target` mới chặn việc sinh bot. `max_humans` là trần NGƯỜI THẬT, hai
-	// con số khác nhau: 20 người + 40 bot vẫn đúng ý "tối đa 20 người, tổng 60 nhân vật".
-	// Bản cũ dừng sinh bot ngay khi đủ 20 người, nên phòng đông người lại thành phòng vắng.
-	if room >= target {
-		return
-	}
-	// Ưu tiên khu nào chưa đạt sàn; hết việc đó thì rải đều cho tới khi chạm trần phòng.
-	budget := min(target-room, r.cfg.Bots.SpawnBatch)
-	for i := 0; i < budget; i++ {
-		z := r.zoneBelowFloor()
-		if z == nil {
-			z = r.thinnestByCount()
-		}
-		level, swords := r.randomBotLevel()
-		r.spawnBotIn(z, level, swords)
-	}
-}
-
-// trimOverCap bớt bot cho tới khi tổng nhân vật về đúng trần phòng. Bỏ bot ở khu ĐÔNG
-// nhất trước, để việc cắt giảm không tạo ra khu trống.
-func (r *Room) trimOverCap() {
-	for r.Humans()+r.Bots() > r.cfg.Room.BotFillTarget {
-		var fat *Zone
-		for _, z := range r.zones {
-			if len(z.brains) > 0 && (fat == nil || z.Count() > fat.Count()) {
-				fat = z
-			}
-		}
-		if fat == nil {
-			return // không còn bot nào để bớt
-		}
-		for id := range fat.brains {
-			fat.G.RemovePlayer(id)
-			delete(fat.brains, id)
-			break
+	floor := r.set.ZoneMinChars
+	for _, z := range r.zones {
+		n := min(floor-z.Count(), r.cfg.Bots.SpawnBatch)
+		for i := 0; i < n; i++ {
+			level, swords := r.randomBotLevel()
+			r.spawnBotIn(z, level, swords)
 		}
 	}
 }
@@ -96,7 +54,7 @@ func (r *Room) trimOverCap() {
 func (r *Room) rebalanceZones() {
 	delta := make(map[*Zone]int, len(r.zones))
 	count := func(z *Zone) int { return z.Count() + delta[z] }
-	floor := r.cfg.Room.ZoneMinChars
+	floor := r.set.ZoneMinChars
 
 	for i := 0; i < len(r.zones); i++ {
 		var thin *Zone
@@ -163,7 +121,7 @@ func (z *Zone) spareBot() (uint32, bool) {
 func (r *Room) zoneBelowFloor() *Zone {
 	var worst *Zone
 	for _, z := range r.zones {
-		if z.Count() >= r.cfg.Room.ZoneMinChars {
+		if z.Count() >= r.set.ZoneMinChars {
 			continue
 		}
 		if worst == nil || z.Count() < worst.Count() {
@@ -239,11 +197,10 @@ func (r *Room) onBotDeath(z *Zone, p *game.Player) {
 	// `fatal error: concurrent map writes` làm sập server (đã dính đúng vậy hôm 29/10).
 	// Tên người vừa rời gom vào hàng chờ của khu, `updateBots` gom lại sau khi mọi khu
 	// tick xong.
-	// `charsAtTick` chứ không `r.Humans()+r.Bots()`: hàm này chạy trong goroutine của MỘT
-	// khu, còn hai hàm kia đọc map của cả năm khu. Xem ghi chú ở `Room.Step`.
-	// Bot đang tắt (§9.5): chết là rời, không hồi sinh — bot vơi dần tự nhiên. `botsOn`
-	// chốt ở pha đơn luồng đầu tick, đọc ở đây (goroutine của khu) là an toàn.
-	if !r.botsOn || r.charsAtTick-1 >= r.cfg.Room.BotFillTarget {
+	// Spec v6.28 §9.3: bot tắt, hoặc khu vẫn đủ sàn khi bớt con này → bỏ hẳn, không hồi
+	// sinh — bot vơi dần tự nhiên. `botsOn` và `r.set` chốt ở pha đơn luồng đầu tick;
+	// `z.Count()` chỉ đọc dữ liệu của CHÍNH khu này, nên gọi từ goroutine của khu là an toàn.
+	if !r.botsOn || z.Count()-1 >= r.set.ZoneMinChars {
 		z.departed = append(z.departed, p.Name)
 		z.G.RemovePlayer(p.ID)
 		delete(z.brains, p.ID)
@@ -291,7 +248,7 @@ func (r *Room) processRespawns() {
 			// Chỉ điều đi khi khu cũ có người để dư. Khu đang đúng sàn mà cho đi thì chỗ
 			// thiếu chỉ chạy sang chỗ khác chứ không mất — cùng một kiểu sai với
 			// `rebalanceZones` bản cũ.
-			if to := r.thinnestByCount(); to != nil && to != z && z.Count() > r.cfg.Room.ZoneMinChars {
+			if to := r.thinnestByCount(); to != nil && to != z && z.Count() > r.set.ZoneMinChars {
 				z.G.RemovePlayer(p.ID)
 				delete(z.brains, p.ID)
 				r.spawnBotIn(to, level, swords)

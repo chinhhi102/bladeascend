@@ -51,6 +51,13 @@ CREATE TABLE IF NOT EXISTS admin_login_attempts (
   ok      INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_admin_attempts ON admin_login_attempts(ip, at DESC);
+
+-- Cấu hình chỉnh ở admin, sống qua deploy (GAME_SPEC v6.28 §9.5): trần phòng, chế độ bot…
+CREATE TABLE IF NOT EXISTS admin_settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `
 
 // Store là cửa duy nhất vào dữ liệu quản trị.
@@ -200,6 +207,23 @@ func (s *Store) Audit(action, target, reason, ip string, details any) {
 	}
 	_, _ = s.db.Exec(`INSERT INTO admin_audit (at, action, target, reason, ip, details) VALUES (?,?,?,?,?,?)`,
 		time.Now().Unix(), action, target, reason, ip, js)
+}
+
+// Setting đọc một cấu hình admin đã lưu; ok = false nếu chưa từng đặt.
+func (s *Store) Setting(key string) (string, bool) {
+	var v string
+	if err := s.db.QueryRow(`SELECT value FROM admin_settings WHERE key = ?`, key).Scan(&v); err != nil {
+		return "", false
+	}
+	return v, true
+}
+
+// SetSetting lưu (ghi đè) một cấu hình admin.
+func (s *Store) SetSetting(key, value string) error {
+	_, err := s.db.Exec(`INSERT INTO admin_settings (key, value, updated_at) VALUES (?,?,?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+		key, value, time.Now().Unix())
+	return err
 }
 
 // RecentAudit đọc `limit` dòng nhật ký mới nhất.
