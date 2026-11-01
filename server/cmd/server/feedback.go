@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -34,16 +35,47 @@ type feedbackBody struct {
 	// Nhận dạng tự do rồi lưu nguyên JSON: nó chỉ để ĐỌC, không có luật nào chạy trên nó,
 	// nên buộc kiểu ở đây chỉ tạo ra việc phải sửa mỗi lần client muốn gửi thêm một trường.
 	Context map[string]any `json:"context"`
-	// Image: ảnh chụp màn hình, base64 (data URL hoặc base64 trần).
+	// Image: ảnh đơn kiểu cũ (client trước khi có "Thêm ảnh"), base64 (data URL hoặc trần).
+	// Vẫn nhận vì người chơi có thể còn giữ bản client cũ trong bộ nhớ đệm.
 	Image string `json:"image"`
+	// Images: 0..3 ảnh (chụp màn hình + ảnh tải lên), cùng dạng base64 như Image (§7.1).
+	Images []string `json:"images"`
+}
+
+// feedbackMaxBody: 3 ảnh × 300 KB nở 4/3 khi base64 ≈ 1,2 MB, cộng ngữ cảnh và chữ.
+const feedbackMaxBody = 1600 << 10
+
+// decodeFeedbackImages gom ảnh kiểu cũ và kiểu mới rồi giải base64.
+func decodeFeedbackImages(b feedbackBody) ([][]byte, error) {
+	all := b.Images
+	if b.Image != "" {
+		all = append([]string{b.Image}, all...)
+	}
+	if len(all) > admin.FeedbackMaxImages {
+		return nil, admin.ErrTooManyImages
+	}
+	out := make([][]byte, 0, len(all))
+	for _, raw := range all {
+		if raw == "" {
+			continue
+		}
+		if i := strings.Index(raw, ","); strings.HasPrefix(raw, "data:") && i > 0 {
+			raw = raw[i+1:]
+		}
+		dec, err := base64.StdEncoding.DecodeString(raw)
+		if err != nil {
+			return nil, errors.New("ảnh không giải mã được")
+		}
+		out = append(out, dec)
+	}
+	return out, nil
 }
 
 // handleFeedback nhận góp ý từ người chơi — đường dẫn CÔNG KHAI duy nhất ghi vào DB admin.
 func (s *server) handleFeedback(w http.ResponseWriter, r *http.Request) {
 	// Trần kích thước đặt ở ĐÂY chứ không tin `Content-Length`: header đó do client gửi.
-	// 1 MB đủ cho 300 KB ảnh sau khi base64 nở 4/3, cộng ngữ cảnh.
 	var b feedbackBody
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&b); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, feedbackMaxBody)).Decode(&b); err != nil {
 		adminJSON(w, http.StatusBadRequest, map[string]string{"error": "nội dung không hợp lệ"})
 		return
 	}
@@ -54,18 +86,10 @@ func (s *server) handleFeedback(w http.ResponseWriter, r *http.Request) {
 		adminJSON(w, http.StatusForbidden, map[string]string{"error": admin.ErrFeedbackBanned.Error()})
 		return
 	}
-	var img []byte
-	if b.Image != "" {
-		raw := b.Image
-		if i := strings.Index(raw, ","); strings.HasPrefix(raw, "data:") && i > 0 {
-			raw = raw[i+1:]
-		}
-		dec, err := base64.StdEncoding.DecodeString(raw)
-		if err != nil {
-			adminJSON(w, http.StatusBadRequest, map[string]string{"error": "ảnh không giải mã được"})
-			return
-		}
-		img = dec
+	imgs, err := decodeFeedbackImages(b)
+	if err != nil {
+		adminJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
 	}
 	// Ghi IP (băm) vào ngữ cảnh để sau này còn lần được, nhưng KHÔNG trả lại cho client.
 	if b.Context == nil {
@@ -74,7 +98,7 @@ func (s *server) handleFeedback(w http.ResponseWriter, r *http.Request) {
 	b.Context["ip"] = ip
 	b.Context["server_build"] = s.buildID
 
-	id, err := st.AddFeedback(feedbackDir(s.dbPath), b.GuestID, b.Name, b.Kind, b.Body, b.Context, img)
+	id, err := st.AddFeedback(feedbackDir(s.dbPath), b.GuestID, b.Name, b.Kind, b.Body, b.Context, imgs)
 	if err != nil {
 		code := http.StatusBadRequest
 		if err == admin.ErrFeedbackRate {
@@ -138,7 +162,15 @@ func (s *server) handleAdminFeedbackImage(w http.ResponseWriter, r *http.Request
 		http.NotFound(w, r)
 		return
 	}
-	path, err := s.adminAuth.Store().FeedbackImage(feedbackDir(s.dbPath), id)
+	// `?i=` chọn ảnh thứ i (0-based); thiếu `i` = ảnh đầu, như trước khi có nhiều ảnh.
+	idx := 0
+	if v := r.URL.Query().Get("i"); v != "" {
+		if idx, err = strconv.Atoi(v); err != nil {
+			http.NotFound(w, r)
+			return
+		}
+	}
+	path, err := s.adminAuth.Store().FeedbackImage(feedbackDir(s.dbPath), id, idx)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -183,13 +215,13 @@ func (s *server) handleAdminFeedbackCSV(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Disposition", `attachment; filename="gop-y.csv"`)
 	cw := csv.NewWriter(w)
 	defer cw.Flush()
-	_ = cw.Write([]string{"id", "thoi_gian", "loai", "trang_thai", "ten", "guest_id", "noi_dung", "ghi_chu", "co_anh"})
+	_ = cw.Write([]string{"id", "thoi_gian", "loai", "trang_thai", "ten", "guest_id", "noi_dung", "ghi_chu", "so_anh"})
 	for _, f := range rows {
 		_ = cw.Write([]string{
 			strconv.FormatInt(f.ID, 10),
 			time.Unix(f.At, 0).Format(time.RFC3339),
 			f.Kind, f.Status, f.Name, f.GuestID, f.Body, f.Note,
-			map[bool]string{true: "co", false: ""}[f.HasImage],
+			strconv.Itoa(f.Images),
 		})
 	}
 }

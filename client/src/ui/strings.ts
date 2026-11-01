@@ -55,6 +55,15 @@ export const STR = {
   feedbackThanks: 'Cảm ơn! Đã nhận góp ý.',
   feedbackTooShort: 'Viết thêm vài chữ nữa nhé (ít nhất 5 ký tự).',
   feedbackFailed: 'Chưa gửi được. Thử lại sau một lát.',
+  feedbackAddImage: '🖼 Thêm ảnh',
+  feedbackImageHint: 'Tối đa 3 ảnh (tính cả ảnh chụp màn hình). Kéo-thả hoặc dán (Ctrl+V) cũng được.',
+  feedbackImageMax: 'Tối đa 3 ảnh mỗi góp ý.',
+  feedbackImageUnsupported: 'Chưa hỗ trợ định dạng này. Hãy chọn ảnh JPG, PNG hoặc WebP.',
+  feedbackImageTooBig: 'Ảnh này nặng quá, chưa nén được. Thử ảnh khác nhé.',
+  feedbackImageBusy: 'Đang xử lý ảnh...',
+  feedbackImageRemove: 'Xoá ảnh',
+  feedbackShotBadge: 'Màn hình',
+  feedbackShotFailed: 'Không chụp được màn hình — vẫn gửi được phần chữ.',
   /** Chữ nổi khi kiếm chạm vật cản quá bậc (spec §8.2). */
   needRealm: (realm: string): string => `Cần ${realm}`,
   /** Chữ nổi khi câu hát ru bị chém đứt (spec v6.9 §6.3). */

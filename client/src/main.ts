@@ -588,10 +588,11 @@ class App {
   }
 
   /**
-   * screenshot chụp canvas thành WebP ≤ 300 KB (§7.1).
+   * screenshot chụp canvas ra data URL (§7.1).
    *
-   * Hạ dần chất lượng cho tới khi lọt ngân sách thay vì chụp một lần rồi chịu: ảnh 4K ở
-   * chất lượng 0.9 dễ vượt 1 MB, mà server từ chối thì người chơi mất cả bài góp ý vừa gõ.
+   * Không tự ép ngân sách ở đây nữa: form góp ý đưa ảnh này qua CÙNG đường nén với ảnh tải
+   * lên (`ui/imagecompress.ts` — thu nhỏ ≤ 1 600 px, WebP/JPEG ≤ 300 KB). Ép ở đây thì
+   * Safari (chụp ra PNG vì không mã hoá được WebP) hay trả null với màn hình lớn.
    * Trả null nếu không chụp được — form vẫn gửi được phần chữ.
    */
   private screenshot(): string | null {
@@ -600,14 +601,11 @@ class App {
       if (!cv) {
         return null;
       }
-      for (const q of [0.7, 0.5, 0.35, 0.2]) {
-        const url = cv.toDataURL('image/webp', q);
-        // 300 KB sau base64 ≈ 400 000 ký tự. Đo trên chuỗi là đủ chính xác ở đây.
-        if (url.length < 400_000) {
-          return url;
-        }
-      }
-      return null;
+      // Vẽ lại một khung NGAY trước khi đọc: WebGL không giữ bộ đệm khung hình
+      // (`preserveDrawingBuffer` tắt — bật thì tốn mọi khung hình), nên đọc ngoài nhịp vẽ
+      // ra ảnh đen. Vẽ rồi đọc trong cùng một lượt chạy JS thì bộ đệm còn nguyên.
+      this.scene.app.render();
+      return cv.toDataURL('image/webp', 0.9);
     } catch (_) {
       return null; // canvas "bẩn" hoặc WebGL mất ngữ cảnh
     }

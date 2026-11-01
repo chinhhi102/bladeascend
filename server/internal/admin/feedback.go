@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS feedback (
   body      TEXT NOT NULL,
   context   TEXT NOT NULL,
   image     TEXT NOT NULL,
+  images    TEXT NOT NULL DEFAULT '',
   status    TEXT NOT NULL DEFAULT 'moi',
   note      TEXT NOT NULL DEFAULT ''
 );
@@ -54,7 +55,9 @@ CREATE INDEX IF NOT EXISTS idx_bans_ip ON bans(ip);
 const (
 	FeedbackMinLen   = 5
 	FeedbackMaxLen   = 1000
-	FeedbackMaxImage = 300 * 1024 // 300 KB
+	FeedbackMaxImage = 300 * 1024 // 300 KB / ảnh
+	// FeedbackMaxImages: tối đa 3 ảnh / góp ý, TÍNH CẢ ảnh chụp màn hình (§7.1).
+	FeedbackMaxImages = 3
 	// FeedbackPerWindow / FeedbackWindow: 3 góp ý / 10 phút / guest_id (§7.1).
 	FeedbackPerWindow = 3
 	FeedbackWindow    = 10 * time.Minute
@@ -74,13 +77,16 @@ func validKind(k string) bool {
 
 // Feedback là một lá thư góp ý.
 type Feedback struct {
-	ID       int64  `json:"id"`
-	At       int64  `json:"at"`
-	GuestID  string `json:"guest_id"`
-	Name     string `json:"name"`
-	Kind     string `json:"kind"`
-	Body     string `json:"body"`
-	Context  string `json:"context"`
+	ID      int64  `json:"id"`
+	At      int64  `json:"at"`
+	GuestID string `json:"guest_id"`
+	Name    string `json:"name"`
+	Kind    string `json:"kind"`
+	Body    string `json:"body"`
+	Context string `json:"context"`
+	// Images: số ảnh (0..FeedbackMaxImages). Ảnh thứ i đọc ở
+	// `/api/admin/feedback/{id}/image?i=<i>`. HasImage giữ lại cho trang admin cũ.
+	Images   int    `json:"images"`
 	HasImage bool   `json:"has_image"`
 	Status   string `json:"status"`
 	Note     string `json:"note"`
@@ -104,6 +110,8 @@ var (
 	ErrFeedbackRate     = errors.New("gửi quá nhanh, thử lại sau vài phút")
 	ErrFeedbackBanned   = errors.New("tài khoản đang bị cấm")
 	ErrNotAnImage       = errors.New("tệp đính kèm không phải ảnh")
+	ErrTooManyImages    = errors.New("tối đa 3 ảnh mỗi góp ý")
+	ErrImageTooBig      = fmt.Errorf("mỗi ảnh tối đa %d KB", FeedbackMaxImage/1024)
 )
 
 // cleanText chuẩn hoá chuỗi do NGƯỜI CHƠI nhập.
@@ -147,8 +155,108 @@ func imageExt(b []byte) string {
 // LooksLikeImage: byte này có đúng là ảnh không (kiểm lại lúc PHỤC VỤ, không chỉ lúc nhận).
 func LooksLikeImage(b []byte) bool { return imageExt(b) != "" }
 
-// AddFeedback lưu một lá thư. `img` có thể nil.
-func (s *Store) AddFeedback(dir, guestID, name, kind, body string, ctx any, img []byte) (int64, error) {
+// migrateFeedback thêm cột `images` cho DB tạo trước khi góp ý nhận nhiều ảnh.
+//
+// Dòng cũ giữ nguyên: `image` vẫn là ảnh đầu tiên, `images` rỗng nghĩa là "chỉ có `image`"
+// (xem `feedbackFiles`). Không chép dữ liệu, không xoá gì — và bản server cũ chạy lại trên
+// DB mới vẫn thấy ảnh đầu tiên ở đúng chỗ cũ.
+func migrateFeedback(db *sql.DB) error {
+	rows, err := db.Query(`SELECT name FROM pragma_table_info('feedback')`)
+	if err != nil {
+		return err
+	}
+	has := false
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			rows.Close()
+			return err
+		}
+		has = has || n == "images"
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil || has {
+		return err
+	}
+	_, err = db.Exec(`ALTER TABLE feedback ADD COLUMN images TEXT NOT NULL DEFAULT ''`)
+	return err
+}
+
+// feedbackFiles ghép danh sách tên tệp ảnh của một lá thư từ hai cột.
+func feedbackFiles(image, images string) []string {
+	var list []string
+	if images != "" && json.Unmarshal([]byte(images), &list) == nil && len(list) > 0 {
+		return list
+	}
+	if image != "" {
+		return []string{image}
+	}
+	return nil
+}
+
+// prepareImages kiểm và gỡ siêu dữ liệu của MỌI ảnh trước khi ghi tệp nào: một ảnh hỏng
+// làm hỏng cả lá thư, chứ không để lại nửa số tệp mồ côi trên đĩa.
+func prepareImages(imgs [][]byte) ([][]byte, []string, error) {
+	if len(imgs) > FeedbackMaxImages {
+		return nil, nil, ErrTooManyImages
+	}
+	clean := make([][]byte, 0, len(imgs))
+	exts := make([]string, 0, len(imgs))
+	for _, img := range imgs {
+		if imageExt(img) == "" {
+			return nil, nil, ErrNotAnImage
+		}
+		if len(img) > FeedbackMaxImage {
+			return nil, nil, ErrImageTooBig
+		}
+		out, ext, err := StripImageMetadata(img)
+		if err != nil {
+			return nil, nil, err
+		}
+		clean = append(clean, out)
+		exts = append(exts, ext)
+	}
+	return clean, exts, nil
+}
+
+// writeImages ghi ảnh ra đĩa, trả về tên tệp.
+func writeImages(dir string, imgs [][]byte, exts []string) ([]string, error) {
+	if len(imgs) == 0 {
+		return nil, nil
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(imgs))
+	now := time.Now().UnixNano()
+	for i, img := range imgs {
+		// Tên tệp do SERVER đặt hoàn toàn, không lấy một ký tự nào từ client — tên do client
+		// gửi là đường vào của `../../` và của mọi trò với đường dẫn.
+		rel := fmt.Sprintf("fb_%d_%d_%d%s", now, i, len(img), exts[i])
+		if err := os.WriteFile(filepath.Join(dir, rel), img, 0o644); err != nil {
+			removeFiles(dir, names)
+			return nil, err
+		}
+		names = append(names, rel)
+	}
+	return names, nil
+}
+
+// removeFiles xoá các tệp ảnh; tệp đã mất thì bỏ qua. Trả về false nếu có tệp không xoá được.
+func removeFiles(dir string, names []string) bool {
+	ok := true
+	for _, n := range names {
+		// `filepath.Base`: tên trong DB do server đặt, nhưng đọc từ DB rồi ghép thẳng vào
+		// đường dẫn xoá thì một ngày nào đó ai đó sửa DB bằng tay và `../../` đi ra ngoài.
+		if err := os.Remove(filepath.Join(dir, filepath.Base(n))); err != nil && !os.IsNotExist(err) {
+			ok = false
+		}
+	}
+	return ok
+}
+
+// AddFeedback lưu một lá thư kèm 0..3 ảnh (§7.1).
+func (s *Store) AddFeedback(dir, guestID, name, kind, body string, ctx any, imgs [][]byte) (int64, error) {
 	if !validKind(kind) {
 		return 0, ErrFeedbackKind
 	}
@@ -164,34 +272,43 @@ func (s *Store) AddFeedback(dir, guestID, name, kind, body string, ctx any, img 
 	if n, _ := s.feedbackCount(guestID, FeedbackWindow); n >= FeedbackPerWindow {
 		return 0, ErrFeedbackRate
 	}
-	ctxJSON := "{}"
-	if ctx != nil {
-		if b, err := json.Marshal(ctx); err == nil && len(b) < 16*1024 {
-			ctxJSON = string(b)
-		}
+	clean, exts, err := prepareImages(imgs)
+	if err != nil {
+		return 0, err
 	}
-	rel := ""
-	if len(img) > 0 {
-		ext := imageExt(img)
-		if ext == "" {
-			return 0, ErrNotAnImage
-		}
-		if len(img) > FeedbackMaxImage {
-			return 0, fmt.Errorf("ảnh quá %d KB", FeedbackMaxImage/1024)
-		}
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return 0, err
-		}
-		// Tên tệp do SERVER đặt hoàn toàn, không lấy một ký tự nào từ client — tên do client
-		// gửi là đường vào của `../../` và của mọi trò với đường dẫn.
-		rel = fmt.Sprintf("fb_%d_%d%s", time.Now().UnixNano(), len(img), ext)
-		if err := os.WriteFile(filepath.Join(dir, rel), img, 0o644); err != nil {
-			return 0, err
-		}
+	names, err := writeImages(dir, clean, exts)
+	if err != nil {
+		return 0, err
+	}
+	id, err := s.insertFeedback(guestID, name, kind, body, contextJSON(ctx), names)
+	if err != nil {
+		removeFiles(dir, names)
+	}
+	return id, err
+}
+
+func contextJSON(ctx any) string {
+	if ctx == nil {
+		return "{}"
+	}
+	if b, err := json.Marshal(ctx); err == nil && len(b) < 16*1024 {
+		return string(b)
+	}
+	return "{}"
+}
+
+// insertFeedback ghi dòng DB. `image` luôn là ảnh đầu tiên để bản server/trang admin cũ
+// vẫn đọc được; `images` giữ đủ danh sách.
+func (s *Store) insertFeedback(guestID, name, kind, body, ctxJSON string, names []string) (int64, error) {
+	first, all := "", ""
+	if len(names) > 0 {
+		first = names[0]
+		b, _ := json.Marshal(names)
+		all = string(b)
 	}
 	res, err := s.db.Exec(
-		`INSERT INTO feedback (at, guest_id, name, kind, body, context, image) VALUES (?,?,?,?,?,?,?)`,
-		time.Now().Unix(), guestID, name, kind, body, ctxJSON, rel)
+		`INSERT INTO feedback (at, guest_id, name, kind, body, context, image, images) VALUES (?,?,?,?,?,?,?,?)`,
+		time.Now().Unix(), guestID, name, kind, body, ctxJSON, first, all)
 	if err != nil {
 		return 0, err
 	}
@@ -208,7 +325,7 @@ func (s *Store) feedbackCount(guestID string, window time.Duration) (int, error)
 // ListFeedback đọc danh sách, mới nhất trước. `kind`/`status` rỗng = không lọc.
 func (s *Store) ListFeedback(kind, status, q string, limit int) ([]Feedback, error) {
 	sb := strings.Builder{}
-	sb.WriteString(`SELECT id, at, guest_id, name, kind, body, context, image, status, note FROM feedback WHERE 1=1`)
+	sb.WriteString(`SELECT id, at, guest_id, name, kind, body, context, image, images, status, note FROM feedback WHERE 1=1`)
 	var args []any
 	if kind != "" {
 		sb.WriteString(` AND kind = ?`)
@@ -234,12 +351,13 @@ func (s *Store) ListFeedback(kind, status, q string, limit int) ([]Feedback, err
 	var out []Feedback
 	for rows.Next() {
 		var f Feedback
-		var img string
+		var img, imgs string
 		if err := rows.Scan(&f.ID, &f.At, &f.GuestID, &f.Name, &f.Kind, &f.Body,
-			&f.Context, &img, &f.Status, &f.Note); err != nil {
+			&f.Context, &img, &imgs, &f.Status, &f.Note); err != nil {
 			return nil, err
 		}
-		f.HasImage = img != ""
+		f.Images = len(feedbackFiles(img, imgs))
+		f.HasImage = f.Images > 0
 		out = append(out, f)
 	}
 	return out, rows.Err()
@@ -271,22 +389,24 @@ func (s *Store) UpdateFeedback(id int64, status, note string) error {
 	return nil
 }
 
-// FeedbackImage trả về đường dẫn tuyệt đối tới ảnh của một lá thư.
+// FeedbackImage trả về đường dẫn tuyệt đối tới ảnh thứ `i` (0-based) của một lá thư.
 //
 // Đọc tên tệp TỪ DB chứ không nhận từ URL, rồi `filepath.Base` một lần nữa: kể cả khi DB
 // có dòng hỏng, cũng không ra khỏi được thư mục ảnh.
-func (s *Store) FeedbackImage(dir string, id int64) (string, error) {
-	var rel string
-	if err := s.db.QueryRow(`SELECT image FROM feedback WHERE id = ?`, id).Scan(&rel); err != nil {
+func (s *Store) FeedbackImage(dir string, id int64, i int) (string, error) {
+	var rel, rels string
+	err := s.db.QueryRow(`SELECT image, images FROM feedback WHERE id = ?`, id).Scan(&rel, &rels)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", errors.New("không có lá thư này")
 		}
 		return "", err
 	}
-	if rel == "" {
-		return "", errors.New("lá thư này không có ảnh")
+	files := feedbackFiles(rel, rels)
+	if i < 0 || i >= len(files) {
+		return "", errors.New("lá thư này không có ảnh đó")
 	}
-	return filepath.Join(dir, filepath.Base(rel)), nil
+	return filepath.Join(dir, filepath.Base(files[i])), nil
 }
 
 // ── Cấm người chơi (§6.2) ────────────────────────────────────────────────────────────────
@@ -425,22 +545,24 @@ const FeedbackImageKeepDays = 90
 func (s *Store) PurgeOldImages(dir string, now time.Time) (int, error) {
 	cutoff := now.AddDate(0, 0, -FeedbackImageKeepDays).Unix()
 	rows, err := s.db.Query(
-		`SELECT id, image FROM feedback
-		 WHERE image <> '' AND status IN ('xong','bo_qua') AND at < ?`, cutoff)
+		`SELECT id, image, images FROM feedback
+		 WHERE (image <> '' OR images <> '') AND status IN ('xong','bo_qua') AND at < ?`, cutoff)
 	if err != nil {
 		return 0, err
 	}
 	type victim struct {
-		id   int64
-		file string
+		id    int64
+		files []string
 	}
 	var list []victim
 	for rows.Next() {
 		var v victim
-		if err := rows.Scan(&v.id, &v.file); err != nil {
+		var img, imgs string
+		if err := rows.Scan(&v.id, &img, &imgs); err != nil {
 			rows.Close()
 			return 0, err
 		}
+		v.files = feedbackFiles(img, imgs)
 		list = append(list, v)
 	}
 	rows.Close()
@@ -450,15 +572,13 @@ func (s *Store) PurgeOldImages(dir string, now time.Time) (int, error) {
 
 	n := 0
 	for _, v := range list {
-		// `filepath.Base`: tên trong DB do server đặt, nhưng đọc từ DB rồi ghép thẳng vào
-		// đường dẫn xoá thì một ngày nào đó ai đó sửa DB bằng tay và `../../` đi ra ngoài.
-		if err := os.Remove(filepath.Join(dir, filepath.Base(v.file))); err != nil && !os.IsNotExist(err) {
+		if !removeFiles(dir, v.files) {
 			continue // không xoá được thì để lại, đừng quên tên trong DB
 		}
-		if _, err := s.db.Exec(`UPDATE feedback SET image = '' WHERE id = ?`, v.id); err != nil {
+		if _, err := s.db.Exec(`UPDATE feedback SET image = '', images = '' WHERE id = ?`, v.id); err != nil {
 			continue
 		}
-		n++
+		n += len(v.files)
 	}
 	return n, nil
 }
