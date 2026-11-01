@@ -12,7 +12,19 @@ name: CI
 on:
   push:
     branches: [main]
+  # PR từ fork cũng chạy. Workflow này KHÔNG dùng secret nào (không `secrets.*`, không khoá
+  # minigen, không sinh art) — mọi bước chỉ đọc mã nguồn và art đã commit trong `assets/src/`.
+  # Sinh art (`cmd/artgen`, minigen) cần khoá API trả tiền nên KHÔNG BAO GIỜ chạy ở CI.
   pull_request:
+
+# Token GitHub chỉ đọc: PR từ người lạ không ghi được gì vào repo dù workflow có bị sửa.
+permissions:
+  contents: read
+
+# Đẩy commit mới lên cùng PR thì huỷ lượt chạy cũ — đỡ tốn phút CI.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # Repo công khai: không để guest_id đầy đủ hay IP người chơi lọt vào docs/ (CLAUDE.md quy
@@ -43,9 +55,6 @@ jobs:
       - name: go test -race
         working-directory: server
         run: go test -race ./...
-      # Sinh lại từ schema rồi kiểm KHÔNG có gì đổi. Ai sửa `proto/schema.txt` mà quên chạy
-      # generator thì code sinh ra và schema lệch nhau — và lệch kiểu đó không làm hỏng build,
-      # nó chỉ làm client đọc rác lúc chạy.
       # §8.1b "Kiểm tra bắt buộc": 5 khu × 14 cảnh giới, flood fill lưới 50. Trượt nghĩa là
       # có cảnh giới nào đó bị NHỐT trong một túi kín, hoặc không tới được một cái Đài — tức
       # người chơi ở cảnh giới đó mở game ra và không chơi được. Phải chặn ở CI vì cả hai
@@ -62,6 +71,9 @@ jobs:
       - name: Nam Châm ≤ 1,5 lần bảng + Luyện Hư → Chân Tiên ≥ 15 phút
         working-directory: server
         run: go run ./cmd/sim --farm --magnet-always --seed 1
+      # Sinh lại từ schema rồi kiểm KHÔNG có gì đổi. Ai sửa `proto/schema.txt` mà quên chạy
+      # generator thì code sinh ra và schema lệch nhau — và lệch kiểu đó không làm hỏng build,
+      # nó chỉ làm client đọc rác lúc chạy.
       - name: code sinh từ schema còn khớp
         working-directory: server
         run: |
@@ -83,7 +95,9 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: client/package-lock.json
+          cache-dependency-path: |
+            client/package-lock.json
+            tools/asset-pipeline/package-lock.json
       - name: npm ci
         working-directory: client
         run: npm ci
