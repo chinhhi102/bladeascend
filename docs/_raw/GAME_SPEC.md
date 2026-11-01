@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.20:** chất lượng mặc định Vừa (PC GPU rời) / Thấp (điện thoại, GPU tích hợp), tự nâng Thấp→Vừa sau 10s, Vừa→Cao sau 20s ổn định ≥ 55 FPS, chỉ lưu lựa chọn tay (§13.6 mục 8, trả lời Q32).
+
 **Thay đổi v6.19:** bảng xếp hạng phòng mới — tên, danh hiệu, khu đang đứng, cảnh giới; danh hiệu tính theo cả phòng (5 khu); Top 1/2/3 thiết kế bục vinh danh riêng (§11.3, §11.5).
 
 **Thay đổi v6.18:** tên Tiếng Việt chốt **Đạo Hữu Xin Dừng Bước** + mô tả/khẩu hiệu/giới thiệu; bỏ hẳn "Kiếm Xoay Tu Tiên"; đổi tên project (§20).
@@ -1194,7 +1196,13 @@ kiem-xoay/
 5. Viên EXP, item, hạt VFX dùng `ParticleContainer` + 1 atlas → ít draw call.
 6. Giải mã MessagePack trong **Web Worker**, luồng chính chỉ nhận dữ liệu đã giải mã.
 7. Không tạo object mới mỗi frame (pool cho sprite, particle, vector).
-8. **Tự hạ chất lượng**: FPS < 45 trong 3s → tắt spin blur, tắt thần thú thường trực, giảm particle 50%, hạ độ phân giải texture vòng; FPS ổn lại 10s → bật dần. Có tùy chọn Chất lượng: Cao / Vừa / Thấp.
+8. **Chất lượng đồ hoạ: mặc định + tự điều chỉnh**
+   - **Mặc định khi vào game**: PC có GPU rời → **Vừa**; điện thoại, máy tính bảng, PC chỉ có GPU tích hợp → **Thấp**. Không bao giờ bắt đầu ở Cao.
+   - **Tự hạ**: FPS < 45 liên tục 3s → hạ 1 bậc (Cao → Vừa → Thấp). Ở Thấp vẫn < 30 → thêm bước khẩn: resolution 1.0, tắt ambient, giảm decal.
+   - **Tự nâng** khi FPS ≥ 55 liên tục: **Thấp → Vừa sau 10s**, **Vừa → Cao sau 20s**. Sau mỗi lần nâng mà bị hạ lại → khoá không tự nâng trong 5 phút (chống lên xuống liên tục).
+   - Người chơi tự chọn mức (phím V / cài đặt) → tắt tự điều chỉnh cho tới khi chọn lại "Tự động".
+   - **Chỉ lựa chọn tay của người chơi được lưu** (localStorage); mức do máy tự đổi không lưu — lần sau vào game lại bắt đầu từ mặc định.
+   - Khác biệt chính giữa Cao và Vừa: mây, lá bay, bloom, vệt hạt thần thú (đo 31/10: Cao tốn hơn Vừa ~33%).
 
 **Server & mạng**
 9. Lượng tử hóa: vị trí `u16` (bản đồ 12 000 → bước ~0.2), góc `u8`/`u16`, scale `u8`. Không gửi float64.
