@@ -1163,7 +1163,8 @@ export class GameScene {
         this.floatText.show(STR.needRealm(realmName(this.cfg, e.n ?? 0)), e.x, e.y, now);
         break;
       case 'ObstacleBroken':
-        this.vfx.play('death_smoke', e.x, e.y, 260, now);
+        // Spec §8.2 (v6.7): vật cản "biến mất ngay lập tức, không hoạt ảnh vỡ, không đống
+        // đổ nát (chỉ 1 tiếng bụp ngắn)" — nên KHÔNG phát khói ở đây.
         sound.play('obstacle_break', 0.7);
         break;
       case 'ObstacleRegrow':
