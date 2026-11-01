@@ -37,7 +37,7 @@ func TestItemDisappearsAfterPickup(t *testing.T) {
 	// Thả viên trong tầm nhìn nhưng NGOÀI tầm nhặt, để server kịp gửi nó cho client; nếu
 	// thả ngay dưới chân thì nhặt xong trong tick đầu, client chưa từng thấy nó.
 	at := p.Pos
-	at.X += 400
+	at.X += towardCenter(r, at.X, 400)
 	it := r.Zone(0).G.SpawnItemForTest("orb", 10, at)
 	itemID := it.ID
 	for tick := 0; tick < 20; tick++ {
@@ -92,7 +92,7 @@ func TestRemovalReportedEvenWhenSlotReused(t *testing.T) {
 	p := r.Zone(0).G.Players[c.PlayerID]
 	p.InvulnUntil = 1e9
 	at := p.Pos
-	at.X += 400
+	at.X += towardCenter(r, at.X, 400)
 	oldID := r.Zone(0).G.SpawnItemForTest("orb", 10, at).ID
 	for tick := 0; tick < 20; tick++ {
 		r.Step(dt) // để server kịp gửi viên cũ cho client
@@ -108,7 +108,7 @@ func TestRemovalReportedEvenWhenSlotReused(t *testing.T) {
 	// Thả viên mới cho tới khi có một viên nhận đúng slot vừa nhả ra. Thả ở CHỖ KHÁC để nó
 	// không bị nhặt mất, nhưng vẫn trong tầm nhìn.
 	far := p.Pos
-	far.X += 700
+	far.X += towardCenter(r, far.X, 700)
 	reused := false
 	for i := 0; i < 200 && !reused; i++ {
 		reused = r.Zone(0).G.SpawnItemForTest("orb", 10, far).Slot() == oldSlot
@@ -131,4 +131,13 @@ func TestRemovalReportedEvenWhenSlotReused(t *testing.T) {
 	if !removed {
 		t.Fatal("slot bị viên mới chiếm nên server quên báo xoá viên cũ — viên cũ kẹt lại trên màn hình")
 	}
+}
+
+// towardCenter: lệch `d` về phía GIỮA bản đồ. B18: người sinh sát mép phải thì +400 rơi ra
+// ngoài tường biên, viên nằm ngoài, người bị kẹp lại trong biên → "chưa nhặt được" ~1/30 lần.
+func towardCenter(r *Room, x, d float64) float64 {
+	if x > r.Zone(0).G.Map.Size/2 {
+		return -d
+	}
+	return d
 }
