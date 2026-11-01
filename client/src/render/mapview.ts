@@ -263,6 +263,13 @@ function inReach(o: MapObstacle, me: MyReach): boolean {
   return dx * dx + dy * dy <= me.r * me.r;
 }
 
+/**
+ * MapWorld: phần trạng thái trận mà bộ vẽ bản đồ thật sự đọc. Tách hẹp ra để trang quản trị
+ * (ADMIN_SPEC §5 — xem toàn cảnh bằng chính bộ vẽ này) đưa vào một trạng thái giả, không cần
+ * dựng cả `ClientWorld` với kết nối mạng.
+ */
+export type MapWorld = Pick<ClientWorld, 'brokenObstacles' | 'canCutObstacle'>;
+
 /** EDGE_GROW: viền to hơn ảnh ngần này (tỉ lệ) — đủ thấy, không thành bóng đổ. */
 const EDGE_GROW = 1.07;
 
@@ -672,7 +679,7 @@ export class MapView {
     }
   }
 
-  update(w: ClientWorld, now: number, myBush: number, me: Viewer | null, occlusionAlpha: number, view?: { x: number; y: number; w: number; h: number }, reach?: MyReach): void {
+  update(w: MapWorld, now: number, myBush: number, me: Viewer | null, occlusionAlpha: number, view?: { x: number; y: number; w: number; h: number }, reach?: MyReach): void {
     this.updateWater(now);
     if (view) {
       this.decals.setThin(emergency());
@@ -705,7 +712,7 @@ export class MapView {
     return b.y + b.h > me.feet && b.x < me.x + me.halfW && b.x + b.w > me.x - me.halfW && b.y < me.feet && b.y + b.h > me.top;
   }
 
-  private updateObstacle(n: ObstacleNode, w: ClientWorld, now: number): void {
+  private updateObstacle(n: ObstacleNode, w: MapWorld, now: number): void {
     const broken = w.brokenObstacles.get(n.o.id) ?? false;
     const look: ObstacleLook = broken ? 'gone' : 'intact';
     // Bậc quá cao thì vẽ VIỀN TỐI MỜ (spec §8.2): người chơi phải nhìn là biết chém được

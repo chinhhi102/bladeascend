@@ -261,6 +261,8 @@ func (s *server) handleAdminClearFlag(w http.ResponseWriter, r *http.Request) {
 	var b struct {
 		GuestID string `json:"guest_id"`
 		Kind    string `json:"kind"`
+		// Reason: lý do admin gõ ở hộp xác nhận (có thể trống → ghi loại cờ như trước).
+		Reason string `json:"reason"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&b); err != nil || b.GuestID == "" {
 		adminJSON(w, http.StatusBadRequest, map[string]string{"error": "thiếu guest_id"})
@@ -277,6 +279,10 @@ func (s *server) handleAdminClearFlag(w http.ResponseWriter, r *http.Request) {
 			}
 		})
 	}
-	s.adminAuth.Store().Audit("clear_flag", b.GuestID, b.Kind, admin.ClientIP(r), nil)
+	reason := sanitizeReason(b.Reason)
+	if reason == "" {
+		reason = b.Kind
+	}
+	s.adminAuth.Store().Audit("clear_flag", b.GuestID, reason, admin.ClientIP(r), map[string]any{"kind": b.Kind})
 	adminJSON(w, http.StatusOK, map[string]int{"ok": 1, "cleared": n})
 }

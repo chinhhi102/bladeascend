@@ -1,129 +1,18 @@
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8">
+<html lang="vi">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
 <title>Quản trị — %BRAND_NAME_VI%</title>
-<link rel="stylesheet" href="/admin/admin.css">
-</head><body>
-<nav id="side">
-  <h1>%BRAND_NAME%</h1>
-  <a href="#dashboard" class="on">Dashboard</a>
-  <a href="#rooms">Phòng &amp; Khu</a>
-  <a href="#feedback">Góp ý <span id="fbcount" class="pill" hidden>0</span></a>
-  <a href="#map">Bản đồ</a>
-  <a href="#players">Người chơi <span id="flagcount" class="pill warn" hidden>0</span></a>
-  <a href="#errors">Lỗi người chơi <span id="errcount" class="pill bad" hidden>0</span></a>
-  <a href="#bans">Danh sách cấm</a>
-  <a href="#chars">Nhân vật</a>
-  <a href="#board">Bảng xếp hạng</a>
-  <a href="#audit">Nhật ký</a>
-  <button id="logout">Đăng xuất</button>
-  <div id="build"></div>
-</nav>
-<main>
-  <section id="dashboard">
-    <h2>Dashboard <small id="tick"></small></h2>
-    <div class="cards" id="cards"></div>
-    <h3>Phân bố cảnh giới (người thật)</h3>
-    <div id="realms" class="realms"></div>
-  </section>
-  <section id="rooms" hidden>
-    <h2>Phòng &amp; Khu</h2>
-    <div id="roomcfg"></div>
-    <div id="botpanel"></div>
-    <div id="roomlist"></div>
-  </section>
-  <section id="feedback" hidden>
-    <h2>Hòm thư góp ý</h2>
-    <div class="filters">
-      <select id="fbkind"><option value="">Mọi loại</option></select>
-      <select id="fbstatus"><option value="">Mọi trạng thái</option></select>
-      <input id="fbq" type="search" placeholder="Tìm trong nội dung...">
-      <a id="fbcsv" href="/api/admin/feedback.csv" download>Xuất CSV</a>
-    </div>
-    <div id="fblist"></div>
-  </section>
-  <section id="map" hidden>
-    <h2>Bản đồ <small id="mapinfo"></small></h2>
-    <div class="filters">
-      <select id="mpmode">
-        <option value="live">Xem trực tiếp (5 lần/giây)</option>
-        <option value="seed">Xem bố cục tĩnh + kết quả --check</option>
-      </select>
-      <select id="mpzone"></select>
-      <label id="mprlab" hidden>Cảnh giới r=<input id="mpr" type="range" min="0" max="13" value="0"><b id="mprv">0</b></label>
-      <span id="mplayers" class="layers"></span>
-    </div>
-    <div id="mpitems" class="layers items"></div>
-    <div id="mpcheck" class="hint"></div>
-    <div id="mpwrap"><canvas id="mpcv" width="860" height="860"></canvas></div>
-  </section>
-  <section id="players" hidden>
-    <h2>Người chơi đang online</h2>
-    <p class="hint">Cờ nghi hack chỉ là <strong>dấu hiệu</strong>, không phải bằng chứng —
-      mạng chập chờn, hai anh em chung nhà, máy yếu nhấp liên tục đều gắn cờ được.
-      Server không bao giờ tự kick ai; mọi thao tác dưới đây đều do anh bấm và phải nêu lý do.</p>
-    <div class="filters">
-      <label><input id="plflag" type="checkbox"> Chỉ người có cờ</label>
-      <input id="plq" type="search" placeholder="Tìm tên hoặc guest_id...">
-      <span id="plcount" class="hint"></span>
-    </div>
-    <div id="pllist"></div>
-  </section>
-  <section id="errors" hidden>
-    <h2>Lỗi của người chơi thật</h2>
-    <p class="hint">Lỗi gửi về từ máy người chơi (TELEMETRY_SPEC §4). Gom theo nội dung —
-      một lỗi trong vòng vẽ bắn 60 lần mỗi giây, nên đếm từng dòng thì không đọc được.
-      Xếp theo <strong>số người dính</strong> trước, rồi mới tới số lần.</p>
-    <div class="filters">
-      <select id="errdays">
-        <option value="1">24 giờ qua</option>
-        <option value="7" selected>7 ngày qua</option>
-        <option value="30">30 ngày qua</option>
-      </select>
-      <span id="errinfo" class="hint"></span>
-    </div>
-    <div id="errlist"></div>
-  </section>
-  <section id="bans" hidden>
-    <h2>Danh sách cấm</h2>
-    <p class="hint">Cấm theo <code>guest_id</code> và IP cùng lúc. Gỡ cấm thì gỡ cả hai.</p>
-    <table id="bantbl"><thead><tr>
-      <th>Từ</th><th>guest_id</th><th>IP</th><th>Hết hạn</th><th>Lý do</th><th></th>
-    </tr></thead><tbody></tbody></table>
-  </section>
-  <section id="board" hidden>
-    <h2>Bảng xếp hạng — rà soát</h2>
-    <p class="hint">Chỉ <strong>ẩn</strong> khỏi bảng, không xoá dữ liệu. Bỏ ẩn được bất cứ lúc nào.
-      Mốc so sánh lấy từ <code>cmd/sim</code>: chơi thật đạt Đại Thừa ~429 giây, Chân Tiên ~479 giây.
-      Danh sách đã rà: <code>docs/LEADERBOARD_AUDIT.md</code>.</p>
-    <div class="filters">
-      <label><input id="bdsus" type="checkbox"> Chỉ mạng đáng ngờ</label>
-      <label><input id="bdhid" type="checkbox"> Chỉ mạng đang ẩn</label>
-      <input id="bdq" type="search" placeholder="Tìm tên hoặc guest_id...">
-      <span id="bdcount" class="hint"></span>
-    </div>
-    <table id="bdtbl"><thead><tr>
-      <th>Kết thúc</th><th>Tên</th><th>Uy Danh</th><th>Tầng</th><th>Sống</th><th>Vì sao ngờ</th><th></th>
-    </tr></thead><tbody></tbody></table>
-  </section>
-  <section id="chars" hidden>
-    <h2>Nhân vật (trận thật)</h2>
-    <p class="hint">Cân bằng theo số liệu người chơi thật ≥ 2 ngày (GAME_SPEC v6.30 §6.3). Bỏ mạng &lt; 30 s và mạng đã ẩn.</p>
-    <div class="filters"><label>Số ngày <select id="chdays"><option>1</option><option selected>2</option><option>7</option><option>30</option></select></label></div>
-    <table id="chtbl"><thead><tr>
-      <th>Nhân vật</th><th>Số mạng</th><th>Tỉ lệ chọn</th><th>Uy Danh/phút</th><th>Sống TB</th><th>Cảnh giới cao nhất TB</th><th>Dùng kỹ năng/phút</th>
-    </tr></thead><tbody></tbody></table>
-  </section>
-  <section id="audit" hidden>
-    <h2>Nhật ký thao tác</h2>
-    <table id="audittbl"><thead><tr>
-      <th>Thời gian</th><th>Hành động</th><th>Đối tượng</th><th>Lý do</th><th>IP</th>
-    </tr></thead><tbody></tbody></table>
-  </section>
-</main>
-<script src="/admin/admin.js"></script>
-<script src="/admin/map.js"></script>
-<script src="/admin/bots.js"></script>
-<script src="/admin/roomcfg.js"></script>
-<script src="/admin/chars.js"></script>
-</body></html>
+<style>
+  html, body, #root { margin: 0; min-height: 100%; }
+  body { background: #f5f5f5; }
+  @media (prefers-color-scheme: dark) { body { background: #000; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="./src/main.tsx"></script>
+</body>
+</html>

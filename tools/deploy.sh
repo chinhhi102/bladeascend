@@ -227,10 +227,13 @@ echo "== 4/5 dựng thư mục deploy =="
 rm -rf "$STAGE"
 mkdir -p "$STAGE/client" "$STAGE/assets"
 cp -r client/dist/. "$STAGE/client/"
-# Trang quản trị nằm NGOÀI `client/dist` (ADMIN_SPEC §1: mã admin không đi chung bundle
-# công khai của game), nên phải chép riêng. Server tìm nó ở `<client>/admin`.
-mkdir -p "$STAGE/client/admin"
-cp -r client/admin/. "$STAGE/client/admin/"
+# Trang quản trị (React + antd, ADMIN_SPEC §2.1) là bundle RIÊNG, `npm run build` dựng vào
+# `client/dist/admin` nên đã nằm trong lệnh chép ở trên. Server tìm nó ở `<client>/admin` và
+# chỉ phục vụ sau khi đăng nhập; `index.html` của game không trỏ tới nó.
+if [ ! -f "$STAGE/client/admin/index.html" ]; then
+  echo "LỖI: bản build thiếu trang quản trị (client/dist/admin). Dừng deploy." >&2
+  exit 1
+fi
 # Chép NGUYÊN `assets/dist` — sản phẩm của `tools/asset-pipeline` (GAME_SPEC §13.7 mục 2).
 # `npm run build` ở bước 2/5 đã dựng nó và đã qua cổng `assets:budget`.
 #
