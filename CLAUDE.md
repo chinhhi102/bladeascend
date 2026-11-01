@@ -48,6 +48,8 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
 6. Khi chưa có art: dùng hình placeholder (hình tròn + chữ) nhưng giữ đúng tên file/anim theo ART_PROMPTS để sau chỉ cần thả ảnh vào.
 7. Trước khi báo "xong": chạy `go test ./...`, `go vet ./...`, `npm run build` đều phải pass.
 8. Làm xong 1 bước nhỏ chạy được → git commit với message tiếng Việt rõ ràng.
+   **Mục nào đã deploy thì push lên GitHub ngay cuối mục** (`git push origin main`). Báo cáo phải ghi
+   rõ **commit cuối đã có trên GitHub** (kiểm bằng `git ls-remote origin refs/heads/main`).
 9. Cuối phiên: cập nhật `docs/PROGRESS.md` (đã làm gì, còn gì, lỗi đã biết).
 10. Khi gặp câu hỏi về thiết kế game hoặc spec chưa rõ: KHÔNG tự đoán. Ghi câu hỏi vào
     docs/QUESTIONS.md (kèm bối cảnh ngắn: đang làm milestone nào, file nào, các phương án),
