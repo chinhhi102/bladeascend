@@ -183,12 +183,22 @@ function fbCard(f) {
     } catch (_) { c.textContent = f.context; }
     box.append(c);
   }
-  if (f.has_image) {
-    const img = document.createElement('img');
-    img.src = `/api/admin/feedback/${f.id}/image`;
-    img.alt = 'ảnh chụp màn hình';
-    img.loading = 'lazy';
-    box.append(img);
+  // `images` = số ảnh (0..3); server cũ chỉ có `has_image` thì coi là 1 ảnh.
+  const nImg = typeof f.images === 'number' ? f.images : (f.has_image ? 1 : 0);
+  if (nImg > 0) {
+    const imgs = el('div', 'imgs');
+    for (let i = 0; i < nImg; i++) {
+      const src = `/api/admin/feedback/${f.id}/image?i=${i}`;
+      const a = document.createElement('a');
+      a.href = src; a.target = '_blank'; a.rel = 'noopener';
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = `ảnh ${i + 1}/${nImg}`;
+      img.loading = 'lazy';
+      a.append(img);
+      imgs.append(a);
+    }
+    box.append(imgs);
   }
 
   const tools = el('div', 'tools');
