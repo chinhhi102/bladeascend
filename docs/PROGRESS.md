@@ -41,6 +41,26 @@ Danh mục asset theo đúng tên ART_PROMPTS: `client/src/render/catalog.ts` (d
 
 ## Đã làm
 
+- **Phiên 1/11/2026 (tối) — thư viện art, EXP_AUDIT, admin staging**
+  - **Thư viện art** (luật 13, spec §13.7-3b). `assets/library/` + `INDEX.md`.
+    - Cứu **205/205** ảnh từng bị xoá trong git, không tệp nào mất. Chuyển thêm 23 tệp Q31
+      nhóm 2 (tổng 228).
+    - Pipeline và mọi `check:*` không đọc thư mục này. Dist dựng lại **giống từng byte**
+      (373 tệp, boot 2,77 MB).
+    - `artgen` coi art trong thư viện là đã có. Trước đó nó định mua lại boba + 9 bộ regrow.
+    - `check:dead` đề xuất chuyển vào thư viện, không đề xuất xoá.
+  - **EXP_AUDIT (v6.21 bước 1)**: `docs/EXP_AUDIT.md`, `cmd/sim --audit`, ghi nguồn EXP
+    (`Game.ExpTrace`).
+    - Nguyên nhân thật: nhặt Bí Kíp khi đủ lượt **nhân đôi** tổng EXP (`items.go`), chiếm
+      80–97 % EXP.
+    - **Chờ chủ dự án duyệt Q33 rồi mới sửa** (gồm cả §6.0, bảng nhịp, `--farm` CI).
+  - Bảng xếp hạng: điểm lấy từ cùng bản chụp đã giữ (13d3457). artgen prep `-only` chỉ đụng
+    đúng tệp (b115cc2). Cả hai đã deploy staging + :9999.
+  - Staging đọc `ADMIN_PASSWORD_HASH` từ `~/bladeascend-secrets/admin.env` (ngoài thư mục
+    deploy). Chủ dự án tự đặt, hướng dẫn ở `docs/SETUP_ADMIN.md`.
+  - **Còn lại theo thứ tự:** v6.21 bước 2–5 (sau Q33) → v6.22 (bot như người mới, bật/tắt bot,
+    loadtest trước khi mở phòng 50) → 3b → 3c → 3d → 3e.
+
 - **Thiên Môn (29/10/2026, spec §8.4a, CHANGES_v5 mục 16–18)** — lối đi **chắc chắn** tới
   Thiên Đình, ngược hẳn với 4 cổng thường vốn cố tình giấu đích đến.
   - Mỗi khu trừ Thiên Đình có **1 Thiên Môn ở tâm khu**, mapgen chừa quảng trường trống bán
