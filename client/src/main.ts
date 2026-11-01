@@ -440,7 +440,7 @@ class App {
     // Qua cổng giữa trận thì chỉ chờ **tối đa 2 giây** rồi vào với placeholder, đúng câu
     // chữ của spec: người chơi đang bị dí, giữ họ ở màn hình dịch chuyển lâu hơn thế là
     // tệ hơn hẳn so với vài vật cản hiện muộn.
-    await this.loadZoneArt(`zone_${w.map}`, w.znm ?? '', changedZone ? ZONE_ART_WAIT_MS : 0);
+    await this.loadZoneArt(`zone_${w.map}`, w.znm ? STR.zoneName(w.zn, w.znm) : '', changedZone ? ZONE_ART_WAIT_MS : 0);
     this.world.reset(w, map);
     this.scene.setWorld(this.world);
     this.hud.minimap.setMap(map);
@@ -490,7 +490,7 @@ class App {
     this.early = [];
     this.input.enabled = true;
     this.zoneIndex = w.zn ?? 0;
-    this.hud.setZone(w.znm ?? '', w.zn ?? 0);
+    this.hud.setZone(w.znm ? STR.zoneName(w.zn, w.znm) : '', w.zn ?? 0);
     // Bắt đầu thu số liệu từ lần vào trận đầu tiên; sang khu khác cũng gửi `welcome` nhưng
     // `startTelemetry` tự bỏ qua lần hai, vì một PHIÊN là một lần chơi chứ không phải một khu.
     void this.startTelemetry();
@@ -499,7 +499,7 @@ class App {
     }
     if (changedZone) {
       // Chữ lớn mờ dần giữa màn hình khi vào khu mới (spec §8.0).
-      this.hud.showBanner(STR.zoneEntered(w.znm ?? ''), ZONE_BANNER_SECS);
+      this.hud.showBanner(STR.zoneEntered(STR.zoneName(w.zn, w.znm ?? '')), ZONE_BANNER_SECS);
       return;
     }
     this.hud.showGuide(); // hướng dẫn mờ trong lúc còn bất tử (spec §18.1)

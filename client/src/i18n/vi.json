@@ -495,6 +495,82 @@
     "medium": "Vừa",
     "low": "Thấp"
   },
+  "seo": {
+    "title": "{name} — Game tu tiên .io chơi ngay trên trình duyệt",
+    "description": "Tu tiên bằng cả trăm thanh kiếm bay. Chém người cướp tu vi, phi thăng tới Đạo Tổ — nếu chạy kịp. Chơi miễn phí ngay trên trình duyệt.",
+    "intro": [
+      "Ngươi là một tu sĩ mới nhập môn, trong tay chỉ có một thanh kiếm. Nhặt linh khí, gom thêm kiếm, xếp thành vòng vòng quanh người — càng nhiều vòng càng chém xa. Gặp đạo hữu yếu hơn thì đuổi theo cướp tu vi; gặp đạo hữu mạnh hơn thì… chạy, kèm một câu thật lịch sự: <em>\"Đạo hữu xin dừng bước!\"</em>.",
+      "Chín đại cảnh giới từ Luyện Khí tới Đại Thừa, năm tầng Tiên giới tới Đạo Tổ. Năm khu vực, cổng dịch chuyển ngẫu nhiên, mười nhân vật dở hơi với mười bí kíp riêng. Không cần tải, không cần đăng ký — nhập tên là vào."
+    ],
+    "shotsTitle": "Trong game trông như thế nào",
+    "shots": [
+      {
+        "alt": "Nhân vật cảnh giới thấp với vài thanh kiếm bay quanh người, đang nhặt linh khí rơi trên đất",
+        "caption": "Mới vào: vài thanh kiếm. Nhặt linh khí dưới đất để gom thêm."
+      },
+      {
+        "alt": "Nhân vật đã lên cảnh giới cao hơn, hàng chục thanh kiếm xếp thành vòng quanh người",
+        "caption": "Lên cảnh giới: kiếm xếp thành vòng quanh người, vòng càng dày chém càng xa."
+      },
+      {
+        "alt": "Hai người chơi mỗi người một vòng kiếm lớn đang áp sát nhau, bên phải là bảng xếp hạng cả phòng",
+        "caption": "Đụng đạo hữu khác: kiếm va kiếm, ai mỏng vòng hơn thì bể trước."
+      }
+    ],
+    "howtoTitle": "Cách chơi",
+    "howto": [
+      {
+        "b": "Di chuyển:",
+        "t": "trên máy tính dùng WASD, phím mũi tên, hoặc giữ chuột. Trên điện thoại kéo ngón tay."
+      },
+      {
+        "b": "Gom kiếm:",
+        "t": "nhặt linh khí rơi trên đất để thêm kiếm. Kiếm tự bay vòng quanh người và tự chém."
+      },
+      {
+        "b": "Cướp tu vi:",
+        "t": "mài vòng kiếm của người yếu hơn cho tới khi lộ thân rồi chém — hút được tu vi của họ. Gặp người mạnh hơn thì chạy."
+      },
+      {
+        "b": "Lên cảnh giới:",
+        "t": "đủ tu vi là lên bậc — người to ra, thêm kiếm, chém xa hơn."
+      },
+      {
+        "b": "Kỹ năng:",
+        "t": "mỗi nhân vật một kỹ năng riêng (phím Space hoặc nút tròn), tự hồi theo thời gian và tích được lượt."
+      },
+      {
+        "b": "Cẩn thận:",
+        "t": "còn một vòng kiếm mà bị chém trúng thân là hết ván, ở cảnh giới nào cũng vậy — bấm \"Chơi tiếp\" để làm lại từ Luyện Khí."
+      }
+    ],
+    "faqTitle": "Câu hỏi thường gặp",
+    "faq": [
+      {
+        "q": "Game có miễn phí không?",
+        "a": "Miễn phí hoàn toàn. Không có gói nạp, không bán vật phẩm, và không có thứ gì mua được để mạnh hơn người chơi khác."
+      },
+      {
+        "q": "Chơi trên điện thoại được không?",
+        "a": "Được, chơi thẳng trên trình duyệt điện thoại — kéo ngón tay để di chuyển. Nên xoay ngang máy để nhìn rộng hơn."
+      },
+      {
+        "q": "Có cần tài khoản không?",
+        "a": "Không. Nhập tên là vào chơi. Không cần email, không cần mật khẩu. Tên và nhân vật bạn chọn được nhớ lại trên máy bạn cho lần sau."
+      },
+      {
+        "q": "Chơi với bạn bè được không?",
+        "a": "Được — cùng vào một lúc thì gần như chắc chắn gặp nhau, vì hệ thống luôn dồn người mới vào phòng đang đông nhất. Chưa có mã phòng riêng để hẹn nhau, nên nếu muốn chắc thì bấm \"Vào chơi\" cùng lúc."
+      },
+      {
+        "q": "Máy yếu hoặc mạng chậm chơi được không?",
+        "a": "Được. Không cần tải gì về và không cần cài đặt. Nếu thấy giật, bấm phím <b>V</b> để hạ chất lượng đồ hoạ."
+      }
+    ],
+    "langLabel": "Ngôn ngữ:",
+    "feedback": "Góp ý / báo lỗi",
+    "privacy": "Chính sách riêng tư"
+  },
   "_meta": {
     "lang": "vi",
     "name": "Tiếng Việt",

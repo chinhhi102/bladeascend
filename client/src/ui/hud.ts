@@ -545,7 +545,7 @@ export class Hud {
     // Tin từ KHU KHÁC hiện kèm tên khu (spec §8.0) — không có tiền tố thì người chơi tưởng
     // vừa có người chết ngay cạnh mình, trong khi chuyện xảy ra ở đầu kia thế giới.
     if (f.znm && (f.zn ?? 0) !== this.myZone) {
-      line.append(h('span', 'feed-zone', `[${f.znm}]`), document.createTextNode(' '));
+      line.append(h('span', 'feed-zone', `[${STR.zoneName(f.zn, f.znm)}]`), document.createTextNode(' '));
     }
     line.append(...colorizeFeed(text, f.a, f.b ?? ''));
     this.feed.prepend(line);

@@ -36,6 +36,11 @@ export const STR = {
   emotes: d.emotes as Record<string, string[]>,
   /** Tên cảnh giới đã dịch; rỗng = dùng tên trong config (tiếng Việt). */
   realmNames: d.realmNames as string[],
+  /**
+   * Tên khu theo ngôn ngữ NGƯỜI XEM (§19): server gửi chỉ số `zn`, client tra bảng dịch.
+   * `fallback` là chuỗi `znm` server gửi kèm — chỉ dùng khi chỉ số nằm ngoài bảng.
+   */
+  zoneName: (index: number | undefined, fallback = ''): string => d.zoneNames[index ?? -1] ?? fallback,
   needRealm: (realm: string): string => fmt(d.needRealm, { realm }),
   swordsStolen: (n: number): string => fmt(d.swordsStolen, { n }),
   skillCooldown: (secs: number, n: number): string => fmt(d.skillCooldown, { secs, n }),
