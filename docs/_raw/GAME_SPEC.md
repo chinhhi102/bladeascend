@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.36:** mọi kỹ năng phải có đủ 5 lớp hình ảnh (người dùng, vùng, mục tiêu, đếm ngược, kết thúc) + icon trạng thái trên HUD người bị trúng (§6.5).
+
 **Thay đổi v6.35:** sàn bot Thiên Đình 30, khu rìa 20 (staging 15/10); ghi số EXP chốt theo sim vào §6.0, Nam Châm +0.2 (Q37); xoá luật cũ 'rớt cảnh giới khi bị chém' còn sót (Q38).
 
 **Thay đổi v6.34:** tên bot đa quốc gia theo 6 ngôn ngữ + intl, tỉ lệ theo ngôn ngữ người thật trong phòng (§9.4); ảnh góp ý mã hoá lại (Q39).
@@ -665,6 +667,37 @@ Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ h�
 - Mỗi kỹ năng có câu thoại tấu hài khi dùng (bong bóng thoại) + SFX riêng.
 - Bot dùng kỹ năng khi có lượt, theo luật đơn giản (vd Cụ Rùa dùng Rụt Cổ khi còn 1 vòng và có địch gần; Bà Tám dùng Loa khi địch trong nón; Ông Ba Võng dùng Ru Ngủ khi ≥ 1 địch trong 4 U đang va kiếm với mình; Sư Phụ Mì dùng khi có địch nhiều kiếm trong nón; Shipper dùng khi Đài sắp phun / có Tiên khí rơi trong 8 U / bị khống chế; Cô Ba dùng khi con mồi yếu hơn đang chạy (đặt chặn phía trước nó) hoặc khi chính mình bỏ chạy (đặt sau lưng)).
 - Server tính mọi hiệu ứng; client nhận event `SkillCast {id, skill, pos, dir}`, `SkillEffect`, `Blinded`.
+
+### 6.5 Hiển thị kỹ năng — mọi kỹ năng phải "nhìn thấy được" (v6.36)
+
+**Luật**: mỗi kỹ năng có đủ **5 lớp hình ảnh**; thiếu lớp nào coi như kỹ năng chưa xong.
+
+| Lớp | Nội dung | Ai thấy |
+|---|---|---|
+| ① Người dùng | Anim `skill` của nhân vật + câu thoại bong bóng + SFX | Mọi người trong tầm nhìn |
+| ② Vùng tác dụng | Hình đúng phạm vi thật (vòng/nón/dãy) loé lên 0.3s lúc dùng (nét đứt sáng, màu riêng kỹ năng), cùng công thức U với server | Mọi người trong tầm nhìn |
+| ③ Hiệu ứng lên mục tiêu | Dấu hiệu trên **từng người bị trúng** suốt thời gian hiệu lực (bảng dưới) | Mọi người, kể cả nạn nhân |
+| ④ Thời gian hiệu lực | Vòng đếm ngược nhỏ dưới chân (người dùng có buff) hoặc trên icon trạng thái (người bị trúng) | Mọi người |
+| ⑤ Kết thúc | Hiệu ứng tan (0.2–0.4s) + SFX nhỏ khi hết hoặc bị phá | Mọi người |
+
+Ngoài ra trên màn hình **người bị trúng**: icon trạng thái + giây còn lại ở **HUD** (dưới ảnh đại diện) và rung nhẹ khung màn hình lúc trúng; nếu bị trúng từ ngoài khung nhìn → mũi tên ở mép màn hình chỉ hướng người dùng kỹ năng.
+
+| Nhân vật — kỹ năng | ② Vùng | ③ Trên mục tiêu / người dùng | ⑤ Kết thúc |
+|---|---|---|---|
+| A Hớn — Bánh Bao Thần | Không (tự thân) | Hơi nóng bốc lên + **kiếm mới bay từ cái bánh vào vòng** từng thanh, số "+N kiếm" bay lên | Ợ một tiếng, khói tan |
+| Bà Tám — Loa Phường | Vòng sóng âm 360° lan từ tâm ra 6 U | Mỗi người bị đẩy: vệt bụi kéo dài theo hướng bị đẩy + icon 📢 nhỏ; vòng kiếm loé khi đổi chiều | Sóng mờ dần |
+| Ông Ba — Ru Ngủ Trưa / Trộm Kiếm | Vòng tím nhạt 4 U, nốt nhạc bay ra | Người ngủ: "zzz" + bong bóng mũi + icon 💤 đếm 2.5s; **Ông Ba**: võng đung đưa + viền tím quanh vòng kiếm 4s; mỗi thanh kiếm bị trộm **bay vệt tím từ nạn nhân về vòng ông** | Võng biến mất, "ngáp" |
+| Đại Ca — Gọi Đàn Em | Không | 2 đàn em chạy từ mép màn hình vào, mỗi đứa có thanh đếm ngược 8s trên đầu + vòng kiếm màu tím sẫm khác đại ca | Đàn em biến mất trong khói + "Đại ca ơi em đi đây" |
+| Thằng Mập — Phun Trân Châu | Nón 45° × 8 U, hạt trân châu bay | Người mù: **lớp trân châu dính trên vòng kiếm** + icon 🧋 đếm 5s; trên màn hình nạn nhân: trân châu dính kính (đã có) | Trân châu rơi lả tả |
+| Cô Ba — Bày Hàng Chặn Lối | Dãy 5 khung sạp nhấp nháy 0.3s trước khi bật lên | Sạp có **tấm bạt cam** + thanh đếm 6s nhỏ; vỏ chuối vàng dọc chân sạp; người trượt: vệt trượt + sao choáng 1s | Sạp sụp + vỏ chuối mờ |
+| Sư Phụ Mì — Hút Mì Đoạt Kiếm | Nón 60° × 5 U loé | **Sợi mì vàng nối Sư Phụ ↔ nạn nhân** 0.5s, kiếm bay dọc sợi mì; số "−N kiếm" trên nạn nhân, "+N" trên Sư Phụ; hụt → sợi mì rơi xuống đất | Sợi mì rút về |
+| Bé Tí — Gồng Cơ | Không | Người phồng to 10%, **hào quang cam** + gân đỏ, vòng kiếm viền cam, icon 💪 đếm 4s | Xì hơi, xẹp lại |
+| Shipper — Gom Đơn Hỏa Tốc | Không | **Vệt tia chớp vàng** sau lưng, đi xuyên vật cản thì vật cản mờ 50% khi đi qua, icon ⚡ đếm 4s; vòng nhặt đồ hiện mờ (+10%) | Phanh gấp, khói bánh xe |
+| Cụ Rùa — Rụt Cổ | Không | Mai rùa **phát sáng xanh** + khiên bán trong suốt, icon 🐢 đếm 5s; ra mai: vòng sóng đẩy 2 U | Sóng đẩy lan + "à há" |
+
+**Icon trạng thái** dùng chung (64 px, sinh qua artgen hoặc vẽ vector): 💤 ngủ · 🧋 mù · 💫 choáng · 📢 bị đẩy · 💪 gồng · ⚡ gom đơn · 🐢 rụt cổ · 🟣 trộm kiếm. Không dùng emoji hệ thống (khác nhau giữa máy) — chỉ dùng làm tên gọi trong spec.
+
+**Hiệu năng**: mọi hiệu ứng là sprite/particle trong `vfxLayer`, theo chất lượng (Thấp: giữ ②③④ dạng đơn giản, tắt particle trang trí). Server gửi event `SkillCast` + `StatusStart/StatusEnd {id, status, secs, src}` — client không tự đoán trạng thái.
 
 ### 6.4 Chỉ số gốc riêng từng nhân vật (nội tại, v6.33)
 
@@ -1652,6 +1685,8 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - Việc chủ dự án cần làm: mua tên miền `bladeascend.io` (và nên giữ thêm `bladeascend.com`), kiểm tra trùng tên trên các cổng game .io lớn và cửa hàng ứng dụng, tra nhãn hiệu (WIPO Global Brand Database).
 
 ## 17. Checklist test chấp nhận
+
+- [ ] Với cả 10 kỹ năng: người đứng xem (không dính) nhìn thấy vùng tác dụng + dấu hiệu trên mục tiêu + đếm ngược; người bị trúng thấy icon trạng thái + giây trên HUD. Chụp ảnh từng kỹ năng ở docs/review/skills/.
 
 - [ ] Phòng vắng production: Thiên Đình có đủ 30 nhân vật, mỗi khu rìa 20; loadtest phòng 110 nhân vật (50 người + bot) tick p95 mỗi khu < 4 ms.
 
