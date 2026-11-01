@@ -98,7 +98,26 @@ hổng bảo mật **riêng tư** theo [SECURITY.md](SECURITY.md), không mở I
 
 ## Giấy phép
 
-Chưa chọn giấy phép — chủ dự án đang cân nhắc các phương án trong
-[`docs/LICENSE_OPTIONS.md`](docs/LICENSE_OPTIONS.md). Cho tới khi có tệp `LICENSE`, mọi quyền
-vẫn thuộc chủ dự án. Tên "Đạo Hữu Xin Dừng Bước", "BladeAscend" và logo không được dùng cho
-bản fork. Nguồn font, thư viện và tài nguyên bên ngoài: [`assets/src/CREDITS.md`](assets/src/CREDITS.md).
+Mỗi phần một giấy phép (chủ dự án chốt 02/11/2026 — bối cảnh trong
+[`docs/LICENSE_OPTIONS.md`](docs/LICENSE_OPTIONS.md)):
+
+| Phần | Giấy phép |
+|---|---|
+| Mã nguồn (`server/`, `client/`, `tools/`, `proto/`, `config/`, `maps/`) | **MIT** — [`LICENSE`](LICENSE) |
+| Art do dự án tạo (`assets/`) | **CC BY-NC-SA 4.0** — [`assets/LICENSE`](assets/LICENSE) |
+| Tên game và logo | Không cấp phép — xem mục dưới |
+
+Font, thư viện và tài nguyên của bên thứ ba giữ giấy phép gốc:
+[`assets/src/CREDITS.md`](assets/src/CREDITS.md).
+
+## Tên và logo
+
+"Đạo Hữu Xin Dừng Bước", "BladeAscend", logo và tên miền bladeascend.io là tên riêng của
+dự án, không thuộc giấy phép mã nguồn hay giấy phép art. Bạn được fork và chạy mã nguồn theo
+giấy phép, nhưng bản fork công khai (nhất là server cho người khác chơi) phải ĐỔI TÊN và
+KHÔNG dùng logo, để người chơi không nhầm với bản chính thức. Nhắc tới dự án gốc để ghi
+nguồn ("dựa trên BladeAscend") thì được và rất hoan nghênh.
+
+"Đạo Hữu Xin Dừng Bước", "BladeAscend", the logo and the bladeascend.io domain are not
+licensed under the code or art licenses. Public forks — especially servers others can play
+on — must use a different name and must not use the logo.

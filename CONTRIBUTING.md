@@ -36,6 +36,10 @@ mâu thuẫn và các phương án — chủ dự án sẽ quyết và tự sử
 6. CI sẽ chạy lại các bài kiểm. CI không dùng secret nào, nên PR từ fork chạy bình thường.
 7. Chủ dự án xem và phản hồi. Có thể sẽ nhờ bạn sửa thêm — chuyện bình thường.
 
+Gửi PR là đồng ý cấp phép phần đóng góp theo giấy phép của repo: mã nguồn **MIT**
+(`LICENSE`), art **CC BY-NC-SA 4.0** (`assets/LICENSE`). Bản fork công khai phải đổi tên và
+không dùng logo — xem mục "Tên và logo" trong `README.md`.
+
 Thay đổi lớn (luật chơi mới, thư viện mới, đổi giao thức mạng)? **Mở Issue bàn trước** khi
 viết code, để khỏi phí công.
 

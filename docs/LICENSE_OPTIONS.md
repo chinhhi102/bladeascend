@@ -1,6 +1,10 @@
 # Chọn giấy phép cho repo công khai — các phương án
 
-> Soạn 02/11/2026 khi chuẩn bị mở công khai repo. **Chưa chọn gì cả** — anh đọc rồi quyết.
+> Soạn 02/11/2026 khi chuẩn bị mở công khai repo.
+>
+> **ĐÃ CHỐT 02/11/2026:** mã nguồn **MIT** (`LICENSE`), art **CC BY-NC-SA 4.0**
+> (`assets/LICENSE`), mục "Tên và logo" đã thêm vào `README.md`. Không cần CLA (chỉ cần khi
+> chọn AGPL). Phần dưới giữ lại làm bối cảnh.
 > Chưa có tệp `LICENSE` thì theo luật, mọi quyền vẫn thuộc anh: người khác **xem** được mã
 > nguồn trên GitHub nhưng **không được phép** chép, sửa, chạy lại. Mở công khai mà chưa có
 > giấy phép là an toàn, chỉ là chưa ai đóng góp hợp pháp được.
