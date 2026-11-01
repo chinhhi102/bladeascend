@@ -39,10 +39,14 @@ type Cultivation struct {
 	// TienDropScatterMin/Max: viên Tiên khí rơi ra khi bị chém văng xa ngần này (spec v5.9).
 	// Phải xa hơn hẳn thân người Tiên giới: họ to gấp 5–6 lần, và vật phẩm vẽ DƯỚI nhân vật,
 	// nên viên rơi gần là nằm khuất hẳn dưới xác — đó chính là lỗi "chém mà không thấy rơi".
-	TienDropScatterMin float64  `json:"tien_drop_scatter_min"`
-	TienDropScatterMax float64  `json:"tien_drop_scatter_max"`
-	TienScaleStep      float64  `json:"tien_scale_step"`
-	TienAuraColors     []string `json:"tien_aura_colors"`
+	TienDropScatterMin float64 `json:"tien_drop_scatter_min"`
+	TienDropScatterMax float64 `json:"tien_drop_scatter_max"`
+	// TienDropUnits: mệnh giá viên Tiên khí rơi ra, LỚN TRƯỚC; TienDropMaxOrbs: trần số viên
+	// mỗi lần rơi, vượt thì gộp phần nhỏ vào viên cuối (spec v6.4 §3.4).
+	TienDropUnits   []float64 `json:"tien_drop_units"`
+	TienDropMaxOrbs int       `json:"tien_drop_max_orbs"`
+	TienScaleStep   float64   `json:"tien_scale_step"`
+	TienAuraColors  []string  `json:"tien_aura_colors"`
 }
 
 type Sword struct {

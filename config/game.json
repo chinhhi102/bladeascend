@@ -35,6 +35,8 @@
     "tien_rob_share": 0.3,
     "tien_drop_scatter_min": 200.0,
     "tien_drop_scatter_max": 500.0,
+    "tien_drop_units": [500, 100, 10, 2, 1],
+    "tien_drop_max_orbs": 40,
     "tien_drop_share": 0.3,
     "tien_scale_step": 0.2,
     "tien_aura_colors": [

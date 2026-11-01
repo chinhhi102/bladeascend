@@ -1,6 +1,7 @@
 package game
 
 import (
+	"bladeascend/server/internal/config"
 	"math"
 	"testing"
 )
@@ -238,7 +239,7 @@ func TestMortalStillBurnsExp(t *testing.T) {
 // vì trên màn hình chỉ là "ít viên hơn một chút".
 func TestSplitTienOrbs(t *testing.T) {
 	for _, total := range []float64{0, 1, 2, 3, 9, 10, 99, 100, 480, 2099, 5399, 9000, 123456} {
-		orbs := splitTienOrbs(total)
+		orbs := splitTienOrbs(total, testOrbUnits, tienOrbMax)
 		sum := 0.0
 		for _, v := range orbs {
 			sum += v
@@ -261,7 +262,7 @@ func TestSplitTienOrbs(t *testing.T) {
 // Ví dụ của checklist §17 chia ra đúng những viên nào.
 func TestSplitTienOrbsChecklistExample(t *testing.T) {
 	// 2 099 = 500×4 + 10×9 + 2×4 + 1×1 → 18 viên.
-	got := splitTienOrbs(2099)
+	got := splitTienOrbs(2099, testOrbUnits, tienOrbMax)
 	want := map[float64]int{500: 4, 10: 9, 2: 4, 1: 1}
 	have := map[float64]int{}
 	for _, v := range got {
@@ -284,7 +285,7 @@ func TestSplitTienOrbsChecklistExample(t *testing.T) {
 // khoá luật lại cho lần sau ai đó nâng trần Tiên khí lên nữa.
 func TestSplitTienOrbsCapsAt40(t *testing.T) {
 	const huge = 500 * 60 // 60 viên 500 nếu không có trần
-	orbs := splitTienOrbs(huge)
+	orbs := splitTienOrbs(huge, testOrbUnits, tienOrbMax)
 	if len(orbs) != tienOrbMax {
 		t.Fatalf("%d ra %d viên, muốn đúng %d", huge, len(orbs), tienOrbMax)
 	}
@@ -297,5 +298,24 @@ func TestSplitTienOrbsCapsAt40(t *testing.T) {
 	}
 	if last := orbs[len(orbs)-1]; last <= 500 {
 		t.Errorf("viên gộp cuối %.0f — phải to hơn mệnh giá thường vì nó ôm phần dư", last)
+	}
+}
+
+// Bộ mệnh giá spec v6.4 §3.4 — bài test bảng ở trên khoá hàm thuần với đúng bộ này;
+// TestTienDropUnitsInConfig khoá rằng game.json đang dùng đúng bộ đó.
+var testOrbUnits = []float64{500, 100, 10, 2, 1}
+
+const tienOrbMax = 40
+
+func TestTienDropUnitsInConfig(t *testing.T) {
+	c := config.MustLoadDefault().Cultivation
+	if c.TienDropMaxOrbs != tienOrbMax || len(c.TienDropUnits) != len(testOrbUnits) {
+		t.Fatalf("game.json: tien_drop_units=%v tien_drop_max_orbs=%d, spec v6.4 §3.4 là %v / %d",
+			c.TienDropUnits, c.TienDropMaxOrbs, testOrbUnits, tienOrbMax)
+	}
+	for i, u := range testOrbUnits {
+		if c.TienDropUnits[i] != u {
+			t.Fatalf("tien_drop_units[%d] = %v, muốn %v", i, c.TienDropUnits[i], u)
+		}
 	}
 }
