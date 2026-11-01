@@ -312,3 +312,13 @@ cũ; code theo v6.26 (30% + thưởng hạ, trần +2 cảnh giới).
 **Đã trả lời (GAME_SPEC v6.30, 1/11/2026):** bỏ hàng rào tỉ lệ thắng tay đôi — `sim --duel` chỉ
 còn số tham khảo; cân bằng theo số liệu người chơi thật (bảng "Nhân vật" trong admin). Bà Tám
 toả tròn 360°, Ông Ba Võng thêm Trộm Kiếm 4 s, ví dụ Uy Danh sửa thành 850. Đã làm ở A1–A5.
+
+## Trả lời ngày 02/11/2026 (Q39–Q42)
+
+| Câu | Nội dung | Kết luận |
+|---|---|---|
+| Q39 | Ảnh góp ý: mã hoá lại hay gỡ metadata | **Mã hoá lại** (spec v6.34). Server giải mã + mã hoá lại JPEG/PNG bằng thư viện chuẩn Go (sau lớp gỡ theo cấu trúc); client luôn gửi JPEG; WebP bị từ chối vì Go chuẩn không đọc được — không cần thêm thư viện. |
+| Q40 | ADMIN_SPEC "không thêm framework UI" vs React + antd | Anh đã sửa ADMIN_SPEC. Xong. |
+| Q41 | Font dự phòng cho tên lạ | Giữ như cũ (PixiJS tự vẽ thêm ký tự thiếu). Xong. |
+| Q42 | Lớp mặt nhân vật §12.5 A | **Hoãn** — ghi vào việc tiếp theo trong `PROGRESS.md`. |
+

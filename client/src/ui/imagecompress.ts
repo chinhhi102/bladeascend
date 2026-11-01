@@ -1,12 +1,12 @@
 /**
  * Thu nhỏ + nén ảnh góp ý ngay trong trình duyệt — ADMIN_SPEC §7.1.
  *
- * Cạnh dài ≤ 1 600 px, WebP ≤ 300 KB. Vẽ lại qua canvas còn có lợi phụ: canvas không mang
+ * Cạnh dài ≤ 1 600 px, JPEG ≤ 300 KB. Vẽ lại qua canvas còn có lợi phụ: canvas không mang
  * EXIF theo, nên toạ độ GPS trong ảnh điện thoại không rời máy người chơi (server vẫn gỡ
  * lại lần nữa — không bao giờ tin client).
  *
- * Safari (macOS lẫn iOS) KHÔNG mã hoá được WebP: `toBlob('image/webp')` lặng lẽ trả về PNG.
- * Nên phải nhìn `blob.type` thật sự nhận được, và khi không phải WebP thì chuyển sang JPEG.
+ * Định dạng gửi đi luôn là JPEG: mọi trình duyệt mã hoá được (Safari không mã hoá WebP), và
+ * server mã hoá lại được bằng thư viện chuẩn (Q39).
  */
 
 /** MAX_SIDE: cạnh dài tối đa sau khi thu nhỏ (§7.1). */
@@ -95,22 +95,11 @@ async function encodeUnder(cv: HTMLCanvasElement, type: string): Promise<Blob | 
   return null;
 }
 
-let webpOk: boolean | null = null;
-
-/** canEncodeWebP hỏi trình duyệt THẬT SỰ có mã hoá WebP không (Safari trả PNG). */
-async function canEncodeWebP(): Promise<boolean> {
-  if (webpOk === null) {
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = 2;
-    const b = await toBlob(cv, 'image/webp', 0.8);
-    webpOk = b?.type === 'image/webp';
-  }
-  return webpOk;
-}
-
 /**
- * compressImage trả về ảnh WebP (hoặc JPEG nếu trình duyệt không mã hoá được WebP)
- * cạnh dài ≤ 1 600 px, ≤ 300 KB.
+ * compressImage trả về ảnh JPEG cạnh dài ≤ 1 600 px, ≤ 300 KB.
+ *
+ * Luôn JPEG (Q39, v6.34): server giải mã rồi mã hoá lại mọi ảnh bằng thư viện chuẩn Go, mà
+ * Go chuẩn không đọc được WebP — gửi WebP là bị từ chối.
  */
 export async function compressImage(blob: Blob): Promise<Blob> {
   const d = await decode(blob);
@@ -118,7 +107,7 @@ export async function compressImage(blob: Blob): Promise<Blob> {
     if (!d.width || !d.height) {
       throw new ImageDecodeError('empty');
     }
-    const type = (await canEncodeWebP()) ? 'image/webp' : 'image/jpeg';
+    const type = 'image/jpeg';
     let scale = Math.min(1, MAX_SIDE / Math.max(d.width, d.height));
     for (let i = 0; i <= MAX_SHRINKS; i++, scale *= SHRINK) {
       const w = Math.max(1, Math.round(d.width * scale));

@@ -194,7 +194,7 @@ func feedbackFiles(image, images string) []string {
 	return nil
 }
 
-// prepareImages kiểm và gỡ siêu dữ liệu của MỌI ảnh trước khi ghi tệp nào: một ảnh hỏng
+// prepareImages kiểm, gỡ siêu dữ liệu và mã hoá lại MỌI ảnh trước khi ghi tệp nào: một ảnh hỏng
 // làm hỏng cả lá thư, chứ không để lại nửa số tệp mồ côi trên đĩa.
 func prepareImages(imgs [][]byte) ([][]byte, []string, error) {
 	if len(imgs) > FeedbackMaxImages {
@@ -209,7 +209,12 @@ func prepareImages(imgs [][]byte) ([][]byte, []string, error) {
 		if len(img) > FeedbackMaxImage {
 			return nil, nil, ErrImageTooBig
 		}
-		out, ext, err := StripImageMetadata(img)
+		// Hai lớp: đi hết cấu trúc tệp (từ chối tệp hỏng), rồi giải mã + mã hoá lại (Q39).
+		stripped, _, err := StripImageMetadata(img)
+		if err != nil {
+			return nil, nil, err
+		}
+		out, ext, err := ReencodeImage(stripped)
 		if err != nil {
 			return nil, nil, err
 		}

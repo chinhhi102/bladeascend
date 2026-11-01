@@ -3,41 +3,57 @@
 > Claude ghi vào đây khi gặp chỗ cần quyết mà không muốn tự đoán (CLAUDE.md luật 10).
 > Câu nào trả lời xong thì chuyển sang `docs/QUESTIONS_DONE.md`.
 
-Bối cảnh chung: lượt cuối 01/11/2026. Chi tiết từng dòng: `docs/SPEC_AUDIT_v630.md`.
+Bối cảnh chung: lượt cuối 01/11/2026; cập nhật 02/11 sau khi anh trả lời Q37–Q42. Chi tiết từng dòng: `docs/SPEC_AUDIT_v630.md`.
 Mỗi câu ghi **phương án đang dùng** (an toàn, không đổi luật) — anh chỉ cần trả lời nếu muốn khác.
 
-## Q37 — Số liệu config lệch spec (config đã chỉnh theo sim, spec chưa ghi lại)
-| Khoá | Spec | Config đang chạy |
+## Q37 — Ghi số config đã chỉnh theo sim vào spec §6.0 · CHỜ ANH SỬA SPEC
+Anh chốt **giữ config**. Bảng để anh chép vào spec (đo `cmd/sim --farm`, 8 khu × 12 bot, seed 1, bản v6.33):
+
+| Khoá | Giá trị đang chạy | Ghi chú |
 |---|---|---|
-| `gates.transit_secs` (qua cổng) | 0.8 s | **2.0 s** |
-| `minimap.size_mobile` | 120 px | **96 px** |
-| `buffs.magnet.mult` | 1.5 | **1.2** |
-| `exp_orbs.cell` | 140 | **160** |
-| `monster_count` | ~150 / phòng | **150 / khu** (750 / phòng) |
-**Đang dùng:** giữ config (đã chạy ổn, có sim). Anh chọn: (a) giữ config và sửa spec, hoặc
-(b) đổi config về đúng spec — Claude đổi + chạy lại sim.
+| `gates.transit_secs` | 2.0 | qua cổng (spec cũ 0.8) |
+| `minimap.size_mobile` | 96 | px (spec cũ 120) |
+| `buffs.magnet.mult` | 1.2 | theo §4.0 = **+0.2** bán kính nhặt (spec cũ 1.5) |
+| `exp_orbs.cell` | 160 | (spec cũ 140) |
+| `room.monster_count` | 150 | **mỗi khu** (750/phòng 5 khu) |
+| `exp_orbs.values` / `weights` | [5, 20, 60] / [80, 18, 2] | |
+| `exp_economy.orb_value_mult` | 1.5 | |
+| `exp_economy.pickup_scale_exp` | 0.5 | bán kính nhặt theo √scale |
+| `exp_economy.bot_steal_share` | 0.15 | |
+| `cultivation.exp_base` / `realm_mult` / `tier_step` | 100 / 2.0 / 0.08 | |
 
-## Q38 — Spec còn sót luật "chết rớt cảnh giới" (đã bỏ từ v6.26)
-Còn ở §1, §3.2, §5.2, §11.4, §12, §16 (`hit_drops_realm`, `tien_rob_share` 0.5), §17 (#55, #64, #80).
-Đoạn giới thiệu §20 (chép nguyên văn ra trang chủ) còn ghi "mười bí kíp riêng" dù kỹ năng giờ tự
-hồi, không còn nhặt Bí Kíp. **Đang dùng:** code + trang chủ theo v6.26/v6.29; đoạn §20 giữ
-nguyên văn. Anh sửa spec khi tiện.
+| Cảnh giới | Farm đo (phút) | Bảng §6.0 | Cộng dồn | Có Nam Châm (phút) |
+|---|---|---|---|---|
+| Luyện Khí | 1.19 | 1.3 | 1.2 | – |
+| Trúc Cơ | 1.31 | 1.5 | 2.5 | – |
+| Kim Đan | 1.55 | 1.8 | 4.1 | – |
+| Nguyên Anh | 1.94 | 2.1 | 6.0 | 1.65 |
+| Hóa Thần | 2.46 | 2.6 | 8.5 | 2.21 |
+| Luyện Hư | 3.13 | 3.3 | 11.6 | 2.84 |
+| Hợp Thể | 3.89 | 4.1 | 15.5 | 3.53 |
+| Độ Kiếp | 4.59 | 5.2 | 20.1 | 4.46 |
+| Đại Thừa | 5.64 | 6.6 | **25.7** (bảng 29.1) | 5.93 |
 
-## Q39 — Góp ý ảnh: "mã hoá lại" hay "gỡ metadata"?
-ADMIN_SPEC §7.1 ghi server "mã hoá lại ảnh". Go chuẩn không mã hoá được WebP nếu không thêm
-thư viện, nên server đang **gỡ theo cấu trúc tệp** EXIF/GPS/XMP (JPEG, PNG, WebP) — đã test bằng
-ảnh có GPS thật. **Đang dùng:** gỡ metadata. Muốn mã hoá lại thật thì cần duyệt thêm thư viện.
+Luyện Hư 1 → Chân Tiên khi có Nam Châm suốt: 23.1 phút (cần ≥ 15). Xong khi spec có bảng này.
 
-## Q40 — ADMIN_SPEC: "không thêm framework UI" vs §2.1 duyệt React + antd
-Đã làm theo §2.1 (React 18 + antd 5, bundle riêng, không vào gói người chơi). Đề nghị xoá câu
-"không thêm framework UI" cho khỏi mâu thuẫn. Kịch bản PERF_LOG S8 trỏ `livemap.mjs` (luồng 5 Hz
-đã bỏ theo §5) — đề nghị bỏ S8.
+## Q38 — Những dòng spec còn luật "chết rớt cảnh giới" · CHỜ ANH SỬA SPEC
+Số dòng theo `docs/_raw/GAME_SPEC.md` bản v6.34 (code đã theo v6.26: chém trúng thân = chết):
 
-## Q41 — Font dự phòng cho tên lạ (§19 "vẽ bằng Text thường")
-PixiJS 8 tự vẽ thêm ký tự thiếu vào BitmapFont lúc gặp, rơi về font hệ thống (chữ Hán, emoji
-hiện đúng). **Đang dùng:** cơ chế này thay cho Text riêng — cùng kết quả, ít texture hơn. Đánh
-dấu XONG nếu anh đồng ý.
+| Dòng | Mục | Nội dung còn sót |
+|---|---|---|
+| 145 | §1 vòng chơi | "bị chém thì rớt tầng, mất kiếm" |
+| 299 | §3.2 hiệu ứng | "Bị chém rớt cảnh giới: thần thú gãy vụn" |
+| 461 | §5.2 | "Bó Kiếm khi rớt cảnh giới gần như không xảy ra" |
+| 483 | §5.2 | "Trúc Cơ trở lên rớt 1 cảnh giới, Luyện Khí chết" |
+| 557 | bảng vật phẩm | Bó Kiếm "rơi ra khi rớt cảnh giới/chết" |
+| 580 | §6.3 | "Qua cổng, rớt cảnh giới không mất" |
+| 674 | kill feed | mẫu `"{B} bị {A} chém rớt xuống {realm}"` |
+| 1098 | §11.4 tin loan | "bị chém trúng (rớt cảnh giới hoặc chết)" |
+| 1197 | §12 chân dung | "khóc khi rớt cảnh giới" |
+| 1444 | §16 M2 | "chém thân, rớt tầng" |
+| 1461 | §16 config mẫu | `"tien_rob_share": 0.5` (config thật không còn khoá này) |
+| 1486 | §16 config mẫu | `"hit_drops_realm": true` (config thật không còn khoá này) |
+| 1614 | §20 giới thiệu | "mười bí kíp riêng" (kỹ năng giờ tự hồi) |
+| 1705 | §17 checklist | "bị chém thân thì rớt cảnh giới (Luyện Khí thì chết)" |
 
-## Q42 — Lớp mặt nhân vật (§12.5 A) — chưa làm
-Art mặt mới có 3/10 nhân vật; ghép lớp mặt ở client cần đủ art + đổi pipeline atlas. **Đang
-dùng:** mỗi mood một bộ frame như cũ. Cần anh quyết có sinh tiếp art mặt cho 7 nhân vật còn lại.
+Dòng 434 và 1689 ("không bao giờ rớt cảnh giới" khi chạy nhanh) vẫn đúng, không cần sửa.
