@@ -63,8 +63,12 @@ type atlasFile struct {
 func buildAtlases(assets string) error {
 	dirs, _ := filepath.Glob(filepath.Join(assets, "characters", "*", "frames"))
 	more, _ := filepath.Glob(filepath.Join(assets, "monsters", "*", "frames"))
-	overrides := loadAnimOverrides(assets)
-	for _, d := range append(dirs, more...) {
+	return buildAtlasesIn(append(dirs, more...), loadAnimOverrides(assets))
+}
+
+// buildAtlasesIn ghép atlas cho đúng các thư mục `frames` được chỉ định (prep -only).
+func buildAtlasesIn(dirs []string, overrides map[string]AnimOverride) error {
+	for _, d := range dirs {
 		// Ưu tiên frame ĐÃ CHUẨN HOÁ nếu có (GAME_SPEC §12.5 B: chuẩn hoá chạy TRƯỚC khi
 		// ghép atlas). Không có thì dùng frame gốc, nên repo chưa chạy `normalize` vẫn ghép
 		// được atlas như cũ.
@@ -182,7 +186,8 @@ func fpsFor(anim string) int {
 }
 
 // writeManifest lists every usable asset so the client can fall back to placeholders.
-func writeManifest(assets string) error {
+// scanManifest quét đĩa ra danh sách tệp game (bỏ `_raw`, `frames`, `frames_norm`).
+func scanManifest(assets string) ([]string, error) {
 	var files []string
 	err := filepath.WalkDir(assets, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -203,9 +208,8 @@ func writeManifest(assets string) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	sort.Strings(files)
-	b, _ := json.MarshalIndent(map[string]any{"files": files}, "", " ")
-	return os.WriteFile(filepath.Join(assets, "manifest.json"), b, 0o644)
+	return files, nil
 }

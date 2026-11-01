@@ -19,7 +19,16 @@ const (
 	minSheetGap = 6
 )
 
-func prepAll(jobs []Job, assets string) {
+// prepOpts: phạm vi của một lần `prep`.
+type prepOpts struct {
+	// scoped: chạy với `-only` — CHỈ được đụng tệp của đúng các job đó (chủ dự án chốt 1/11).
+	scoped bool
+	// allowDrop: cho phép manifest MẤT dòng. Mặc định cấm — xem guardManifest.
+	allowDrop bool
+}
+
+func prepAll(jobs []Job, assets string, o prepOpts) {
+	var done []Job
 	for _, j := range jobs {
 		raw := rawPath(assets, j)
 		if _, err := os.Stat(raw); err != nil {
@@ -30,12 +39,21 @@ func prepAll(jobs []Job, assets string) {
 			continue
 		}
 		prepped[j.Name] = true
+		done = append(done, j)
 		log.Printf("prep %s", j.Name)
 	}
-	if err := buildAtlases(assets); err != nil {
+	// `-only`: chỉ ghép lại atlas của nhân vật/quái mà job vừa cắt frame cho. Trước 1/11 bước
+	// này luôn ghép lại MỌI atlas — `prep -only crown_small` làm đổi 21 atlas không liên quan.
+	var err error
+	if o.scoped {
+		err = buildAtlasesIn(atlasDirsOf(assets, done), loadAnimOverrides(assets))
+	} else {
+		err = buildAtlases(assets)
+	}
+	if err != nil {
 		log.Printf("atlas: %v", err)
 	}
-	if err := writeManifest(assets); err != nil {
+	if err := updateManifest(assets, done, o); err != nil {
 		log.Printf("manifest: %v", err)
 	}
 	if err := writeMiscut(assets); err != nil {
