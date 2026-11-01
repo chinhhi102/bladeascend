@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.34:** tên bot đa quốc gia theo 6 ngôn ngữ + intl, tỉ lệ theo ngôn ngữ người thật trong phòng (§9.4); ảnh góp ý mã hoá lại (Q39).
+
 **Thay đổi v6.33:** mỗi nhân vật có nội tại riêng ±15% cho tốc chạy / bán kính nhặt / tốc quay / độ bền (tổng = 0), cộng trên base (§6.4).
 
 **Thay đổi v6.32:** luật chung mọi thưởng/phạt CỘNG trên base (bán kính nhặt, tốc chạy, tốc quay, độ bền, EXP) — không nhân dồn; Shipper +0.1 cộng dồn với Nam Châm và cảnh giới (§4.0).
@@ -961,7 +963,14 @@ bot_spawn_enabled(room):
 
 ### 9.4 Đặt tên bot
 
-- Nguồn: `config/bot_names.txt` — 1 000 tên theo đúng kiểu nickname game thủ Việt hay dùng: tên thật (có/không dấu, kèm năm sinh như `2k7`, `_09`), tên ở nhà (Tèo, Bống, Mít...), biệt danh tu tiên hài (Sư Huynh Nợ Tiền, Tán Tu Lang Thang...), câu nói đùa (Đừng gank em, Wifi hàng xóm...), tên tiếng Anh ghép (SleepyNinja, LazyPanda...), kiểu teencode chữ thường (`tho2k9`, `meo.22`), và một ít có ký tự trang trí ASCII (`_Max.`, `^^Vy_`). Không có chữ "bot", không có tên người nổi tiếng hay nhân vật có bản quyền.
+- **Tên bot đa quốc gia (v6.34)** — game có 6 ngôn ngữ nên bot phải trông như người chơi từ nhiều nước:
+  - Nguồn tách theo ngôn ngữ: `config/bot_names/{vi,en,pt,es,id,th}.txt`, mỗi tệp **≥ 400 tên**, cộng `intl.txt` (≥ 300 tên trung tính kiểu gamer tag quốc tế: `ShadowFox`, `xNova`, `Kai_07`…). Đợt 2 thêm `ru, tr, ja, ko` khi bật ngôn ngữ đó.
+  - Mỗi tệp viết **đúng kiểu nickname bản địa** (không dịch tên Việt): vd pt-BR `Gui_BR`, `joaozinho.07`, `Tatá`; es `Pablito_x`, `la.Vale`; id `Bagas_99`, `putri.cantik`; th dùng **cả chữ Thái và Latin** (`น้องเมย์`, `BossTH`); en `sleepy_wolf`, `xXRiderXx`.
+  - **Tỉ lệ chọn ngôn ngữ cho bot trong 1 phòng**: 60% theo **phân bố ngôn ngữ của người thật đang trong phòng** (phòng toàn người Việt → phần này toàn tên Việt), 25% theo phân bố ngôn ngữ người chơi toàn server 7 ngày, 15% `intl`. Phòng chưa có ai → theo toàn server.
+  - Ký tự: chữ Latin có dấu + chữ Thái được phép (font Noto Sans Thai đã có); vẫn không dùng ★ ♥ ✿.
+  - Mọi tệp đi qua **bộ lọc từ tục cho từng ngôn ngữ** (`config/bad_words/{lang}.txt`) và kiểm không trùng tên người nổi tiếng/thương hiệu. CI: tệp nào < 400 tên hoặc có tên lọt bộ lọc → fail.
+  - Agent soạn danh sách, người bản ngữ duyệt cùng đợt duyệt bản dịch (`i18n/NOTES.md`).
+- Tên Việt (giữ như cũ, nay ở `config/bot_names/vi.txt`): 1 000 tên theo đúng kiểu nickname game thủ Việt hay dùng: tên thật (có/không dấu, kèm năm sinh như `2k7`, `_09`), tên ở nhà (Tèo, Bống, Mít...), biệt danh tu tiên hài (Sư Huynh Nợ Tiền, Tán Tu Lang Thang...), câu nói đùa (Đừng gank em, Wifi hàng xóm...), tên tiếng Anh ghép (SleepyNinja, LazyPanda...), kiểu teencode chữ thường (`tho2k9`, `meo.22`), và một ít có ký tự trang trí ASCII (`_Max.`, `^^Vy_`). Không có chữ "bot", không có tên người nổi tiếng hay nhân vật có bản quyền.
 - **Ký tự trang trí chỉ dùng ASCII** (`_ . ~ ^ x`) vì BitmapFont của bảng tên (§12.3) có thể không có glyph ★ ♥ ✿. Tên người chơi thật có ký tự lạ ngoài font → vẽ bằng font dự phòng, không được hiện ô vuông.
 - **Luật chọn tên trong 1 room**:
   - Rút ngẫu nhiên không lặp; không trùng tên bất kỳ người/bot nào đang trong room hoặc vừa rời trong 10 phút.

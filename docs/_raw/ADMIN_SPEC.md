@@ -8,7 +8,7 @@
 
 **v1.1:** `?debug=true` chỉ hoạt động khi đã đăng nhập admin (§1.1).
 
-> Đặt tại `docs/_raw/ADMIN_SPEC.md`. Dùng chung stack hiện tại (Go server + Vite/TypeScript client), không thêm framework UI. Mọi con số cấu hình nằm trong `config/game.json` → khối `admin`.
+> Đặt tại `docs/_raw/ADMIN_SPEC.md`. Dùng chung stack hiện tại (Go server + Vite/TypeScript). **Riêng trang admin** được dùng React + Ant Design (§2.1, bundle tách khỏi game); game không thêm framework UI. Mọi con số cấu hình nằm trong `config/game.json` → khối `admin`.
 
 ## 0. Mục tiêu
 Một trang quản trị chỉ chủ dự án vào được, để:
