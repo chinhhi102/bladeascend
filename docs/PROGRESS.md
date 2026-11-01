@@ -1594,3 +1594,46 @@ màn tổng kết không, và đáy ảnh có phải vùng ngoài rìa bản đ�
   chưa có. Dựng ô chọn ngôn ngữ ở đây lúc này là một cái nút bấm không xảy ra gì.
 - `share_card.png` nặng 1 MB (PNG, vì Twitter không nhận WebP). Không nằm trên
   đường vào game — chỉ con bọ mạng xã hội tải — nên chưa tối ưu.
+
+## Phiên 1/11 (tiếp) — đổi tên staging, đơ game addressModeU, respawn, chất lượng mặc định, cổng
+
+| # | Việc | Kết quả |
+|---|---|---|
+| 1 | `docs/RENAME_STAGING.md`: sao lưu, đếm dòng trước/sau, "Mong đợi" từng lệnh | ✅ — và **sửa tên volume SAI** (`kiemtien_kiemtien-data`, không phải `kiemtien-data`) |
+| 1b | Chạy RENAME trên staging (anh duyệt) | ✅ `lives 167` khớp 4 lần đếm; xoá volume cũ **sau 8/11** |
+| 2 | Respawn | ✅ **31 → 2** (WANDER), người thật trước đó 100/17 phút — PERF_LOG #22 |
+| 3 | WebGL + `addressModeU` | ✅ ép `preference: 'webgl'`; lỗi thật nằm ở nhả atlas — **3 đường**, xem dưới |
+| 4 | Chất lượng mặc định | ✅ PC Vừa · ĐT/GPU tích hợp Thấp · lên Cao cần 20 s; Cao chỉ +33 % chứ không gấp đôi — PERF_LOG #23 |
+| 5 | Deploy | ✅ `:9999` + staging `https://bladeascend.staging.maveragroups.com` |
+| – | Anh báo: game đơ (ảnh 15:58) | ✅ chính là `addressModeU`, đường thứ 3 |
+| – | Anh báo: hình chữ nhật trên khối băng (ảnh 16:00) | ✅ viền "quá bậc" vẽ theo hình Tiled → nay ôm theo ảnh, chỉ hiện trong tầm kiếm (đúng spec §8.2) |
+| – | Anh yêu cầu: cổng nổi trên vòng kiếm | ✅ lớp `gateLayer` ngay trên vòng kiếm |
+| – | Anh hỏi: v6.x chưa xong? | Rà 87 mục: 57 xong · 17 một phần · 13 chưa — `docs/V6_AUDIT.md` |
+
+### Đơ game `addressModeU` — ba đường, cùng một gốc
+
+Gốc: `releaseChar` (nhả atlas nhân vật không ai dùng, Q30) huỷ ảnh nguồn trong khi vẫn còn chỗ giữ nó.
+1. Sprite vẽ bằng **nhân vật dự phòng** — `keepChars` chỉ được khai tên muốn, không khai atlas đang vẽ.
+2. **View Pool** — view cất > 10 s, atlas bị nhả; lấy ra cho cùng nhân vật thì `setCharacter` chỉ so tên.
+3. **Bộ đệm `Assets`** — huỷ tay thì bộ đệm vẫn giữ xác; nạp lại trả về đúng ảnh đã huỷ. Đây là đường
+   trong ảnh anh chụp (console: `[Cache] already has key` + `destroyed instead of unloaded`).
+
+Pixi 8.22 vốn đã ưu tiên WebGL; lỗi nằm trong `GlTextureSystem.updateStyle`, không phải WebGPU.
+
+### Lỗi hạ tầng tìm được trong lúc làm
+- `tools/deploy.sh`: `pkill -f bladeascend` khớp cả đường dẫn repo → **deploy tự giết chính nó** (exit 144),
+  và sẽ giết luôn `npm run dev`/editor. Nay `pkill -x`.
+- `deploy/staging.sh` chép `assets/` thay vì `assets/dist/` → staging chạy **không ảnh nào**. Đã sửa.
+- `deploy/docker-compose.yml`: volume nay tên cố định + `external` — thiếu thì dừng, không tạo rỗng.
+- `netcode-bench.mjs` gọi binary tên cũ `kxserver`; và không bao giờ ép được entity ra/vào (xem PERF_LOG #22).
+
+### Còn lại / lỗi đã biết
+- **Telemetry staging không bền**: ghi vào `/app/server/data/telemetry.db` trong container, KHÔNG nằm trên
+  volume → mất mỗi lần deploy. Cần thêm `-telemetry-db /data/telemetry.db` vào Dockerfile (chưa làm: đổi
+  hạ tầng, hỏi anh trước).
+- Chưa đo được **điện thoại / GPU tích hợp thật** cho mục tiêu p50 ≥ 40 / p1 ≥ 25 (B17).
+- Viền "quá bậc" mới **chưa chụp ảnh kiểm** ở cảnh thật (đã kiểm cổng bằng ảnh, không lỗi JS).
+- Test chập chờn `TestRemovalReportedEvenWhenSlotReused` (B18) — có từ trước, không do lượt này.
+- Q32: spec §13.6 cần anh ghi luật chất lượng mới.
+- v6.x chưa xong (xem `docs/V6_AUDIT.md`): lớn nhất là v6.16 (ảnh góp ý, admin antd, đa ngôn ngữ) và
+  v6.19 mục 2–5 (giao diện bảng xếp hạng mới).

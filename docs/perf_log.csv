@@ -40,3 +40,6 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 21,2026-10-31,4d2d52e,"MÁY YẾU: 1 tab, CPU 4x, Đạo Tổ, 2 phút",S10,,,,,,,79.0,25.3,24.3,3.56,341,2724,,,,,,,,,,"FPS p10 24.3 / p50 24.3 — DƯỚI mốc 40 anh đặt, nên đã chạy hồ sơ CPU (S11). Một khung 41.2 ms: giải mã 0.00, Pixi vẽ 3.56, còn lại 37.7.",
 21,2026-10-31,4d2d52e,"Hồ sơ CPU luồng chính (CDP Profiler, CPU 4x)",S11,,,,,,,,24.3,,3.56,341,2724,,,,,,,,,,"Top: (program) 15.8%, RenderTargetSystem.Ge 6.4%, _getGlobalBoundsRecursive 4.3%, collectRenderablesSimple 4.2%, pack* ~6%. Không hàm nào của mã game trong top 22 — toàn PixiJS.",
 0,2026-10-31,,"Người thật 31/10 12:00 → 31/10 23:30",S6,0.80,5.07,11.7,3.4,32.8,9.5,250.0,26.7,0.8,,121,4082,108.1,0,5.44,,,,"",76
+22,2026-11-01,b402f80,"Respawn: AOI trễ áp cả trạng thái — WANDER 4 tab×120s",WANDER,,,,,,,,,,,,,,0,0.25,,,,,,,,"trước 31 (3.88/phút-tab, quái 28) → sau 2 (do Despawn đúng luật)",
+22,2026-11-01,b402f80,"Giá băng thông của AOI trễ (cùng máy, trước 1.35/2.30 · 3.4 KB/s · 3.6 KB)",S1,1.41,2.37,,4.1,,4.0,0.00,,,,,,,,,,,,,,,,"trước: tick 1.35/2.30, 3.4 KB/s, gói 3.6 KB",1
+23,2026-11-01,477e84f,"Mức chất lượng: Vừa (khu 2, CPU 4x, RTX 3060)",QCOST,,,,,,,,59.9,30.0,1.65,112,3567,,,,,,,,,,,,"Cao: 59.9/29.9, 2.20 ms, 141 dc, 4451 sprite; Cao-ambient 1.75 ms",

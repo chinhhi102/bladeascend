@@ -18,6 +18,8 @@
 | **S9** | `node tools/browsertest/iphone.mjs <url> <giây>` | **WebKit giả lập iPhone** (DPR 3, 390×844): vào trận, đứng chỗ đông, đọc bộ nhớ texture. Dùng WebKit chứ không Chromium vì người báo lỗi dùng Safari iPhone. **Chỉ con số bộ nhớ là chuyển sang máy thật**; FPS ở đây là tốc độ vẽ phần mềm của máy dựng, không phải của iPhone. |
 | **S10** | `node tools/browsertest/pingsource.mjs <url> <giây> [--cpu=N] [--daoto] [--tabs=N]` | **Trễ đến từ đâu**: chạy đồng thời ping luồng chính và ping trong Web Worker, cùng đường truyền cùng server. Chênh lệch = phần trễ do luồng chính bận. `--cpu=N` bóp CPU giả lập máy yếu; `--daoto` lên Đạo Tổ 1050 kiếm. |
 | **S11** | `node tools/browsertest/cputrace.mjs <url> <giây> [--cpu=N] [--daoto]` | **Hồ sơ CPU luồng chính** (CDP `Profiler`, 1000 mẫu/giây): thời gian TỰ THÂN từng hàm. Trả lời "mỗi khung tốn N ms thì N ms đó nằm ở hàm nào". |
+| **WANDER** | `node tools/browsertest/respawn-wander.mjs [client-dir] 120 4` | **Respawn 2 giây như người chơi gặp**: server riêng 9993, 60 bot, 4 tab đi lang thang 120 s, đọc thẳng `world.respawnBy` (tách do Despawn / do hết hạn / quái). `client-dir` trỏ vào `server/data/deploy-archive/<build>/client` để so theo build. Dao động giữa các lượt ~±10 — so khác biệt cỡ chục lần, không so 2 với 4. |
+| **QCOST** | `node tools/browsertest/qualitycost.mjs 20 --zone=2 --cpu=4 --runs=2` | **Mức chất lượng tốn ở đâu**: server riêng 9995, vào đúng một khu, CPU 4×, ép mức tay, hạ từng hiệu ứng bằng `?qf=`. FPS p1 với 2 lượt KHÔNG đủ mẫu; tin cột "cập nhật cảnh (ms)". |
 | **S8** | `node tools/browsertest/livemap.mjs <cổng>` | **Giá của trang quản trị** (ADMIN_SPEC §11): đo tick TB cao nhất khi KHÔNG ai xem bản đồ, rồi khi 2 admin xem ở 5 lần/giây, lấy hiệu. Trần 0,3 ms. |
 | **S7** | `cd client && npm run assets:size` + `node tools/browsertest/loadtime.mjs <url>` | **Dung lượng tải & thời gian vào trận** (GAME_SPEC §13.7). Hai nửa: dung lượng lấy từ manifest (chính xác tuyệt đối), thời gian đo trong Chrome có bóp mạng 4 Mbps / 10 Mbps / lần 2 có cache. |
 
@@ -92,6 +94,9 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | **20** | 2026-10-31 | `c5a8ab5` | **Protocol v2 — bài 10 tab, 4G yếu** | S3 | 1.4 ✅ / 3.1 ✅ | 7.1 / 11.9 (p95) ✅ | **3.8** ✅ | 20.6 / 6.8 | 0.6 ✅ | 222 | 0 | – | snapshot tệ nhất 3.8 KB (<6) · ping p95 264 ms · tick không đổi so với mạng thường | **Mẫu tệ nhất 73,6 KB/s** — xem ghi chú ở §4: bóp mạng làm gói dồn lại rồi về một đợt, nên con số tức thời vọt lên; p95 11,9 mới là mức thật |
 | **21** | 2026-10-31 | `4d2d52e` | **Tách nguồn trễ ping (anh yêu cầu)** | S10 | – | – | – | 58.6 → 24.3 (p10, CPU 4×) | 0.7–3.6 | – | – | – | ping luồng chính p95 **27/12/10/79 ms** (1 tab rảnh / Đạo Tổ / 10 tab / CPU 4×) · ping Worker **0–1 ms** ở CẢ BỐN | **Trễ là do LUỒNG CHÍNH client**, không phải mạng hay server |
 | **21** | 2026-10-31 | `4d2d52e` | Hồ sơ CPU: 41 ms mỗi khung nằm ở đâu | S11 | – | – | – | 24.3 (p10, CPU 4×) | 3.6 | 341 | – | – | giải mã gói **0,00 ms** · Pixi vẽ 3,6 ms · còn lại 37,7 ms | **Toàn bộ nằm trong PixiJS**: duyệt cây cảnh + gom batch, không có nút thắt nào trong mã game |
+| **22** | 2026-11-01 | `b402f80` | **Respawn 2 giây: AOI có trễ áp cả trạng thái gửi đi (người + quái)** | WANDER | – | – | – | – | – | – | – | **31 → 2** / 8 phút-tab ✅ | Respawn 3,88 → **0,25**/phút-tab; quái 28 → **0**; do hết hạn 26 → **0** | 2 lần còn lại do `Despawn` đúng luật (ra quá lề 900 rồi quay lại) |
+| 22 | 2026-11-01 | `b402f80` | Như trên — giá băng thông (cùng máy, trước/sau) | S1 | 1.35 → 1.41 ✅ / 2.30 → 2.37 ✅ | 3.4 → **4.1** / – | 3.6 → **4.0** ✅ | – | – | – | – | – | +0,7 KB/s vì gửi tiếp người/quái ngay ngoài mép | Trong ngân sách; chấp nhận để đổi lấy respawn ≈ 0 |
+| **23** | 2026-11-01 | `477e84f` | **Mức chất lượng tốn ở đâu — tắt từng thứ** (khu 2, CPU 4×, RTX 3060) | QCOST | – | – | – | 59.9 / 30.0 (Vừa) · 59.9 / 29.9 (Cao) | 1.65 (Vừa) · 2.20 (Cao) | 112 · 141 | – | – | Cao = Vừa **+0,55 ms (+33 %)**, KHÔNG gấp đôi; `ambient` chiếm ~0,45 ms | Chưa đo được máy yếu thật — xem §6 B17 |
 
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
@@ -555,6 +560,73 @@ Việc tiếp theo đề xuất:
 1. Chạy lại bằng WebKit thật sau khi cài `libavif16`.
 2. Gộp ô nền trộn thành một lớp duy nhất (hoặc bake sẵn) để kéo draw call xuống.
 
+### Lượt #22 — Respawn 2 giây: vùng quan tâm có trễ áp cả trạng thái (2026-11-01, commit `b402f80`)
+
+Mục tiêu: respawn/phút về 0 (ngân sách §4.3). Người thật 1/11 trên build `20261101_1149_6e73318`
+(SAU bản sửa decode) vẫn ghi **100 lần / 17 phút** (`perfreport --real`, mục 8 "Theo BUILD").
+
+Đo trước rồi mới sửa. `netcode-bench` 3 lượt ra `rời=0 · quay lại=0` — bài đó không ép được
+entity ra/vào khung (tab đi không lách vật cản tới được tab kia; `bot_fill_target = 0` khiến
+`trimOverCap` xoá ngay bot thả bằng phím B). Viết bài mới `tools/browsertest/respawn-wander.mjs`
+(kịch bản **WANDER**: server riêng cổng 9993, 60 bot, 4 tab đi lang thang 120 s, đọc thẳng
+`world.respawnBy`), chạy được trên client cũ trong `deploy-archive/` để so theo build.
+
+| Lần đo | Server | Respawn | do Despawn | do hết hạn 2 s | trong đó quái | Lỗi JS |
+|---|---|---|---|---|---|---|
+| Trước | `6e73318` | **31** | 5 | 26 | (chưa tách) | 0 |
+| Sửa người chơi | + Perceivable/Tracks | 20 | 0 | 20 | – | 0 |
+| (lần lặp, tách quái) | như trên | 30 | 2 | 28 | **28** | 0 |
+| **Sau** | `b402f80` | **2** | 2 | **0** | **0** | 0 |
+
+Nút thắt tìm được (có bằng chứng):
+1. `room/broadcast.go` `snapshotFor` gửi trạng thái theo `CanSee` — có phép thử ĐÚNG MÉP khung
+   nhìn — trong khi `aoi.go` theo dõi tới lề ra 900 + chờ 2 s. Lớp trễ chỉ quyết định lúc gửi
+   `Despawn`, không quyết định lúc gửi trạng thái. Test `TestSnapshotKeepsSendingTrackedPlayerJustOutsideView`
+   trượt trên code cũ, qua trên code mới.
+2. Quái không có lớp trễ nào: 28/30 lần respawn của lần đo tách nguồn.
+
+Giá (S1, cùng máy, trước/sau): băng thông 3,4 → 4,1 KB/s · gói lớn nhất 3,6 → 4,0 KB · tick
+1,35 → 1,41 ms. Chấp nhận: vẫn trong ngân sách, đổi lấy respawn ≈ 0.
+
+Việc tiếp theo: xem lại respawn trên telemetry người thật khi có ≥ 5 phiên ở build mới.
+
+### Lượt #23 — Mức Cao tốn ở đâu (2026-11-01, commit `477e84f`)
+
+Mục tiêu: chủ dự án hỏi "vì sao Cao tốn gần gấp đôi Vừa" (telemetry 31/10: vẽ p95 64,9 vs 18,2 ms).
+Công cụ: `tools/browsertest/qualitycost.mjs` (kịch bản **QCOST**: server riêng 9995, vào đúng
+khu 2 — khu tệ nhất 31/10 — CPU bóp 4×, ép mức bằng `kx.quality.manual`, hạ từng thứ bằng
+`?qf=tên:medium`). 2 lượt/cấu hình × 20 s, trung vị. GPU: RTX 3060 (ANGLE/OpenGL).
+
+| Cấu hình | FPS p50 | FPS p1 | Cập nhật cảnh (ms) | Draw call | Sprite |
+|---|---|---|---|---|---|
+| Vừa | 59.9 | 30.0 | 1.65 | 112 | 3 567 |
+| Cao | 59.9 | 29.9 | **2.20** | 141 | 4 451 |
+| Cao −bloom | 59.9 | 29.9 | 2.06 | 163 | 4 478 |
+| Cao −ambient | 59.9 | 59.5 | **1.75** | 134 | 4 432 |
+| Cao −decals | 59.9 | 29.9 | 2.12 | 152 | **3 428** |
+| Cao −beast | 59.9 | 59.5 | 2.04 | 159 | 4 094 |
+| Cao −motes | 59.9 | 29.9 | 2.30 | 247 | 4 296 |
+| Thấp | 59.9 | 59.5 | 1.89 | 157 | 2 496 |
+| ĐT (giả lập) Thấp | 59.9 | 59.5 | 2.59 | 219 | 2 702 |
+| ĐT (giả lập) Vừa | 59.9 | 59.5 | 2.46 | 140 | 3 182 |
+
+Kết luận có bằng chứng:
+1. Trên GPU thật, kể cả CPU 4×, **mọi mức đều 60 FPS p50**. Cao hơn Vừa **0,55 ms cập nhật cảnh
+   (+33 %)**, không phải gấp đôi.
+2. `ambient` (150 hạt mây/lá ở Cao so với 60 ở Vừa) chiếm **~0,45 ms** trong 0,55 ms đó; `decals`
+   chiếm ~1 000 sprite nhưng gần như không tốn ms.
+3. FPS p1 dao động 30 ↔ 59,5 theo kiểu hai giá trị (một khung rơi trong 20 s) — 2 lượt là KHÔNG
+   ĐỦ mẫu để kết luận gì về p1 giữa các cấu hình.
+4. Con số "gấp đôi" của telemetry 31/10 lẫn phiên Playwright (Chrome/156, 64/75 phiên) chạy
+   10 tab chung một máy — không phải máy người chơi.
+
+Thay đổi đi kèm (chủ dự án chốt 1/11): mặc định PC = Vừa, điện thoại/GPU tích hợp = Thấp, lên
+Cao chỉ khi ≥ 55 FPS suốt 20 s. Sửa luôn lỗi `autoQuality` nâng ngược ngay sau khi
+`autoQualityByMemory` hạ (bộ đếm không đặt lại) — `npm run check:quality` bắt được.
+
+Bị chặn: **chưa đo được điện thoại thật / GPU tích hợp thật** — giả lập trên RTX 3060 không nói gì
+về mục tiêu "điện thoại p50 ≥ 40 / p1 ≥ 25". Cần telemetry người thật ở build mới.
+
 ### Mẫu — copy cho mỗi lượt
 
 ```
@@ -583,9 +655,11 @@ Việc tiếp theo đề xuất: <1–3 việc, xếp theo lợi ích / công s�
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
+| B17 | **Chưa có số đo máy yếu THẬT cho mức chất lượng mặc định** | Không xác nhận được mục tiêu điện thoại p50 ≥ 40 / p1 ≥ 25, PC p1 ≥ 30 | Lượt #23: trên RTX 3060 + CPU 4× mọi mức đều 60 FPS; telemetry 31/10 lẫn phiên máy | Mở — chờ ≥ 5 phiên người thật ở build `≥ 20261101_16xx`, đọc `perfreport --real` mục 3 + 8 | – |
+| B18 | **`TestRemovalReportedEvenWhenSlotReused` chập chờn** | CI đỏ ngẫu nhiên | Trượt 1/6 lần trên code CŨ (`367eb68`), không liên quan respawn | Mở | – |
 | B1 | ItemsAdded dồn 1 gói khi camera lùi xa | Gói 38 KB, nghẽn mạng yếu | Lượt #0 | **Đóng** — gói 38.3 → 6.8 KB | #4 |
 | B2 | Server tick vượt ngân sách khi 10 Đạo Tổ chụm | Lag server | Lượt #0 | **Đóng** — tick 11.45 → 1.56 ms | #4 |
-| B3b | **Chỉ số respawn DAO ĐỘNG MẠNH giữa các lượt** | Phương pháp đo | Cùng một bản build, 8 lượt `flicker.mjs` ra 0,0,0,2,3,1,0,0. Và `netcode-bench` cũ **không bao giờ ép được entity quay lại khung nhìn**, nên số respawn = 0 của nó là con số hiển nhiên, không chứng minh gì. | **Đóng (#12)** — bài đo giờ đi theo KHOẢNG CÁCH tới chỗ đứng ban đầu, không theo đồng hồ và không theo tab kia: 4 lần quay lại thật trên 4 lượt, respawn 0. | #8, #9, #12 |
+| B3b | **Chỉ số respawn DAO ĐỘNG MẠNH giữa các lượt** | Phương pháp đo | Cùng một bản build, 8 lượt `flicker.mjs` ra 0,0,0,2,3,1,0,0. Và `netcode-bench` cũ **không bao giờ ép được entity quay lại khung nhìn**, nên số respawn = 0 của nó là con số hiển nhiên, không chứng minh gì. | **Đóng (#22)** — kịch bản WANDER (`respawn-wander.mjs`, 60 bot, 4 tab × 120 s) ép được entity ra/vào thật và tách nguồn: trước 31 (26 hết hạn, quái 28/30 lần tách), sau 2 (cả hai do Despawn đúng luật). Gốc: trạng thái gửi theo mép khung nhìn, không theo lớp trễ AOI | #22 |
 | B3 | Nhấp nháy + placeholder khi entity vào khung | Hình ảnh | Trên `:9999` THẬT, 16 lượt `flicker.mjs` sau bước 2b: **placeholder 0/16 lượt** (trước 2b: 252/0/24/4/0), **respawn 2/16 lượt có đúng 1** (trước 2b ~1.0/30s, trước 2a 38/30s) | **Đóng hẳn (#20).** Sau Protocol v2, `netcode-bench` 3 lượt: **respawn 0/3 lượt với 5 lần quay lại THẬT**, placeholder **0 / 8 707 khung**, nhấp nháy do `Despawn` 0, do luật hết hạn 2 giây 0. | #5, #7, #8 |
 | B12 | **Trang quản trị đọc trạng thái phòng từ goroutine HTTP** | **Sập server**, không phải chậm | `go test -race ./internal/room/` trên bản cũ: DATA RACE ngay lượt đầu. `Room.Clients()` và `collectStats()` duyệt `z.clients` / `g.Players` / `g.Obstacles` trong lúc goroutine phòng ghi vào — Go dừng hẳn chương trình với "concurrent map iteration and map write". Dashboard làm mới 2 giây/lần từ A1, nên chỉ cần một người bấm Vào trận đúng nhịp. | **Đóng (#18)** — mọi lần đọc đi qua `Room.Query`, chạy trên chính goroutine phòng giữa hai tick. Test giữ: 248 lần đọc song song với 120 lượt vào/ra, `-race` sạch. | #18 |
 | B15 | **Mỗi khung tốn 41 ms trên máy yếu (CPU 4×), FPS p10 24,3 < 40** | Người chơi máy cũ thấy giật | Hồ sơ CPU (S11, 40s, Đạo Tổ 1050 kiếm): `(program)` 15,8% · `RenderTargetSystem.Ge` 6,4% · `_getGlobalBoundsRecursive` 4,3% · `collectRenderablesSimple` 4,2% · `packIndex`/`packAttributes`/`packQuadAttributes` ~6% · `set font` 1,7%. **Không có hàm nào của mã game trong top 22.** Toàn bộ là PixiJS duyệt cây cảnh và gom batch, tỉ lệ với số sprite (2 724 sprite, 341 draw call). | **Mở** — hướng sửa là giảm SỐ SPRITE/kích thước cây cảnh (vòng 1 050 kiếm là nguồn chính), không phải tối ưu mã game. Chưa làm: đó là một lượt tối ưu riêng. | – |
