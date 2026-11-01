@@ -80,22 +80,6 @@ func (p *Progression) MaxSwords(r int) int {
 	return p.maxSwords[len(p.maxSwords)-1] + 40*(r-len(p.maxSwords)+1)
 }
 
-// DropRealmExp is total_exp after falling one whole realm while keeping the tier and the
-// progress through it (spec §5.1): Trúc Cơ 2 at 40% → Luyện Khí 2 at 40%.
-// DropRealmExp: bị chém thì rớt 1 đại cảnh giới và thanh về **MỨC SÀN** của cảnh giới mới
-// (tầng 1, 0%) — spec v5.8 §5.1.
-//
-// Bản cũ giữ nguyên tầng và % tiến độ (Trúc Cơ tầng 2 → Luyện Khí tầng 2). Luật mới nặng
-// hơn hẳn: Trúc Cơ tầng 2 → Luyện Khí **tầng 1, 0%**, Kim Đan tầng 7 → Trúc Cơ tầng 1 0%.
-func (p *Progression) DropRealmExp(exp float64) float64 {
-	L := p.LevelFromExp(exp)
-	r := p.Realm(L)
-	if r <= 0 {
-		return 0
-	}
-	return p.Threshold((r - 1) * p.cfg.TiersPerRealm)
-}
-
 // Scale returns scale(L) = min + (max-min) * L / (levels-1); Tiên giới keeps growing by
 // tien_scale_step per realm (spec §3.4: Chân Tiên 5.2 … Đạo Tổ 6.0).
 func (p *Progression) Scale(L int) float64 {

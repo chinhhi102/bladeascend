@@ -92,8 +92,8 @@ func TestLoaPhuongPushesOnlyInsideCone(t *testing.T) {
 	}
 }
 
-// Ru Ngủ Trưa (spec v6.9 §6.3): hát 0.5s rồi mọi địch trong 4 U ngủ gục 2.5s — đứng im,
-// vòng kiếm NGỪNG QUAY.
+// Ru Ngủ Trưa (spec v6.27 §6.3): hát 0.5s rồi mọi địch trong 4 U ngủ gục 2.5s — đứng im,
+// nhưng vòng kiếm VẪN QUAY (khống chế không khoá kiếm).
 func TestRuNguSleepsAfterChannel(t *testing.T) {
 	g := skillGame(t)
 	a := put(g, "ong_ba_vong", Vec{X: 3000, Y: 3000}, 10, 20)
@@ -119,8 +119,8 @@ func TestRuNguSleepsAfterChannel(t *testing.T) {
 	if g.MoveSpeed(b) != 0 {
 		t.Errorf("đang ngủ mà vẫn đi được %.1f", g.MoveSpeed(b))
 	}
-	if g.Omega(b) != 0 {
-		t.Errorf("đang ngủ mà vòng kiếm vẫn quay %.2f rad/s — spec nói NGỪNG QUAY", g.Omega(b))
+	if g.Omega(b) != fastSpin {
+		t.Errorf("đang ngủ vòng kiếm quay %.2f rad/s, muốn %.2f — v6.27: kiếm vẫn quay", g.Omega(b), fastSpin)
 	}
 	g.Time += g.skillNum("ru_ngu_secs") + 0.01
 	if g.MoveSpeed(b) != fastMove || g.Omega(b) != fastSpin {
@@ -151,30 +151,6 @@ func TestRuNguCancelledByBodyHit(t *testing.T) {
 	}
 	if a.SkillCharges != 0 {
 		t.Error("mất chiêu mà được hoàn lượt — vậy thì không có rủi ro nào")
-	}
-}
-
-// Checklist §17: "2 người đang mài kiếm, Ông Ba Võng ru → trong 2.5s CHỈ người ngủ bị bể kiếm."
-func TestSleepingSwordsDoNotFightBack(t *testing.T) {
-	g := skillGame(t)
-	// Hai người CÙNG cảnh giới, cùng số kiếm: không ngủ thì mài nhau mất đúng bằng nhau.
-	a := put(g, "cu_rua", Vec{X: 3000, Y: 3000}, 10, 30)
-	b := put(g, "be_ti", Vec{X: 3500, Y: 3000}, 10, 30)
-	// Đặt sau khi cả hai đã có hình vòng: hai vòng chồng lên nhau một chút để chắc chắn va.
-	b.Pos.X = a.Pos.X + (a.Geom.Reach+b.Geom.Reach)*0.8
-
-	g.ApplyStatus(b, StSleep, 2.5)
-	beforeA, beforeB := a.Ring.Count, b.Ring.Count
-	for i := 0; i < 20; i++ {
-		g.resolveSwordSword()
-		g.Time += 1.0 / 30
-	}
-	if b.Ring.Count >= beforeB {
-		t.Fatal("người ngủ không bị bể kiếm nào — hai vòng không chạm nhau, bài test vô nghĩa")
-	}
-	if a.Ring.Count != beforeA {
-		t.Errorf("người THỨC mất %d kiếm — spec nói kiếm đang ngủ không đánh trả",
-			beforeA-a.Ring.Count)
 	}
 }
 

@@ -32,7 +32,7 @@
       15000
     ],
     "tien_entry_requires_full_exp": true,
-    "tien_rob_share": 0.5,
+    "tien_rob_share": 0.3,
     "tien_drop_scatter_min": 200.0,
     "tien_drop_scatter_max": 500.0,
     "tien_drop_share": 0.3,
@@ -107,7 +107,7 @@
     "pickup_r": 90,
     "invuln_on_hit": 1.0,
     "invuln_on_spawn": 5.0,
-    "attacker_share": 0.5,
+    "attacker_share": 0.3,
     "drop_share": 0.3,
     "kill_bonus_exp": 30,
     "death_sword_drop": 0.5,
@@ -115,7 +115,9 @@
     "camera_view_h": 900,
     "camera_exp": 0.85,
     "camera_reach_mult": 2.6,
-    "hit_drops_realm": true,
+    "rob_cap_realms": 2,
+    "rob_cap_tien_realms": 1,
+    "death_orbs_max": 40,
     "knockback": 140,
     "knockback_secs": 0.25,
     "death_anim_secs": 1.0,
@@ -207,7 +209,7 @@
   "exp_economy": {
     "orb_value_mult": 1.5,
     "pickup_scale_exp": 0.5,
-    "bot_steal_share": 0.25
+    "bot_steal_share": 0.15
   },
   "exp_orbs": {
     "cell": 160,
@@ -560,6 +562,7 @@
     "brace_secs": 4.0,
     "brace_durability": 2.0,
     "ghost_unstick_secs": 0.3,
+    "blind_no_body_hit": true,
     "shell_secs": 5.0
   }
 }

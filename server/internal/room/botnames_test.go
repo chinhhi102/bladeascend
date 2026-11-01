@@ -43,6 +43,9 @@ func TestBotNamesUniqueInRoom(t *testing.T) {
 	n := 0
 	for _, z := range r.Zones() {
 		for _, p := range z.Game().Players {
+			if p.IsMinion {
+				continue // hai đàn em của một Đại Ca cùng tên "<chủ> (đàn em)" — cố ý
+			}
 			n++
 			key := strings.ToLower(p.Name)
 			if other, dup := seen[key]; dup {

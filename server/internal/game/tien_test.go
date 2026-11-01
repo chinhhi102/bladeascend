@@ -22,7 +22,7 @@ func TestSpawnAtTienRealmSeatsTienKhi(t *testing.T) {
 	}
 }
 
-// Và hệ quả của nó: bot Chân Tiên bị chém thân thì PHẢI rớt khỏi Tiên giới.
+// Và hệ quả của nó: bot Chân Tiên bị chém thân thì chết và mất hết Tiên khí (v6.26).
 func TestChanTienBotDropsWhenHit(t *testing.T) {
 	g := rulesGame(t)
 	lv := g.Prog.TienLevel(0) // Chân Tiên
@@ -34,10 +34,10 @@ func TestChanTienBotDropsWhenHit(t *testing.T) {
 
 	g.applyBodyHit(attacker, victim)
 
-	if g.Prog.IsTien(g.Prog.Realm(victim.Level)) {
-		t.Fatalf("Chân Tiên bị chém mà vẫn ở Tiên giới (cấp %d)", victim.Level)
+	if !victim.Dead {
+		t.Fatal("Chân Tiên bị chém mà không chết")
 	}
 	if victim.TienKhi != 0 {
-		t.Errorf("rớt khỏi Tiên giới mà thanh Tiên khí còn %v, phải về 0", victim.TienKhi)
+		t.Errorf("chết mà thanh Tiên khí còn %v, phải về 0", victim.TienKhi)
 	}
 }

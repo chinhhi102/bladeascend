@@ -81,10 +81,9 @@ func TestUnshieldedBodyTakesHit(t *testing.T) {
 	if g.Shielded(b) {
 		t.Fatal("thiết lập sai: 5 kiếm phải là 1 vòng, không còn lá chắn")
 	}
-	lv := b.Level
 	g.resolveSwordBody()
-	if b.Level >= lv {
-		t.Fatalf("không còn lá chắn mà vẫn không ăn cú chém thân (level %d)", b.Level)
+	if !b.Dead {
+		t.Fatal("không còn lá chắn mà vẫn không ăn cú chém thân")
 	}
 }
 

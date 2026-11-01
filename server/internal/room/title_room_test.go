@@ -114,8 +114,8 @@ func TestTop1IsRoomWideNotPerZone(t *testing.T) {
 		t.Errorf("người Uy Danh cao nhất phòng (5000) phải là Top 1, được danh hiệu %d", ta)
 	}
 	if tb == 1 {
-		t.Errorf("người Uy Danh 100 đang đeo vương miện Top 1 — danh hiệu đang tính THEO KHU.\n"+
-			"Một phòng 5 khu sẽ có 5 người cùng là Top 1, và khi họ gặp nhau qua cổng thì cả\n"+
+		t.Errorf("người Uy Danh 100 đang đeo vương miện Top 1 — danh hiệu đang tính THEO KHU.\n" +
+			"Một phòng 5 khu sẽ có 5 người cùng là Top 1, và khi họ gặp nhau qua cổng thì cả\n" +
 			"hai cùng đeo vương miện.")
 	}
 	if tb != 2 {

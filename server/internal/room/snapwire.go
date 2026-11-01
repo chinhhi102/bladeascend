@@ -154,8 +154,8 @@ func (c *Client) EncodeSnapshot(s *netproto.Snapshot, chars []string) []byte {
 				Title: clampU8(p.Title),
 				X:     now.X, Y: now.Y, Facing: now.Facing, Level: now.Level, Scale: now.Scale,
 				Swords: now.Swords, RingPhase: now.RingPhase, RingDir: now.RingDir,
-				Mood:   now.Mood, Buffs: now.Buffs, Flags: now.Flags,
-				Tilt:   now.Tilt, Status: now.Status, Crack: now.Crack,
+				Mood: now.Mood, Buffs: now.Buffs, Flags: now.Flags,
+				Tilt: now.Tilt, Status: now.Status, Crack: now.Crack,
 			}.Encode(buf)
 			c.lastWire[p.ID] = now
 			continue
@@ -177,8 +177,8 @@ func (c *Client) EncodeSnapshot(s *netproto.Snapshot, chars []string) []byte {
 			ID: p.ID, Changed: changed,
 			X: now.X, Y: now.Y, Facing: now.Facing, Level: now.Level, Scale: now.Scale,
 			Swords: now.Swords, RingPhase: now.RingPhase, RingDir: now.RingDir,
-			Mood:   now.Mood, Buffs: now.Buffs, Flags: now.Flags,
-			Tilt:   now.Tilt, Status: now.Status, Crack: now.Crack,
+			Mood: now.Mood, Buffs: now.Buffs, Flags: now.Flags,
+			Tilt: now.Tilt, Status: now.Status, Crack: now.Crack,
 		}.Encode(buf)
 		c.lastWire[p.ID] = now
 	}

@@ -95,12 +95,17 @@ type Player struct {
 	CameraViewH    float64 `json:"camera_view_h"`
 	CameraExp      float64 `json:"camera_exp"`
 	CameraReachMul float64 `json:"camera_reach_mult"`
-	HitDropsRealm  bool    `json:"hit_drops_realm"`
-	Knockback      float64 `json:"knockback"`
-	KnockbackSecs  float64 `json:"knockback_secs"`
-	DeathAnimSecs  float64 `json:"death_anim_secs"`
-	NameMin        int     `json:"name_min"`
-	NameMax        int     `json:"name_max"`
+	// RobCapRealms: chém chết thì người chém nhận Linh khí tối đa tới sàn cảnh giới r+N
+	// (spec v6.26 §5.1, N = 2). RobCapTienRealms: Tiên khí tối đa tới trần cảnh giới Tiên +N.
+	RobCapRealms     int `json:"rob_cap_realms"`
+	RobCapTienRealms int `json:"rob_cap_tien_realms"`
+	// DeathOrbsMax: xác rơi tối đa ngần này viên Linh khí, mệnh giá lớn trước (40).
+	DeathOrbsMax  int     `json:"death_orbs_max"`
+	Knockback     float64 `json:"knockback"`
+	KnockbackSecs float64 `json:"knockback_secs"`
+	DeathAnimSecs float64 `json:"death_anim_secs"`
+	NameMin       int     `json:"name_min"`
+	NameMax       int     `json:"name_max"`
 }
 
 // Burn is Thiêu Đốt Tinh Huyết (spec §4.1c): hold to run faster, paying EXP every second.
@@ -386,6 +391,9 @@ type Skills struct {
 	// chỗ trống gần nhất trong ngần này giây (spec v5.5 §6.3) — không dịch tức thời, vì
 	// nhảy một phát là client thấy giật y như lỗi §8.2a vừa sửa xong.
 	GhostUnstickSecs float64 `json:"ghost_unstick_secs"`
+	// BlindNoBodyHit: người bị bịt mắt (Thằng Mập) — kiếm không chém trúng thân ai, va kiếm
+	// vẫn tính (spec v6.27 §6.3).
+	BlindNoBodyHit bool `json:"blind_no_body_hit"`
 
 	ShellSecs float64 `json:"shell_secs"`
 }

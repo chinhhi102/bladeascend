@@ -8,15 +8,15 @@ package game
 type ExpSource uint8
 
 const (
-	ExpOrbAmbient    ExpSource = iota // viên môi trường §6.1 (giá trị 0 = mặc định của Item)
-	ExpOrbMonster                     // viên rơi khi hạ quái §14
-	ExpOrbHitDrop                     // viên văng ra khi chém trúng người (drop_share)
-	ExpHitPlayer                      // cướp EXP khi chém người thật (attacker_share)
-	ExpHitBot                         // cướp EXP khi chém bot
-	ExpKillPlayer                     // hạ người thật ở Luyện Khí (+ kill_bonus_exp)
-	ExpKillBot                        // hạ bot ở Luyện Khí
-	ExpOvercapSword                   // nhặt kiếm khi đã đủ kiếm tối đa
-	ExpDebug                          // phím debug (chỉ server -debug)
+	ExpOrbAmbient   ExpSource = iota // viên môi trường §6.1 (giá trị 0 = mặc định của Item)
+	ExpOrbMonster                    // viên rơi khi hạ quái §14
+	ExpOrbHitDrop                    // viên văng ra khi chém trúng người (drop_share)
+	ExpHitPlayer                     // cướp EXP khi chém người thật (attacker_share)
+	ExpHitBot                        // cướp EXP khi chém bot
+	ExpKillPlayer                    // hạ người thật ở Luyện Khí (+ kill_bonus_exp)
+	ExpKillBot                       // hạ bot ở Luyện Khí
+	ExpOvercapSword                  // nhặt kiếm khi đã đủ kiếm tối đa
+	ExpDebug                         // phím debug (chỉ server -debug)
 	ExpOther
 	ExpSourceCount
 )

@@ -63,56 +63,6 @@ func hasEvent(evs []Event, kind string) bool {
 	return false
 }
 
-// Spec v5.8 §5.1: bị chém rớt 1 đại cảnh giới và thanh về SÀN cảnh giới mới (tầng 1, 0%).
-// Trúc Cơ tầng 2 → Luyện Khí tầng 1, 0% — không còn giữ tầng như bản cũ.
-func TestBodyHitDropsToRealmFloor(t *testing.T) {
-	g := quietGame(t, nil)
-	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 0, Swords: 1})
-	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 11, Swords: 1})
-	place(g, a, Vec{X: 5000, Y: 5000}, 0)
-	b.TotalExp += 0.4 * g.Prog.ExpNeeded(11)
-	place(g, b, bladeMid(a), math.Pi/2)
-	before := b.TotalExp
-	g.resolveSwordBody()
-	want := g.Prog.Threshold(0) // sàn Luyện Khí = 0
-	if b.Level != 0 || math.Abs(b.TotalExp-want) > 1e-9 {
-		t.Fatalf("B level %d exp %v, muốn Luyện Khí tầng 1 (level 0) exp %v", b.Level, b.TotalExp, want)
-	}
-	loss := before - want
-	if math.Abs(a.TotalExp-loss*0.5) > 1e-9 {
-		t.Fatalf("A exp = %v, want %v", a.TotalExp, loss*0.5)
-	}
-	if !b.Invulnerable(g.Time) {
-		t.Fatal("B should be invulnerable after a hit")
-	}
-	if !hasEvent(g.DrainEvents(), "RealmDrop") {
-		t.Fatal("Trúc Cơ → Luyện Khí must emit RealmDrop")
-	}
-	if _, orbs := countItems(g, "orb"); math.Abs(orbs-math.Round(loss*0.3)) > 1e-9 {
-		t.Fatalf("dropped orb EXP = %v, want %v", orbs, math.Round(loss*0.3))
-	}
-}
-
-// Spec §5.1: swords over the new realm's max (60 at Luyện Khí) fall as bundles of ≤ 10.
-func TestRealmDropSpillsExtraSwordsAsBundles(t *testing.T) {
-	g := quietGame(t, nil)
-	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 0, Swords: 1})
-	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 10, Swords: 25}) // Trúc Cơ: tối đa 30
-	place(g, a, Vec{X: 5000, Y: 5000}, 0)
-	place(g, b, bladeMid(a), math.Pi/16)
-	a.InvulnUntil = 1e9 // B's larger ring would otherwise hit A first
-	// Gọi thẳng §5.1: ở đây đang kiểm luật rớt cảnh giới, không kiểm cổng lá chắn §5.2
-	// (25 kiếm = 2 vòng nên resolveSwordBody sẽ bỏ qua).
-	g.applyBodyHit(a, b)
-	if b.Ring.Count != 10 {
-		t.Fatalf("B swords = %d, want 10 (Luyện Khí max)", b.Ring.Count)
-	}
-	n, total := countItems(g, "bundle")
-	if n != 2 || total != 15 {
-		t.Fatalf("bundles = %d holding %v swords, want 2 holding 15", n, total)
-	}
-}
-
 // Spec §5.1: Luyện Khí at any tier dies when hit.
 func TestLuyenKhiDiesAtAnyTier(t *testing.T) {
 	g := quietGame(t, nil)
@@ -156,8 +106,17 @@ func TestOneHitPerVictimPerTick(t *testing.T) {
 		place(g, a, b.Pos.Sub(bladeMid(a)), ang)
 	}
 	g.resolveSwordBody()
-	if b.Level != 10 {
-		t.Fatalf("B level = %d, want 10 (only one hit per tick)", b.Level)
+	if !b.Dead {
+		t.Fatal("B phải chết")
+	}
+	n := 0
+	for _, e := range g.DrainEvents() {
+		if e.Kind == "Death" && e.B == b.ID {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("B chết %d lần trong 1 tick, muốn 1", n)
 	}
 }
 
@@ -545,8 +504,8 @@ func TestKillRewardAndDeathSwordDrop(t *testing.T) {
 	if !b.Dead {
 		t.Fatal("B should die at Luyện Khí")
 	}
-	if got, want := a.TotalExp-aBefore, 80*0.5+30; math.Abs(got-want) > 1e-9 {
-		t.Fatalf("killer gained %v, want %v (50%% + kill bonus)", got, want)
+	if got, want := a.TotalExp-aBefore, 80*g.Cfg.Player.AttackerShare+g.Cfg.Player.KillBonusExp; math.Abs(got-want) > 1e-9 {
+		t.Fatalf("killer gained %v, want %v (30%% + kill bonus)", got, want)
 	}
 	bundles, swords := countItems(g, "bundle")
 	_, orbs := countItems(g, "orb")

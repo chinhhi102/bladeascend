@@ -49,6 +49,11 @@ func (g *Game) resolveSwordBody() {
 			if a.IsMinion || sameSide(a, b) {
 				continue // đàn em chỉ mài kiếm, và không đụng tới phe mình (spec §6.3)
 			}
+			// Bị Thằng Mập bịt mắt: kiếm KHÔNG chém trúng thân ai (v6.27 `blind_no_body_hit`),
+			// va kiếm vẫn tính bình thường ở `resolveSwordSword`.
+			if g.Cfg.Skills.BlindNoBodyHit && a.HasStatus(StBlind, g.Time) {
+				continue
+			}
 			if _, hit := g.swordTouchesCircle(a, b.Pos, g.BodyR(b)); hit {
 				g.applyBodyHit(a, b)
 				break
@@ -57,12 +62,11 @@ func (g *Game) resolveSwordBody() {
 	}
 }
 
+// applyBodyHit: kiếm A chạm thân B — spec v6.26 §5.1: **B CHẾT NGAY ở mọi cảnh giới**
+// (bỏ luật rớt một đại cảnh giới). Ngoại lệ duy nhất: B có khiên Kim Cang → khiên vỡ, B
+// sống, bất tử 1 s, bị đẩy lùi khỏi A.
 func (g *Game) applyBodyHit(a, b *Player) {
 	pc := g.Cfg.Player
-	// Chém trúng thân → TỈNH NGAY (spec v6.9 §6.3) và câu hát ru của chính mình thì mất.
-	//
-	// Nhờ hai dòng này mà Ru Ngủ Trưa không khoá cứng được ai: một nhịp chém là tỉnh, nên
-	// 2.5 giây ngủ chỉ có giá khi cả đám đang mài kiếm chứ không ai rảnh để chém thân.
 	b.Status[StSleep] = 0
 	a.CombatAt, b.CombatAt = g.Time, g.Time
 	g.cancelChannel(b, "hit")
@@ -70,64 +74,30 @@ func (g *Game) applyBodyHit(a, b *Player) {
 	if g.HiddenInBush(b) {
 		g.emote(b, "revealed") // spec §12: bubble when knocked out of hiding
 	}
-	b.InvulnUntil = g.Time + pc.InvulnOnHit
 	b.RevealedUntil = g.Time + g.Cfg.Zones.BushRevealOnHitSecs
-	push := b.Pos.Sub(a.Pos).Norm()
-	b.KnockVel = push.Mul(pc.Knockback / pc.KnockbackSecs)
-	b.KnockUntil = g.Time + pc.KnockbackSecs
 	ev := Event{Kind: "Hit", A: a.ID, B: b.ID, X: float32(b.Pos.X), Y: float32(b.Pos.Y)}
 	if b.HasBuff(BuffShield, g.Time) {
 		b.Buffs[BuffShield] = 0
+		b.InvulnUntil = g.Time + pc.InvulnOnHit
+		push := b.Pos.Sub(a.Pos).Norm()
+		b.KnockVel = push.Mul(pc.Knockback / pc.KnockbackSecs)
+		b.KnockUntil = g.Time + pc.KnockbackSecs
 		ev.S = "shield"
 		g.emit(ev)
 		g.emote(b, "shield_break")
 		return
 	}
 	g.emit(ev)
-	dies := b.Level == 0
-	if pc.HitDropsRealm {
-		dies = g.Prog.Realm(b.Level) == 0 // Luyện Khí at any tier dies
-	}
-	if dies {
-		g.kill(a, b)
-		return
-	}
-	g.setMood(b, MoodHit, g.Cfg.Mood.HitSecs)
-	oldRealm := g.Prog.Realm(b.Level)
-	g.awardHit(a, b, oldRealm, false) // scored on the realm they had before being knocked down
-	if g.Prog.IsTien(oldRealm) {
-		g.robTienKhi(a, b) // Tiên giới: rớt cảnh giới + bị cướp Tiên khí (§3.4)
-		return
-	}
-	after := g.expAfterHit(b)
-	loss := b.TotalExp - after
-	g.setTotalExp(b, after)
-	g.GainExpFrom(a, loss*g.stealShare(b), true, hitSource(b))
-	g.scatterOrbs(b.Pos, loss*pc.DropShare, a.ID, ExpOrbHitDrop) // viên thuộc người chém 1.5s, không thì nạn nhân hút lại ngay
-	if g.Prog.Realm(b.Level) < oldRealm {
-		g.emit(Event{Kind: "KillFeed", Global: true, S: "realm_drop", A: a.ID, B: b.ID, N: g.Prog.Realm(b.Level)})
-	}
+	g.kill(a, b)
 }
 
-// expAfterHit is the victim's total_exp after a body hit (spec §5.1): one whole realm down,
-// same tier, same progress through the tier. With hit_drops_realm off it is one tier down.
-func (g *Game) expAfterHit(b *Player) float64 {
-	if !g.Cfg.Player.HitDropsRealm {
-		return math.Max(0, b.TotalExp-g.Prog.ExpNeeded(b.Level-1))
-	}
-	return g.Prog.DropRealmExp(b.TotalExp)
-}
-
-// kill handles a Luyện Khí player being cut down (spec §5.1, §7).
+// kill: A chém chết B (spec v6.26 §5.1, §7).
 func (g *Game) kill(a, b *Player) {
 	pc := g.Cfg.Player
-	// Scored first: the EXP reward below can push the attacker up a realm, which would
-	// shrink their lật_kèo multiplier for this very kill (spec §11.1).
+	// Chấm Uy Danh TRƯỚC: phần thưởng EXP bên dưới có thể đẩy A lên cảnh giới, làm giảm hệ
+	// số lật kèo của chính lần chém này (spec §11.1).
 	g.awardHit(a, b, g.Prog.Realm(b.Level), true)
-	// Spec §5.1: at Luyện Khí the "loss" is the victim's whole EXP, plus a kill bonus.
-	loss := b.TotalExp
-	g.GainExpFrom(a, loss*g.stealShare(b)+pc.KillBonusExp, true, killSource(b))
-	g.scatterOrbs(b.Pos, loss*pc.DropShare, a.ID, ExpOrbHitDrop) // viên thuộc người chém 1.5s, không thì nạn nhân hút lại ngay
+	g.robOnKill(a, b)
 	g.dropDeathSwords(b)
 	a.Kills++
 	victimRank := g.RankOf(b)
@@ -144,6 +114,72 @@ func (g *Game) kill(a, b *Player) {
 	// N = hạng của nạn nhân trong bảng phòng lúc bị giết; hạ một người trong Top 5 thì
 	// dòng này được loan ra toàn server (spec §11.4). victimRank lấy TRƯỚC khi b.Dead = true.
 	g.emit(Event{Kind: "KillFeed", Global: true, S: feed, A: a.ID, B: b.ID, N: victimRank})
+}
+
+// robOnKill chia tu vi của người vừa chết (spec v6.26 §5.1, §3.4):
+//   - Linh khí: A nhận 30 % (bot 15 %), trần = đủ lên thêm `rob_cap_realms` đại cảnh giới;
+//     rơi 30 % tại xác (≤ 40 viên, mệnh giá lớn trước); 40 % còn lại biến mất.
+//   - Tiên khí (B ở Tiên giới): mất hết; A — nếu hấp thụ được — nhận 30 %, trần +1 cảnh giới
+//     Tiên; LUÔN rơi 30 % thành viên Tiên khí, bất kể người chém là ai.
+func (g *Game) robOnKill(a, b *Player) {
+	pc := g.Cfg.Player
+	linh := b.TotalExp
+	gain := linh * g.stealShare(b)
+	if a.HasBuff(BuffExp2, g.Time) {
+		gain *= g.Cfg.Buffs["exp2"].Mult // Song Bội Đan nhân TRƯỚC khi kẹp trần
+	}
+	gain = math.Min(gain, g.robCapExp(a))
+	g.GainExpFrom(a, gain, false, killSource(b))
+	g.GainExpFrom(a, pc.KillBonusExp, true, killSource(b))
+	g.scatterDeathOrbs(b.Pos, linh*pc.DropShare, a.ID)
+	if g.TienRealmOf(b) < 0 {
+		return
+	}
+	khi := b.TienKhi
+	b.TienKhi = 0
+	c := g.Cfg.Cultivation
+	if g.BanksTienKhi(a) {
+		g.GainTienKhi(a, math.Min(khi*c.TienRobShare, g.robCapTien(a)))
+	}
+	g.scatterTienKhi(b.Pos, khi*c.TienDropShare)
+	g.emit(Event{Kind: "SkillEffect", A: b.ID, S: "tien_burst",
+		X: float32(b.Pos.X), Y: float32(b.Pos.Y), N: int(khi * c.TienDropShare)})
+}
+
+// robCapExp: Linh khí tối đa A còn nhận được từ một lần chém — tới SÀN của cảnh giới
+// r_A + rob_cap_realms (spec v6.26: "trần = sàn(r_A + 2) − A.total_exp", tối thiểu 0).
+func (g *Game) robCapExp(a *Player) float64 {
+	top := g.Prog.Realm(a.Level) + g.Cfg.Player.RobCapRealms
+	realms := len(g.Cfg.Cultivation.Realms)
+	limit := g.Prog.MaxExp()
+	if top < realms {
+		limit = g.Prog.Threshold(top * g.Prog.Tiers())
+	}
+	return math.Max(0, limit-a.TotalExp)
+}
+
+// robCapTien: Tiên khí tối đa A còn nhận — tới TRẦN của cảnh giới Tiên cao hơn hiện tại
+// `rob_cap_tien_realms` bậc (Đại Thừa 10 đầy thanh tính là bậc −1 → tối đa Chân Tiên).
+func (g *Game) robCapTien(a *Player) float64 {
+	idx := min(g.TienRealmOf(a)+g.Cfg.Player.RobCapTienRealms, g.Prog.TienCount()-1)
+	return math.Max(0, g.Prog.TienCeil(idx)-a.TienKhi)
+}
+
+// scatterDeathOrbs rải Linh khí tại xác: mệnh giá lớn trước, TỐI ĐA `death_orbs_max` viên
+// (spec v6.26). Xác Đại Thừa rơi ~200 000 Linh khí — chia theo viên 60 là hàng nghìn viên,
+// ngốn trần viên của cả khu; nên khi vượt trần thì mỗi viên to lên cho đủ tổng.
+func (g *Game) scatterDeathOrbs(pos Vec, total float64, owner uint32) {
+	total = math.Round(total)
+	maxN := g.Cfg.Player.DeathOrbsMax
+	large := g.Cfg.Items.OrbValues["large"]
+	if maxN <= 0 || large <= 0 || total <= float64(maxN)*large {
+		g.scatterOrbs(pos, total, owner, ExpOrbHitDrop)
+		return
+	}
+	each := math.Ceil(total / float64(maxN))
+	for left := total; left > 0 && g.orbCount < g.Cfg.Items.MaxOrbs; left -= each {
+		g.ownOrb(g.spawnItemNear("orb", math.Min(each, left), pos, g.Cfg.Items.ScatterR), owner, ExpOrbHitDrop)
+	}
 }
 
 // DebugKill kills a player without an attacker (debug key only).
@@ -384,24 +420,9 @@ func (g *Game) clash(a, b *Player, at Vec) {
 		ClashSide{Realm: ra, Count: a.Ring.Count, Crack: a.Ring.Crack, DurMult: g.hardMult(a, "durability")},
 		ClashSide{Realm: rb, Count: b.Ring.Count, Crack: b.Ring.Crack, DurMult: g.hardMult(b, "durability")})
 	a.Ring.Crack, b.Ring.Crack = out.CrackA, out.CrackB
-	// **Kiếm đang ngủ không đánh trả** (spec v6.9 §6.3): bên nào ngủ thì chịu hết, bên thức
-	// không mất gì. Một chiều, không phải "ngủ thì mất gấp đôi".
-	//
-	// Đây là toàn bộ sức mạnh của Ru Ngủ Trưa. Không có nó, kỹ năng chỉ làm địch đứng im —
-	// mà hai vòng kiếm chạm nhau thì vẫn mài nhau đều, nên 2.5 giây ngủ không đổi ai thắng
-	// cuộc mài. Có nó: ru đúng lúc hai bên đang mài là địch mất sạch vòng ngoài, mình
-	// nguyên vẹn, và đó là khoảnh khắc thắng nhìn thấy được mà §6.3 mục 5 đòi.
-	//
-	// Cả hai cùng ngủ thì cả hai cùng chịu — hai người ngủ mài nhau là chuyện tấu hài,
-	// không phải một ngoại lệ cần luật riêng.
-	aSleep, bSleep := a.HasStatus(StSleep, g.Time), b.HasStatus(StSleep, g.Time)
+	// v6.27: KHÔNG khống chế nào vô hiệu hoá vòng kiếm — người đang ngủ / choáng vẫn va
+	// kiếm hai chiều bình thường (bản v6.9 cho "kiếm ngủ không đánh trả", đã bỏ).
 	lostA, lostB := out.LostA, out.LostB
-	if aSleep && !bSleep {
-		lostB = 0
-	}
-	if bSleep && !aSleep {
-		lostA = 0
-	}
 	g.breakSwords(a, lostA)
 	g.breakSwords(b, lostB)
 }

@@ -154,7 +154,6 @@ func (g *Game) canAbsorb(p *Player, it *Item) bool {
 	}
 }
 
-
 // Viên Linh khí / Tiên khí **gộp thành một sự kiện mỗi người mỗi tick**, và chỉ gửi cho
 // chính người nhặt. Hai lớp, vì một lớp không đủ:
 //

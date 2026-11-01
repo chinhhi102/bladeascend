@@ -61,7 +61,7 @@ func (g *Game) GainTienKhi(p *Player, points float64) float64 {
 // 1 500 mới đổi Uy Danh (10:1). Bản v5.6 ghim thanh ở đúng mốc vào cảnh giới nên Đạo Tổ
 // không bao giờ có phần dư để Thiêu Đốt — đó là Q26.
 //
-// Vẫn chặn thanh ở 1 500 chứ không cho phình mãi: `robTienKhi` tính `loss = tien_khi − đáy`,
+// Vẫn chặn thanh ở 1 500 chứ không cho phình mãi: `robOnKill` tính phần chia theo `tien_khi − đáy`,
 // không chặn thì một người Đạo Tổ ngồi lâu thành cục mồi khổng lồ.
 func (g *Game) overflowToScore(p *Player) {
 	cap := g.Prog.TienMaxKhi()
@@ -87,52 +87,6 @@ func (g *Game) promoteTien(p *Player, idx int) {
 		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 	g.emit(Event{Kind: "KillFeed", Global: true, S: "tien_ascend", A: p.ID, N: realm})
 	g.shockNearby(p)
-}
-
-// robTienKhi applies spec §3.4 when a Tiên giới player is cut: they drop one realm, their
-// Tiên khí falls back to the new realm's entry threshold, the attacker robs tien_rob_share
-// of the loss and tien_drop_share scatters as orbs around the victim.
-func (g *Game) robTienKhi(attacker, victim *Player) {
-	idx := g.TienRealmOf(victim)
-	if idx < 0 {
-		return
-	}
-	c := g.Cfg.Cultivation
-	var entry float64
-	if idx == 0 {
-		// Chân Tiên bị chém → về **SÀN Đại Thừa** (tầng 1, thanh 0%), mất sạch Tiên khí
-		// (spec v5.8). Bản v5.7 cho về Đại Thừa tầng 10 đầy thanh, tức là chỉ cần nhặt một
-		// viên Tiên khí là lên lại Chân Tiên ngay — rớt cảnh giới mà gần như không mất gì.
-		victim.Level = g.Prog.Realm(g.Prog.TopMortalLevel()) * g.Prog.Tiers()
-		victim.TotalExp = g.Prog.Threshold(victim.Level)
-	} else {
-		victim.Level = g.Prog.TienLevel(idx - 1)
-		entry = g.Prog.TienEntry(idx - 1)
-	}
-	loss := math.Max(0, victim.TienKhi-entry)
-	victim.TienKhi = entry
-	if idx == 0 {
-		victim.TienKhi = 0 // rớt hẳn khỏi Tiên giới thì thanh Tiên khí về 0, không phải 1
-	}
-	g.refreshDerived(victim)
-	g.setMood(victim, MoodRealmDrop, g.Cfg.Mood.RealmDropSecs)
-	g.emit(Event{Kind: "RealmDrop", A: victim.ID, N: victim.Level,
-		X: float32(victim.Pos.X), Y: float32(victim.Pos.Y)})
-	g.dropExcessSwords(victim)
-	g.emit(Event{Kind: "KillFeed", Global: true, S: "realm_drop", A: attacker.ID, B: victim.ID,
-		N: g.Prog.Realm(victim.Level)})
-	if loss <= 0 {
-		return
-	}
-	// Người chém chỉ CƯỚP được Tiên khí khi bản thân đã sang đường tu đó (spec §3.4);
-	// `GainTienKhi` tự lo điều kiện ấy.
-	g.GainTienKhi(attacker, loss*c.TienRobShare)
-	// Nhưng phần RƠI RA ĐẤT thì **luôn luôn** xảy ra, bất kể người chém là phàm, Tiên hay
-	// bot (spec v5.9 §3.4). Đây là nguồn Tiên khí quan trọng ngoài Đài Tiên Khí: người phàm
-	// hạ được một Đạo Tổ mà không rơi gì thì cả khu mất một cơ hội lớn.
-	g.scatterTienKhi(victim.Pos, loss*c.TienDropShare)
-	g.emit(Event{Kind: "SkillEffect", A: victim.ID, S: "tien_burst",
-		X: float32(victim.Pos.X), Y: float32(victim.Pos.Y), N: int(loss * c.TienDropShare)})
 }
 
 // TienProgress is what the HUD bar shows: Tiên khí banked inside the current realm and how

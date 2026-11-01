@@ -19,15 +19,22 @@ func hitOnce(t *testing.T, g *Game, a, b *Player) {
 	}
 }
 
-// Spec §11.1 ví dụ: Trúc Cơ (r=1) chém trúng Nguyên Anh (r=3) → 100 × 4 × 2 = 800.
+// revive: nạn nhân hồi lại đúng cấp cũ để bị chém lần nữa (test chống cày điểm).
+func revive(g *Game, b *Player) {
+	g.Respawn(b, b.Level, 1)
+	b.InvulnUntil = 0
+}
+
+// Spec §11.1 (v6.26): Trúc Cơ (r=1) chém trúng Nguyên Anh (r=3) → 100 × 4 × 2 = 800, và vì
+// chém trúng nay luôn là chém chết nên +50 → 850 (CHANGES_v6_26 mục 4).
 func TestScoreUpsetExample(t *testing.T) {
 	g := quietGame(t, nil)
 	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 10, Swords: 20, GuestID: "ga"}) // Trúc Cơ 1
 	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 30, Swords: 1, GuestID: "gb"})  // Nguyên Anh 1
 	hitOnce(t, g, a, b)
-	// Chỉ xét nguồn "hit": EXP cướp được có thể đẩy A đột phá, cộng thêm điểm nguồn khác.
-	if math.Abs(a.ScoreBy[ScoreHit]-800) > 1e-9 {
-		t.Fatalf("điểm chém trúng = %v, muốn 800", a.ScoreBy[ScoreHit])
+	// Chỉ xét nguồn "kill": EXP cướp được có thể đẩy A đột phá, cộng thêm điểm nguồn khác.
+	if math.Abs(a.ScoreBy[ScoreKill]-850) > 1e-9 {
+		t.Fatalf("điểm chém chết = %v, muốn 850", a.ScoreBy[ScoreKill])
 	}
 }
 
@@ -52,22 +59,22 @@ func TestScoreSameVictimCooldown(t *testing.T) {
 	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 10, Swords: 20, GuestID: "ga"})
 	b := g.AddPlayer(SpawnOptions{Name: "B", Level: 30, Swords: 1, GuestID: "gb"})
 	hitOnce(t, g, a, b)
-	first := a.ScoreBy[ScoreHit]
-	b.InvulnUntil = 0
+	first := a.ScoreBy[ScoreKill]
+	revive(g, b)
 	hitOnce(t, g, a, b)
-	if a.ScoreBy[ScoreHit] != first {
+	if a.ScoreBy[ScoreKill] != first {
 		t.Fatalf("chém lại trong %vs vẫn cộng điểm: %v → %v",
-			g.Cfg.Score.SameVictimCooldown, first, a.ScoreBy[ScoreHit])
+			g.Cfg.Score.SameVictimCooldown, first, a.ScoreBy[ScoreKill])
 	}
 	if a.Hits != 2 {
 		t.Fatalf("số lần chém trúng = %d, muốn 2 (bảng Sát Thần vẫn đếm)", a.Hits)
 	}
 	// Hết cooldown thì tính điểm lại.
 	a.HitCooldown[victimKey(b)] = g.Time - 1
-	b.InvulnUntil = 0
+	revive(g, b)
 	hitOnce(t, g, a, b)
-	if a.ScoreBy[ScoreHit] <= first {
-		t.Fatalf("hết cooldown vẫn không cộng điểm: %v", a.ScoreBy[ScoreHit])
+	if a.ScoreBy[ScoreKill] <= first {
+		t.Fatalf("hết cooldown vẫn không cộng điểm: %v", a.ScoreBy[ScoreKill])
 	}
 }
 
@@ -77,8 +84,8 @@ func TestScoreBotVictimHalved(t *testing.T) {
 	a := g.AddPlayer(SpawnOptions{Name: "A", Level: 10, Swords: 20, GuestID: "ga"})
 	bot := g.AddPlayer(SpawnOptions{Name: "Bot", Level: 30, Swords: 1, IsBot: true})
 	hitOnce(t, g, a, bot)
-	if math.Abs(a.ScoreBy[ScoreHit]-400) > 1e-9 {
-		t.Fatalf("điểm chém bot = %v, muốn 400 (một nửa của 800)", a.ScoreBy[ScoreHit])
+	if math.Abs(a.ScoreBy[ScoreKill]-425) > 1e-9 {
+		t.Fatalf("điểm chém bot = %v, muốn 425 (một nửa của 850)", a.ScoreBy[ScoreKill])
 	}
 }
 

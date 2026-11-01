@@ -58,12 +58,13 @@ func TestStealShareHumanVsBot(t *testing.T) {
 		g := quietGame(t, nil)
 		a := g.AddPlayer(SpawnOptions{Name: "A", Char: g.Cfg.Characters[0], Swords: 1})
 		b := g.AddPlayer(SpawnOptions{Name: "B", Char: g.Cfg.Characters[1], IsBot: isBot, Level: 2 * g.Prog.Tiers(), Swords: 1})
-		loss := b.TotalExp - g.Prog.DropRealmExp(b.TotalExp)
+		b.InvulnUntil = 0
+		victimExp := b.TotalExp
 		before := a.TotalExp
 		g.applyBodyHit(a, b)
-		want := loss * g.Cfg.Player.AttackerShare
+		want := victimExp*g.Cfg.Player.AttackerShare + g.Cfg.Player.KillBonusExp
 		if isBot {
-			want = loss * g.Cfg.ExpEconomy.BotStealShare
+			want = victimExp*g.Cfg.ExpEconomy.BotStealShare + g.Cfg.Player.KillBonusExp
 		}
 		if got := a.TotalExp - before; math.Abs(got-want) > 1e-6 {
 			t.Errorf("bot=%v: người chém nhận %.0f, muốn %.0f", isBot, got, want)

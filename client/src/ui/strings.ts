@@ -86,9 +86,9 @@ export const STR = {
   skillDesc: {
     a_hon: 'Ăn bánh bao, hồi ngay 20% số kiếm tối đa của cảnh giới.',
     ba_tam_loa: 'Hét một tiếng: đẩy văng địch phía trước 500 và làm vòng kiếm của họ quay ngược.',
-    ong_ba_vong: 'Hát ru nửa giây (bị chém là mất chiêu): cả đám quanh mình ngủ gục 2,5 giây — đứng im, vòng kiếm ngừng quay, và kiếm đang ngủ KHÔNG đánh trả.',
+    ong_ba_vong: 'Hát ru nửa giây (bị chém là mất chiêu): cả đám quanh mình ngủ gục 2,5 giây — đứng im, không dùng được kỹ năng, nhưng vòng kiếm của họ vẫn quay và đánh trả.',
     dai_ca_dep: 'Gọi 2 đàn em trong 8 giây, mỗi đứa mang 30% số kiếm của mình — mình không mất kiếm nào.',
-    map_tra_sua: 'Phun trân châu bịt mắt địch 5 giây; trong 5 giây đó họ không nhặt được gì.',
+    map_tra_sua: 'Phun trân châu bịt mắt địch 5 giây: không nhặt được gì, và kiếm của họ không chém chết được ai (va kiếm vẫn tính).',
     co_ba_ganh: 'Bày 5 cái sạp thành vòng cung chặn đường 6 giây — người ngang cấp hoặc kém hơn không chém được, mình thì đi xuyên. Dọc chân sạp rải vỏ chuối: ai giẫm thì trượt và choáng 1 giây.',
     su_phu_mi: 'Hút một sợi mì vào địch gần nhất phía trước: cướp 25% số kiếm của họ về vòng của mình (tối đa 20% kiếm tối đa của mình, dư thì rơi xuống đất). Không ai phía trước thì hụt, vẫn mất lượt.',
     be_ti: 'Gồng 4 giây: kiếm cứng gấp đôi, miễn mọi đòn đẩy, chậm, trói và choáng.',
@@ -140,7 +140,7 @@ export const STR = {
   /** Mẹo + câu bựa đổi mỗi 4 giây trong lúc chờ (§13.7 mục 4). */
   loadTips: [
     'Không có nút đánh. Kiếm tự xoay — việc của bạn là đi đúng chỗ.',
-    'Bị chém là rớt nguyên một cảnh giới, nhưng giữ tầng. Đừng tham.',
+    'Bị chém trúng thân là chết, cảnh giới nào cũng vậy. Còn 1 vòng kiếm thì đừng tham.',
     'Kiếm thừa rơi ra thành Bó Kiếm. Bó của người khác cũng nhặt được.',
     'Giữ Shift để Thiêu Đốt Tinh Huyết: chạy nhanh hơn, đổi bằng EXP.',
     'Kỹ năng tự hồi theo thời gian và tích được lượt — để dành cho lúc cần.',
@@ -151,7 +151,7 @@ export const STR = {
     'Mặt hồ băng trơn: vẫn chạy được, chỉ là không phanh được.',
     'Thằng Mập phun trân châu kín màn hình. 5 giây đó bạn cũng không nhặt được gì.',
     'Đại Ca Dép gọi hai đàn em mang nửa số kiếm của hắn. Đừng xông vào giữa.',
-    'Luyện Khí bị chém là chết luôn, không rớt cảnh giới. Lên Trúc Cơ cho nhanh.',
+    'Chém chết ai thì hút 30% Linh khí của họ, nhưng không vọt quá 2 đại cảnh giới.',
     'Vật cản phá được sẽ mọc lại. Chỗ vừa trống không có nghĩa là sẽ còn trống.',
   ] as string[],
   controlsPc: 'Di chuyển: WASD / phím mũi tên / giữ chuột. Thiêu Đốt Tinh Huyết: giữ Shift, hoặc nháy đúp chuột rồi giữ. Kỹ năng: Space. Không có nút đánh — kiếm tự xoay!',

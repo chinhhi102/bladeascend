@@ -25,6 +25,10 @@ type botStats struct {
 	peakRealm  int
 	deaths     int
 	lastDeadAt float64
+	// Mỗi mạng kết thúc (CHANGES v6.26 mục 6): cộng dồn thời gian sống và cảnh giới cao nhất.
+	lifePeak  int
+	lifeSecs  float64
+	lifeRealm int
 }
 
 func main() {
@@ -121,6 +125,9 @@ func track(g *game.Game, stats map[uint32]*botStats, cfg *config.Config) {
 			if p.DiedAt != s.lastDeadAt {
 				s.lastDeadAt = p.DiedAt
 				s.deaths++
+				s.lifeSecs += p.DiedAt - s.spawnedAt
+				s.lifeRealm += s.lifePeak
+				s.lifePeak = 0
 			}
 			if g.Time-p.DiedAt >= cfg.Bots.RespawnSecs {
 				g.Respawn(p, 0, 1)
@@ -134,6 +141,7 @@ func track(g *game.Game, stats map[uint32]*botStats, cfg *config.Config) {
 			s.reachedAt[r] = g.Time - s.spawnedAt
 		}
 		s.peakRealm = max(s.peakRealm, r)
+		s.lifePeak = max(s.lifePeak, r)
 	}
 }
 
@@ -141,9 +149,12 @@ func report(g *game.Game, stats map[uint32]*botStats, ticks int, tickTime, wall 
 	fmt.Printf("map %s · %d bots · %.1f simulated minutes (wall %s)\n", mapID, len(stats), g.Time/60, wall.Round(time.Millisecond))
 	fmt.Printf("avg tick %.3f ms (target < 3 ms)\n", float64(tickTime.Microseconds())/float64(ticks)/1000)
 	reach := map[int][]float64{}
-	deaths, swords, alive := 0, 0, 0
+	deaths, swords, alive, lifeRealm := 0, 0, 0, 0
+	lifeSecs := 0.0
 	for id, s := range stats {
 		deaths += s.deaths
+		lifeSecs += s.lifeSecs
+		lifeRealm += s.lifeRealm
 		for r, t := range s.reachedAt {
 			if r > 0 {
 				reach[r] = append(reach[r], t)
@@ -169,6 +180,10 @@ func report(g *game.Game, stats map[uint32]*botStats, ticks int, tickTime, wall 
 	}
 	if alive > 0 {
 		fmt.Printf("avg swords (alive) %.1f · total deaths %d · deaths/bot %.2f\n", float64(swords)/float64(alive), deaths, float64(deaths)/float64(len(stats)))
+	}
+	if deaths > 0 {
+		fmt.Printf("mạng đã kết thúc: sống trung bình %.1fs · cảnh giới cao nhất trung bình %.2f (0 = Luyện Khí)\n",
+			lifeSecs/float64(deaths), float64(lifeRealm)/float64(deaths))
 	}
 	top := g.Ranking()
 	if len(top) > 0 {

@@ -1,7 +1,7 @@
 import { Container, Graphics, Particle, ParticleContainer, Texture } from 'pixi.js';
 
 import { type GameConfig, realmOf } from '../config';
-import { BUFFS } from '../net/protocol';
+import { BUFFS, statusOn } from '../net/protocol';
 import type { PlayerFrame } from '../net/state';
 import { assets } from './assets';
 import { REALM_COLORS } from './palette';
@@ -14,6 +14,9 @@ const GHOSTS = 2; // trailing copies per sword that fake motion blur (spec §4.1
 const GHOST_STEP = (7 * Math.PI) / 180;
 const MAIN_ALPHA = 0.95;
 const SPIN_BIT = 1 << BUFFS.indexOf('spin');
+// Lớp trân châu trên vòng kiếm người bị bịt mắt (v6.27 §6.3): chỉ để nhận ra, không phải số cân bằng.
+const PEARLS = 18;
+const PEARL_COLOR = 0x3b2416;
 
 let bladeTex: Texture | null = null;
 
@@ -80,6 +83,9 @@ export class SwordRing {
   private readonly skin = new ParticleContainer({ dynamicProperties: { position: true, rotation: true, vertex: true, color: true } });
   private readonly cracks = new Graphics();
   private readonly hitbox = new Graphics();
+  private readonly pearl = new Graphics();
+  /** Bán kính lớp trân châu đang vẽ (0 = tắt) — chỉ vẽ lại khi bật/tắt hay vòng đổi cỡ. */
+  private pearlR = 0;
   private blades: Blade[] = [];
   private angles: number[] = [];
   private realm = -1;
@@ -95,7 +101,7 @@ export class SwordRing {
 
   constructor(private readonly cfg: GameConfig) {
     this.tints = cfg.sword.ring_tints.map(parseTint);
-    this.root.addChild(this.blur, this.tinted, this.skin, this.cracks, this.hitbox);
+    this.root.addChild(this.blur, this.tinted, this.skin, this.cracks, this.pearl, this.hitbox);
   }
 
   update(f: PlayerFrame, now: number, showHitbox: boolean, detail = 1): void {
@@ -121,7 +127,32 @@ export class SwordRing {
     this.drawBlur(g, s.tl, realm, spin);
     this.placeAll(f, t, s.tl, s.d);
     this.drawCracks(f, g);
+    this.drawPearl(f, g);
     this.drawHitbox(f, g, showHitbox);
+  }
+
+  /**
+   * drawPearl: người bị Thằng Mập bịt mắt thì kiếm không chém chết ai (`blind_no_body_hit`),
+   * nên người khác phải NHÌN ra điều đó — một lớp trân châu mờ phủ lên vòng kiếm, quay theo vòng.
+   */
+  private drawPearl(f: PlayerFrame, g: RingGeom): void {
+    const want = statusOn(f.s.st, 'blind') && f.s.n > 0 ? g.reach : 0;
+    if (want !== this.pearlR) {
+      this.pearlR = want;
+      const gr = this.pearl.clear();
+      if (want > 0) {
+        gr.circle(0, 0, want).fill({ color: PEARL_COLOR, alpha: 0.18 });
+        const dot = Math.max(4, want * 0.06);
+        for (let i = 0; i < PEARLS; i++) {
+          const a = (i * Math.PI * 2) / PEARLS;
+          const r = want * (i % 2 === 0 ? 0.62 : 0.85);
+          gr.circle(Math.cos(a) * r, Math.sin(a) * r, dot);
+        }
+        gr.fill({ color: PEARL_COLOR, alpha: 0.55 });
+      }
+    }
+    this.pearl.visible = want > 0;
+    this.pearl.rotation = f.ringAngle;
   }
 
   /**

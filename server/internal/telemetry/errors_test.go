@@ -47,7 +47,7 @@ func TestRecentErrorsGroupsAndRanksByPeopleNotCount(t *testing.T) {
 			TS: float64(now.Add(-ago).UnixMilli())})
 	}
 	for i := 0; i < 3; i++ {
-		s.AddSession(&Session{ID: string(rune('a'+i)), Browser: "Safari/18",
+		s.AddSession(&Session{ID: string(rune('a' + i)), Browser: "Safari/18",
 			OS: "iPhone OS 18_7", Mobile: true, Build: "b1"}, "iphash")
 	}
 	// Lỗi A: một người, 300 lần (vòng vẽ).

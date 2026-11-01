@@ -608,14 +608,8 @@ function bracket<T>(buf: Timed<T>[], t: number): { a: Timed<T>; b: Timed<T>; t: 
  * lại là lãng phí 7 byte mỗi người mỗi gói, 20 lần mỗi giây.
  */
 export function omega(cfg: GameConfig, s: PlayerState): number {
-  // Ngủ gục thì vòng kiếm NGỪNG QUAY (spec v6.9 §6.3) — phải khớp `Game.Omega` bên server.
-  //
-  // Nếu client vẫn quay trong lúc server đã dừng thì hai bên lệch pha mỗi tick: người chơi
-  // thấy kiếm mình quét trúng địch nhưng không có gì xảy ra, và sau 2.5 giây vòng kiếm nhảy
-  // về đúng chỗ server giữ. Đây là cùng một lớp lỗi với §8.2a, chỉ là ở góc thay vì vị trí.
-  if (statusOn(s.st, 'sleep')) {
-    return 0;
-  }
+  // v6.27: khống chế (kể cả ngủ) KHÔNG dừng vòng kiếm — phải khớp `Game.Omega` bên server,
+  // lệch là kiếm trên màn hình quét trúng mà server không tính (cùng lớp lỗi §8.2a).
   const spin = s.bf & (1 << BUFFS.indexOf('spin')) ? (cfg.buffs.spin?.mult ?? 1) : 1;
   return ((2 * Math.PI) / cfg.sword.rev_secs) * spin;
 }

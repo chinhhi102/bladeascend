@@ -172,7 +172,7 @@ type PlayerState struct {
 	// giây còn lại: mốc giờ đứng yên giữa hai lần hồi, nên SelfExtra không phải gửi lại mỗi
 	// tick; client tự đếm ngược theo đồng hồ server.
 	ChargeAt float32 `msgpack:"ska,omitempty"`
-	Title   int `msgpack:"ti,omitempty"` // room rank badge 1..3 (spec §11.3), 0 = none
+	Title    int     `msgpack:"ti,omitempty"` // room rank badge 1..3 (spec §11.3), 0 = none
 	// Tiên giới (spec §3.4): sát mạng đã có / cần, để HUD vẽ thanh Tiên khí. Chỉ gửi cho
 	// chính người đó; người khác chỉ cần Level để biết cảnh giới và màu hào quang.
 	TienHave float32 `msgpack:"th,omitempty"`

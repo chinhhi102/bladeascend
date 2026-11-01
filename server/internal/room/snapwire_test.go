@@ -17,7 +17,6 @@ import (
 // cả hai chiều). Chỗ này lo phần khác: KHUNG gói — thứ tự message, có lẫn byte thừa không,
 // delta có đúng không.
 
-
 // joinWith đưa một client vào phòng, tắt bot cho kết quả ổn định.
 //
 // Bot bật thì số entity trong tầm nhìn dao động theo từng lượt chạy, và mấy bài kiểm dưới

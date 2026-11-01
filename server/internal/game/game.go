@@ -197,8 +197,8 @@ func (g *Game) ForceState(p *Player, level, swords int, at Vec) {
 // Phải gọi ở MỌI chỗ gán `p.Level` mà không đi qua `GainTienKhi`. Thiếu nó thì người đó có
 // `Level` ở Tiên giới nhưng `TienKhi = 0`, và hai nguồn sự thật nói ngược nhau:
 //
-//	applyBodyHit:  Realm(Level) = 9 → IsTien → gọi robTienKhi
-//	robTienKhi:    TienRealmOf → TienRealmForKhi(0) = -1 → return, KHÔNG LÀM GÌ
+//	robOnKill:     Realm(Level) = 9 → IsTien → chia Tiên khí
+//	               TienRealmOf → TienRealmForKhi(0) = -1 → return, KHÔNG LÀM GÌ
 //
 // Triệu chứng ngoài trận: **bot Chân Tiên bị chém mà không rớt cảnh giới** — vẫn bị đẩy
 // lùi, vẫn hiện "Hit", nhưng đứng nguyên ở Chân Tiên mãi mãi. Bot dính nhiều nhất vì
@@ -316,14 +316,7 @@ func (g *Game) Omega(p *Player) float64 {
 	if p.HasBuff(BuffSpin, g.Time) {
 		w *= g.Cfg.Buffs["spin"].Mult
 	}
-	// Ngủ gục thì vòng kiếm **NGỪNG QUAY** hẳn (spec v6.9 §6.3), không phải chậm lại.
-	//
-	// Dừng hẳn chứ không 0.0001 rad/s: `updateRing` cộng góc theo omega, nên chỉ cần nó
-	// khác 0 là kiếm vẫn nhích và vẫn quét trúng người khác. Mà cái làm kỹ năng này đáng
-	// chọn chính là "trong 2.5s đó địch không mài được ai".
-	if p.HasStatus(StSleep, g.Time) {
-		return 0
-	}
+	// v6.27: ngủ gục / choáng KHÔNG dừng vòng kiếm — chém trúng là chết, khoá kiếm = giết chắc.
 	return w
 }
 

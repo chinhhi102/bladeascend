@@ -123,9 +123,9 @@ func duelOnce(cfg *config.Config, charA, charB string, seed int64, o duelOpts, s
 			switch {
 			case e.Kind == "SkillCast":
 				casts[e.S]++
-			case e.Kind == "Hit" && e.A == pa.ID && e.B == pb.ID:
+			case e.Kind == "Death" && e.A == pa.ID && e.B == pb.ID:
 				return 1, casts
-			case e.Kind == "Hit" && e.A == pb.ID && e.B == pa.ID:
+			case e.Kind == "Death" && e.A == pb.ID && e.B == pa.ID:
 				return -1, casts
 			}
 		}
