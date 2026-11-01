@@ -30,6 +30,7 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
 - Đo thời gian vào trận (bóp mạng 4G): `node tools/browsertest/loadtime.mjs http://localhost:9999`
 - Đối chiếu va chạm client↔server (spec §8.2a):
   `cd server && go run ./cmd/collisionfixture -o /tmp/fx.json && cd ../client && npm run check:collision -- /tmp/fx.json`
+- Kiểm dữ liệu người chơi lọt vào `docs/` (quy tắc 15): `node tools/check-privacy.mjs`
 
 ## Asset: nguồn và bản phát hành (spec §13.7)
 - `assets/src/` — **art gốc**. artgen ghi vào đây; chỉ chỗ này mới có `frames/`, `_raw/`.
@@ -68,6 +69,12 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
     `assets/library/INDEX.md`). `assets/library/` không bao giờ được build vào `assets/dist`,
     không nạp cho người chơi. Muốn dùng lại thì chuyển ngược ra `assets/src/`.
 14. Không bao giờ tự đặt, lưu, hay ghi mật khẩu/token vào tệp hoặc báo cáo.
+15. **Repo công khai — không bao giờ commit dữ liệu người chơi thật:** tên/biệt danh người
+    chơi gõ, `guest_id` đầy đủ, địa chỉ IP, nội dung góp ý người chơi viết (kể cả trong ảnh
+    chụp trang quản trị). Bản đầy đủ chỉ để ở `docs/private/` (đã gitignore); bản công khai
+    chỉ ghi số ẩn danh: "Người chơi A/B…", id cắt còn 6 ký tự đầu. Tên bot và tên test của
+    đội làm game (`KiemTraStaging`, `Test01`…) thì được. CI chặn bằng
+    `node tools/check-privacy.mjs` (UUID đầy đủ + IPv4 công khai trong `docs/`).
 
 > **Bản `CLAUDE.md` trong repo là bản chuẩn.** Bản Claude gửi trong chat (hoặc đặt ở
 > `docs/_raw/CLAUDE.md`) chỉ để tham khảo DÒNG MỚI — không chép đè, vì bản chat thường

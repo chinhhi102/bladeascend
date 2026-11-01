@@ -11,6 +11,10 @@ Chụp 01/11 23:35 sau khi deploy bản `04fc86a`, đăng nhập bằng mật kh
 | Góp ý (Table + Drawer, ảnh đính kèm) | `feedback_*` |
 | Bản đồ toàn cảnh (bộ vẽ thật của game, Xuất PNG) | `map_*` |
 | Người chơi · Lỗi người chơi · Danh sách cấm | `players_*` `errors_*` `bans_*` |
-| Nhân vật (bảng mục A5) · Bảng xếp hạng · Nhật ký | `chars_*` `board_*` `audit_*` |
+| Nhân vật (bảng mục A5) | `chars_*` |
+| Bảng xếp hạng · Nhật ký | *chỉ ở `docs/private/review/11-admin/`* (xem dưới) |
 
 Lỗi JS trên trang: 0 (cả hai trình duyệt).
+
+`board_*` (tên người chơi thật) và `audit_*` (địa chỉ IP) đã chuyển vào
+`docs/private/review/11-admin/` — không đưa lên repo công khai (CLAUDE.md quy tắc 15).
