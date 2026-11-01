@@ -52,3 +52,5 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 26,2026-11-01,0009e21,Lượt cuối — S1 local (máy đang chạy 2 agent song song),S1,1.75,4.01,5,5.7,,2.4,0.00,,,,,,,,,,,,,,,,,"p95 sát trần 4 ms; #22 cùng máy là 2.37 — máy bận (2 agent build/test song song), cần đo lại khi rảnh",
 26,2026-11-01,0009e21,Lượt cuối — loadtime.mjs dev :9998,S7,,,,,,,,,,,,,,,,,,,3.65,,8.8,13.0,7.9,home 0.89 + boot 2.76 MB; chờ thực sau khi bấm: 0.6 s (10 Mbps) / 2.6 s (4 Mbps),
 0,2026-11-01,,"Người thật 01/11 12:00 → 01/11 23:30",S6,0.90,5.78,12.8,8.2,15.4,4.8,6.0,58.4,14.9,,0,4209,248.7,0,3.74,,,,"",7
+27,2026-11-01,87d7cd6,Lượt cuối — đo lại S1 lúc máy rảnh,S1,0.92,1.38,3,5.7,,2.4,0.00,,,,,,,,,,,,,,,,,"Thiên Đình p95 1.27 ms; B20 đóng (#26 do máy bận)",
+27,2026-11-01,87d7cd6,Lượt cuối — WebKit giả lập iPhone :9999,S9,,,,,,,,43.2,,,0,4990,113.1,,,,,,,,,,,"lỗi 0, 201 texture",

@@ -106,6 +106,8 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 25 | 2026-11-01 | `f8bbb8e` | Mục 1.3 — respawn khi entity ra/vào khung (60 bot, 4 tab × 120 s) | WANDER | – | – | – | – | – | – | – | **0.13** ✅ | respawn 1 (do Despawn đúng luật 1, do hết hạn 2 s 0) · lỗi JS 0 | So #22 (2 lần/4 tab): giữ ≈ 0 |
 | 26 | 2026-11-01 | `0009e21` | Lượt cuối — sau B6–E17 (máy đang chạy 2 agent build/test song song) | S1 | 1.75 / **4.01** ❌ | 5.7 / – ✅ | 2.4 ✅ | – | – | – | – | – | So #22 cùng máy (1.35 / 2.37): p95 +1.64 ms — nghi do máy bận, chưa kết luận | B20 |
 | 26 | 2026-11-01 | `0009e21` | Lượt cuối — `assets:size` + `loadtime.mjs` (dev :9998) | S7 | – | – | – | – | – | – | – | – | gói chặn home 0.89 + boot 2.76 = **3.65 MB** ✅ · 4G 10 Mbps mở trang→trận 8.8 s ✅, bấm→trận 0.6 s · Fast 4G 13.0 s | B9 (4 Mbps) |
+| 27 | 2026-11-01 | `87d7cd6` | Lượt cuối — đo lại S1 lúc máy rảnh (load 3,4) | S1 | 0.92 / **1.38** ✅ | 5.7 / – ✅ | 2.4 ✅ | – | – | – | – | – | Khu nặng nhất (Thiên Đình) p95 1.27 ms; 4 khu kia ≤ 0.39 ms. So #26 (4.01): chênh do máy bận, KHÔNG phải thoái lui | B20 đóng |
+| 27 | 2026-11-01 | `87d7cd6` | Lượt cuối — WebKit giả lập iPhone, `:9999`, 45 s | S9 | – | – | – | 43.2 / – | – | 0 | 113.1 | – | lỗi 0 · 201 texture · 4990 sprite. So #25 (43.6 / 110.3): giữ nguyên | – |
 
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
@@ -727,11 +729,27 @@ font Thái nhóm riêng) và làm số cho `npm run perf:report`.
 - Noto Sans Thai (213 KB) ở nhóm `lang_th`, KHÔNG nằm trong gói chặn.
 - Báo cáo tự sinh: `docs/reports/2026-11-01-hieu-nang/`.
 
+### Lượt #27 — 2026-11-01 — đo lại S1 + S9 lúc máy rảnh · `87d7cd6`
+
+Đóng B20. Cùng lệnh `go run ./cmd/loadtest --scenario S1 --seed 7`, không agent nào chạy song song
+(load average 3,4 so với ~9 lúc #26):
+
+| Chỉ số | #22 | #26 (máy bận) | #27 (máy rảnh) | Ngân sách |
+|---|---|---|---|---|
+| Tick TB / p95 S1 | 1.35 / 2.37 ms | 1.75 / 4.01 ms | **0.92 / 1.38 ms** | < 4 ms |
+| p95 khu nặng nhất (Thiên Đình) | – | – | 1.27 ms | < 4 ms |
+| Gói max · KB/s | 2.6 KB · 5.3 | 2.4 KB · 5.7 | 2.4 KB · 5.7 | < 6 KB · < 40 |
+| S9 FPS / texMB (WebKit giả lập) | – | – | 43.2 / 113.1 MB (#25: 43.6 / 110.3) | – / < 180 MB |
+
+Telemetry server `:9999` (bảng `server_samples`, cửa sổ 10 s) cùng ngày cho thấy khu Thiên Đình
+có p95 tới 6,6 ms ở bản 23:12 — các mẫu đó rơi đúng lúc máy đang build/test song song (cùng giờ #26).
+S1 sạch ở trên là bằng chứng chính; theo dõi tiếp bằng dashboard admin (tick theo khu đỏ khi > 4 ms).
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
-| B20 | **S1 p95 4,01 ms ở lượt #26 (sát trần)** | Có thể là thoái lui, có thể do máy bận | Lượt #26: máy chạy song song 2 agent; #22 cùng máy 2,37 ms | Mở — đo lại `go run ./cmd/perfreport` khi máy rảnh | – |
+| B20 | **S1 p95 4,01 ms ở lượt #26 (sát trần)** | Có thể là thoái lui, có thể do máy bận | Lượt #26: máy chạy song song 2 agent; #22 cùng máy 2,37 ms · **#27 máy rảnh: 1,38 ms** | **Đóng** — do máy bận, không phải thoái lui | #27 |
 | B19 | **Phòng 50 người: khu có 10 Đạo Tổ chụm vượt p95 4 ms trên staging** | Chưa mở được giới hạn 50 trên staging (§9.1) | Lượt #24: S12 trên staging p95 khu nặng nhất 5.19 / 4.28 / 5.16 ms; máy dev 2.02 ms | **Đóng theo quyết định (v6.28, Q35)** — trần là cấu hình theo máy: production 50 (đạt 2.02 ms), staging 20. Trang admin cảnh báo vàng nếu đặt trần cao hơn mức đã qua loadtest. Tối ưu khu Đạo Tổ chụm vẫn là việc nên làm nếu muốn staging lên 50. | #24 |
 | B17 | **Chưa có số đo máy yếu THẬT cho mức chất lượng mặc định** | Không xác nhận được mục tiêu điện thoại p50 ≥ 40 / p1 ≥ 25, PC p1 ≥ 30 | Lượt #23: trên RTX 3060 + CPU 4× mọi mức đều 60 FPS; telemetry 31/10 lẫn phiên máy | Mở — chờ ≥ 5 phiên người thật ở build `≥ 20261101_16xx`, đọc `perfreport --real` mục 3 + 8 | – |
 | B18 | **`TestRemovalReportedEvenWhenSlotReused` chập chờn** | CI đỏ ngẫu nhiên | Trượt 1/6 lần trên code CŨ (`367eb68`), không liên quan respawn; lượt #25 trượt 1/30 lần (`2d326ea`) ở bước "chưa nhặt được viên cũ" — nghi vị trí thả viên rơi vào vật cản của bản đồ ngẫu nhiên | Mở | – |
