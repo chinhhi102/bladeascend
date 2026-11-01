@@ -96,7 +96,7 @@ Bảng phòng → bấm mở ra 5 khu:
 | Nút **"Xem bản đồ"** → §5 | |
 
 **Cấu hình phòng** (GAME_SPEC §9.5) — thẻ ở đầu trang Phòng & Khu, chỉnh được ngay:
-- Trần người thật/phòng (mặc định production 50, staging 20), sàn nhân vật/khu (10), ngưỡng tự tắt bot (production 40, staging 20).
+- Trần người thật/phòng (mặc định production 50, staging 20), sàn nhân vật **từng khu** (production Thiên Đình 30 · khu rìa 20; staging 15 · 10), ngưỡng tự tắt bot (production 40, staging 20).
 - Hiện môi trường đang chạy + mức đã qua loadtest; đặt cao hơn → cảnh báo vàng nhưng vẫn cho lưu.
 - Lưu → `Modal.confirm` + lý do + audit; áp dụng ngay, sống qua deploy.
 
