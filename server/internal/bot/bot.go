@@ -51,6 +51,12 @@ type Brain struct {
 	gateUntil float64
 	// fearless: không bao giờ bỏ chạy (chỉ dùng trong cmd/sim --duel).
 	fearless bool
+	// pureFarm: chỉ nhặt viên/vật phẩm và hạ quái (cmd/sim --farm, spec §6.0 "chỉ farm").
+	pureFarm bool
+	// stuckAt/stuckPos/unstickUntil: gỡ kẹt cho pureFarm (xem farmDecide).
+	stuckAt      float64
+	stuckPos     Vec
+	unstickUntil float64
 }
 
 // trySkill: bot dùng kỹ năng của nhân vật mình theo luật đơn giản (spec §6.3).
@@ -129,6 +135,40 @@ func NewFighter(id uint32, seed int64, g *game.Game) *Brain {
 	return b
 }
 
+// NewFarmer là bot CHỈ farm — dùng cho `cmd/sim --farm` (spec v6.24 §6.0: "chỉ farm, không
+// đánh nhau, không buff").
+//
+// Bot thường ở farm sim (mọi người bất tử) vẫn đi săn "con mồi" và chạy trốn "mối đe doạ".
+// Lên cao thì mồi nhiều hơn, nó đuổi mãi những đối thủ không chém được và đứng chặt vật cản
+// (lên cảnh giới thì chém được nhiều bậc hơn) — đo 1/11: từ Hợp Thể, 25/48 bot không xong
+// Đại Thừa sau 60 phút. Con số đó là AI lạc đường, không phải nhịp farm. Vẫn giữ việc chém
+// vật cản: bỏ luôn phần đó thì bot kẹt sau tường (4/48 không qua nổi Luyện Khí).
+func NewFarmer(id uint32, seed int64, g *game.Game) *Brain {
+	b := New(id, seed, g)
+	b.pureFarm = true
+	return b
+}
+
+// farmDecide: farm, nhưng đứng gần như yên 3 s thì đi lang thang 3 s.
+//
+// Bot thường được việc săn/trốn kéo đi chỗ khác nên tự gỡ kẹt; bot chỉ farm thì đuổi mãi
+// một viên nằm sau bức tường nó không chém nổi (đo 1/11: 1/4 số bot không qua Luyện Khí).
+func (b *Brain) farmDecide(g *game.Game, me *game.Player) {
+	if g.Time < b.unstickUntil {
+		return
+	}
+	if me.Pos.Dist(b.stuckPos) > 60 {
+		b.stuckPos, b.stuckAt = me.Pos, g.Time
+	} else if g.Time-b.stuckAt > 3 {
+		ang := b.rng.Float64() * 2 * math.Pi
+		b.State = StateWander
+		b.setGoal(me.Pos.Add(geom.FromAngle(ang).Mul(900)), 0)
+		b.unstickUntil, b.stuckAt, b.stuckPos = g.Time+3, g.Time, me.Pos
+		return
+	}
+	b.farm(g, me)
+}
+
 // Update chooses an input for this tick and applies it to the game.
 func (b *Brain) Update(g *game.Game) {
 	me, ok := g.Players[b.ID]
@@ -150,6 +190,10 @@ func (b *Brain) setGoal(p Vec, stopNear float64) {
 }
 
 func (b *Brain) decide(g *game.Game, me *game.Player) {
+	if b.pureFarm {
+		b.farmDecide(g, me)
+		return
+	}
 	bc := g.Cfg.Bots
 	myPow := g.Power(me)
 	threat, prey := b.scanPlayers(g, me, myPow)

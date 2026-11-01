@@ -331,3 +331,51 @@ Atlas riêng của Đàn Em — không nằm trong 10 nhân vật; đàn em vẽ
 | `characters/dan_em/frames/run_05.png` | 2026-11-01 | `char_dan_em_run` — prompt trong `server/cmd/artgen/catalog.go` hiện tại | chuyển từ assets/src (git mv) |
 | `characters/dan_em/frames/run_06.png` | 2026-11-01 | `char_dan_em_run` — prompt trong `server/cmd/artgen/catalog.go` hiện tại | chuyển từ assets/src (git mv) |
 | `characters/dan_em/frames/run_07.png` | 2026-11-01 | `char_dan_em_run` — prompt trong `server/cmd/artgen/catalog.go` hiện tại | chuyển từ assets/src (git mv) |
+
+## Bản cũ của ảnh bị ghi đè — KHÔNG chuyển vào thư viện, lấy lại bằng git
+
+Lịch sử git còn **396 bản cũ** của **196 ảnh**. Mỗi bản là ảnh trước khi artgen sinh lại
+hoặc cắt lại. Chủ dự án chốt 1/11 (Q33-c): không chép ra đây, vì git đã giữ trọn và chép ra
+thì repo phình thêm mà không thêm thông tin gì.
+
+**Lấy một ảnh** ở trạng thái NGAY TRƯỚC một đợt ghi đè:
+
+```bash
+git show <commit>^:<đường dẫn> > /tmp/anh_cu.png
+# ví dụ: git show 605f896^:assets/characters/a_hon/frames/idle_00.png > /tmp/a.png
+```
+
+**Lấy cả một đợt** về một thư mục tạm, để xem cạnh nhau:
+
+```bash
+C=<commit>; mkdir -p /tmp/dot_$C
+git diff-tree --no-commit-id --name-only --diff-filter=M -r $C -- "assets/*.png" |
+  while read f; do mkdir -p "/tmp/dot_$C/$(dirname "$f")"; git show "$C^:$f" > "/tmp/dot_$C/$f"; done
+```
+
+**Xem mọi bản** của một ảnh: `git log --format="%h %ad %s" --date=short -- <đường dẫn>`.
+
+Đường dẫn trước ngày 29/10 là `assets/<…>`, sau đó là `assets/src/<…>` (git tự theo dấu đổi tên
+khi dùng `git log --follow`).
+
+| Commit (đợt) | Ngày | Số ảnh bị ghi đè | Nội dung đợt |
+|---|---|---|---|
+| `9b0e7a8` | 2026-11-01 | 1 | Vương miện: artgen vẽ lại crown_small (chỉ vương miện) + kiểm icon UI không chứa người |
+| `611558a` | 2026-10-31 | 8 | Lượt 3.1 — phá cảm giác bàn cờ, vòng tre quanh Thiên Môn + ART THẬT 16 loại |
+| `8029741` | 2026-10-30 | 17 | dep_lao idle hết đỏ (56.9 → 44.1); bắt "sai dáng"; art thử hướng A |
+| `9cff870` | 2026-10-30 | 16 | C: bộ điều khiển hoạt ảnh; B hoàn tất — giật lặp -24%, chỉ còn 1 anim đỏ |
+| `9204be0` | 2026-10-30 | 42 | B: chuẩn hoá frame tự động (GAME_SPEC v6.3 §12.5 B) — giật lặp -16%, một lần -57% |
+| `ab0f706` | 2026-10-30 | 34 | Sửa lỗi mất hình trên laptop: bộ lọc nền cấp phát texture 1 GB; art thừa 3-8 lần |
+| `c52bd11` | 2026-10-30 | 10 | Art: 32 ảnh mới (Bí Kíp, icon 10 kỹ năng, VFX trân châu, chân dung, decor khu) |
+| `b86ff87` | 2026-10-29 | 11 | HUD trái xếp dọc bằng flex nên không tự đè nhau; vá magenta sót trong 7 ảnh nền |
+| `605f896` | 2026-10-29 | 50 | Art: thêm 23 ảnh (sinh lại idle/hit bị cắt hỏng + hiệu ứng dịch chuyển, lên cấp); ART_JOBS.md còn 94 ảnh |
+| `2aada2d` | 2026-10-28 | 6 | Art: thêm 62 ảnh từ hai đợt sinh (thần thú, hiệu ứng nhân vật, huy hiệu, bảng tên); ART_JOBS.md còn 113 ảnh |
+| `e436652` | 2026-10-28 | 1 | Sửa Đại Ca Dép idle thành cái áo tím nhấp nháy; chặn sheet cắt sai ở cả hai đầu |
+| `d4b9dfa` | 2026-10-28 | 1 | Sửa lag: bể kiếm bắn 1 867 sự kiện/giây; viên EXP vẽ bằng ParticleContainer |
+| `4e92227` | 2026-10-22 | 12 | Sửa lỗi nhân vật mình luôn bị vẽ mờ; bảng xếp hạng + danh hiệu to rõ hơn; kill feed tô màu theo vai; hướng dẫn |
+| `9d7870b` | 2026-10-22 | 14 | Art: chase/flee 10 nhân vật, levelup/đột phá/rớt cảnh giới/hồi sinh/vào cổng của A Hớn, hit/death còn lại, VFX |
+| `72648c3` | 2026-10-22 | 12 | Art: khung thoại, rương, hit/death Ông Ba Vòng, death Đại Ca, hit Thằng Mập; artgen cắt theo lưới khi sheet nh |
+| `64a9b7f` | 2026-10-22 | 87 | Art ưu tiên 1: quái, nền, bụi, vật cản, cổng, Shipper, Cụ Rùa; artgen cắt theo đường kẻ lưới/ô, nhận nền magen |
+| `a6fcda9` | 2026-10-22 | 17 | Art: idle/run Bé Tí, Sư Phụ Mì, Cô Ba Gánh, run Thằng Mập; artgen xóa đường kẻ lưới, bỏ chấm watermark xa hình |
+| `f954695` | 2026-10-22 | 55 | Art bựa mới: idle/run của A Hớn, Bà Tám, Ông Ba, Đại Ca + idle Thằng Mập; hệ số chiều cao theo anim để nhân vậ |
+| `aa95fbb` | 2026-10-21 | 2 | M0–M3: client Vite+PixiJS (nội suy, dự đoán, HUD, trang chủ, tổng kết, bảng xếp hạng), cmd/sim, test phòng/bot |

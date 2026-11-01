@@ -161,6 +161,18 @@ type ExpOrbs struct {
 	RespawnRegion float64   `json:"respawn_region"`
 }
 
+// ExpEconomy: mọi hệ số kinh tế Linh khí (spec v6.24 §6.0). Bảng nhịp §6.0 là CHUẨN; các
+// số ở đây được `cmd/sim --farm` chỉnh cho trúng bảng (±25 %) và Nam Châm ≤ 1,5 lần.
+type ExpEconomy struct {
+	// OrbValueMult: viên EXP môi trường và EXP quái × OrbValueMult^r (r = cảnh giới của người
+	// nhặt / người chém). Không nguồn nào khác nhân theo cảnh giới.
+	OrbValueMult float64 `json:"orb_value_mult"`
+	// PickupScaleExp: bán kính hút = pickup_r × scale^PickupScaleExp (0.5 = √scale, 1 = thẳng).
+	PickupScaleExp float64 `json:"pickup_scale_exp"`
+	// BotStealShare: phần EXP người chém nhận khi nạn nhân là BOT (người thật: attacker_share).
+	BotStealShare float64 `json:"bot_steal_share"`
+}
+
 type MonsterKind struct {
 	HP        int     `json:"hp"`
 	Exp       float64 `json:"exp"`
@@ -548,6 +560,7 @@ type Config struct {
 	Buffs       map[string]Buff `json:"buffs"`
 	Items       Items           `json:"items"`
 	ExpOrbs     ExpOrbs         `json:"exp_orbs"`
+	ExpEconomy  ExpEconomy      `json:"exp_economy"`
 	Monsters    Monsters        `json:"monsters"`
 	Obstacles   Obstacles       `json:"obstacles"`
 	Zones       Zones           `json:"zones"`

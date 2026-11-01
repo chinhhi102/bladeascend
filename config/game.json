@@ -138,7 +138,7 @@
       "secs": 10
     },
     "magnet": {
-      "mult": 3.0,
+      "mult": 1.2,
       "secs": 15
     },
     "hard": {
@@ -194,8 +194,13 @@
     "scatter_r": 90,
     "max_orbs": 600
   },
+  "exp_economy": {
+    "orb_value_mult": 1.5,
+    "pickup_scale_exp": 0.5,
+    "bot_steal_share": 0.25
+  },
   "exp_orbs": {
-    "cell": 140,
+    "cell": 160,
     "values": [
       5,
       20,

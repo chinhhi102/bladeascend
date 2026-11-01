@@ -78,9 +78,12 @@ func (g *Game) removeItem(it *Item) {
 	}
 }
 
-// PickupRadius is pickup_r * scale, × Nam Châm when active (spec §6).
+// PickupRadius is pickup_r × scale^pickup_scale_exp, × Nam Châm when active (spec v6.24 §6.0).
+//
+// Không nhân thẳng scale nữa: Đại Thừa (scale 4,6) từng hút rộng gấp 4,6 lần, Nam Châm ×3
+// nữa là ×14 — tốc độ farm tăng theo cấp số trong khi EXP cần chỉ ×2 mỗi cảnh giới.
 func (g *Game) PickupRadius(p *Player) float64 {
-	r := g.Cfg.Player.PickupR * p.Scale
+	r := g.Cfg.Player.PickupR * math.Pow(p.Scale, g.pickupScaleExp())
 	if p.HasBuff(BuffMagnet, g.Time) {
 		r *= g.Cfg.Buffs["magnet"].Mult
 	}
@@ -196,7 +199,11 @@ func (g *Game) pickup(p *Player, it *Item) {
 	}
 	switch it.Kind {
 	case "orb":
-		g.GainExpFrom(p, it.Value, true, it.Src)
+		v := it.Value
+		if it.Src == ExpOrbAmbient {
+			v *= g.OrbValueMult(p) // viên môi trường: theo cảnh giới NGƯỜI NHẶT (§6.0)
+		}
+		g.GainExpFrom(p, v, true, it.Src)
 	case "sword":
 		g.AddSwords(p, g.Cfg.Items.SwordAmount)
 	case "bundle":
@@ -217,7 +224,9 @@ func (g *Game) pickup(p *Player, it *Item) {
 		if g.BanksTienKhi(p) {
 			g.GainTienKhi(p, g.Cfg.Skills.OvercapTien)
 		} else {
-			g.GainExpFrom(p, p.TotalExp+g.Cfg.Skills.OvercapExp, false, ExpOvercapScroll)
+			// +20, KHÔNG phải `TotalExp + 20`: GainExp tự cộng vào tổng. Bản cũ nhân đôi tu
+			// vi mỗi cuốn — nguyên nhân lạm phát EXP 1/11 (EXP_AUDIT, spec v6.24 §6.0).
+			g.GainExpFrom(p, g.Cfg.Skills.OvercapExp, false, ExpOvercapScroll)
 		}
 	case "chest":
 		for i := 0; i < g.Cfg.Items.ChestItems; i++ {

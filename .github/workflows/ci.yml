@@ -41,6 +41,15 @@ jobs:
       - name: bố cục 5 khu đi lọt ở cả 14 cảnh giới (§8.1b)
         working-directory: server
         run: go run ./cmd/mapgen --check
+      # Spec v6.24 §6.0 (Q33): bảng nhịp farm là CHUẨN. Lạm phát EXP 1/11 (Bí Kíp nhân đôi tu
+      # vi, Luyện Hư → Đại Thừa 10 trong ~70 s) không làm đỏ test nào — chỉ người chơi thấy.
+      # Mỗi bài ~1–2 phút: 4 khu × 12 bot farm trọn đường Luyện Khí → Đại Thừa 10.
+      - name: nhịp farm thuần trúng bảng §6.0 (±25 %)
+        working-directory: server
+        run: go run ./cmd/sim --farm --seed 1
+      - name: Nam Châm ≤ 1,5 lần bảng + Luyện Hư → Chân Tiên ≥ 15 phút
+        working-directory: server
+        run: go run ./cmd/sim --farm --magnet-always --seed 1
       - name: code sinh từ schema còn khớp
         working-directory: server
         run: |

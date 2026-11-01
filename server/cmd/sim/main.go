@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"sort"
 	"time"
 
@@ -33,7 +34,8 @@ func main() {
 	seed := flag.Int64("seed", time.Now().UnixNano(), "random seed")
 	monsters := flag.Int("monsters", -1, "override room.monster_count (-1 = config)")
 	cell := flag.Float64("orb-cell", 0, "override exp_orbs.cell (0 = config)")
-	farm := flag.Bool("farm", false, "nobody can be hit: measures pure farming pace (spec §6.1 target 60–90s to Trúc Cơ)")
+	farm := flag.Bool("farm", false, "farm thuần, so với bảng nhịp spec v6.24 §6.0 (thoát 1 khi trượt)")
+	magnetAlways := flag.Bool("magnet-always", false, "--farm: Nam Châm suốt (≤ 1,5 lần bảng) + bài Luyện Hư → Chân Tiên ≥ 15 phút")
 	audit := flag.Bool("audit", false, "EXP theo nguồn cho docs/EXP_AUDIT.md (CHANGES v6.21)")
 	seeds := flag.Int("seeds", 3, "--audit: số seed mỗi phép đo")
 	flag.Parse()
@@ -42,6 +44,9 @@ func main() {
 	if *audit {
 		auditMain(cfg, *mapID, *seed, *seeds)
 		return
+	}
+	if *farm {
+		os.Exit(farmCLI(cfg, *magnetAlways, *mapID, *seed, flagSet("bots"), *bots, *minutes))
 	}
 	if *farm {
 		cfg.Player.InvulnOnSpawn = 1e9
@@ -160,4 +165,36 @@ func report(g *game.Game, stats map[uint32]*botStats, ticks int, tickTime, wall 
 	if len(top) > 0 {
 		fmt.Printf("top: %s %s tầng %d (%.0f EXP, %d kills)\n", top[0].Name, g.Prog.RealmName(g.Prog.Realm(top[0].Level)), g.Prog.Tier(top[0].Level)+1, top[0].TotalExp, top[0].Kills)
 	}
+}
+
+// flagSet: cờ có được truyền tường minh không (để --farm có mặc định riêng).
+func flagSet(name string) bool {
+	set := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			set = true
+		}
+	})
+	return set
+}
+
+// farmCLI: --farm có mặc định riêng — 12 bot (phòng 60 nhân vật / 5 khu) và đủ giờ để
+// chạm Đại Thừa 10 (bảng 28 phút → chạy tối đa 60). Trả mã thoát.
+func farmCLI(cfg *config.Config, magnet bool, mapID string, seed int64, botsSet bool, bots int, minutes float64) int {
+	if !botsSet {
+		bots = 12
+	}
+	if minutes == 10 {
+		minutes = 60
+	}
+	o := farmOpts{bots: bots, minutes: minutes, magnet: magnet, seed: seed, mapID: mapID, seeds: 8}
+	ok := farmMain(cfg, o)
+	if magnet {
+		ok = tienMain(config.MustLoadDefault(), o) && ok
+	}
+	if !ok {
+		fmt.Println("\nTRƯỢT bảng nhịp §6.0")
+		return 1
+	}
+	return 0
 }
