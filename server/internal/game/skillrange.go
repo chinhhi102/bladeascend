@@ -56,3 +56,6 @@ func (g *Game) pushAway(p, o *Player, dist float64) {
 	o.KnockVel = away.Mul(dist / secs)
 	o.KnockUntil = g.Time + secs
 }
+
+// SkillRangeOf: `skillRange` cho gói ngoài (bot quyết định dùng kỹ năng theo đúng tầm thật).
+func (g *Game) SkillRangeOf(p *Player, key string) float64 { return g.skillRange(p, key) }

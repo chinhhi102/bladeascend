@@ -525,10 +525,11 @@
     "range_unit": "pickup_r",
     "push_secs": 0.3,
     "ranges_u": {
-      "loa_cone": 6.0,
+      "loa_radius": 6.0,
       "loa_push": 6.0,
       "ru_ngu_r": 4.0,
       "ru_ngu_secs": 2.5,
+      "ru_ngu_steal_secs": 4.0,
       "ru_ngu_channel": 0.5,
       "dan_em_follow": 3.0,
       "dan_em_seek": 8.0,
@@ -549,7 +550,7 @@
       "rut_co_push": 3.0
     },
     "banh_bao_max_share": 0.2,
-    "loa_cone_deg": 60.0,
+    "hut_mi_cone_deg": 60.0,
     "dan_em_count": 2,
     "dan_em_secs": 8.0,
     "dan_em_sword_share": 0.3,

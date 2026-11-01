@@ -67,7 +67,7 @@ export const STR = {
   skillNames: {
     a_hon: 'Bánh Bao Thần',
     ba_tam_loa: 'Loa Phường',
-    ong_ba_vong: 'Ru Ngủ Trưa',
+    ong_ba_vong: 'Ru Ngủ Trưa — Trộm Kiếm',
     dai_ca_dep: 'Gọi Đàn Em',
     map_tra_sua: 'Phun Trân Châu',
     co_ba_ganh: 'Bày Hàng Chặn Lối',
@@ -85,8 +85,8 @@ export const STR = {
    */
   skillDesc: {
     a_hon: 'Ăn bánh bao, hồi ngay 20% số kiếm tối đa của cảnh giới.',
-    ba_tam_loa: 'Hét một tiếng: đẩy văng địch phía trước 500 và làm vòng kiếm của họ quay ngược.',
-    ong_ba_vong: 'Hát ru nửa giây (bị chém là mất chiêu): cả đám quanh mình ngủ gục 2,5 giây — đứng im, không dùng được kỹ năng, nhưng vòng kiếm của họ vẫn quay và đánh trả.',
+    ba_tam_loa: 'Hét vào loa: sóng âm toả tròn quanh mình, đẩy văng mọi địch xung quanh và làm vòng kiếm của họ quay ngược.',
+    ong_ba_vong: 'Hát ru nửa giây (bị chém là mất chiêu) rồi nằm võng 4 giây: địch quanh mình ngủ gục 2,5 giây, kiếm của ông không mẻ, và kiếm địch bể khi va với ông bay về vòng của ông.',
     dai_ca_dep: 'Gọi 2 đàn em trong 8 giây, mỗi đứa mang 30% số kiếm của mình — mình không mất kiếm nào.',
     map_tra_sua: 'Phun trân châu bịt mắt địch 5 giây: không nhặt được gì, và kiếm của họ không chém chết được ai (va kiếm vẫn tính).',
     co_ba_ganh: 'Bày 5 cái sạp thành vòng cung chặn đường 6 giây — người ngang cấp hoặc kém hơn không chém được, mình thì đi xuyên. Dọc chân sạp rải vỏ chuối: ai giẫm thì trượt và choáng 1 giây.',

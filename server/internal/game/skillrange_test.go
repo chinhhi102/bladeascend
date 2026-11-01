@@ -17,10 +17,11 @@ import (
 // `bay_sap_owner_passes`), nên bảng này để `float64` với quy ước `true → 1`, đúng như
 // `config.SkillU` nạp.
 var specRangesU = map[string]float64{
-	"loa_cone":              6,
+	"loa_radius":            6,
 	"loa_push":              6,
 	"ru_ngu_r":              4,
 	"ru_ngu_secs":           2.5,
+	"ru_ngu_steal_secs":     4,
 	"ru_ngu_channel":        0.5,
 	"dan_em_follow":         3,
 	"dan_em_seek":           8,
@@ -75,7 +76,7 @@ func TestSkillUMatchesPickupRadius(t *testing.T) {
 		t.Errorf("Luyện Khí 1: U = %g, bảng spec ghi 90", got)
 	}
 	// Và Loa Phường ở cảnh giới đó với tới 540 (6 U).
-	if got := g.skillRange(p, "loa_cone"); math.Abs(got-540) > 1e-9 {
+	if got := g.skillRange(p, "loa_radius"); math.Abs(got-540) > 1e-9 {
 		t.Errorf("Loa Phường Luyện Khí 1 với %g, bảng spec ghi 540", got)
 	}
 }
@@ -87,7 +88,7 @@ func TestSkillRangeGrowsWithRealm(t *testing.T) {
 	high := put(g, "ba_tam_loa", Vec{X: 8000, Y: 8000}, 0, 1)
 	g.ForceState(high, g.Prog.TopMortalLevel(), 10, high.Pos)
 
-	lo, hi := g.skillRange(low, "loa_cone"), g.skillRange(high, "loa_cone")
+	lo, hi := g.skillRange(low, "loa_radius"), g.skillRange(high, "loa_radius")
 	if hi <= lo {
 		t.Fatalf("Đại Thừa với %g, Luyện Khí với %g — phạm vi phải tăng theo cảnh giới", hi, lo)
 	}

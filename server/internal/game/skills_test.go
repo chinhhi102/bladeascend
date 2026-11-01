@@ -72,23 +72,75 @@ func TestDeathClearsCharges(t *testing.T) {
 }
 
 // Loa Phường đẩy lùi và làm vòng kiếm địch đổi chiều, CHỈ với người đứng trong nón.
-func TestLoaPhuongPushesOnlyInsideCone(t *testing.T) {
+func TestLoaPhuongPushesAllAround(t *testing.T) {
 	g := skillGame(t)
 	a := put(g, "ba_tam_loa", Vec{X: 3000, Y: 3000}, 10, 20)
-	a.Facing = 0 // nhìn sang phải
+	a.Facing = 0 // nhìn sang phải — v6.30: hướng nhìn không còn quan trọng
 	front := put(g, "cu_rua", Vec{X: 3000 + 300, Y: 3000}, 10, 20)
 	back := put(g, "cu_rua", Vec{X: 3000 - 300, Y: 3000}, 10, 20)
-	dirBefore := back.Ring.Dir
+	far := put(g, "cu_rua", Vec{X: 3000, Y: 3000 + g.skillRange(a, "loa_radius") + 200}, 10, 20)
+	dirBefore, farDir := back.Ring.Dir, far.Ring.Dir
 
 	giveCharge(a)
 	if !g.CastSkill(a) {
 		t.Fatal("không dùng được Loa Phường")
 	}
-	if front.KnockUntil <= g.Time {
-		t.Fatal("người đứng trước mặt không bị đẩy")
+	if front.KnockUntil <= g.Time || back.KnockUntil <= g.Time || back.Ring.Dir == dirBefore {
+		t.Fatal("Loa toả tròn 360° (v6.30): người trước mặt VÀ sau lưng đều phải bị đẩy + đổi chiều")
 	}
-	if back.KnockUntil > g.Time || back.Ring.Dir != dirBefore {
-		t.Fatal("người đứng SAU LƯNG cũng trúng — nón 60° đang sai")
+	if far.KnockUntil > g.Time || far.Ring.Dir != farDir {
+		t.Fatal("người ngoài 6 U cũng trúng")
+	}
+}
+
+// Checklist §17 v6.30: Ông Ba Võng trong 4s Trộm Kiếm va kiếm với người cùng cảnh giới →
+// Ông Ba không mất kiếm, đối thủ mất kiếm và Ông Ba +đúng số đó (tới trần, dư rơi Bó Kiếm).
+func TestTromKiemStealsClashedSwords(t *testing.T) {
+	g := skillGame(t)
+	a := put(g, "ong_ba_vong", Vec{X: 3000, Y: 3000}, 10, 10)
+	b := put(g, "cu_rua", Vec{X: 3500, Y: 3000}, 10, 30)
+	g.finishRuNgu(a) // hát xong → nằm võng Trộm Kiếm
+	if !g.stealing(a) {
+		t.Fatal("hát xong mà không vào Trộm Kiếm")
+	}
+	b.Status[StSleep] = 0
+	b.Pos.X = a.Pos.X + (a.Geom.Reach+b.Geom.Reach)*0.8
+	beforeA, beforeB := a.Ring.Count, b.Ring.Count
+	for i := 0; i < 20; i++ {
+		g.resolveSwordSword()
+		g.Time += 1.0 / 30
+	}
+	lostB := beforeB - b.Ring.Count
+	if lostB <= 0 {
+		t.Fatal("hai vòng không chạm nhau — bài test đặt sai")
+	}
+	if a.Ring.Count != beforeA+lostB {
+		t.Fatalf("Ông Ba %d → %d kiếm, đối thủ mất %d: muốn Ông Ba +%d, không mất thanh nào",
+			beforeA, a.Ring.Count, lostB, lostB)
+	}
+	g.Time = a.StealUntil + 0.01
+	if g.stealing(a) {
+		t.Fatal("hết 4 s mà vẫn Trộm Kiếm")
+	}
+}
+
+// Trộm tới trần thì phần dư rơi Bó Kiếm, không bốc hơi, không đổi EXP.
+func TestTromKiemOverflowDropsBundles(t *testing.T) {
+	g := skillGame(t)
+	a := put(g, "ong_ba_vong", Vec{X: 3000, Y: 3000}, 10, 10)
+	maxSw := g.Prog.MaxSwords(g.Prog.Realm(a.Level))
+	a.Ring.Count = maxSw - 1
+	g.refreshDerived(a)
+	exp := a.TotalExp
+	g.giveSwords(a, 5)
+	n := 0
+	for _, it := range g.Items {
+		if it.Kind == "bundle" {
+			n += int(it.Value)
+		}
+	}
+	if a.Ring.Count != maxSw || n != 4 || a.TotalExp != exp {
+		t.Fatalf("vòng %d/%d, rơi %d (muốn %d/%d, rơi 4, EXP không đổi)", a.Ring.Count, maxSw, n, maxSw, maxSw)
 	}
 }
 

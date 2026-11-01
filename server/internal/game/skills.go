@@ -212,15 +212,13 @@ func castBanhBao(g *Game, p *Player, _ Vec) {
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "banh_bao", N: back, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 
-// Loa Phường — nón 60° dài 6 U: đẩy lùi 6 U và làm vòng kiếm địch đổi chiều (§6.3).
-func castLoaPhuong(g *Game, p *Player, dir Vec) {
-	sc := g.Cfg.Skills
-	reach := g.skillRange(p, "loa_cone")
+// Loa Phường (v6.30 §6.3) — sóng âm TOẢ TRÒN 360° bán kính 6 U: đẩy mọi địch xung quanh ra
+// 6 U và làm vòng kiếm của họ đổi chiều. Bản nón 60° cũ thắng 17% tay đôi; toả tròn để dọn
+// sạch quanh mình khi tranh Đài / Rương / xác vừa nổ đồ.
+func castLoaPhuong(g *Game, p *Player, _ Vec) {
+	reach := g.skillRange(p, "loa_radius")
 	push := g.skillRange(p, "loa_push")
 	for _, o := range g.targetsNear(p, reach) {
-		if !inCone(p, o.Pos, dir, sc.LoaConeDeg, reach) {
-			continue
-		}
 		if o.HasStatus(StBrace, g.Time) || o.HasStatus(StShell, g.Time) {
 			continue // đang gồng hoặc rụt mai thì không đẩy được
 		}
@@ -255,6 +253,11 @@ func castRuNgu(g *Game, p *Player, _ Vec) {
 // Khác biệt quan trọng: ai chạy ra khỏi 4 U trong nửa giây hát thì thoát được. Đó là phần
 // "nhìn thấy trước mà tránh" của kỹ năng, và client vẽ vòng báo trước đúng bán kính này.
 func (g *Game) finishRuNgu(p *Player) {
+	// v6.30: hát xong thì nằm võng `ru_ngu_steal_secs` giây Trộm Kiếm (xem `clash`).
+	steal := g.skillNum("ru_ngu_steal_secs")
+	p.StealUntil = g.Time + steal
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "trom_kiem", F: float32(steal),
+		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 	secs := g.skillNum("ru_ngu_secs")
 	for _, o := range g.targetsNear(p, g.skillRange(p, "ru_ngu_r")) {
 		g.ApplyStatus(o, StSleep, secs)
@@ -302,7 +305,7 @@ func castHutMi(g *Game, p *Player, dir Vec) {
 	var target *Player
 	best := math.Inf(1)
 	for _, o := range g.targetsNear(p, reach) {
-		if !inCone(p, o.Pos, dir, g.Cfg.Skills.LoaConeDeg, reach) {
+		if !inCone(p, o.Pos, dir, g.Cfg.Skills.HutMiConeDeg, reach) {
 			continue
 		}
 		if d := o.Pos.Dist(p.Pos); d < best {
@@ -352,17 +355,23 @@ func (g *Game) stealSwords(to, from *Player) {
 	// khác tranh được, nên hút đầy tay vẫn có cái giá. Dùng `dropBundles` chứ không
 	// `AddSwords` cho phần dư, vì `AddSwords` quy đổi phần thừa thành EXP — mà §6.3 cấm
 	// kỹ năng đổi EXP trực tiếp.
-	room := ownMax - to.Ring.Count
-	gain := min(got, max(room, 0))
+	g.giveSwords(to, got)
+	g.emit(Event{Kind: "SkillEffect", A: to.ID, B: from.ID, S: "hut_mi", N: got,
+		X: float32(from.Pos.X), Y: float32(from.Pos.Y)})
+}
+
+// giveSwords nhập `n` kiếm cướp được vào vòng của `to`, tới trần cảnh giới; phần dư rơi
+// xuống đất thành Bó Kiếm (không quy đổi EXP — §6.3 cấm kỹ năng đổi EXP trực tiếp).
+func (g *Game) giveSwords(to *Player, n int) {
+	ownMax := g.Prog.MaxSwords(g.Prog.Realm(to.Level))
+	gain := min(n, max(ownMax-to.Ring.Count, 0))
 	if gain > 0 {
 		to.Ring.Count += gain
 		g.refreshDerived(to)
 	}
-	if over := got - gain; over > 0 {
+	if over := n - gain; over > 0 {
 		g.dropBundles(to.Pos, over, to.Geom.Reach)
 	}
-	g.emit(Event{Kind: "SkillEffect", A: to.ID, B: from.ID, S: "hut_mi", N: got,
-		X: float32(from.Pos.X), Y: float32(from.Pos.Y)})
 }
 
 // Gồng Cơ — 4 giây độ bền kiếm ×2 và miễn mọi khống chế.

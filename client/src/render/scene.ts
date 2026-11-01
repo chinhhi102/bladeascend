@@ -979,13 +979,13 @@ export class GameScene {
     const sk = this.cfg.skills;
     switch (e.s) {
       case 'loa': {
-        // Server gửi một event cho MỖI nạn nhân; nón thì chỉ cần vẽ một lần.
+        // Server gửi một event cho MỖI nạn nhân; sóng tròn (v6.30) chỉ cần vẽ một lần.
         const key = `loa:${e.a}:${Math.round(now * 1000)}`;
         if (this.lastCone !== key) {
           this.lastCone = key;
           const at = this.casterAt(e.a ?? 0);
           if (at) {
-            this.skillFx.cone(at.x, at.y, at.f, sc, 'loa_cone', sk.loa_cone_deg, 0xffd23f, now);
+            this.skillFx.circle(at.x, at.y, sc, 'loa_radius', 0xffd23f, now);
           }
         }
         break;
@@ -1017,6 +1017,17 @@ export class GameScene {
         sound.play('skill_sleep', 0.5);
         break;
       }
+      case 'trom_kiem': {
+        // Nằm võng Trộm Kiếm 4 s (v6.30): vòng báo quanh Ông Ba để người khác biết đừng va.
+        const at = this.casterAt(e.a ?? 0);
+        if (at) {
+          this.skillFx.circle(at.x, at.y, sc, 'ru_ngu_r', 0xc9a227, now);
+        }
+        break;
+      }
+      case 'trom_kiem_hit':
+        this.floatText.show(STR.swordsStolen(e.n ?? 0), e.x, e.y, now, 0xffe14d);
+        break;
       case 'ru_ngu_huy':
         this.floatText.show(STR.skillCancelled, e.x, e.y, now, 0xffb3b3);
         break;
@@ -1033,7 +1044,7 @@ export class GameScene {
       case 'hut_mi_miss': {
         const at = this.casterAt(e.a ?? 0);
         if (at) {
-          this.skillFx.cone(at.x, at.y, e.f ?? 0, sc, 'hut_mi_cone', sk.loa_cone_deg, 0xf2c14e, now);
+          this.skillFx.cone(at.x, at.y, e.f ?? 0, sc, 'hut_mi_cone', sk.hut_mi_cone_deg, 0xf2c14e, now);
         }
         break;
       }

@@ -138,6 +138,8 @@ type Player struct {
 	SkillRecharge float64
 	// SkillCasts: số lần đã dùng kỹ năng trong mạng này (telemetry v6.25 §6.3).
 	SkillCasts int
+	// StealUntil: hết giờ Trộm Kiếm của Ông Ba Võng (v6.30 §6.3), giờ game.
+	StealUntil float64
 	// SkillReadyAt: khoá 3 giây giữa hai lần dùng (§6.3).
 	SkillReadyAt float64
 	// shellOn: đang trong mai rùa — dùng để bắt đúng khoảnh khắc RA khỏi mai.

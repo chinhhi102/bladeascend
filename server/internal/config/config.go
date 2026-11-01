@@ -363,7 +363,7 @@ type Skills struct {
 	// sổ ghi kiếm bể nữa.
 	BanhBaoMaxShare float64 `json:"banh_bao_max_share"`
 
-	LoaConeDeg float64 `json:"loa_cone_deg"`
+	HutMiConeDeg float64 `json:"hut_mi_cone_deg"`
 
 	DanEmCount int     `json:"dan_em_count"`
 	DanEmSecs  float64 `json:"dan_em_secs"`

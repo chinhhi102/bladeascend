@@ -423,9 +423,34 @@ func (g *Game) clash(a, b *Player, at Vec) {
 	// v6.27: KHÔNG khống chế nào vô hiệu hoá vòng kiếm — người đang ngủ / choáng vẫn va
 	// kiếm hai chiều bình thường (bản v6.9 cho "kiếm ngủ không đánh trả", đã bỏ).
 	lostA, lostB := out.LostA, out.LostB
+	lostA, lostB = g.stealOnClash(a, b, lostA, lostB)
 	g.breakSwords(a, lostA)
 	g.breakSwords(b, lostB)
 }
+
+// stealOnClash: Trộm Kiếm của Ông Ba Võng (v6.30 §6.3). Trong `ru_ngu_steal_secs` kiếm của ông
+// không mẻ, và mỗi thanh của đối thủ bể khi va với ông bay về nhập vòng ông (tới trần, dư rơi
+// Bó Kiếm). Hai người cùng đang trộm thì triệt tiêu — va như thường.
+func (g *Game) stealOnClash(a, b *Player, lostA, lostB int) (int, int) {
+	sa, sb := g.stealing(a), g.stealing(b)
+	if sa == sb {
+		return lostA, lostB
+	}
+	thief, victim, lost := a, b, lostB
+	if sb {
+		thief, victim, lost = b, a, lostA
+	}
+	before := victim.Ring.Count
+	g.breakSwords(victim, lost)
+	if got := before - victim.Ring.Count; got > 0 {
+		g.giveSwords(thief, got)
+		g.emit(Event{Kind: "SkillEffect", A: thief.ID, B: victim.ID, S: "trom_kiem_hit", N: got,
+			X: float32(victim.Pos.X), Y: float32(victim.Pos.Y)})
+	}
+	return 0, 0
+}
+
+func (g *Game) stealing(p *Player) bool { return p.StealUntil > g.Time }
 
 // pushApart knocks both players away from each other so their rings separate (spec §5.2).
 func (g *Game) pushApart(a, b *Player) {

@@ -79,7 +79,11 @@ func (b *Brain) trySkill(g *game.Game, me *game.Player, threat, prey *game.Playe
 		if g.Geom(me).Rings <= 1 && near != nil && near.Pos.Dist(me.Pos) < reach*1.5 {
 			g.CastSkill(me)
 		}
-	case "ba_tam_loa", "map_tra_sua": // kỹ năng hình nón: địch phải ở phía trước
+	case "ba_tam_loa": // Loa toả tròn 6 U (v6.30): có địch trong tầm là hét
+		if near != nil && near.Pos.Dist(me.Pos) < g.SkillRangeOf(me, "loa_radius") {
+			g.CastSkill(me)
+		}
+	case "map_tra_sua": // kỹ năng hình nón: địch phải ở phía trước
 		if near != nil && b.inFront(me, near, 60) {
 			g.CastSkill(me)
 		}

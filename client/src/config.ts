@@ -80,7 +80,7 @@ export interface GameConfig {
     /** Tiên giới +N lượt tích tối đa. */
     tien_extra_charges: number;
     /** Góc nón của hai kỹ năng hình nón — chỉ báo phạm vi phải vẽ đúng góc server xét. */
-    loa_cone_deg: number;
+    hut_mi_cone_deg: number;
     tran_chau_cone_deg: number;
     /**
      * ranges_u: hệ số phạm vi theo U (spec v6.5 §6.3). Client vẽ chỉ báo bằng **đúng bộ số

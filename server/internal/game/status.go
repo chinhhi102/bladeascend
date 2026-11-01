@@ -108,7 +108,7 @@ func (g *Game) ClearStatuses(p *Player) {
 //
 // Rớt cảnh giới hay qua cổng thì KHÔNG mất lượt, nên việc xoá chỉ gắn vào đúng chỗ chết.
 func (g *Game) onDeathClear(p *Player) {
-	p.SkillCharges, p.SkillRecharge = 0, 0
+	p.SkillCharges, p.SkillRecharge, p.StealUntil = 0, 0, 0
 	p.Vel = Vec{}
 	p.shellOn = false
 	p.orbPicked, p.orbPickedID, p.orbPickedKind = 0, 0, ""
