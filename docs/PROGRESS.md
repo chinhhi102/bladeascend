@@ -1657,3 +1657,21 @@ Pixi 8.22 vốn đã ưu tiên WebGL; lỗi nằm trong `GlTextureSystem.updateS
 - Q32: spec §13.6 cần anh ghi luật chất lượng mới.
 - v6.x chưa xong (xem `docs/V6_AUDIT.md`): lớn nhất là v6.16 (ảnh góp ý, admin antd, đa ngôn ngữ) và
   v6.19 mục 2–5 (giao diện bảng xếp hạng mới).
+
+## Phiên 1/11/2026 (tối) — spec v6.25 → v6.29
+
+| Commit | Việc | Kiểm |
+|---|---|---|
+| `f8bbb8e` | v6.25-A: tốc độ cộng trên base, trần ×2 (Gom Đơn ×3), sàn ×0.4 | collision 1000 bước lệch 0 |
+| `b5d86fa` | v6.25-B: kỹ năng tự hồi + tích lượt theo nhân vật, bỏ Bí Kíp (art chuyển `assets/library/bi_kip_v6.25/`) | test, build |
+| `dcaf402` | v6.26 chém trúng = chết mọi cảnh giới (30% / trần +2 cảnh giới; Tiên +1), v6.27 khống chế không khoá vòng kiếm, bịt mắt không chém chết ai + lớp trân châu | test §17 mới, sim |
+| `0e2b585` | v6.29 chết = hết ván: tải lại vẫn ở Tổng kết, không tự vào lại | test server |
+| `2d326ea` | v6.28 trần/sàn/ngưỡng bot chỉnh ở admin, bot lấp theo khu; mặc định production 50/10/40, staging 20/10/20 | deploy cả hai, admin API staging trả 20/10/20 |
+
+- Sim farm 40 bot × 10 phút, 3 seed, trước → sau v6.26: sống TB **35.2 → 35.1 s**, cảnh giới cao nhất
+  TB mỗi mạng **0.34 → 0.36** (gần như không đổi: phần lớn cái chết vẫn ở Luyện Khí, nơi luật cũ cũng chết).
+- `cmd/sim --duel` **trượt hàng rào** (Bé Tí 100%, Bà Tám / Ông Ba 17%); chỉnh hồi chiêu tới ±30% không đổi
+  kết quả → **Q36** chờ anh (giữ đúng bảng hồi chiêu của spec).
+- Lỗi đã biết mới: test `TestBotNamesUniqueInRoom` từng đỏ vì 2 đàn em cùng tên "(đàn em)" — sửa test bỏ
+  qua đàn em; test telemetry từng chậm 60 s một lần khi máy bận (chạy lại đạt).
+- Còn: giai đoạn 2–5 của lượt lớn; admin React/antd (3c) sẽ thay thẻ "Cấu hình phòng" JS thuần hiện có.

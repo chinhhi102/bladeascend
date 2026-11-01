@@ -46,3 +46,6 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 24,2026-11-01,a25fe91,"Phòng 50 người — staging ARM (seed 7)",S12,3.00,5.18,9,4.9,,2.4,0.00,,,,,,,,,,,,,,,,,"p95 khu nặng nhất 5.19 ms (seed 8: 4.28, seed 9: 5.16) — chưa đạt, giữ 20",
 24,2026-11-01,a25fe91,"Phòng 50 người — máy dev i5-12400F",S12,1.42,2.01,4,4.8,,2.5,0.00,,,,,,,,,,,,,,,,,"p95 khu nặng nhất 2.02 ms",
 24,2026-11-01,a25fe91,"S1 đối chứng trên staging ARM",S1,2.26,4.20,,5.3,,2.6,0.00,,,,,,,,,,,,,,,,,"khu nặng nhất p95 3.90 ms; staging có tải game thật",
+25,2026-11-01,5447e31,"Mục 1.3 — giả lập iPhone WebKit, máy rảnh",S9,,,,,,,,43.6,,,,,110.3,,,,,,,,,,,"lỗi JS 0; FPS chỉ tham khảo",
+25,2026-11-01,f8bbb8e,"Mục 1.3 — mức Vừa (khu 2, CPU 4x, RTX 3060)",QCOST,,,,,,,,59.9,29.9,,,,,,,,,,,,,,,"Cao 59.9/29.9; Thấp 59.9/29.9; ĐT Thấp 59.9/59.5; bước cuối timeout",
+25,2026-11-01,f8bbb8e,"Mục 1.3 — respawn 60 bot, 4 tab x 120s",WANDER,,,,,,,,,,,,,,,0.13,,,,,,,,,"1 respawn do Despawn đúng luật; lỗi JS 0",

@@ -101,6 +101,9 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | **24** | 2026-11-01 | `a25fe91` | **Phòng 50 người: S12 trên staging (ARM Neoverse-N1, 4 nhân)** | S12 | 3.00 / **5.18** ❌ | 4.9 / – | 2.4 ✅ | – | – | – | – | – | Khu nặng nhất (Thiên Đình, 10 Đạo Tổ chụm) p95 **5.19 / 4.28 / 5.16 ms** (seed 7/8/9) ❌; 4 khu kia 1.6–2.3 ms | **Chưa mở 50** — giữ `max_humans` 20, Q35 |
 | 24 | 2026-11-01 | `a25fe91` | Như trên — máy dev (i5-12400F) | S12 | 1.42 / 2.01 ✅ | 4.8 / – | 2.5 ✅ | – | – | – | – | – | Thiên Đình p95 2.02 ms, khu khác ≤ 0.60 ms | Máy dev đạt, server thật không — chỉ số server thật mới tính |
 | 24 | 2026-11-01 | `a25fe91` | Đối chứng S1 trên staging (cùng máy, cùng lúc) | S1 | 2.26 / 4.20 | 5.3 / – | 2.6 ✅ | – | – | – | – | – | Thiên Đình p95 3.90 ms — 40 nhân vật đã sát ngưỡng | Staging chạy cả game thật (load 1.6) nên số này là trên máy có tải |
+| 25 | 2026-11-01 | `5447e31` | Mục 1.3 đo lại — giả lập iPhone WebKit (máy rảnh) | S9 | – | – | – | 43.6 (tham khảo, WebKit phần mềm) | – | – | – | – | texMB đỉnh **110.3** / trần iOS 256 · lỗi JS 0 | So #20 (95.8, máy rảnh) +14.5 MB — trong biên dao động B13c |
+| 25 | 2026-11-01 | `f8bbb8e` | Mục 1.3 — giá từng mức chất lượng (khu 2, CPU 4×, RTX 3060) | QCOST | – | – | – | Vừa / Cao / Thấp 59.9 / 29.9 · ĐT Thấp 59.9 / 59.5 | – | – | – | – | Như #23: mọi mức 60 FPS p50; "Cao −motes" p1 20.0 (1 mẫu) | Bước cuối của bài lỗi chờ trang chủ (timeout 60 s) — số các mức trên vẫn đủ |
+| 25 | 2026-11-01 | `f8bbb8e` | Mục 1.3 — respawn khi entity ra/vào khung (60 bot, 4 tab × 120 s) | WANDER | – | – | – | – | – | – | – | **0.13** ✅ | respawn 1 (do Despawn đúng luật 1, do hết hạn 2 s 0) · lỗi JS 0 | So #22 (2 lần/4 tab): giữ ≈ 0 |
 
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
@@ -654,6 +657,27 @@ gọn ở MỘT khu — khu có 10 Đạo Tổ chụm (cảnh nặng nhất củ
 Staging vừa đo vừa phục vụ game thật (load ≈ 1.6–1.9) nên con số có tải nền; đó cũng là điều
 kiện thật khi phòng 50 người chạy.
 
+### Lượt #25 — Mục 1.3 đo lại sau đợt sửa lỗi (2026-11-01)
+
+**Câu hỏi:** sau 1.1/1.2 (bot như người mới, AOI, tốc độ cộng dồn v6.25-A) có gì tụt không?
+
+**Cách đo:** S9 `iphone.mjs` trên `:9999` lúc máy rảnh (build `5447e31`); QCOST
+`qualitycost.mjs` CPU 4× và WANDER `respawn-wander.mjs` trên build `f8bbb8e`, chạy với
+`nice` thấp để build song song không làm nhiễu (bài trước đó bị nhiễu nên chạy lại).
+
+| Kịch bản | Kết quả | So lượt trước cùng kịch bản |
+|---|---|---|
+| S9 (máy rảnh) | texMB đỉnh 110.3 MB · FPS 43.6 (tham khảo) · lỗi JS 0 | #20: 95.8 MB — trong biên dao động theo số nhân vật trên màn hình (B13c) |
+| QCOST | Vừa / Cao / Thấp: p50 59.9 · p1 29.9; ĐT Thấp 59.9 / 59.5 | #23: như nhau |
+| WANDER | 1 respawn / 4 tab × 120 s (do Despawn đúng luật) = 0.13/phút-tab | #22: 2 / 4 tab — giữ ≈ 0 |
+
+**Kết luận:** không tụt. Bài QCOST lỗi ở bước cuối (chờ ô nhập tên quá 60 s) sau khi đã đo
+xong các mức — ghi lại để lần sau chạy riêng bước đó.
+
+Sau lượt này còn có v6.26–v6.29 (chém trúng = chết, bot lấp theo khu 5 × 10): logic server
+đổi ít, số nhân vật mặc định/phòng giảm (trần cũ 60 tổng → sàn 10/khu = 50). Sim 40 bot 10
+phút sau đổi: avg tick 0.400 ms (ngân sách < 3 ms) — không cần lượt đo riêng.
+
 ### Mẫu — copy cho mỗi lượt
 
 ```
@@ -682,9 +706,9 @@ Việc tiếp theo đề xuất: <1–3 việc, xếp theo lợi ích / công s�
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
-| B19 | **Phòng 50 người: khu có 10 Đạo Tổ chụm vượt p95 4 ms trên staging** | Chưa mở được giới hạn 50 (§9.1) | Lượt #24: S12 trên staging p95 khu nặng nhất 5.19 / 4.28 / 5.16 ms; máy dev 2.02 ms | Mở — Q35 | – |
+| B19 | **Phòng 50 người: khu có 10 Đạo Tổ chụm vượt p95 4 ms trên staging** | Chưa mở được giới hạn 50 trên staging (§9.1) | Lượt #24: S12 trên staging p95 khu nặng nhất 5.19 / 4.28 / 5.16 ms; máy dev 2.02 ms | **Đóng theo quyết định (v6.28, Q35)** — trần là cấu hình theo máy: production 50 (đạt 2.02 ms), staging 20. Trang admin cảnh báo vàng nếu đặt trần cao hơn mức đã qua loadtest. Tối ưu khu Đạo Tổ chụm vẫn là việc nên làm nếu muốn staging lên 50. | #24 |
 | B17 | **Chưa có số đo máy yếu THẬT cho mức chất lượng mặc định** | Không xác nhận được mục tiêu điện thoại p50 ≥ 40 / p1 ≥ 25, PC p1 ≥ 30 | Lượt #23: trên RTX 3060 + CPU 4× mọi mức đều 60 FPS; telemetry 31/10 lẫn phiên máy | Mở — chờ ≥ 5 phiên người thật ở build `≥ 20261101_16xx`, đọc `perfreport --real` mục 3 + 8 | – |
-| B18 | **`TestRemovalReportedEvenWhenSlotReused` chập chờn** | CI đỏ ngẫu nhiên | Trượt 1/6 lần trên code CŨ (`367eb68`), không liên quan respawn | Mở | – |
+| B18 | **`TestRemovalReportedEvenWhenSlotReused` chập chờn** | CI đỏ ngẫu nhiên | Trượt 1/6 lần trên code CŨ (`367eb68`), không liên quan respawn; lượt #25 trượt 1/30 lần (`2d326ea`) ở bước "chưa nhặt được viên cũ" — nghi vị trí thả viên rơi vào vật cản của bản đồ ngẫu nhiên | Mở | – |
 | B1 | ItemsAdded dồn 1 gói khi camera lùi xa | Gói 38 KB, nghẽn mạng yếu | Lượt #0 | **Đóng** — gói 38.3 → 6.8 KB | #4 |
 | B2 | Server tick vượt ngân sách khi 10 Đạo Tổ chụm | Lag server | Lượt #0 | **Đóng** — tick 11.45 → 1.56 ms | #4 |
 | B3b | **Chỉ số respawn DAO ĐỘNG MẠNH giữa các lượt** | Phương pháp đo | Cùng một bản build, 8 lượt `flicker.mjs` ra 0,0,0,2,3,1,0,0. Và `netcode-bench` cũ **không bao giờ ép được entity quay lại khung nhìn**, nên số respawn = 0 của nó là con số hiển nhiên, không chứng minh gì. | **Đóng (#22)** — kịch bản WANDER (`respawn-wander.mjs`, 60 bot, 4 tab × 120 s) ép được entity ra/vào thật và tách nguồn: trước 31 (26 hết hạn, quái 28/30 lần tách), sau 2 (cả hai do Despawn đúng luật). Gốc: trạng thái gửi theo mép khung nhìn, không theo lớp trễ AOI | #22 |
