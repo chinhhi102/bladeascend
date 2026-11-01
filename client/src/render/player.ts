@@ -78,6 +78,11 @@ export class PlayerSprite {
   private animFps = 12;
   /** usingFallback: đang vẽ bằng nhân vật dự phòng vì thiếu atlas của nhân vật thật. */
   private usingFallback = false;
+  /**
+   * atlasChar: nhân vật có atlas đang vẽ (khác `char` khi dùng dự phòng). Vòng vẽ khai tên
+   * này cho `assets.keepChars` — xem `CharAtlas.drawn`.
+   */
+  atlasChar = '';
   private lastPos = { x: 0, y: 0 };
   private lastFace = 0;
   private lastAt = 0;
@@ -94,6 +99,7 @@ export class PlayerSprite {
     const got = assets.charAtlas(char);
     this.atlas = got?.set ?? null;
     this.usingFallback = got?.fallback ?? false;
+    this.atlasChar = got?.drawn ?? '';
     this.swordRing = new SwordRing(cfg);
     this.plate = new Nameplate(cfg, name, isMe, Input.isTouchDevice());
     // Hào quang Tiên giới KHÔNG còn nằm ở đây: nó chuyển sang `vfxLayer` dùng chung để ăn
@@ -183,17 +189,21 @@ export class PlayerSprite {
   }
 
   setCharacter(char: string): boolean {
-    // `usingFallback` cũng phải xét: nếu đang vẽ bằng nhân vật dự phòng thì dù tên nhân vật
-    // không đổi vẫn phải thử lại — atlas thật có thể vừa tải xong.
-    if (char === this.char && !this.usingFallback) {
-      return true;
-    }
+    // So ĐÚNG ĐỐI TƯỢNG atlas, không chỉ so tên. View nằm trong pool quá 10 giây thì atlas
+    // của nó đã bị `keepChars` nhả và huỷ (QUESTIONS Q30); lấy view ra cho cùng nhân vật mà
+    // chỉ so tên thì nó vẽ tiếp bằng texture đã huỷ — Pixi ném "reading 'addressModeU'".
+    // Atlas nạp lại là một đối tượng MỚI, nên so `===` bắt được cả trường hợp đó — và cả
+    // trường hợp đang vẽ bằng nhân vật dự phòng mà atlas thật vừa tải xong.
     const got = assets.charAtlas(char);
     const next = got?.set ?? null;
+    if (char === this.char && next !== null && next === this.atlas) {
+      return true;
+    }
     if (!next) {
       return false;
     }
     this.usingFallback = got?.fallback ?? false;
+    this.atlasChar = got?.drawn ?? '';
     this.char = char;
     this.atlas = next;
     this.mood = ''; // ép `updateBody` dựng lại thân theo atlas mới

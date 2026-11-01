@@ -139,6 +139,10 @@ export class GameScene {
 
   async init(parent: HTMLElement, maxFps: number): Promise<void> {
     await this.app.init({
+      // Ép WebGL. Pixi 8 vốn xếp WebGL trước, nhưng ghi rõ để một lần nâng Pixi đổi thứ tự
+      // mặc định không lặng lẽ chuyển người chơi sang WebGPU — đường đó chưa từng được đo
+      // (`countDrawCalls`, `trackGpuMemory` bên dưới chỉ đọc được WebGL).
+      preference: 'webgl',
       resizeTo: window,
       background: 0x2b2b2b,
       antialias: true,
@@ -304,6 +308,10 @@ export class GameScene {
     for (const sp of this.players.values()) {
       if (sp.char) {
         this.charsInUse.add(sp.char);
+      }
+      // Cả atlas ĐANG VẼ: sprite dùng nhân vật dự phòng vẽ bằng atlas của người khác.
+      if (sp.atlasChar) {
+        this.charsInUse.add(sp.atlasChar);
       }
     }
     assets.keepChars(this.charsInUse, this.myChar, performance.now());

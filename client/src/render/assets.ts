@@ -62,6 +62,20 @@ export interface AnimSet {
   pivotY: number;
 }
 
+/**
+ * CharAtlas: kết quả của `charAtlas`.
+ *
+ * `drawn` là nhân vật có atlas ĐANG ĐƯỢC VẼ — khác `char` được hỏi khi phải dùng nhân vật
+ * dự phòng. Vòng vẽ phải khai `drawn` cho `keepChars`, không phải tên được hỏi: khai sai thì
+ * atlas dự phòng bị coi là "không ai dùng", bị nhả giữa lúc đang hiện, và lần vẽ sau Pixi
+ * đọc `style` của nguồn ảnh đã huỷ — lỗi "reading 'addressModeU'" trong telemetry 31/10.
+ */
+export interface CharAtlas {
+  set: AnimSet;
+  fallback: boolean;
+  drawn: string;
+}
+
 class AssetStore {
   private man: Manifest | null = null;
   private readonly textures = new Map<string, Texture>();
@@ -253,10 +267,10 @@ class AssetStore {
    * atlas của 9 nhân vật kia CHƯA tải xong (nhóm `chars` tải nền). Vẽ bằng nhân vật mình đã
    * chọn là đúng tinh thần "placeholder đã có rồi đổi sang ảnh thật".
    */
-  charAtlas(char: string): { set: AnimSet; fallback: boolean } | null {
+  charAtlas(char: string): CharAtlas | null {
     const want = this.atlas(`characters/${char}`);
     if (want) {
-      return { set: want, fallback: false };
+      return { set: want, fallback: false, drawn: char };
     }
     // Yêu cầu tải ngay nhân vật đang thiếu: nó vừa xuất hiện trong khung hình nên là nhân
     // vật ĐÁNG tải trước nhất, dù nhóm `chars` đang xếp hàng theo thứ tự khác.
@@ -270,7 +284,7 @@ class AssetStore {
           this.warnedChars.add(char);
           console.warn(`chưa có atlas nhân vật "${char}" — dùng tạm "${alt}" (NETCODE_SPEC §5.1)`);
         }
-        return { set, fallback: true };
+        return { set, fallback: true, drawn: alt };
       }
     }
     return null;
