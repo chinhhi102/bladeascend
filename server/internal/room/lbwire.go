@@ -33,7 +33,9 @@ func (r *Room) lbRows(top []*game.Player) []byte {
 			ID: p.ID, Name: p.Name, Character: charIndex(r.cfg.Characters, p.Char),
 			TitleID: clampU8(p.Title), Rank: uint8(i + 1), ZoneID: clampU8(zoneOf[p.ID]),
 			Realm: clampU8(prog.Realm(p.Level)), Tier: clampU8(prog.Tier(p.Level) + 1),
-			Score: roundU32(p.Score),
+			// Điểm từ bản chụp đã giữ, CÙNG nhịp với thứ tự (heldboard.go). Uy Danh của chính
+			// mình ở HUD đi `LbHead.MyScore` — vẫn tức thời.
+			Score: roundU32(r.board.score(p.ID)),
 		}
 		if stealthy[p.ID] {
 			row.ZoneID, row.Stealth = lbZoneHidden, 1

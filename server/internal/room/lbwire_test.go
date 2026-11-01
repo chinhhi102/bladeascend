@@ -1,6 +1,8 @@
 package room
 
 import (
+	"fmt"
+	"math/rand"
 	"testing"
 
 	"bladeascend/server/internal/game"
@@ -152,11 +154,11 @@ func TestBoardOrderAndTitlesNeverDisagree(t *testing.T) {
 func TestHeldBoardNeverFreezes(t *testing.T) {
 	var b heldBoard
 	present := map[uint32]bool{1: true, 2: true, 3: true}
-	b.step([]uint32{1, 2, 3}, present, 1, 3)
+	b.step([]uint32{1, 2, 3}, nil, present, 1, 3)
 	churn := [][]uint32{{2, 1, 3}, {2, 3, 1}, {3, 2, 1}, {3, 1, 2}}
 	adopted := -1.0
 	for i, now := 0, 2.0; now < 20; i, now = i+1, now+1 {
-		b.step(churn[i%len(churn)], present, now, 3)
+		b.step(churn[i%len(churn)], nil, present, now, 3)
 		if adopted < 0 && b.held[0] != 1 {
 			adopted = now
 		}
@@ -167,21 +169,65 @@ func TestHeldBoardNeverFreezes(t *testing.T) {
 
 	// Đổi qua lại A↔B mỗi giây, quay về thứ tự đang hiện: bảng đứng yên, không nhấp nháy.
 	var c heldBoard
-	c.step([]uint32{1, 2}, present, 1, 3)
+	c.step([]uint32{1, 2}, nil, present, 1, 3)
 	for now := 2.0; now < 20; now++ {
 		live := []uint32{1, 2}
 		if int(now)%2 == 0 {
 			live = []uint32{2, 1}
 		}
-		c.step(live, present, now, 3)
+		c.step(live, nil, present, now, 3)
 		if c.held[0] != 1 {
 			t.Fatalf("giây %.0f: đổi qua lại liên tục mà bảng vẫn đổi theo — đó là nhấp nháy", now)
 		}
 	}
 
 	// Người rời phòng rút khỏi bảng NGAY, không chờ giữ.
-	b.step([]uint32{2}, map[uint32]bool{2: true}, 30, 3)
+	b.step([]uint32{2}, nil, map[uint32]bool{2: true}, 30, 3)
 	if b.rank(1) != 0 || b.rank(2) != 1 {
 		t.Fatalf("người đã rời vẫn nằm trên bảng: %v", b.held)
+	}
+}
+
+// Điểm trên bảng CÙNG nhịp với thứ tự (duyệt 1/11): 1 000 lượt đổi Uy Danh ngẫu nhiên của 12
+// người, kiểm MỖI lần gửi bảng — không bao giờ có dòng điểm thấp đứng trên dòng điểm cao.
+// Kiểm cả ở phòng thật (qua sendLeaderboards) để bắt đúng con số người chơi nhìn thấy.
+func TestBoardScoresNeverOutOfOrder(t *testing.T) {
+	m, cfg := fiveZoneRoom(t)
+	cfg.TitleHold = 3
+	conn := &lbConn{}
+	clients := []*Client{NewClient(conn, false)}
+	for i := 1; i < 12; i++ {
+		clients = append(clients, NewClient(&lbConn{}, false))
+	}
+	for i, c := range clients {
+		m.Join(c, netproto.Join{Name: fmt.Sprintf("N%d", i), Char: "a_hon"})
+	}
+	r := m.AllRooms()[0]
+	dt := 1 / float64(cfg.Net.TickHz)
+	r.Step(dt)
+	rng := rand.New(rand.NewSource(11))
+	for turn := 0; turn < 1000; turn++ {
+		// Mỗi lượt: một người ngẫu nhiên được cộng/bị đặt lại điểm — đủ để đổi hạng liên tục.
+		c := clients[rng.Intn(len(clients))]
+		if z := r.ZoneOf(c.PlayerID); z != nil {
+			if p := z.G.Players[c.PlayerID]; p != nil {
+				p.InvulnUntil = 1e9
+				p.Score = float64(rng.Intn(2000))
+			}
+		}
+		for k := 0; k < 1+rng.Intn(10); k++ {
+			r.Step(dt)
+		}
+		r.sendLeaderboards()
+		_, rows := decodeLb(t, conn.last)
+		for i := 1; i < len(rows); i++ {
+			if rows[i].Score > rows[i-1].Score {
+				t.Fatalf("lượt %d: dòng %d (%d điểm) đứng dưới dòng %d (%d điểm) nhưng điểm cao hơn",
+					turn, rows[i].Rank, rows[i].Score, rows[i-1].Rank, rows[i-1].Score)
+			}
+			if int(rows[i].TitleID) != int(rows[i].Rank) {
+				t.Fatalf("lượt %d: dòng hạng %d đeo danh hiệu %d", turn, rows[i].Rank, rows[i].TitleID)
+			}
+		}
 	}
 }
