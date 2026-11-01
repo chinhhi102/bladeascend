@@ -116,8 +116,8 @@ func (g *Game) Burning(p *Player) bool {
 	if !p.Burning || !p.Moving || p.Dead || p.InTransit(g.Time) || g.Cfg.Speed.Burn <= 0 {
 		return false
 	}
-	if p.HasStatus(StStun, g.Time) {
-		return false // đang choáng thì không Thiêu Đốt được (spec v5.5 §6.3)
+	if g.actionLocked(p) {
+		return false // đang choáng/ngủ thì không Thiêu Đốt được (spec §6.3) — và không bị trừ tu vi
 	}
 	if g.BanksTienKhi(p) {
 		return p.TienKhi > g.tienFloor(p)

@@ -130,9 +130,20 @@ func (g *Game) clampSkillCharges(p *Player) {
 }
 
 // CanCastSkill: đủ điều kiện bấm kỹ năng chưa (spec §6.3).
+//
+// Choáng và NGỦ khoá kỹ năng ("không di chuyển/kỹ năng/Thiêu Đốt" — Ru Ngủ, §6.3). Ngoại
+// lệ: Shipper — Gom Đơn "miễn mọi khống chế", nên đó chính là nút thoát khi bị choáng/ngủ
+// (§17; bot Shipper cũng dùng đúng lúc bị khống chế).
 func (g *Game) CanCastSkill(p *Player) bool {
-	return !p.Dead && p.SkillCharges > 0 && g.Time >= p.SkillReadyAt &&
-		!p.InTransit(g.Time) && !p.HasStatus(StStun, g.Time) && SkillOf(p.Char) != nil
+	if p.Dead || p.SkillCharges <= 0 || g.Time < p.SkillReadyAt || p.InTransit(g.Time) || SkillOf(p.Char) == nil {
+		return false
+	}
+	return p.Char == "shipper" || !g.actionLocked(p)
+}
+
+// actionLocked: đang choáng hoặc ngủ gục — không kỹ năng, không Thiêu Đốt (spec §6.3).
+func (g *Game) actionLocked(p *Player) bool {
+	return p.HasStatus(StStun, g.Time) || p.HasStatus(StSleep, g.Time)
 }
 
 // CastSkill dùng kỹ năng của nhân vật. Trả về false nếu chưa dùng được.
