@@ -64,7 +64,7 @@
     "co_ba_ganh": "Monta 5 barracas em arco bloqueando o caminho por 6s — quem é do seu reino ou abaixo não consegue cortá-las, e você passa por dentro. Cascas de banana na frente: pisou, escorregou e fica atordoado por 1s.",
     "su_phu_mi": "Suga um fio de miojo no inimigo mais próximo à frente: rouba 25% das espadas dele para o seu anel (máx. 20% do seu máximo, o resto cai no chão). Ninguém na frente = errou, e gasta a carga mesmo assim.",
     "be_ti": "Contrai os músculos por 4s: espadas duas vezes mais duras, imune a empurrão, lentidão, prisão e atordoamento.",
-    "shipper": "Corre 3× mais rápido por 4s: atravessa qualquer obstáculo (menos a borda da zona), remove e ignora controle, e aspira todos os orbes e itens por perto.",
+    "shipper": "Corre 3× mais rápido por 4s: atravessa qualquer obstáculo (menos a borda da zona), remove e ignora controle, e pega itens 10% mais longe.",
     "cu_rua": "Se esconde no casco por 5s: nenhuma espada quebra, ninguém te corta; ao sair, solta uma onda de empurrão."
   },
   "skillLabel": "Habilidade",
@@ -592,5 +592,6 @@
     "name": "Português",
     "flag": "🇧🇷",
     "locale": "pt-BR"
-  }
+  },
+  "statLabels": {"speed": "Veloc.", "pickup": "Coleta", "spin": "Giro", "durability": "Resist."}
 }

@@ -64,7 +64,7 @@
     "co_ba_ganh": "Set up 5 stalls in an arc to block the way for 6s — players of your realm or lower can't cut them, you walk right through. Banana peels along the stalls: step on one and slip, stunned for 1s.",
     "su_phu_mi": "Slurp a noodle at the nearest enemy in front: steal 25% of their swords into your ring (max 20% of your max swords, the rest drops). Nobody in front = miss, charge still used.",
     "be_ti": "Flex for 4s: swords twice as tough, immune to knockback, slow, root and stun.",
-    "shipper": "Run 3× faster for 4s: pass through all obstacles (except zone edges), cleanse and ignore crowd control, vacuum up every orb and item nearby.",
+    "shipper": "Run 3× faster for 4s: pass through all obstacles (except zone edges), cleanse and ignore crowd control, pick up items from 10% farther.",
     "cu_rua": "Hide in your shell for 5s: no sword breaks, can't be cut; popping out releases a knockback wave."
   },
   "skillLabel": "Skill",
@@ -592,5 +592,6 @@
     "name": "English",
     "flag": "🇬🇧",
     "locale": "en-US"
-  }
+  },
+  "statLabels": {"speed": "Speed", "pickup": "Pickup", "spin": "Spin", "durability": "Tough"}
 }

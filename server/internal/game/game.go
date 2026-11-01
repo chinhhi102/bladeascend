@@ -310,14 +310,11 @@ func (g *Game) refreshView(p *Player) {
 
 func (g *Game) BodyR(p *Player) float64 { return g.Cfg.Player.BodyR * p.Scale }
 
-// Omega is the spin rate: one revolution per rev_secs, × Tốc Kiếm.
+// Omega is the spin rate: base = một vòng mỗi rev_secs, cộng nội tại + Tốc Kiếm (+0.6) theo
+// luật §4.0, trần ×2. v6.27: ngủ gục / choáng KHÔNG dừng vòng kiếm.
 func (g *Game) Omega(p *Player) float64 {
-	w := 2 * math.Pi / math.Max(g.Cfg.Sword.RevSecs, 1e-3)
-	if p.HasBuff(BuffSpin, g.Time) {
-		w *= g.Cfg.Buffs["spin"].Mult
-	}
-	// v6.27: ngủ gục / choáng KHÔNG dừng vòng kiếm — chém trúng là chết, khoá kiếm = giết chắc.
-	return w
+	base := 2 * math.Pi / math.Max(g.Cfg.Sword.RevSecs, 1e-3)
+	return Stat(base, StatOpts{Cap: g.Cfg.Stats.SpinCap}, g.innate(p).Spin, g.buffBonus(p, BuffSpin, "spin"))
 }
 
 // Tick advances the simulation by dt seconds in the order of spec §5.

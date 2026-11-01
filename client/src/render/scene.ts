@@ -1055,8 +1055,7 @@ export class GameScene {
         break;
       }
       case 'gom_don':
-        // Vòng hút 3 U của Shipper.
-        this.skillFx.circle(e.x, e.y, sc, 'gom_don_r', 0x7ad7ff, now);
+        // v6.31: Gom Đơn không còn vòng hút 3 U (chỉ +0.1 bán kính nhặt) — không vẽ vòng phạm vi.
         sound.play('skill_gom_don', 0.6);
         break;
       case 'rut_co_burst':

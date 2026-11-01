@@ -390,6 +390,9 @@ type Skills struct {
 
 	BraceSecs       float64 `json:"brace_secs"`
 	BraceDurability float64 `json:"brace_durability"`
+	// GomDonPickup: Gom Đơn cộng ngần này base vào bán kính nhặt (spec v6.31 §6.3: +0.1),
+	// cộng dồn với cảnh giới và Nam Châm theo §4.0. Thay cho "hút 3 U" cũ.
+	GomDonPickup float64 `json:"gom_don_pickup"`
 
 	// GhostUnstickSecs: hết Giao Hỏa Tốc mà đang đứng trong vật cản thì được đẩy mượt ra
 	// chỗ trống gần nhất trong ngần này giây (spec v5.5 §6.3) — không dịch tức thời, vì
@@ -596,6 +599,8 @@ type Config struct {
 	RoomEnv     map[string]RoomEnv `json:"room_env"`
 	Bots        Bots               `json:"bots"`
 	Characters  []string           `json:"characters"`
+	Innate      map[string]Innate  `json:"innate"`
+	Stats       Stats              `json:"stats"`
 	Mood        Mood               `json:"mood"`
 	Titles      []string           `json:"titles"`
 	TitleHold   float64            `json:"title_hold_secs"`
@@ -666,6 +671,9 @@ func Load(path string) (*Config, []byte, error) {
 	if err := c.checkCooldowns(); err != nil {
 		return nil, nil, err
 	}
+	if err := c.checkInnate(); err != nil {
+		return nil, nil, err
+	}
 	return &c, raw, nil
 }
 
@@ -676,6 +684,47 @@ func (c *Config) checkCooldowns() error {
 		cd, ok := c.Skills.Cooldowns[ch]
 		if !ok || cd[0] <= 0 || cd[1] < 1 {
 			return fmt.Errorf("config: skills.cooldowns[%q] thiếu hoặc sai (cần [giây > 0, lượt ≥ 1])", ch)
+		}
+	}
+	return nil
+}
+
+// Innate: nội tại riêng của một nhân vật (spec v6.33 §6.4) — mỗi số là một KHOẢN CỘNG trên
+// base theo luật chung §4.0 (vd -0.05 = -5% base), không phải hệ số nhân.
+type Innate struct {
+	Speed      float64 `json:"speed"`
+	Pickup     float64 `json:"pickup"`
+	Spin       float64 `json:"spin"`
+	Durability float64 `json:"durability"`
+}
+
+// Sum: tổng 4 khoản — spec bắt buộc = 0 (ưu điểm đổi bằng nhược điểm).
+func (n Innate) Sum() float64 { return n.Speed + n.Pickup + n.Spin + n.Durability }
+
+// Stats: trần của các chỉ số tính theo luật cộng §4.0 (bội số của base).
+type Stats struct {
+	PickupCap float64 `json:"pickup_cap"` // bán kính nhặt ≤ ×4 base
+	SpinCap   float64 `json:"spin_cap"`   // tốc quay kiếm ≤ ×2 base
+}
+
+// innateMaxAbs: mỗi chỉ số nội tại lệch tối đa ±15% (spec §6.4).
+const innateMaxAbs = 0.15
+
+// checkInnate: đủ 10 nhân vật, mỗi số trong ±15%, tổng = 0 (spec v6.33 §6.4). Lệch một con
+// số là có nhân vật mạnh hơn hẳn trên giấy — chặn ngay lúc nạp config.
+func (c *Config) checkInnate() error {
+	for _, ch := range c.Characters {
+		n, ok := c.Innate[ch]
+		if !ok {
+			return fmt.Errorf("config: innate[%q] thiếu (spec §6.4)", ch)
+		}
+		for _, v := range []float64{n.Speed, n.Pickup, n.Spin, n.Durability} {
+			if v < -innateMaxAbs-1e-9 || v > innateMaxAbs+1e-9 {
+				return fmt.Errorf("config: innate[%q] có chỉ số %.2f ngoài ±15%%", ch, v)
+			}
+		}
+		if s := n.Sum(); s > 1e-9 || s < -1e-9 {
+			return fmt.Errorf("config: innate[%q] tổng %.2f ≠ 0 (spec §6.4)", ch, s)
 		}
 	}
 	return nil

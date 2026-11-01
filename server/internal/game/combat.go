@@ -125,9 +125,7 @@ func (g *Game) robOnKill(a, b *Player) {
 	pc := g.Cfg.Player
 	linh := b.TotalExp
 	gain := linh * g.stealShare(b)
-	if a.HasBuff(BuffExp2, g.Time) {
-		gain *= g.Cfg.Buffs["exp2"].Mult // Song Bội Đan nhân TRƯỚC khi kẹp trần
-	}
+	gain = Stat(gain, StatOpts{}, g.expBonus(a)) // Song Bội Đan cộng TRƯỚC khi kẹp trần
 	gain = math.Min(gain, g.robCapExp(a))
 	g.GainExpFrom(a, gain, false, killSource(b))
 	g.GainExpFrom(a, pc.KillBonusExp, true, killSource(b))
@@ -371,26 +369,30 @@ func (g *Game) sparseRingsTouch(a, b *Player) (Vec, bool) {
 	return Vec{}, false
 }
 
-// hardMult is the Cương Kiếm multiplier for p right now (spec v4.4 §6.2): "durability" cho
-// va kiếm, "damage" cho chém quái và vật cản. 1 khi không có buff.
-func (g *Game) hardMult(p *Player, which string) float64 {
-	// Gồng Cơ cộng dồn với Cương Kiếm (spec §6.3) — hai nguồn độ bền nhân vào nhau.
-	brace := 1.0
-	if which == "durability" && p.HasStatus(StBrace, g.Time) {
-		brace = g.Cfg.Skills.BraceDurability
+// durBonus: tổng khoản cộng độ bền kiếm khi va của p (spec v6.32 §4.0, §5.2):
+// nội tại nhân vật + Cương Kiếm (+0.5) + Gồng Cơ (+1.0) — CỘNG, không nhân dồn.
+// `D = 1.2^r × (1 + durBonus)`.
+func (g *Game) durBonus(p *Player) float64 {
+	sum := g.innate(p).Durability
+	if p.HasStatus(StBrace, g.Time) {
+		sum += Bonus(g.Cfg.Skills.BraceDurability)
 	}
+	if p.HasBuff(BuffHard, g.Time) {
+		sum += Bonus(g.Cfg.Buffs["hard"].DurabilityMult)
+	}
+	return sum
+}
+
+// hardDamageMult: Cương Kiếm làm kiếm chém quái và vật cản mạnh gấp `damage_mult` (§6.2).
+// Chỉ có MỘT nguồn nên không phải gộp; 1 khi không có buff.
+func (g *Game) hardDamageMult(p *Player) float64 {
 	if !p.HasBuff(BuffHard, g.Time) {
-		return brace
+		return 1
 	}
-	b := g.Cfg.Buffs["hard"]
-	m := b.DurabilityMult
-	if which == "damage" {
-		m = b.DamageMult
+	if m := g.Cfg.Buffs["hard"].DamageMult; m > 0 {
+		return m
 	}
-	if m <= 0 {
-		return brace
-	}
-	return m * brace
+	return 1
 }
 
 func (g *Game) clash(a, b *Player, at Vec) {
@@ -417,8 +419,8 @@ func (g *Game) clash(a, b *Player, at Vec) {
 		g.emit(Event{Kind: "RingFlip", A: a.ID, B: b.ID, N: int(a.Ring.Dir), X: float32(at.X), Y: float32(at.Y)})
 	}
 	out := ResolveClash(g.Cfg.Sword,
-		ClashSide{Realm: ra, Count: a.Ring.Count, Crack: a.Ring.Crack, DurMult: g.hardMult(a, "durability")},
-		ClashSide{Realm: rb, Count: b.Ring.Count, Crack: b.Ring.Crack, DurMult: g.hardMult(b, "durability")})
+		ClashSide{Realm: ra, Count: a.Ring.Count, Crack: a.Ring.Crack, DurBonus: g.durBonus(a)},
+		ClashSide{Realm: rb, Count: b.Ring.Count, Crack: b.Ring.Crack, DurBonus: g.durBonus(b)})
 	a.Ring.Crack, b.Ring.Crack = out.CrackA, out.CrackB
 	// v6.27: KHÔNG khống chế nào vô hiệu hoá vòng kiếm — người đang ngủ / choáng vẫn va
 	// kiếm hai chiều bình thường (bản v6.9 cho "kiếm ngủ không đánh trả", đã bỏ).
@@ -528,7 +530,7 @@ func (g *Game) hitMonsters(a *Player) {
 			continue
 		}
 		// Cương Kiếm: mỗi lần chạm gây 2 damage thay vì 1 (spec v4.4 §5.3).
-		hits = int(float64(hits) * g.hardMult(a, "damage"))
+		hits = int(float64(hits) * g.hardDamageMult(a))
 		m.HP -= hits
 		m.FleeUntil, m.FleeFrom = g.Time+g.Cfg.Monsters.FleeSecs, a.Pos
 		if m.HP <= 0 {

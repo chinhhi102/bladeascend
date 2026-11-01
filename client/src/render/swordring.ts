@@ -1,8 +1,8 @@
 import { Container, Graphics, Particle, ParticleContainer, Texture } from 'pixi.js';
 
 import { type GameConfig, realmOf } from '../config';
-import { BUFFS, statusOn } from '../net/protocol';
-import type { PlayerFrame } from '../net/state';
+import { statusOn } from '../net/protocol';
+import { omega, type PlayerFrame } from '../net/state';
 import { assets } from './assets';
 import { REALM_COLORS } from './palette';
 import { bladeLen, hiltR, ringCap, type RingGeom, ringGeom, ringOf, ringStart, slotAngle, tipDist } from './ringgeom';
@@ -13,7 +13,6 @@ const ART_FILL = 0.9; // blade art fills ~90% of its canvas height
 const GHOSTS = 2; // trailing copies per sword that fake motion blur (spec §4.1b)
 const GHOST_STEP = (7 * Math.PI) / 180;
 const MAIN_ALPHA = 0.95;
-const SPIN_BIT = 1 << BUFFS.indexOf('spin');
 // Lớp trân châu trên vòng kiếm người bị bịt mắt (v6.27 §6.3): chỉ để nhận ra, không phải số cân bằng.
 const PEARLS = 18;
 const PEARL_COLOR = 0x3b2416;
@@ -123,7 +122,8 @@ export class SwordRing {
     this.root.position.set(f.x, f.y);
     this.root.zIndex = f.y + 1;
     const t = Math.min(1, (now - this.tweenStart) / this.cfg.sword.tween_secs);
-    const spin = s.bf & SPIN_BIT ? (this.cfg.buffs.spin?.mult ?? 1) : 1;
+    // Vệt mờ theo đúng tốc quay thật (nội tại + Tốc Kiếm, luật cộng §4.0) so với base.
+    const spin = omega(this.cfg, s, f.view.char) / ((2 * Math.PI) / this.cfg.sword.rev_secs);
     this.drawBlur(g, s.tl, realm, spin);
     this.placeAll(f, t, s.tl, s.d);
     this.drawCracks(f, g);

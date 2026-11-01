@@ -33,6 +33,31 @@ function cooldownText(cfg: GameConfig, char: string): string {
   return cd ? STR.skillCooldown(cd[0], cd[1]) : '';
 }
 
+const STAT_KEYS = ['speed', 'pickup', 'spin', 'durability'] as const;
+
+/**
+ * statBars: 4 thanh nội tại (Tốc · Nhặt · Quay · Bền) của nhân vật — spec v6.33 §6.4. Thanh
+ * mọc từ giữa: dương sang phải (xanh), âm sang trái (đỏ). Nửa thanh = mức lệch lớn nhất có
+ * trong config, để thanh dài nhất luôn chạm mép mà không phải ghi cứng "15%".
+ */
+function statBars(cfg: GameConfig, char: string): HTMLElement {
+  const all = Object.values(cfg.innate ?? {}).flatMap((n) => STAT_KEYS.map((k) => Math.abs(n[k])));
+  const span = Math.max(0.01, ...all);
+  const inn = cfg.innate?.[char];
+  const row = h('div', 'preview-stats');
+  for (const k of STAT_KEYS) {
+    const v = inn?.[k] ?? 0;
+    const pct = Math.round(v * 100);
+    const fill = h('span', `stat-fill ${v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero'}`);
+    fill.style.width = `${(Math.abs(v) / span) * 50}%`;
+    row.append(h('span', 'stat',
+      h('span', 'stat-label', STR.statLabels[k]),
+      h('span', 'stat-bar', fill),
+      h('span', `stat-val ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}`, pct > 0 ? `+${pct}%` : `${pct}%`)));
+  }
+  return row;
+}
+
 export function guestId(): string {
   let id = lsGet(LS_GUEST);
   if (!id) {
@@ -96,7 +121,7 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
 
   // Khung xem trước: ảnh to + tên + KỸ NĂNG của nhân vật đang chọn.
   //
-  // Mười nhân vật chỉ khác nhau ở kỹ năng (tốc độ, máu, kiếm đều như nhau — spec §6.3), nên
+  // Mười nhân vật khác nhau chủ yếu ở kỹ năng (+ nội tại nhẹ ±15%, spec §6.4), nên
   // lưới chỉ có ảnh nhỏ + tên thì người chơi chọn mù hoàn toàn. Đưa kỹ năng ra đây là chỗ
   // DUY NHẤT họ đọc được trước khi vào trận.
   const previewArt = h('div', 'preview-art');
@@ -110,6 +135,7 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
       h('div', 'preview-name', STR.charNick[c] ? `${STR.characters[c] ?? c} — ${STR.charNick[c]}` : (STR.characters[c] ?? c)),
       h('div', 'preview-skill', `${STR.skillLabel}: ${STR.skillNames[c] ?? '—'}`),
       h('div', 'preview-cd', cooldownText(cfg, c)),
+      statBars(cfg, c),
       h('div', 'preview-desc', STR.skillDesc[c] ?? '')));
   }
   const preview = h('div', 'char-preview',

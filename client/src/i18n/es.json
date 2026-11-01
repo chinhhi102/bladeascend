@@ -64,7 +64,7 @@
     "co_ba_ganh": "Monta 5 puestos en arco que bloquean el paso 6s — quien sea de tu reino o inferior no puede cortarlos, tú pasas a través. Pieles de plátano delante: quien las pise resbala y queda aturdido 1s.",
     "su_phu_mi": "Sorbe un fideo hacia el enemigo más cercano delante: le robas el 25% de sus espadas para tu anillo (máx. 20% de tu máximo, el resto cae al suelo). Si no hay nadie delante, fallas y gastas la carga igual.",
     "be_ti": "Saca músculo 4s: espadas el doble de duras, inmune a empujones, ralentización, inmovilización y aturdimiento.",
-    "shipper": "Corre 3× más rápido 4s: atraviesa todos los obstáculos (salvo el borde de la zona), elimina e ignora el control, y aspira todos los orbes y objetos cercanos.",
+    "shipper": "Corre 3× más rápido 4s: atraviesa todos los obstáculos (salvo el borde de la zona), elimina e ignora el control, y recoge objetos un 10% más lejos.",
     "cu_rua": "Métete en el caparazón 5s: no se rompen espadas, nadie te corta; al salir, sueltas una onda de empuje."
   },
   "skillLabel": "Habilidad",
@@ -592,5 +592,6 @@
     "name": "Español",
     "flag": "🇪🇸",
     "locale": "es-ES"
-  }
+  },
+  "statLabels": {"speed": "Veloc.", "pickup": "Recoger", "spin": "Giro", "durability": "Aguante"}
 }

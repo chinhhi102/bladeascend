@@ -78,24 +78,18 @@ func (g *Game) removeItem(it *Item) {
 	}
 }
 
-// PickupRadius is pickup_r × scale^pickup_scale_exp, × Nam Châm when active (spec v6.24 §6.0).
+// PickupRadius: bán kính nhặt đồ theo luật cộng §4.0 (spec v6.32):
 //
-// Không nhân thẳng scale nữa: Đại Thừa (scale 4,6) từng hút rộng gấp 4,6 lần, Nam Châm ×3
-// nữa là ×14 — tốc độ farm tăng theo cấp số trong khi EXP cần chỉ ×2 mỗi cảnh giới.
+//	90 × min(1 + nội tại + (√scale − 1) + Nam Châm + Gom Đơn, ×4)
+//
+// Không nhân thẳng scale và không nhân dồn buff: Đại Thừa có Nam Châm từng hút ×2,2 × 1,5.
+// Gom Đơn chỉ +0.1 base (v6.31), không còn "hút sạch 3 U".
 func (g *Game) PickupRadius(p *Player) float64 {
-	r := g.Cfg.Player.PickupR * math.Pow(p.Scale, g.pickupScaleExp())
-	if p.HasBuff(BuffMagnet, g.Time) {
-		r *= g.Cfg.Buffs["magnet"].Mult
-	}
-	// Gom Đơn Hỏa Tốc hút sạch mọi thứ trong 3 U (spec v6.9 §6.3).
-	//
-	// Lấy MAX chứ không nhân: `gom_don_r` đã tính theo U, mà U = `pickup_r × scale` chính
-	// là `r` lúc chưa buff. Nhân vào là 3 × (bán kính đã có cả Hút Linh) — tức Shipper cầm
-	// Hút Linh hút cả 1 350 đơn vị ở Đại Thừa, gần một phần tám bản đồ.
+	terms := []float64{g.innate(p).Pickup, g.scalePickupTerm(p), g.buffBonus(p, BuffMagnet, "magnet")}
 	if p.HasStatus(StGhost, g.Time) {
-		r = math.Max(r, g.skillRange(p, "gom_don_r"))
+		terms = append(terms, g.Cfg.Skills.GomDonPickup)
 	}
-	return r
+	return Stat(g.Cfg.Player.PickupR, StatOpts{Cap: g.Cfg.Stats.PickupCap}, terms...)
 }
 
 // CanPickUp: người này có nhặt được gì không.

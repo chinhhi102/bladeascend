@@ -1,6 +1,7 @@
 import { realmOf, type GameConfig } from '../config';
 import { lerp, type Vec } from './geom';
 import { moveStep } from './movestep.ts';
+import { bonus, innate, stat } from './stat';
 import {
   BUFFS,
   TIER_BORDER,
@@ -522,7 +523,8 @@ export class ClientWorld {
     // Tốc CỘNG trên base rồi kẹp (spec v6.25 §4.1) — cùng danh sách nguồn với
     // `Game.speedBonus`; vùng địa hình do `moveStep` cộng thêm.
     const sp = this.cfg.speed;
-    let bonus = 0;
+    // Nội tại nhân vật là một khoản cộng như mọi buff (spec v6.33 §6.4), khớp `Game.speedBonus`.
+    let bonus = innate(this.cfg, this.players.get(this.myId)?.char ?? '').speed;
     let cap = sp.cap;
     if (me.bf & (1 << BUFFS.indexOf('haste'))) {
       bonus += sp.haste;
@@ -568,7 +570,7 @@ export class ClientWorld {
     // Advance within the current input step so motion is smooth at high frame rates.
     const since = Math.min((performance.now() - this.lastSendAt) / 1000, 1 / this.cfg.net.tick_hz);
     const ahead = this.step(this.predicted, this.predictedVel, this.lastInput, s, since).pos;
-    const ringAngle = s.ph + s.d * omega(this.cfg, s) * (this.serverNow() - last.t);
+    const ringAngle = s.ph + s.d * omega(this.cfg, s, v.char) * (this.serverNow() - last.t);
     return { view: v, s, x: ahead.x + this.correction.x, y: ahead.y + this.correction.y, ringAngle };
   }
 
@@ -607,11 +609,12 @@ function bracket<T>(buf: Timed<T>[], t: number): { a: Timed<T>; b: Timed<T>; t: 
  * nó suy ra được từ `rev_secs` trong config và buff Tốc Kiếm mà client đã có sẵn, nên gửi
  * lại là lãng phí 7 byte mỗi người mỗi gói, 20 lần mỗi giây.
  */
-export function omega(cfg: GameConfig, s: PlayerState): number {
+export function omega(cfg: GameConfig, s: PlayerState, char: string): number {
   // v6.27: khống chế (kể cả ngủ) KHÔNG dừng vòng kiếm — phải khớp `Game.Omega` bên server,
   // lệch là kiếm trên màn hình quét trúng mà server không tính (cùng lớp lỗi §8.2a).
-  const spin = s.bf & (1 << BUFFS.indexOf('spin')) ? (cfg.buffs.spin?.mult ?? 1) : 1;
-  return ((2 * Math.PI) / cfg.sword.rev_secs) * spin;
+  // Luật cộng §4.0: nội tại + Tốc Kiếm, trần ×2.
+  const spin = s.bf & (1 << BUFFS.indexOf('spin')) ? bonus(cfg.buffs.spin?.mult) : 0;
+  return stat((2 * Math.PI) / cfg.sword.rev_secs, { cap: cfg.stats?.spin_cap }, innate(cfg, char).spin, spin);
 }
 
 function interpPlayer(v: PlayerView, cfg: GameConfig, rt: number): PlayerFrame {
@@ -620,6 +623,6 @@ function interpPlayer(v: PlayerView, cfg: GameConfig, rt: number): PlayerFrame {
   const jump = Math.hypot(b.s.x - a.s.x, b.s.y - a.s.y) > 600;
   const k = jump ? 1 : t;
   const base = t >= 1 ? b : a;
-  const ringAngle = base.s.ph + base.s.d * omega(cfg, base.s) * (rt - base.t);
+  const ringAngle = base.s.ph + base.s.d * omega(cfg, base.s, v.char) * (rt - base.t);
   return { view: v, s: b.s, x: lerp(a.s.x, b.s.x, k), y: lerp(a.s.y, b.s.y, k), ringAngle };
 }

@@ -7,7 +7,7 @@
     "predev": "npm run assets:build",
     "dev": "vite",
     "assets:build": "node ../tools/asset-pipeline/index.mjs",
-    "build": "npm run assets:build && npm run assets:budget && npm run check:i18n && npm run check:dead && npm run check:brand && npm run check:decode && npm run check:quality && tsc --noEmit && tsc --noEmit -p admin && vite build && npm run seo:pages && npm run build:admin",
+    "build": "npm run assets:build && npm run assets:budget && npm run check:i18n && npm run check:stat && npm run check:dead && npm run check:brand && npm run check:decode && npm run check:quality && tsc --noEmit && tsc --noEmit -p admin && vite build && npm run seo:pages && npm run build:admin",
     "preview": "vite preview",
     "assets:report": "node --no-warnings scripts/assets-report.ts",
     "assets:size": "node --no-warnings --experimental-strip-types scripts/assets-size.ts",
@@ -24,6 +24,7 @@
     "perf:report": "python3 ../tools/perf-report/report.py",
     "build:admin": "vite build -c vite.admin.config.ts",
     "dev:admin": "vite -c vite.admin.config.ts",
+    "check:stat": "node --no-warnings --experimental-strip-types scripts/stat-check.ts",
     "check:i18n": "node --no-warnings --experimental-strip-types scripts/i18n-check.ts",
     "seo:pages": "node --no-warnings --experimental-strip-types scripts/seo-pages.ts"
   },

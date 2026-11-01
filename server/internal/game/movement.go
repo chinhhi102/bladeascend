@@ -29,6 +29,7 @@ func (g *Game) frozen(p *Player) bool {
 func (g *Game) speedBonus(p *Player) (bonus, ceiling float64) {
 	sp := g.Cfg.Speed
 	ceiling = sp.Cap
+	bonus = g.innate(p).Speed // nội tại nhân vật (spec v6.33 §6.4) — một khoản cộng như mọi buff
 	if p.HasBuff(BuffHaste, g.Time) {
 		bonus += sp.Haste
 	}
@@ -47,7 +48,7 @@ func (g *Game) speedBonus(p *Player) (bonus, ceiling float64) {
 
 // speedFactor kẹp tổng vào [floor, ceiling].
 func (g *Game) speedFactor(sum, ceiling float64) float64 {
-	return geom.Clamp(1+sum, g.Cfg.Speed.Floor, ceiling)
+	return Stat(1, StatOpts{Floor: g.Cfg.Speed.Floor, Cap: ceiling}, sum)
 }
 
 // MoveSpeed: tốc độ KHÔNG tính địa hình (dùng cho gia tốc trên băng và cho test).

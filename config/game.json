@@ -469,6 +469,19 @@
       "Thím Ba Bầu"
     ]
   },
+  "innate": {
+    "a_hon":       { "speed": -0.05, "pickup":  0.10, "spin": -0.05, "durability":  0.00 },
+    "ba_tam_loa":  { "speed": -0.05, "pickup": -0.05, "spin":  0.00, "durability":  0.10 },
+    "ong_ba_vong": { "speed": -0.10, "pickup":  0.00, "spin": -0.05, "durability":  0.15 },
+    "dai_ca_dep":  { "speed": -0.10, "pickup":  0.00, "spin":  0.05, "durability":  0.05 },
+    "map_tra_sua": { "speed": -0.10, "pickup":  0.15, "spin":  0.00, "durability": -0.05 },
+    "co_ba_ganh":  { "speed":  0.10, "pickup":  0.05, "spin": -0.05, "durability": -0.10 },
+    "su_phu_mi":   { "speed":  0.00, "pickup": -0.05, "spin":  0.10, "durability": -0.05 },
+    "be_ti":       { "speed": -0.05, "pickup": -0.10, "spin":  0.05, "durability":  0.10 },
+    "shipper":     { "speed":  0.15, "pickup":  0.00, "spin": -0.05, "durability": -0.10 },
+    "cu_rua":      { "speed": -0.15, "pickup":  0.00, "spin":  0.00, "durability":  0.15 }
+  },
+  "stats": { "pickup_cap": 4.0, "spin_cap": 2.0 },
   "characters": [
     "a_hon",
     "ba_tam_loa",
@@ -547,7 +560,6 @@
       "hut_mi_cone": 5.0,
       "hut_mi_steal": 0.25,
       "hut_mi_cap_of_own_max": 0.2,
-      "gom_don_r": 3.0,
       "gom_don_secs": 4.0,
       "rut_co_wave": 2.0,
       "rut_co_push": 3.0
@@ -568,6 +580,7 @@
     "slip_secs": 1.0,
     "brace_secs": 4.0,
     "brace_durability": 2.0,
+    "gom_don_pickup": 0.1,
     "ghost_unstick_secs": 0.3,
     "blind_no_body_hit": true,
     "shell_secs": 5.0

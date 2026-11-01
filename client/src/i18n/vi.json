@@ -63,7 +63,7 @@
     "co_ba_ganh": "Bày 5 cái sạp thành vòng cung chặn đường 6 giây — người ngang cấp hoặc kém hơn không chém được, mình thì đi xuyên. Dọc chân sạp rải vỏ chuối: ai giẫm thì trượt và choáng 1 giây.",
     "su_phu_mi": "Hút một sợi mì vào địch gần nhất phía trước: cướp 25% số kiếm của họ về vòng của mình (tối đa 20% kiếm tối đa của mình, dư thì rơi xuống đất). Không ai phía trước thì hụt, vẫn mất lượt.",
     "be_ti": "Gồng 4 giây: kiếm cứng gấp đôi, miễn mọi đòn đẩy, chậm, trói và choáng.",
-    "shipper": "Chạy nhanh gấp 3 trong 4 giây: xuyên mọi vật cản (trừ biên khu), miễn và gỡ sạch khống chế, hút hết viên và vật phẩm quanh mình.",
+    "shipper": "Chạy nhanh gấp 3 trong 4 giây: xuyên mọi vật cản (trừ biên khu), miễn và gỡ sạch khống chế, nhặt đồ xa thêm 10%.",
     "cu_rua": "Rụt vào mai 5 giây: không bể kiếm, không bị chém; ra khỏi mai thì bật sóng đẩy."
   },
   "skillLabel": "Kỹ năng",
@@ -576,5 +576,6 @@
     "name": "Tiếng Việt",
     "flag": "🇻🇳",
     "locale": "vi-VN"
-  }
+  },
+  "statLabels": {"speed": "Tốc", "pickup": "Nhặt", "spin": "Quay", "durability": "Bền"}
 }

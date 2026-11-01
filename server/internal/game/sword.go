@@ -244,9 +244,9 @@ type ClashSide struct {
 	Realm int
 	Count int
 	Crack float64
-	// DurMult: hệ số độ bền từ buff (Cương Kiếm = buffs.hard.durability_mult, spec v4.4
-	// §5.2). 0 hoặc 1 đều nghĩa là không buff.
-	DurMult float64
+	// DurBonus: tổng khoản cộng độ bền (nội tại + Cương Kiếm + Gồng Cơ, spec v6.32 §4.0).
+	// 0 = không có gì.
+	DurBonus float64
 }
 
 // ClashOutcome is the number of swords each side loses and their new crack values.
@@ -280,13 +280,10 @@ func ResolveClash(c config.Sword, a, b ClashSide) ClashOutcome {
 	return out
 }
 
-// SideDurability is D = độ bền theo cảnh giới × hệ số Cương Kiếm (spec v4.4 §5.2).
+// SideDurability is D = 1.2^r × (1 + Σ khoản cộng) (spec v6.32 §4.0, §5.2).
+// Sàn 0.1 base để nội tại âm cộng với thứ gì đó lạ cũng không ra D ≤ 0 (chia cho 0 ở k).
 func SideDurability(c config.Sword, s ClashSide) float64 {
-	d := realmDurability(c, s.Realm)
-	if s.DurMult > 1 {
-		d *= s.DurMult
-	}
-	return d
+	return Stat(realmDurability(c, s.Realm), StatOpts{Floor: 0.1}, s.DurBonus)
 }
 
 // realmDurability là độ bền tuyệt đối của kiếm ở cảnh giới r.

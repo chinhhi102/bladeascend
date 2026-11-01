@@ -64,7 +64,7 @@
     "co_ba_ganh": "Pasang 5 lapak melengkung yang menghadang jalan selama 6 detik — pemain sealam atau di bawahmu tidak bisa menebasnya, kamu bisa tembus. Kulit pisang di depan lapak: siapa yang menginjak terpeleset dan pingsan 1 detik.",
     "su_phu_mi": "Seruput seutas mi ke musuh terdekat di depan: rampas 25% pedangnya ke cincinmu (maks. 20% pedang maksimalmu, sisanya jatuh ke tanah). Tidak ada orang di depan = meleset, tetap habis satu muatan.",
     "be_ti": "Pamer otot 4 detik: pedang dua kali lebih keras, kebal dorongan, lambat, ikat, dan pingsan.",
-    "shipper": "Lari 3× lebih cepat selama 4 detik: tembus semua rintangan (kecuali batas zona), kebal dan bersihkan semua kontrol, sedot semua orb dan item di sekitar.",
+    "shipper": "Lari 3× lebih cepat selama 4 detik: tembus semua rintangan (kecuali batas zona), kebal dan bersihkan semua kontrol, ambil item 10% lebih jauh.",
     "cu_rua": "Masuk tempurung 5 detik: pedang tidak patah, tidak bisa ditebas; keluar dari tempurung memicu gelombang dorong."
   },
   "skillLabel": "Skill",
@@ -592,5 +592,6 @@
     "name": "Bahasa Indonesia",
     "flag": "🇮🇩",
     "locale": "id-ID"
-  }
+  },
+  "statLabels": {"speed": "Laju", "pickup": "Ambil", "spin": "Putar", "durability": "Kuat"}
 }

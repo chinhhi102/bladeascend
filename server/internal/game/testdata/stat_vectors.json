@@ -1,0 +1,15 @@
+{
+  "_doc": "Bộ số mẫu cho hàm stat() — luật cộng spec v6.32 §4.0. Server (stat_test.go) và client (npm run check:stat) cùng chạy file này; lệch một bên là đỏ.",
+  "vectors": [
+    { "name": "base trơn",                         "base": 90,  "floor": 0,   "cap": 4, "terms": [],                        "want": 90 },
+    { "name": "spec §4.0: Shipper Đại Thừa 10, Gom Đơn + Nam Châm +0.5", "base": 90, "floor": 0, "cap": 4, "terms": [1.2360679775, 0.5, 0.1], "want": 255.24611797 },
+    { "name": "trần bán kính ×4",                  "base": 90,  "floor": 0,   "cap": 4, "terms": [2.0, 0.5, 1.0],           "want": 360 },
+    { "name": "tốc chạy kẹp trần ×2",              "base": 195, "floor": 0.4, "cap": 2, "terms": [0.4, 0.8, 0.5],           "want": 390 },
+    { "name": "tốc chạy Gom Đơn trần ×3",          "base": 195, "floor": 0.4, "cap": 3, "terms": [0.15, 2.0],               "want": 585 },
+    { "name": "tốc chạy sàn ×0.4",                 "base": 195, "floor": 0.4, "cap": 2, "terms": [-0.15, -0.4, -0.4],       "want": 78 },
+    { "name": "nội tại Cụ Rùa trên bùn",           "base": 195, "floor": 0.4, "cap": 2, "terms": [-0.15, -0.4],             "want": 87.75 },
+    { "name": "tốc quay Sư Phụ + Tốc Kiếm",        "base": 6.283185307, "floor": 0, "cap": 2, "terms": [0.10, 0.6],     "want": 10.681415022 },
+    { "name": "độ bền Bé Tí gồng + Cương Kiếm",    "base": 1.44, "floor": 0.1, "cap": 0, "terms": [0.10, 1.0, 0.5],         "want": 3.744 },
+    { "name": "EXP Song Bội Đan",                  "base": 60,  "floor": 0,   "cap": 0, "terms": [1.0],                     "want": 120 }
+  ]
+}

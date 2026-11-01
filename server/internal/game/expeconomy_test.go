@@ -38,17 +38,21 @@ func TestMonsterExpScalesWithKillerRealmOnce(t *testing.T) {
 	}
 }
 
-// §6.0 luật 2 + 3: bán kính hút = pickup_r × scale^pickup_scale_exp × Nam Châm.
+// §6.0 luật 2 + 3, §4.0: bán kính hút = 90 × (1 + nội tại + (√scale − 1) + Nam Châm) — cộng.
 func TestPickupRadiusSqrtScaleAndMagnet(t *testing.T) {
 	g := quietGame(t, nil)
-	p := g.AddPlayer(SpawnOptions{Name: "A", Char: g.Cfg.Characters[0], Level: 80, Swords: 1})
-	base := g.Cfg.Player.PickupR * math.Pow(p.Scale, g.Cfg.ExpEconomy.PickupScaleExp)
+	ch := g.Cfg.Characters[0]
+	p := g.AddPlayer(SpawnOptions{Name: "A", Char: ch, Level: 80, Swords: 1})
+	inn := g.Cfg.Innate[ch].Pickup
+	scaleTerm := math.Pow(p.Scale, g.Cfg.ExpEconomy.PickupScaleExp) - 1
+	base := g.Cfg.Player.PickupR * (1 + inn + scaleTerm)
 	if got := g.PickupRadius(p); math.Abs(got-base) > 1e-6 {
 		t.Fatalf("bán kính hút %.1f, muốn %.1f (scale %.2f)", got, base, p.Scale)
 	}
 	g.ApplyBuff(p, "magnet")
-	if got := g.PickupRadius(p); math.Abs(got-base*g.Cfg.Buffs["magnet"].Mult) > 1e-6 {
-		t.Fatalf("Nam Châm: %.1f, muốn %.1f", got, base*g.Cfg.Buffs["magnet"].Mult)
+	want := g.Cfg.Player.PickupR * (1 + inn + scaleTerm + (g.Cfg.Buffs["magnet"].Mult - 1))
+	if got := g.PickupRadius(p); math.Abs(got-want) > 1e-6 {
+		t.Fatalf("Nam Châm: %.1f, muốn %.1f (cộng trên base, không nhân dồn)", got, want)
 	}
 }
 

@@ -283,14 +283,14 @@ func TestGongCoBlocksControl(t *testing.T) {
 	if p.HasStatus(StSlow, g.Time) {
 		t.Fatal("đang gồng mà vẫn dính khống chế mới")
 	}
-	// Độ bền ×2, cộng dồn với Cương Kiếm.
-	if m := g.hardMult(p, "durability"); math.Abs(m-g.Cfg.Skills.BraceDurability) > 1e-9 {
-		t.Fatalf("độ bền khi gồng ×%.2f, muốn ×%.2f", m, g.Cfg.Skills.BraceDurability)
+	// Độ bền: Gồng Cơ +1.0, cộng (không nhân) với Cương Kiếm +0.5 và nội tại Bé Tí (spec §4.0).
+	inn := g.Cfg.Innate["be_ti"].Durability
+	if m := g.durBonus(p); math.Abs(m-(inn+1.0)) > 1e-9 {
+		t.Fatalf("khoản bền khi gồng %+.2f, muốn %+.2f", m, inn+1.0)
 	}
 	g.ApplyBuff(p, "hard")
-	want := g.Cfg.Skills.BraceDurability * g.Cfg.Buffs["hard"].DurabilityMult
-	if m := g.hardMult(p, "durability"); math.Abs(m-want) > 1e-9 {
-		t.Fatalf("gồng + Cương Kiếm ×%.2f, muốn ×%.2f (phải cộng dồn)", m, want)
+	if m := g.durBonus(p); math.Abs(m-(inn+1.5)) > 1e-9 {
+		t.Fatalf("gồng + Cương Kiếm %+.2f, muốn %+.2f (cộng, không nhân dồn)", m, inn+1.5)
 	}
 }
 

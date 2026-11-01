@@ -27,9 +27,9 @@ func TestResolveClashTable(t *testing.T) {
 		// Spec v4.4: so theo độ bền D chứ không so cảnh giới. Luyện Khí có Cương Kiếm
 		// (D = 1 × 1.5 = 1.5) CỨNG HƠN Trúc Cơ không buff (D = 1.2) → Trúc Cơ mất 1 mỗi lần,
 		// Luyện Khí chỉ nứt 1 / (1.5/1.2) = 0.8.
-		{"Luyện Khí + Cương Kiếm vs Trúc Cơ: Trúc Cơ là bên mềm", ClashSide{Realm: 0, Count: 50, Crack: 0, DurMult: 1.5}, ClashSide{Realm: 1, Count: 60, Crack: 0}, 0, 1, 0.8, 0},
+		{"Luyện Khí + Cương Kiếm vs Trúc Cơ: Trúc Cơ là bên mềm", ClashSide{Realm: 0, Count: 50, Crack: 0, DurBonus: 0.5}, ClashSide{Realm: 1, Count: 60, Crack: 0}, 0, 1, 0.8, 0},
 		// Cùng cảnh giới nhưng một bên có Cương Kiếm → bên không buff là bên mềm.
-		{"cùng Kim Đan, một bên Cương Kiếm", ClashSide{Realm: 2, Count: 60, Crack: 0, DurMult: 1.5}, ClashSide{Realm: 2, Count: 60, Crack: 0}, 0, 1, 0.6667, 0},
+		{"cùng Kim Đan, một bên Cương Kiếm", ClashSide{Realm: 2, Count: 60, Crack: 0, DurBonus: 0.5}, ClashSide{Realm: 2, Count: 60, Crack: 0}, 0, 1, 0.6667, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

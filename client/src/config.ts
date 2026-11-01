@@ -23,6 +23,14 @@ export interface BuffCfg {
   visible_alpha?: number; // Ẩn Thân: độ đậm khi bị nhìn từ xa (spec §6.2)
 }
 
+/** Nội tại nhân vật (spec v6.33 §6.4): khoản cộng trên base, tổng = 0. */
+export interface InnateCfg {
+  speed: number;
+  pickup: number;
+  spin: number;
+  durability: number;
+}
+
 export interface GameConfig {
   cultivation: {
     realms: string[];
@@ -67,6 +75,8 @@ export interface GameConfig {
   speed: SpeedCfg;
   burn: { exp_frac_per_sec: number; keep_realm: boolean };
   buffs: Record<string, BuffCfg>;
+  innate?: Record<string, InnateCfg>;
+  stats?: { pickup_cap: number; spin_cap: number };
   /** Mặt băng ở Băng Nguyệt Hồ (spec §8.0): quán tính khi trượt. */
   ice: { friction: number; accel: number };
   /**

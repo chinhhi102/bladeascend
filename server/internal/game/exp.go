@@ -14,8 +14,8 @@ func (g *Game) GainExpFrom(p *Player, amount float64, boosted bool, src ExpSourc
 	if amount <= 0 || p.Dead || !g.CanAbsorbExp(p) {
 		return
 	}
-	if boosted && p.HasBuff(BuffExp2, g.Time) {
-		amount *= g.Cfg.Buffs["exp2"].Mult
+	if boosted {
+		amount = Stat(amount, StatOpts{}, g.expBonus(p))
 	}
 	before := p.TotalExp
 	g.setTotalExp(p, math.Min(p.TotalExp+amount, g.Prog.MaxExp()))

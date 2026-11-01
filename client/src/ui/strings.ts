@@ -27,6 +27,8 @@ export const STR = {
   feedbackKinds: d.feedbackKinds as Rec,
   skillNames: d.skillNames as Rec,
   skillDesc: d.skillDesc as Rec,
+  /** Nhãn 4 thanh nội tại ở trang chọn nhân vật (spec v6.33 §6.4). */
+  statLabels: d.statLabels as { speed: string; pickup: string; spin: string; durability: string },
   skillLines: d.skillLines as Rec,
   characters: d.characters as Rec,
   charactersShort: d.charactersShort as Rec,

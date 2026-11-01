@@ -36,7 +36,6 @@ var specRangesU = map[string]float64{
 	"hut_mi_cone":           5,
 	"hut_mi_steal":          0.25,
 	"hut_mi_cap_of_own_max": 0.2,
-	"gom_don_r":             3,
 	"gom_don_secs":          4,
 	"rut_co_wave":           2,
 	"rut_co_push":           3,
