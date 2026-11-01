@@ -363,3 +363,30 @@ func TestSnapshotMonsterHysteresis(t *testing.T) {
 		t.Fatal("quái quay lại sau khi đã quên mà không kèm loại: client không biết vẽ con gì")
 	}
 }
+
+// Spec v6.29 §7 / checklist §17: người thật chết → rời phòng, chờ 2 phút không tự vào lại.
+// Muốn chơi tiếp phải gửi lại `join` (nút "Chơi tiếp") và bắt đầu từ Luyện Khí 1.
+func TestDeadHumanNeverAutoRejoins(t *testing.T) {
+	m, _, _ := testManager(t)
+	cs := joinN(m, 1)
+	r := m.AllRooms()[0]
+	stepSecs(r, 1)
+	id := cs[0].PlayerID
+	p := r.Zone(0).G.Players[id]
+	p.Dead, p.DiedAt = true, r.Zone(0).G.Time
+	stepSecs(r, 120)
+	if cs[0].Room() != nil {
+		t.Fatal("chết rồi mà vẫn bị gắn lại vào phòng")
+	}
+	for _, z := range r.Zones() {
+		if _, ok := z.G.Players[id]; ok {
+			t.Fatal("nhân vật đã chết vẫn nằm trong khu sau 2 phút (hồi sinh tại chỗ?)")
+		}
+	}
+	got := m.Join(cs[0], netproto.Join{Name: "P0", Char: "a_hon"})
+	stepSecs(got, 0.1)
+	np := got.ZoneOf(cs[0].PlayerID).G.Players[cs[0].PlayerID]
+	if np == nil || np.Level != 0 || np.Dead {
+		t.Fatalf("Chơi tiếp: %+v, muốn sống ở Luyện Khí 1", np)
+	}
+}

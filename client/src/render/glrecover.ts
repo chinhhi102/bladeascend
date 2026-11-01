@@ -123,9 +123,14 @@ export function watchContextLoss(
       return; // vừa tải lại xong lại mất tiếp: máy hỏng thật, đừng quay vòng
     }
 
+    // Không có hồ sơ (chưa vào trận, hoặc đã chết — v6.29) thì không đánh dấu tự vào lại.
     const p = profile();
     try {
-      sessionStorage.setItem(KEY, JSON.stringify({ name: p?.name ?? '', char: p?.char ?? '', at: now }));
+      if (p) {
+        sessionStorage.setItem(KEY, JSON.stringify({ name: p.name, char: p.char, at: now }));
+      } else {
+        sessionStorage.removeItem(KEY);
+      }
     } catch {
       /* không lưu được thì vẫn tải lại, chỉ mất phần tự vào lại phòng */
     }

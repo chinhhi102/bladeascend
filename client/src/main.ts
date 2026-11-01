@@ -34,6 +34,7 @@ import { Hud } from './ui/hud';
 import { leaderboardScreen } from './ui/leaderboard';
 import * as feedback from './ui/feedback';
 import { STR } from './ui/strings';
+import { clearEndedRun, endedRun, saveEndedRun } from './ui/runend';
 import { summaryScreen } from './ui/summary';
 
 /**
@@ -194,7 +195,9 @@ class App {
     // viễn nếu không làm gì. Nhớ lại tên + nhân vật rồi tải lại trang và tự vào lại phòng.
     watchContextLoss(
       this.scene.app.canvas as HTMLCanvasElement,
-      () => this.profile,
+      // Chỉ nhớ hồ sơ để tự vào lại khi người chơi CÒN SỐNG trong trận (v6.29 §7): chết rồi
+      // thì tải lại phải về màn Tổng kết, không tự vào trận mới.
+      () => (this.playing ? this.profile : null),
       (canRecover) => {
         // Gửi về server KÈM BỐI CẢNH: mất ngữ cảnh WebGL trên iPhone gần như luôn là hệ quả
         // của hết bộ nhớ GPU, nên con số `texMB` đi cùng mới nói được nguyên nhân.
@@ -210,7 +213,7 @@ class App {
       // "game tự chơi lại từ đầu" mà ta đang sửa.
       () => {
         this.telemetry?.event('webgl_context_restored', JSON.stringify(this.telemetry?.errorContext() ?? {}));
-        this.showHome();
+        this.resumeOrHome();
       },
     );
     // Bắt đầu thu số liệu NGAY khi game khởi động xong, không đợi vào trận.
@@ -221,13 +224,25 @@ class App {
     // có lấy một phiên điện thoại nào. Thiết bị hỏng nặng nhất lại là thiết bị im lặng nhất.
     void this.startTelemetry();
 
-    // Vừa tải lại vì mất đồ hoạ thì vào thẳng phòng, đừng bắt bấm lại "Vào chơi".
+    // Vừa tải lại vì mất đồ hoạ thì vào thẳng phòng, đừng bắt bấm lại "Vào chơi" — nhưng
+    // chỉ khi ván chưa kết thúc: chết rồi thì luôn quay về màn Tổng kết (v6.29 §7).
     const again = pendingRejoin();
-    if (again) {
+    if (again && !endedRun()) {
       this.join(again);
     } else {
-      this.showHome();
+      this.resumeOrHome();
     }
+  }
+
+  /** resumeOrHome: ván vừa kết thúc vì chết thì hiện lại Tổng kết, không thì về trang chủ. */
+  private resumeOrHome(): void {
+    const run = endedRun();
+    if (!run) {
+      this.showHome();
+      return;
+    }
+    this.profile = run.profile;
+    this.onDead(run.dead);
   }
 
   /** onKicked: bị mời ra hoặc bị cấm (ADMIN_SPEC §6.2). */
@@ -258,6 +273,7 @@ class App {
    * client không đoán được, và đoán sai là tải 3,2 MB vật cản của khu không dùng tới.
    */
   private join(p: Profile): void {
+    clearEndedRun();
     this.profile = p;
     sound.startMusic();
     this.telemetry?.setPhase('loading');
@@ -516,11 +532,17 @@ class App {
     this.input.enabled = false;
     this.hud.root.remove();
     const p = this.profile;
+    if (p) {
+      saveEndedRun(d, p);
+    }
     this.screens.show(
       summaryScreen(this.cfg, d, p?.char ?? '', {
         playAgain: () => p && this.join(p),
         leaderboard: () => this.showLeaderboard(() => this.onDead(d)),
-        changeCharacter: () => this.showHome(),
+        changeCharacter: () => {
+          clearEndedRun();
+          this.showHome();
+        },
       }),
     );
   }
