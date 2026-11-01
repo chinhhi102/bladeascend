@@ -285,18 +285,27 @@ type Leaderboard struct {
 	// Top 10, hạng và Uy Danh của mình KHÔNG còn ở đây: chúng đi gói nhị phân LbHead/LbRow
 	// (proto/schema.txt, spec §11.5 v6.19) gửi ngay sau gói này.
 	// Top1 is the leader's position for the minimap crown; absent while they are hiding.
-	Top1    bool    `msgpack:"t1,omitempty"`
-	Top1X   float32 `msgpack:"t1x,omitempty"`
-	Top1Y   float32 `msgpack:"t1y,omitempty"`
-	HasBau  bool    `msgpack:"ch,omitempty"` // a Rương Báu is on the map (or warned)
-	ChestX  float32 `msgpack:"chx,omitempty"`
-	ChestY  float32 `msgpack:"chy,omitempty"`
-	ChestIn bool    `msgpack:"chw,omitempty"` // still in the 10s warning, not spawned yet
+	Top1  bool    `msgpack:"t1,omitempty"`
+	Top1X float32 `msgpack:"t1x,omitempty"`
+	Top1Y float32 `msgpack:"t1y,omitempty"`
+	// DaoTo: vị trí mọi Đạo Tổ trong khu của người xem (spec §3.4 "hiện trên minimap của cả
+	// phòng, giống Top 1"). Núp bụi / Ẩn Thân thì không lộ — cùng luật với vương miện Top 1.
+	DaoTo   []MapMark `msgpack:"dt,omitempty"`
+	HasBau  bool      `msgpack:"ch,omitempty"` // a Rương Báu is on the map (or warned)
+	ChestX  float32   `msgpack:"chx,omitempty"`
+	ChestY  float32   `msgpack:"chy,omitempty"`
+	ChestIn bool      `msgpack:"chw,omitempty"` // still in the 10s warning, not spawned yet
 	// Đài Tiên Khí cho minimap (spec §8.5, §12.1): x, y, kind, đang sắp phun lớn.
 	Altars []AltarMark `msgpack:"al,omitempty"`
 }
 
 // AltarMark is one Đài Tiên Khí on the minimap.
+// MapMark là một chấm trên minimap.
+type MapMark struct {
+	X float32 `msgpack:"x"`
+	Y float32 `msgpack:"y"`
+}
+
 type AltarMark struct {
 	X    float32 `msgpack:"x"`
 	Y    float32 `msgpack:"y"`

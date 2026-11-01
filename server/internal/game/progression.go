@@ -115,6 +115,9 @@ func (p *Progression) IsTien(r int) bool { return r >= len(p.cfg.Realms) }
 // TienIndex is the 0-based position inside tien_realms.
 func (p *Progression) TienIndex(r int) int { return r - len(p.cfg.Realms) }
 
+// IsDaoTo: cảnh giới cuối cùng (Đạo Tổ) — hiện trên minimap cả phòng (spec §3.4).
+func (p *Progression) IsDaoTo(r int) bool { return p.IsTien(r) && p.TienIndex(r) == len(p.cfg.TienRealms)-1 }
+
 // TienCount is how many Tiên realms exist.
 func (p *Progression) TienCount() int { return len(p.cfg.TienRealms) }
 

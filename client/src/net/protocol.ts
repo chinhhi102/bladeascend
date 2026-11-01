@@ -173,6 +173,8 @@ export interface LeaderboardMsg {
   t1?: boolean;
   t1x?: number;
   t1y?: number;
+  /** dt: Đạo Tổ đang lộ diện trong khu (spec §3.4 — cả phòng săn). */
+  dt?: { x: number; y: number }[];
   ch?: boolean;
   chx?: number;
   chy?: number;

@@ -21,6 +21,7 @@ const TERRAIN: Record<string, string> = {
 const ME = '#ffe14d';
 const VIEW = 'rgba(255,255,255,0.65)';
 const CROWN = '#ffd700';
+const DAO_TO = '#c084fc'; // tím Đạo Tổ — khác vàng Top 1 để không nhầm hai mục tiêu
 const CHEST = '#ff9a3c';
 const ALTAR_SMALL = '#9fe8ff';
 const ALTAR_CENTER = '#ffd60a';
@@ -275,6 +276,11 @@ export class Minimap {
     const lb = this.lb;
     if (lb?.t1) {
       this.marker(g, (lb.t1x ?? 0) * k, (lb.t1y ?? 0) * k, px * 0.022, CROWN, '👑');
+    }
+    // Đạo Tổ (spec §3.4): cả phòng thấy để hợp sức săn. Vẽ sau vương miện, cùng chỗ thì
+    // chấm tím đè lên — Đạo Tổ là mục tiêu hiếm và đáng chú ý hơn.
+    for (const d of lb?.dt ?? []) {
+      this.marker(g, d.x * k, d.y * k, px * 0.024, DAO_TO, '☯');
     }
     // Đài Tiên Khí: 5 cái cố định, nhấp nháy khi sắp phun lớn (spec §8.5).
     for (const a of lb?.al ?? []) {

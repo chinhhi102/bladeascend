@@ -458,6 +458,7 @@ func (r *Room) sendLeaderboards() {
 				base.Top1, base.Top1X, base.Top1Y = true, float32(lead.Pos.X), float32(lead.Pos.Y)
 			}
 		}
+		base.DaoTo = daoToMarks(z.G)
 		for _, a := range z.G.AltarMarkers() {
 			base.Altars = append(base.Altars, netproto.AltarMark{X: float32(a.X), Y: float32(a.Y), Kind: a.Kind, Warn: a.Warning})
 		}
@@ -475,4 +476,20 @@ func (r *Room) sendLeaderboards() {
 			c.sendBytes(lbFrame(head, rows))
 		}
 	}
+}
+
+// daoToMarks: Đạo Tổ đang lộ diện trong khu này (spec §3.4) — núp bụi hay Ẩn Thân thì giấu,
+// như vương miện Top 1 (§12.1).
+func daoToMarks(g *game.Game) []netproto.MapMark {
+	var out []netproto.MapMark
+	for _, p := range g.Players {
+		if p.Dead || p.InTransit(g.Time) || !g.Prog.IsDaoTo(g.Prog.Realm(p.Level)) {
+			continue
+		}
+		if g.HiddenInBush(p) || p.HasBuff(game.BuffStealth, g.Time) {
+			continue
+		}
+		out = append(out, netproto.MapMark{X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+	}
+	return out
 }
