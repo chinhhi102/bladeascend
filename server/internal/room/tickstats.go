@@ -22,16 +22,40 @@ type tickStats struct {
 	ring [tickWindow]float64
 	n    int // số tick đã ghi (để biết ring đã đầy chưa)
 	at   int
+	// hotSecs: khu đã có p95 > ngưỡng cảnh báo LIÊN TỤC bao lâu (giây, bước 10 s) — cảnh báo
+	// admin "tick p95 > 3,5 ms trong 5 phút" (CHANGES v6.36 mục 5, nút thắt B21).
+	hotSecs float64
 }
 
-func (t *tickStats) add(ms float64) {
+// add ghi một tick. Mỗi lần cửa sổ quay đủ một vòng (10 s), so p95 của cửa sổ với `warnMs`:
+// vượt thì cộng 10 s vào `hotSecs`, không vượt thì đặt lại 0. warnMs ≤ 0 = tắt.
+func (t *tickStats) add(ms, warnMs float64) {
 	t.mu.Lock()
 	t.ring[t.at] = ms
 	t.at = (t.at + 1) % tickWindow
 	if t.n < tickWindow {
 		t.n++
 	}
+	full := t.at == 0 && t.n == tickWindow
 	t.mu.Unlock()
+	if !full || warnMs <= 0 {
+		return
+	}
+	_, p95 := t.snapshot() // 300 số, 10 s một lần — rẻ
+	t.mu.Lock()
+	if p95 > warnMs {
+		t.hotSecs += tickWindow / 30.0
+	} else {
+		t.hotSecs = 0
+	}
+	t.mu.Unlock()
+}
+
+// hot: số giây khu đã vượt ngưỡng liên tục.
+func (t *tickStats) hot() float64 {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.hotSecs
 }
 
 // snapshot trả về (trung bình, p95) của cửa sổ hiện tại. n == 0 thì trả 0, 0.
@@ -59,3 +83,6 @@ func (t *tickStats) snapshot() (avg, p95 float64) {
 // TickStats là số liệu tick 10 giây gần nhất của khu (trung bình, p95, tính bằng ms).
 // Gọi được từ goroutine bất kỳ.
 func (z *Zone) TickStats() (avg, p95 float64) { return z.ticks.snapshot() }
+
+// TickHotSecs: khu đã có tick p95 > `admin.tick_warn_ms` liên tục bao nhiêu giây.
+func (z *Zone) TickHotSecs() float64 { return z.ticks.hot() }

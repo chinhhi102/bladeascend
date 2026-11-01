@@ -397,7 +397,7 @@ func (r *Room) stepZone(z *Zone, dt float64) {
 	z.stepMs = z.stepMs*0.9 + float32(took)*0.1
 	// Lưu nguyên giá trị thô vào cửa sổ 10 giây để telemetry tính được p95 — trung bình
 	// trượt ở trên đã làm phẳng mất đúng những tick chậm cần tìm (xem tickstats.go).
-	z.ticks.add(took)
+	z.ticks.add(took, r.cfg.Admin.TickWarnMs)
 }
 
 func (r *Room) drainInbox() {

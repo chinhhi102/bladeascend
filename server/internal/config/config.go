@@ -431,6 +431,14 @@ type Gates struct {
 	FeedSecs     float64 `json:"feed_secs"`
 }
 
+// Admin: ngưỡng cảnh báo trên dashboard quản trị (CHANGES v6.36 mục 5).
+type Admin struct {
+	// TickWarnMs: tick p95 một khu vượt mức này LIÊN TỤC TickWarnSecs giây → cảnh báo vàng
+	// (sớm hơn mốc đỏ 4 ms của spec §9.1, để kịp hạ sàn bot trước khi người chơi thấy giật).
+	TickWarnMs   float64 `json:"tick_warn_ms"`
+	TickWarnSecs float64 `json:"tick_warn_secs"`
+}
+
 type Room struct {
 	// Zones: số khu mỗi phòng (spec §8.0). Để 1 là quay về thế giới một bản đồ như trước.
 	Zones int `json:"zones"`
@@ -624,6 +632,7 @@ type Config struct {
 	Mapgen      Mapgen             `json:"mapgen"`
 	Score       Score              `json:"score"`
 	Net         Net                `json:"net"`
+	Admin       Admin              `json:"admin"`
 }
 
 // RoomEnv: mặc định phòng/bot của một môi trường (spec v6.28 §9.5). LoadtestedHumans là

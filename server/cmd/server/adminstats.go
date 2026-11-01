@@ -32,6 +32,9 @@ type zoneStat struct {
 	Items    int     `json:"items"`
 	// BrokenObstacles: vật cản đang bị chém, chờ mọc lại (§4).
 	BrokenObstacles int `json:"broken_obstacles"`
+	// HotSecs: tick p95 > admin.tick_warn_ms liên tục bao lâu (giây). Dashboard cảnh báo khi
+	// ≥ admin.tick_warn_secs.
+	HotSecs float64 `json:"hot_secs"`
 }
 
 type roomStat struct {
@@ -56,6 +59,9 @@ type adminStats struct {
 		HeapMB     float64 `json:"heap_mb"`
 		TickAvgMax float64 `json:"tick_avg_max"`
 		TickP95Max float64 `json:"tick_p95_max"`
+		// Ngưỡng cảnh báo vàng (config `admin`) — dashboard so `hot_secs` từng khu với số này.
+		TickWarnMs   float64 `json:"tick_warn_ms"`
+		TickWarnSecs float64 `json:"tick_warn_secs"`
 	} `json:"server"`
 	// Realms: phân bố cảnh giới của NGƯỜI THẬT (§3 nhóm "Trò chơi"). Chỉ số cảnh giới →
 	// số người. Bot không tính: dashboard là để nhìn người chơi thật.
@@ -95,6 +101,7 @@ func (s *server) collectStats() adminStats {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	st.Server.Goroutines = runtime.NumGoroutine()
+	st.Server.TickWarnMs, st.Server.TickWarnSecs = s.cfg.Admin.TickWarnMs, s.cfg.Admin.TickWarnSecs
 	st.Server.HeapMB = float64(ms.HeapAlloc) / (1024 * 1024)
 
 	rooms := s.mgr.AllRooms()
@@ -135,7 +142,7 @@ func (s *server) zoneStat(r *room.Room, i int, st *adminStats) zoneStat {
 	zs := zoneStat{
 		Index: z.Index, Name: z.Name, Map: g.Map.ID,
 		Humans: z.Humans(), Bots: z.Count() - z.Humans(),
-		TickAvg: avg, TickP95: p95,
+		TickAvg: avg, TickP95: p95, HotSecs: z.TickHotSecs(),
 		Monsters: len(g.Monsters), Items: g.ItemCount(),
 		TopLevel: -1,
 	}

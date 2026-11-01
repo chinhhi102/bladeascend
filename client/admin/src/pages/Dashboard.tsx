@@ -130,6 +130,30 @@ function ZoneTicks({ s }: { s: Stats }): ReactNode {
   );
 }
 
+/**
+ * HotZones — CHANGES v6.36 mục 5 (nút thắt B21): khu có tick p95 > 3,5 ms liên tục ≥ 5 phút
+ * → cảnh báo vàng, sớm hơn mốc đỏ 4 ms để kịp hạ sàn bot ở trang Phòng & Khu.
+ */
+function HotZones({ s }: { s: Stats }): ReactNode {
+  const warnSecs = s.server.tick_warn_secs ?? 0;
+  if (warnSecs <= 0) {
+    return null;
+  }
+  const hot = (s.rooms ?? []).flatMap((r) => (r.zones ?? []).filter((z) => (z.hot_secs ?? 0) >= warnSecs).map((z) => `${r.id} · ${z.name} (${Math.round((z.hot_secs ?? 0) / 60)} phút)`));
+  if (!hot.length) {
+    return null;
+  }
+  return (
+    <Alert
+      type="warning"
+      showIcon
+      style={{ marginBottom: 12 }}
+      message={`Tick p95 > ${s.server.tick_warn_ms ?? 3.5} ms liên tục ≥ ${Math.round(warnSecs / 60)} phút: ${hot.join(' · ')}`}
+      description="Sát ngưỡng 4 ms. Cân nhắc hạ sàn bot của khu đó ở trang Phòng & Khu (áp dụng ngay)."
+    />
+  );
+}
+
 export function DashboardPage(): ReactNode {
   const { now, ago, error } = useStats();
   const bots = useFetch<BotsResp>('/api/admin/bots', 2000);
@@ -139,6 +163,7 @@ export function DashboardPage(): ReactNode {
   return (
     <div>
       {error ? <Alert type="warning" showIcon message={`Mất kết nối một nhịp: ${error}`} style={{ marginBottom: 12 }} /> : null}
+      <HotZones s={now} />
       <Typography.Text type="secondary">{`Cập nhật ${new Date(now.at * 1000).toLocaleTimeString('vi-VN')} · mũi tên so với ~1 phút trước`}</Typography.Text>
       <Group title="Người chơi" items={playerMetrics(now, bots.data?.mode ?? '')} now={now} ago={ago} />
       <Group title="Server" items={serverMetrics(now)} now={now} ago={ago} />

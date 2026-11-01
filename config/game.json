@@ -393,6 +393,7 @@
     "min_open_ratio": 0.65,
     "max_retries": 10
   },
+  "admin": { "tick_warn_ms": 3.5, "tick_warn_secs": 300 },
   "room": {
     "zones": 5,
     "max_humans": 50,

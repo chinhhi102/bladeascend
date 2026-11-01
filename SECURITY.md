@@ -13,7 +13,8 @@ client, làm sập server từ xa, lộ dữ liệu người chơi), xin báo **
    (tính năng *private vulnerability reporting*).
 2. Mô tả: lỗi là gì, cách tái hiện từng bước, ảnh hưởng tới đâu, bản build/commit bạn thử.
 
-<!-- TODO chủ dự án: thêm email riêng nếu muốn -->
+Đây là kênh duy nhất — dự án **không** dùng email cho báo cáo bảo mật. Báo cáo chỉ bạn và chủ
+dự án đọc được (tính năng đã bật từ 02/11/2026).
 
 **Xin đừng** báo lỗ hổng qua Issue, Pull Request, bình luận hay bất cứ chỗ công khai nào — như
 vậy là chỉ cho người xấu biết trước khi kịp sửa.

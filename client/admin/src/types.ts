@@ -14,6 +14,8 @@ export interface ZoneStat {
   monsters: number;
   items: number;
   broken_obstacles: number;
+  /** Tick p95 > ngưỡng cảnh báo liên tục bao lâu (giây). */
+  hot_secs?: number;
 }
 
 export interface RoomStat {
@@ -28,7 +30,7 @@ export interface Stats {
   build: string;
   uptime_secs: number;
   players: { humans: number; bots: number; rooms: number };
-  server: { goroutines: number; heap_mb: number; tick_avg_max: number; tick_p95_max: number };
+  server: { goroutines: number; heap_mb: number; tick_avg_max: number; tick_p95_max: number; tick_warn_ms?: number; tick_warn_secs?: number };
   realms: Record<string, number>;
   tien_count: number;
   rooms: RoomStat[] | null;

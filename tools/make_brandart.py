@@ -389,7 +389,7 @@ def share_card(w: int, h: int, name_vi: str, tag: str, foot: str) -> Image.Image
 #   True  → ghi thẳng vào `client/public/brand/` (cả .jpg lẫn .png).
 #
 # Chủ dự án duyệt xong thì đổi một dòng này, chạy lại tool, rồi deploy.
-SHARE_CARD_APPROVED = False
+SHARE_CARD_APPROVED = True
 
 PREVIEW = ROOT / "docs/review/og"  # chủ dự án duyệt ở đây
 
