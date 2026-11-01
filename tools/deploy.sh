@@ -53,8 +53,13 @@ restart_server() {
   # 9999 và cả lượt deploy hỏng — với một dòng lỗi "address already in use" mà người đọc
   # không nối được với việc đổi tên. Giữ dòng `kxserver` tới khi chắc không còn máy nào
   # chạy bản trước 1/11; xoá sớm thì chính lúc cần nó là lúc không có.
-  pkill -f 'bladeascend' 2>/dev/null || true
-  pkill -f 'kxserver' 2>/dev/null || true
+  #
+  # `-x` (đúng TÊN tiến trình), KHÔNG `-f` (cả dòng lệnh). Từ khi repo đổi tên thành
+  # `~/git/bladeascend`, chữ "bladeascend" nằm trong đường dẫn của MỌI lệnh chạy từ repo:
+  # `pkill -f` giết luôn chính shell gọi deploy (exit 144, không một dòng log), `npm run dev`,
+  # editor... Tên tiến trình của server là đúng tên binary `./bladeascend`.
+  pkill -x 'bladeascend' 2>/dev/null || true
+  pkill -x 'kxserver' 2>/dev/null || true
   sleep 2
   # Mật khẩu quản trị đọc từ `docs/private/admin.env` (thư mục riêng của chủ dự án, đã
   # nằm trong .gitignore từ 22/10).
