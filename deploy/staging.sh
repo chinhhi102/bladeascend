@@ -15,10 +15,10 @@ BUILD_ID="$(date +%Y%m%d_%H%M)_$(git rev-parse --short HEAD)"
 (cd client && TELEMETRY=on BUILD_ID="$BUILD_ID" npm run build)
 cp -r config maps "$OUT/"
 cp -r client/dist "$OUT/client/dist"
-# Trang quản trị nằm NGOÀI client/dist (ADMIN_SPEC §1) — server tìm ở `<client>/admin`.
-# Thiếu dòng này thì đăng nhập được nhưng /admin/ trả 500 "không đọc được trang quản trị"
-# (chủ dự án gặp 1/11, ngay lần đầu bật /admin trên staging).
-cp -r client/admin "$OUT/client/dist/admin"
+# Trang quản trị (React + antd, ADMIN_SPEC §2.1) do `npm run build` dựng sẵn vào
+# `client/dist/admin` — server tìm ở `<client>/admin` và chỉ phục vụ sau khi đăng nhập.
+# KHÔNG chép `client/admin` nữa: đó giờ là mã nguồn TSX, không chạy được trên trình duyệt.
+[ -f client/dist/admin/index.html ] || { echo "thiếu client/dist/admin/index.html — npm run build hỏng?"; exit 1; }
 # Chép `assets/dist` (bản phát hành do asset-pipeline dựng, spec §13.7), KHÔNG chép `assets/`.
 # `assets/` từ 1/11 chỉ còn `src/` (art gốc) và `dist/`; chép nguyên thì server tìm
 # `/app/assets/manifest.json` không thấy và staging chạy KHÔNG MỘT ẢNH nào.

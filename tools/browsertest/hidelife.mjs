@@ -92,7 +92,7 @@ const ctx = await br.newContext();
 await ctx.addCookies([{ name: 'kx_admin', value: cookie.split('=')[1], domain: '127.0.0.1', path: '/' }]);
 const page = await ctx.newPage();
 await page.goto(`${BASE}/admin/#board`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('#bdtbl tbody tr', { timeout: 15000 });
+await page.waitForSelector('#bdtbl tbody tr.ant-table-row', { timeout: 15000 });
 check(!(await page.evaluate(() => window.__pwned)), 'tên người chơi không chạy được mã trên trang admin');
 const hidRows = await page.locator('#bdtbl tr.hid').count();
 check(hidRows >= 1, `dòng đang ẩn hiện rõ bằng lớp .hid (${hidRows} dòng)`);
