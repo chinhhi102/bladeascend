@@ -8,32 +8,64 @@ import (
 	"bladeascend/server/internal/geom"
 )
 
-// MoveSpeed implements spec §4.1 without the zone factor.
-// Tốc độ KHÔNG phụ thuộc tu vi; chỉ buff Thần Hành (nhặt được) và Thiêu Đốt Tinh Huyết
-// (đốt EXP, §4.1c) mới tăng tốc.
-func (g *Game) MoveSpeed(p *Player) float64 {
-	s := g.Cfg.Player.MoveBase
+// Tốc độ di chuyển — spec v6.25 §4.1: mọi hệ số CỘNG trên base rồi kẹp, không nhân dồn.
+//
+//	move_speed = move_base × clamp(1 + Σ thưởng + Σ phạt, floor, cap)
+//
+// Bản cũ nhân dồn: Thần Hành × Thiêu Đốt × theo gió = ×3.78. Giờ 1 + 0.4 + 0.8 + 0.5 = 2.7,
+// kẹp về ×2. Tốc độ KHÔNG phụ thuộc tu vi.
+//
+// Phải khớp từng con số với `speedFactor` bên client (net/movestep.ts) — lệch là client dự
+// đoán sai và bị kéo về mỗi tick (§8.2a).
+
+// frozen: các khống chế ĐỨNG IM (trói, rụt mai, choáng, ngủ gục, đang hát ru) — tốc 0, không
+// áp sàn. Đọc qua bit trạng thái để client dùng CÙNG điều kiện.
+func (g *Game) frozen(p *Player) bool {
+	return p.HasStatus(StRoot, g.Time) || p.HasStatus(StShell, g.Time) || p.HasStatus(StStun, g.Time) ||
+		p.HasStatus(StSleep, g.Time) || p.HasStatus(StSing, g.Time)
+}
+
+// speedBonus: Σ thưởng/phạt KHÔNG thuộc địa hình (buff, Thiêu Đốt, kỹ năng) và trần áp dụng.
+func (g *Game) speedBonus(p *Player) (bonus, ceiling float64) {
+	sp := g.Cfg.Speed
+	ceiling = sp.Cap
 	if p.HasBuff(BuffHaste, g.Time) {
-		s *= g.Cfg.Buffs["haste"].Mult
+		bonus += sp.Haste
 	}
 	if g.Burning(p) {
-		s *= g.Cfg.Burn.Mult
+		bonus += sp.Burn
 	}
-	// Kỹ năng (spec §6.3): Gom Đơn Hỏa Tốc làm nhanh ×3; bùn và gió nghịch vẫn dùng StSlow.
 	if p.HasStatus(StSlow, g.Time) {
-		s *= g.Cfg.Zones.MudMult
+		bonus += sp.SlowStatus
 	}
 	if p.HasStatus(StGhost, g.Time) {
-		s *= g.Cfg.Skills.GhostSpeed
+		bonus += sp.GomDon
+		ceiling = sp.CapGomDon
 	}
-	// Đang hát ru thì đứng yên (spec v6.9 §6.3: "đứng yên 0.5s"). Đọc qua `StSing` chứ
-	// không qua `p.channel`: client chỉ thấy được bit trạng thái, và hai bên phải dùng
-	// CÙNG một điều kiện, nếu không thì dự đoán lệch đúng nửa giây mỗi lần dùng kỹ năng.
-	if p.HasStatus(StRoot, g.Time) || p.HasStatus(StShell, g.Time) || p.HasStatus(StStun, g.Time) ||
-		p.HasStatus(StSleep, g.Time) || p.HasStatus(StSing, g.Time) {
-		s = 0 // bị trói, rụt trong mai, choáng, ngủ gục, hoặc đang hát ru
+	return bonus, ceiling
+}
+
+// speedFactor kẹp tổng vào [floor, ceiling].
+func (g *Game) speedFactor(sum, ceiling float64) float64 {
+	return geom.Clamp(1+sum, g.Cfg.Speed.Floor, ceiling)
+}
+
+// MoveSpeed: tốc độ KHÔNG tính địa hình (dùng cho gia tốc trên băng và cho test).
+func (g *Game) MoveSpeed(p *Player) float64 {
+	if g.frozen(p) {
+		return 0
 	}
-	return s
+	bonus, ceiling := g.speedBonus(p)
+	return g.Cfg.Player.MoveBase * g.speedFactor(bonus, ceiling)
+}
+
+// MoveSpeedAt: tốc độ thật khi đi theo `dir` tại `pos` — gồm cả vùng địa hình.
+func (g *Game) MoveSpeedAt(p *Player, pos, dir Vec) float64 {
+	if g.frozen(p) {
+		return 0
+	}
+	bonus, ceiling := g.speedBonus(p)
+	return g.Cfg.Player.MoveBase * g.speedFactor(bonus+g.ZoneBonus(pos, dir), ceiling)
 }
 
 // burnFloor is the lowest total_exp Thiêu Đốt Tinh Huyết may take a player down to: the
@@ -81,7 +113,7 @@ func (g *Game) tienBurnPerSec(p *Player) float64 {
 // giới nên `TotalExp > burnFloor` luôn sai — lên Tiên giới là mất hẳn khả năng chạy nhanh
 // (xem Q24, đã được trả lời bằng chính v5.6).
 func (g *Game) Burning(p *Player) bool {
-	if !p.Burning || !p.Moving || p.Dead || p.InTransit(g.Time) || g.Cfg.Burn.Mult <= 1 {
+	if !p.Burning || !p.Moving || p.Dead || p.InTransit(g.Time) || g.Cfg.Speed.Burn <= 0 {
 		return false
 	}
 	if p.HasStatus(StStun, g.Time) {
@@ -113,9 +145,13 @@ func (g *Game) burnExp(p *Player, dt float64) {
 	g.setTotalExp(p, after)
 }
 
-// ZoneMult returns the terrain speed factor for moving along dir at pos (spec §8.3).
-func (g *Game) ZoneMult(pos Vec, dir Vec) float64 {
-	mult := 1.0
+// ZoneBonus: phần cộng/trừ tốc độ của vùng địa hình tại pos (spec §4.1, §8.3). Mỗi LOẠI
+// vùng tính một lần — đứng chỗ hai vùng bùn chồng nhau vẫn chỉ −0.4 ("cùng nguồn không cộng
+// 2 lần"). Bùn và nước cùng một nguồn.
+func (g *Game) ZoneBonus(pos Vec, dir Vec) float64 {
+	sp := g.Cfg.Speed
+	var mud, snow bool
+	wind := 0.0
 	g.QueryZones(pos, 1, func(id int) {
 		z := g.Map.Zones[id]
 		if !z.Shape.Contains(pos) {
@@ -123,31 +159,36 @@ func (g *Game) ZoneMult(pos Vec, dir Vec) float64 {
 		}
 		switch z.Kind {
 		case "mud", "water":
-			// Ao/suối làm chậm như bùn (spec §8.6 mục 4); client vẽ mặt nước gợn sóng.
-			mult *= g.Cfg.Zones.MudMult
+			mud = true // ao/suối làm chậm như bùn (spec §8.6 mục 4)
 		case "snow":
-			// Bờ tuyết quanh hồ băng (spec §8.0, khu Băng Nguyệt Hồ).
-			mult *= g.Cfg.Zones.SnowMult
+			snow = true // bờ tuyết quanh hồ băng (spec §8.0)
 		case "wind":
-			mult *= g.windMult(dir, z.WindDir)
+			wind = g.windBonus(dir, z.WindDir)
 		default:
 		}
 	})
-	return mult
+	b := wind
+	if mud {
+		b += sp.Mud
+	}
+	if snow {
+		b += sp.Snow
+	}
+	return b
 }
 
-// windMult: within wind_with_max_deg of the wind → with; beyond wind_against_min_deg → against;
-// otherwise (crosswind) unchanged (spec §8.3).
-func (g *Game) windMult(dir Vec, windDir float64) float64 {
+// windBonus: within wind_with_max_deg of the wind → with; beyond wind_against_min_deg →
+// against; otherwise (crosswind) 0 (spec §8.3).
+func (g *Game) windBonus(dir Vec, windDir float64) float64 {
 	cos := geom.Clamp(dir.Dot(geom.FromAngle(windDir)), -1, 1)
 	deg := math.Acos(cos) * 180 / math.Pi
 	switch {
 	case deg < g.Cfg.Zones.WindWithMaxDeg:
-		return g.Cfg.Zones.WindWith
+		return g.Cfg.Speed.WindWith
 	case deg > g.Cfg.Zones.WindAgainstMinDeg:
-		return g.Cfg.Zones.WindAgainst
+		return g.Cfg.Speed.WindAgain
 	default:
-		return 1
+		return 0
 	}
 }
 
@@ -185,7 +226,7 @@ func (g *Game) movePlayer(p *Player, dt float64) {
 		g.slideOnIce(p, dt)
 	} else if p.Moving {
 		dir := geom.FromAngle(p.InputAngle)
-		p.Pos = p.Pos.Add(dir.Mul(g.MoveSpeed(p) * g.ZoneMult(p.Pos, dir) * dt))
+		p.Pos = p.Pos.Add(dir.Mul(g.MoveSpeedAt(p, p.Pos, dir) * dt))
 		p.Vel = Vec{}
 	} else {
 		p.Vel = Vec{}
@@ -362,13 +403,9 @@ func (g *Game) movePlayerForTest(p *Player, dt float64) {
 		g.slideOnIce(p, dt)
 	} else if p.Moving {
 		dir := geom.FromAngle(p.InputAngle)
-		// Giao Hỏa Tốc nhân tốc độ — phần này cũng phải có ở bài đối chiếu, nếu không
-		// client dự đoán Shipper chạy ×3 mà bài kiểm vẫn báo "đạt".
-		speed := g.Cfg.Player.MoveBase
-		if p.HasStatus(StGhost, g.Time) {
-			speed *= g.Cfg.Skills.GhostSpeed
-		}
-		p.Pos = p.Pos.Add(dir.Mul(speed * g.ZoneMult(p.Pos, dir) * dt))
+		// Cùng công thức tốc độ với trận thật (gồm Gom Đơn) — nếu không client dự đoán
+		// Shipper chạy ×3 mà bài kiểm vẫn báo "đạt".
+		p.Pos = p.Pos.Add(dir.Mul(g.MoveSpeedAt(p, p.Pos, dir) * dt))
 		p.Vel = Vec{}
 	} else {
 		p.Vel = Vec{}

@@ -1,5 +1,19 @@
 // Subset of config/game.json the client needs. Fetched from GET /api/config — never hardcode numbers.
 
+export interface SpeedCfg {
+  cap: number;
+  cap_gom_don: number;
+  floor: number;
+  haste: number;
+  burn: number;
+  gom_don: number;
+  wind_with: number;
+  wind_against: number;
+  mud: number;
+  snow: number;
+  slow_status: number;
+}
+
 export interface BuffCfg {
   mult: number;
   secs: number;
@@ -47,7 +61,9 @@ export interface GameConfig {
     name_min: number;
     name_max: number;
   };
-  burn: { mult: number; exp_frac_per_sec: number; keep_realm: boolean };
+  /** Tốc độ CỘNG trên base rồi kẹp (spec v6.25 §4.1) — khớp `config.Speed` bên server. */
+  speed: SpeedCfg;
+  burn: { exp_frac_per_sec: number; keep_realm: boolean };
   buffs: Record<string, BuffCfg>;
   /** Mặt băng ở Băng Nguyệt Hồ (spec §8.0): quán tính khi trượt. */
   ice: { friction: number; accel: number };
@@ -58,7 +74,6 @@ export interface GameConfig {
    */
   skills: {
     ru_ngu_move: number;
-    ghost_speed: number;
     tran_chau_secs: number;
     /** Trần lượt Bí Kíp: thường 2, Tiên giới 3 (spec v6.5 §6.3). Nút kỹ năng vẽ theo đây. */
     max_charges: number;
@@ -73,7 +88,7 @@ export interface GameConfig {
      */
     ranges_u: Record<string, number>;
   };
-  zones: { mud_mult: number; snow_mult: number; wind_with: number; wind_against: number; wind_with_max_deg: number; wind_against_min_deg: number };
+  zones: { wind_with_max_deg: number; wind_against_min_deg: number };
   gates: { radius: number };
   items: { item_r: number; chest_warn_secs: number };
   obstacles: { occlusion_alpha: number; hard_buff_extra_tier: number; cut_hint_cooldown_secs: number };

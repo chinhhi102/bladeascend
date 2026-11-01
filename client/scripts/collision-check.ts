@@ -46,7 +46,8 @@ const cfg = loadConfigFromJSON();
 const never = (): boolean => false;
 const run = (c: Case) =>
   moveStep(cfg, fx.map, { x: c.x, y: c.y }, c.a, c.sc, c.dt, never,
-    c.gh ? cfg.skills.ghost_speed : 1, { x: c.vx, y: c.vy }, c.mv, c.gh);
+    { bonus: c.gh ? cfg.speed.gom_don : 0, cap: c.gh ? cfg.speed.cap_gom_don : cfg.speed.cap, frozen: false },
+    { x: c.vx, y: c.vy }, c.mv, c.gh);
 
 let worst = 0;
 let worstCase: Case | null = null;

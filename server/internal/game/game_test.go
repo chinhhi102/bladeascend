@@ -527,7 +527,7 @@ func TestMoveSpeedFormula(t *testing.T) {
 	}
 	// Chỉ vật phẩm (buff Thần Hành) mới tăng tốc.
 	low.Buffs[BuffHaste] = g.Time + 10
-	if s := g.MoveSpeed(low); math.Abs(s-base*g.Cfg.Buffs["haste"].Mult) > 1e-9 {
+	if s := g.MoveSpeed(low); math.Abs(s-base*(1+g.Cfg.Speed.Haste)) > 1e-9 {
 		t.Fatalf("speed khi có buff = %v", s)
 	}
 }
@@ -563,10 +563,10 @@ func TestWindAngles(t *testing.T) {
 	cases := []struct {
 		deg  float64
 		want float64
-	}{{0, 1.5}, {45, 1.5}, {90, 1}, {119, 1}, {130, 0.8}, {180, 0.8}}
+	}{{0, 0.5}, {45, 0.5}, {90, 0}, {119, 0}, {130, -0.2}, {180, -0.2}}
 	for _, c := range cases {
 		dir := Vec{X: math.Cos(c.deg * math.Pi / 180), Y: math.Sin(c.deg * math.Pi / 180)}
-		if got := g.windMult(dir, 0); got != c.want {
+		if got := g.windBonus(dir, 0); got != c.want {
 			t.Errorf("%v° off the wind → %v, want %v", c.deg, got, c.want)
 		}
 	}

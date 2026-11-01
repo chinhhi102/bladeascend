@@ -146,7 +146,7 @@ func TestSkillDurationsMatchSpec(t *testing.T) {
 		{"Gom Đơn Hỏa Tốc", g.skillNum("gom_don_secs"), 4},
 		{"Ru Ngủ Trưa ngủ", g.skillNum("ru_ngu_secs"), 2.5},
 		{"Ru Ngủ Trưa hát", g.skillNum("ru_ngu_channel"), 0.5},
-		{"Giao Hỏa Tốc tốc độ", sc.GhostSpeed, 3},
+		{"Gom Đơn trần tốc", g.Cfg.Speed.CapGomDon, 3},
 	} {
 		if c.got != c.want {
 			t.Errorf("%s = %g, spec nói %g", c.name, c.got, c.want)

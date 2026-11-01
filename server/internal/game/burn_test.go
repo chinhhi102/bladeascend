@@ -19,8 +19,8 @@ func TestBurnSpeedsUpAndCostsExp(t *testing.T) {
 	if !g.Burning(p) {
 		t.Fatal("giữ phím mà không đốt")
 	}
-	if s := g.MoveSpeed(p); math.Abs(s-base*g.Cfg.Burn.Mult) > 1e-9 {
-		t.Fatalf("tốc độ khi đốt = %v, muốn %v", s, base*g.Cfg.Burn.Mult)
+	if s := g.MoveSpeed(p); math.Abs(s-base*(1+g.Cfg.Speed.Burn)) > 1e-9 {
+		t.Fatalf("tốc độ khi đốt = %v, muốn %v", s, base*(1+g.Cfg.Speed.Burn))
 	}
 
 	before := p.TotalExp
@@ -100,14 +100,14 @@ func TestBurnAtLowestRealmStopsAtZero(t *testing.T) {
 	}
 }
 
-// Thiêu Đốt cộng dồn với buff Thần Hành.
+// Thiêu Đốt CỘNG với buff Thần Hành (v6.25 §4.1): 1 + 0.4 + 0.8 = 2.2 → kẹp trần ×2.
 func TestBurnStacksWithHaste(t *testing.T) {
 	g := quietGame(t, nil)
 	p := g.AddPlayer(SpawnOptions{Name: "P", Level: 15, Swords: 1})
 	place(g, p, Vec{X: 6000, Y: 6000}, 0)
 	g.SetInput(p.ID, 1, 0, true, true)
 	g.ApplyBuff(p, "haste")
-	want := g.Cfg.Player.MoveBase * g.Cfg.Buffs["haste"].Mult * g.Cfg.Burn.Mult
+	want := g.Cfg.Player.MoveBase * math.Min(1+g.Cfg.Speed.Haste+g.Cfg.Speed.Burn, g.Cfg.Speed.Cap)
 	if s := g.MoveSpeed(p); math.Abs(s-want) > 1e-9 {
 		t.Fatalf("tốc độ = %v, muốn %v", s, want)
 	}

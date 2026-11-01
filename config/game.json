@@ -122,8 +122,20 @@
     "name_min": 2,
     "name_max": 16
   },
+  "speed": {
+    "cap": 2.0,
+    "cap_gom_don": 3.0,
+    "floor": 0.4,
+    "haste": 0.4,
+    "burn": 0.8,
+    "gom_don": 2.0,
+    "wind_with": 0.5,
+    "wind_against": -0.2,
+    "mud": -0.4,
+    "snow": -0.2,
+    "slow_status": -0.4
+  },
   "burn": {
-    "mult": 1.8,
     "exp_frac_per_sec": 0.08,
     "tien_frac_per_sec": 0.008,
     "keep_realm": true
@@ -134,7 +146,6 @@
       "secs": 12
     },
     "haste": {
-      "mult": 1.4,
       "secs": 10
     },
     "magnet": {
@@ -297,10 +308,6 @@
     "hit_cooldown": 0.25
   },
   "zones": {
-    "mud_mult": 0.6,
-    "snow_mult": 0.8,
-    "wind_with": 1.5,
-    "wind_against": 0.8,
     "wind_with_max_deg": 60,
     "wind_against_min_deg": 120,
     "bush_reveal_r": 150,
@@ -543,7 +550,6 @@
     "slip_secs": 1.0,
     "brace_secs": 5.0,
     "brace_durability": 2.0,
-    "ghost_speed": 3.0,
     "ghost_unstick_secs": 0.3,
     "shell_secs": 5.0
   }

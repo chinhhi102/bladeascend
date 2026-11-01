@@ -519,26 +519,28 @@ export class ClientWorld {
     // và mỗi tick bị kéo về một lần — đúng cái giật §8.2a.
     const frozen = statusOn(me.st, 'root') || statusOn(me.st, 'shell') || statusOn(me.st, 'stun')
       || statusOn(me.st, 'sleep') || statusOn(me.st, 'sing');
-    let mult = 1;
+    // Tốc CỘNG trên base rồi kẹp (spec v6.25 §4.1) — cùng danh sách nguồn với
+    // `Game.speedBonus`; vùng địa hình do `moveStep` cộng thêm.
+    const sp = this.cfg.speed;
+    let bonus = 0;
+    let cap = sp.cap;
     if (me.bf & (1 << BUFFS.indexOf('haste'))) {
-      mult *= this.cfg.buffs.haste.mult;
+      bonus += sp.haste;
     }
     // Thiêu Đốt Tinh Huyết (spec §4.1c). Server dừng cộng tốc khi EXP chạm đáy cảnh giới
     // và sẽ sửa lại vị trí; ở đây chỉ cần dự đoán đúng trường hợp thường gặp.
     if (inp.burn && !frozen) {
-      mult *= this.cfg.burn.mult;
+      bonus += sp.burn;
     }
     if (statusOn(me.st, 'slow')) {
-      mult *= this.cfg.zones.mud_mult; // bùn và gió nghịch; Ru Ngủ v6.9 không còn làm chậm
+      bonus += sp.slow_status;
     }
     if (statusOn(me.st, 'ghost')) {
-      mult *= this.cfg.skills.ghost_speed;
-    }
-    if (frozen) {
-      mult = 0;
+      bonus += sp.gom_don;
+      cap = sp.cap_gom_don;
     }
     return moveStep(this.cfg, map, from, inp.angle, me.sc, dt,
-      (id: number) => this.brokenObstacles.get(id) === true, mult, vel, inp.moving,
+      (id: number) => this.brokenObstacles.get(id) === true, { bonus, cap, frozen }, vel, inp.moving,
       statusOn(me.st, 'ghost'), this.blockingStalls(me));
   }
 

@@ -105,41 +105,60 @@ export function resolveBlocking(
 
 
 /**
- * zoneMult: hệ số tốc độ của vùng địa hình đang đứng (spec §8.3) — bản port của
- * `game.ZoneMult`.
- *
- * Hai chỗ từng lệch so với server, cả hai đều làm server kéo nhân vật về mỗi tick:
- *   - Vùng **nước** cũng làm chậm như bùn (§8.6 mục 4); client trước đây chỉ xét `mud`.
- *   - Vùng bây giờ là **đa giác**, không phải hình chữ nhật — xem `contains`.
+ * SpeedTerms: phần tốc độ KHÔNG thuộc địa hình (buff, Thiêu Đốt, kỹ năng) — bản port của
+ * `Game.speedBonus`. `frozen` = khống chế đứng im (tốc 0, không áp sàn).
  */
-export function zoneMult(cfg: GameConfig, map: Pick<GameMap, 'zones'>, p: Vec, dir: Vec): number {
-  let mult = 1;
+export interface SpeedTerms {
+  bonus: number;
+  cap: number;
+  frozen: boolean;
+}
+
+/** speedFactor: clamp(1 + Σ, floor, cap) — spec v6.25 §4.1, khớp `Game.speedFactor`. */
+export function speedFactor(cfg: GameConfig, sum: number, cap: number): number {
+  return Math.max(cfg.speed.floor, Math.min(cap, 1 + sum));
+}
+
+/** plainSpeed: chạy thường, không buff — mặc định của `moveStep`. */
+export function plainSpeed(cfg: GameConfig): SpeedTerms {
+  return { bonus: 0, cap: cfg.speed.cap, frozen: false };
+}
+
+/**
+ * zoneBonus: phần cộng/trừ tốc độ của vùng địa hình tại p (spec §4.1, §8.3) — bản port của
+ * `Game.ZoneBonus`. Mỗi LOẠI vùng tính một lần (bùn chồng bùn vẫn −0.4); nước = bùn.
+ * Vùng là **đa giác**, không phải hình chữ nhật — xem `contains`.
+ */
+export function zoneBonus(cfg: GameConfig, map: Pick<GameMap, 'zones'>, p: Vec, dir: Vec): number {
+  let mud = false;
+  let snow = false;
+  let wind = 0;
   for (const z of map.zones ?? []) {
     if (!contains(z.s, p.x, p.y)) {
       continue;
     }
     if (z.k === 'mud' || z.k === 'water') {
-      mult *= cfg.zones.mud_mult;
+      mud = true;
     } else if (z.k === 'snow') {
-      mult *= cfg.zones.snow_mult;
+      snow = true;
     } else if (z.k === 'wind') {
-      mult *= windMult(cfg, dir, z.wd ?? 0);
+      wind = windBonus(cfg, dir, z.wd ?? 0);
     }
   }
-  return mult;
+  return wind + (mud ? cfg.speed.mud : 0) + (snow ? cfg.speed.snow : 0);
 }
 
-/** windMult: theo gió thì nhanh, ngược gió thì chậm, ngang gió giữ nguyên (spec §8.3). */
-export function windMult(cfg: GameConfig, dir: Vec, windDir: number): number {
+/** windBonus: theo gió thì cộng, ngược gió thì trừ, ngang gió 0 (spec §8.3). */
+export function windBonus(cfg: GameConfig, dir: Vec, windDir: number): number {
   const cos = Math.max(-1, Math.min(1, dir.x * Math.cos(windDir) + dir.y * Math.sin(windDir)));
   const deg = (Math.acos(cos) * 180) / Math.PI;
   if (deg < cfg.zones.wind_with_max_deg) {
-    return cfg.zones.wind_with;
+    return cfg.speed.wind_with;
   }
   if (deg > cfg.zones.wind_against_min_deg) {
-    return cfg.zones.wind_against;
+    return cfg.speed.wind_against;
   }
-  return 1;
+  return 0;
 }
 
 /** onIce: điểm này có nằm trên mặt băng không (spec §8.0). */
@@ -196,7 +215,7 @@ export function moveStep(
   scale: number,
   dt: number,
   broken: (id: number) => boolean,
-  speedMult = 1,
+  speed: SpeedTerms | null = null,
   vel: Vec = { x: 0, y: 0 },
   moving = true,
   ghost = false,
@@ -232,15 +251,19 @@ export function moveStep(
     }
     return out;
   };
+  const terms = speed ?? plainSpeed(cfg);
+  // Trên băng: gia tốc nhân theo tốc KHÔNG tính địa hình, như `slideOnIce` (MoveSpeed/base).
+  const iceMult = terms.frozen ? 0 : speedFactor(cfg, terms.bonus, terms.cap);
   if (onIce(map, from)) {
-    const step = iceStep(cfg, from, vel, angle, moving, dt, speedMult);
+    const step = iceStep(cfg, from, vel, angle, moving, dt, iceMult);
     return { pos: settle(step.pos), vel: step.vel };
   }
   if (!moving) {
     return { pos: settle(from), vel: { x: 0, y: 0 } };
   }
   const dir = { x: Math.cos(angle), y: Math.sin(angle) };
-  const speed = cfg.player.move_base * speedMult * zoneMult(cfg, map, from, dir);
-  const to = { x: from.x + dir.x * speed * dt, y: from.y + dir.y * speed * dt };
+  const mult = terms.frozen ? 0 : speedFactor(cfg, terms.bonus + zoneBonus(cfg, map, from, dir), terms.cap);
+  const v = cfg.player.move_base * mult;
+  const to = { x: from.x + dir.x * v * dt, y: from.y + dir.y * v * dt };
   return { pos: settle(to), vel: { x: 0, y: 0 } };
 }

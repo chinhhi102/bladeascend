@@ -107,7 +107,6 @@ type Player struct {
 // ExpFracPerSec is a fraction of the CURRENT tier's requirement, so the cost scales with
 // cultivation instead of being free at high realms and crippling at low ones.
 type Burn struct {
-	Mult          float64 `json:"mult"`
 	ExpFracPerSec float64 `json:"exp_frac_per_sec"`
 	// TienFracPerSec: người Tiên giới đốt **Tiên khí** thay cho EXP (spec v5.6 §4.1c) —
 	// mỗi giây ngần này phần của BƯỚC Tiên khí hiện tại. Spec §16 ghi khoá này trong khối
@@ -115,6 +114,27 @@ type Burn struct {
 	// cách config đang xếp (khối `burn` riêng), đúng như `burn_exp_per_sec` đã làm.
 	TienFracPerSec float64 `json:"tien_frac_per_sec"`
 	KeepRealm      bool    `json:"keep_realm"` // never burn below the floor of the current realm
+}
+
+// Speed: tốc độ di chuyển CỘNG trên base rồi kẹp (spec v6.25 §4.1):
+//
+//	move_speed = move_base × clamp(1 + Σ thưởng + Σ phạt, floor, cap)
+//
+// Mỗi nguồn cộng đúng một lần (hai vùng bùn chồng nhau vẫn chỉ −0.4).
+type Speed struct {
+	Cap       float64 `json:"cap"`         // trần thường (×2 base)
+	CapGomDon float64 `json:"cap_gom_don"` // trần khi Shipper đang Gom Đơn (×3)
+	Floor     float64 `json:"floor"`       // sàn khi bị làm chậm (không áp cho khống chế đứng im)
+	Haste     float64 `json:"haste"`       // Thần Hành
+	Burn      float64 `json:"burn"`        // Thiêu Đốt Tinh Huyết
+	GomDon    float64 `json:"gom_don"`     // Gom Đơn Hỏa Tốc
+	WindWith  float64 `json:"wind_with"`
+	WindAgain float64 `json:"wind_against"`
+	Mud       float64 `json:"mud"`  // bùn + nước
+	Snow      float64 `json:"snow"` // bờ tuyết
+	// SlowStatus: trạng thái "chậm" do kỹ năng (spec: "theo kỹ năng"). Hiện chưa kỹ năng nào
+	// gây chậm; giữ khoá để kỹ năng sau dùng, cùng mức với bùn.
+	SlowStatus float64 `json:"slow_status"`
 }
 
 type Buff struct {
@@ -362,7 +382,6 @@ type Skills struct {
 	BraceSecs       float64 `json:"brace_secs"`
 	BraceDurability float64 `json:"brace_durability"`
 
-	GhostSpeed float64 `json:"ghost_speed"`
 	// GhostUnstickSecs: hết Giao Hỏa Tốc mà đang đứng trong vật cản thì được đẩy mượt ra
 	// chỗ trống gần nhất trong ngần này giây (spec v5.5 §6.3) — không dịch tức thời, vì
 	// nhảy một phát là client thấy giật y như lỗi §8.2a vừa sửa xong.
@@ -372,11 +391,6 @@ type Skills struct {
 }
 
 type Zones struct {
-	// SnowMult: bờ tuyết ở Băng Nguyệt Hồ làm chậm (spec §8.0). Cùng cơ chế với bùn.
-	SnowMult            float64 `json:"snow_mult"`
-	MudMult             float64 `json:"mud_mult"`
-	WindWith            float64 `json:"wind_with"`
-	WindAgainst         float64 `json:"wind_against"`
 	WindWithMaxDeg      float64 `json:"wind_with_max_deg"`
 	WindAgainstMinDeg   float64 `json:"wind_against_min_deg"`
 	BushRevealR         float64 `json:"bush_reveal_r"`
@@ -553,6 +567,7 @@ type Config struct {
 	Cultivation Cultivation     `json:"cultivation"`
 	Sword       Sword           `json:"sword"`
 	Player      Player          `json:"player"`
+	Speed       Speed           `json:"speed"`
 	Burn        Burn            `json:"burn"`
 	Buffs       map[string]Buff `json:"buffs"`
 	Items       Items           `json:"items"`
