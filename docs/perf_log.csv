@@ -43,3 +43,6 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 22,2026-11-01,b402f80,"Respawn: AOI trễ áp cả trạng thái — WANDER 4 tab×120s",WANDER,,,,,,,,,,,,,,0,0.25,,,,,,,,"trước 31 (3.88/phút-tab, quái 28) → sau 2 (do Despawn đúng luật)",
 22,2026-11-01,b402f80,"Giá băng thông của AOI trễ (cùng máy, trước 1.35/2.30 · 3.4 KB/s · 3.6 KB)",S1,1.41,2.37,,4.1,,4.0,0.00,,,,,,,,,,,,,,,,"trước: tick 1.35/2.30, 3.4 KB/s, gói 3.6 KB",1
 23,2026-11-01,477e84f,"Mức chất lượng: Vừa (khu 2, CPU 4x, RTX 3060)",QCOST,,,,,,,,59.9,30.0,1.65,112,3567,,,,,,,,,,,,"Cao: 59.9/29.9, 2.20 ms, 141 dc, 4451 sprite; Cao-ambient 1.75 ms",
+24,2026-11-01,a25fe91,"Phòng 50 người — staging ARM (seed 7)",S12,3.00,5.18,9,4.9,,2.4,0.00,,,,,,,,,,,,,,,,,"p95 khu nặng nhất 5.19 ms (seed 8: 4.28, seed 9: 5.16) — chưa đạt, giữ 20",
+24,2026-11-01,a25fe91,"Phòng 50 người — máy dev i5-12400F",S12,1.42,2.01,4,4.8,,2.5,0.00,,,,,,,,,,,,,,,,,"p95 khu nặng nhất 2.02 ms",
+24,2026-11-01,a25fe91,"S1 đối chứng trên staging ARM",S1,2.26,4.20,,5.3,,2.6,0.00,,,,,,,,,,,,,,,,,"khu nặng nhất p95 3.90 ms; staging có tải game thật",

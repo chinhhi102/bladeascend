@@ -21,6 +21,7 @@
 | **WANDER** | `node tools/browsertest/respawn-wander.mjs [client-dir] 120 4` | **Respawn 2 giây như người chơi gặp**: server riêng 9993, 60 bot, 4 tab đi lang thang 120 s, đọc thẳng `world.respawnBy` (tách do Despawn / do hết hạn / quái). `client-dir` trỏ vào `server/data/deploy-archive/<build>/client` để so theo build. Dao động giữa các lượt ~±10 — so khác biệt cỡ chục lần, không so 2 với 4. |
 | **QCOST** | `node tools/browsertest/qualitycost.mjs 20 --zone=2 --cpu=4 --runs=2` | **Mức chất lượng tốn ở đâu**: server riêng 9995, vào đúng một khu, CPU 4×, ép mức tay, hạ từng hiệu ứng bằng `?qf=`. FPS p1 với 2 lượt KHÔNG đủ mẫu; tin cột "cập nhật cảnh (ms)". |
 | **S8** | `node tools/browsertest/livemap.mjs <cổng>` | **Giá của trang quản trị** (ADMIN_SPEC §11): đo tick TB cao nhất khi KHÔNG ai xem bản đồ, rồi khi 2 admin xem ở 5 lần/giây, lấy hiệu. Trần 0,3 ms. |
+| **S12** | `go run ./cmd/loadtest --scenario S12 --seed 7` | **Phòng 50 người** (spec v6.22 §9.1): 50 người thật + 20 bot (bật bot tay), 10 Đạo Tổ đủ kiếm chụm, 120s. In p95 TỪNG KHU (cửa sổ 10 s tệ nhất); ngưỡng mở giới hạn 50 là mọi khu < 4 ms **trên server thật**. |
 | **S7** | `cd client && npm run assets:size` + `node tools/browsertest/loadtime.mjs <url>` | **Dung lượng tải & thời gian vào trận** (GAME_SPEC §13.7). Hai nửa: dung lượng lấy từ manifest (chính xác tuyệt đối), thời gian đo trong Chrome có bóp mạng 4 Mbps / 10 Mbps / lần 2 có cache. |
 
 Mỗi kịch bản chạy **3 lần**, ghi trung vị. Cùng máy, cùng commit build, đóng ứng dụng nặng khác.
@@ -97,6 +98,9 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | **22** | 2026-11-01 | `b402f80` | **Respawn 2 giây: AOI có trễ áp cả trạng thái gửi đi (người + quái)** | WANDER | – | – | – | – | – | – | – | **31 → 2** / 8 phút-tab ✅ | Respawn 3,88 → **0,25**/phút-tab; quái 28 → **0**; do hết hạn 26 → **0** | 2 lần còn lại do `Despawn` đúng luật (ra quá lề 900 rồi quay lại) |
 | 22 | 2026-11-01 | `b402f80` | Như trên — giá băng thông (cùng máy, trước/sau) | S1 | 1.35 → 1.41 ✅ / 2.30 → 2.37 ✅ | 3.4 → **4.1** / – | 3.6 → **4.0** ✅ | – | – | – | – | – | +0,7 KB/s vì gửi tiếp người/quái ngay ngoài mép | Trong ngân sách; chấp nhận để đổi lấy respawn ≈ 0 |
 | **23** | 2026-11-01 | `477e84f` | **Mức chất lượng tốn ở đâu — tắt từng thứ** (khu 2, CPU 4×, RTX 3060) | QCOST | – | – | – | 59.9 / 30.0 (Vừa) · 59.9 / 29.9 (Cao) | 1.65 (Vừa) · 2.20 (Cao) | 112 · 141 | – | – | Cao = Vừa **+0,55 ms (+33 %)**, KHÔNG gấp đôi; `ambient` chiếm ~0,45 ms | Chưa đo được máy yếu thật — xem §6 B17 |
+| **24** | 2026-11-01 | `a25fe91` | **Phòng 50 người: S12 trên staging (ARM Neoverse-N1, 4 nhân)** | S12 | 3.00 / **5.18** ❌ | 4.9 / – | 2.4 ✅ | – | – | – | – | – | Khu nặng nhất (Thiên Đình, 10 Đạo Tổ chụm) p95 **5.19 / 4.28 / 5.16 ms** (seed 7/8/9) ❌; 4 khu kia 1.6–2.3 ms | **Chưa mở 50** — giữ `max_humans` 20, Q35 |
+| 24 | 2026-11-01 | `a25fe91` | Như trên — máy dev (i5-12400F) | S12 | 1.42 / 2.01 ✅ | 4.8 / – | 2.5 ✅ | – | – | – | – | – | Thiên Đình p95 2.02 ms, khu khác ≤ 0.60 ms | Máy dev đạt, server thật không — chỉ số server thật mới tính |
+| 24 | 2026-11-01 | `a25fe91` | Đối chứng S1 trên staging (cùng máy, cùng lúc) | S1 | 2.26 / 4.20 | 5.3 / – | 2.6 ✅ | – | – | – | – | – | Thiên Đình p95 3.90 ms — 40 nhân vật đã sát ngưỡng | Staging chạy cả game thật (load 1.6) nên số này là trên máy có tải |
 
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
@@ -627,6 +631,29 @@ Cao chỉ khi ≥ 55 FPS suốt 20 s. Sửa luôn lỗi `autoQuality` nâng ngư
 Bị chặn: **chưa đo được điện thoại thật / GPU tích hợp thật** — giả lập trên RTX 3060 không nói gì
 về mục tiêu "điện thoại p50 ≥ 40 / p1 ≥ 25". Cần telemetry người thật ở build mới.
 
+### Lượt #24 — Phòng 50 người: loadtest S12 (2026-11-01, commit `a25fe91`)
+
+**Câu hỏi:** spec v6.22 §9.1 cho phép 50 người thật/phòng *nếu* `cmd/loadtest` 50 người + bot
+cho tick p95 mỗi khu < 4 ms trên server thật.
+
+**Cách đo:** kịch bản mới S12 (`--scenario S12`): 50 người thật + 20 bot (bật bot tay, vì ở
+chế độ tự động > 40 người là bot tắt), 10 Đạo Tổ 1050 kiếm đứng chụm, 120 s. `loadtest` giờ
+in p95 của từng khu theo cửa sổ 10 s (`tickstats.go`), lấy cửa sổ tệ nhất. Chạy trên máy dev
+và trên chính máy staging (binary arm64 chép lên `/tmp`, chạy xong xoá).
+
+| Máy | Tick TB / p95 cả phòng | p95 khu nặng nhất | 4 khu còn lại |
+|---|---|---|---|
+| Dev i5-12400F | 1.42 / 2.01 ms | 2.02 ms ✅ | ≤ 0.60 ms |
+| Staging Neoverse-N1 ×4 (seed 7) | 3.00 / 5.18 ms | **5.19 ms** ❌ | 1.63–2.28 ms |
+| Staging seed 8 | 2.82 / 4.63 ms | **4.28 ms** ❌ | – |
+| Staging seed 9 | 2.88 / 4.85 ms | **5.16 ms** ❌ | – |
+| Staging S1 (40 nhân vật) | 2.26 / 4.20 ms | 3.90 ms ✅ (sát) | 1.60–2.21 ms |
+
+**Kết luận:** chưa đạt trên server thật → giữ `room.max_humans = 20` (Q35). Phần vượt nằm
+gọn ở MỘT khu — khu có 10 Đạo Tổ chụm (cảnh nặng nhất của game). Bốn khu kia dư nhiều.
+Staging vừa đo vừa phục vụ game thật (load ≈ 1.6–1.9) nên con số có tải nền; đó cũng là điều
+kiện thật khi phòng 50 người chạy.
+
 ### Mẫu — copy cho mỗi lượt
 
 ```
@@ -655,6 +682,7 @@ Việc tiếp theo đề xuất: <1–3 việc, xếp theo lợi ích / công s�
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
+| B19 | **Phòng 50 người: khu có 10 Đạo Tổ chụm vượt p95 4 ms trên staging** | Chưa mở được giới hạn 50 (§9.1) | Lượt #24: S12 trên staging p95 khu nặng nhất 5.19 / 4.28 / 5.16 ms; máy dev 2.02 ms | Mở — Q35 | – |
 | B17 | **Chưa có số đo máy yếu THẬT cho mức chất lượng mặc định** | Không xác nhận được mục tiêu điện thoại p50 ≥ 40 / p1 ≥ 25, PC p1 ≥ 30 | Lượt #23: trên RTX 3060 + CPU 4× mọi mức đều 60 FPS; telemetry 31/10 lẫn phiên máy | Mở — chờ ≥ 5 phiên người thật ở build `≥ 20261101_16xx`, đọc `perfreport --real` mục 3 + 8 | – |
 | B18 | **`TestRemovalReportedEvenWhenSlotReused` chập chờn** | CI đỏ ngẫu nhiên | Trượt 1/6 lần trên code CŨ (`367eb68`), không liên quan respawn | Mở | – |
 | B1 | ItemsAdded dồn 1 gói khi camera lùi xa | Gói 38 KB, nghẽn mạng yếu | Lượt #0 | **Đóng** — gói 38.3 → 6.8 KB | #4 |
