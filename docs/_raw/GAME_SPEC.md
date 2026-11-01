@@ -4,6 +4,12 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.33:** mỗi nhân vật có nội tại riêng ±15% cho tốc chạy / bán kính nhặt / tốc quay / độ bền (tổng = 0), cộng trên base (§6.4).
+
+**Thay đổi v6.32:** luật chung mọi thưởng/phạt CỘNG trên base (bán kính nhặt, tốc chạy, tốc quay, độ bền, EXP) — không nhân dồn; Shipper +0.1 cộng dồn với Nam Châm và cảnh giới (§4.0).
+
+**Thay đổi v6.31:** Shipper Gom Đơn: bán kính nhặt đồ chỉ +10% base (bỏ hút 3 U) (§6.3).
+
 **Thay đổi v6.30:** bỏ hàng rào cân bằng theo tỉ lệ thắng tay đôi (cân bằng theo số liệu người chơi thật); Bà Tám toả tròn 360°; Ông Ba Võng thêm Trộm Kiếm 4s (kiếm không mẻ, kiếm địch bể thành của ông); sửa ví dụ Uy Danh 850 (§6.3, §11.1, trả lời Q36).
 
 **Thay đổi v6.29:** chết = hết ván: ra màn hình Tổng kết, không hồi sinh, không tự vào lại; phải bấm "Chơi tiếp" (§5.1, §7).
@@ -330,6 +336,29 @@ Mỗi cảnh giới Tiên có một thần thú, màu khớp với hào quang:
 - Chỉ người trong khung nhìn mới có VFX; người ở xa (nhỏ hơn 40 px trên màn hình) chỉ còn lớp quầng sáng.
 - Bloom filter chỉ 1 lần cho cả `vfxLayer`, không gắn filter riêng từng nhân vật.
 
+## 4.0 Luật chung: mọi thưởng/phạt CỘNG trên base (v6.32)
+
+Mọi chỉ số bị ảnh hưởng bởi cảnh giới, vật phẩm, kỹ năng, địa hình đều tính:
+
+```
+giá_trị = base × (1 + Σ phần_thưởng − Σ phần_phạt)        // KHÔNG nhân các hệ số với nhau
+```
+
+- Mỗi nguồn đóng góp **một phần trăm của base**, cộng lại với nhau. Cùng một nguồn không cộng 2 lần.
+- Hệ số kiểu "× k" ghi trong bảng cũ được hiểu là **phần thưởng = k − 1** (vd Nam Châm ×1.5 → +0.5; Tốc Kiếm ×1.6 → +0.6; Song Bội Đan ×2 → +1.0; Cương Kiếm ×1.5 → +0.5; Gồng Cơ ×2 → +1.0).
+- Phần đóng góp của **cảnh giới/scale** cũng là một khoản cộng như mọi nguồn khác (vd bán kính hút: `√scale − 1`), để Luyện Khí 1 đúng bằng base.
+
+| Chỉ số | base | Các khoản cộng | Trần |
+|---|---|---|---|
+| Bán kính nhặt đồ | 90 | nội tại nhân vật (§6.4) · cảnh giới `√scale − 1` · Nam Châm +0.5 · Gom Đơn (Shipper) +0.1 | ×4 base |
+| Tốc chạy | 195 | nội tại nhân vật · Thần Hành +0.4 · Thiêu Đốt +0.8 · Gom Đơn +2.0 · gió ±; bùn −0.4, tuyết −0.2 | ×2 (×3 khi Gom Đơn), sàn ×0.4 |
+| Tốc quay kiếm ω | 2π/1s | nội tại nhân vật · Tốc Kiếm +0.6 | ×2 |
+| Độ bền kiếm khi va (D) | `1.2^r` | nội tại nhân vật · Cương Kiếm +0.5 · Gồng Cơ +1.0 · (Trộm Kiếm của Ông Ba: không mẻ) | — |
+| EXP nhận | giá trị viên/quái | Song Bội Đan +1.0 | — |
+
+Ví dụ bán kính nhặt đồ của Shipper Đại Thừa 10 (scale 5) đang Gom Đơn và có Nam Châm:
+`90 × (1 + (√5 − 1) + 0.5 + 0.1) = 90 × 2.836 ≈ 255` (cách nhân dồn cũ: 90 × 2.236 × 1.5 × 1.1 ≈ 332).
+
 ## 4. Kiếm, vòng quay, tầm đánh
 
 ### 4.1a Vòng kiếm nhiều lớp (kiểu cánh quạt như quảng cáo)
@@ -435,7 +464,7 @@ Sau đó tính bể kiếm theo **độ bền kiếm**: mỗi cảnh giới ki�
 
 ```
 durability(r) = 1.2^r                      // Luyện Khí 1.0 · Trúc Cơ 1.2 · Kim Đan 1.44 · Nguyên Anh 1.73 ...
-D(người) = durability(r) × (1.5 nếu có buff Cương Kiếm)
+D(người) = durability(r) × (1 + nội_tại_bền + 0.5 nếu Cương Kiếm + 1.0 nếu Gồng Cơ)   // cộng, §4.0, §6.4
 k = D(bên cứng hơn) / D(bên mềm hơn) ≥ 1      // không buff: k = 1.2^d
 ```
 
@@ -485,8 +514,8 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 
 **Luật mới (mọi nguồn EXP phải theo)**
 1. **Giá trị viên EXP môi trường** = giá trị gốc (5 / 20 / 60) × `orb_value_mult^r`, với `orb_value_mult = 1.5` (không phải 2). EXP cần tăng ×2 mỗi cảnh giới nên mỗi cảnh giới farm lâu hơn cảnh giới trước một chút — đúng cảm giác "càng lên càng khó".
-2. **Bán kính hút đồ** = `pickup_r × sqrt(scale)` (không nhân thẳng scale). Vẫn rộng ra khi to lên nhưng không tăng tốc hút theo cấp số.
-3. **Nam Châm**: bán kính hút × **1.5** (thay ×3), 15s.
+2. **Bán kính hút đồ** = `90 × (1 + (√scale − 1) + Σ thưởng)` theo luật cộng §4.0 (không nhân thẳng scale, không nhân dồn buff). Vẫn rộng ra khi to lên nhưng không tăng tốc hút theo cấp số.
+3. **Nam Châm**: bán kính hút **+0.5 base** (cộng, §4.0), 15s.
 4. **Quái**: EXP khi hạ = giá trị gốc × `orb_value_mult^r_người_chém` (cùng hệ số, không riêng).
 5. **Cướp EXP khi chém người** (§5.1, v6.26): chém trúng = giết; người chém nhận **30%** EXP nạn nhân, trần +2 đại cảnh giới; nạn nhân là bot → 15%. Vẫn là đường lên cấp nhanh nhất — phần thưởng của giao tranh.
 6. Song Bội Đan ×2 giữ nguyên (20s, hiếm).
@@ -524,12 +553,12 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 |---|---|---|---|
 | Kiếm | +3 kiếm. Nếu đã max → +20 EXP | – | 40 |
 | Bó Kiếm | +15 kiếm (cũng là dạng rơi ra khi rớt cảnh giới/chết, khi đó chứa đúng số kiếm rơi) | – | 6 |
-| Tốc Kiếm | **Chỉ** tăng tốc độ quay: ω × 1.6. **Không** đổi chiều dài/bán kính/tầm chém | 12s | 12 |
+| Tốc Kiếm | **Chỉ** tăng tốc độ quay: ω **+0.6 base** (cộng, §4.0). **Không** đổi chiều dài/bán kính/tầm chém | 12s | 12 |
 | Thần Hành | Tốc chạy **+0.4 base** (cộng, §4.1) | 10s | 12 |
-| Nam Châm | Bán kính hút đồ × 1.5 | 15s | 8 |
-| **Cương Kiếm** (độ cứng) | Kiếm cứng hơn: độ bền khi va kiếm × 1.5 (§5.2), sát thương lên quái × 2, **chém được vật cản cao hơn 1 bậc** (§8.2) | 10s | 7 |
+| Nam Châm | Bán kính hút đồ **+0.5 base** (cộng, §4.0) | 15s | 8 |
+| **Cương Kiếm** (độ cứng) | Kiếm cứng hơn: độ bền khi va kiếm **+0.5** (cộng, §4.0, §5.2), sát thương lên quái × 2, **chém được vật cản cao hơn 1 bậc** (§8.2) | 10s | 7 |
 | Kim Cang (khiên) | Chặn 1 lần bị chém vào thân | 8s hoặc tới khi vỡ | 7 |
-| Song Bội Đan | EXP nhận × 2 | 20s | 5 |
+| Song Bội Đan | EXP nhận **+1.0** (cộng, §4.0) | 20s | 5 |
 | Ẩn Thân Phù | Tàng hình **80%**: người khác thấy mình và vòng kiếm mờ (độ đậm 20%), không thấy tên, không hiện trên minimap. Ở rất gần (120 × scale của người nhìn) thì hiện rõ 100%. Hết hiệu lực ngay khi kiếm mình chém trúng người | **5s** (tối đa, nhặt lại chỉ làm mới về 5s) | 3 |
 | **Rương Báu** (hiếm) | Người đầu tiên **chạm vào** → nổ ra 8 item ngẫu nhiên văng xung quanh | – | 1 rương mỗi 60s, báo trước toàn phòng 10s |
 
@@ -569,8 +598,8 @@ Mỗi nhân vật có **1 kỹ năng riêng**, **tự hồi** theo thời gian, 
 | Thằng Mập Trà Sữa | **Phun Trân Châu (bịt mắt)** | Phun 1 loạt trân châu hình nón 45° dài **8 U** phía trước. Người trúng **bị mù 5s**: màn hình dính đầy trân châu, **không nhặt được gì**, và **kiếm của họ không chém trúng thân bất kỳ ai** (vẫn va kiếm, vẫn mài kiếm bình thường — chỉ không giết được người). Dùng để thoát thân hoặc cứu đồng đội đang còn 1 vòng | 20s | 2 |
 | Cô Ba Gánh Hàng | **Bày Hàng Chặn Lối** | Quăng gánh bày ra **1 dãy 5 sạp hàng** hình vòng cung, cách **3 U** theo hướng đang nhắm (chuột / hướng joystick), dài **6 U**, tồn tại **6s**. Sạp là **vật cản tạm** có bậc = **cảnh giới Cô Ba + 1** (tối đa 13): người **cùng cảnh giới hoặc thấp hơn** không chém được, phải đi vòng; Cô Ba **tự đi xuyên** sạp của mình → bỏ chạy chắc chắn trước người ngang cấp. Dọc chân dãy sạp rải **vỏ chuối** rộng **1 U**: địch dẫm phải → **trượt theo quán tính 1s và choáng**. Sạp không đặt đè lên người (đoạn nào trùng người thì bỏ trống đoạn đó). Dùng để chặn đường chạy của con mồi, chắn lối vào Đài, hoặc đặt sau lưng khi bỏ chạy | 22s | 2 |
 | Sư Phụ Mì Gói | **Hút Mì Đoạt Kiếm** | Ném sợi mì vào **1 địch gần nhất** trong nón 60° dài **5 U**, rồi húp "sùn sụt": **cướp 25% số kiếm hiện có** của họ (lấy từ vòng ngoài cùng), kiếm bay dọc sợi mì về **nhập vào vòng của Sư Phụ** (không vượt tối đa; tối đa cướp = 20% kiếm tối đa của Sư Phụ). Phần cướp vượt trần thì rơi xuống đất thành Bó Kiếm. Không có ai trong nón → sợi mì hụt, vẫn mất lượt | 30s | 2 |
-| Bé Tí Cơ Bắp | **Gồng Cơ** | Gồng **4s** (giảm từ 5s — tỉ lệ thắng cũ 85%): độ bền kiếm **× 2** (cộng dồn với Cương Kiếm), không bị đẩy lùi/chậm/trói | 35s | 1 |
-| Anh Shipper Tia Chớp | **Gom Đơn Hỏa Tốc** | 4s: tốc chạy **× 3**, **đi xuyên mọi vật cản** (trừ biên), **miễn mọi khống chế** (chậm, trói, choáng, ngủ, đẩy lùi), và **hút sạch** mọi viên Linh khí / Tiên khí / vật phẩm / Bó Kiếm trong bán kính **3 U** dọc đường chạy (kể cả lúc đang bị bịt mắt). Hết giờ mà kẹt trong vật cản → đẩy mượt ra chỗ trống gần nhất 0.3s. Điểm mạnh: lao qua Đài Tiên Khí đúng lúc phun để gom, hoặc hớt xác vừa nổ Tiên khí | 20s | 2 |
+| Bé Tí Cơ Bắp | **Gồng Cơ** | Gồng **4s** (giảm từ 5s — tỉ lệ thắng cũ 85%): độ bền kiếm **× 2** (cộng với Cương Kiếm theo §4.0: cả hai = +1.5), không bị đẩy lùi/chậm/trói | 35s | 1 |
+| Anh Shipper Tia Chớp | **Gom Đơn Hỏa Tốc** | 4s: tốc chạy **+2.0 base** (trần ×3, §4.1), **đi xuyên mọi vật cản** (trừ biên), **miễn mọi khống chế** (chậm, trói, choáng, ngủ, đẩy lùi), và **bán kính nhặt đồ +10% base** (` +0.1 base, **cộng dồn** với cảnh giới và Nam Châm theo §4.0). Hết giờ mà kẹt trong vật cản → đẩy mượt ra chỗ trống gần nhất 0.3s. Điểm mạnh: chạy nhanh nhất game + xuyên vật cản + miễn khống chế để tới Đài / xác vừa nổ đồ trước người khác | 20s | 2 |
 | Cụ Rùa Thiền | **Rụt Cổ** | Rụt vào mai **5s**: đứng yên, **không bị bể kiếm, không bị chém thân**; ra khỏi mai bật sóng bán kính **2 U**, đẩy địch ra **3 U** | 30s | 2 |
 
 Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ hệ số:
@@ -582,7 +611,6 @@ Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ h�
 | Phun Trân Châu: nón (8 U) | 720 | 1 368 | 3 600 | 4 320 |
 | Bày Hàng: khoảng cách / độ dài dãy sạp (3 U / 6 U) | 270 / 540 | 513 / 1 026 | 1 350 / 2 700 | 1 620 / 3 240 |
 | Hút Mì: nón (5 U) | 450 | 855 | 2 250 | 2 700 |
-| Gom Đơn: bán kính hút (3 U) | 270 | 513 | 1 350 | 1 620 |
 | Rụt Cổ: sóng / đẩy (2 U / 3 U) | 180 / 270 | 342 / 513 | 900 / 1 350 | 1 080 / 1 620 |
 
 
@@ -604,6 +632,29 @@ Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ h�
 - Mỗi kỹ năng có câu thoại tấu hài khi dùng (bong bóng thoại) + SFX riêng.
 - Bot dùng kỹ năng khi có lượt, theo luật đơn giản (vd Cụ Rùa dùng Rụt Cổ khi còn 1 vòng và có địch gần; Bà Tám dùng Loa khi địch trong nón; Ông Ba Võng dùng Ru Ngủ khi ≥ 1 địch trong 4 U đang va kiếm với mình; Sư Phụ Mì dùng khi có địch nhiều kiếm trong nón; Shipper dùng khi Đài sắp phun / có Tiên khí rơi trong 8 U / bị khống chế; Cô Ba dùng khi con mồi yếu hơn đang chạy (đặt chặn phía trước nó) hoặc khi chính mình bỏ chạy (đặt sau lưng)).
 - Server tính mọi hiệu ứng; client nhận event `SkillCast {id, skill, pos, dir}`, `SkillEffect`, `Blinded`.
+
+### 6.4 Chỉ số gốc riêng từng nhân vật (nội tại, v6.33)
+
+Mỗi nhân vật có **nội tại** chỉnh nhẹ 4 chỉ số gốc. Nội tại là **một khoản cộng** như mọi nguồn khác trong §4.0 (vd Shipper tốc chạy = 195 × (1 + 0.15 + các buff khác)).
+
+| Nhân vật | Tốc chạy | Bán kính nhặt | Tốc quay kiếm | Độ bền kiếm | Tổng | Lý do |
+|---|---|---|---|---|---|---|
+| A Hớn Bánh Bao | -5% | +10% | -5% | 0 | +0 | Tham ăn: hút đồ xa hơn; bụng phệ chạy hơi chậm. |
+| Bà Tám Loa | -5% | -5% | 0 | +10% | +0 | Lì đòn chợ búa: kiếm cứng; chen lấn chậm, mải nói nên nhặt kém. |
+| Ông Ba Võng | -10% | 0 | -5% | +15% | +0 | Lười: chạy chậm, quay chậm; da dày nên kiếm bền — hợp Trộm Kiếm. |
+| Đại Ca Dép Tổ Ong | -10% | 0 | +5% | +5% | +0 | Ra vẻ đại ca: đi khệnh khạng; kiếm quay nhanh, cứng. |
+| Thằng Mập Trà Sữa | -10% | +15% | 0 | -5% | +0 | Hút trà sữa rột rột: hút đồ xa nhất; nặng nề, kiếm hơi giòn. |
+| Cô Ba Gánh Hàng | +10% | +5% | -5% | -10% | +0 | Quen gánh chạy chợ: nhanh nhẹn, nhặt khéo; kiếm mỏng. |
+| Sư Phụ Mì Gói | 0 | -5% | +10% | -5% | +0 | Võ sư: kiếm quay nhanh nhất; mắt lé nên nhặt kém. |
+| Bé Tí Cơ Bắp | -5% | -10% | +5% | +10% | +0 | Cơ bắp: kiếm cứng, quay mạnh; chân ngắn, tay to vớ đồ kém. |
+| Anh Shipper Tia Chớp | +15% | 0 | -5% | -10% | +0 | Chạy nhanh nhất game; kiếm đồ chơi giao kèm đơn nên giòn. |
+| Cụ Rùa Thiền | -15% | 0 | 0 | +15% | +0 | Chậm nhất game; mai rùa nên kiếm bền nhất. |
+
+- **Tổng mỗi nhân vật = 0** (ưu điểm đổi bằng nhược điểm), không ai mạnh hơn hẳn trên giấy. Mỗi chỉ số lệch tối đa **±15%**.
+- Nội tại **hợp với kỹ năng**: Shipper chạy nhanh + Gom Đơn; Cụ Rùa/Ông Ba kiếm bền + kỹ năng phòng thủ/trộm kiếm; Thằng Mập/A Hớn hút xa để farm; Sư Phụ quay nhanh để mài kiếm.
+- Độ bền ở đây cộng vào hệ số độ bền khi va kiếm (§5.2): `D = 1.2^r × (1 + nội_tại_bền + Cương Kiếm + Gồng Cơ)`.
+- Trang chọn nhân vật: dưới khung chi tiết có **4 thanh chỉ số** (Tốc · Nhặt · Quay · Bền) tô xanh nếu dương, đỏ nếu âm, kèm số %, cạnh dòng "Hồi Xs · tích N lượt".
+- Cân bằng như §6.3: theo số liệu người chơi thật; chỉnh nội tại theo bước 5%, giữ tổng = 0.
 
 ## 7. Chết & màn hình chờ
 
@@ -1426,12 +1477,12 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "hit_drops_realm": true
   },
   "buffs": {
-    "spin":   { "mult": 1.6, "secs": 12 },
+    "spin":   { "bonus": 0.6, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },
-    "magnet": { "mult": 1.5, "secs": 15 },
-    "hard":   { "durability_mult": 1.5, "damage_mult": 2.0, "secs": 10 },
+    "magnet": { "bonus": 0.5, "secs": 15 },
+    "hard":   { "durability_bonus": 0.5, "damage_bonus": 1.0, "secs": 10 },
     "shield": { "secs": 8 },
-    "exp2":   { "mult": 2.0, "secs": 20 },
+    "exp2":   { "bonus": 1.0, "secs": 20 },
     "stealth":{ "secs": 5, "max_secs": 5, "visible_alpha": 0.2, "reveal_r": 120, "bot_detect_mult": 0.5 }
   },
   "items": {
@@ -1439,6 +1490,9 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "sword_item_amount": 3, "bundle_amount": 15,
     "count_per_room": 200, "respawn_secs": 3, "overcap_exp": 20, "chest_every_secs": 60, "chest_items": 8
   },
+  "stat_stacking": "additive_on_base",
+  "character_traits": {"a_hon": {"move": -0.05, "pickup": 0.1, "spin": -0.05, "durability": 0.0}, "ba_tam_loa": {"move": -0.05, "pickup": -0.05, "spin": 0.0, "durability": 0.1}, "ong_ba_vong": {"move": -0.1, "pickup": 0.0, "spin": -0.05, "durability": 0.15}, "dai_ca_dep": {"move": -0.1, "pickup": 0.0, "spin": 0.05, "durability": 0.05}, "map_tra_sua": {"move": -0.1, "pickup": 0.15, "spin": 0.0, "durability": -0.05}, "co_ba_ganh": {"move": 0.1, "pickup": 0.05, "spin": -0.05, "durability": -0.1}, "su_phu_mi": {"move": 0.0, "pickup": -0.05, "spin": 0.1, "durability": -0.05}, "be_ti": {"move": -0.05, "pickup": -0.1, "spin": 0.05, "durability": 0.1}, "shipper": {"move": 0.15, "pickup": 0.0, "spin": -0.05, "durability": -0.1}, "cu_rua": {"move": -0.15, "pickup": 0.0, "spin": 0.0, "durability": 0.15}},
+  "pickup": { "base": 90, "scale_term": "sqrt_minus_1", "cap": 4.0 },
   "exp_economy": { "orb_value_mult": 1.5, "pickup_scale_mode": "sqrt", "monster_value_mult": 1.5, "rob_share_bot_victim": 0.15, "sim_tolerance": 0.25, "magnet_max_speedup": 1.5 },
   "exp_orbs": {
     "cell": 140, "values": [5, 20, 60], "weights": [80, 18, 2],
@@ -1477,7 +1531,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "ice": { "friction": 0.92, "accel": 0.25, "snow_mult": 0.8 },
   "skills": { "key": "Space", "source": "cooldown", "start_charges": 1, "tien_extra_charges": 1, "lockout_secs": 3,
     "cooldowns": { "a_hon": [30, 2], "ba_tam_loa": [18, 2], "ong_ba_vong": [25, 2], "dai_ca_dep": [40, 1], "map_tra_sua": [20, 2], "co_ba_ganh": [22, 2], "su_phu_mi": [30, 2], "be_ti": [35, 1], "shipper": [20, 2], "cu_rua": [30, 2] },
-    "ranges_u": { "loa_radius": 6, "loa_shape": "circle", "loa_push": 6, "ru_ngu_r": 4, "ru_ngu_steal_secs": 4, "ru_ngu_secs": 2.5, "ru_ngu_channel": 0.5, "dan_em_follow": 3, "dan_em_share": 0.3, "dan_em_secs": 8, "gong_co_secs": 4, "dan_em_seek": 8, "tran_chau_cone": 8, "bay_sap_dist": 3, "bay_sap_len": 6, "bay_sap_count": 5, "bay_sap_secs": 6, "bay_sap_tier_bonus": 1, "bay_sap_owner_passes": true, "vo_chuoi_w": 1, "hut_mi_cone": 5, "hut_mi_steal": 0.25, "hut_mi_cap_of_own_max": 0.2, "gom_don_r": 3, "gom_don_secs": 4, "rut_co_wave": 2, "rut_co_push": 3 },
+    "ranges_u": { "loa_radius": 6, "loa_shape": "circle", "loa_push": 6, "ru_ngu_r": 4, "ru_ngu_steal_secs": 4, "ru_ngu_secs": 2.5, "ru_ngu_channel": 0.5, "dan_em_follow": 3, "dan_em_share": 0.3, "dan_em_secs": 8, "gong_co_secs": 4, "dan_em_seek": 8, "tran_chau_cone": 8, "bay_sap_dist": 3, "bay_sap_len": 6, "bay_sap_count": 5, "bay_sap_secs": 6, "bay_sap_tier_bonus": 1, "bay_sap_owner_passes": true, "vo_chuoi_w": 1, "hut_mi_cone": 5, "hut_mi_steal": 0.25, "hut_mi_cap_of_own_max": 0.2, "gom_don_pickup_bonus": 0.1, "gom_don_secs": 4, "rut_co_wave": 2, "rut_co_push": 3 },
     "push_secs": 0.3, "lockout_secs": 3, "overcap_exp": 20, "overcap_tien_khi": 2, "blind": { "secs": 5, "no_pickup": true, "pearls": [25, 40], "cover": [0.55, 0.65], "bot_vision_mult": 0.4 } },
   "movement": { "slide_iterations": 3, "smooth_correct_max": 30, "smooth_correct_ms": 100 },
   "room": {
@@ -1560,6 +1614,11 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 
 ## 17. Checklist test chấp nhận
 
+- [ ] Shipper Luyện Khí 1 không buff: tốc chạy = 195 × 1.15; Cụ Rùa = 195 × 0.85; nội tại cộng chung với buff theo §4.0 (vd Shipper + Thần Hành = 195 × 1.55).
+- [ ] Trang chọn nhân vật hiện 4 thanh chỉ số đúng bảng §6.4.
+
+- [ ] Grep code: không còn chỗ nào nhân 2 hệ số buff/kỹ năng/địa hình với nhau cho cùng một chỉ số; mọi chỉ số đi qua 1 hàm `stat(base, bonuses, cap)` dùng chung server + client.
+
 - [ ] Bà Tám dùng Loa: mọi địch trong 6 U ở mọi hướng bị đẩy ra 6 U + đổi chiều vòng kiếm.
 - [ ] Ông Ba Võng trong 4s Trộm Kiếm: va kiếm với người cùng cảnh giới → Ông Ba không mất kiếm, đối thủ mất kiếm và Ông Ba +đúng số đó (tới trần, dư rơi Bó Kiếm).
 
@@ -1588,7 +1647,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Cô Ba Kim Đan bày sạp (bậc 3): người Kim Đan và thấp hơn không chém được, phải đi vòng; người Nguyên Anh chém được; Cô Ba đi xuyên sạp của mình; dẫm vỏ chuối → trượt + choáng 1s; sau 6s sạp biến mất; Shipper đang Gom Đơn đi xuyên qua.
 
 - [ ] Hút Mì: địch 100 kiếm → Sư Phụ cướp 25 (không vượt 20% tối đa của mình, dư rơi Bó Kiếm); không ai trong nón → hụt, mất lượt.
-- [ ] Gom Đơn: chạy qua Đài đang phun → hút mọi viên trong 3 U; đang bị trói/ngủ/choáng dùng được và thoát ngay.
+- [ ] Bán kính nhặt Shipper Đại Thừa 10 + Gom Đơn + Nam Châm ≈ 255 (cộng §4.0, không phải 332); đang bị trói/ngủ/choáng dùng được và thoát ngay.
 
 - [ ] Luyện Khí chém rào tre → biến mất ngay, không hoạt ảnh; chém tường gạch → không có tác dụng + chữ "Cần Kim Đan"; 30s sau rào mọc lại đúng chỗ.
 - [ ] `mapgen --check` pass cả 5 khu × 14 cảnh giới: không túi kín, mọi cổng/Đài/Thiên Môn tới được, trống ≥ 60%.
