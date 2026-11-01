@@ -170,9 +170,10 @@ class App {
         return;
       }
       if (this.playing && e.code === 'KeyV' && !e.repeat) {
-        // Spec §3.6: đổi mức chất lượng Cao / Vừa / Thấp. Thần thú không còn tắt được nữa
-        // (v4.7), nhưng số đốt và vệt hạt co theo mức này.
-        this.hud.showBanner(STR.qualitySet(QUALITY_NAME[cycleQuality()]), 2.5);
+        // Spec §13.6 mục 8 (v6.20): Tự động → Cao → Vừa → Thấp → Tự động.
+        const pick = cycleQuality();
+        const name = QUALITY_NAME[pick.q];
+        this.hud.showBanner(STR.qualitySet(pick.auto ? STR.qualityAuto(name) : name), 2.5);
         return;
       }
       this.debugKey(e);

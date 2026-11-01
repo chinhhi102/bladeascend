@@ -6,6 +6,7 @@ import { assets } from './assets';
 import { BIOME_TILES, OBSTACLE_ALIAS } from './catalog';
 import { buildDecals, type DecalLayer, obstacleSkirt } from './decals';
 import { GATE_COLORS } from './palette';
+import { emergency } from './quality';
 
 /**
  * Mỗi biome 2–3 texture nền, trộn bằng mặt nạ nhiễu (spec §8.6 mục 1). Lớp đầu phủ kín, các
@@ -674,6 +675,7 @@ export class MapView {
   update(w: ClientWorld, now: number, myBush: number, me: Viewer | null, occlusionAlpha: number, view?: { x: number; y: number; w: number; h: number }, reach?: MyReach): void {
     this.updateWater(now);
     if (view) {
+      this.decals.setThin(emergency());
       this.decals.update(view.x, view.y, view.w / 2, view.h / 2);
       this.clampFilterArea(view);
       this.updateGroundChunks(view);

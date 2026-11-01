@@ -100,32 +100,102 @@ export function setQuality(q: Quality): void {
   // `check:quality` bắt được đúng chuyện đó.
   lowSince = 0;
   okSince = 0;
-}
-
-/** cycleQuality đổi sang mức tiếp theo và trả về mức mới. Người chơi tự chọn thì khoá lại và lưu. */
-export function cycleQuality(): Quality {
-  manual = true;
-  setQuality(ORDER[(ORDER.indexOf(current) + 1) % ORDER.length]);
-  try {
-    localStorage.setItem(KEY, current);
-  } catch {
-    // Không lưu được thì lựa chọn chỉ sống trong phiên này — vẫn đúng ý người chơi lúc này.
-  }
-  return current;
+  critSince = 0;
 }
 
 /**
- * Tự hạ chất lượng (spec §13.6 mục 8): FPS dưới 45 suốt 3 giây thì hạ một bậc; ổn lại trên
- * 55 suốt 10 giây thì nâng lại một bậc — RIÊNG bậc lên Cao phải ổn ≥ 55 suốt 20 giây
- * (chủ dự án chốt 1/11), vì Cao tốn gần gấp đôi Vừa và nâng sớm là tụt lại ngay.
+ * QualityChoice: kết quả của phím V — mức đang dùng, và người chơi đang để Tự động hay chọn tay.
+ */
+export interface QualityChoice {
+  q: Quality;
+  auto: boolean;
+}
+
+/**
+ * cycleQuality: phím V đi vòng **Tự động → Cao → Vừa → Thấp → Tự động** (spec §13.6 mục 8, v6.20).
  *
- * Không đụng tới lựa chọn của người chơi: ai đã tự bấm phím V thì giữ nguyên mức họ chọn —
- * máy tự ý đổi ngược ý người dùng là thứ gây ức chế nhất.
+ * Chọn một mức = tắt tự điều chỉnh và LƯU lựa chọn. Chọn "Tự động" = xoá lựa chọn đã lưu, bật
+ * lại tự điều chỉnh từ mức đang dùng. Thiếu nấc "Tự động" thì một lần bấm V là khoá tay vĩnh
+ * viễn, không có đường về — spec v6.20 ghi rõ phải có.
+ */
+export function cycleQuality(): QualityChoice {
+  if (!manual) {
+    manual = true;
+    setQuality('high');
+  } else if (current === 'low') {
+    manual = false;
+    lockUntil = 0;
+    lastWasUp = false;
+  } else {
+    setQuality(ORDER[ORDER.indexOf(current) + 1]);
+  }
+  emergencyOn = false;
+  try {
+    if (manual) {
+      localStorage.setItem(KEY, current);
+    } else {
+      localStorage.removeItem(KEY);
+    }
+  } catch {
+    // Không lưu được thì lựa chọn chỉ sống trong phiên này — vẫn đúng ý người chơi lúc này.
+  }
+  return { q: current, auto: !manual };
+}
+
+/** isAutoQuality: đang để máy tự điều chỉnh (chưa chọn tay, hoặc đã chọn lại "Tự động"). */
+export function isAutoQuality(): boolean {
+  return !manual;
+}
+
+/**
+ * Tự điều chỉnh (spec §13.6 mục 8, v6.20):
+ *  - Tự hạ: FPS < 45 suốt 3 s → hạ một bậc. Đã ở Thấp mà vẫn < 30 suốt 3 s → BƯỚC KHẨN
+ *    (`emergency()`: resolution 1.0, tắt ambient, giảm decal).
+ *  - Tự nâng khi FPS ≥ 55 liên tục: bỏ bước khẩn sau 10 s, Thấp → Vừa sau 10 s, Vừa → Cao
+ *    sau 20 s.
+ *  - Vừa nâng mà bị hạ lại → khoá tự nâng 5 phút, chống lên xuống liên tục.
+ *
+ * Không đụng tới lựa chọn của người chơi: ai đã tự chọn mức thì giữ nguyên — máy tự ý đổi
+ * ngược ý người dùng là thứ gây ức chế nhất.
  */
 const UP_SECS = 10;
 const UP_TO_HIGH_SECS = 20;
+const DOWN_SECS = 3;
+const UP_LOCK_SECS = 300;
+const FPS_DOWN = 45;
+const FPS_EMERGENCY = 30;
+const FPS_UP = 55;
 let lowSince = 0;
 let okSince = 0;
+let critSince = 0;
+let emergencyOn = false;
+/** lastWasUp: lần đổi mức gần nhất của máy là NÂNG — nếu lần kế là hạ thì khoá tự nâng. */
+let lastWasUp = false;
+let lockUntil = 0;
+/** lastNow: mốc giờ gần nhất `autoQuality` nhận, để nhánh bộ nhớ (không có `now`) khoá được. */
+let lastNow = 0;
+
+/** emergency: đang ở bước khẩn dưới cả mức Thấp (spec §13.6 mục 8). */
+export function emergency(): boolean {
+  return emergencyOn;
+}
+
+function stepDown(now: number): void {
+  if (lastWasUp) {
+    lockUntil = now + UP_LOCK_SECS;
+  }
+  lastWasUp = false;
+  setQuality(ORDER[ORDER.indexOf(current) + 1]);
+}
+
+function stepUp(): void {
+  if (emergencyOn) {
+    emergencyOn = false;
+  } else {
+    setQuality(ORDER[ORDER.indexOf(current) - 1]);
+  }
+  lastWasUp = true;
+}
 
 /**
  * gpuPressure: bộ nhớ texture đã vượt ngân sách thiết bị chưa (NETCODE_SPEC §5 L1).
@@ -159,32 +229,44 @@ export function autoQualityByMemory(texMB: number): boolean {
   if (want === current) {
     return false;
   }
+  // Hạ vì bộ nhớ cũng tính là "bị hạ lại": tự nâng ngay sau đó là nạp lại đúng chỗ texture vừa
+  // làm chạm trần.
+  if (lastWasUp) {
+    lockUntil = lastNow + UP_LOCK_SECS;
+  }
+  lastWasUp = false;
   setQuality(want);
   return true;
 }
 
 export function autoQuality(fps: number, now: number): void {
+  lastNow = now;
   if (manual || fps <= 0) {
     return;
   }
-  if (fps < 45) {
+  if (fps < FPS_DOWN) {
     okSince = 0;
     lowSince = lowSince || now;
-    if (now - lowSince >= 3 && current !== 'low') {
-      setQuality(ORDER[ORDER.indexOf(current) + 1]);
+    critSince = fps < FPS_EMERGENCY ? critSince || now : 0;
+    if (current !== 'low' && now - lowSince >= DOWN_SECS) {
+      stepDown(now);
       lowSince = now;
+    } else if (current === 'low' && !emergencyOn && critSince > 0 && now - critSince >= DOWN_SECS) {
+      emergencyOn = true;
+      lastWasUp = false;
     }
     return;
   }
   lowSince = 0;
-  if (fps >= 55) {
-    okSince = okSince || now;
-    const need = current === 'medium' ? UP_TO_HIGH_SECS : UP_SECS;
-    if (now - okSince >= need && current !== 'high') {
-      setQuality(ORDER[ORDER.indexOf(current) - 1]);
-      okSince = now;
-    }
-  } else {
+  critSince = 0;
+  if (fps < FPS_UP || now < lockUntil) {
     okSince = 0;
+    return;
+  }
+  okSince = okSince || now;
+  const need = !emergencyOn && current === 'medium' ? UP_TO_HIGH_SECS : UP_SECS;
+  if (now - okSince >= need && (emergencyOn || current !== 'high')) {
+    stepUp();
+    okSince = now;
   }
 }

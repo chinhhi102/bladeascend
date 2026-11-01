@@ -187,3 +187,21 @@ chứ không phải *art thừa*.
 thấy "không ai nạp" đôi khi có nghĩa là *code thiếu*, không phải *art thừa*. Anh xem nhóm 3
 trước: nếu `icon_skill_scroll` đúng là quên nối thì đó là một lỗi hiển thị đang sống.
 
+## Q32 — Spec §13.6 mục 8 chưa ghi luật chất lượng anh chốt 1/11 (chỉ cần anh sửa chữ)
+
+Bối cảnh: lượt 1/11, việc 4 (chất lượng mặc định). Tệp: `client/src/render/quality.ts`.
+
+Code đã làm đúng lời anh chốt trong chat:
+- Mặc định: PC → **Vừa**; điện thoại / GPU tích hợp → **Thấp**. Không ai bắt đầu ở Cao.
+- Vừa → Cao chỉ khi ≥ 55 FPS suốt **20 giây**.
+
+Spec §13.6 mục 8 hiện ghi: "FPS ổn lại **10s** → bật dần" và không nói mức mặc định. Tôi giữ
+**Thấp → Vừa = 10 giây** theo spec, chỉ bậc lên Cao là 20 giây. Không sửa `docs/_raw/`.
+
+Anh chỉ cần thêm vào §13.6 mục 8 (đề xuất câu chữ):
+> Mặc định: PC Vừa, điện thoại/GPU tích hợp Thấp. Thấp→Vừa sau 10s ổn ≥ 55 FPS; Vừa→Cao sau 20s.
+> Chỉ lựa chọn tay của người chơi được lưu; máy tự đổi không lưu.
+
+Nếu anh muốn Thấp → Vừa cũng 20 giây thì báo, đổi một hằng số.
+
+**Trả lời (1/11):** GAME_SPEC v6.20 §13.6 mục 8 — giữ Thấp→Vừa 10 s, Vừa→Cao 20 s; thêm bước khẩn ở Thấp < 30 FPS, khoá tự nâng 5 phút sau khi nâng rồi bị hạ, phím V có nấc "Tự động". Đã làm, `npm run check:quality` kiểm cả ba.

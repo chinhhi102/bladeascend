@@ -19,7 +19,7 @@ import { MapView, type Viewer } from './mapview';
 import { OrbLayer } from './orblayer';
 import { Ambient } from './ambient';
 import { Breakthrough, HITSTOP_SECS } from './breakthrough';
-import { autoQuality, autoQualityByMemory, gpuPressure, quality } from './quality';
+import { autoQuality, autoQualityByMemory, emergency, gpuPressure, quality } from './quality';
 import { AURA_FAR_PX, TienAura } from './tienaura';
 import { FloatTextLayer } from './floattext';
 import { StallView } from './stallview';
@@ -177,6 +177,24 @@ export class GameScene {
     this.app.renderer.on('resize', (w: number, h: number) => this.boba.resize(w, h));
   }
 
+  /** resEmergency: bước khẩn đã áp resolution 1.0 chưa — chỉ đổi khi trạng thái đổi. */
+  private resEmergency = false;
+
+  /**
+   * applyEmergencyResolution: bước khẩn (spec §13.6 mục 8) hạ resolution về 1.0; thoát bước
+   * khẩn thì trả về mức của chất lượng hiện tại. Chỉ gọi `resize` khi trạng thái ĐỔI — đổi
+   * resolution là dựng lại bộ đệm khung hình, làm mỗi khung là tự giết FPS.
+   */
+  private applyEmergencyResolution(): void {
+    const on = emergency();
+    if (on === this.resEmergency) {
+      return;
+    }
+    this.resEmergency = on;
+    const res = on ? 1 : rendererResolution(quality() === 'low');
+    this.app.renderer.resize(this.app.screen.width, this.app.screen.height, res);
+  }
+
   setWorld(w: ClientWorld): void {
     this.world = w;
     this.clear();
@@ -262,6 +280,7 @@ export class GameScene {
       this.updateCamera(me.x, me.y, me.s.sc, this.myReach.r, now);
     }
     autoQuality(this.fps, now); // máy yếu thì tự hạ chất lượng (spec §13.6 mục 8)
+    this.applyEmergencyResolution();
     // Ngân sách bộ nhớ GPU (NETCODE_SPEC §5 L1): kiểm mỗi giây, không mỗi khung — con số
     // này đổi khi NẠP ẢNH, không đổi khi vẽ. Hạ chất lượng vì bộ nhớ là nhánh riêng, vì
     // trên iOS hết bộ nhớ đồ hoạ không làm tụt FPS trước: máy chạy 60 fps tới đúng lúc

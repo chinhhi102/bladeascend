@@ -1,7 +1,7 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 
 import { particle } from './particles';
-import { qualityFor } from './quality';
+import { emergency, qualityFor } from './quality';
 
 /**
  * Sự sống của bản đồ (spec §8.6 mục 5): bóng mây trôi, lá tre rơi, đom đóm, sương mù, bướm,
@@ -169,7 +169,8 @@ export class Ambient {
    * hạt ngay ngoài mép màn hình rồi cho nó trôi ngang qua.
    */
   update(cx: number, cy: number, viewW: number, viewH: number, now: number): void {
-    const budget = BUDGET[qualityFor('ambient')] ?? 0;
+    // Bước khẩn (spec §13.6 mục 8): tắt hẳn ambient.
+    const budget = emergency() ? 0 : BUDGET[qualityFor('ambient')] ?? 0;
     if (budget === 0) {
       this.clear();
       return;

@@ -154,6 +154,7 @@ export const STR = {
   animInfoOn: 'Hiện số liệu hoạt ảnh (J): tên anim · frame · pha · điểm độ giật',
   animInfoOff: 'Tắt số liệu hoạt ảnh',
   qualitySet: (name: string) => `Chất lượng đồ họa: ${name} (phím V để đổi)`,
+  qualityAuto: (name: string) => `Tự động (đang ${name})`,
   controlsMobile: 'Kéo ngón tay để di chuyển. Thiêu Đốt Tinh Huyết: chạm 2 lần rồi giữ, hoặc giữ nút 🔥. Kiếm tự xoay!',
 
   // Thiêu Đốt Tinh Huyết (spec §4.1c)

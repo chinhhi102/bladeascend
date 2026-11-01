@@ -6,9 +6,12 @@
 //   1. Mặc định: điện thoại / GPU tích hợp → Thấp, PC còn lại → Vừa. Không ai bắt đầu ở Cao.
 //   2. Vừa → Cao chỉ khi ≥ 55 FPS suốt 20 giây; 19 giây là CHƯA.
 //   3. Tụt dưới 45 FPS suốt 3 giây thì hạ một bậc; Thấp → Vừa vẫn 10 giây như spec §13.6.
+//   4. (v6.20) Vừa nâng mà bị hạ lại → khoá tự nâng 5 phút.
+//   5. (v6.20) Ở Thấp vẫn < 30 FPS suốt 3 giây → bước khẩn; ổn lại 10 giây thì bỏ bước khẩn.
+//   6. (v6.20) Phím V: Tự động → Cao → Vừa → Thấp → Tự động; chọn tay thì tắt tự điều chỉnh.
 //
 // Đã thử bài có răng: đặt `UP_TO_HIGH_SECS` về 10 thì điều 2 trượt ngay.
-import { autoQuality, defaultQuality, quality, setQuality } from '../src/render/quality.ts';
+import { autoQuality, cycleQuality, defaultQuality, emergency, isAutoQuality, quality, setQuality } from '../src/render/quality.ts';
 
 let fails = 0;
 function expect(name: string, got: unknown, want: unknown): void {
@@ -54,9 +57,44 @@ expect('Vừa, 15 s + nghẽn 1 s + 15 s', quality(), 'medium');
 setQuality('high');
 chay(40, 200, 203.1);
 expect('Cao, 40 FPS suốt 3 s', quality(), 'medium');
+// (Lần hạ ngay trên là sau một lần NÂNG → đã khoá 5 phút từ giây ~203; đo ở giây 1000.)
 setQuality('low');
-chay(60, 300, 310.1);
+chay(60, 1000, 1010.1);
 expect('Thấp, 60 FPS suốt 10 s', quality(), 'medium');
+
+// 4. Khoá tự nâng 5 phút sau khi nâng rồi bị hạ lại
+chay(40, 1011, 1014.1); // vừa nâng Thấp→Vừa ở trên, giờ tụt → hạ lại, khoá tới ~1314
+expect('nâng xong bị hạ lại', quality(), 'low');
+chay(60, 1015, 1300);
+expect('trong 5 phút khoá, 60 FPS suốt 285 s', quality(), 'low');
+chay(60, 1300, 1330);
+expect('hết khoá, 60 FPS thêm 16 s', quality(), 'medium');
+
+// 5. Bước khẩn
+setQuality('low');
+chay(20, 2000, 2003.1);
+expect('Thấp, 20 FPS suốt 3 s → bước khẩn', emergency(), true);
+expect('bước khẩn không đổi mức', quality(), 'low');
+chay(60, 2004, 2014.1);
+expect('ổn 10 s → bỏ bước khẩn', emergency(), false);
+expect('bỏ bước khẩn trước, chưa lên Vừa', quality(), 'low');
+setQuality('low');
+chay(40, 2100, 2110);
+expect('Thấp, 40 FPS (không dưới 30) → KHÔNG khẩn', emergency(), false);
+
+// 6. Phím V
+expect('lúc đầu là Tự động', isAutoQuality(), true);
+const v1 = cycleQuality();
+expect('V lần 1 → Cao, tay', `${v1.q}/${v1.auto}`, 'high/false');
+chay(30, 3000, 3010);
+expect('chọn tay Cao rồi 30 FPS suốt 10 s → máy KHÔNG hạ', quality(), 'high');
+cycleQuality();
+cycleQuality();
+expect('V lần 3 → Thấp', quality(), 'low');
+const v4 = cycleQuality();
+expect('V lần 4 → Tự động', v4.auto, true);
+chay(60, 3100, 3110.1);
+expect('Tự động lại: 60 FPS suốt 10 s → máy nâng', quality(), 'medium');
 
 if (fails > 0) {
   console.error(`\n${fails} điều TRƯỢT`);

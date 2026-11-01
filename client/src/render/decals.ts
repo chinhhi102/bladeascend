@@ -116,6 +116,26 @@ export class DecalLayer {
     this.root.addChild(node);
   }
 
+  private thin = false;
+
+  /**
+   * setThin: bước khẩn (spec §13.6 mục 8) "giảm decal" — ẩn MỘT NỬA decal trong mỗi ô.
+   *
+   * Ẩn tại chỗ thay vì dựng lại với mật độ thấp hơn: bước khẩn bật đúng lúc máy đang hụt hơi,
+   * dựng lại cả lớp decal lúc đó là thêm một cú khựng đúng lúc tệ nhất.
+   */
+  setThin(on: boolean): void {
+    if (on === this.thin) {
+      return;
+    }
+    this.thin = on;
+    for (const c of this.chunks) {
+      c.node.children.forEach((d, i) => {
+        d.visible = !on || i % 2 === 0;
+      });
+    }
+  }
+
   /** update bật/tắt từng ô theo khung nhìn, cộng một ô lề cho mượt lúc di chuyển. */
   update(camX: number, camY: number, halfW: number, halfH: number): void {
     for (const c of this.chunks) {
