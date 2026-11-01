@@ -46,7 +46,15 @@ fi
 
 restart_server() {
   local build="$1"
+  # Tắt cả tên MỚI lẫn tên CŨ.
+  #
+  # Binary đổi tên `kxserver` → `bladeascend` ngày 1/11. Bản đang chạy lúc đổi vẫn mang
+  # tên cũ, nên nếu chỉ tìm tên mới thì deploy không tắt được nó, rồi bản mới kẹt cổng
+  # 9999 và cả lượt deploy hỏng — với một dòng lỗi "address already in use" mà người đọc
+  # không nối được với việc đổi tên. Giữ dòng `kxserver` tới khi chắc không còn máy nào
+  # chạy bản trước 1/11; xoá sớm thì chính lúc cần nó là lúc không có.
   pkill -f 'bladeascend' 2>/dev/null || true
+  pkill -f 'kxserver' 2>/dev/null || true
   sleep 2
   # Mật khẩu quản trị đọc từ `docs/private/admin.env` (thư mục riêng của chủ dự án, đã
   # nằm trong .gitignore từ 22/10).
