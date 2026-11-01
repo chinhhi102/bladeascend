@@ -114,6 +114,8 @@ export class GameScene {
   private lastRenderMs = 0;
   /** charsInUse: dùng lại mỗi khung thay vì cấp phát Set mới — §5 "không tạo object lúc chơi". */
   private readonly charsInUse = new Set<string>();
+  /** myReach: tâm + tầm kiếm của mình, tính một lần mỗi khung (camera và viền vật cản dùng chung). */
+  private readonly myReach = { x: 0, y: 0, r: 0 };
   /** myChar: nhân vật của chính mình, không bao giờ nhả. */
   myChar = '';
   private detail = 1;
@@ -189,8 +191,9 @@ export class GameScene {
     // Viên EXP luôn nằm dưới mọi thứ khác nên xếp ngay trên mặt đất, không cần y-sort.
     // Lớp phát sáng nằm dưới nhân vật (hào quang ở sau lưng) nhưng trên vòng kiếm, để
     // hàng trăm thanh kiếm không che mất hào quang.
+    // Cổng nằm NGAY TRÊN vòng kiếm, dưới nhân vật: vòng kiếm không che được cổng.
     this.entities.addChild(this.stallView.layer);
-    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.glow.root, this.entities, this.mapView.over, this.ambient.root, this.skillFx.layer, this.vfx.layer, this.floatText.layer);
+    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.mapView.gateLayer, this.glow.root, this.entities, this.mapView.over, this.ambient.root, this.skillFx.layer, this.vfx.layer, this.floatText.layer);
     this.ambient.setBiome(w.map.id);
   }
 
@@ -253,7 +256,10 @@ export class GameScene {
     this.lastFrames = frames;
     const me = frames.find((f) => f.view.id === w.myId);
     if (me) {
-      this.updateCamera(me.x, me.y, me.s.sc, ringGeom(this.cfg, me.s.sc, me.s.n).reach, now);
+      this.myReach.x = me.x;
+      this.myReach.y = me.y;
+      this.myReach.r = ringGeom(this.cfg, me.s.sc, me.s.n).reach;
+      this.updateCamera(me.x, me.y, me.s.sc, this.myReach.r, now);
     }
     autoQuality(this.fps, now); // máy yếu thì tự hạ chất lượng (spec §13.6 mục 8)
     // Ngân sách bộ nhớ GPU (NETCODE_SPEC §5 L1): kiểm mỗi giây, không mỗi khung — con số
@@ -291,7 +297,8 @@ export class GameScene {
     }
     const vs = this.viewSize();
     this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha,
-      me ? { x: me.x, y: me.y, w: vs.w, h: vs.h } : undefined);
+      me ? { x: me.x, y: me.y, w: vs.w, h: vs.h } : undefined,
+      me ? this.myReach : undefined);
     this.vfx.update(now);
     this.floatText.update(now);
     this.stallView.sync(w);

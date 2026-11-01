@@ -174,6 +174,15 @@ interface ObstacleNode {
   drawnWithArt: boolean;
   /** fadeFrom: mốc bắt đầu mờ dần khi ảnh thật vừa thay placeholder. 0 = không mờ. */
   fadeFrom: number;
+  /** edge: viền tối của vật cản QUÁ BẬC; chỉ hiện khi nằm trong tầm kiếm (spec §8.2). */
+  edge: Container | null;
+}
+
+/** MyReach: tâm và tầm kiếm của mình — vật cản quá bậc chỉ hiện viền khi lọt vào đây. */
+export interface MyReach {
+  x: number;
+  y: number;
+  r: number;
 }
 
 /** ART_FADE_SECS: ảnh thật thay placeholder thì mờ dần vào, không nhấp nháy (§13.7 mục 3). */
@@ -230,12 +239,31 @@ function tintAll(node: Container, tint: number): void {
  * chơi vẫn cần biết TRƯỚC khi mài kiếm rằng cái này không chém được. Vẽ bằng một nét dày
  * mờ phía trong, không phải một lớp phủ đen — phủ lên cả vật cản thì mất hết chi tiết art.
  */
-function tooHardOutline(o: MapObstacle): Graphics {
-  const g = new Graphics();
-  drawShape(g, o.s).stroke({ color: 0x000000, width: 10, alpha: 0.55 });
-  drawShape(g, o.s).fill({ color: 0x101018, alpha: 0.22 });
-  return g;
+/**
+ * silhouette nhuộm đen mọi sprite trong một bản sao của art vật cản.
+ *
+ * Viền "quá bậc" (spec §8.2) phải ôm theo ĐƯỜNG NÉT CỦA ẢNH. Bản trước vẽ hình chữ nhật
+ * theo hình va chạm trong Tiled — mà hình đó thấp hơn phần ảnh (kiểu vẽ 3/4) — nên trên
+ * màn hình là một khối tối lệch hẳn khỏi tảng băng (chủ dự án chụp 1/11 16:00). Đặt bản
+ * sao đen này SAU ảnh và to hơn một chút thì chỉ phần rìa lộ ra: một viền tối đúng dáng.
+ */
+function silhouette(art: Container): Container {
+  // Pixi 8: `tint` của Container truyền xuống mọi con (Sprite, TilingSprite, Graphics).
+  art.tint = 0x000000;
+  art.alpha = 0.6;
+  return art;
 }
+
+/** inReach: hình vật cản có chạm vòng tròn tầm kiếm không (điểm gần nhất của khung bao). */
+function inReach(o: MapObstacle, me: MyReach): boolean {
+  const b = bounds(o.s);
+  const dx = Math.max(b.x - me.x, 0, me.x - (b.x + b.w));
+  const dy = Math.max(b.y - me.y, 0, me.y - (b.y + b.h));
+  return dx * dx + dy * dy <= me.r * me.r;
+}
+
+/** EDGE_GROW: viền to hơn ảnh ngần này (tỉ lệ) — đủ thấy, không thành bóng đổ. */
+const EDGE_GROW = 1.07;
 
 /**
  * MapView draws the static map. Obstacle nodes are handed to the scene's entity layer so they
@@ -250,7 +278,15 @@ export class MapView {
   /** blendChunks: ô đang dựng, khoá `"cx,cy"`. Ra ngoài khung nhìn là **huỷ**, không ẩn. */
   private readonly blendChunks = new Map<string, Container>();
   readonly decor = new Container();
-  readonly under = new Container(); // zones under entities (mud, wind) + gates
+  readonly under = new Container(); // zones under entities (mud, wind)
+  /**
+   * gateLayer: cổng dịch chuyển, nằm TRÊN vòng kiếm (chủ dự án yêu cầu 1/11).
+   *
+   * Trước đây cổng nằm chung lớp `under` với bùn/gió, tức là dưới vòng kiếm. Từ Hoá Thần
+   * trở lên vòng kiếm phủ kín cả khoảng quanh người, nên cổng bị che mất đúng lúc người
+   * chơi đang cần nhắm tới nó.
+   */
+  readonly gateLayer = new Container();
   readonly over = new Container(); // bush canopy above entities
   /** Ao/suối: mặt nước gợn sóng, cập nhật mỗi khung (spec §8.6 mục 4). */
   private readonly water: { root: Container; ripple: Graphics; s: Shape }[] = [];
@@ -271,7 +307,7 @@ export class MapView {
     this.buildGates();
     this.buildDecor();
     for (const o of map.obstacles) {
-      const n: ObstacleNode = { o, node: new Container(), look: '', tierDrawn: true, warnUntil: 0, box: bounds(o.s), drawnWithArt: false, fadeFrom: 0 };
+      const n: ObstacleNode = { o, node: new Container(), look: '', tierDrawn: true, warnUntil: 0, box: bounds(o.s), drawnWithArt: false, fadeFrom: 0, edge: null };
       this.obstacleNodes.set(o.id, n);
     }
     const filter = backgroundFilter();
@@ -602,7 +638,7 @@ export class MapView {
         node = new Graphics().circle(0, 0, this.gateR).fill({ color, alpha: 0.35 }).stroke({ color, width: 14 }).circle(0, 0, this.gateR * 0.55).stroke({ color: 0xffffff, width: 6, alpha: 0.6 });
       }
       node.position.set(gt.x, gt.y);
-      this.under.addChild(node);
+      this.gateLayer.addChild(node);
       this.gates.set(gt.id, { node, warnUntil: 0 });
     }
   }
@@ -635,7 +671,7 @@ export class MapView {
     }
   }
 
-  update(w: ClientWorld, now: number, myBush: number, me: Viewer | null, occlusionAlpha: number, view?: { x: number; y: number; w: number; h: number }): void {
+  update(w: ClientWorld, now: number, myBush: number, me: Viewer | null, occlusionAlpha: number, view?: { x: number; y: number; w: number; h: number }, reach?: MyReach): void {
     this.updateWater(now);
     if (view) {
       this.decals.update(view.x, view.y, view.w / 2, view.h / 2);
@@ -644,6 +680,9 @@ export class MapView {
     }
     for (const n of this.obstacleNodes.values()) {
       this.updateObstacle(n, w, now);
+      if (n.edge) {
+        n.edge.visible = reach !== undefined && inReach(n.o, reach);
+      }
       if (me && n.look === 'intact' && this.covers(n, me)) {
         n.node.alpha *= occlusionAlpha;
       }
@@ -690,12 +729,29 @@ export class MapView {
         const skirt = obstacleSkirt(b.w, b.h, n.o.k, n.o.id * 2654435761);
         skirt.position.set(b.x + b.w / 2, b.y + b.h / 2);
         n.node.addChild(skirt);
-        n.node.addChild(this.varied(this.obstacleArt(n.o), n.o));
+        n.edge = null;
         if (!canCut) {
-          n.node.addChild(tooHardOutline(n.o));
+          // Viền nằm SAU ảnh, phóng quanh tâm vật cản: chỉ phần rìa lộ ra.
+          const edge = new Container();
+          edge.position.set(b.x + b.w / 2, b.y + b.h / 2);
+          edge.scale.set(EDGE_GROW);
+          const sil = silhouette(this.varied(this.obstacleArt(n.o), n.o));
+          sil.position.set(sil.position.x - b.x - b.w / 2, sil.position.y - b.y - b.h / 2);
+          edge.addChild(sil);
+          edge.visible = false;
+          n.node.addChild(edge);
+          n.edge = edge;
         }
+        n.node.addChild(this.varied(this.obstacleArt(n.o), n.o));
+      }
+      const shown = n.edge?.visible ?? false;
+      if (n.edge) {
+        n.edge.visible = true; // tính khung vẽ cả viền, để vùng nhìn-xuyên không đổi theo tầm kiếm
       }
       const lb = n.node.getLocalBounds();
+      if (n.edge) {
+        n.edge.visible = shown;
+      }
       n.box = { x: lb.x, y: lb.y, w: lb.width, h: lb.height };
       n.node.zIndex = broken ? -1e6 : bounds(n.o.s).y + bounds(n.o.s).h;
     }
