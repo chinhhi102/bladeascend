@@ -121,6 +121,13 @@ class App {
     this.bindBurnButton();
     this.bindSkillButton();
     this.conn = new Conn((m) => this.onMessage(m));
+    // Gói hỏng phải ĐI VỀ ĐƯỢC, không chỉ nằm trong console của máy người chơi.
+    // Kèm `errorContext()` (khu, cảnh giới, ping, FPS) vì một lỗi giải mã gần như chắc
+    // chắn phụ thuộc hoàn cảnh — biết nó xảy ra lúc đang đổi khu hay lúc mạng yếu là nửa
+    // phần chẩn đoán.
+    this.conn.onDecodeFail = (info) => {
+      this.telemetry?.event('decode_fail', JSON.stringify({ info, ...(this.telemetry?.errorContext() ?? {}) }));
+    };
     this.thresholds = levelThresholds(cfg);
     this.setupFeedback();
   }

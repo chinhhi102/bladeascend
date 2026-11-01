@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -66,6 +67,9 @@ type Session struct {
 	QualAuto  bool    `msgpack:"qa"`
 	CanvasW   int     `msgpack:"cw"`
 	CanvasH   int     `msgpack:"ch"`
+	// Automated: phiên do máy điều khiển (`navigator.webdriver`). Báo cáo "người chơi
+	// thật" loại nó ra — xem ghi chú dài ở `au` trong client/src/telemetry/session.ts.
+	Automated bool `msgpack:"au"`
 }
 
 // Sample là một mẫu 10 giây đã tổng hợp sẵn ở client (§2.2).
@@ -169,6 +173,9 @@ CREATE TABLE IF NOT EXISTS sessions (
 	net_type TEXT NOT NULL DEFAULT '', downlink REAL NOT NULL DEFAULT 0, net_rtt REAL NOT NULL DEFAULT 0,
 	quality TEXT NOT NULL DEFAULT '', qual_auto INTEGER NOT NULL DEFAULT 0,
 	canvas_w INTEGER NOT NULL DEFAULT 0, canvas_h INTEGER NOT NULL DEFAULT 0,
+	-- automated: phiên do MÁY điều khiển (navigator.webdriver). Xem trường "au" trong
+	-- client/src/telemetry/session.ts — báo cáo "người chơi thật" phải loại nó ra.
+	automated INTEGER NOT NULL DEFAULT 0,
 	ended_at INTEGER NOT NULL DEFAULT 0, dur_secs REAL NOT NULL DEFAULT 0,
 	n_samples INTEGER NOT NULL DEFAULT 0, fps_median REAL NOT NULL DEFAULT 0
 );
@@ -243,6 +250,17 @@ func Open(path, buildID string) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("schema telemetry: %w", err)
+	}
+	// Cột thêm sau: `CREATE TABLE IF NOT EXISTS` KHÔNG đụng tới bảng đã tồn tại, nên DB cũ
+	// vẫn thiếu cột và mọi lần ghi phiên sẽ lỗi. `ALTER TABLE` lần hai báo "duplicate
+	// column name" — bỏ qua đúng lỗi đó, không bỏ qua lỗi khác.
+	for _, alter := range []string{
+		`ALTER TABLE sessions ADD COLUMN automated INTEGER NOT NULL DEFAULT 0`,
+	} {
+		if _, err := db.Exec(alter); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+			db.Close()
+			return nil, fmt.Errorf("nâng cấp schema telemetry: %w", err)
+		}
 	}
 	s := &Store{db: db, path: path, buildID: buildID, q: make(chan any, queueSize), done: make(chan struct{})}
 	s.wg.Add(1)
@@ -417,11 +435,11 @@ func writeOne(tx *sql.Tx, v any, now int64) error {
 		_, err := tx.Exec(`INSERT OR REPLACE INTO sessions
 			(session_id,guest_hash,ip_hash,build,proto,schema_hash,started_at,ua,browser,os,mobile,
 			 cores,mem_gb,screen_w,screen_h,dpr,gpu,webgl,max_tex,net_type,downlink,net_rtt,
-			 quality,qual_auto,canvas_w,canvas_h)
-			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			 quality,qual_auto,canvas_w,canvas_h,automated)
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 			d.ID, d.GuestHash, x.ipHash, d.Build, d.Proto, d.Schema, now, d.UA, d.Browser, d.OS, b2i(d.Mobile),
 			d.Cores, d.MemGB, d.ScreenW, d.ScreenH, d.DPR, d.GPU, d.WebGL, d.MaxTex, d.NetType, d.Downlink, d.NetRTT,
-			d.Quality, b2i(d.QualAuto), d.CanvasW, d.CanvasH)
+			d.Quality, b2i(d.QualAuto), d.CanvasW, d.CanvasH, b2i(d.Automated))
 		return err
 	case *Sample:
 		_, err := tx.Exec(`INSERT INTO samples

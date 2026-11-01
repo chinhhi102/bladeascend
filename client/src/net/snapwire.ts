@@ -1,10 +1,13 @@
-import { EVENT_KINDS, MONSTER_KINDS } from './eventkinds';
-import type { GameEvent, MonsterState, PlayerState, Snapshot, WireItemState } from './protocol';
+// Đuôi `.ts` tường minh: `scripts/decode-fuzz.ts` nạp cây mô-đun này thẳng bằng Node
+// (không qua Vite), mà Node ESM bắt buộc có đuôi. Ba tệp dưới đây đều không import gì
+// nữa nên chuỗi dừng ở đây. `allowImportingTsExtensions` bật sẵn trong tsconfig.
+import { EVENT_KINDS, MONSTER_KINDS } from './eventkinds.ts';
+import type { GameEvent, MonsterState, PlayerState, Snapshot, WireItemState } from './protocol.ts';
 import {
   decodeDesc, decodeDespawn, decodeEvent, decodeItemAdd, decodeItemDel, decodeMonster,
   decodeSelfExtra, decodeSelfState, decodeSnapHead, decodeSpawn, decodeUpdate,
   MsgType, Reader,
-} from './wire.gen';
+} from './wire.gen.ts';
 
 /**
  * Giải mã snapshot nhị phân — Protocol v2 (NETCODE_SPEC §4.1).

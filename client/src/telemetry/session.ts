@@ -29,6 +29,21 @@ export interface SessionInfo {
   qa: boolean;
   cw: number;
   ch: number;
+  /**
+   * au — phiên này do MÁY điều khiển (Playwright, Selenium, bài đo 10 tab…), không phải
+   * người thật.
+   *
+   * Vì sao cần: báo cáo §4.1 tên là "số liệu NGƯỜI CHƠI THẬT", nhưng ngày 31/10 nó gộp cả
+   * bài đo 10 tab vào — 64 trong 67 phiên buổi tối đến từ đúng một máy chạy Chromium của
+   * Playwright. Mười tab chia nhau một GPU thì FPS 24–28 là chuyện đương nhiên, vậy mà nó
+   * nổi lên thành cảnh báo "96% mẫu FPS 1% dưới 30" và suýt nữa thành một đợt tối ưu đuổi
+   * theo cái bóng của chính bài đo.
+   *
+   * Dùng `navigator.webdriver` chứ không dò chuỗi User-Agent: đây là cờ CHUẨN mà mọi công
+   * cụ tự động hoá đều đặt, nên nó bắt cả công cụ chưa ai nghĩ tới. Dò "Chrome/156" thì chỉ
+   * bắt đúng bản Playwright hôm nay và sẽ im lặng trượt vào tháng sau.
+   */
+  au: boolean;
 }
 
 /** randomId sinh mã phiên. Mỗi lần vào trận một mã mới (§2.1). */
@@ -134,5 +149,6 @@ export function collectSession(opts: {
     qa: opts.qualityAuto,
     cw: opts.canvas.w,
     ch: opts.canvas.h,
+    au: navigator.webdriver === true,
   };
 }

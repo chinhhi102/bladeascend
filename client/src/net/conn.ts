@@ -1,5 +1,6 @@
-import { decode, encode } from '@msgpack/msgpack';
+import { encode } from '@msgpack/msgpack';
 
+import { decodeFrame, type FrameFail } from './frame';
 import type { ServerMsg } from './protocol';
 import { isBinarySnapshot, SnapshotDecoder } from './snapwire';
 
@@ -40,7 +41,44 @@ export class Conn {
    */
   readonly snap = new SnapshotDecoder();
 
+  /**
+   * onDecodeFail — báo ra ngoài khi một gói không giải mã được.
+   *
+   * Là CALLBACK chứ không gọi thẳng telemetry: tầng mạng không nên biết telemetry tồn
+   * tại, và `Conn` còn được dùng trong test lẫn công cụ đo, nơi không có telemetry nào.
+   * `App` nối nó vào `telemetry.event('decode_fail', …)`.
+   */
+  onDecodeFail: ((info: string) => void) | null = null;
+
+  /**
+   * Trần báo lỗi giải mã cho mỗi kết nối.
+   *
+   * Gói hỏng hiếm khi đi một mình: nếu luồng đã lệch thì mọi gói sau đều hỏng, và báo hết
+   * thì một tab lỗi tự nó làm ngập cả bảng sự kiện. Telemetry có trần 20 sự kiện/phút,
+   * nhưng trần đó dùng chung cho mọi loại sự kiện — để một lỗi lặp ăn hết suất thì các sự
+   * kiện khác của phút đó biến mất.
+   */
+  private decodeFails = 0;
+
   constructor(private readonly onMessage: Handler) {}
+
+  /**
+   * reportDecodeFail ghi lại MỘT gói hỏng: loại gói, độ dài, và mấy byte đầu.
+   *
+   * Ba thứ đó là tối thiểu để sau này tái hiện được. Lỗi gốc 31/10 chỉ để lại
+   * "RangeError: Extra 18 of 121 byte(s) found at buffer[103]" — biết có 121 byte và thừa
+   * 18, nhưng KHÔNG biết đó là gói gì, nên không dựng lại được. Byte đầu chính là
+   * `MsgType` (hoặc byte mở đầu msgpack), và nó là manh mối rẻ nhất.
+   */
+  private reportDecodeFail(fail: FrameFail): void {
+    this.decodeFails++;
+    if (this.decodeFails > 3) {
+      return;
+    }
+    const info = JSON.stringify({ ...fail, nth: this.decodeFails });
+    console.error('gói hỏng, bỏ qua:', info);
+    this.onDecodeFail?.(info);
+  }
 
   connect(onOpen: () => void, onClose: () => void): void {
     this.onOpenCb = onOpen;
@@ -68,29 +106,30 @@ export class Conn {
         this.bytesAt = now;
       }
       const u8 = new Uint8Array(e.data);
-      let msg: ServerMsg;
-      if (isBinarySnapshot(u8)) {
+      const binary = isBinarySnapshot(u8);
+      if (binary) {
         this.lastSnapBytes = bytes;
-        const t0 = performance.now();
-        try {
-          msg = this.snap.decode(u8);
-          // Đo thời gian GIẢI MÃ riêng ra.
-          //
-          // Trước khi chuyển việc này sang Web Worker (CHANGES_v4 mục 25) thì phải biết nó
-          // có đáng không: nếu giải mã tốn 0,2 ms còn vòng vẽ tốn 45 ms thì chuyển nó đi
-          // chẳng sửa được gì, chỉ thêm một luồng và một lớp sao chép bộ nhớ.
-          this.decodeMs = this.decodeMs * 0.9 + (performance.now() - t0) * 0.1;
-        } catch (err) {
-          // Gói hỏng: BỎ QUA gói đó, đừng để lỗi nổ ra vòng vẽ.
-          //
-          // Keyframe 2 giây một lần sẽ dựng lại toàn bộ trạng thái, nên mất một gói là mất
-          // nhiều nhất 2 giây độ chính xác. Ném lỗi ở đây thì cả game đứng vì một gói lẻ.
-          console.error('snapshot v2 hỏng:', err);
-          return;
-        }
-      } else {
-        msg = decode(u8) as ServerMsg;
       }
+      const t0 = performance.now();
+      const res = decodeFrame(u8, this.snap);
+      if (binary && res.msg) {
+        // Đo thời gian GIẢI MÃ riêng ra.
+        //
+        // Trước khi chuyển việc này sang Web Worker (CHANGES_v4 mục 25) thì phải biết nó
+        // có đáng không: nếu giải mã tốn 0,2 ms còn vòng vẽ tốn 45 ms thì chuyển nó đi
+        // chẳng sửa được gì, chỉ thêm một luồng và một lớp sao chép bộ nhớ.
+        this.decodeMs = this.decodeMs * 0.9 + (performance.now() - t0) * 0.1;
+      }
+      if (res.fail) {
+        // Gói hỏng: BỎ QUA gói đó, đừng để lỗi nổ ra vòng vẽ.
+        //
+        // Snapshot thì keyframe 2 giây một lần dựng lại toàn bộ, nên mất một gói là mất
+        // nhiều nhất 2 giây độ chính xác. Tin msgpack thì là tin rời, mất một cái chỉ
+        // thiếu một dòng chữ. Cả hai đều KHÔNG làm lệch trạng thái trận.
+        this.reportDecodeFail(res.fail);
+        return;
+      }
+      const msg = res.msg as ServerMsg;
       this.delay(() => this.receive(msg));
     };
     ws.onclose = () => {

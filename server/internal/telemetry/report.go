@@ -50,6 +50,14 @@ type sampleRow struct {
 	Burning, Zoning               bool
 	Quality, GPU, Browser, OSName string
 	Mobile                        bool
+	Automated                     bool
+	// Build: bản build của phiên sinh ra mẫu này.
+	//
+	// Một ngày có nhiều lần deploy, nên gộp cả ngày lại rồi kết luận là trộn số đo của
+	// bản đã sửa với bản chưa sửa — bảng "trước/sau" ra vô nghĩa và một lần tối ưu thành
+	// công có thể biến mất trong trung vị. Chủ dự án chốt 1/11: chỉ kết luận trên build
+	// mới nhất, các build cũ để đối chiếu.
+	Build string
 }
 
 type sessionRow struct {
@@ -84,6 +92,8 @@ type Data struct {
 	SrvSample []srvRow
 	Truncated bool
 	Opts      Opts
+	// Số phiên / mẫu đã bị loại vì do máy điều khiển. In ra đầu báo cáo.
+	AutoSessions, AutoSamples int
 }
 
 type eventRow struct {
@@ -91,6 +101,7 @@ type eventRow struct {
 	TS      int64
 	Kind    string
 	Data    string
+	Build   string
 }
 
 type srvRow struct {
@@ -116,7 +127,8 @@ func Load(db *sql.DB, o Opts) (*Data, error) {
 		s.over33,s.over100,s.long_tasks,s.draw_calls,s.sprites,s.tex_mb,s.placeholder,s.respawn2s,
 		s.ping_p50,s.ping_p95,s.ping_max,s.kbps_in,s.kbps_out,s.max_pkt,s.corrections,
 		s.zone,s.realm,s.chars_view,s.tien_view,s.burning,s.zoning,
-		COALESCE(ss.quality,''),COALESCE(ss.gpu,''),COALESCE(ss.browser,''),COALESCE(ss.os,''),COALESCE(ss.mobile,0)
+		COALESCE(ss.quality,''),COALESCE(ss.gpu,''),COALESCE(ss.browser,''),COALESCE(ss.os,''),COALESCE(ss.mobile,0),
+		COALESCE(ss.build,''),COALESCE(ss.automated,0)
 		FROM samples s LEFT JOIN sessions ss ON ss.session_id = s.session_id`+where+
 		` ORDER BY s.server_ts LIMIT ?`, append(args, sampleCap+1)...)
 	if err != nil {
@@ -125,15 +137,15 @@ func Load(db *sql.DB, o Opts) (*Data, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var r sampleRow
-		var burn, zon, mob int
+		var burn, zon, mob, auto int
 		if err := rows.Scan(&r.Session, &r.TS, &r.SrvTS, &r.FPSAvg, &r.FPSP1, &r.FrameP95,
 			&r.Over33, &r.Over100, &r.LongTasks, &r.DrawCalls, &r.Sprites, &r.TexMB, &r.Placeholder, &r.Respawn2s,
 			&r.PingP50, &r.PingP95, &r.PingMax, &r.KbpsIn, &r.KbpsOut, &r.MaxPkt, &r.Corrections,
 			&r.Zone, &r.Realm, &r.CharsView, &r.TienView, &burn, &zon,
-			&r.Quality, &r.GPU, &r.Browser, &r.OSName, &mob); err != nil {
+			&r.Quality, &r.GPU, &r.Browser, &r.OSName, &mob, &r.Build, &auto); err != nil {
 			return nil, err
 		}
-		r.Burning, r.Zoning, r.Mobile = burn != 0, zon != 0, mob != 0
+		r.Burning, r.Zoning, r.Mobile, r.Automated = burn != 0, zon != 0, mob != 0, auto != 0
 		d.Samples = append(d.Samples, r)
 	}
 	if err := rows.Err(); err != nil {
@@ -141,6 +153,34 @@ func Load(db *sql.DB, o Opts) (*Data, error) {
 	}
 	if len(d.Samples) > sampleCap {
 		d.Samples, d.Truncated = d.Samples[:sampleCap], true
+	}
+
+	// ── LOẠI PHIÊN DO MÁY ĐIỀU KHIỂN ─────────────────────────────────────────────────
+	//
+	// Báo cáo này tên là "số liệu NGƯỜI CHƠI THẬT". Ngày 31/10 nó không phải vậy: 64 trong
+	// 67 phiên buổi tối đến từ đúng một máy chạy Chromium của Playwright — bài đo 10 tab.
+	// Mười tab chia nhau một GPU thì FPS 24–28 là chuyện đương nhiên, nhưng gộp vào đây nó
+	// nổi lên thành cảnh báo "96% mẫu FPS 1% dưới 30", trong khi các build chỉ có người
+	// thật cùng ngày cho FPS p50 58–59.
+	//
+	// Đếm và NÓI RA số bị loại, không âm thầm bỏ: một báo cáo tự ý vứt dữ liệu mà không
+	// khai là loại báo cáo tệ nhất.
+	//
+	// `Opts.Session` thì giữ nguyên tất cả — soi một phiên cụ thể thì phiên nào cũng đáng
+	// soi, kể cả phiên của bài đo.
+	if o.Session == "" {
+		kept := d.Samples[:0]
+		autoSess := map[string]bool{}
+		for _, r := range d.Samples {
+			if r.Automated {
+				autoSess[r.Session] = true
+				d.AutoSamples++
+				continue
+			}
+			kept = append(kept, r)
+		}
+		d.Samples = kept
+		d.AutoSessions = len(autoSess)
 	}
 
 	sWhere, sArgs := " WHERE started_at BETWEEN ? AND ?", []any{o.From, o.To}
@@ -171,14 +211,20 @@ func Load(db *sql.DB, o Opts) (*Data, error) {
 	if o.Session != "" {
 		eWhere, eArgs = " WHERE session_id = ?", []any{o.Session}
 	}
-	erows, err := db.Query(`SELECT session_id,server_ts,kind,data FROM events`+eWhere+` LIMIT 20000`, eArgs...)
+	// Lỗi JS cũng phải quy được về BUILD: "lỗi này còn không sau khi sửa?" là câu hỏi duy
+	// nhất đáng hỏi về một lỗi, và không trả lời được nếu bảng lỗi gộp mọi build.
+	// `events` không có cột build nên lấy qua `sessions`; phiên không khớp thì để trống
+	// chứ không đoán.
+	erows, err := db.Query(`SELECT e.session_id,e.server_ts,e.kind,e.data,COALESCE(ss.build,'')
+		FROM events e LEFT JOIN sessions ss ON ss.session_id = e.session_id`+
+		strings.ReplaceAll(eWhere, " session_id", " e.session_id")+` LIMIT 20000`, eArgs...)
 	if err != nil {
 		return nil, err
 	}
 	defer erows.Close()
 	for erows.Next() {
 		var e eventRow
-		if err := erows.Scan(&e.Session, &e.TS, &e.Kind, &e.Data); err != nil {
+		if err := erows.Scan(&e.Session, &e.TS, &e.Kind, &e.Data, &e.Build); err != nil {
 			return nil, err
 		}
 		d.Events = append(d.Events, e)
@@ -420,6 +466,10 @@ func (d *Data) Markdown() string {
 	if d.Truncated {
 		fmt.Fprintf(&b, "> ⚠ Vượt trần %d mẫu — các con số dưới đây tính trên %d mẫu ĐẦU của khoảng, không phải toàn bộ.\n\n", sampleCap, sampleCap)
 	}
+	if d.AutoSessions > 0 {
+		fmt.Fprintf(&b, "> Đã LOẠI %d phiên / %d mẫu do MÁY điều khiển (`navigator.webdriver`: Playwright, "+
+			"bài đo 10 tab…). Báo cáo này chỉ còn người thật.\n\n", d.AutoSessions, d.AutoSamples)
+	}
 	d.sec1Overview(&b)
 	d.sec2S6(&b)
 	d.sec3ByDevice(&b)
@@ -427,6 +477,7 @@ func (d *Data) Markdown() string {
 	d.sec5ClientServer(&b)
 	d.sec6WorstSessions(&b)
 	d.sec7Errors(&b)
+	d.sec8ByBuild(&b)
 	d.secAlerts(&b)
 	return b.String()
 }
@@ -665,9 +716,10 @@ func (d *Data) sec6WorstSessions(b *strings.Builder) {
 func (d *Data) sec7Errors(b *strings.Builder) {
 	b.WriteString("## 7. Lỗi\n\n")
 	type agg struct {
-		n     int
-		sess  map[string]bool
-		first string
+		n      int
+		sess   map[string]bool
+		first  string
+		builds map[string]bool
 	}
 	errs := map[string]*agg{}
 	for _, e := range d.Events {
@@ -677,31 +729,145 @@ func (d *Data) sec7Errors(b *strings.Builder) {
 		key := firstLine(e.Data)
 		a := errs[key]
 		if a == nil {
-			a = &agg{sess: map[string]bool{}, first: e.Data}
+			a = &agg{sess: map[string]bool{}, first: e.Data, builds: map[string]bool{}}
 			errs[key] = a
 		}
 		a.n++
 		a.sess[e.Session] = true
+		if e.Build != "" {
+			a.builds[e.Build] = true
+		}
 	}
 	if len(errs) == 0 {
 		b.WriteString("Không có lỗi nào được báo.\n\n")
 		return
 	}
-	keys := sortedKeysAgg(errs)
-	b.WriteString("| Lỗi | Lần | Phiên |\n|---|---|---|\n")
-	for _, k := range keys {
-		fmt.Fprintf(b, "| %s | %d | %d |\n", k, errs[k].n, len(errs[k].sess))
+	// Cột "Còn ở bản mới?" là cột đáng đọc nhất của bảng này: một lỗi chỉ xuất hiện ở
+	// build cũ đã được sửa rồi, và để nó nằm chung bảng với lỗi đang sống khiến người
+	// đọc đi sửa lại thứ không còn hỏng.
+	latest := d.latestBuild()
+	b.WriteString("| Lỗi | Lần | Phiên | Build | Còn ở bản mới? |\n|---|---|---|---|---|\n")
+	for _, k := range sortedKeysAgg(errs) {
+		a := errs[k]
+		con := "—"
+		if latest != "" {
+			con = "không"
+			if a.builds[latest] {
+				con = "**CÒN**"
+			}
+		}
+		fmt.Fprintf(b, "| %s | %d | %d | %d | %s |\n", k, a.n, len(a.sess), len(a.builds), con)
 	}
 	b.WriteString("\n")
 }
 
+// buildsSeen trả danh sách build có trong khoảng, CŨ TRƯỚC MỚI SAU.
+//
+// Sắp theo mốc thời gian mẫu ĐẦU TIÊN của mỗi build, không theo tên: tên build là
+// `YYYY-MM-DD_HHMM` nên sắp theo chuỗi thường đúng, nhưng "thường đúng" là thứ sẽ sai vào
+// đúng hôm đổi định dạng tên.
+func (d *Data) buildsSeen() []string {
+	firstTS := map[string]int64{}
+	for _, r := range d.Samples {
+		if r.Build == "" {
+			continue
+		}
+		if ts, ok := firstTS[r.Build]; !ok || r.SrvTS < ts {
+			firstTS[r.Build] = r.SrvTS
+		}
+	}
+	out := make([]string, 0, len(firstTS))
+	for bld := range firstTS {
+		out = append(out, bld)
+	}
+	sort.Slice(out, func(i, j int) bool { return firstTS[out[i]] < firstTS[out[j]] })
+	return out
+}
+
+// latestBuild là build có mẫu mới nhất — build DUY NHẤT được phép kết luận.
+func (d *Data) latestBuild() string {
+	all := d.buildsSeen()
+	if len(all) == 0 {
+		return ""
+	}
+	return all[len(all)-1]
+}
+
+func (d *Data) samplesOf(build string) []sampleRow {
+	if build == "" {
+		return d.Samples
+	}
+	out := make([]sampleRow, 0, len(d.Samples))
+	for _, r := range d.Samples {
+		if r.Build == build {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// sec8ByBuild — bảng theo từng BUILD (chủ dự án chốt 1/11).
+//
+// Một ngày có nhiều lần deploy. Gộp cả ngày rồi kết luận là trộn số đo của bản đã sửa với
+// bản chưa sửa: một lần tối ưu thành công có thể biến mất trong trung vị, và một lỗi đã
+// sửa vẫn hiện trong bảng lỗi như thể còn nguyên. Báo cáo 31/10 đọc "98% mẫu FPS 1% dưới
+// 30" trên toàn ngày — không nói được đó là tình trạng của bản nào.
+func (d *Data) sec8ByBuild(b *strings.Builder) {
+	b.WriteString("## 8. Theo BUILD\n\n")
+	builds := d.buildsSeen()
+	if len(builds) == 0 {
+		b.WriteString("Không mẫu nào có build id.\n\n")
+		return
+	}
+	errsOf := map[string]int{}
+	for _, e := range d.Events {
+		if e.Kind == "error" {
+			errsOf[e.Build]++
+		}
+	}
+	// Sprite và draw call đứng cạnh FPS trong cùng một bảng là có chủ đích: khi FPS tụt
+	// giữa hai build, câu hỏi đầu tiên luôn là "có phải vì vẽ nhiều hơn không", và để trả
+	// lời bằng cách mở một bảng khác thì người ta sẽ không mở.
+	b.WriteString("| Build | Phiên | Mẫu | FPS p50 | FPS p1 | Vẽ p95 (ms) | Sprite | Draw | Respawn 2s | Lỗi JS |\n")
+	b.WriteString("|---|---|---|---|---|---|---|---|---|---|\n")
+	for _, bld := range builds {
+		rows := d.samplesOf(bld)
+		sess := map[string]bool{}
+		for _, r := range rows {
+			sess[r.Session] = true
+		}
+		mark := ""
+		if bld == d.latestBuild() {
+			mark = " ← mới nhất"
+		}
+		fmt.Fprintf(b, "| `%s`%s | %d | %d | %.0f | %.0f | %.1f | %.0f | %.0f | %d | %d |\n",
+			bld, mark, len(sess), len(rows),
+			median(col(rows, func(r sampleRow) float64 { return r.FPSAvg })),
+			median(col(rows, func(r sampleRow) float64 { return r.FPSP1 })),
+			median(col(rows, func(r sampleRow) float64 { return r.FrameP95 })),
+			median(col(rows, func(r sampleRow) float64 { return r.Sprites })),
+			median(col(rows, func(r sampleRow) float64 { return r.DrawCalls })),
+			sumInt(rows, func(r sampleRow) int { return r.Respawn2s }),
+			errsOf[bld])
+	}
+	b.WriteString("\n**Chỉ kết luận trên dòng cuối.** Các dòng trên để đối chiếu trước/sau.\n\n")
+}
+
 // secAlerts in các ngưỡng §4.3 đã vượt. Đứng CUỐI báo cáo chứ không đầu: đọc xong số liệu
 // rồi mới tới kết luận, và kết luận thì cần nói rõ dựa trên con số nào.
+//
+// Tính TRÊN BUILD MỚI NHẤT, không trên cả khoảng: một cảnh báo gộp nhiều build không nói
+// được là nó đang mô tả bản đang chạy hay một bản đã bị thay từ sáng.
 func (d *Data) secAlerts(b *strings.Builder) {
 	b.WriteString("## ⚠ Ngưỡng cảnh báo (§4.3)\n\n")
+	latest := d.latestBuild()
+	samples := d.samplesOf(latest)
+	if latest != "" {
+		fmt.Fprintf(b, "Tính trên build `%s` (%d mẫu / %d mẫu cả khoảng).\n\n", latest, len(samples), len(d.Samples))
+	}
 	var hits []string
 	cls := map[string][]sampleRow{}
-	for _, r := range d.Samples {
+	for _, r := range samples {
 		cls[deviceClass(r.Mobile, r.GPU)] = append(cls[deviceClass(r.Mobile, r.GPU)], r)
 	}
 	for _, c := range sortedKeys(cls) {
@@ -716,23 +882,23 @@ func (d *Data) secAlerts(b *strings.Builder) {
 			hits = append(hits, fmt.Sprintf("**%s**: %.0f%% mẫu có FPS 1%% dưới 30 (ngưỡng 10%%)", c, share*100))
 		}
 	}
-	if n := sumInt(d.Samples, func(r sampleRow) int { return r.Placeholder }); n > 0 {
+	if n := sumInt(samples, func(r sampleRow) int { return r.Placeholder }); n > 0 {
 		hits = append(hits, fmt.Sprintf("**%d khung placeholder** ở build thật (ngân sách 0)", n))
 	}
-	if n := sumInt(d.Samples, func(r sampleRow) int { return r.Respawn2s }); n > 0 {
+	if n := sumInt(samples, func(r sampleRow) int { return r.Respawn2s }); n > 0 {
 		hits = append(hits, fmt.Sprintf("**%d lần entity respawn trong 2s** (ngân sách 0)", n))
 	}
 	lost := 0
 	for _, e := range d.Events {
-		if e.Kind == "webgl_context_lost" {
+		if e.Kind == "webgl_context_lost" && (latest == "" || e.Build == latest) {
 			lost++
 		}
 	}
 	if lost > 0 {
 		hits = append(hits, fmt.Sprintf("**%d lần mất ngữ cảnh WebGL**", lost))
 	}
-	if len(d.Samples) > 0 {
-		if p := median(col(d.Samples, func(r sampleRow) float64 { return r.PingP95 })); p > 150 {
+	if len(samples) > 0 {
+		if p := median(col(samples, func(r sampleRow) float64 { return r.PingP95 })); p > 150 {
 			hits = append(hits, fmt.Sprintf("**Ping p95 %.0f ms trên LAN** — LAN mà ping cao là nghẽn client hoặc server, không phải mạng", p))
 		}
 	}
