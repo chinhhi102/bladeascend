@@ -1,6 +1,7 @@
 package main
 
-// --duel: đấu từng cặp nhân vật để đo cân bằng kỹ năng (spec v6.25 §6.3, hàng rào 35–65%).
+// --duel: đấu từng cặp nhân vật — SỐ THAM KHẢO cho báo cáo (spec v6.30 §6.3 bỏ hàng rào
+// tỉ lệ thắng tay đôi; cân bằng theo số liệu người chơi thật, xem /api/admin/characters).
 //
 //	cd server && go run ./cmd/sim --duel [--rounds 20] [--secs 60]
 //
@@ -9,9 +10,9 @@ package main
 // bảng** (vào trận 1 lượt, tự hồi — không cấp sẵn lượt). Đổi bên trái/phải mỗi trận.
 //
 // Thắng = chém trúng thân trước (v6.26: chém trúng là chết). Hết giờ chưa ai trúng → bên còn
-// nhiều kiếm hơn thắng; bằng nhau → hoà. Thoát mã 1 nếu có nhân vật ngoài 35–65%.
+// nhiều kiếm hơn thắng; bằng nhau → hoà. Luôn thoát mã 0.
 //
-// Lịch sử: bản cũ bị bỏ ở Q25 (spec lúc đó bỏ cân bằng tay đôi); v6.25 đưa lại làm hàng rào.
+// Lịch sử: bỏ ở Q25, v6.25 đưa lại làm hàng rào 35–65%, v6.30 (Q36) hạ xuống số tham khảo.
 
 import (
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"bladeascend/server/internal/world"
 )
 
+// duelLo / duelHi: chỉ để tô ✅/⚠ trong bảng tham khảo (không chặn gì).
 const (
 	duelLo = 0.35
 	duelHi = 0.65
@@ -155,7 +157,7 @@ func duelMain(cfg *config.Config, o duelOpts) bool {
 	for _, b := range chars {
 		fmt.Printf(" %s |", short(b))
 	}
-	fmt.Println(" Tỉ lệ thắng | Hồi · lượt | Bấm kỹ năng | Hàng rào |")
+	fmt.Println(" Tỉ lệ thắng | Hồi · lượt | Bấm kỹ năng | 35–65% (tham khảo) |")
 	fmt.Println("|" + repeat("---|", len(chars)+5))
 	ok := true
 	for _, a := range chars {

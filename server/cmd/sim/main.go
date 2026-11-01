@@ -42,16 +42,14 @@ func main() {
 	magnetAlways := flag.Bool("magnet-always", false, "--farm: Nam Châm suốt (≤ 1,5 lần bảng) + bài Luyện Hư → Chân Tiên ≥ 15 phút")
 	audit := flag.Bool("audit", false, "EXP theo nguồn cho docs/EXP_AUDIT.md (CHANGES v6.21)")
 	seeds := flag.Int("seeds", 3, "--audit: số seed mỗi phép đo")
-	duel := flag.Bool("duel", false, "đấu từng cặp nhân vật, hàng rào 35–65% (spec v6.25 §6.3; thoát 1 khi trượt)")
+	duel := flag.Bool("duel", false, "đấu từng cặp nhân vật — SỐ THAM KHẢO, không phải hàng rào (spec v6.30 §6.3)")
 	rounds := flag.Int("rounds", 20, "--duel: số trận mỗi cặp")
 	duelSecs := flag.Float64("secs", 60, "--duel: giây tối đa mỗi trận")
 	flag.Parse()
 
 	cfg := config.MustLoadDefault()
 	if *duel {
-		if !duelMain(cfg, duelOpts{rounds: *rounds, secs: *duelSecs, seed: *seed, realm: 2}) {
-			os.Exit(1)
-		}
+		duelMain(cfg, duelOpts{rounds: *rounds, secs: *duelSecs, seed: *seed, realm: 2})
 		return
 	}
 	if *audit {
