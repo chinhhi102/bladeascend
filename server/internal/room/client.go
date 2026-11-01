@@ -438,7 +438,9 @@ func playerFlags(g *game.Game, viewer, p *game.Player) uint8 {
 	set(p == viewer && p.HasBuff(game.BuffStealth, g.Time) || g.StealthFaded(viewer, p), netproto.FlagStealth)
 	set(p.InTransit(g.Time), netproto.FlagTransit)
 	set(p.Dead, netproto.FlagDead)
-	set(p.IsBot, netproto.FlagBot)
+	// KHÔNG gửi `FlagBot` (spec v6.1 §9.4 "không được nhìn là biết đâu là bot"): client
+	// không dùng nó, chỉ để ai mở DevTools/đọc gói là biết ngay. Bit vẫn giữ trong giao
+	// thức để không đổi schema.
 	set(p.RevealedUntil > g.Time, netproto.FlagRevealed)
 	set(g.Burning(p), netproto.FlagBurning)
 	return f
