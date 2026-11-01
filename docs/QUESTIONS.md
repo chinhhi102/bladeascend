@@ -37,3 +37,5 @@ hiệu ứng kỹ năng vì đó là luật trong spec.
 
 **Ghi chú nhỏ cùng lượt:** §11.1 ví dụ "Trúc Cơ chém Nguyên Anh → 800" nay phải là 850 (mọi
 lần chém trúng đều là chém chết, +50 — CHANGES v6.26 mục 4). Code theo 850; anh sửa ví dụ khi tiện.
+Tương tự, checklist §17 dòng "Bị chém ở Luyện Khí… người chém nhận 50% EXP nạn nhân + 30" còn số
+cũ; code theo v6.26 (30% + thưởng hạ, trần +2 cảnh giới).
