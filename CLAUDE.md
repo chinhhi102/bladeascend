@@ -58,6 +58,11 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
     kỹ năng…) — cập nhật `docs/PERF_LOG.md` (bảng §3, chi tiết §5, nút thắt §6) và
     `docs/perf_log.csv`, theo đúng kịch bản chuẩn S1–S5. **Đo trước rồi mới sửa**; nút thắt
     phải có số đo làm bằng chứng, không ghi phỏng đoán. Chỉ so các lần đo CÙNG kịch bản.
+13. **Không bao giờ xoá art đã sinh** (tài nguyên trả tiền). Art không dùng nữa → chuyển vào
+    `assets/library/<nhóm>/` (giữ nguyên tên + ghi lý do, ngày, job/prompt gốc trong
+    `assets/library/INDEX.md`). `assets/library/` không bao giờ được build vào `assets/dist`,
+    không nạp cho người chơi. Muốn dùng lại thì chuyển ngược ra `assets/src/`.
+14. Không bao giờ tự đặt, lưu, hay ghi mật khẩu/token vào tệp hoặc báo cáo.
 
 > **Bản `CLAUDE.md` trong repo là bản chuẩn.** Bản Claude gửi trong chat (hoặc đặt ở
 > `docs/_raw/CLAUDE.md`) chỉ để tham khảo DÒNG MỚI — không chép đè, vì bản chat thường

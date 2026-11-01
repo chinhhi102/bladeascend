@@ -159,7 +159,7 @@ func alreadyHave(assets string, j Job) bool {
 // nhân vật chưa có levelup / đột phá / rớt cảnh giới / hồi sinh / vào cổng / ra cổng.
 func haveOutputs(assets string, j Job) bool {
 	if j.Mode != modeSheet {
-		return j.Out != "" && exists(filepath.Join(assets, filepath.FromSlash(j.Out)))
+		return j.Out != "" && haveArt(assets, j.Out)
 	}
 	for _, s := range j.Segs {
 		if s.Out == "" {
@@ -169,7 +169,7 @@ func haveOutputs(assets string, j Job) bool {
 		// khung đầu là coi như đã có art (thiếu vài khung cuối thì hoạt ảnh ngắn đi chứ
 		// không phải chưa vẽ); đoạn đặt tên rõ (vật cản intact/cracked/...) phải đủ cả.
 		for _, name := range segFileNames(s) {
-			if !exists(filepath.Join(assets, filepath.FromSlash(s.Out), name)) {
+			if !haveArt(assets, s.Out+"/"+name) {
 				return false
 			}
 		}

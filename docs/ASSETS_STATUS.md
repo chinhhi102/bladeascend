@@ -4,13 +4,7 @@ Tạo lại file này: `cd server && go run ./cmd/artgen status`.
 Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.
 Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.
 
-## Còn thiếu (0 ảnh)
-
-| Job | Ưu tiên | Ra file |
-|---|---|---|
-
-
-## Đã có (356 ảnh)
+## Còn thiếu (21 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
@@ -23,6 +17,23 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `sword_realm_6` | p0 | swords/realm_6.png |
 | `sword_realm_7` | p0 | swords/realm_7.png |
 | `sword_realm_8` | p0 | swords/realm_8.png |
+| `brand_logo_frame` | p1 | ui/logo_frame.png |
+| `brand_icon` | p1 | ui/brand_icon_src.png |
+| `brand_logo_vi` | p1 | ui/logo_vi_src.png |
+| `tile_grass` | p1 | tiles/grass.png |
+| `tile_concrete` | p1 | tiles/concrete.png |
+| `tile_dirt` | p1 | tiles/dirt.png |
+| `obs_sect_wall_regrow` | p4 | obstacles/sect_wall/regrow (regrow ×6) |
+| `obs_cliff_regrow` | p4 | obstacles/cliff/regrow (regrow ×6) |
+| `obs_boulder_huge_regrow` | p4 | obstacles/boulder_huge/regrow (regrow ×6) |
+| `obs_ice_eternal_regrow` | p4 | obstacles/ice_eternal/regrow (regrow ×6) |
+| `obs_jade_pillar_regrow` | p4 | obstacles/jade_pillar/regrow (regrow ×6) |
+| `obs_seal_stele_regrow` | p4 | obstacles/seal_stele/regrow (regrow ×6) |
+
+## Đã có (359 ảnh)
+
+| Job | Ưu tiên | Ra file |
+|---|---|---|
 | `item_sword` | p0 | items/sword.png |
 | `item_bundle` | p0 | items/bundle.png |
 | `item_orb_small` | p0 | items/orb_small.png |
@@ -61,25 +72,40 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `mon_ga_hoang` | p1 | monsters/ga_hoang/frames (idle ×4), monsters/ga_hoang/frames (hurt ×2), monsters/ga_hoang/frames (death ×6) |
 | `mon_muoi` | p1 | monsters/muoi/frames (idle ×4), monsters/muoi/frames (hurt ×2), monsters/muoi/frames (death ×6) |
 | `mon_vua_ghe` | p1 | monsters/vua_ghe/frames (idle ×4), monsters/vua_ghe/frames (hurt ×2), monsters/vua_ghe/frames (death ×6) |
-| `tile_grass` | p1 | tiles/grass.png |
-| `tile_concrete` | p1 | tiles/concrete.png |
-| `tile_dirt` | p1 | tiles/dirt.png |
 | `tile_mud` | p1 | tiles/mud.png |
 | `zone_bush` | p1 | zones/bush.png |
-| `obs_fence_states` | p1 | obstacles/fence (states ×4) |
-| `obs_fence_states_vertical` | p1 | obstacles/fence (states ×4) |
-| `obs_stall_states` | p1 | obstacles/stall (states ×4) |
-| `obs_stall_states_vertical` | p1 | obstacles/stall (states ×4) |
-| `obs_cart_states` | p1 | obstacles/cart (states ×4) |
-| `obs_cart_states_vertical` | p1 | obstacles/cart (states ×4) |
-| `obs_brick_states` | p1 | obstacles/brick (states ×4) |
-| `obs_brick_states_vertical` | p1 | obstacles/brick (states ×4) |
-| `obs_boulder_states` | p1 | obstacles/boulder (states ×4) |
-| `obs_boulder_states_vertical` | p1 | obstacles/boulder (states ×4) |
-| `obs_stone_wall_states` | p1 | obstacles/stone_wall (states ×4) |
-| `obs_stone_wall_states_vertical` | p1 | obstacles/stone_wall (states ×4) |
-| `obs_bamboo_wall_states` | p1 | obstacles/bamboo_wall (states ×4) |
-| `obs_bamboo_wall_states_vertical` | p1 | obstacles/bamboo_wall (states ×4) |
+| `obs_fence_states` | p1 | obstacles/fence/intact.png |
+| `obs_fence_states_vertical` | p1 | obstacles/fence/intact_vertical.png |
+| `obs_stall_states` | p1 | obstacles/stall/intact.png |
+| `obs_stall_states_vertical` | p1 | obstacles/stall/intact_vertical.png |
+| `obs_cart_states` | p1 | obstacles/cart/intact.png |
+| `obs_cart_states_vertical` | p1 | obstacles/cart/intact_vertical.png |
+| `obs_bamboo_thin_states` | p1 | obstacles/bamboo_thin/intact.png |
+| `obs_bamboo_thin_states_vertical` | p1 | obstacles/bamboo_thin/intact_vertical.png |
+| `obs_brick_states` | p1 | obstacles/brick/intact.png |
+| `obs_brick_states_vertical` | p1 | obstacles/brick/intact_vertical.png |
+| `obs_bamboo_wall_states` | p1 | obstacles/bamboo_wall/intact.png |
+| `obs_bamboo_wall_states_vertical` | p1 | obstacles/bamboo_wall/intact_vertical.png |
+| `obs_boulder_states` | p1 | obstacles/boulder/intact.png |
+| `obs_boulder_states_vertical` | p1 | obstacles/boulder/intact_vertical.png |
+| `obs_bamboo_ancient_states` | p1 | obstacles/bamboo_ancient/intact.png |
+| `obs_bamboo_ancient_states_vertical` | p1 | obstacles/bamboo_ancient/intact_vertical.png |
+| `obs_stone_wall_states` | p1 | obstacles/stone_wall/intact.png |
+| `obs_stone_wall_states_vertical` | p1 | obstacles/stone_wall/intact_vertical.png |
+| `obs_sect_wall_states` | p1 | obstacles/sect_wall/intact.png |
+| `obs_sect_wall_states_vertical` | p1 | obstacles/sect_wall/intact_vertical.png |
+| `obs_cliff_states` | p1 | obstacles/cliff/intact.png |
+| `obs_cliff_states_vertical` | p1 | obstacles/cliff/intact_vertical.png |
+| `obs_boulder_huge_states` | p1 | obstacles/boulder_huge/intact.png |
+| `obs_boulder_huge_states_vertical` | p1 | obstacles/boulder_huge/intact_vertical.png |
+| `obs_ice_eternal_states` | p1 | obstacles/ice_eternal/intact.png |
+| `obs_ice_eternal_states_vertical` | p1 | obstacles/ice_eternal/intact_vertical.png |
+| `obs_jade_pillar_states` | p1 | obstacles/jade_pillar/intact.png |
+| `obs_jade_pillar_states_vertical` | p1 | obstacles/jade_pillar/intact_vertical.png |
+| `obs_seal_stele_states` | p1 | obstacles/seal_stele/intact.png |
+| `obs_seal_stele_states_vertical` | p1 | obstacles/seal_stele/intact_vertical.png |
+| `obs_border_states` | p1 | obstacles/border/intact.png |
+| `obs_border_states_vertical` | p1 | obstacles/border/intact_vertical.png |
 | `gate_purple` | p1 | gates/purple (idle ×6), gates/purple (warn ×4), gates/purple (burst ×6) |
 | `gate_blue` | p1 | gates/blue (idle ×6), gates/blue (warn ×4), gates/blue (burst ×6) |
 | `gate_orange` | p1 | gates/orange (idle ×6), gates/orange (warn ×4), gates/orange (burst ×6) |
@@ -287,18 +313,15 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `facesA_dai_ca_dep` | p4 | characters/dai_ca_dep/faces (face ×8) |
 | `bodyA_su_phu_mi` | p4 | characters/su_phu_mi/body (run ×6), characters/su_phu_mi/body (idle ×4) |
 | `facesA_su_phu_mi` | p4 | characters/su_phu_mi/faces (face ×8) |
-| `obs_fence_break` | p4 | obstacles/fence/break (break ×6) |
 | `obs_fence_regrow` | p4 | obstacles/fence/regrow (regrow ×6) |
-| `obs_stall_break` | p4 | obstacles/stall/break (break ×6) |
 | `obs_stall_regrow` | p4 | obstacles/stall/regrow (regrow ×6) |
-| `obs_cart_break` | p4 | obstacles/cart/break (break ×6) |
 | `obs_cart_regrow` | p4 | obstacles/cart/regrow (regrow ×6) |
-| `obs_brick_break` | p4 | obstacles/brick/break (break ×6) |
+| `obs_bamboo_thin_regrow` | p4 | obstacles/bamboo_thin/regrow (regrow ×6) |
 | `obs_brick_regrow` | p4 | obstacles/brick/regrow (regrow ×6) |
-| `obs_boulder_break` | p4 | obstacles/boulder/break (break ×6) |
-| `obs_boulder_regrow` | p4 | obstacles/boulder/regrow (regrow ×6) |
-| `obs_bamboo_wall_break` | p4 | obstacles/bamboo_wall/break (break ×6) |
 | `obs_bamboo_wall_regrow` | p4 | obstacles/bamboo_wall/regrow (regrow ×6) |
+| `obs_boulder_regrow` | p4 | obstacles/boulder/regrow (regrow ×6) |
+| `obs_bamboo_ancient_regrow` | p4 | obstacles/bamboo_ancient/regrow (regrow ×6) |
+| `obs_stone_wall_regrow` | p4 | obstacles/stone_wall/regrow (regrow ×6) |
 | `vfx_run_dust` | p4 | vfx/run_dust (run_dust ×4) |
 | `decal_mud_edge` | p4 | decals/mud_edge.png |
 | `decal_pond_shore` | p4 | decals/pond_shore.png |

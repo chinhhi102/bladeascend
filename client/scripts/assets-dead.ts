@@ -5,7 +5,7 @@
 //   `check:dead`   — tệp CÓ mà không ai đòi            → người chơi tải về rồi vứt đi.
 //
 // Vì sao đáng chặn build: ngày 31/10 thư mục `assets/src` còn 78 tệp art v6.7 đã bỏ
-// (`break/`, `cracked`, `nearly_broken`, `rubble`) — **12,9 MB chưa từng được vẽ một lần
+// (`break/`, `cracked`, `nearly_broken`, `rubble`; nay nằm trong `assets/library/`) — **12,9 MB chưa từng được vẽ một lần
 // nào**. Chúng đẩy gói tải vượt ngân sách 8 MB và chặn deploy, mà không ai hiểu vì sao
 // nặng. Không có bài kiểm này thì chuyện đó lặp lại mỗi lần đổi hướng art.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -231,10 +231,17 @@ if (dead.length > 30) {
  * 12,9 MB art đã bỏ nằm lại trong gói tải.
  */
 const DEAD_MB_MAX = 1;
+// Luật 13 CLAUDE.md / spec §13.7-3b: art đã sinh là tài nguyên trả tiền — KHÔNG BAO GIỜ đề xuất
+// xoá. Không dùng nữa thì chuyển sang `assets/library/`, nơi pipeline không bao giờ đọc tới.
+const MOVE_HINT = [
+  'Không dùng nữa → CHUYỂN vào assets/library/<nhóm>/ (git mv, giữ nguyên tên) và ghi',
+  'assets/library/INDEX.md. KHÔNG xoá art đã sinh. Định dùng → nối vào code.',
+].join('\n');
 if (deadBytes > DEAD_MB_MAX * 1024 * 1024) {
   console.error(`\nLỖI: ${mb(deadBytes)} MB art chết > ngưỡng ${DEAD_MB_MAX} MB.`);
-  console.error('Xoá nếu không dùng nữa, hoặc nối vào code nếu định dùng.');
+  console.error(MOVE_HINT);
   console.error('Báo nhầm (đường dẫn ghép bằng biến) thì thêm vào ALLOW trong tệp này, KÈM LÝ DO.');
   process.exit(1);
 }
 console.log(`\nCẢNH BÁO: ${mb(deadBytes)} MB art chết (ngưỡng chặn build: ${DEAD_MB_MAX} MB).`);
+console.log(MOVE_HINT);
