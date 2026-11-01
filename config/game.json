@@ -416,6 +416,7 @@
     ],
     "rejoin_same_name_chance": 0.7,
     "idle_after_join_chance": 0.05,
+    "shipper_skill_u": 8.0,
     "idle_after_join_secs": [
       3.0,
       8.0

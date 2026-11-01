@@ -87,6 +87,16 @@ func (g *Game) ApplyStatus(p *Player, s int, secs float64) {
 	}
 }
 
+// Controlled: đang dính ít nhất một trạng thái khống chế (bot Shipper dùng để thoát — spec §9).
+func (p *Player) Controlled(now float64) bool {
+	for _, c := range controlStatuses {
+		if p.HasStatus(c, now) {
+			return true
+		}
+	}
+	return false
+}
+
 func isControl(s int) bool {
 	for _, c := range controlStatuses {
 		if c == s {

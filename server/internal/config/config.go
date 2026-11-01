@@ -449,6 +449,9 @@ type Bots struct {
 	RejoinSameNameChance float64   `json:"rejoin_same_name_chance"`
 	IdleAfterJoinChance  float64   `json:"idle_after_join_chance"`
 	IdleAfterJoinSecs    []float64 `json:"idle_after_join_secs"`
+	// ShipperSkillU: bot Shipper dùng Gom Đơn khi có Tiên khí / Đài sắp phun trong ngần
+	// này U (spec §9 v6.9: "trong 8 U").
+	ShipperSkillU float64 `json:"shipper_skill_u"`
 	// Chế độ bot (spec v6.22 §9.5): "auto" | "on" | "off". Admin đổi lúc chạy; đây là giá
 	// trị khi server khởi động. Bot sinh ra như người chơi mới (Luyện Khí 1, 1 kiếm, không
 	// buff) — đã bỏ `spawn_rank` / `max_spawn_realm`.

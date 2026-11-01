@@ -79,7 +79,7 @@ func (b *Brain) MaybeIdleOnJoin(g *game.Game, now float64) bool {
 // Idle: bot đang trong khoảng đứng yên sau khi vào không.
 func (b *Brain) Idle(now float64) bool { return now < b.idleUntil }
 
-// trySkill: bot dùng kỹ năng của nhân vật mình theo luật đơn giản (spec §6.3).
+// trySkill: bot dùng kỹ năng của nhân vật mình theo luật đơn giản (spec §9, v6.9).
 //
 // Mỗi nhân vật một điều kiện riêng, cố ý giữ THÔ: mục đích là để kỹ năng xuất hiện trong
 // trận và đo được cân bằng (cmd/sim --duel), không phải để bot chơi giỏi. Bot tính toán
@@ -93,37 +93,120 @@ func (b *Brain) trySkill(g *game.Game, me *game.Player, threat, prey *game.Playe
 	if near == nil {
 		near = prey
 	}
+	if b.wantsSkill(g, me, near, threat, prey) {
+		g.CastSkill(me)
+	}
+}
+
+// wantsSkill: điều kiện dùng kỹ năng của từng nhân vật. Nhân vật nhắm theo hướng mặt
+// (Sư Phụ, Cô Ba, Thằng Mập) được xoay mặt về đúng hướng trước khi trả true.
+func (b *Brain) wantsSkill(g *game.Game, me, near, threat, prey *game.Player) bool {
 	reach := g.Geom(me).Reach
 	switch me.Char {
 	case "cu_rua": // Rụt Cổ: chỉ còn một vòng mà địch đã sát bên
-		if g.Geom(me).Rings <= 1 && near != nil && near.Pos.Dist(me.Pos) < reach*1.5 {
-			g.CastSkill(me)
-		}
+		return g.Geom(me).Rings <= 1 && near != nil && near.Pos.Dist(me.Pos) < reach*1.5
 	case "ba_tam_loa": // Loa toả tròn 6 U (v6.30): có địch trong tầm là hét
-		if near != nil && near.Pos.Dist(me.Pos) < g.SkillRangeOf(me, "loa_radius") {
-			g.CastSkill(me)
-		}
+		return near != nil && near.Pos.Dist(me.Pos) < g.SkillRangeOf(me, "loa_radius")
 	case "map_tra_sua": // kỹ năng hình nón: địch phải ở phía trước
-		if near != nil && b.inFront(me, near, 60) {
-			g.CastSkill(me)
-		}
+		return near != nil && b.inFront(me, near, 60)
 	case "a_hon": // Bánh Bao: khi đã mất kha khá kiếm
-		if me.Ring.Count*2 < g.Prog.MaxSwords(g.Prog.Realm(me.Level)) {
-			g.CastSkill(me)
-		}
+		return me.Ring.Count*2 < g.Prog.MaxSwords(g.Prog.Realm(me.Level))
 	case "be_ti": // Gồng: khi có ai đó sát bên, dù mình đang đuổi hay đang bị đuổi
-		if near != nil && near.Pos.Dist(me.Pos) < reach*2 {
-			g.CastSkill(me)
+		return near != nil && near.Pos.Dist(me.Pos) < reach*2
+	case "ong_ba_vong":
+		return b.wantsRuNgu(g, me)
+	case "su_phu_mi":
+		return b.aimHutMi(g, me)
+	case "shipper":
+		return b.wantsGomDon(g, me)
+	case "co_ba_ganh":
+		return b.aimBayHang(g, me, threat, prey)
+	default: // Gọi Đàn Em: cứ có địch gần là dùng
+		return near != nil && near.Pos.Dist(me.Pos) < reach*2.5
+	}
+}
+
+// wantsRuNgu — Ông Ba: ≥ 1 địch trong `ru_ngu_r` (4 U) ĐANG VA KIẾM với mình, tức hai
+// vòng kiếm chồng lên nhau (spec §9 v6.9).
+func (b *Brain) wantsRuNgu(g *game.Game, me *game.Player) bool {
+	r := g.SkillRangeOf(me, "ru_ngu_r")
+	myReach := g.Geom(me).Reach
+	for _, o := range g.PlayerList() {
+		if o.ID == me.ID || o.Dead || o.Ring.Count == 0 {
+			continue
 		}
-	case "shipper", "co_ba_ganh": // chạy/lướt: khi cần rút ngắn hoặc kéo giãn khoảng cách
-		if near != nil {
-			g.CastSkill(me)
-		}
-	default: // Ru Ngủ, Lưới Mì, Gọi Đàn Em: cứ có địch gần là dùng
-		if near != nil && near.Pos.Dist(me.Pos) < reach*2.5 {
-			g.CastSkill(me)
+		d := o.Pos.Dist(me.Pos)
+		if d < r && d < myReach+g.Geom(o).Reach {
+			return true
 		}
 	}
+	return false
+}
+
+// aimHutMi — Sư Phụ Mì: có địch NHIỀU KIẾM (không ít hơn mình) trong nón Hút Mì. Xoay mặt
+// về địch đó rồi mới dùng, vì nón tính theo hướng mặt (spec §9 v6.9).
+func (b *Brain) aimHutMi(g *game.Game, me *game.Player) bool {
+	r := g.SkillRangeOf(me, "hut_mi_cone")
+	var best *game.Player
+	for _, o := range g.PlayerList() {
+		if o.ID == me.ID || o.Dead || o.Ring.Count < me.Ring.Count || o.Ring.Count == 0 {
+			continue
+		}
+		if o.Pos.Dist(me.Pos) > r || !b.inFront(me, o, g.Cfg.Skills.HutMiConeDeg*2) {
+			continue
+		}
+		if best == nil || o.Ring.Count > best.Ring.Count {
+			best = o
+		}
+	}
+	if best == nil {
+		return false
+	}
+	me.Facing = best.Pos.Sub(me.Pos).Angle()
+	return true
+}
+
+// wantsGomDon — Shipper: Đài sắp phun / có Tiên khí rơi trong `bots.shipper_skill_u` U /
+// đang bị khống chế (spec §9 v6.9).
+func (b *Brain) wantsGomDon(g *game.Game, me *game.Player) bool {
+	if me.Controlled(g.Time) {
+		return true
+	}
+	r := g.Cfg.Bots.ShipperSkillU * g.SkillU(me)
+	for _, a := range g.AltarMarkers() {
+		if a.Warning && me.Pos.Dist(Vec{X: a.X, Y: a.Y}) < r {
+			return true
+		}
+	}
+	for _, it := range g.Items {
+		if it.Kind == game.ItemTienKhi && it.Pos.Dist(me.Pos) < r {
+			return true
+		}
+	}
+	return false
+}
+
+// aimBayHang — Cô Ba: con mồi yếu hơn đang chạy → đặt sạp chặn PHÍA TRƯỚC nó; chính mình
+// bỏ chạy → đặt SAU LƯNG, chắn giữa mình và kẻ đuổi (spec §9 v6.9).
+func (b *Brain) aimBayHang(g *game.Game, me, threat, prey *game.Player) bool {
+	dist := g.SkillRangeOf(me, "bay_sap_dist")
+	switch {
+	case b.State == StateFlee && threat != nil && threat.Pos.Dist(me.Pos) < dist*2:
+		me.Facing = threat.Pos.Sub(me.Pos).Angle()
+		return true
+	case prey != nil && fleeing(me, prey) && prey.Pos.Dist(me.Pos) < dist*1.5:
+		// Đón đầu: nhắm vào chỗ con mồi sẽ tới sau nửa giây.
+		ahead := prey.Pos.Add(prey.Vel.Mul(0.5))
+		me.Facing = ahead.Sub(me.Pos).Angle()
+		return true
+	}
+	return false
+}
+
+// fleeing: `o` đang chạy ra xa `me`.
+func fleeing(me, o *game.Player) bool {
+	away := o.Pos.Sub(me.Pos)
+	return o.Vel.Len() > 1 && away.X*o.Vel.X+away.Y*o.Vel.Y > 0
 }
 
 // inFront: mục tiêu có nằm trong nón `deg` độ trước mặt không.
