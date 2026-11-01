@@ -422,6 +422,11 @@ export class ClientWorld {
     return reach >= tier;
   }
 
+  /** myName: tên của mình như server đã duyệt (có thể khác tên gõ vào nếu bị lọc). */
+  myName(): string {
+    return this.players.get(this.myId)?.name ?? '';
+  }
+
   me(): PlayerState | null {
     const v = this.players.get(this.myId);
     return v ? v.snaps[v.snaps.length - 1].s : null;

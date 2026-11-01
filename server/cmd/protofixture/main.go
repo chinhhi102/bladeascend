@@ -170,7 +170,31 @@ func goldenCases() []Case {
 				{"tienHave", f32(e.TienHave)}, {"tienNeed", f32(e.TienNeed)}},
 		), e.Encode(nil))
 	}
+	// Bảng xếp hạng phòng (spec §11.5 v6.19): hạng 0 (chưa có), số lớn nhất, tên Thái nhiều
+	// byte UTF-8, và ca Ẩn Thân (khu 255).
+	for _, hd := range []wire.LbHead{{}, {Rank: 65535, Total: 65535, MyScore: 4294967295, Count: 10}} {
+		add("LbHead", lbHeadFields(hd), hd.Encode(nil))
+	}
+	for _, row := range []wire.LbRow{
+		{},
+		{ID: 0xFFFFFFFF, Name: "Mít Tơ Bean", Character: 255, TitleID: 1, Rank: 1, ZoneID: 4,
+			Realm: 13, Tier: 10, Score: 4294967295, Stealth: 0},
+		{ID: 5, Name: "สมชาย", Character: 2, TitleID: 3, Rank: 3, ZoneID: 255, Realm: 2, Tier: 9,
+			Score: 1070, Stealth: 1},
+	} {
+		add("LbRow", lbRowFields(row), row.Encode(nil))
+	}
 	return cs
+}
+
+func lbHeadFields(h wire.LbHead) map[string]any {
+	return map[string]any{"rank": h.Rank, "total": h.Total, "myScore": h.MyScore, "count": h.Count}
+}
+
+func lbRowFields(v wire.LbRow) map[string]any {
+	return map[string]any{"id": v.ID, "name": v.Name, "character": v.Character, "titleId": v.TitleID,
+		"rank": v.Rank, "zoneId": v.ZoneID, "realm": v.Realm, "tier": v.Tier, "score": v.Score,
+		"stealth": v.Stealth}
 }
 
 func updateFields(u wire.Update) map[string]any {
@@ -200,7 +224,7 @@ func fuzzCases(r *rand.Rand, n int) []Case {
 	names := []string{"", "A", "Đệ Tử", "Lão Quái Ham Ngủ85", "ユーザー", "a.b_c", "Bé Tí", "~Kikix"}
 	var cs []Case
 	for i := 0; i < n; i++ {
-		switch i % 11 {
+		switch i % 14 { // 14 = 13 ca có tên + default (Input) — để 13 thì default không bao giờ tới
 		case 0:
 			sp := wire.Spawn{
 				ID: r.Uint32(), DescVer: uint16(r.Intn(65536)), Name: names[r.Intn(len(names))],
@@ -292,6 +316,16 @@ func fuzzCases(r *rand.Rand, n int) []Case {
 				e.Has, []optField{{"exp", f32(e.Exp)}, {"charges", e.Charges}, {"title", e.Title},
 					{"tienHave", f32(e.TienHave)}, {"tienNeed", f32(e.TienNeed)}},
 			), Bytes: b64(e.Encode(nil))})
+		case 11:
+			hd := wire.LbHead{Rank: uint16(r.Intn(65536)), Total: uint16(r.Intn(65536)),
+				MyScore: r.Uint32(), Count: uint8(r.Intn(256))}
+			cs = append(cs, Case{Msg: "LbHead", Fields: lbHeadFields(hd), Bytes: b64(hd.Encode(nil))})
+		case 12:
+			row := wire.LbRow{ID: r.Uint32(), Name: names[r.Intn(len(names))],
+				Character: uint8(r.Intn(256)), TitleID: uint8(r.Intn(256)), Rank: uint8(r.Intn(256)),
+				ZoneID: uint8(r.Intn(256)), Realm: uint8(r.Intn(256)), Tier: uint8(r.Intn(256)),
+				Score: r.Uint32(), Stealth: uint8(r.Intn(2))}
+			cs = append(cs, Case{Msg: "LbRow", Fields: lbRowFields(row), Bytes: b64(row.Encode(nil))})
 		default:
 			in := wire.Input{Seq: r.Uint32(), Angle: uint8(r.Intn(256)), Buttons: uint8(r.Intn(8))}
 			cs = append(cs, Case{Msg: "Input", Fields: map[string]any{

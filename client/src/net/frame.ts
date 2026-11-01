@@ -4,6 +4,7 @@ import { decode } from '@msgpack/msgpack';
 // Vite), mà Node ESM bắt buộc có đuôi. `allowImportingTsExtensions` trong tsconfig bật sẵn
 // cho đúng kiểu dùng này — xem ghi chú ở đó.
 import type { ServerMsg } from './protocol.ts';
+import { decodeLeaderboard, isBinaryLeaderboard } from './lbwire.ts';
 import { isBinarySnapshot, type SnapshotDecoder } from './snapwire.ts';
 
 /**
@@ -17,7 +18,7 @@ import { isBinarySnapshot, type SnapshotDecoder } from './snapwire.ts';
  * Hàm này KHÔNG BAO GIỜ ném. Gói hỏng trả về `fail`; người gọi bỏ qua gói đó và đi tiếp.
  */
 export interface FrameFail {
-  kind: 'snapshot_v2' | 'msgpack';
+  kind: 'snapshot_v2' | 'leaderboard_v2' | 'msgpack';
   /** Byte đầu — chính là `MsgType` với gói nhị phân, hoặc byte mở đầu msgpack. */
   byte0: number;
   len: number;
@@ -47,6 +48,13 @@ export function decodeFrame(u8: Uint8Array, snap: SnapshotDecoder): FrameResult 
       return { msg: snap.decode(u8) };
     } catch (err) {
       return { fail: describe('snapshot_v2', u8, err) };
+    }
+  }
+  if (isBinaryLeaderboard(u8)) {
+    try {
+      return { msg: decodeLeaderboard(u8) };
+    } catch (err) {
+      return { fail: describe('leaderboard_v2', u8, err) };
     }
   }
   // Mọi message KHÁC snapshot (welcome, bảng xếp hạng, kill feed, kick…) đi msgpack.

@@ -335,7 +335,10 @@ class App {
         }
         break;
       case 'lb':
-        this.hud.setLeaderboard(m, this.world.myId);
+        this.hud.setLeaderboard(m);
+        break;
+      case 'rb':
+        this.hud.setRoomBoard(m, this.world.myId, this.world.myName());
         break;
       case 'feed':
         this.hud.addFeed(m);

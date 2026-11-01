@@ -178,6 +178,20 @@ export const STR = {
   tienOverflow: 'Tiên khí dư → Uy Danh',
   swords: (n: number, max: number) => `Kiếm ${n}/${max}`,
   roomTop: 'Top phòng',
+  /** Bảng xếp hạng phòng v6.19 (spec §11.5). */
+  board: {
+    title: 'TOP PHÒNG',
+    players: (n: number): string => `${n} người`,
+    you: 'Bạn',
+    /** Dòng ghim của mình khi ngoài top 10, và hàng thu gọn trên điện thoại: "Bạn #14". */
+    youRank: (rank: number): string => (rank > 0 ? `Bạn #${rank}` : 'Bạn —'),
+    /** Tên ngắn 5 khu, theo đúng thứ tự `zoneNames`. */
+    zoneShort: ['Thiên Đình', 'Linh Sơn', 'Trúc Lâm', 'Phàm Trấn', 'Băng Nguyệt'],
+    /** Khu của người đang Ẩn Thân. */
+    zoneHidden: '???',
+    sameZone: 'Cùng khu với bạn',
+    expand: 'Chạm để xem bảng xếp hạng',
+  },
   yourRank: (rank: number, total: number) => `Hạng của bạn: ${rank}/${total}`,
   ping: (ms: number) => `Ping ${ms}ms`,
   chestIncoming: (secs: number) => `Rương Báu sắp xuất hiện trong ${secs}s!`,

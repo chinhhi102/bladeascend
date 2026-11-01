@@ -192,7 +192,7 @@ Theo file: v6 (4/5/0) · v6.1 (4/5/0) · v6.2 (5/1/0) · v6.4 (11/0/0) · v6.5 (
 | Mục | Trạng thái | Bằng chứng / còn thiếu |
 |---|---|---|
 | 1. Danh hiệu theo cả phòng + test | XONG | `4d2d52e`; `server/internal/room/title_room_test.go:88,131` |
-| 2. Gói Leaderboard mới trong schema v2 | CHƯA | `server/internal/netproto/messages.go:275-282` thiếu character/rank/zone_id/tier/stealth; không có trong `proto/schema.txt` |
-| 3. Giao diện thẻ Top 1/2/3 | CHƯA | `client/src/ui/hud.ts:478-497` danh sách chữ + emoji 👑 |
-| 4. Hoạt ảnh đổi hạng, thu gọn mobile | CHƯA | — |
-| 5. ≤300px, i18n, chất lượng Thấp, ảnh duyệt | CHƯA | chỉ có cắt dòng `hud.ts:513` |
+| 2. Gói Leaderboard mới trong schema v2 | XONG 1/11 | `proto/schema.txt` LbHead/LbRow + golden/fuzz `cmd/protofixture`; test `room/lbwire_test.go` |
+| 3. Giao diện thẻ Top 1/2/3 | XONG 1/11 (chờ duyệt ảnh) | `client/src/ui/roomboard.ts` |
+| 4. Hoạt ảnh đổi hạng, thu gọn mobile | XONG 1/11 | trượt FLIP 0.25s, ▲▼ 2s, Top 1 rung + lật + chớp vàng; điện thoại thu gọn |
+| 5. ≤300px, i18n, chất lượng Thấp, ảnh duyệt | MỘT PHẦN | ≤300px + cắt "…" + Thấp tắt hiệu ứng: xong; i18n chờ v6.16 C |

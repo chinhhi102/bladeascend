@@ -7,6 +7,7 @@ import (
 
 	"bladeascend/server/internal/game"
 	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/wire"
 )
 
 const (
@@ -433,15 +434,14 @@ func (z *Zone) nameOf(id uint32) string {
 // được — năm khu không nối nhau bằng đường đi.
 func (r *Room) sendLeaderboards() {
 	ranking := r.Ranking()
-	top := make([]netproto.LeaderEntry, 0, leaderboardTop)
-	rankOf := map[uint32]int{}
+	rankOf := make(map[uint32]int, len(ranking))
 	for i, p := range ranking {
 		rankOf[p.ID] = i + 1
-		if i < leaderboardTop {
-			top = append(top, netproto.LeaderEntry{ID: p.ID, Name: p.Name, Exp: float32(p.TotalExp),
-				Level: p.Level, Score: float32(p.Score), Title: p.Title})
-		}
 	}
+	// Top 10 đi gói NHỊ PHÂN trong schema v2 (proto/schema.txt LbHead/LbRow, spec §11.5).
+	// Gói msgpack "lb" giờ chỉ còn dấu minimap và số người mỗi khu.
+	rows := r.lbRows(ranking[:min(len(ranking), leaderboardTop)])
+	count := uint8(min(len(ranking), leaderboardTop))
 	// Số người mỗi khu cho bảng M (spec §8.0) — ai cũng thấy giống nhau.
 	counts := make([]int, len(r.zones))
 	for i, z := range r.zones {
@@ -452,7 +452,7 @@ func (r *Room) sendLeaderboards() {
 		lead = ranking[0]
 	}
 	for _, z := range r.zones {
-		base := netproto.Leaderboard{T: "lb", Top: top, Total: len(ranking), ZoneCounts: counts}
+		base := netproto.Leaderboard{T: "lb", ZoneCounts: counts}
 		// Spec §12.1: the crown shows for the whole room, but a leader in a bush or under
 		// Ẩn Thân drops off the minimap so it never gives their position away.
 		if lead != nil && r.cfg.Minimap.ShowTop1 {
@@ -469,12 +469,12 @@ func (r *Room) sendLeaderboards() {
 			}
 		}
 		for id, c := range z.clients {
-			msg := base
-			msg.Rank = rankOf[id]
+			c.send(base)
+			head := wire.LbHead{Rank: clampU16(rankOf[id]), Total: clampU16(len(ranking)), Count: count}
 			if p, ok := z.G.Players[id]; ok {
-				msg.MyScore = float32(p.Score)
+				head.MyScore = roundU32(p.Score)
 			}
-			c.send(msg)
+			c.sendBytes(lbFrame(head, rows))
 		}
 	}
 }

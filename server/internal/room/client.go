@@ -368,6 +368,12 @@ func (r *Room) ZoneKbpsOut(z *Zone, secs float64) float64 {
 // `SendLossy` **cố ý vứt** snapshot cũ khi hàng đợi đầy. Đó là lý do Protocol v2 phải có
 // keyframe: delta chỉ đúng nếu client nhận được mọi gói trước đó, mà chỗ này thì không hứa
 // điều đó — và nó vứt gói đúng lúc mạng yếu, tức là đúng lúc client cần nhất.
+// sendBytes gửi một gói nhị phân đã mã hoá sẵn, đường TIN CẬY (không bỏ gói khi nghẽn).
+func (c *Client) sendBytes(b []byte) {
+	c.countOut(len(b))
+	c.Conn.Send(b)
+}
+
 func (c *Client) sendSnapshotBytes(b []byte) {
 	c.countOut(len(b))
 	if lossy, ok := c.Conn.(LossyConn); ok {

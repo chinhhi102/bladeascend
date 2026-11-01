@@ -15,10 +15,10 @@ import { readFileSync } from 'node:fs';
 import {
   decodeDesc, decodeDespawn, decodeInput, decodeSelfState, decodeSpawn, decodeUpdate,
   decodeEvent, decodeItemAdd, decodeItemDel, decodeMonster, decodeMonsterDel,
-  decodeSelfExtra, decodeSnapHead,
+  decodeSelfExtra, decodeSnapHead, decodeLbHead, decodeLbRow,
   encodeDesc, encodeDespawn, encodeEvent, encodeInput, encodeItemAdd, encodeItemDel,
   encodeMonster, encodeMonsterDel, encodeSelfExtra, encodeSelfState, encodeSnapHead,
-  encodeSpawn, encodeUpdate,
+  encodeSpawn, encodeUpdate, encodeLbHead, encodeLbRow,
   Reader, SCHEMA_HASH, SCHEMA_VERSION, Writer,
 } from '../src/net/wire.gen.ts';
 
@@ -72,6 +72,8 @@ const decoders: Record<string, Decoder> = {
   MonsterDel: decodeMonsterDel as Decoder,
   SnapHead: decodeSnapHead as Decoder,
   SelfExtra: decodeSelfExtra as Decoder,
+  LbHead: decodeLbHead as Decoder,
+  LbRow: decodeLbRow as Decoder,
 };
 const encoders: Record<string, Encoder> = {
   Spawn: encodeSpawn as Encoder,
@@ -87,6 +89,8 @@ const encoders: Record<string, Encoder> = {
   MonsterDel: encodeMonsterDel as Encoder,
   SnapHead: encodeSnapHead as Encoder,
   SelfExtra: encodeSelfExtra as Encoder,
+  LbHead: encodeLbHead as Encoder,
+  LbRow: encodeLbRow as Encoder,
 };
 
 function hex(b: Uint8Array): string {

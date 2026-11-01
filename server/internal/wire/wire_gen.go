@@ -13,7 +13,7 @@ import (
 
 // SchemaHash là băm của proto/schema.txt. Client gửi hash của nó lúc bắt tay;
 // lệch nghĩa là hai bên đang nói hai thứ tiếng — từ chối kết nối thay vì đọc rác (§4.9).
-const SchemaHash = "597500cc51639dac"
+const SchemaHash = "84af90e2ea6120a4"
 
 // SchemaVersion lấy từ dòng `version` trong schema.
 const SchemaVersion = 2
@@ -36,6 +36,8 @@ const (
 	TypeMonsterDel = 11
 	TypeSnapHead = 12
 	TypeSelfExtra = 13
+	TypeLbHead = 14
+	TypeLbRow = 15
 )
 
 // Entity vào vùng quan tâm lần đầu, hoặc quay lại sau khi đã Despawn (§4.3).
@@ -910,6 +912,131 @@ func DecodeSelfExtra(src []byte) (SelfExtra, int, error) {
 		if err != nil {
 			return v, p, err
 		}
+	}
+	return v, p, nil
+}
+
+// Đầu gói BẢNG XẾP HẠNG PHÒNG, 1 lần/giây (GAME_SPEC §11.5, v6.19). Sau nó là `count`
+// message LbRow, mỗi cái mở đầu bằng 1 byte loại — y như SnapHead.
+// 
+// `rank` là hạng THẬT của người nhận trong cả phòng (5 khu) — để ghim dòng "Bạn #14"
+// khi mình ngoài top 10. 0 = chưa có hạng (vừa vào, đang hồi sinh).
+type LbHead struct {
+	Rank uint16
+	Total uint16 // số người (thật + bot) cả phòng đang được xếp
+	MyScore uint32 // Uy Danh của người nhận, làm tròn
+	Count uint8 // số LbRow theo sau (≤ 10)
+}
+
+// Encode nối LbHead vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
+func (v LbHead) Encode(dst []byte) []byte {
+	dst = putU16(dst, v.Rank)
+	dst = putU16(dst, v.Total)
+	dst = putU32(dst, v.MyScore)
+	dst = putU8(dst, v.Count)
+	return dst
+}
+
+// DecodeLbHead đọc một LbHead từ `src`, trả về giá trị và số byte đã dùng.
+func DecodeLbHead(src []byte) (LbHead, int, error) {
+	var v LbHead
+	var err error
+	p := 0
+	v.Rank, p, err = getU16(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Total, p, err = getU16(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.MyScore, p, err = getU32(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Count, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	return v, p, nil
+}
+
+// Một dòng bảng phòng. Đủ để vẽ thẻ Top 1/2/3 mà không cần hỏi thêm gì (§11.5).
+// 
+// `zone_id` = 255 khi người đó đang Ẩn Thân: SERVER giấu, không phải client giấu —
+// gửi khu thật rồi để client tự viết "???" thì ai mở DevTools cũng đọc được.
+type LbRow struct {
+	ID uint32
+	Name string
+	Character uint8 // chỉ số trong config characters; 255 = không rõ
+	TitleID uint8 // danh hiệu đang đeo (1–10, đã qua chống nhấp nháy 3 s); 0 = chưa có
+	Rank uint8 // hạng 1–10
+	ZoneID uint8 // 0–4; 255 = Ẩn Thân
+	Realm uint8 // 0–8 phàm, 9+ Tiên giới
+	Tier uint8 // tầng 1–10
+	Score uint32 // Uy Danh, làm tròn
+	Stealth uint8 // 1 = đang Ẩn Thân
+}
+
+// Encode nối LbRow vào cuối `dst` (byte loại đã nằm ở đầu gói, không lặp lại ở đây).
+func (v LbRow) Encode(dst []byte) []byte {
+	dst = putU32(dst, v.ID)
+	dst = putStr(dst, v.Name)
+	dst = putU8(dst, v.Character)
+	dst = putU8(dst, v.TitleID)
+	dst = putU8(dst, v.Rank)
+	dst = putU8(dst, v.ZoneID)
+	dst = putU8(dst, v.Realm)
+	dst = putU8(dst, v.Tier)
+	dst = putU32(dst, v.Score)
+	dst = putU8(dst, v.Stealth)
+	return dst
+}
+
+// DecodeLbRow đọc một LbRow từ `src`, trả về giá trị và số byte đã dùng.
+func DecodeLbRow(src []byte) (LbRow, int, error) {
+	var v LbRow
+	var err error
+	p := 0
+	v.ID, p, err = getU32(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Name, p, err = getStr(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Character, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.TitleID, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Rank, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.ZoneID, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Realm, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Tier, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Score, p, err = getU32(src, p)
+	if err != nil {
+		return v, p, err
+	}
+	v.Stealth, p, err = getU8(src, p)
+	if err != nil {
+		return v, p, err
 	}
 	return v, p, nil
 }

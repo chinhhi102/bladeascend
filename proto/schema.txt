@@ -173,3 +173,30 @@ message SelfExtra 13
   title       u8      if title
   tien_have   f32     if tien_have
   tien_need   f32     if tien_need
+
+message LbHead 14
+  doc Đầu gói BẢNG XẾP HẠNG PHÒNG, 1 lần/giây (GAME_SPEC §11.5, v6.19). Sau nó là `count`
+  doc message LbRow, mỗi cái mở đầu bằng 1 byte loại — y như SnapHead.
+  doc
+  doc `rank` là hạng THẬT của người nhận trong cả phòng (5 khu) — để ghim dòng "Bạn #14"
+  doc khi mình ngoài top 10. 0 = chưa có hạng (vừa vào, đang hồi sinh).
+  rank        u16
+  total       u16     # số người (thật + bot) cả phòng đang được xếp
+  my_score    u32     # Uy Danh của người nhận, làm tròn
+  count       u8      # số LbRow theo sau (≤ 10)
+
+message LbRow 15
+  doc Một dòng bảng phòng. Đủ để vẽ thẻ Top 1/2/3 mà không cần hỏi thêm gì (§11.5).
+  doc
+  doc `zone_id` = 255 khi người đó đang Ẩn Thân: SERVER giấu, không phải client giấu —
+  doc gửi khu thật rồi để client tự viết "???" thì ai mở DevTools cũng đọc được.
+  id          u32
+  name        str
+  character   u8      # chỉ số trong config characters; 255 = không rõ
+  title_id    u8      # danh hiệu đang đeo (1–10, đã qua chống nhấp nháy 3 s); 0 = chưa có
+  rank        u8      # hạng 1–10
+  zone_id     u8      # 0–4; 255 = Ẩn Thân
+  realm       u8      # 0–8 phàm, 9+ Tiên giới
+  tier        u8      # tầng 1–10
+  score       u32     # Uy Danh, làm tròn
+  stealth     u8      # 1 = đang Ẩn Thân

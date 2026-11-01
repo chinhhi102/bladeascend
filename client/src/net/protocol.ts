@@ -166,10 +166,7 @@ export interface LeaderboardMsg {
   /** zc: số nhân vật mỗi khu, cho bảng phóng to bằng phím M (spec §8.0). */
   zc?: number[];
   t: 'lb';
-  top: { id: number; nm: string; xp: number; L: number; sc: number; ti?: number }[];
-  rank: number;
-  total: number;
-  ms: number; // my Uy Danh (spec §11.1)
+  // Top 10, hạng và Uy Danh của mình đi gói nhị phân riêng: `RoomBoardMsg` (spec §11.5).
   // Minimap markers, the only off-screen positions the client may know (spec §12.1).
   t1?: boolean;
   t1x?: number;
@@ -179,6 +176,35 @@ export interface LeaderboardMsg {
   chy?: number;
   chw?: boolean; // still in the 10s warning
   al?: { x: number; y: number; k: string; w?: boolean }[]; // Đài Tiên Khí (spec §8.5)
+}
+
+/** RoomBoardRow: một dòng bảng xếp hạng phòng (proto/schema.txt LbRow, spec §11.5). */
+export interface RoomBoardRow {
+  id: number;
+  name: string;
+  /** Chỉ số trong `cfg.characters`; 255 = không rõ. */
+  character: number;
+  /** Danh hiệu đang đeo 1–10; 0 = chưa có. */
+  titleId: number;
+  rank: number;
+  /** 0–4; 255 = Ẩn Thân (server đã giấu). */
+  zoneId: number;
+  realm: number;
+  /** Tầng 1–10. */
+  tier: number;
+  score: number;
+  stealth: boolean;
+}
+
+/** RoomBoardMsg: bảng xếp hạng phòng 1 Hz, giải mã từ gói nhị phân LbHead + LbRow. */
+export interface RoomBoardMsg {
+  t: 'rb';
+  /** Hạng thật của mình trong cả phòng; 0 = chưa có. */
+  rank: number;
+  total: number;
+  /** Uy Danh của mình (spec §11.1). */
+  ms: number;
+  rows: RoomBoardRow[];
 }
 
 export interface FeedMsg {
@@ -230,7 +256,7 @@ export interface KickedMsg {
   until?: number;
 }
 
-export type ServerMsg = Snapshot | Welcome | LeaderboardMsg | FeedMsg | DeadMsg | PongMsg
+export type ServerMsg = Snapshot | Welcome | LeaderboardMsg | RoomBoardMsg | FeedMsg | DeadMsg | PongMsg
   | ErrorMsg | KickedMsg;
 
 // Player flags (netproto.Flag*).

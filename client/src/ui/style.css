@@ -228,30 +228,133 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
    viewport, chữ co lại khi cửa sổ hẹp (clamp), danh hiệu dài thì cắt bằng "…". */
 .room-board {
   position: absolute; right: 12px; top: 12px;
-  background: rgba(0,0,0,.45); border-radius: 12px; padding: 10px 14px;
-  font-size: clamp(12px, 1.15vw, 17px);
-  width: clamp(190px, 22vw, 300px);
+  background: rgba(10,8,6,.62); border-radius: 12px; padding: 8px 10px;
+  font-size: 13px; color: #fff;
+  width: 300px;
   max-width: calc(100vw - 24px);
-  /* KHÔNG BAO GIỜ quá nửa chiều cao màn hình (chủ dự án chốt 31/10).
-     `boardRows()` trong hud.ts đếm số dòng vừa với khoảng này, nên bình thường không bị
-     cắt; `max-height` ở đây là chốt chặn cuối cho những cỡ chữ/màn hình bất ngờ. */
+  /* KHÔNG BAO GIỜ quá nửa chiều cao màn hình (chủ dự án chốt 31/10). `trimToScreen()` trong
+     roomboard.ts ẩn bớt dòng cuối cho vừa; `max-height` là chốt chặn cuối. */
   max-height: 50vh;
   overflow: hidden;
+  /* `.hud` tắt chuột/chạm cho mọi thứ con; bảng phải BẬT lại: điện thoại chạm để mở (§11.5),
+     PC rê chuột xem đủ tên bị cắt "…". Hướng đi theo `mousemove` trên window nên không mất. */
+  pointer-events: auto;
 }
-.board-title { color: var(--gold); margin-bottom: 6px; font-size: 1.06em; }
-.lb-line { margin-bottom: 7px; }
-.lb-line.me { color: var(--gold); }
-.lb-main { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
-.lb-who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb-crown { margin-right: 4px; }
-.lb-score { min-width: 3.2em; text-align: right; color: var(--gold); flex: none; }
+
+/* ── Bảng xếp hạng phòng v6.19 (spec §11.5) ─────────────────────────────────────────── */
+.rb { --gold1: #ffd23f; --gold2: #ff9f1c; --silver: #dfe6ee; --bronze: #e0894a; }
+.rb-clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.rb-clip.full { white-space: normal; }
+.rb-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;
+  font-size: 11px; letter-spacing: .08em; color: #f5e6c8; }
+.rb-htitle { font-weight: 900; color: var(--gold1); }
+.rb-count { opacity: .75; letter-spacing: 0; }
+.rb-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.rb-name { flex: 1; font-weight: 800; }
+.rb-score { flex: none; font-weight: 900; font-variant-numeric: tabular-nums; margin-left: auto; }
+.rb-tags { display: flex; align-items: center; gap: 6px; margin-top: 3px; min-width: 0; }
+.rb-face { flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;
+  border: 2px solid #888; background: #2b2722; overflow: hidden; font-weight: 900; font-size: 12px; }
+.rb-face img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Viên thuốc cảnh giới: cùng màu huy hiệu §12.3; Tiên giới viền chảy. */
+.rb-pill { flex: none; display: inline-flex; align-items: baseline; padding: 1px 6px 1px 7px; border-radius: 999px;
+  background: var(--pill); color: #fff; font-size: 10px; font-weight: 900; letter-spacing: .03em;
+  text-shadow: 0 1px 1px rgba(0,0,0,.6); box-shadow: inset 0 0 0 1px rgba(255,255,255,.28); }
+.rb-pill sup { font-size: .8em; margin-left: 2px; }
+.rb-pill.tien { box-shadow: none; border: 1px solid transparent;
+  background: linear-gradient(var(--pill), var(--pill)) padding-box,
+              linear-gradient(90deg, #fff6, #ffd23f, #7ff0ff, #fff6) border-box;
+  background-size: 100% 100%, 300% 100%; animation: rb-flow 3s linear infinite; }
+.rb-zone { flex: none; display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: #e8dcc6; position: relative; }
+.rb-zone.hidden { color: #9a8f80; letter-spacing: .1em; }
+.rb-zicon { width: 12px; height: 12px; }
+.rb-same { width: 5px; height: 5px; border-radius: 50%; background: #7dffb0; box-shadow: 0 0 4px #7dffb0; }
+
+/* Top 1: thẻ to, nền tối ánh vàng, viền vàng kim chuyển sắc, vệt sáng 3 s, lấp lánh. */
+.rb-top1 { position: relative; display: flex; gap: 10px; align-items: center; padding: 10px 10px 8px 8px;
+  border-radius: 10px; margin-bottom: 6px; overflow: hidden;
+  background: radial-gradient(120% 140% at 0% 0%, rgba(255,210,63,.28), rgba(40,26,6,.92) 60%) padding-box,
+              linear-gradient(120deg, #fff1a8, #ffb300, #ff7a00, #ffe066, #fff1a8) border-box;
+  background-size: 100% 100%, 300% 300%; border: 2px solid transparent; animation: rb-flow 4s linear infinite; }
+.rb-top1 .rb-portrait { position: relative; flex: none; padding-top: 8px; }
+.rb-top1 .rb-crown { position: absolute; top: -4px; left: 50%; transform: translateX(-50%) rotate(-8deg); width: 24px; z-index: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.rb-crown img, .rb-crown svg { width: 100%; display: block; }
+.rb-top1 .rb-info { flex: 1; min-width: 0; }
+.rb-top1 .rb-name { font-size: 16px; color: var(--gold1); text-shadow: 0 1px 2px #000; }
+.rb-top1 .rb-score { font-size: 18px; color: #fff3c4; }
+.rb-top1 .rb-title { display: block; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 700;
+  color: #ffd76a; font-size: 12px; }
+.rb-top1.me, .rb-pod.me { outline: 1px solid #fff8; outline-offset: -3px; }
+.rb-shine { position: absolute; inset: 0; pointer-events: none; background-repeat: no-repeat; background-size: 45% 100%;
+  background-image: linear-gradient(105deg, transparent 20%, rgba(255,255,255,.55) 50%, transparent 80%);
+  background-position: -60% 0; mix-blend-mode: screen; animation: rb-shine 3s ease-in-out infinite; }
+.rb-spark { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #fff7c2; box-shadow: 0 0 6px 2px #ffd23f;
+  opacity: 0; pointer-events: none; animation: rb-twinkle 2.4s ease-in-out infinite; }
+.rb-spark.s1 { top: 8px; right: 30%; } .rb-spark.s2 { bottom: 6px; right: 12%; animation-delay: .6s; }
+.rb-spark.s3 { top: 40%; left: 4px; animation-delay: 1.2s; } .rb-spark.s4 { top: 6px; left: 46px; animation-delay: 1.8s; }
+.rb-top1.shake { animation: rb-shake .32s linear; }
+.rb-top1.flip { animation: rb-flip .5s ease-out, rb-flow 4s linear infinite; }
+.rb-top1.flip::after { content: ''; position: absolute; inset: 0; background: #ffd23f; animation: rb-flash .6s ease-out forwards; pointer-events: none; }
+
+/* Top 2/3: hai thẻ nửa rộng, viền bạc (vệt sáng 5 s) / đồng (tĩnh). */
+.rb-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+.rb-pod { position: relative; overflow: hidden; border-radius: 9px; padding: 6px 6px 5px; min-width: 0;
+  background: rgba(30,30,34,.85); border: 1.5px solid var(--edge); }
+.rb-pod.p2 { --edge: var(--silver); } .rb-pod.p3 { --edge: var(--bronze); }
+.rb-pod.p3 .rb-shine { display: none; }
+.rb-pod .rb-shine { animation-duration: 5s; opacity: .7; }
+.rb-pod-txt { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.15; }
+.rb-pod .rb-name { font-size: 14px; color: var(--edge); }
+.rb-pod .rb-score { font-size: 14px; margin-left: 0; color: #fff; }
+.rb-pod .rb-title { display: block; font-size: 10.5px; color: var(--edge); opacity: .9; margin-top: 3px; }
+.rb-pod .rb-tags { gap: 4px; }
+.rb-medal { flex: none; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-size: 10px; font-weight: 900; color: #222; }
+.rb-medal img { width: 100%; height: 100%; }
+.rb-medal.m2:not(:has(img)) { background: var(--silver); } .rb-medal.m3:not(:has(img)) { background: var(--bronze); }
+
+/* 4–10: một dòng gọn, danh hiệu dòng phụ chữ nhỏ mờ 70%. */
+.rb-row { padding: 3px 4px; border-radius: 6px; will-change: transform; }
+.rb-row + .rb-row { border-top: 1px solid rgba(255,255,255,.06); }
+.rb-row .rb-rank { flex: none; width: 1.4em; text-align: center; font-weight: 900; color: #cbbfa9; }
+.rb-row .rb-name { font-size: 13px; font-weight: 700; }
+.rb-row .rb-score { font-size: 13px; }
+.rb-sub { display: block; font-size: 10.5px; opacity: .7; padding-left: calc(1.4em + 6px); font-style: italic; }
+.rb-row.me { background: rgba(255,210,63,.16); box-shadow: inset 0 0 0 1px rgba(255,210,63,.55); }
+.rb-me { display: block; margin-top: 5px; background: rgba(255,210,63,.2); box-shadow: inset 0 0 0 1px rgba(255,210,63,.6); }
+.rb-me .rb-rank { width: auto; color: var(--gold1); }
+.rb-arrow { flex: none; font-size: 10px; animation: rb-fade 2s forwards; }
+.rb-arrow.up { color: #46e37a; } .rb-arrow.down { color: #ff5a5a; }
+
+/* Điện thoại: thu gọn mặc định = 1 hàng (3 chân dung + "Bạn #N"); chạm để mở. */
+.rb-mini { display: none; align-items: center; gap: 4px; cursor: pointer; }
+.rb-mface { position: relative; display: inline-flex; padding-top: 6px; }
+.rb-mface .rb-crown { position: absolute; top: -2px; left: 50%; width: 15px; transform: translateX(-50%); z-index: 1; }
+.rb-mface.r1 .rb-face { border-color: var(--gold1) !important; }
+.rb-mface.r2 .rb-face { border-color: var(--silver) !important; }
+.rb-mface.r3 .rb-face { border-color: var(--bronze) !important; }
+.rb-mrank { margin-left: 4px; font-weight: 900; font-size: 12px; color: var(--gold1); white-space: nowrap; }
+.room-board.compact:not(.open) { width: auto; padding: 4px 8px 4px 6px; border-radius: 999px; }
+.room-board.compact:not(.open) > :not(.rb-mini) { display: none !important; }
+.room-board.compact:not(.open) .rb-mini { display: flex; }
+/* Mở ra là người chơi CHỦ ĐỘNG chạm để xem, nên được cao hơn nửa màn hình (luật "không quá
+   nửa màn hình" 31/10 là cho bảng luôn hiện); chạm ngoài là đóng. */
+.room-board.compact.open { width: min(300px, calc(100vw - 24px)); max-height: 80vh; }
+
+/* Chất lượng Thấp: tắt mọi hiệu ứng động (§11.5). */
+.rb.lowfx .rb-shine, .rb.lowfx .rb-spark { display: none; }
+.rb.lowfx .rb-top1, .rb.lowfx .rb-pill.tien, .rb.lowfx .rb-arrow { animation: none; }
+
+@keyframes rb-flow { to { background-position: 0 0, 300% 0; } }
+@keyframes rb-shine { 0%, 55% { background-position: -60% 0; } 100% { background-position: 180% 0; } }
+@keyframes rb-twinkle { 0%, 100% { opacity: 0; transform: scale(.4); } 50% { opacity: 1; transform: scale(1); } }
+@keyframes rb-shake { 0%, 100% { transform: none; } 25% { transform: translateX(-3px) rotate(-1deg); } 75% { transform: translateX(3px) rotate(1deg); } }
+@keyframes rb-flip { from { transform: perspective(500px) rotateX(90deg); } to { transform: none; } }
+@keyframes rb-flash { from { opacity: .7; } to { opacity: 0; } }
+@keyframes rb-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 /* Danh hiệu thay cho cảnh giới trong bảng phòng (spec §11.2, §11.3). */
-.lb-title { font-size: .82em; font-weight: 700; font-style: italic; color: #cfe4ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb-title.t1 { color: #ffd700; }
-.lb-title.t2 { color: #e8edf3; }
-.lb-title.t3 { color: #e39a4e; }
-.my-rank { font-size: .9em; }
-.my-rank { margin-top: 4px; color: #cde; }
 /* Kill feed góc dưới trái — to hơn 50% so với bản trước để đọc được khi đang chạy. */
 /* Góc dưới trái: kill feed, và trên màn hẹp có thêm dải tin toàn server. Xếp dọc theo
    luồng nên khối nào dài ra thì khối kia tự tránh. */
@@ -342,14 +445,6 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
   .preview-name { font-size: 15px; }
   .preview-skill { font-size: 13px; }
   .preview-desc { font-size: 11.5px; }
-  .room-board { font-size: clamp(10px, 2.9vw, 12px); width: clamp(124px, 34vw, 160px); padding: 5px 7px; border-radius: 9px; }
-  .board-title { font-size: 1em; margin-bottom: 3px; }
-  /* Danh hiệu làm MỖI DÒNG CAO GẤP ĐÔI, mà cảnh giới+danh hiệu đã hiện trên đầu nhân vật
-     rồi — trên màn hẹp thì bỏ, giữ lại thứ tự hạng và điểm. */
-  .lb-title { display: none; }
-  .lb-line { margin-bottom: 3px; }
-  .lb-score { min-width: 2.6em; }
-  .my-rank { font-size: .9em; margin-top: 3px; }
   .hud-left { left: 8px; top: 8px; gap: 5px; }
   .status { gap: 7px; }
   .status-text { min-width: 104px; }

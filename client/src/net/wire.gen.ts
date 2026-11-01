@@ -12,7 +12,7 @@
  * Không có bước này thì client cũ gặp server mới sẽ đọc rác và đứng hình — đã dính
  * đúng một lần với trường `mood`.
  */
-export const SCHEMA_HASH = "597500cc51639dac";
+export const SCHEMA_HASH = "84af90e2ea6120a4";
 
 export const SCHEMA_VERSION = 2;
 
@@ -31,6 +31,8 @@ export const MsgType = {
   MonsterDel: 11,
   SnapHead: 12,
   SelfExtra: 13,
+  LbHead: 14,
+  LbRow: 15,
 } as const;
 
 /**
@@ -636,6 +638,87 @@ export function encodeSelfExtra(w: Writer, v: SelfExtra): void {
   if ((v.has & (1 << 4)) !== 0) {
     w.putF32(v.tienNeed ?? 0);
   }
+}
+
+/**
+ * Đầu gói BẢNG XẾP HẠNG PHÒNG, 1 lần/giây (GAME_SPEC §11.5, v6.19). Sau nó là `count`
+ * message LbRow, mỗi cái mở đầu bằng 1 byte loại — y như SnapHead.
+ * 
+ * `rank` là hạng THẬT của người nhận trong cả phòng (5 khu) — để ghim dòng "Bạn #14"
+ * khi mình ngoài top 10. 0 = chưa có hạng (vừa vào, đang hồi sinh).
+ */
+export interface LbHead {
+  rank: number;
+  total: number; // số người (thật + bot) cả phòng đang được xếp
+  myScore: number; // Uy Danh của người nhận, làm tròn
+  count: number; // số LbRow theo sau (≤ 10)
+}
+
+/** decodeLbHead đọc một LbHead từ `r`. */
+export function decodeLbHead(r: Reader): LbHead {
+  const v = {} as LbHead;
+  v.rank = r.u16();
+  v.total = r.u16();
+  v.myScore = r.u32();
+  v.count = r.u8v();
+  return v;
+}
+
+/** encodeLbHead ghi một LbHead vào `w`. Dùng cho bài đối chiếu và cho gói client gửi lên. */
+export function encodeLbHead(w: Writer, v: LbHead): void {
+  w.putU16(v.rank ?? 0);
+  w.putU16(v.total ?? 0);
+  w.putU32(v.myScore ?? 0);
+  w.putU8(v.count ?? 0);
+}
+
+/**
+ * Một dòng bảng phòng. Đủ để vẽ thẻ Top 1/2/3 mà không cần hỏi thêm gì (§11.5).
+ * 
+ * `zone_id` = 255 khi người đó đang Ẩn Thân: SERVER giấu, không phải client giấu —
+ * gửi khu thật rồi để client tự viết "???" thì ai mở DevTools cũng đọc được.
+ */
+export interface LbRow {
+  id: number;
+  name: string;
+  character: number; // chỉ số trong config characters; 255 = không rõ
+  titleId: number; // danh hiệu đang đeo (1–10, đã qua chống nhấp nháy 3 s); 0 = chưa có
+  rank: number; // hạng 1–10
+  zoneId: number; // 0–4; 255 = Ẩn Thân
+  realm: number; // 0–8 phàm, 9+ Tiên giới
+  tier: number; // tầng 1–10
+  score: number; // Uy Danh, làm tròn
+  stealth: number; // 1 = đang Ẩn Thân
+}
+
+/** decodeLbRow đọc một LbRow từ `r`. */
+export function decodeLbRow(r: Reader): LbRow {
+  const v = {} as LbRow;
+  v.id = r.u32();
+  v.name = r.str();
+  v.character = r.u8v();
+  v.titleId = r.u8v();
+  v.rank = r.u8v();
+  v.zoneId = r.u8v();
+  v.realm = r.u8v();
+  v.tier = r.u8v();
+  v.score = r.u32();
+  v.stealth = r.u8v();
+  return v;
+}
+
+/** encodeLbRow ghi một LbRow vào `w`. Dùng cho bài đối chiếu và cho gói client gửi lên. */
+export function encodeLbRow(w: Writer, v: LbRow): void {
+  w.putU32(v.id ?? 0);
+  w.putStr(v.name ?? '');
+  w.putU8(v.character ?? 0);
+  w.putU8(v.titleId ?? 0);
+  w.putU8(v.rank ?? 0);
+  w.putU8(v.zoneId ?? 0);
+  w.putU8(v.realm ?? 0);
+  w.putU8(v.tier ?? 0);
+  w.putU32(v.score ?? 0);
+  w.putU8(v.stealth ?? 0);
 }
 
 

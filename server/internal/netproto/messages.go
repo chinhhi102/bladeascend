@@ -272,25 +272,14 @@ type Snapshot struct {
 	SrvMs float32 `msgpack:"sv,omitempty"`
 }
 
-type LeaderEntry struct {
-	ID    uint32  `msgpack:"id"`
-	Name  string  `msgpack:"nm"`
-	Exp   float32 `msgpack:"xp"`
-	Level int     `msgpack:"L"`
-	Score float32 `msgpack:"sc"`
-	Title int     `msgpack:"ti,omitempty"`
-}
-
 // Leaderboard goes out once a second. It also carries the minimap's live markers, which are
 // the only positions a client is allowed to know outside its own view (spec §12.1).
 type Leaderboard struct {
 	// ZoneCounts: số nhân vật ở mỗi khu, cho bảng phóng to bằng phím M (spec §8.0).
-	ZoneCounts []int         `msgpack:"zc,omitempty"`
-	T          string        `msgpack:"t"`
-	Top        []LeaderEntry `msgpack:"top"`
-	Rank       int           `msgpack:"rank"`
-	Total      int           `msgpack:"total"`
-	MyScore    float32       `msgpack:"ms"`
+	ZoneCounts []int  `msgpack:"zc,omitempty"`
+	T          string `msgpack:"t"`
+	// Top 10, hạng và Uy Danh của mình KHÔNG còn ở đây: chúng đi gói nhị phân LbHead/LbRow
+	// (proto/schema.txt, spec §11.5 v6.19) gửi ngay sau gói này.
 	// Top1 is the leader's position for the minimap crown; absent while they are hiding.
 	Top1    bool    `msgpack:"t1,omitempty"`
 	Top1X   float32 `msgpack:"t1x,omitempty"`

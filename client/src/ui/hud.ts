@@ -1,7 +1,8 @@
 import { sound } from '../audio/sound';
 import type { GameConfig } from '../config';
 import { maxSwords, realmName, realmOf, tienIndex, tierOf } from '../config';
-import type { FeedMsg, GameEvent, LeaderboardMsg, PlayerState } from '../net/protocol';
+import type { FeedMsg, GameEvent, LeaderboardMsg, PlayerState, RoomBoardMsg } from '../net/protocol';
+import { RoomBoard } from './roomboard';
 import { BUFFS, moodName } from '../net/protocol';
 import { assets } from '../render/assets';
 import { REALM_BADGE } from '../render/palette';
@@ -31,24 +32,6 @@ const narrow = narrowScreen;
 /** Số tin kill feed giữ lại: màn hẹp **1 tin** (chủ dự án chốt 30/10), màn rộng 5. */
 function feedKeep(): number {
   return narrow() ? 1 : 5;
-}
-/**
- * Số dòng bảng xếp hạng phòng — tính theo CHIỀU CAO CÒN LẠI, không phải một con số cố định.
- *
- * Chủ dự án chốt 31/10: **bảng không bao giờ cao quá nửa màn hình**. Một con số cố định
- * không giữ được lời hứa đó: 10 dòng vừa trên màn 1080p nhưng tràn trên 720p, và trên điện
- * thoại nằm ngang thì tràn hẳn. Nên đếm ngược từ chỗ còn trống.
- *
- * Mỗi dòng ~2 hàng chữ (tên + danh hiệu) nên tốn khoảng 2.9em; trừ sẵn tiêu đề và dòng
- * "hạng của mình".
- */
-function boardRows(): number {
-  if (narrow()) {
-    return 3;
-  }
-  const em = Math.min(Math.max(window.innerWidth * 0.0115, 12), 17); // khớp clamp() trong CSS
-  const room = window.innerHeight * 0.5 - 24 /* đệm */ - em * 1.06 /* tiêu đề */ - em /* hạng mình */;
-  return Math.max(3, Math.min(10, Math.floor(room / (em * 2.9))));
 }
 /**
  * Tin loan toàn server: **LUÔN LUÔN một cái tại một thời điểm** (chủ dự án chốt 31/10).
@@ -143,7 +126,8 @@ export class Hud {
   private readonly scoreBox = h('div', 'score');
   private readonly pops = h('div', 'score-pops');
   private readonly buffs = h('div', 'buffs');
-  private readonly board = h('div', 'room-board');
+  /** Bảng xếp hạng phòng §11.5 — dựng sau khi có `cfg` (constructor). */
+  private readonly board: RoomBoard;
   private readonly feed = h('div', 'feed');
   /** serverFeed is the top-centre strip for server-wide announcements (spec §11.4). */
   private readonly serverFeed = h('div', 'server-feed');
@@ -152,6 +136,8 @@ export class Hud {
   private readonly zoneBox = h('div', 'zone-name');
   /** Khu người chơi đang đứng — để biết tin kill feed nào đến từ khu khác (spec §8.0). */
   private myZone = 0;
+  /** Trạng thái mới nhất của chính mình — cho dòng ghim "Bạn (tên) [cảnh giới] khu" (§11.5). */
+  private meState: PlayerState | null = null;
   private readonly ping = h('div', 'ping');
   private readonly debugHelp = h('div', 'debug-help', STR.debugHelp);
   /** Đồng hồ đo hiệu năng, chỉ hiện khi ?debug=true — để biết lag nằm ở đâu (xem setPerf). */
@@ -201,6 +187,7 @@ export class Hud {
     this.badgeWrap.append(this.badge, this.badgeTag, this.crown);
     this.expBar = h('div', 'exp-bar', this.expFill);
     this.minimap = new Minimap(cfg, isTouch);
+    this.board = new RoomBoard(cfg);
     this.burnBtn.title = STR.burnName;
     this.burnBtn.style.display = isTouch ? 'flex' : 'none';
     this.skillBtn.title = STR.skillBtnHint(isTouch);
@@ -220,7 +207,7 @@ export class Hud {
         this.zoneBox,
         this.minimap.root),
       this.pops,
-      this.board,
+      this.board.el,
       // Kill feed và tin loan toàn server vào CHUNG một cột dọc. Trên màn hẹp cả hai đều
       // nằm góc dưới trái, và ghim `bottom` riêng cho từng cái thì cái nào dài ra là đè
       // cái kia — đã đo được đúng vậy (212×21px trên máy 320, 312×56px trên cửa sổ hẹp).
@@ -295,6 +282,7 @@ export class Hud {
     if (!me) {
       return;
     }
+    this.meState = me;
     const r = realmOf(this.cfg, me.L);
     const tienHere = tienIndex(this.cfg, r) >= 0;
     this.setBadge(r, tienHere ? 0 : tierOf(this.cfg, me.L), me.ti ?? 0, moodName(me.md));
@@ -474,57 +462,17 @@ export class Hud {
     this.bannerUntil = performance.now() / 1000 + secs;
   }
 
-  /** setLeaderboard draws the room top 10: realm+tier order, Uy Danh, Top 1–3 badges (§11.2). */
-  setLeaderboard(lb: LeaderboardMsg, myId: number): void {
+  /** setLeaderboard: gói msgpack "lb" giờ chỉ chở dấu minimap và số người mỗi khu. */
+  setLeaderboard(lb: LeaderboardMsg): void {
     this.minimap.setLeaderboard(lb);
-    this.scoreBox.textContent = STR.scoreHud(lb.ms ?? 0);
-    // Xếp theo Uy Danh; mỗi dòng ghi danh hiệu thay cho cảnh giới (cảnh giới đã hiện
-    // trên đầu nhân vật trong trận — spec §11.2).
-    const rows = lb.top.slice(0, boardRows()).map((e, i) => {
-      const line = h('div', `lb-line${e.id === myId ? ' me' : ''}`);
-      const who = h('span', 'lb-who', `${i + 1}. ${e.nm}`);
-      if (e.ti === 1) {
-        who.prepend(h('span', 'lb-crown', '👑'));
-      }
-      const titleText = STR.titles[(e.ti || i + 1) - 1] ?? '';
-      line.append(
-        h('div', 'lb-main', who, h('span', 'lb-score', Math.round(e.sc ?? 0).toLocaleString('vi-VN'))),
-        h('div', `lb-title t${Math.min(e.ti || i + 1, 3)}`, titleText),
-      );
-      return line;
-    });
-    this.board.replaceChildren(h('div', 'board-title', STR.roomTop), ...rows, h('div', 'my-rank', STR.yourRank(lb.rank, lb.total)));
-    this.trimBoardToHalfScreen();
   }
 
-  /**
-   * trimBoardToHalfScreen bỏ bớt dòng cuối cho tới khi bảng vừa trong nửa màn hình.
-   *
-   * `boardRows()` đã ước lượng số dòng, nhưng ước lượng là ước lượng: chiều cao một dòng
-   * phụ thuộc cỡ chữ thật, độ dài danh hiệu (có cái xuống hai hàng), và ngôn ngữ. Ảnh chụp
-   * 960×540 cho thấy nó hụt đúng một dòng — "Hạng của bạn 45/45" bị cắt ngang.
-   *
-   * Nên đo thật rồi cắt: `scrollHeight > clientHeight` là câu hỏi duy nhất đáng tin, và nó
-   * đúng với mọi cỡ chữ, mọi ngôn ngữ, mọi độ dài tên.
-   *
-   * Cắt từ CUỐI lên: dòng cuối là hạng thấp nhất, mất nó ít tiếc nhất. Luôn chừa lại dòng
-   * "hạng của mình" — đó là dòng người chơi tìm trước tiên.
-   */
-  private trimBoardToHalfScreen(): void {
-    // 12 vòng là trần chống treo: nhiều nhất 10 dòng xếp hạng + tiêu đề + hạng mình.
-    for (let i = 0; i < 12 && this.board.scrollHeight > this.board.clientHeight; i++) {
-      // `querySelectorAll(...).at(-1)` chứ KHÔNG `.lb-line:last-of-type`.
-      //
-      // `:last-of-type` xét theo TÊN THẺ, không theo class: phần tử cuối trong bảng là
-      // `div.my-rank`, cũng là một `div`, nên `.lb-line:last-of-type` không khớp gì cả —
-      // vòng lặp thoát ngay và bảng vẫn bị cắt. Bài đo bắt được: thừa 17px ở 960×540.
-      const lines = this.board.querySelectorAll('.lb-line');
-      const last = lines[lines.length - 1];
-      if (!last) {
-        break;
-      }
-      last.remove();
-    }
+  /** setRoomBoard vẽ bảng xếp hạng phòng §11.5 và Uy Danh của mình (gói nhị phân 1 Hz). */
+  setRoomBoard(msg: RoomBoardMsg, myId: number, myName: string): void {
+    this.scoreBox.textContent = STR.scoreHud(msg.ms);
+    const me = this.meState;
+    const self = me ? { name: myName, realm: realmOf(this.cfg, me.L), tier: tierOf(this.cfg, me.L) } : undefined;
+    this.board.update(msg, { myId, myZone: this.myZone, self });
   }
 
   /** popScore floats a "+800 LẬT KÈO!" number up when Uy Danh is earned (spec §11.1). */
