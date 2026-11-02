@@ -16,6 +16,23 @@
     -->
     <title>%BRAND_NAME_VI% — Game tu tiên .io chơi ngay trên trình duyệt</title>
     <meta name="description" content="Tu tiên bằng cả trăm thanh kiếm bay. Chém người cướp tu vi, phi thăng tới Đạo Tổ — nếu chạy kịp. Chơi miễn phí ngay trên trình duyệt." />
+    <!--
+      Icon tab. Trước 02/11 trang KHÔNG khai thẻ nào, nên trình duyệt tự xin
+      `/favicon.ico` — mà tệp đó không tồn tại, yêu cầu rơi vào catch-all và nhận về
+      index.html 18,8 KB dạng `text/html`. Mỗi lần mở trang tốn một request vô ích và tab
+      vẫn trống icon.
+
+      Khai cả ba, vì mỗi nơi đọc một kiểu: `.ico` nhiều cỡ cho tab và dấu trang (cũng là
+      thứ trình duyệt xin sẵn ở gốc web dù có thẻ hay không), PNG 32 px cho trình duyệt
+      hiện đại, `apple-touch-icon` 192 px cho lối tắt màn hình chính iOS — iOS KHÔNG đọc
+      icon từ manifest PWA.
+
+      Ảnh do `tools/make_brandart.py` dựng từ cùng một hàm `icon()` với icon PWA, nên
+      không có chỗ thứ hai lưu hình thương hiệu.
+    -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/brand/icon_192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="%BRAND_NAME%" />

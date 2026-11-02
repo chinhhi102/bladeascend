@@ -4,7 +4,15 @@ Tạo lại file này: `cd server && go run ./cmd/artgen status`.
 Asset thiếu → game tự vẽ placeholder (hình tròn + chữ). Sinh thêm: `go run ./cmd/artgen run -p 2 -n 30` rồi `go run ./cmd/artgen prep`.
 Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` rồi chạy `prep`.
 
-## Còn thiếu (21 ảnh)
+## Còn thiếu (3 ảnh)
+
+| Job | Ưu tiên | Ra file |
+|---|---|---|
+| `brand_logo_frame` | p1 | ui/logo_frame.png |
+| `brand_icon` | p1 | ui/brand_icon_src.png |
+| `brand_logo_vi` | p1 | ui/logo_vi_src.png |
+
+## Đã có (385 ảnh)
 
 | Job | Ưu tiên | Ra file |
 |---|---|---|
@@ -17,23 +25,6 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `sword_realm_6` | p0 | swords/realm_6.png |
 | `sword_realm_7` | p0 | swords/realm_7.png |
 | `sword_realm_8` | p0 | swords/realm_8.png |
-| `brand_logo_frame` | p1 | ui/logo_frame.png |
-| `brand_icon` | p1 | ui/brand_icon_src.png |
-| `brand_logo_vi` | p1 | ui/logo_vi_src.png |
-| `tile_grass` | p1 | tiles/grass.png |
-| `tile_concrete` | p1 | tiles/concrete.png |
-| `tile_dirt` | p1 | tiles/dirt.png |
-| `obs_sect_wall_regrow` | p4 | obstacles/sect_wall/regrow (regrow ×6) |
-| `obs_cliff_regrow` | p4 | obstacles/cliff/regrow (regrow ×6) |
-| `obs_boulder_huge_regrow` | p4 | obstacles/boulder_huge/regrow (regrow ×6) |
-| `obs_ice_eternal_regrow` | p4 | obstacles/ice_eternal/regrow (regrow ×6) |
-| `obs_jade_pillar_regrow` | p4 | obstacles/jade_pillar/regrow (regrow ×6) |
-| `obs_seal_stele_regrow` | p4 | obstacles/seal_stele/regrow (regrow ×6) |
-
-## Đã có (359 ảnh)
-
-| Job | Ưu tiên | Ra file |
-|---|---|---|
 | `item_sword` | p0 | items/sword.png |
 | `item_bundle` | p0 | items/bundle.png |
 | `item_orb_small` | p0 | items/orb_small.png |
@@ -72,6 +63,9 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `mon_ga_hoang` | p1 | monsters/ga_hoang/frames (idle ×4), monsters/ga_hoang/frames (hurt ×2), monsters/ga_hoang/frames (death ×6) |
 | `mon_muoi` | p1 | monsters/muoi/frames (idle ×4), monsters/muoi/frames (hurt ×2), monsters/muoi/frames (death ×6) |
 | `mon_vua_ghe` | p1 | monsters/vua_ghe/frames (idle ×4), monsters/vua_ghe/frames (hurt ×2), monsters/vua_ghe/frames (death ×6) |
+| `tile_grass` | p1 | tiles/grass.png |
+| `tile_concrete` | p1 | tiles/concrete.png |
+| `tile_dirt` | p1 | tiles/dirt.png |
 | `tile_mud` | p1 | tiles/mud.png |
 | `zone_bush` | p1 | zones/bush.png |
 | `obs_fence_states` | p1 | obstacles/fence/intact.png |
@@ -160,6 +154,14 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `icon_skill_be_ti` | p3 | ui/skills/be_ti.png |
 | `icon_skill_shipper` | p3 | ui/skills/shipper.png |
 | `icon_skill_cu_rua` | p3 | ui/skills/cu_rua.png |
+| `icon_status_sleep` | p3 | ui/status/sleep.png |
+| `icon_status_blind` | p3 | ui/status/blind.png |
+| `icon_status_stun` | p3 | ui/status/stun.png |
+| `icon_status_push` | p3 | ui/status/push.png |
+| `icon_status_brace` | p3 | ui/status/brace.png |
+| `icon_status_ghost` | p3 | ui/status/ghost.png |
+| `icon_status_shell` | p3 | ui/status/shell.png |
+| `icon_status_steal` | p3 | ui/status/steal.png |
 | `char_dan_em_run` | p3 | characters/dan_em/frames (run ×8) |
 | `char_a_hon_chase` | p3 | characters/a_hon/frames (chase ×8) |
 | `char_a_hon_flee` | p3 | characters/a_hon/frames (flee ×8) |
@@ -322,6 +324,12 @@ Nếu tự tải ảnh từ Gemini: lưu thành `assets/_raw/<tên job>.png` r�
 | `obs_boulder_regrow` | p4 | obstacles/boulder/regrow (regrow ×6) |
 | `obs_bamboo_ancient_regrow` | p4 | obstacles/bamboo_ancient/regrow (regrow ×6) |
 | `obs_stone_wall_regrow` | p4 | obstacles/stone_wall/regrow (regrow ×6) |
+| `obs_sect_wall_regrow` | p4 | obstacles/sect_wall/regrow (regrow ×6) |
+| `obs_cliff_regrow` | p4 | obstacles/cliff/regrow (regrow ×6) |
+| `obs_boulder_huge_regrow` | p4 | obstacles/boulder_huge/regrow (regrow ×6) |
+| `obs_ice_eternal_regrow` | p4 | obstacles/ice_eternal/regrow (regrow ×6) |
+| `obs_jade_pillar_regrow` | p4 | obstacles/jade_pillar/regrow (regrow ×6) |
+| `obs_seal_stele_regrow` | p4 | obstacles/seal_stele/regrow (regrow ×6) |
 | `vfx_run_dust` | p4 | vfx/run_dust (run_dust ×4) |
 | `decal_mud_edge` | p4 | decals/mud_edge.png |
 | `decal_pond_shore` | p4 | decals/pond_shore.png |

@@ -422,6 +422,9 @@ def main() -> None:
         "logo_vi.png": wordmark(1024, 384, None, name_vi, tag),
         "icon_192.png": icon(192),
         "icon_512.png": icon(512),
+        # favicon 32 px cho thẻ `<link rel="icon">`. Cùng hình với icon PWA nên không có
+        # chỗ thứ hai lưu hình thương hiệu.
+        "favicon-32.png": icon(32),
     }
     # `og:image` LUÔN trỏ `share_card.jpg`, duyệt hay chưa cũng vậy.
     #
@@ -446,7 +449,21 @@ def main() -> None:
         p = UI / fn
         img.save(p)
         print(f"  {fn:<18} {img.width}×{img.height}  {p.stat().st_size // 1024} KB")
-    print(f"\n{len(out)} tệp trong {UI.relative_to(ROOT)} — Vite chép nguyên xi sang dist/, không qua asset-pipeline.")
+
+    # ── favicon.ico ở GỐC web, không trong `brand/` ─────────────────────────────────────
+    #
+    # Trình duyệt nào cũng tự xin `/favicon.ico` dù trang có khai `<link rel="icon">` hay
+    # không, và nó xin ĐÚNG đường dẫn gốc đó. Trước 02/11 tệp này không tồn tại, nên yêu
+    # cầu rơi vào catch-all của server và nhận về **index.html 18,8 KB dạng text/html** —
+    # mỗi lần mở trang tốn một request vô ích, và tab vẫn không có icon.
+    #
+    # Nhiều kích thước trong MỘT tệp `.ico`: 16 px cho tab, 32 px cho thanh dấu trang,
+    # 48 px cho lối tắt trên màn hình nền Windows. Trình duyệt tự chọn cỡ gần nhất.
+    ico = ROOT / "client/public/favicon.ico"
+    icon(64).save(ico, format="ICO", sizes=[(16, 16), (32, 32), (48, 48)])
+    print(f"  {'favicon.ico':<18} 16+32+48      {ico.stat().st_size // 1024} KB   ← gốc web")
+
+    print(f"\n{len(out)} tệp trong {UI.relative_to(ROOT)} + favicon.ico — Vite chép nguyên xi sang dist/.")
 
 
 if __name__ == "__main__":
