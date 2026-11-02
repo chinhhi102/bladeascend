@@ -54,7 +54,7 @@ p.on('console', (m) => { if (m.type() === 'error') console.log('  [console]', m.
 await p.goto(`${TARGET}/?debug=true`, { waitUntil: 'domcontentloaded' });
 await p.waitForSelector('input', { timeout: 60000 });
 await p.fill('input', 'Đạo Hữu');
-await p.getByText('Vào chơi', { exact: true }).click();
+await p.locator('.home .btn.primary').click();
 await p.waitForSelector('.room-board', { timeout: 60000 });
 
 // Chờ art nạp xong. Bắt đầu chụp quá sớm thì ảnh đầy hình placeholder (vòng tròn + chữ) —
@@ -85,7 +85,7 @@ let dirIdx = 0;
 async function reviveIfDead() {
   const over = await p.$('.summary');
   if (!over) return false;
-  await p.getByText('Chơi tiếp', { exact: true }).click();
+  await p.locator('.summary .btn.primary').click();
   await p.waitForSelector('.room-board', { timeout: 30000 });
   await sleep(2500);
   return true;

@@ -234,7 +234,7 @@ async function openTabOnce(browser, name, slow, full) {
     await page.goto(BASE, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('input', { timeout: 120000 });
     await page.fill('input', name);
-    await page.getByText('Vào chơi', { exact: true }).click();
+    await page.locator('.home .btn.primary').click();
     await page.waitForFunction(() => typeof window.__stats === 'function', null, { timeout: 120000 });
   } catch (e) {
     // Đóng context hỏng để server thả kết nối cũ, không thì lần thử lại ăn thêm một suất
@@ -422,7 +422,7 @@ async function runOnce(label, slow) {
     if (alive) {
       return;
     }
-    await t.page.getByText('Chơi tiếp', { exact: true }).click({ timeout: 2000 }).catch(() => {});
+    await t.page.locator('.summary .btn.primary').click({ timeout: 2000 }).catch(() => {});
     await t.page.waitForFunction(() => window.kx?.playing?.() === true, null, { timeout: 15000 }).catch(() => {});
   }));
 

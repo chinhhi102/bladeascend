@@ -83,7 +83,7 @@ async function joinZone(ctx, cfg) {
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('input', { timeout: 60000 });
     await page.fill('input', 'DoChatLuong');
-    await page.getByText('Vào chơi', { exact: true }).click();
+    await page.locator('.home .btn.primary').click();
     await page.waitForFunction(() => window.__playing?.() === true, null, { timeout: 60000 });
     const zone = await page.evaluate(() => window.__stats().zone);
     if (zone === ZONE) {

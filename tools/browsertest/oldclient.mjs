@@ -78,7 +78,7 @@ await page.route('**/*', async (route) => {
 await page.goto(TARGET, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('input', { timeout: 60000 });
 await page.fill('input', 'TabCu');
-await page.getByText('Vào chơi', { exact: true }).click();
+await page.locator('.home .btn.primary').click();
 await page.waitForTimeout(10000);
 
 const body = (await page.locator('body').textContent()) ?? '';

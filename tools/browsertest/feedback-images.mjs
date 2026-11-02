@@ -184,7 +184,7 @@ async function run({ label, engine, ctxOpts, shotName, tryHeic = false, noWebp =
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('input', { timeout: 30000 });
   await page.fill('input', label.slice(0, 10).replace(/\W/g, '') || 'Test');
-  await page.getByText('Vào chơi', { exact: true }).click();
+  await page.locator('.home .btn.primary').click();
   await page.waitForFunction(() => window.__playing?.() === true, null, { timeout: 30000 });
   await sleep(1500);
   await page.locator('.fb-btn.fb-match').click();

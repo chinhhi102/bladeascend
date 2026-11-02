@@ -35,22 +35,23 @@ type sampleRow struct {
 	// bao giờ khớp với mẫu server. Lúc đầu tôi đọc nhầm cột `server_ts` vào `TS`, mục 5 của
 	// báo cáo im lặng trả "không có mẫu server cùng lúc" cho mọi dòng —
 	// `TestGhepClientServerChiRaNghenODau` bắt được.
-	TS                            int64
-	SrvTS                         int64
-	FPSAvg, FPSP1, FrameP95       float64
-	Over33, Over100, LongTasks    int
-	DrawCalls, Sprites, TexMB     float64
-	Placeholder, Respawn2s        int
-	PingP50, PingP95, PingMax     float64
-	KbpsIn, KbpsOut               float64
-	MaxPkt                        int
-	Corrections                   float64
-	Zone, Realm                   int
-	CharsView, TienView           int
-	Burning, Zoning               bool
-	Quality, GPU, Browser, OSName string
-	Mobile                        bool
-	Automated                     bool
+	TS                                    int64
+	SrvTS                                 int64
+	FPSAvg, FPSP1, FrameP95               float64
+	Over33, Over100, LongTasks            int
+	DrawCalls, Sprites, TexMB             float64
+	Placeholder, Respawn2s                int
+	RespawnDs, RespawnHethan, RespawnQuai int
+	PingP50, PingP95, PingMax             float64
+	KbpsIn, KbpsOut                       float64
+	MaxPkt                                int
+	Corrections                           float64
+	Zone, Realm                           int
+	CharsView, TienView                   int
+	Burning, Zoning                       bool
+	Quality, GPU, Browser, OSName         string
+	Mobile                                bool
+	Automated                             bool
 	// Build: bản build của phiên sinh ra mẫu này.
 	//
 	// Một ngày có nhiều lần deploy, nên gộp cả ngày lại rồi kết luận là trộn số đo của
@@ -125,6 +126,7 @@ func Load(db *sql.DB, o Opts) (*Data, error) {
 	}
 	rows, err := db.Query(`SELECT s.session_id,s.ts,s.server_ts,s.fps_avg,s.fps_p1,s.frame_p95,
 		s.over33,s.over100,s.long_tasks,s.draw_calls,s.sprites,s.tex_mb,s.placeholder,s.respawn2s,
+		COALESCE(s.respawn_ds,0),COALESCE(s.respawn_hethan,0),COALESCE(s.respawn_quai,0),
 		s.ping_p50,s.ping_p95,s.ping_max,s.kbps_in,s.kbps_out,s.max_pkt,s.corrections,
 		s.zone,s.realm,s.chars_view,s.tien_view,s.burning,s.zoning,
 		COALESCE(ss.quality,''),COALESCE(ss.gpu,''),COALESCE(ss.browser,''),COALESCE(ss.os,''),COALESCE(ss.mobile,0),
@@ -140,6 +142,7 @@ func Load(db *sql.DB, o Opts) (*Data, error) {
 		var burn, zon, mob, auto int
 		if err := rows.Scan(&r.Session, &r.TS, &r.SrvTS, &r.FPSAvg, &r.FPSP1, &r.FrameP95,
 			&r.Over33, &r.Over100, &r.LongTasks, &r.DrawCalls, &r.Sprites, &r.TexMB, &r.Placeholder, &r.Respawn2s,
+			&r.RespawnDs, &r.RespawnHethan, &r.RespawnQuai,
 			&r.PingP50, &r.PingP95, &r.PingMax, &r.KbpsIn, &r.KbpsOut, &r.MaxPkt, &r.Corrections,
 			&r.Zone, &r.Realm, &r.CharsView, &r.TienView, &burn, &zon,
 			&r.Quality, &r.GPU, &r.Browser, &r.OSName, &mob, &r.Build, &auto); err != nil {
@@ -780,7 +783,24 @@ func (d *Data) buildsSeen() []string {
 	for bld := range firstTS {
 		out = append(out, bld)
 	}
-	sort.Slice(out, func(i, j int) bool { return firstTS[out[i]] < firstTS[out[j]] })
+	// Bằng điểm thì xử theo TÊN build.
+	//
+	// `SrvTS` là mốc lúc server GHI mẫu, không phải lúc client đo. Hai build có mẫu rơi
+	// vào cùng một giây — chuyện thường khi một bản vừa thay bản kia, và luôn xảy ra trong
+	// test vì mọi mẫu được ghi trong cùng một nhịp — thì so `<` không phân định được, và
+	// `sort.Slice` KHÔNG ổn định: thứ tự rơi về thứ tự duyệt map, tức ngẫu nhiên mỗi lần
+	// chạy. Hậu quả là "build mới nhất" lúc đúng lúc sai. `TestBangTheoBuild…` bắt được
+	// đúng kiểu này: đạt hôm 1/11, trượt hôm 2/11, cùng một đoạn mã.
+	//
+	// Tên build là `YYYYMMDD_HHMM_<sha>` nên so chuỗi đúng thứ tự thời gian. Chỉ dùng nó
+	// làm phép phân định PHỤ — đổi định dạng tên thì cũng chỉ mất tiêu chí phụ, thứ tự
+	// chính vẫn theo mốc thời gian thật.
+	sort.Slice(out, func(i, j int) bool {
+		if firstTS[out[i]] != firstTS[out[j]] {
+			return firstTS[out[i]] < firstTS[out[j]]
+		}
+		return out[i] < out[j]
+	})
 	return out
 }
 
@@ -886,7 +906,14 @@ func (d *Data) secAlerts(b *strings.Builder) {
 		hits = append(hits, fmt.Sprintf("**%d khung placeholder** ở build thật (ngân sách 0)", n))
 	}
 	if n := sumInt(samples, func(r sampleRow) int { return r.Respawn2s }); n > 0 {
-		hits = append(hits, fmt.Sprintf("**%d lần entity respawn trong 2s** (ngân sách 0)", n))
+		// Kèm luôn NGUYÊN NHÂN. Một cảnh báo chỉ có tổng buộc người đọc phải đi dựng lại
+		// cả chuỗi build mới biết chữa ở đâu — đúng việc đã mất nửa ngày 2/11.
+		hits = append(hits, fmt.Sprintf(
+			"**%d lần entity respawn trong 2s** (ngân sách 0) — Despawn %d · hết hạn 2s %d · quái %d",
+			n,
+			sumInt(samples, func(r sampleRow) int { return r.RespawnDs }),
+			sumInt(samples, func(r sampleRow) int { return r.RespawnHethan }),
+			sumInt(samples, func(r sampleRow) int { return r.RespawnQuai })))
 	}
 	lost := 0
 	for _, e := range d.Events {

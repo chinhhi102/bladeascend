@@ -69,7 +69,7 @@ async function measure({ name, down, up, rtt, ctx: reuse }) {
   await sleep(TYPE_MS);
   // ——— "Thời gian chờ THỰC" của người chơi: bấm Vào chơi → đang ở trong trận ———
   const tClick = Date.now();
-  await p.getByText('Vào chơi', { exact: true }).click();
+  await p.locator('.home .btn.primary').click();
   await p.waitForFunction(() => window.__playing?.() === true, null, { timeout: 180000 });
   await requireDebug(p, 'loadtime.mjs');
   const waited = Date.now() - tClick;

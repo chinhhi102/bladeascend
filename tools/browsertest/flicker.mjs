@@ -22,7 +22,7 @@ const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } }))
 await p.goto(`${URL}/?debug=true`, { waitUntil: 'domcontentloaded' });
 await p.waitForSelector('input', { timeout: 60000 });
 await p.fill('input', 'FlickTest');
-await p.getByText('Vào chơi', { exact: true }).click();
+await p.locator('.home .btn.primary').click();
 await p.waitForFunction(() => window.__playing?.() === true, null, { timeout: 60000 });
 await requireDebug(p, 'flicker.mjs');
 await sleep(2000);

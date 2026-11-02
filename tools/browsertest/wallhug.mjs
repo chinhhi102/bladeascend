@@ -50,7 +50,7 @@ await p.addInitScript(() => {
 await p.goto(`${URL}/?debug=true`, { waitUntil: 'domcontentloaded' });
 await p.waitForSelector('input', { timeout: 60000 });
 await p.fill('input', 'WallHug');
-await p.getByText('Vào chơi', { exact: true }).click();
+await p.locator('.home .btn.primary').click();
 await p.waitForFunction(() => window.__playing?.() === true && window.__map, null, { timeout: 60000 });
 await requireDebug(p, 'wallhug.mjs');
 await sleep(2500);

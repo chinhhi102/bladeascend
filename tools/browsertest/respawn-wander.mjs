@@ -43,7 +43,7 @@ async function tab(i) {
   await page.goto(`http://127.0.0.1:${PORT}/?debug=true`);
   await page.waitForSelector('input', { timeout: 60000 });
   await page.fill('input', `Lang${i}`);
-  await page.getByText('Vào chơi', { exact: true }).click();
+  await page.locator('.home .btn.primary').click();
   await page.waitForFunction(() => window.__playing?.() === true, null, { timeout: 60000 });
   // Bất tử + vài cảnh giới để không chết giữa bài (chết = hồi sinh id mới, làm nhiễu số).
   for (let k = 0; k < 3; k++) { await page.keyboard.press('r'); await sleep(200); }
@@ -57,7 +57,7 @@ async function tab(i) {
     await sleep(2500);
     for (const x of k) { await page.keyboard.up(x); }
     if (!(await page.evaluate(() => window.__playing?.()))) {
-      await page.getByText('Chơi tiếp').click().catch(() => {});
+      await page.locator('.summary .btn.primary').click().catch(() => {});
       await sleep(2000);
     }
   }

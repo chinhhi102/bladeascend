@@ -29,7 +29,7 @@ if (CPU > 1) {
 await page.goto(TARGET, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('input', { timeout: 60000 });
 await page.fill('input', 'HoSo');
-await page.getByText('Vào chơi', { exact: true }).click();
+await page.locator('.home .btn.primary').click();
 await page.waitForFunction(() => window.__playing?.() === true, null, { timeout: 60000 });
 await sleep(4000);
 

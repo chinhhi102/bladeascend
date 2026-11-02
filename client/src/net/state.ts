@@ -334,6 +334,26 @@ export class ClientWorld {
     return n;
   }
 
+  /**
+   * takeRespawnBy trả bảng chia theo NGUYÊN NHÂN rồi đặt lại — cùng luật "lấy rồi xoá".
+   *
+   * Vì sao telemetry cần nó, chứ không chỉ cần tổng: ngày 2/11 đi tìm lại con số "1.357
+   * lần respawn" của 31/10, dữ liệu người thật chỉ có TỔNG. Không trả lời được câu duy
+   * nhất đáng hỏi — do `Despawn` của server, do luật hết hạn 2 giây ở client, hay do quái
+   * — nên phải dựng lại cả chuỗi build mới lần ra. Ba nguyên nhân cần ba cách chữa khác
+   * hẳn nhau.
+   *
+   * Lúc đó bảng này đã tồn tại nhưng chỉ `tools/browsertest/respawn-wander.mjs` đọc, tức
+   * chỉ thấy được trên máy dev — đúng chỗ lỗi gần như không bao giờ xảy ra.
+   */
+  takeRespawnBy(): { ds: number; hethan: number; quai: number } {
+    const out = { ...this.respawnBy };
+    this.respawnBy.ds = 0;
+    this.respawnBy.hethan = 0;
+    this.respawnBy.quai = 0;
+    return out;
+  }
+
   private updateMonsters(s: Snapshot): void {
     const seen = new Set<number>();
     for (const m of s.m ?? []) {

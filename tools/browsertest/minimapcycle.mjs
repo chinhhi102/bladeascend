@@ -8,7 +8,7 @@ async function run(w, h, mobile) {
   await p.goto('http://127.0.0.1:9998/', { waitUntil: 'domcontentloaded' });
   await p.waitForSelector('input', { timeout: 60000 });
   await p.fill('input', 'MapTest');
-  await p.getByText('Vào chơi', { exact: true }).click();
+  await p.locator('.home .btn.primary').click();
   await p.waitForSelector('.room-board', { timeout: 60000 });
   await sleep(2000);
   const state = () => p.evaluate(() => {

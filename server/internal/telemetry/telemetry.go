@@ -106,8 +106,14 @@ type Sample struct {
 	Stalls  int     `msgpack:"st"`
 
 	Corrections float64 `msgpack:"cor"`
-	Respawn2s   int     `msgpack:"rs"`
-	InterpMS    float64 `msgpack:"im"`
+	// Nhấp nháy chia theo nguyên nhân (client gửi từ 2/11): Despawn của server · luật hết
+	// hạn 2 giây ở client · quái. Có tổng mà không có nguyên nhân thì không chữa được —
+	// ba nguyên nhân cần ba cách chữa khác hẳn nhau.
+	RespawnDs     int     `msgpack:"rsd"`
+	RespawnHethan int     `msgpack:"rsh"`
+	RespawnQuai   int     `msgpack:"rsq"`
+	Respawn2s     int     `msgpack:"rs"`
+	InterpMS      float64 `msgpack:"im"`
 
 	Zone       int  `msgpack:"zn"`
 	Realm      int  `msgpack:"rl"`
@@ -190,6 +196,7 @@ CREATE TABLE IF NOT EXISTS samples (
 	ping_p50 REAL, ping_p95 REAL, ping_max REAL, kbps_in REAL, kbps_out REAL,
 	max_pkt INTEGER, late150 INTEGER, stalls INTEGER,
 	corrections REAL, respawn2s INTEGER, interp_ms REAL,
+	respawn_ds INTEGER NOT NULL DEFAULT 0, respawn_hethan INTEGER NOT NULL DEFAULT 0, respawn_quai INTEGER NOT NULL DEFAULT 0,
 	zone INTEGER, realm INTEGER, swords INTEGER, rings INTEGER,
 	chars_view INTEGER, tien_view INTEGER, swords_draw INTEGER, vfx INTEGER,
 	burning INTEGER, zoning INTEGER
@@ -256,6 +263,9 @@ func Open(path, buildID string) (*Store, error) {
 	// column name" — bỏ qua đúng lỗi đó, không bỏ qua lỗi khác.
 	for _, alter := range []string{
 		`ALTER TABLE sessions ADD COLUMN automated INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE samples ADD COLUMN respawn_ds INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE samples ADD COLUMN respawn_hethan INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE samples ADD COLUMN respawn_quai INTEGER NOT NULL DEFAULT 0`,
 	} {
 		if _, err := db.Exec(alter); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 			db.Close()
@@ -446,12 +456,13 @@ func writeOne(tx *sql.Tx, v any, now int64) error {
 			(session_id,ts,server_ts,fps_avg,fps_p1,frame_p50,frame_p95,frame_max,over33,over100,long_tasks,
 			 draw_calls,sprites,tex_mb,tex_uploads,placeholder,ping_p50,ping_p95,ping_max,kbps_in,kbps_out,
 			 max_pkt,late150,stalls,corrections,respawn2s,interp_ms,zone,realm,swords,rings,
-			 chars_view,tien_view,swords_draw,vfx,burning,zoning)
-			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			 chars_view,tien_view,swords_draw,vfx,burning,zoning,respawn_ds,respawn_hethan,respawn_quai)
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 			x.Session, int64(x.TS), now, x.FPSAvg, x.FPSP1, x.FrameP50, x.FrameP95, x.FrameMax, x.Over33, x.Over100, x.LongTasks,
 			x.DrawCalls, x.Sprites, x.TexMB, x.TexUploads, x.Placeholder, x.PingP50, x.PingP95, x.PingMax, x.KbpsIn, x.KbpsOut,
 			x.MaxPkt, x.Late150, x.Stalls, x.Corrections, x.Respawn2s, x.InterpMS, x.Zone, x.Realm, x.Swords, x.Rings,
-			x.CharsView, x.TienView, x.SwordsDraw, x.VFX, b2i(x.Burning), b2i(x.Zoning))
+			x.CharsView, x.TienView, x.SwordsDraw, x.VFX, b2i(x.Burning), b2i(x.Zoning),
+			x.RespawnDs, x.RespawnHethan, x.RespawnQuai)
 		return err
 	case *Event:
 		_, err := tx.Exec(`INSERT INTO events (session_id,ts,server_ts,kind,data) VALUES (?,?,?,?,?)`,

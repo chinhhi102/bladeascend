@@ -30,6 +30,10 @@ interface Sample {
   dc: number; sp: number; tx: number; tu: number; ph: number;
   p50: number; p95: number; pmx: number; ki: number; ko: number; mp: number; l150: number; st: number;
   cor: number; rs: number; im: number;
+  // Chia nhấp nháy theo nguyên nhân: Despawn của server · hết hạn 2s ở client · quái.
+  // Xem `takeRespawnBy` trong net/state.ts — có tổng mà không có nguyên nhân thì lần sau
+  // tái phát lại phải dựng lại cả chuỗi build mới lần ra được.
+  rsd: number; rsh: number; rsq: number;
   zn: number; rl: number; sws: number; rg: number; cv: number; tv: number; sd: number; vf: number;
   bn: boolean; zg: boolean;
 }
@@ -55,6 +59,7 @@ export interface TelemetryContext {
   zoning: boolean;
   placeholderNow: boolean;
   respawn2s: number;
+  respawnBy: { ds: number; hethan: number; quai: number };
   quality: string;
   qualityAuto: boolean;
 }
@@ -97,6 +102,9 @@ export class Telemetry {
   private longTasks = 0;
   private placeholderFrames = 0;
   private respawn2s = 0;
+  private respawnDs = 0;
+  private respawnHethan = 0;
+  private respawnQuai = 0;
   private corrections: number[] = [];
   private polls = 0;
 
@@ -170,6 +178,9 @@ export class Telemetry {
       this.placeholderFrames++;
     }
     this.respawn2s += c.respawn2s;
+    this.respawnDs += c.respawnBy.ds;
+    this.respawnHethan += c.respawnBy.hethan;
+    this.respawnQuai += c.respawnBy.quai;
   }
 
   /** flushSample gộp cửa sổ hiện tại thành một mẫu rồi gửi đi. */
@@ -212,6 +223,9 @@ export class Telemetry {
       st: 0,
       cor: +avg(this.corrections).toFixed(2),
       rs: this.respawn2s,
+      rsd: this.respawnDs,
+      rsh: this.respawnHethan,
+      rsq: this.respawnQuai,
       im: 0,
       zn: c.zone, rl: c.realm, sws: c.swords, rg: c.rings,
       cv: c.charsInView, tv: c.tienInView, sd: c.swordsDrawn, vf: c.vfx,
@@ -236,6 +250,9 @@ export class Telemetry {
     this.longTasks = 0;
     this.placeholderFrames = 0;
     this.respawn2s = 0;
+    this.respawnDs = 0;
+    this.respawnHethan = 0;
+    this.respawnQuai = 0;
     this.polls = 0;
   }
 

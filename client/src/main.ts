@@ -795,6 +795,9 @@ class App {
       zoning: this.joining,
       placeholderNow: draw.placeholder,
       respawn2s: this.world.takeRespawn2s(),
+      // Lấy TỔNG trước rồi mới lấy bảng chia: cả hai đều "lấy rồi xoá", đảo thứ tự không
+      // đổi kết quả, nhưng để cạnh nhau cho rõ chúng đếm cùng một sự kiện.
+      respawnBy: this.world.takeRespawnBy(),
       quality: STR.quality[quality()] ?? '',
       qualityAuto: false,
     };

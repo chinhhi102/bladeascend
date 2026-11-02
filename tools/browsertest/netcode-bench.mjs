@@ -122,7 +122,7 @@ async function round(browser) {
     await page.goto(`http://127.0.0.1:${PORT}/?debug=true`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('input', { timeout: 30000 });
     await page.fill('input', name);
-    await page.getByText('Vào chơi', { exact: true }).click();
+    await page.locator('.home .btn.primary').click();
     // `window.__playing` chứ không phải `window.kx.playing()`: từ ADMIN_SPEC §1.1, `kx`
     // chỉ có khi server CẤP quyền debug, mà `?debug=true` một mình không còn đủ. Bài đo
     // này chạy trên server riêng không đăng nhập admin, nên `kx` không bao giờ xuất hiện

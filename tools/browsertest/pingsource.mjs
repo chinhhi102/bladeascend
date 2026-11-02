@@ -114,7 +114,7 @@ if (CPU > 1) {
 await page.goto(TARGET, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('input', { timeout: 60000 });
 await page.fill('input', 'DoTre');
-await page.getByText('Vào chơi', { exact: true }).click();
+await page.locator('.home .btn.primary').click();
 await page.waitForFunction(() => window.__playing?.() === true, null, { timeout: 60000 });
 await sleep(4000);
 
@@ -147,7 +147,7 @@ for (let i = 0; i < EXTRA; i++) {
   await p2.goto(TARGET, { waitUntil: 'domcontentloaded' });
   await p2.waitForSelector('input', { timeout: 60000 }).catch(() => {});
   await p2.fill('input', `Chen${i + 1}`).catch(() => {});
-  await p2.getByText('Vào chơi', { exact: true }).click().catch(() => {});
+  await p2.locator('.home .btn.primary').click().catch(() => {});
   extraPages.push(p2);
 }
 if (EXTRA) {

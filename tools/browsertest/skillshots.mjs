@@ -66,7 +66,7 @@ async function join_(p, name, char) {
   });
   await p.fill('input', name);
   await p.locator('.char-card').nth(cfg.characters.indexOf(char)).click();
-  await p.getByText('Vào chơi', { exact: true }).click();
+  await p.locator('.home .btn.primary').click();
   await p.waitForSelector('.room-board', { timeout: 60000 });
 }
 
@@ -79,7 +79,7 @@ const hideDebug = (p) => p.evaluate(() => {
 
 async function revive(p) {
   if (await p.$('.summary')) {
-    await p.getByText('Chơi tiếp', { exact: true }).click();
+    await p.locator('.summary .btn.primary').click();
     await p.waitForSelector('.room-board', { timeout: 30000 });
     await sleep(2000);
   }
