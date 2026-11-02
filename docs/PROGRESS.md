@@ -133,7 +133,14 @@ chủ không nằm trong kịch bản S1–S13 nào nên chưa có số.
 - Thẻ hồi chiêu tiếng Bồ "Recarga 30s · 2 cargas" dài nhất — vừa thẻ trên ảnh, cần xem máy thật.
 - FPS điện thoại / bộ nhớ GPU iPhone thật **chưa đo** (B13b, B17) — cần máy thật.
 - Telemetry staging ghi vào ổ container, mất mỗi lần deploy (cần `-telemetry-db /data/...`, hỏi trước).
-- Lớp mặt nhân vật chưa làm (Q42). 1 anim lặp còn vượt ngưỡng giật 45 (`docs/JITTER_REPORT.md`).
+- **Lớp mặt nhân vật §12.5 A — art thử KHÔNG ghép được (đánh giá 02/11, → Q44).** Bước đánh
+  giá mà anh chốt hôm 30/10 ("sinh 3 nhân vật thử rồi mới code") nay đã làm: thân AI vẽ vốn
+  ĐÃ có sẵn mặt đầy đủ nên chồng lớp mặt lên là hai mặt đè nhau; hai bộ còn khác mũ, khác
+  nét, khác góc nhìn (thân nghiêng / mặt chính diện) và không chung neo. `prep` cũng chỉ
+  neo CHÂN, chưa có neo đầu. **Không sinh art cho 7 nhân vật còn lại** — sẽ tốn 14 lượt
+  quota cho art chắc chắn không dùng được. Bằng chứng: `docs/review/q44_than_vs_mat.png`.
+  Ba hướng đi tiếp nằm trong Q44; hiện game chạy như cũ, không tệp nào nạp `faces/`.
+- 1 anim lặp còn vượt ngưỡng giật 45 (`docs/JITTER_REPORT.md`).
 - Netcode bước 2/4/5/7 (Room Shared Cache, encode-once, IndexedDB, Service Worker) chưa làm — số đo hiện
   đạt ngân sách nên không phải nút thắt.
 - Admin: dashboard còn thiếu CPU/KB/s/ping/FPS theo thiết bị; ô "xem bản đồ theo seed" cần API mới.
@@ -163,7 +170,11 @@ thật, nên đừng coi việc hoãn là coi nhẹ.
 2. **Q43**: `minimap.size_mobile` — spec ghi 96 ở dòng 534 và 120 ở dòng 1585. Code theo 96.
    Chốt một số rồi sửa dòng còn lại trong spec.
 3. Điền email trong `SECURITY.md`. (Việc viết lại lịch sử git đã làm xong 02/11.)
-4. Hoãn (Q42): lớp mặt nhân vật §12.5 A — cần art mặt cho 7 nhân vật còn lại.
+4. **Q44**: lớp mặt §12.5 A — art thử không ghép được (xem ảnh `docs/review/q44_than_vs_mat.png`).
+   Chọn một trong ba: **A1** sửa prompt + thêm neo đầu rồi thử lại 1 nhân vật (rẻ nhất, tôi
+   nghiêng về cái này) · **A2** bỏ hướng A, giữ mỗi mood một bộ frame · **A3** nhảy thẳng
+   sang rig cắt mảnh 2D như chính spec gợi ý. Q42 ("hoãn vì thiếu art") nay thay bằng Q44:
+   vấn đề không phải thiếu art mà là art sinh ra không ghép được.
 5. Xem ảnh trang admin mới trên staging (`docs/review/11-admin/`) rồi tự đăng nhập thử.
 6. Tìm người bản ngữ duyệt 5 bản dịch + danh sách tên bot (`client/src/i18n/NOTES.md`).
 7. Đo FPS/GPU trên điện thoại thật — cũng là thứ mở khoá mục 4 ở bảng trên.
