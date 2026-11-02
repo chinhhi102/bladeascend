@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.37:** minimap điện thoại chốt 96px (Q43).
+
 **Thay đổi v6.36:** mọi kỹ năng phải có đủ 5 lớp hình ảnh (người dùng, vùng, mục tiêu, đếm ngược, kết thúc) + icon trạng thái trên HUD người bị trúng (§6.5).
 
 **Thay đổi v6.35:** sàn bot Thiên Đình 30, khu rìa 20 (staging 15/10); ghi số EXP chốt theo sim vào §6.0, Nam Châm +0.2 (Q37); xoá luật cũ 'rớt cảnh giới khi bị chém' còn sót (Q38).
@@ -1306,7 +1308,7 @@ Thay vòng tròn số "14" ở góc trên trái bằng **ảnh đại diện nh�
 
 ### 12.1 Minimap
 
-- Góc **trên bên trái** (dưới thanh cảnh giới), hình vuông bo góc, nền mờ 60%. Kích thước: 180px trên PC, 120px trên điện thoại. Chạm/nhấn phím `M` → phóng to giữa màn hình (bấm lại để thu nhỏ).
+- Góc **trên bên trái** (dưới thanh cảnh giới), hình vuông bo góc, nền mờ 60%. Kích thước: 180px trên PC, **96px** trên điện thoại. Chạm/nhấn phím `M` → phóng to giữa màn hình (bấm lại để thu nhỏ).
 - **Hiển thị:**
   - Địa hình tĩnh vẽ sẵn 1 lần từ bản đồ Tiled: tường không phá được, đá tảng, bụi rậm, bùn, đường gió (màu nhạt, đơn giản).
   - Cổng dịch chuyển: chấm tròn theo màu cặp/mạng cổng.
@@ -1582,7 +1584,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "heaven_gate": { "enabled": true, "radius": 200, "landing_r_from_center": 1400, "landing_clear_r": 400, "zone_center_plaza_r": 500, "map": { "linh_son_coc": "north", "truc_lam_me_cung": "east", "pham_tran": "south", "bang_nguyet_ho": "west" } } },
   "titles": ["Bần tăng chưa ngán ai bao giờ", "Ngon thì nhào vô", "Chỗ này nhiều máu nè"],
   "title_hold_secs": 3,
-  "minimap": { "size_pc": 180, "size_mobile": 120, "show_top1": true, "show_chest": true, "show_others": false },
+  "minimap": { "size_pc": 180, "size_mobile": 96, "show_top1": true, "show_chest": true, "show_others": false },
   "score": {
     "hit_base": 100, "kill_bonus": 50, "upset_per_realm": 0.5,
     "breakthrough_per_realm": 20, "top1_per_sec": 1,

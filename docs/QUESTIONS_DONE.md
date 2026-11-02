@@ -323,3 +323,4 @@ toả tròn 360°, Ông Ba Võng thêm Trộm Kiếm 4 s, ví dụ Uy Danh sửa
 | Q42 | Lớp mặt nhân vật §12.5 A | **Hoãn** — ghi vào việc tiếp theo trong `PROGRESS.md`. |
 | Q37 | Số config chỉnh theo sim chưa có trong spec | Anh giữ config, đã ghi bảng số + thời gian farm vào spec §6.0 (v6.35); Nam Châm ghi dạng `bonus: 0.2`. |
 | Q38 | Spec còn sót luật "rớt cảnh giới" | Anh đã xoá trong spec v6.35 (14 dòng Claude liệt kê). |
+| Q43 | `minimap.size_mobile`: spec ghi 96 ở bảng §16 và 120 ở khối JSON mẫu | **Giữ 96** — anh sửa spec v6.37, nay cả hai dòng đều 96. `config/game.json` vốn đã 96 nên KHÔNG đổi code. Bản rà `SPEC_AUDIT_v630.md` từng chấm đây là lỗi cài đặt; đã sửa lại ở mục 6b — code không sai, spec tự mâu thuẫn. |
