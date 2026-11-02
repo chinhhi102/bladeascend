@@ -115,33 +115,48 @@ for (const s of sizes) {
   const ctx = await b.newContext({ viewport: { width: s.w, height: s.h }, deviceScaleFactor: s.dpr, isMobile: s.mobile, hasTouch: s.mobile });
   const p = await ctx.newPage();
   // KHÔNG bật ?debug=true: bảng đo F3 che nửa màn hình và không phải thứ người chơi thấy.
-  await p.goto(TARGET, { waitUntil: 'domcontentloaded' });
+  // `?lang=vi`: ÉP ngôn ngữ, không để bài đo phụ thuộc locale của máy chạy nó.
+  //
+  // Từ khi có i18n (D13), giao diện theo `navigator.language`, mà Chromium headless báo
+  // locale Anh — nên nút "Vào chơi" thành "Play" và cả bài đo chết ở cỡ màn hình ĐẦU TIÊN
+  // với một TimeoutError, bỏ qua 6/7 cỡ còn lại. Bài đo mà đổi kết quả theo máy chạy thì
+  // không đo được gì. Tiếng Việt cũng là bản chữ DÀI NHẤT, nên nó là trường hợp khó nhất
+  // cho các luật bề ngang.
+  await p.goto(`${TARGET}/?lang=vi`, { waitUntil: 'domcontentloaded' });
   await p.waitForSelector('input', { timeout: 60000 });
 
   // ── TRANG CHỦ: đo TRƯỚC khi bấm "Vào chơi" ────────────────────────────────────────
   //
   // Phần còn lại của bài này đo HUD trong trận. Nhưng màn hình đầu tiên người lạ nhìn
-  // thấy là trang chủ, và nó hỏng theo một kiểu mà mắt thường khó bắt: panel có
-  // `overflow-y: auto`, nên khi nội dung không vừa thì phần thừa KHÔNG tràn ra ngoài —
-  // nó trôi vào một thanh cuộn bên trong gần như vô hình.
+  // thấy là trang chủ, và nó hỏng theo một kiểu mà mắt thường khó bắt: nội dung không vừa
+  // thì phần thừa KHÔNG tràn ra ngoài — nó trôi vào một vùng cuộn gần như vô hình.
   //
-  // Vì vậy KHÔNG đo bằng `display`/`visibility`: `getComputedStyle` vẫn báo dòng hướng
-  // dẫn là `block` trong khi người ngồi trước máy không thấy dòng nào. Bằng chứng đúng
-  // là `scrollHeight - clientHeight`.
+  // Vì vậy KHÔNG đo bằng `display`/`visibility`: `getComputedStyle` vẫn báo nút là
+  // `block` trong khi người ngồi trước máy không thấy nút nào. Bằng chứng đúng là so HÌNH
+  // CHỮ NHẬT của nút với hình chữ nhật nhìn thấy được của panel.
+  //
+  // Phép đo cũ dùng `panel.scrollHeight - panel.clientHeight`. Nó đúng khi cả panel là
+  // một khối cuộn, nhưng từ 2/11 chỉ phần GIỮA cuộn còn panel thì `overflow: hidden` —
+  // hiệu đó luôn bằng 0, tức bài kiểm sẽ luôn ĐẠT và không còn canh gì. Một bài kiểm hỏng
+  // theo kiểu luôn-đạt nguy hiểm hơn hẳn một bài kiểm hỏng theo kiểu luôn-trượt.
   await p.waitForSelector('.home .panel', { timeout: 60000 });
   await sleep(900);
   const home = await p.evaluate(() => {
     const panel = document.querySelector('.home .panel');
     const hint = document.querySelector('.home .hint');
+    const play = document.querySelector('.home .btn.primary');
+    const scroll = document.querySelector('.home .home-scroll');
     const r = panel.getBoundingClientRect();
+    // `inView`: hình chữ nhật của phần tử có nằm TRỌN trong hình chữ nhật nhìn thấy của
+    // panel không. Dung sai 1px cho số lẻ của `getBoundingClientRect`.
+    const inView = (el) => {
+      if (!el) return false;
+      const b = el.getBoundingClientRect();
+      return b.bottom <= r.bottom + 1 && b.top >= r.top - 1 && b.height > 0;
+    };
     const st = hint ? getComputedStyle(hint) : null;
     const hintShown = !!st && st.display !== 'none' && st.visibility !== 'hidden';
-    // Dòng hướng dẫn nằm TRONG vùng nhìn thấy của panel hay đã trôi quá đáy nó?
-    let hintInView = false;
-    if (hintShown) {
-      const hr = hint.getBoundingClientRect();
-      hintInView = hr.bottom <= r.bottom + 1 && hr.top >= r.top - 1;
-    }
+    const hintInView = hintShown && inView(hint);
     // Tên game: có chữ nào rơi lẻ một mình xuống dòng cuối không?
     const logo = document.querySelector('.home .logo');
     const tops = [];
@@ -164,25 +179,38 @@ for (const s of sizes) {
     const maxTop = tops.length ? Math.max(...tops) : 0;
     return {
       cachMepDuoi: Math.round(innerHeight - r.bottom),
+      // Panel KHÔNG được tự cuộn: chỉ `.home-scroll` mới được.
       biCuonTrongPanel: panel.scrollHeight - panel.clientHeight,
+      // Lưới nhân vật cuộn bao nhiêu — thông tin, KHÔNG phải vi phạm. Cuộn để xem nốt
+      // nhân vật là chuyện bình thường; cuộn để tìm nút bắt đầu chơi thì không.
+      cuonLuoi: scroll ? scroll.scrollHeight - scroll.clientHeight : 0,
+      nutChoiInView: inView(play),
       hintShown, hintInView,
       soDongTen: new Set(tops).size,
       soChuDongCuoi: tops.filter((t) => t === maxTop).length,
       soH1: document.querySelectorAll('h1').length,
-      theDaiDong: [...document.querySelectorAll('.char-card .card-name')].filter((e) => {
-        const lh = parseFloat(getComputedStyle(e).lineHeight) || e.getBoundingClientRect().height;
-        return e.getBoundingClientRect().height > lh * 1.4;
-      }).length,
+      // Tên nhân vật bị CẮT (có "…" hoặc chữ tràn khỏi ô) — không phải "xuống dòng".
+      //
+      // Bài kiểm cũ canh "mỗi thẻ đúng một dòng". Nó ĐẠT trong khi thẻ hiện "Thằng …",
+      // tức nửa cái tên đã mất mà bài đo vẫn báo xanh: một dòng và đọc được là hai chuyện
+      // khác nhau. Điều thật sự cần là ĐỌC ĐƯỢC CẢ TÊN; xuống hai dòng trên màn hẹp là
+      // cách đạt được điều đó, không phải vi phạm.
+      tenBiCat: [...document.querySelectorAll('.char-card .card-name')]
+        .filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1)
+        .map((e) => e.textContent.trim()),
     };
   });
   console.log(`\n=== ${s.name} ===`);
-  console.log(`  TRANG CHU: panel cach mep duoi ${home.cachMepDuoi}px · cuon trong panel ${home.biCuonTrongPanel}px · ten game ${home.soDongTen} dong`);
+  console.log(`  TRANG CHU: panel cach mep duoi ${home.cachMepDuoi}px · luoi cuon ${home.cuonLuoi}px · ten game ${home.soDongTen} dong`);
   const kiemHome = (ok, nhan) => {
     console.log(`  ${ok ? 'OK ' : 'VI PHAM'} ${nhan}`);
     if (!ok) viPham++;
   };
+  // Luật QUAN TRỌNG NHẤT của trang chủ. Mọi thứ khác đều là tiện nghi; không thấy nút
+  // bắt đầu chơi thì trang chủ không làm được việc duy nhất nó sinh ra để làm.
+  kiemHome(home.nutChoiInView, 'nut "Vao choi" nam trong vung nhin thay');
   kiemHome(home.biCuonTrongPanel <= 1,
-    `bang trang chu khong bi cat vao thanh cuon (thua ${home.biCuonTrongPanel}px)`);
+    `panel tu no khong duoc cuon — chi .home-scroll duoc (thua ${home.biCuonTrongPanel}px)`);
   kiemHome(home.cachMepDuoi >= 4, `bang trang chu khong cham mep duoi (cach ${home.cachMepDuoi}px)`);
   // Dòng hướng dẫn CHO PHÉP ẩn ở cửa sổ rất thấp (luật CSS ≤560px) — ở đó nó đọc được
   // trong trận. Nhưng hiện mà nằm ngoài vùng nhìn thấy thì là hỏng, không phải lựa chọn.
@@ -193,11 +221,14 @@ for (const s of sizes) {
   kiemHome(home.soChuDongCuoi !== 1 || home.soDongTen === 1,
     `ten game khong bo le mot chu o dong cuoi (${home.soDongTen} dong, dong cuoi ${home.soChuDongCuoi} chu)`);
   kiemHome(home.soH1 === 1, `trang co dung 1 the h1 (dang co ${home.soH1})`);
-  kiemHome(home.theDaiDong === 0, `the nhan vat deu 1 dong (${home.theDaiDong} the bi xuong dong)`);
+  kiemHome(home.tenBiCat.length === 0,
+    `ten nhan vat doc duoc het, khong bi cat${home.tenBiCat.length ? ' — cat: ' + home.tenBiCat.join(', ') : ''}`);
   await p.screenshot({ path: `${OUT}/home_${s.w}x${s.h}.png` });
 
   await p.fill('input', 'UiTest');
-  await p.getByText('Vào chơi', { exact: true }).click();
+  // Chọn theo CLASS, không theo chữ: nút "Vào chơi" là nút chính duy nhất của trang chủ,
+  // và class không đổi khi đổi ngôn ngữ.
+  await p.locator('.home .btn.primary').click();
   await p.waitForSelector('.room-board', { timeout: 60000 });
   await sleep(3000);
   // Ép cho CẢ HAI loại tin cùng hiện. Không ép thì phép đo phụ thuộc vào việc trong lúc

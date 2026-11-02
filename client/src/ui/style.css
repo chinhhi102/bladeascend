@@ -53,6 +53,31 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 .screen { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: radial-gradient(circle at 50% 30%, #4a3b2a, #1d1a16); background-size: cover; background-position: center; overflow-y: auto; }
 .screen.center { background: rgba(0, 0, 0, 0.55); }
 .panel { background: var(--panel); border: 4px solid var(--ink); border-radius: 18px; box-shadow: 0 8px 0 var(--ink); padding: 20px; width: min(560px, 100%); text-align: center; max-height: 100%; overflow-y: auto; }
+
+/* ── Trang chủ: phần GIỮA cuộn, nút "Vào chơi" không bao giờ bị đẩy khuất ────────────────
+   Xem ghi chú dài ở `homeScreen()` trong `ui/home.ts`. Tóm tắt: khi cả panel là một khối
+   cuộn, thứ bị đẩy xuống dưới mép là thứ nằm CUỐI — tức hai cái nút. Đo 2/11: nút "Vào
+   chơi" không nhìn thấy ở 4/7 cỡ màn hình, gồm 1366×768.
+
+   `min-height: 0` trên vùng cuộn là bắt buộc, không phải trang trí: mặc định một flex item
+   có `min-height: auto`, tức nó TỪ CHỐI co nhỏ hơn nội dung — vùng cuộn sẽ đẩy panel cao
+   lên đúng như cũ và cả cách sửa này thành vô nghĩa mà không có dấu hiệu gì. */
+.screen.home .panel { display: flex; flex-direction: column; overflow: hidden; }
+/* Mép dưới vùng cuộn mờ dần — dấu hiệu "còn nội dung ở dưới".
+   Không có nó thì khung chi tiết bị cắt ngang giữa một dòng chữ, và cái đó đọc ra là
+   "trang vỡ" chứ không phải "cuộn xuống còn nữa" — đúng ấn tượng mà cách sửa này muốn
+   tránh.
+
+   Mặt nạ bật THƯỜNG TRỰC, kể cả khi không có gì để cuộn: tắt nó đúng lúc cuộn hết đáy
+   cần nghe sự kiện scroll bằng JS, và 12 px mờ ở mép dưới một vùng vốn kết thúc bằng
+   khoảng trắng thì không ai nhận ra. Đổi sang JS chỉ khi có người thật thấy chướng. */
+.home-scroll {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 12px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 12px), transparent 100%);
+}
+/* Hai phần đầu/cuối không được co: co chúng lại thì nút bẹp dí trước khi lưới chịu cuộn. */
+.screen.home .panel > :not(.home-scroll) { flex: 0 0 auto; }
 .panel.wide { width: min(720px, 100%); }
 /* Tên game. `clamp` trần 44px từng làm "Đạo Hữu Xin Dừng Bước" rớt lẻ đúng chữ "Bước"
    xuống dòng dưới trong panel rộng 560px — đo được ở 5/7 cỡ màn hình. Hạ trần xuống 38px
@@ -92,6 +117,27 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
    — thẻ điện thoại chỉ ~60 px, một dòng thì bị cắt mất số lượt. */
 .char-card .card-cd { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
   width: 100%; font-size: 10px; font-weight: 600; opacity: .8; line-height: 1.15; min-height: 2.3em; }
+/* Màn HẸP: cho ba dòng. Ở 360 px mỗi thẻ rộng ~60 px, và "tích 2 lượt" tự nó đã không vừa
+   một dòng — kẹp hai dòng thì thẻ hiện "Hồi 30s ·" / "tích 2…", tức mất đúng con số mà
+   dòng này sinh ra để nói (ảnh chụp 2/11, 360×800).
+   Thêm một dòng tốn ~12 px mỗi hàng thẻ, chấp nhận được VÌ lưới nhân vật nay cuộn trong
+   `.home-scroll`: chiều cao thêm vào không còn đẩy nút "Vào chơi" ra khỏi màn hình như
+   trước. Trước khi có vùng cuộn đó thì cách sửa này sẽ đổi một lỗi lấy một lỗi nặng hơn. */
+@media (max-width: 600px) {
+  .char-card .card-cd { -webkit-line-clamp: 3; min-height: 3.45em; }
+  /* Tên được xuống HAI DÒNG trên màn hẹp, thay vì cắt bằng "…".
+     Đo 2/11 ở 360×800: ô tên rộng 43 px, chín trong mười tên vừa đúng 43 px, riêng
+     "Thằng Mập" cần 50 px nên hiện ra "Thằng …" — mất nửa cái tên.
+     Hạ cỡ chữ KHÔNG sửa được: chữ ở đây đã là 9 px do tầng `max-height: 720px` đặt, và
+     tầng đó đặc hiệu hơn (`.screen.home .char-card`) nên một luật `.char-card` mới viết
+     sau cũng không thắng — cùng cái bẫy đã làm hỏng khối ảnh chụp hôm 1/11.
+     `min-height` giữ hai dòng cho MỌI thẻ để các hàng không cao thấp lệch nhau. */
+  .screen.home .char-card .card-name {
+    white-space: normal; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    min-height: 2.2em; line-height: 1.1;
+  }
+}
 /* Ảnh nhân vật ở MÀN CHỌN. Phải khoanh theo thẻ cha, không để `.portrait` trần:
    ô đại diện trên HUD cũng dùng class `.portrait`, và luật rộng 64px ở đây từng rò sang
    đó — ô HUD chỉ 40px nên ảnh tràn hẳn ra ngoài khung tròn và đè lên chữ "Kiếm x/y"

@@ -255,6 +255,21 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     }
   });
   const logo = gameLogo();
+  // Lưới nhân vật + khung chi tiết nằm trong một vùng CUỘN RIÊNG.
+  //
+  // Trước 2/11 cả panel là một khối `overflow-y: auto`. Khi nội dung vượt chiều cao cửa
+  // sổ, thứ bị đẩy xuống dưới mép là thứ nằm CUỐI — tức hai cái nút. Đo 2/11 trên bản vừa
+  // pull: nút "Vào chơi" KHÔNG nhìn thấy ở 4 trong 7 cỡ màn hình, gồm cả 1366×768. Người
+  // mới mở game trên laptop phổ thông nhất không thấy nút để bắt đầu.
+  //
+  // Bốn tầng `max-height` dựng hôm 1/11 đã bóp hết mức rồi vẫn không đủ, vì trang chủ từ
+  // đó dày thêm bốn thứ: ảnh logo, ô chọn ngôn ngữ, dòng hồi chiêu trên mỗi thẻ, và bốn
+  // thanh chỉ số trong khung chi tiết. Thêm tầng thứ năm chỉ là hoãn lần vỡ sau.
+  //
+  // Nên đổi cách chia chỗ: phần GIỮA co giãn và cuộn, phần ĐẦU (tên, ô nhập) và phần CUỐI
+  // (hai nút, dòng hướng dẫn) luôn nằm ngoài vùng cuộn. Thêm bao nhiêu nội dung vào lưới
+  // nữa thì nút "Vào chơi" vẫn ở nguyên chỗ nhìn thấy được.
+  const scroller = h('div', 'home-scroll', grid, preview);
   panel.append(
     langPicker(),
     logo,
@@ -262,8 +277,7 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     input,
     err,
     h('div', 'label', STR.pickCharacter),
-    grid,
-    preview,
+    scroller,
     h('div', 'row', button(STR.play, 'btn primary', play), button(STR.leaderboard, 'btn', onLeaderboard)),
     h('div', 'hint', 'ontouchstart' in window ? STR.controlsMobile : STR.controlsPc),
   );
