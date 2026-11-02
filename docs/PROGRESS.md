@@ -1,6 +1,6 @@
 # Tiến độ — BladeAscend (Đạo Hữu Xin Dừng Bước)
 
-_Cập nhật: 2026-11-02 (v6.31–v6.36, mở công khai, logo, hiển thị kỹ năng). Nhật ký đầy đủ các phiên trước (22/10 → 01/11, 1 677 dòng):
+_Cập nhật: 2026-11-02 chiều (v6.31–v6.36, mở công khai, logo, hiển thị kỹ năng; trang chủ + bộ đo + telemetry theo build). Nhật ký đầy đủ các phiên trước (22/10 → 01/11, 1 677 dòng):
 `docs/history/PROGRESS_den_2026-11-01.md` — chuyển nguyên văn, không xoá._
 
 ## Cách chạy (máy dev)
@@ -33,7 +33,8 @@ node tools/browsertest/review.mjs <url> docs/review/<mục> <tên> [--full]   # 
 | Đa ngôn ngữ | ✅ bản nháp | vi + en/pt-BR/es/id/th (`_draft`, cần người bản ngữ duyệt — `client/src/i18n/NOTES.md`) |
 | SEO | ✅ | `/`, `/en/`, `/pt/`, `/es/`, `/id/`, `/th/`, hreflang, `sitemap.xml` |
 | Hiệu năng | ✅ server/mạng · 🔴 thiết bị thật | `docs/reports/2026-11-01-hieu-nang/`; FPS/GPU iPhone thật chưa đo |
-| Đối chiếu spec | — | `docs/SPEC_AUDIT_v630.md`: §17 73 PASS · 3 FAIL · 2 cần máy thật |
+| Đối chiếu spec | — | `docs/SPEC_AUDIT_v630.md` + mục 6b (rà lại 02/11): còn **3 mục** chưa làm — lớp mặt (Q42), 1 anim giật, Web Worker/RenderTexture. 2 mục từng chấm là lỗi hoá ra chấm sai |
+| Bộ đo browsertest | ✅ | 15 bài từng chết im lặng vì i18n (02/11) — nay dùng selector theo class, luật ở `tools/browsertest/README.md` |
 
 ## Lượt cuối 01/11/2026 — đã làm
 
@@ -60,6 +61,53 @@ tạm (`ca58995`) · ảnh duyệt + công cụ `tools/browsertest/skillshots.mj
 Chụp lại ảnh kỹ năng: `cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9998 -debug=true`
 rồi `node tools/browsertest/skillshots.mjs http://127.0.0.1:9998` (phím debug mới `U` = kéo
 người thật khác về cạnh mình, chỉ ở chế độ dev).
+
+### 02/11 (chiều) — trang chủ, bộ đo, telemetry
+
+**Trang chủ: nút "Vào chơi" biến mất ở 4/7 cỡ màn hình** (`c40329f`), gồm cả 1366×768 — laptop
+phổ thông nhất. Cả panel là một khối `overflow-y: auto` nên thứ bị đẩy khuất là thứ nằm cuối,
+tức hai cái nút; trang chủ từ 1/11 dày thêm ảnh logo, ô chọn ngôn ngữ, dòng hồi chiêu, bốn
+thanh chỉ số. Nay lưới nhân vật + khung chi tiết vào vùng cuộn riêng (`.home-scroll`), phần
+đầu và phần cuối luôn nằm ngoài vùng cuộn — thêm nội dung nữa cũng không đẩy mất nút. Kèm:
+thẻ cho 3 dòng hồi chiêu và tên xuống 2 dòng trên màn hẹp (trước đó cắt thành "tích 2…",
+"Thằng …"). **7/7 cỡ ĐẠT.**
+
+**15 bài browsertest đã chết im lặng từ lúc có i18n** (`7c230f9`). Tất cả tìm phần tử bằng
+`getByText('Vào chơi')`; Chromium headless báo locale Anh nên nút thành "Play" → TimeoutError
+ngay ở cỡ màn hình đầu tiên. Trong quãng đó trang chủ vỡ như trên mà không bài nào kêu. Nay
+dùng selector theo class, luật ghi ở `tools/browsertest/README.md`.
+
+**Hai phép kiểm canh sai thứ, đã sửa.** `panel.scrollHeight - clientHeight` luôn bằng 0 sau
+khi panel đổi sang `overflow: hidden` → sẽ luôn ĐẠT. "Mỗi thẻ đúng một dòng" thì ĐẠT trong
+khi thẻ hiện "Thằng …" — một dòng và đọc được là hai chuyện khác nhau. Nay canh: nút "Vào
+chơi" có trong vùng nhìn thấy không, và tên có bị cắt không.
+
+**Telemetry tách theo build + loại phiên máy** (`64b2734`). Báo cáo gộp cả ngày mà 31/10
+deploy 17 lần. Thêm mục 8 "Theo BUILD"; ngưỡng cảnh báo §4.3 chỉ tính build mới nhất. Và:
+**64/67 phiên buổi tối 31/10 đến từ đúng một máy chạy Chromium của Playwright** — bài đo 10
+tab. Cảnh báo "96% mẫu FPS 1% dưới 30" phần lớn là tiếng vọng của chính bài đo. Client nay
+gửi `navigator.webdriver`, báo cáo loại phiên máy ra và khai số đã loại.
+
+**Gói hỏng không còn thoát ra ngoài** (`64b2734`). Đường snapshot nhị phân có `try/catch` từ
+đầu, đường msgpack thì không — nên một gói hỏng ném thẳng ra khỏi `ws.onmessage`
+(`RangeError: Extra 18 of 121 byte(s)`, Safari, telemetry 31/10). Nay `decodeFrame()` trong
+`net/frame.ts` không bao giờ ném; gói hỏng → bỏ qua + báo telemetry kèm loại gói, độ dài,
+8 byte hex đầu. `npm run check:decode` vào chuỗi build: 8 gói golden + 12 000 gói fuzz + phép
+kiểm trạng thái.
+
+**Respawn: điều tra xong, không sửa gì** (`7c230f9`). Tách theo build (chỉ người thật): đỉnh
+829 lần ở build `20261031_1050`, tụt hẳn sau đó — đúng lúc bản sửa `KEEP_GONE_SECS` lên.
+`respawn-wander.mjs` trên bản hôm nay: 0. Theo luật "bench phải tái hiện được trước khi sửa"
+nên dừng. Việc đã làm: ba con số nguyên nhân (Despawn · hết hạn 2s · quái) nay đi về telemetry
+và in trong cảnh báo — trước đó chỉ có tổng, nên mất nửa ngày dựng lại chuỗi build mới biết
+bản nào đã đóng nó.
+
+**Quy tắc 12 — vì sao lượt này KHÔNG thêm dòng PERF_LOG.** Ba thay đổi hôm nay đều không nằm
+trên đường nóng: CSS/DOM trang chủ (ngoài trận), selector của bài đo (không vào bản phát
+hành), và ba số nguyên respawn đi kèm mẫu telemetry 10 giây một lần. `decodeFrame` — thứ duy
+nhất nằm trên đường gói tin — lên từ 1/11 nên đã nằm trong số đo #29. Một chỗ đáng để mắt khi
+có máy thật: vùng cuộn trang chủ dùng `mask-image`, trên điện thoại yếu nó có thể tốn; trang
+chủ không nằm trong kịch bản S1–S13 nào nên chưa có số.
 
 ## Lỗi / hạn chế đã biết
 
@@ -91,11 +139,31 @@ người thật khác về cạnh mình, chỉ ở chế độ dev).
 - Admin: dashboard còn thiếu CPU/KB/s/ping/FPS theo thiết bị; ô "xem bản đồ theo seed" cần API mới.
 - `npm run check:telemetry-off` báo trượt từ trước (chuỗi `WEBGL_debug_renderer_info`), không nằm trong build.
 
+## Hiệu năng — hai quyết định của chủ dự án 02/11
+
+Sau khi tách telemetry theo build và loại phiên máy, danh sách ưu tiên hiệu năng rút lại:
+
+| Mục | Quyết định |
+|---|---|
+| 0. Tách telemetry theo build | ✅ xong |
+| 1. `RangeError` giải mã | ✅ xong — thiếu `try/catch` ở đường msgpack |
+| 2. Respawn | ✅ điều tra xong, không tái hiện được → không sửa; đã thêm bảng nguyên nhân |
+| 3. `addressModeU of null` | **BỎ** — chỉ xuất hiện trong phiên Playwright, không người thật nào dính. Ép WebGL cho mọi người là sửa một cái bóng |
+| 4. Chất lượng mặc định / FPS | **HOÃN** — đợi vài ngày người thật chơi trên telemetry đã lọc rồi mới quyết |
+| 5. Deploy + bảng trước/sau | chờ mục 4 |
+
+Mục 4 hoãn vì nền số liệu cũ không dùng được: nó trộn bài đo 10 tab vào. Từ 02/11 telemetry
+tự loại phiên máy, nên chỉ cần ít ngày là có nền sạch. Mục tiêu vẫn giữ: **điện thoại p50 ≥ 40,
+p1 ≥ 25; PC p1 ≥ 30**. Hai phiên iPhone thật 31/10 cho FPS 11,5 — mẫu mỏng nhưng là tín hiệu
+thật, nên đừng coi việc hoãn là coi nhẹ.
+
 ## Việc tiếp theo
 
 1. Anh duyệt ảnh OG có logo (`docs/review/08-logo/og_share_card_preview.jpg`) → bật `SHARE_CARD_APPROVED`.
-2. Quyết có viết lại lịch sử git để xoá dữ liệu người chơi cũ không; điền email trong `SECURITY.md`.
-3. Hoãn (Q42): lớp mặt nhân vật §12.5 A — cần art mặt cho 7 nhân vật còn lại.
-4. Xem ảnh trang admin mới trên staging (`docs/review/11-admin/`) rồi tự đăng nhập thử.
-5. Tìm người bản ngữ duyệt 5 bản dịch + danh sách tên bot (`client/src/i18n/NOTES.md`).
-6. Đo FPS/GPU trên điện thoại thật.
+2. **Q43**: `minimap.size_mobile` — spec ghi 96 ở dòng 534 và 120 ở dòng 1585. Code theo 96.
+   Chốt một số rồi sửa dòng còn lại trong spec.
+3. Điền email trong `SECURITY.md`. (Việc viết lại lịch sử git đã làm xong 02/11.)
+4. Hoãn (Q42): lớp mặt nhân vật §12.5 A — cần art mặt cho 7 nhân vật còn lại.
+5. Xem ảnh trang admin mới trên staging (`docs/review/11-admin/`) rồi tự đăng nhập thử.
+6. Tìm người bản ngữ duyệt 5 bản dịch + danh sách tên bot (`client/src/i18n/NOTES.md`).
+7. Đo FPS/GPU trên điện thoại thật — cũng là thứ mở khoá mục 4 ở bảng trên.

@@ -356,6 +356,43 @@ ADMIN_SPEC:
 
 ---
 
+## 6b. Cập nhật 02/11/2026 — rà lại Top 10 so với code hiện tại
+
+Bản rà này chấm theo spec **v6.30**; spec nay đã là **v6.36**. Rà lại từng mục của Top 10 bên
+dưới so với `main` (HEAD `7c230f9`):
+
+| # | Việc | Nay |
+|---|---|---|
+| 1 | Shipper bị choáng không Gom Đơn được | **XONG** — `skills.go:141` miễn trừ `p.Char == "shipper"` |
+| 2 | Ngủ gục vẫn dùng được kỹ năng / Thiêu Đốt | **XONG** — `actionLocked()` gồm cả `StSleep`; `movement.go:24-25` chặn Thiêu Đốt |
+| 3 | Qua cổng 2s thay vì 0.8s | **CHẤM SAI** — xem dưới |
+| 4 | Lớp mặt "một thân nhiều mặt" (§12.5 A) | **CHƯA** — không file client nào đọc `faces/`. Hoãn có chủ ý (Q42): cần art mặt cho 7 nhân vật còn lại |
+| 5 | Đạo Tổ trên minimap cả phòng | **XONG** — `minimap.ts:283` chấm tím ☯ |
+| 6 | 1 anim lặp vượt ngưỡng giật | **CHƯA** — `JITTER_REPORT.md` vẫn "Còn đỏ: 1" |
+| 7 | Không có font dự phòng cho ký tự ngoài bộ | **XONG** — `fonts.ts:65-69`, Pixi 8 `DynamicBitmapFont` tự sinh glyph, rơi về font hệ thống |
+| 8 | Web Worker giải mã + vòng kiếm RenderTexture | **CHƯA** — không có `new Worker`, không có `RenderTexture` trong `render/`. Netcode bước 2/4/5/7, số đo hiện vẫn trong ngân sách |
+| 9 | Minimap 96 px · VFX thiếu filter | **nửa CHẤM SAI, nửa XONG** — xem dưới |
+| 10 | Admin dashboard thiếu nửa chỉ số | **PHẦN LỚN XONG** — 12 endpoint `/api/admin/*`, 10 trang React; còn thiếu `/api/admin/ws` và CPU/KB-s theo thiết bị |
+
+**Hai mục chấm sai, sửa ở đây để lần rà sau không lặp lại:**
+
+- **Mục 3 — không phải khoảng thiếu.** GAME_SPEC dòng 533 ghi `gates.transit_secs` = **2.0**,
+  đúng bằng `config/game.json`. Con số 0.8 trong bản rà là `cultivation.breakthrough_secs`
+  (thời gian đột phá cảnh giới), một khoá khác hẳn. Hai số nằm gần nhau trong tệp config và
+  bị đọc nhầm sang nhau.
+- **Mục 9 (phần minimap) — code không sai, SPEC tự mâu thuẫn.** Dòng 534 ghi 96 px, dòng 1585
+  ghi 120. Code theo 96. Đã ghi thành **Q43** trong `docs/QUESTIONS.md` để chủ dự án chốt một
+  số rồi sửa dòng còn lại.
+- **Mục 9 (phần VFX) — XONG.** `pixi-filters` và `revolt-fx` đã cài và đang dùng trong
+  `render/breakthrough.ts` và `render/vfxlayer.ts`.
+
+Còn lại thật sự: **mục 4, 6, 8** và phần đuôi của mục 10. Cả bốn đều đã nằm trong
+"Lỗi / hạn chế đã biết" của `docs/PROGRESS.md`, không có việc nào bị bỏ quên.
+
+Yêu cầu MỚI của v6.31–v6.36 (ngoài phạm vi bản rà này) đều đã làm: luật cộng `Stat()` dùng
+chung (v6.31–33), tên bot đa quốc gia (v6.34), sàn bot theo khu (v6.35), đủ 5 lớp hiển thị
+kỹ năng + icon trạng thái (v6.36).
+
 ## 6. Top 10 việc FAIL / CHƯA quan trọng nhất (theo mức người chơi thấy)
 
 1. **Shipper bị choáng không Gom Đơn được** — `server/internal/game/skills.go:135` chặn mọi kỹ năng khi choáng; spec §6.3/§17 nói đang trói/ngủ/choáng vẫn dùng được và thoát ngay. Thiếu cả test.
