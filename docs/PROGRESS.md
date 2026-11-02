@@ -66,8 +66,13 @@ người thật khác về cạnh mình, chỉ ở chế độ dev).
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở
   Linh Sơn (4,74 ms, máy bận), chạy lại đạt.
 - Lịch sử git còn tên/UUID người chơi + IP từ trước khi mở công khai (commit 0efc19c, 6cc900a,
-  cd777f8, 510ccd5, 87d7cd6). Đã sao lưu mirror (`~/backup/bladeascend-mirror-2026-11-02`),
-  danh sách tệp đã gửi chủ dự án — **chờ duyệt rồi mới chạy filter-repo + force push**.
+  cd777f8, 510ccd5, 87d7cd6). **Đã làm sạch 02/11** (chủ dự án duyệt): filter-repo xoá mọi bản
+  `docs/LEADERBOARD_AUDIT.md` cũ + 4 ảnh `docs/review/11-admin/{board,audit}_*.png`, thay chữ trong
+  `server/cmd/hidelives/main.go`, thêm lại bản ẩn danh; force push → **mọi hash commit đã đổi**
+  (bb1cd96 → 654b2fe, 5740e47 → 39805da…). Máy khác có bản clone cũ phải clone lại.
+  Còn sót: GitHub giữ commit cũ trong `refs/pull/1..7` và cache theo hash — muốn xoá hẳn phải
+  nhờ GitHub Support (gửi danh sách hash cũ trong bản sao lưu).
+  Bản sao lưu trước khi làm sạch: `~/backup/bladeascend-mirror-2026-11-02` (khớp 5740e47).
   Khôi phục nếu cần: `cd ~/backup/bladeascend-mirror-2026-11-02 && git push --mirror --force <url>`.
 - Kỹ năng: đàn em "chạy từ mép vào" và khung sạp "nhấp nháy trước khi bật" chỉ là lớp vẽ —
   server vẫn đặt đàn em/sạp ngay lập tức (không đổi luật). Tiếng kỹ năng là tiếng tạm tổng hợp.
