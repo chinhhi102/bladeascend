@@ -146,12 +146,20 @@ bán thân/toàn thân, đầu nhỏ và lệch. Spec §12.4 ghi "cắt từ đ�
 
 Nay mỗi chân dung có **khung đầu riêng** `[trái, trên, cạnh]` trong
 `client/src/render/headbox.ts`, sinh bằng `node tools/portrait-headbox.mjs` (thêm `--sheet
-<ảnh.png>` để có tờ ảnh kiểm bằng mắt). Tool dò cổ bằng alpha, nhưng **cằm thì không tin vào
-cổ**: mặt có râu hay hàm bạnh thì chỗ hẹp nhất là quai hàm, nằm trên cằm — lấy đúng chỗ đó
-là cắt mất mồm (thấy rõ ở thẻ nhân vật 64 px). Đầu bộ art này cao ~1,35 lần bề ngang nên đáy
-khung suy từ bề ngang. Còn 4 ảnh toàn thân máy dò sai (`co_ba_ganh/neutral`,
-`ong_ba_vong/evil`, `shipper/evil`, `su_phu_mi/evil`) → đo bằng mắt, để trong `OVERRIDE` của
-tool. Thêm nhân vật mới: chạy lại tool, xem tờ kiểm, ảnh nào lệch thì thêm vào `OVERRIDE`.
+<ảnh.png>` để có tờ ảnh kiểm). Tool dò **hai tầng**: alpha tìm CỘT của đầu (chỗ hẹp nhất
+phía trên thân là cổ), rồi **màu da** tìm MẶT trong cột đó — gộp mọi mảng da, nới lên 42%
+cho tóc/nón và xuống 10% cho râu/cằm. 38/40 ảnh máy dò đúng; 2 ảnh toàn thân
+(`ong_ba_vong/evil`, `shipper/evil`) đo bằng mắt trong `OVERRIDE`.
+
+Hai hướng sai phải bỏ mới ra được cái trên, cả hai đều đã lọt tới tay chủ dự án: **(a)** chỉ
+dùng alpha rồi đoán cằm theo cổ — mặt có râu/hàm bạnh thì chỗ hẹp nhất là quai hàm NẰM TRÊN
+cằm, khung cắt ngang mồm; **(b)** bù bằng "đầu cao 1,35 lần bề ngang" — ảnh nón to thì khung
+phình ôm cả người, ba ảnh Cô Ba ra đúng `[0, 0, 1]`. Vùng da thì không phải đoán.
+
+**Bài học về cách duyệt**: tờ ảnh kiểm 120 px hình VUÔNG nói dối hai lần. Khung tròn bo mất
+bốn góc nên ô vuông trông ổn mà trong game vẫn cắt; và ở 120 px thì chính cái cằm bị cắt
+cũng không nhìn ra. Giờ duyệt bằng hai bài chụp thật: trang DOM dùng chính `style.css` với
+đủ 5 cỡ ô, và trang Pixi nạp THẲNG lớp `Emote` thật. Chi tiết trong báo cáo.
 
 Bốn nơi dùng chung `headCrop`/`headBox`, không ai tự chép công thức: ô đại diện HUD (§12.4),
 bong bóng mặt (§12.5), chân dung tròn bảng xếp hạng 28–40 px (§11.5), ảnh nhân vật màn chọn

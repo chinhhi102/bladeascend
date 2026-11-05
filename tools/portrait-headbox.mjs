@@ -9,13 +9,22 @@
  * trên ảnh. Bộ chân dung thật là ảnh bán thân/toàn thân, đầu nhỏ và lệch, nên khung tròn
  * chỉ hứng được cái nón với hai con mắt (ảnh chụp 05/11). Mỗi ảnh cần một khung riêng.
  *
- * Cách tìm (tự động): quét alpha để lấy bề rộng từng hàng, chỗ hẹp nhất phía trên thân là
- * CỔ; phần trên cổ là đầu. Bề ngang đầu lấy theo phân vị 8–92% để vài hàng bất thường
- * (đòn gánh của Cô Ba Gánh, cánh tay giơ lên) không kéo khung rộng ra.
+ * Cách tìm (tự động), HAI TẦNG:
+ *  1. **Alpha** cho biết CỘT của đầu: quét bề rộng từng hàng, chỗ hẹp nhất phía trên thân
+ *     là cổ, phần trên cổ là đầu. Bề ngang lấy theo phân vị 8–92% để đòn gánh của Cô Ba
+ *     hay cánh tay giơ lên không kéo khung rộng ra.
+ *  2. **Màu da** cho biết MẶT nằm đâu trong cột đó: gộp mọi mảng màu da trong cột ấy (tóc,
+ *     kính râm, râu cắt mặt thành nhiều mảnh nên phải gộp, lấy mảng to nhất là mất trán
+ *     hoặc mất cằm). Nới lên 42% chiều cao mặt cho tóc/nón, xuống 10% cho râu và cằm.
  *
- * Máy dò sai ở ảnh toàn thân và ảnh có nón to → bảng `OVERRIDE` bên dưới là số ĐO BẰNG MẮT,
- * luôn thắng máy. Thêm nhân vật mới thì chạy lại tool, xem tờ kiểm `--sheet`, ảnh nào lệch
- * thì thêm vào `OVERRIDE`.
+ * Vì sao cần tầng 2: bản đầu chỉ dùng alpha, đoán cằm theo vị trí cổ — nhưng với mặt có
+ * râu, hàm bạnh hay cổ rụt thì chỗ hẹp nhất là QUAI HÀM, nằm trên cằm, nên khung cắt ngang
+ * mồm. Đoán bù bằng "đầu cao 1,35 lần bề ngang" thì ảnh nào có nón to lại phình ra ôm cả
+ * người. Vùng da thì chỉ đúng một chỗ: nó chính là cái mặt.
+ *
+ * Máy vẫn dò sai ở ảnh TOÀN THÂN (cột đầu theo alpha ôm cả người nên lọt bắp tay, bắp
+ * chân) → bảng `OVERRIDE` bên dưới là số ĐO BẰNG MẮT, luôn thắng máy. Thêm nhân vật mới
+ * thì chạy lại tool, xem tờ kiểm `--sheet`, ảnh nào lệch thì thêm vào `OVERRIDE`.
  *
  *   node tools/portrait-headbox.mjs            # ghi client/src/render/headbox.ts
  *   node tools/portrait-headbox.mjs --sheet /tmp/box.png   # thêm tờ ảnh kiểm bằng mắt
@@ -45,21 +54,62 @@ try {
 /**
  * OVERRIDE — khung đo bằng mắt, [trái, trên, cạnh] theo TỈ LỆ cạnh ảnh (0–1).
  *
- * Chỉ ghi ở đây những ảnh máy dò sai. Cả bốn đều là **ảnh toàn thân**: chỗ hẹp nhất của
- * thân rơi xuống tận eo hoặc khe hai chân, máy tưởng đó là cổ nên khung ôm cả người và mặt
- * bé tí. Mấy kiểu sai khác (cắt mất cằm) đã chữa bằng luật chiều cao đầu trong `detect`,
- * không cần đo tay nữa.
+ * Chỉ còn hai ảnh, cả hai là **ảnh toàn thân**: cột đầu dò theo alpha ôm trọn người (chỗ
+ * hẹp nhất rơi xuống eo / khe hai chân), nên bắp tay bắp chân lọt vào vùng da và khung
+ * phình ra, mặt bé tí.
  */
 const OVERRIDE = {
-  'co_ba_ganh/neutral': [0.30, 0.03, 0.42],
-  'ong_ba_vong/evil': [0.33, 0.09, 0.36],
-  'shipper/evil': [0.45, 0.17, 0.40],
-  'su_phu_mi/evil': [0.31, 0.09, 0.42],
+  'ong_ba_vong/evil': [0.29, 0.06, 0.47],
+  'shipper/evil': [0.55, 0.24, 0.45],
 };
 
 const pct = (arr, p) => arr[Math.min(arr.length - 1, Math.max(0, Math.round((arr.length - 1) * p)))];
 
-/** detect trả về khung đầu [trái, trên, cạnh] theo tỉ lệ, dò bằng alpha. */
+/**
+ * skinMask — pixel nào là DA MẶT.
+ *
+ * Bộ art này tô da bằng màu cam nhạt sáng. Ba điều kiện lọc gần hết thứ khác: phải SÁNG
+ * (áo nâu của Shipper và Cô Ba tối hơn hẳn), đỏ phải trội và xanh dương thấp nhất, và sắc
+ * màu dưới 45° (áo vàng nhạt của A Hôn ra ~52° nên rụng). Nón bánh bao màu kem thì lọt
+ * vào, nhưng nó nằm ngay trên đầu nên không hại gì.
+ */
+function skinMask(data, W, H, C) {
+  const m = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    if (data[i * C + 3] < 140) continue;
+    const r = data[i * C], g = data[i * C + 1], b = data[i * C + 2];
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    if (mx < 185 || r !== mx || b > g) continue;
+    const sat = d / mx;
+    if (sat < 0.08 || sat > 0.60) continue;
+    if (d !== 0 && 60 * ((g - b) / d) > 45) continue;
+    m[i] = 1;
+  }
+  return m;
+}
+
+/** blobs — các mảng pixel LIỀN NHAU của mặt nạ, kèm hộp bao. */
+function blobs(mask, W, H) {
+  const seen = new Uint8Array(W * H), st = new Int32Array(W * H), out = [];
+  for (let i = 0; i < W * H; i++) {
+    if (!mask[i] || seen[i]) continue;
+    let sp = 0; st[sp++] = i; seen[i] = 1;
+    let a = 0, x0 = W, x1 = -1, y0 = H, y1 = -1;
+    while (sp) {
+      const p = st[--sp], x = p % W, y = (p / W) | 0;
+      a++;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      if (x > 0 && mask[p - 1] && !seen[p - 1]) { seen[p - 1] = 1; st[sp++] = p - 1; }
+      if (x < W - 1 && mask[p + 1] && !seen[p + 1]) { seen[p + 1] = 1; st[sp++] = p + 1; }
+      if (y > 0 && mask[p - W] && !seen[p - W]) { seen[p - W] = 1; st[sp++] = p - W; }
+      if (y < H - 1 && mask[p + W] && !seen[p + W]) { seen[p + W] = 1; st[sp++] = p + W; }
+    }
+    out.push({ a, x0, x1, y0, y1, cx: (x0 + x1) / 2 });
+  }
+  return out;
+}
+
+/** detect trả về khung đầu [trái, trên, cạnh] theo tỉ lệ: alpha tìm cột đầu, da tìm mặt. */
 async function detect(file) {
   const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height, C = info.channels;
@@ -114,13 +164,23 @@ async function detect(file) {
     [hx0, hx1] = span(y0, neck);
   }
   const hw = hx1 - hx0 + 1;
-  // Cằm ở đâu thì KHÔNG tin vào chỗ hẹp nhất: với mặt có râu, hàm bạnh hay cổ rụt, chỗ hẹp
-  // nhất là quai hàm — nằm TRÊN cằm, lấy đúng chỗ đó là cắt mất mồm (ảnh chụp thẻ nhân vật
-  // 05/11). Đầu của bộ art này cao khoảng 1,35 lần bề ngang, nên lấy bề ngang suy ra đáy và
-  // chỉ dùng cổ khi nó còn thấp hơn thế.
-  const bottom = Math.max(neck + hw * 0.20, y0 + hw * 1.35);
-  let size = Math.round(Math.max(hw, bottom - y0) * 1.12);
-  const cx = (hx0 + hx1) / 2, cy = (y0 + bottom) / 2;
+
+  // Tầng 2 — vùng DA trong cột đầu chính là cái mặt. Bỏ mảng nào lệch khỏi cột (bắp tay
+  // giơ ngang) hoặc tụt sâu dưới cổ (bụng, bàn tay cầm đồ). Gộp hết phần còn lại: tóc,
+  // kính râm, râu cắt mặt thành nhiều mảnh rời nên lấy mảng to nhất là mất trán hoặc cằm.
+  const skin = blobs(skinMask(data, W, H, C), W, H)
+    .filter((b) => b.a > W * H * 0.003)
+    .filter((b) => b.cx > hx0 - hw * 0.12 && b.cx < hx1 + hw * 0.12 && b.y0 < neck + hw * 0.45);
+  if (!skin.length) return null;
+  const fx0 = Math.min(...skin.map((b) => b.x0)), fx1 = Math.max(...skin.map((b) => b.x1));
+  const fy0 = Math.min(...skin.map((b) => b.y0)), fy1 = Math.max(...skin.map((b) => b.y1));
+  const fw = fx1 - fx0 + 1, fh = fy1 - fy0 + 1;
+  // Da bắt đầu từ chân tóc nên nới LÊN cho tóc/nón; nới XUỐNG ít cho râu và cằm.
+  const by0 = Math.max(y0, fy0 - fh * 0.42);
+  const by1 = fy1 + fh * 0.10;
+  const bx0 = fx0 - fw * 0.10, bx1 = fx1 + fw * 0.10;
+  let size = Math.round(Math.max(bx1 - bx0, by1 - by0) * 1.04);
+  const cx = (bx0 + bx1) / 2, cy = (by0 + by1) / 2;
   let left = Math.max(0, Math.min(Math.round(cx - size / 2), W - size));
   let top = Math.max(0, Math.min(Math.round(cy - size / 2), H - size));
   size = Math.min(size, W - left, H - top);
@@ -140,6 +200,13 @@ for (const char of readdirSync(CHARS).sort()) {
     if (!box) { console.warn(`bỏ qua ${key}: ảnh rỗng`); continue; }
     rows.push({ key, box: box.map(r3), manual: Boolean(manual), file });
   }
+}
+
+// Khung chiếm gần hết ảnh = máy dò hỏng (tưởng cả người là cái đầu). Báo đích danh, đừng
+// để nó lọt vào `headbox.ts` trong im lặng như lần 05/11.
+const ngo = rows.filter((r) => !r.manual && r.box[2] > 0.8);
+if (ngo.length) {
+  console.warn(`NGỜ: ${ngo.length} khung chiếm > 80% ảnh, xem lại rồi đo tay — ${ngo.map((r) => r.key).join(', ')}`);
 }
 
 const body = rows.map((r) => `  '${r.key}': [${r.box.join(', ')}],${r.manual ? ' // đo bằng mắt' : ''}`).join('\n');
