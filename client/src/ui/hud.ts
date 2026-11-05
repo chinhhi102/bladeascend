@@ -6,6 +6,7 @@ import { RoomBoard } from './roomboard';
 import { crown } from './roomboard-parts';
 import { BUFFS, moodName } from '../net/protocol';
 import { assets } from '../render/assets';
+import { headBox } from '../render/headbox';
 import type { StatusChip } from '../render/skillpresent';
 import { statusIconUrl } from '../render/statusicons';
 import { REALM_BADGE } from '../render/palette';
@@ -23,6 +24,14 @@ export interface SkillView {
   /** remainSecs: giây còn lại tới lượt kế; 0 = đã đầy. */
   remainSecs: number;
   cooldownSecs: number;
+}
+
+/** portraitMood đổi tâm trạng của server sang 1 trong 4 chân dung biểu cảm (spec §12.4). */
+function portraitMood(mood: string): string {
+  if (mood === 'chase') return 'evil';
+  if (mood === 'hit' || mood === 'no_swords') return 'panic';
+  if (mood === 'realm_drop') return 'cry';
+  return 'neutral';
 }
 
 const FEED_SECS = 6;
@@ -343,7 +352,7 @@ export class Hud {
       return; // chỉ dựng lại khi có gì đổi, không chạm DOM mỗi khung hình
     }
     this.badgeKey = key;
-    this.setPortrait(this.portraitUrl(mood));
+    this.setPortrait(this.portraitUrl(portraitMood(mood)));
     const col = `#${(REALM_BADGE[realm] ?? 0x8d99ae).toString(16).padStart(6, '0')}`;
     this.badge.style.borderColor = col;
     this.badge.classList.toggle('tien', realm >= this.cfg.cultivation.realms.length);
@@ -357,30 +366,33 @@ export class Hud {
   }
 
   /**
-   * portraitUrl chọn ảnh chân dung theo tâm trạng (spec §12.4). Chưa có bộ chân dung riêng
-   * thì dùng khung `idle_00` và để CSS cắt lấy phần đầu.
+   * portraitUrl chọn ảnh chân dung theo biểu cảm (spec §12.4). Trả về cả biểu cảm THẬT SỰ
+   * dùng — người gọi cần nó để tra khung đầu, mà khung của ảnh dự phòng khác ảnh được hỏi.
    */
-  private portraitUrl(mood: string): string {
-    const want = mood === 'chase' ? 'evil' : mood === 'hit' || mood === 'no_swords' ? 'panic' : mood === 'realm_drop' ? 'cry' : 'neutral';
+  private portraitUrl(want: string): { url: string; face: string } {
     if (!this.char) {
-      return '';
+      return { url: '', face: want };
     }
     const real = `characters/${this.char}/portrait_${want}.png`;
     if (assets.has(real)) {
-      return assets.url(real);
+      return { url: assets.url(real), face: want };
     }
     // Dự phòng là chân dung TRUNG TÍNH, không phải `frames/idle_00.png`: `frames/` là ảnh
     // nguồn, không có trong manifest và không được deploy (xem tools/deploy.sh).
     const neutral = `characters/${this.char}/portrait_neutral.png`;
-    return assets.url(neutral);
+    return { url: assets.url(neutral), face: 'neutral' };
   }
 
   /**
    * setPortrait nạp ảnh rồi mới gắn làm nền. Không kiểm tra qua danh sách asset được: ảnh
    * từng khung của nhân vật đã được gộp vào atlas nên không nằm trong danh sách, dù file vẫn
    * có trên đĩa. Tải hụt thì rơi về hai chữ cái đầu của tên nhân vật.
+   *
+   * Phép cắt lấy từ `headBox` chứ không để nguyên luật `center top / 180%` trong CSS: chân
+   * dung là ảnh bán thân/toàn thân, đầu nhỏ và lệch, nên luật chung đó chỉ hứng được cái
+   * nón với hai con mắt (ảnh chụp 05/11). Spec §12.4 ghi "cắt từ đầu tới vai".
    */
-  private setPortrait(url: string): void {
+  private setPortrait({ url, face }: { url: string; face: string }): void {
     const initials = this.char.split('_').map((w) => w[0] ?? '').join('').toUpperCase().slice(0, 2);
     if (!url) {
       this.portrait.style.backgroundImage = '';
@@ -389,6 +401,13 @@ export class Hud {
     }
     const img = new Image();
     img.onload = () => {
+      const [bx, by, bs] = headBox(this.char, face);
+      // Ô đại diện vuông, ảnh vuông → phóng sao cho cạnh khung đầu vừa đúng ô: 100/bs %.
+      // Vị trí nền tính theo phần trăm: 0% là mép trái khung ảnh, 100% là mép phải, nên
+      // toạ độ khung đầu phải chia cho phần ảnh THỪA ra ngoài ô (1 - bs).
+      this.portrait.style.backgroundSize = `${(100 / bs).toFixed(2)}%`;
+      this.portrait.style.backgroundPosition = bs >= 1 ? 'center'
+        : `${((bx / (1 - bs)) * 100).toFixed(2)}% ${((by / (1 - bs)) * 100).toFixed(2)}%`;
       this.portrait.style.backgroundImage = `url(${url})`;
       this.portrait.textContent = '';
     };

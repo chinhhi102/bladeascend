@@ -1,6 +1,7 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 
 import { assets } from './assets';
+import { DEFAULT_HEAD_BOX, headBox } from './headbox';
 import { quality } from './quality';
 
 /**
@@ -11,10 +12,14 @@ import { quality } from './quality';
  * có** của §12.4 làm emote nổi trên đầu khi tâm trạng đổi. Thân vẫn chạy bằng bộ frame cũ,
  * không đổi dáng người, và KHÔNG cần art mới.
  *
- * Khung ảnh cắt y như ô đại diện trên HUD: `background: center top / 180%` trong
- * `style.css`. Cùng một phép cắt ở hai chỗ thì cùng một khuôn mặt — chân dung là ảnh toàn
- * thân ở `neutral`/`cry` và bán thân ở `evil`/`panic`, nên không cắt thì bong bóng ra cái
- * người tí xíu thay vì cái mặt.
+ * Khung ảnh cắt y như ô đại diện trên HUD, bằng KHUNG ĐẦU đo riêng cho từng ảnh
+ * (`headbox.ts`). Cùng một phép cắt ở hai chỗ thì cùng một khuôn mặt — chân dung là ảnh
+ * toàn thân ở `neutral`/`cry` và bán thân ở `evil`/`panic`, nên không cắt thì bong bóng ra
+ * cái người tí xíu thay vì cái mặt.
+ *
+ * Bản đầu cắt bằng một luật CHUNG `center top / 180%` (lấy nửa trên, phóng 1,8 lần). Luật
+ * đó giả định mặt nằm giữa và chiếm gần hết mép trên ảnh — art thật không như vậy, nên
+ * bong bóng chỉ hứng được cái nón với hai con mắt (ảnh chụp 05/11).
  */
 
 /** Hai biểu cảm dùng cho emote. `neutral`/`cry` để cho HUD và màn tổng kết. */
@@ -25,8 +30,8 @@ const LIFE = 1.5;
 const COOLDOWN = 3;
 const POP = 0.18;
 const FADE = 0.25;
-/** Phóng ảnh trong khung tròn — khớp `background: ... / 180%` của `.badge .portrait`. */
-const ZOOM = 1.8;
+/** Bán kính phần nhìn thấy, tính theo bán kính bong bóng — chừa chỗ cho viền trắng. */
+const MASK_R = 0.92;
 /** Bán kính bong bóng, tính bằng PIXEL MÀN HÌNH (xem `update`). */
 const R = 28;
 
@@ -68,6 +73,7 @@ export class Emote {
   private shownAt = -999;
   private lastAt = -999;
   private radius = 0;
+  private box = DEFAULT_HEAD_BOX;
 
   constructor() {
     this.root.visible = false;
@@ -88,6 +94,7 @@ export class Emote {
       return false; // chưa tải xong chân dung thì thôi, không vẽ ô trống
     }
     this.face.texture = tex;
+    this.box = headBox(char, face);
     this.fitFace(R);
     this.shownAt = now;
     this.lastAt = now;
@@ -148,28 +155,27 @@ export class Emote {
       .fill(0xfff7e6)
       .circle(0, 0, r)
       .stroke({ width: Math.max(2, r * 0.14), color: 0xffffff, alignment: 0.5 });
-    this.mask.clear().circle(0, 0, r * 0.92).fill(0xffffff);
+    this.mask.clear().circle(0, 0, r * MASK_R).fill(0xffffff);
     this.fitFace(r);
   }
 
   /**
-   * fitFace đặt lại cỡ ảnh mặt trong khung.
+   * fitFace đặt lại cỡ và vị trí ảnh mặt sao cho KHUNG ĐẦU vừa đúng vòng tròn.
    *
-   * Gọi cả lúc ĐỔI TEXTURE, không chỉ lúc đổi bán kính: bốn chân dung có tỉ lệ khác nhau
-   * (`evil`/`panic` là bán thân, `neutral`/`cry` toàn thân), nên dùng lại số đo của ảnh
-   * trước là méo.
+   * Gọi cả lúc ĐỔI TEXTURE, không chỉ lúc đổi bán kính: mỗi chân dung có khung đầu riêng
+   * (`headbox.ts`), dùng lại số đo của ảnh trước là lệch mặt.
    */
   private fitFace(r: number): void {
     const tex = this.face.texture;
     if (!tex || tex.width <= 0) {
       return;
     }
-    // `center top / 180%` — y như ô đại diện HUD trong `style.css`.
-    const w = r * 2 * ZOOM;
-    this.face.width = w;
-    this.face.height = w * (tex.height / tex.width);
-    this.face.x = -w / 2;
-    this.face.y = -r * 0.92;
+    const [bx, by, bs] = this.box;
+    const side = bs * tex.width;
+    const s = (r * 2 * MASK_R) / side; // cạnh khung đầu = đường kính phần nhìn thấy
+    this.face.scale.set(s);
+    this.face.x = -(bx * tex.width + side / 2) * s;
+    this.face.y = -(by * tex.height + side / 2) * s;
   }
 
   destroy(): void {

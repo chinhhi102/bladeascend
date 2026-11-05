@@ -136,6 +136,27 @@ Công cụ mới `tools/browsertest/emoteshots.mjs`: bong bóng sống 1,5 s nê
 định là trò may rủi; nay `emote.ts` báo một dòng `[EMOTE]` ra console khi `?debug=true` và
 bài chụp bấm máy ngay khi nghe thấy. Ảnh: `docs/review/emote/` (3 PC + 3 iPhone).
 
+### 05/11 (chiều) — khung tròn chỉ thấy cái nón: khung đầu riêng cho từng chân dung
+
+Chủ dự án chụp màn hình: ô đại diện HUD (§12.4) và bong bóng mặt (§12.5) chỉ thấy **cái nón
+với hai con mắt**. Cả hai cắt ảnh bằng **một luật chung** `background: center top / 180%` —
+luật đó chỉ đúng nếu mặt nằm giữa và chiếm gần hết mép trên, mà bộ chân dung thật là ảnh
+bán thân/toàn thân, đầu nhỏ và lệch. Spec §12.4 ghi "cắt từ đầu tới vai", luật cũ không làm
+được việc đó.
+
+Nay mỗi chân dung có **khung đầu riêng** `[trái, trên, cạnh]` trong
+`client/src/render/headbox.ts`, sinh bằng `node tools/portrait-headbox.mjs` (thêm `--sheet
+<ảnh.png>` để có tờ ảnh kiểm bằng mắt). Tool dò cổ bằng alpha; máy dò sai ở ảnh toàn thân và
+mặt có râu nên bảng `OVERRIDE` trong tool là số đo bằng mắt và luôn thắng máy — hiện 28/40
+ảnh do máy, 12 ảnh đo tay. Thêm nhân vật mới: chạy lại tool, xem tờ kiểm, ảnh nào lệch thì
+thêm vào `OVERRIDE`.
+
+Trước/sau + cách làm: `docs/reports/2026-11-05-cat-chan-dung/`.
+
+Chưa làm: chân dung tròn ở bảng xếp hạng (`.rb-face`, 28–40 px) và màn chọn nhân vật vẫn
+hiện **cả ảnh** thu nhỏ — không cắt mất mặt nhưng mặt bé tí; dùng chung khung đầu sẽ rõ hơn,
+chờ chủ dự án quyết.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở
