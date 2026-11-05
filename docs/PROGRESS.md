@@ -148,8 +148,9 @@ Nay mỗi chân dung có **khung đầu riêng** `[trái, trên, cạnh]` trong
 `client/src/render/headbox.ts`, sinh bằng `node tools/portrait-headbox.mjs` (thêm `--sheet
 <ảnh.png>` để có tờ ảnh kiểm). Tool dò **hai tầng**: alpha tìm CỘT của đầu (chỗ hẹp nhất
 phía trên thân là cổ), rồi **màu da** tìm MẶT trong cột đó — gộp mọi mảng da, nới lên 42%
-cho tóc/nón và xuống 10% cho râu/cằm. 38/40 ảnh máy dò đúng; 2 ảnh toàn thân
-(`ong_ba_vong/evil`, `shipper/evil`) đo bằng mắt trong `OVERRIDE`.
+cho tóc/nón và xuống 10% cho râu/cằm. 34/40 ảnh máy dò đúng; 6 ảnh toàn thân đo bằng mắt
+trong `OVERRIDE` (`ong_ba_vong/evil`, `shipper/evil`, cả 4 biểu cảm của `a_hon` — nhân vật
+hở da gần hết người nên vùng da ôm trọn cả người).
 
 Hai hướng sai phải bỏ mới ra được cái trên, cả hai đều đã lọt tới tay chủ dự án: **(a)** chỉ
 dùng alpha rồi đoán cằm theo cổ — mặt có râu/hàm bạnh thì chỗ hẹp nhất là quai hàm NẰM TRÊN

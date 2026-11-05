@@ -11,10 +11,10 @@
  * mỗi ảnh phải có khung riêng.
  */
 export const HEAD_BOX: Record<string, readonly [number, number, number]> = {
-  'a_hon/neutral': [0.064, 0.035, 0.846],
-  'a_hon/evil': [0.104, 0.035, 0.857],
-  'a_hon/panic': [0, 0, 1],
-  'a_hon/cry': [0.063, 0.035, 0.877],
+  'a_hon/neutral': [0.22, 0.05, 0.52], // đo bằng mắt
+  'a_hon/evil': [0.2, 0.07, 0.66], // đo bằng mắt
+  'a_hon/panic': [0.16, 0.01, 0.66], // đo bằng mắt
+  'a_hon/cry': [0.26, 0.05, 0.48], // đo bằng mắt
   'ba_tam_loa/neutral': [0.309, 0.201, 0.574],
   'ba_tam_loa/evil': [0.238, 0.086, 0.504],
   'ba_tam_loa/panic': [0.148, 0.162, 0.586],

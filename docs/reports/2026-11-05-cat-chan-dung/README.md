@@ -35,9 +35,12 @@ Tầng 2 mới là chỗ quyết định, và phải thử hai hướng sai trư
 - đoán bù bằng "đầu cao 1,35 lần bề ngang" → ảnh nào nón to thì khung phình ra ôm cả
   người, ba ảnh của Cô Ba ra đúng `[0, 0, 1]`.
 
-Vùng da thì không phải đoán: nó chính là cái mặt. 38/40 ảnh máy dò đúng; còn 2 ảnh
-**toàn thân** (`ong_ba_vong/evil`, `shipper/evil`) cột đầu theo alpha ôm trọn người nên
-bắp tay bắp chân lọt vào — hai ảnh đó đo bằng mắt, để trong `OVERRIDE` của tool.
+Vùng da thì không phải đoán: nó chính là cái mặt. 34/40 ảnh máy dò đúng; còn 6 ảnh
+**toàn thân** thì cột đầu theo alpha ôm trọn người nên tầng 2 thừa hưởng luôn cái sai —
+bắp tay bắp chân lọt vào vùng da. Sáu ảnh đó đo bằng mắt, để trong `OVERRIDE` của tool:
+`ong_ba_vong/evil`, `shipper/evil`, và cả bốn biểu cảm của `a_hon` (nhân vật này mặc áo
+ba lỗ với quần đùi nên hở da gần hết người, lại đội nón bánh bao màu kem cũng lọt vào
+mặt nạ da).
 
 Bốn nơi dùng khung này — tất cả gọi chung `headCrop`/`headBox`, không ai tự chép công thức:
 - `client/src/ui/hud.ts` — ô đại diện HUD 64 px (§12.4).

@@ -54,11 +54,17 @@ try {
 /**
  * OVERRIDE — khung đo bằng mắt, [trái, trên, cạnh] theo TỈ LỆ cạnh ảnh (0–1).
  *
- * Chỉ còn hai ảnh, cả hai là **ảnh toàn thân**: cột đầu dò theo alpha ôm trọn người (chỗ
- * hẹp nhất rơi xuống eo / khe hai chân), nên bắp tay bắp chân lọt vào vùng da và khung
- * phình ra, mặt bé tí.
+ * Sáu ảnh, đều cùng một kiểu sai: **ảnh toàn thân**. Cột đầu dò theo alpha ôm trọn người
+ * (chỗ hẹp nhất rơi xuống eo hoặc khe hai chân), nên tầng 2 thừa hưởng luôn cái sai —
+ * bắp tay bắp chân lọt vào vùng da và khung phình ra, mặt bé tí. A Hôn dính cả bốn biểu
+ * cảm vì nhân vật này mặc áo ba lỗ với quần đùi: hở da gần hết người, lại đội nón bánh bao
+ * màu kem cũng lọt vào mặt nạ da.
  */
 const OVERRIDE = {
+  'a_hon/neutral': [0.22, 0.05, 0.52],
+  'a_hon/evil': [0.20, 0.07, 0.66],
+  'a_hon/panic': [0.16, 0.01, 0.66],
+  'a_hon/cry': [0.26, 0.05, 0.48],
   'ong_ba_vong/evil': [0.29, 0.06, 0.47],
   'shipper/evil': [0.55, 0.24, 0.45],
 };
