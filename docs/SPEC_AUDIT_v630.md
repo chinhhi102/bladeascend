@@ -393,6 +393,40 @@ Yêu cầu MỚI của v6.31–v6.36 (ngoài phạm vi bản rà này) đều đ
 chung (v6.31–33), tên bot đa quốc gia (v6.34), sàn bot theo khu (v6.35), đủ 5 lớp hiển thị
 kỹ năng + icon trạng thái (v6.36).
 
+## 6c. Rà lại 05/11/2026 — spec v6.38
+
+Rà lại sau khi bong bóng mặt lên (`3173f7a`). Spec cao nhất: **v6.38**.
+
+**Còn CHƯA triển khai: 2 mục rưỡi.**
+
+| Mục | Trạng thái | Bằng chứng |
+|---|---|---|
+| 1 anim lặp vượt ngưỡng giật 45 | **CHƯA** | `JITTER_REPORT.md`: "Còn đỏ: 1" |
+| Web Worker giải mã + vòng kiếm RenderTexture (§13.6 #1, #6) | **CHƯA** | không có `new Worker`, không có `RenderTexture` trong `client/src/render/` |
+| `/api/admin/ws` + CPU/KB-s theo thiết bị trên dashboard | **nửa** | 12 endpoint `/api/admin/*` và 10 trang React đã có; thiếu luồng trực tiếp |
+
+Cả ba đều đã nằm trong "Lỗi / hạn chế đã biết" của `PROGRESS.md`, không mục nào bị bỏ quên.
+Netcode bước 2/4/5/7 (gồm Web Worker) vẫn trong ngân sách nên chưa phải nút thắt.
+
+**Đã đóng kể từ mục 6b:** lớp mặt §12.5 A — Q44 bỏ hướng A, thay bằng **bong bóng mặt**
+(`client/src/render/emote.ts`). Đối chiếu từng chữ của v6.38: 1,5 s (`LIFE`), cooldown 3 s
+(`COOLDOWN`), tắt ở Thấp khi > 15 người (`LOW_MAX_CHARS`), viền trắng + đuôi chỉ xuống, nảy
+khi hiện, ẩn khi Ẩn Thân/trong bụi — đủ.
+
+**Yêu cầu mới v6.37, v6.38:** đã làm (minimap 96 px vốn đã đúng; bong bóng mặt).
+
+### Hai chỗ SPEC chưa theo kịp quyết định của chính nó (→ Q45)
+
+- **Dòng 1284** vẫn mô tả đầy đủ hướng A ("lớp mặt riêng chồng lên đầu… đổi mood = chỉ đổi
+  mặt") dù ghi chú v6.38 ngay phía trên đã bỏ hướng đó.
+- **Dòng 1748 (§17 checklist)** vẫn đòi "đổi run → chase → flee … **chỉ đổi mặt + tư thế**".
+  Vế này nay KHÔNG đạt được theo thiết kế: thân vẫn dùng bộ frame riêng cho từng mood. Hai
+  vế còn lại của dòng đó thì ĐẠT — crossfade, không reset frame, chống lật qua lại và tốc
+  độ bước chân đều có trong `client/src/render/animctl.ts`.
+
+Nên §17 còn **FAIL 2** chứ không phải 3: mục 20 (Gom Đơn khi choáng) đã sửa; mục 30 là dòng
+lỗi thời chờ chủ dự án sửa spec; mục 31 (anim giật) còn thật.
+
 ## 6. Top 10 việc FAIL / CHƯA quan trọng nhất (theo mức người chơi thấy)
 
 1. **Shipper bị choáng không Gom Đơn được** — `server/internal/game/skills.go:135` chặn mọi kỹ năng khi choáng; spec §6.3/§17 nói đang trói/ngủ/choáng vẫn dùng được và thoát ngay. Thiếu cả test.
