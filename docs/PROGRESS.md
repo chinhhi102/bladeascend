@@ -27,7 +27,7 @@ node tools/browsertest/review.mjs <url> docs/review/<mục> <tên> [--full]   # 
 | Bot | ✅ | sàn theo khu v6.35 (production Thiên Đình 30 · rìa 20; staging 15/10, admin chỉnh từng khu), tên đa quốc gia v6.34, lấp theo khu (v6.28), 5% đứng yên sau khi vào, dùng kỹ năng theo luật v6.9, không lộ cờ bot |
 | Trang chủ | ✅ chờ duyệt ảnh | lưới 5 thẻ, nền kéo hết trang, ô chọn ngôn ngữ — `docs/review/06-…`, `07-…` |
 | Logo Pattaya | ✅ | trang chủ PC/điện thoại/ngoại ngữ + màn tải — `docs/review/08-logo/` |
-| Ảnh chia sẻ OG | 🟡 chờ duyệt | bản có logo `docs/review/08-logo/og_share_card_preview.jpg`; og:image CHƯA đổi |
+| Ảnh chia sẻ OG | ✅ ĐÃ DUYỆT, đang chạy | bản có logo · `SHARE_CARD_APPROVED = True` · `og:image` → `/brand/share_card.jpg` (213 KB) |
 | Góp ý 3 ảnh | ✅ | client nén JPEG ≤ 300 KB, server gỡ EXIF + giải mã/mã hoá lại (Q39), Playwright 4 thiết bị |
 | Admin React + antd | ✅ | đã chạy trên staging, ảnh 10 trang `docs/review/11-admin/` |
 | Đa ngôn ngữ | ✅ bản nháp | vi + en/pt-BR/es/id/th (`_draft`, cần người bản ngữ duyệt — `client/src/i18n/NOTES.md`) |
@@ -190,12 +190,14 @@ thật, nên đừng coi việc hoãn là coi nhẹ.
 
 ## Việc tiếp theo
 
-1. Anh duyệt ảnh OG có logo (`docs/review/08-logo/og_share_card_preview.jpg`) → bật `SHARE_CARD_APPROVED`.
-2. **Q43**: `minimap.size_mobile` — spec ghi 96 ở dòng 534 và 120 ở dòng 1585. Code theo 96.
-   Chốt một số rồi sửa dòng còn lại trong spec.
-3. Điền email trong `SECURITY.md`. (Việc viết lại lịch sử git đã làm xong 02/11.)
-4. Xem ảnh **bong bóng mặt** (`docs/review/emote/`, PC + iPhone) — Q44 đã đóng, chỉ còn duyệt
-   bằng mắt. Thấy chướng thì chỉnh cỡ `R` hoặc thời gian `LIFE` trong `render/emote.ts`.
-5. Xem ảnh trang admin mới trên staging (`docs/review/11-admin/`) rồi tự đăng nhập thử.
-6. Tìm người bản ngữ duyệt 5 bản dịch + danh sách tên bot (`client/src/i18n/NOTES.md`).
-7. Đo FPS/GPU trên điện thoại thật — cũng là thứ mở khoá mục 4 ở bảng trên.
+> Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
+> người (hoặc Claude) hỏi lại thứ anh đã trả lời rồi. Ngày 05/11 đã dính đúng vậy với ảnh OG.
+
+1. Xem ảnh **bong bóng mặt** (`docs/review/emote/`, 3 PC + 3 iPhone) — Q44 đã đóng, code đã
+   chạy, chỉ còn duyệt bằng mắt. Thấy chướng thì chỉnh `R` (cỡ) hoặc `LIFE` (thời gian hiện)
+   trong `client/src/render/emote.ts`.
+2. Điền email trong `SECURITY.md`.
+3. Xem ảnh trang admin trên staging (`docs/review/11-admin/`) rồi tự đăng nhập thử.
+4. Tìm người bản ngữ duyệt 5 bản dịch + danh sách tên bot (`client/src/i18n/NOTES.md`).
+5. **Đo FPS/GPU trên điện thoại thật** — cũng là thứ mở khoá mục 4 của bảng hiệu năng
+   (chất lượng mặc định, đang hoãn chờ số liệu người thật đã lọc).
