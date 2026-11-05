@@ -1,6 +1,7 @@
 import { isTien, realmName, type GameConfig } from '../config';
 import type { RoomBoardRow } from '../net/protocol';
 import { assets } from '../render/assets';
+import { headCrop } from '../render/headbox';
 import { REALM_BADGE } from '../render/palette';
 import { LB_ZONE_HIDDEN } from '../net/lbwire';
 import { h } from './dom';
@@ -83,7 +84,13 @@ export function realmBorder(realm: number): string {
   return `#${c.toString(16).padStart(6, '0')}`;
 }
 
-/** face: chân dung tròn; thiếu art thì chấm tròn màu cảnh giới với chữ cái đầu tên. */
+/**
+ * face: chân dung tròn; thiếu art thì chấm tròn màu cảnh giới với chữ cái đầu tên.
+ *
+ * Cắt lấy phần đầu (`headCrop`) chứ không thu CẢ TẤM ảnh vào ô: chân dung là ảnh bán
+ * thân/toàn thân, nhét vào ô 28–40 px thì mặt bé bằng hạt gạo, nhìn ra cái người chứ không
+ * ra ai.
+ */
 export function face(cfg: GameConfig, row: RoomBoardRow, size: number): HTMLElement {
   const char = cfg.characters[row.character] ?? '';
   const url = char ? assets.url(`characters/${char}/portrait_neutral.png`) : '';
@@ -91,11 +98,7 @@ export function face(cfg: GameConfig, row: RoomBoardRow, size: number): HTMLElem
   wrap.style.width = wrap.style.height = `${size}px`;
   wrap.style.borderColor = realmBorder(row.realm);
   if (url) {
-    const img = h('img');
-    img.src = url;
-    img.alt = '';
-    img.draggable = false;
-    wrap.append(img);
+    headCrop(wrap, url, char);
   } else {
     wrap.textContent = row.name.slice(0, 1).toLocaleUpperCase('vi');
   }

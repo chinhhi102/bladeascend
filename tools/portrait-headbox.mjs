@@ -45,25 +45,16 @@ try {
 /**
  * OVERRIDE — khung đo bằng mắt, [trái, trên, cạnh] theo TỈ LỆ cạnh ảnh (0–1).
  *
- * Chỉ ghi ở đây những ảnh máy dò sai. Lý do sai gom thành hai kiểu:
- *  - ảnh TOÀN THÂN (`*_evil` của Ông Bà Vòng, Shipper, Sư Phụ Mì, Cô Ba Gánh neutral):
- *    chỗ hẹp nhất rơi xuống tận eo → khung ôm cả người;
- *  - mặt có RÂU hoặc hàm bạnh (Cu Rùa, A Hôn evil): chỗ hẹp nhất là quai hàm, nằm TRÊN
- *    cằm → khung cắt mất mồm.
+ * Chỉ ghi ở đây những ảnh máy dò sai. Cả bốn đều là **ảnh toàn thân**: chỗ hẹp nhất của
+ * thân rơi xuống tận eo hoặc khe hai chân, máy tưởng đó là cổ nên khung ôm cả người và mặt
+ * bé tí. Mấy kiểu sai khác (cắt mất cằm) đã chữa bằng luật chiều cao đầu trong `detect`,
+ * không cần đo tay nữa.
  */
 const OVERRIDE = {
-  'a_hon/evil': [0.20, 0.08, 0.64],
   'co_ba_ganh/neutral': [0.30, 0.03, 0.42],
-  'cu_rua/neutral': [0.22, 0.07, 0.58],
-  'cu_rua/panic': [0.22, 0.06, 0.62],
-  'cu_rua/cry': [0.25, 0.08, 0.58],
   'ong_ba_vong/evil': [0.33, 0.09, 0.36],
-  'ong_ba_vong/cry': [0.30, 0.06, 0.54],
   'shipper/evil': [0.45, 0.17, 0.40],
-  'shipper/panic': [0.45, 0.18, 0.40],
-  'shipper/cry': [0.39, 0.14, 0.44],
-  'su_phu_mi/neutral': [0.31, 0.11, 0.50],
-  'su_phu_mi/evil': [0.32, 0.10, 0.38],
+  'su_phu_mi/evil': [0.31, 0.09, 0.42],
 };
 
 const pct = (arr, p) => arr[Math.min(arr.length - 1, Math.max(0, Math.round((arr.length - 1) * p)))];
@@ -123,7 +114,11 @@ async function detect(file) {
     [hx0, hx1] = span(y0, neck);
   }
   const hw = hx1 - hx0 + 1;
-  const bottom = neck + hw * 0.20; // cổ dò được nằm ở quai hàm, nới xuống cho hết cằm
+  // Cằm ở đâu thì KHÔNG tin vào chỗ hẹp nhất: với mặt có râu, hàm bạnh hay cổ rụt, chỗ hẹp
+  // nhất là quai hàm — nằm TRÊN cằm, lấy đúng chỗ đó là cắt mất mồm (ảnh chụp thẻ nhân vật
+  // 05/11). Đầu của bộ art này cao khoảng 1,35 lần bề ngang, nên lấy bề ngang suy ra đáy và
+  // chỉ dùng cổ khi nó còn thấp hơn thế.
+  const bottom = Math.max(neck + hw * 0.20, y0 + hw * 1.35);
   let size = Math.round(Math.max(hw, bottom - y0) * 1.12);
   const cx = (hx0 + hx1) / 2, cy = (y0 + bottom) / 2;
   let left = Math.max(0, Math.min(Math.round(cx - size / 2), W - size));
@@ -154,9 +149,11 @@ writeFileSync(OUT, `// SINH TỰ ĐỘNG bằng \`node tools/portrait-headbox.mj
 /**
  * Khung đầu của từng chân dung: \`[trái, trên, cạnh]\` theo TỈ LỆ cạnh ảnh (0–1), luôn vuông.
  *
- * Dùng cho hai chỗ cắt ảnh vào khung TRÒN: ô đại diện HUD (§12.4) và bong bóng mặt (§12.5).
- * Chân dung là ảnh bán thân/toàn thân nên cắt bằng một luật chung ("lấy nửa trên, phóng
- * 180%") là ra cái nón với hai con mắt — mỗi ảnh phải có khung riêng.
+ * Dùng cho mọi chỗ hiện MẶT nhân vật trong ô nhỏ: ô đại diện HUD (§12.4), bong bóng mặt
+ * (§12.5), chân dung tròn ở bảng xếp hạng (§11.5), ảnh nhân vật ở màn chọn. Chân dung là
+ * ảnh bán thân/toàn thân nên cắt bằng một luật chung ("lấy nửa trên, phóng 180%") là ra
+ * cái nón với hai con mắt, còn thu cả tấm ảnh vào ô 28–40 px thì mặt bé bằng hạt gạo —
+ * mỗi ảnh phải có khung riêng.
  */
 export const HEAD_BOX: Record<string, readonly [number, number, number]> = {
 ${body}
@@ -171,6 +168,25 @@ export const DEFAULT_HEAD_BOX: readonly [number, number, number] = [0.2, 0.02, 0
 /** headBox tra khung đầu theo nhân vật + biểu cảm. */
 export function headBox(char: string, mood: string): readonly [number, number, number] {
   return HEAD_BOX[\`\${char}/\${mood}\`] ?? HEAD_BOX[\`\${char}/neutral\`] ?? DEFAULT_HEAD_BOX;
+}
+
+/**
+ * headCrop gắn ảnh chân dung vào một thẻ HTML sao cho khung đầu vừa đúng cả ô.
+ *
+ * Mọi chỗ hiện mặt trong ô nhỏ đều gọi hàm này, không ai tự chép công thức: ô phải VUÔNG
+ * (khung đầu vuông) và thẻ phải có \`overflow: hidden\` nếu ô bo tròn.
+ *
+ * Công thức phần trăm của \`background-position\`: 0% là mép trái ảnh trùng mép trái ô,
+ * 100% là mép phải trùng mép phải — nên toạ độ khung đầu phải chia cho phần ảnh THỪA ra
+ * ngoài ô (1 - cạnh), không phải nhân thẳng với 100.
+ */
+export function headCrop(el: HTMLElement, url: string, char: string, mood = 'neutral'): void {
+  const [bx, by, bs] = headBox(char, mood);
+  el.style.backgroundRepeat = 'no-repeat';
+  el.style.backgroundSize = \`\${(100 / bs).toFixed(2)}%\`;
+  el.style.backgroundPosition = bs >= 1 ? 'center'
+    : \`\${((bx / (1 - bs)) * 100).toFixed(2)}% \${((by / (1 - bs)) * 100).toFixed(2)}%\`;
+  el.style.backgroundImage = \`url(\${url})\`;
 }
 `);
 console.log(`ghi ${OUT} — ${rows.length} ảnh (${rows.filter((r) => r.manual).length} đo bằng mắt)`);

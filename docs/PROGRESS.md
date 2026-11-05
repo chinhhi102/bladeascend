@@ -146,16 +146,19 @@ bán thân/toàn thân, đầu nhỏ và lệch. Spec §12.4 ghi "cắt từ đ�
 
 Nay mỗi chân dung có **khung đầu riêng** `[trái, trên, cạnh]` trong
 `client/src/render/headbox.ts`, sinh bằng `node tools/portrait-headbox.mjs` (thêm `--sheet
-<ảnh.png>` để có tờ ảnh kiểm bằng mắt). Tool dò cổ bằng alpha; máy dò sai ở ảnh toàn thân và
-mặt có râu nên bảng `OVERRIDE` trong tool là số đo bằng mắt và luôn thắng máy — hiện 28/40
-ảnh do máy, 12 ảnh đo tay. Thêm nhân vật mới: chạy lại tool, xem tờ kiểm, ảnh nào lệch thì
-thêm vào `OVERRIDE`.
+<ảnh.png>` để có tờ ảnh kiểm bằng mắt). Tool dò cổ bằng alpha, nhưng **cằm thì không tin vào
+cổ**: mặt có râu hay hàm bạnh thì chỗ hẹp nhất là quai hàm, nằm trên cằm — lấy đúng chỗ đó
+là cắt mất mồm (thấy rõ ở thẻ nhân vật 64 px). Đầu bộ art này cao ~1,35 lần bề ngang nên đáy
+khung suy từ bề ngang. Còn 4 ảnh toàn thân máy dò sai (`co_ba_ganh/neutral`,
+`ong_ba_vong/evil`, `shipper/evil`, `su_phu_mi/evil`) → đo bằng mắt, để trong `OVERRIDE` của
+tool. Thêm nhân vật mới: chạy lại tool, xem tờ kiểm, ảnh nào lệch thì thêm vào `OVERRIDE`.
+
+Bốn nơi dùng chung `headCrop`/`headBox`, không ai tự chép công thức: ô đại diện HUD (§12.4),
+bong bóng mặt (§12.5), chân dung tròn bảng xếp hạng 28–40 px (§11.5), ảnh nhân vật màn chọn
+64 px + khung xem trước 84 px. Hai chỗ sau trước đây thu **cả tấm ảnh** vào ô nên mặt bé bằng
+hạt gạo. Màn Tổng kết và màn tải giữ nguyên cả tấm ảnh — ở đó cố ý hiện nguyên nhân vật.
 
 Trước/sau + cách làm: `docs/reports/2026-11-05-cat-chan-dung/`.
-
-Chưa làm: chân dung tròn ở bảng xếp hạng (`.rb-face`, 28–40 px) và màn chọn nhân vật vẫn
-hiện **cả ảnh** thu nhỏ — không cắt mất mặt nhưng mặt bé tí; dùng chung khung đầu sẽ rõ hơn,
-chờ chủ dự án quyết.
 
 ## Lỗi / hạn chế đã biết
 

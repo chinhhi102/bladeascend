@@ -1,4 +1,4 @@
-# 05/11 — Cắt chân dung vào khung tròn (ô đại diện HUD §12.4 · bong bóng mặt §12.5)
+# 05/11 — Cắt chân dung lấy phần mặt (HUD §12.4 · bong bóng mặt §12.5 · bảng xếp hạng §11.5 · màn chọn)
 
 ## Lỗi
 
@@ -21,14 +21,21 @@ node tools/portrait-headbox.mjs                       # ghi lại headbox.ts
 node tools/portrait-headbox.mjs --sheet /tmp/box.png  # kèm tờ ảnh kiểm bằng mắt
 ```
 
-Tool dò cổ bằng alpha (hàng hẹp nhất phía trên thân) rồi lấy phần trên cổ làm đầu. Máy dò
-sai ở ảnh toàn thân và mặt có râu → bảng `OVERRIDE` trong tool là số đo bằng mắt, luôn
-thắng máy. Hiện 28/40 ảnh do máy dò, 12 ảnh đo tay.
+Tool dò cổ bằng alpha (hàng hẹp nhất phía trên thân) rồi lấy phần trên cổ làm đầu. **Cằm
+thì không tin vào cổ**: với mặt có râu, hàm bạnh hay cổ rụt, chỗ hẹp nhất là quai hàm nằm
+TRÊN cằm — lấy đúng chỗ đó là cắt mất mồm. Đầu của bộ art này cao khoảng 1,35 lần bề ngang
+nên đáy khung suy từ bề ngang, chỉ dùng cổ khi nó còn thấp hơn thế.
 
-Hai nơi dùng khung này:
-- `client/src/ui/hud.ts` — đặt `background-size`/`background-position` theo khung đầu.
-- `client/src/render/emote.ts` — đặt `scale`/vị trí sprite sao cho cạnh khung đầu vừa đúng
-  đường kính vòng tròn.
+Còn lại 4 ảnh máy dò sai, đều là **ảnh toàn thân** (`co_ba_ganh/neutral`,
+`ong_ba_vong/evil`, `shipper/evil`, `su_phu_mi/evil`): chỗ hẹp nhất rơi xuống eo hoặc khe
+hai chân nên khung ôm cả người. Bốn ảnh đó đo bằng mắt, để trong bảng `OVERRIDE` của tool
+và luôn thắng máy. 36/40 ảnh còn lại do máy dò.
+
+Bốn nơi dùng khung này — tất cả gọi chung `headCrop`/`headBox`, không ai tự chép công thức:
+- `client/src/ui/hud.ts` — ô đại diện HUD 64 px (§12.4).
+- `client/src/render/emote.ts` — bong bóng mặt, sprite Pixi (§12.5).
+- `client/src/ui/roomboard-parts.ts` — chân dung tròn bảng xếp hạng 28–40 px (§11.5).
+- `client/src/ui/dom.ts` — ảnh nhân vật ở màn chọn 64 px + khung xem trước 84 px.
 
 Thêm nhân vật mới thì chạy lại tool, xem tờ ảnh kiểm, ảnh nào lệch thì thêm vào `OVERRIDE`.
 
@@ -38,8 +45,7 @@ Thêm nhân vật mới thì chạy lại tool, xem tờ ảnh kiểm, ảnh nà
 
 Cột trái: luật cũ. Cột phải: khung đầu riêng. Mỗi nhân vật 2 ảnh (`neutral`, `panic`).
 
-## Chưa làm
+## Không đổi
 
-- Chân dung tròn ở **bảng xếp hạng** (`.rb-face`, 28–40 px) và màn chọn nhân vật vẫn hiện
-  **cả ảnh** thu nhỏ (`object-fit: cover/contain`) — không bị cắt mất mặt, nhưng ở cỡ đó
-  thì mặt bé tí. Dùng chung khung đầu này sẽ rõ hơn; chờ chủ dự án quyết.
+Màn **Tổng kết** (bóng ma `portrait_cry`) và **màn tải** (người chạy) vẫn dùng cả tấm ảnh:
+ở đó cố ý hiện nguyên nhân vật chứ không phải cái mặt trong ô nhỏ.

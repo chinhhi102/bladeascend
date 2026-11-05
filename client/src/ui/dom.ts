@@ -1,3 +1,5 @@
+import { headCrop } from '../render/headbox';
+
 /** h creates an element with a class and optional text/children. */
 export function h<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -39,10 +41,11 @@ export class Screens {
 /**
  * portrait dựng ảnh nhân vật cho màn chọn.
  *
- * Ưu tiên `portrait_neutral.png` — ảnh CHÂN DUNG vẽ riêng cho việc này, mặt chiếm gần hết
- * khung. Bản trước dùng `frames/idle_00.png`, là một khung hình toàn thân trên canvas 512
- * với nhân vật chỉ chiếm 72% và chân ghim ở y=460: thu về ô 40px thì người bé bằng hạt gạo
- * giữa một vùng trong suốt, nhìn như thẻ trống (ảnh chụp 30/10 — mười thẻ đều trắng trơn).
+ * Dùng `portrait_neutral.png`, cắt lấy phần đầu bằng `headCrop`. Bản trước dùng
+ * `frames/idle_00.png`, là một khung hình toàn thân trên canvas 512 với nhân vật chỉ chiếm
+ * 72% và chân ghim ở y=460: thu về ô 40px thì người bé bằng hạt gạo giữa một vùng trong
+ * suốt, nhìn như thẻ trống (ảnh chụp 30/10 — mười thẻ đều trắng trơn). Chân dung đỡ hơn
+ * nhưng vẫn là ảnh bán thân/toàn thân, nên vẫn phải cắt lấy mặt mới nhận ra là ai.
  *
  * Chưa có chân dung thì chấm tròn màu — để màn chọn không bao giờ trống trơn khi art chưa kịp.
  */
@@ -55,10 +58,9 @@ export function portrait(char: string, src: (p: string) => string, color: string
   // trong tên nên chỉ manifest biết địa chỉ thật, ghép tay là 404.
   const url = src(`characters/${char}/portrait_neutral.png`);
   if (url) {
-    const img = h('img', 'portrait');
-    img.src = url;
-    img.alt = '';
-    return img;
+    const el = h('div', 'portrait');
+    headCrop(el, url, char);
+    return el;
   }
   const d = h('div', 'portrait placeholder');
   d.style.background = color;

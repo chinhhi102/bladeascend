@@ -142,7 +142,9 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
    ô đại diện trên HUD cũng dùng class `.portrait`, và luật rộng 64px ở đây từng rò sang
    đó — ô HUD chỉ 40px nên ảnh tràn hẳn ra ngoài khung tròn và đè lên chữ "Kiếm x/y"
    (ảnh chụp 30/10). `.badge` không có `overflow:hidden` nên không có gì chặn lại. */
-.char-card .portrait, .preview-art .portrait { width: 64px; height: 64px; object-fit: contain; }
+/* Ô VUÔNG, ảnh gắn bằng `headCrop` (nền, không phải thẻ `img`) nên đã cắt sẵn lấy phần
+   đầu — không còn `object-fit: contain` thu cả tấm ảnh vào ô. */
+.char-card .portrait, .preview-art .portrait { width: 64px; height: 64px; }
 .char-card .portrait.placeholder, .preview-art .portrait.placeholder { border-radius: 50%; width: 52px; height: 52px; margin: 6px; border: 3px solid var(--ink); }
 
 /* Khung xem trước nhân vật đang chọn: ảnh to + tên + kỹ năng (người chơi cần biết mình
@@ -339,7 +341,8 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 .rb-tags { display: flex; align-items: center; gap: 6px; margin-top: 3px; min-width: 0; }
 .rb-face { flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;
   border: 2px solid #888; background: #2b2722; overflow: hidden; font-weight: 900; font-size: 12px; }
-.rb-face img { width: 100%; height: 100%; object-fit: cover; }
+/* Chân dung gắn bằng `headCrop` (nền của chính `.rb-face`), không còn thẻ `img` bên trong:
+   ô chỉ 28–40 px nên phải cắt lấy mặt, thu cả tấm ảnh vào thì mặt bé bằng hạt gạo. */
 
 /* Viên thuốc cảnh giới: cùng màu huy hiệu §12.3; Tiên giới viền chảy. */
 .rb-pill { flex: none; display: inline-flex; align-items: baseline; padding: 1px 6px 1px 7px; border-radius: 999px;

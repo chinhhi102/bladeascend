@@ -6,7 +6,7 @@ import { RoomBoard } from './roomboard';
 import { crown } from './roomboard-parts';
 import { BUFFS, moodName } from '../net/protocol';
 import { assets } from '../render/assets';
-import { headBox } from '../render/headbox';
+import { headCrop } from '../render/headbox';
 import type { StatusChip } from '../render/skillpresent';
 import { statusIconUrl } from '../render/statusicons';
 import { REALM_BADGE } from '../render/palette';
@@ -401,14 +401,7 @@ export class Hud {
     }
     const img = new Image();
     img.onload = () => {
-      const [bx, by, bs] = headBox(this.char, face);
-      // Ô đại diện vuông, ảnh vuông → phóng sao cho cạnh khung đầu vừa đúng ô: 100/bs %.
-      // Vị trí nền tính theo phần trăm: 0% là mép trái khung ảnh, 100% là mép phải, nên
-      // toạ độ khung đầu phải chia cho phần ảnh THỪA ra ngoài ô (1 - bs).
-      this.portrait.style.backgroundSize = `${(100 / bs).toFixed(2)}%`;
-      this.portrait.style.backgroundPosition = bs >= 1 ? 'center'
-        : `${((bx / (1 - bs)) * 100).toFixed(2)}% ${((by / (1 - bs)) * 100).toFixed(2)}%`;
-      this.portrait.style.backgroundImage = `url(${url})`;
+      headCrop(this.portrait, url, this.char, face);
       this.portrait.textContent = '';
     };
     img.onerror = () => {
