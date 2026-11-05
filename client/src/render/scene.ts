@@ -1,5 +1,6 @@
 import { Application, Container } from 'pixi.js';
 import { AnimViewer } from './animviewer';
+import { setEmoteCharCount } from './emote';
 import { assets } from './assets';
 import { SkillPresenter, type StatusChip } from './skillpresent';
 import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuTextureCount, trackGpuMemory } from './gpumem';
@@ -453,6 +454,9 @@ export class GameScene {
       this.syncAura(f, now);
       this.moodChatter(f.view.id, moodName(f.s.md), now);
     }
+    // Số người đang vẽ — luật tắt bong bóng mặt ở chất lượng Thấp (spec §12.5) đọc từ đây.
+    // Đặt sau vòng vẽ để nó là con số của ĐÚNG khung vừa vẽ, không phải khung trước.
+    setEmoteCharCount(this.players.size);
     // Rời khung hình: MỜ DẦN RA 150 ms rồi mới về pool, không biến mất đột ngột
     // (NETCODE_SPEC §5 Hiển thị mục 4). Huỷ hẳn sprite cũng bị bỏ: view vào pool, giữ
     // texture, lần sau lấy ra dùng lại (§5 "View Pool").
@@ -908,6 +912,14 @@ export class GameScene {
     }
     const mine = e.a === this.world?.myId;
     const size = 90 * this.playerScale(e.a);
+    // Hạ được người → bong bóng mặt cười (spec §12.5 v6.38).
+    //
+    // `KillFeed` còn dùng cho đột phá / qua Thiên Môn / lên danh hiệu — những cái đó KHÔNG
+    // có nạn nhân, nên `e.b` là thứ phân biệt. Thiếu phép thử này thì ai đột phá cũng cười
+    // nham hiểm một cái.
+    if (e.k === 'KillFeed' && e.b) {
+      this.players.get(e.a ?? 0)?.onKill(now);
+    }
     switch (e.k) {
       case 'RingFlip':
         // Both rings emit RingFlip at the same contact point; show one spark.

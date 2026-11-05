@@ -1,6 +1,6 @@
 # Tiến độ — BladeAscend (Đạo Hữu Xin Dừng Bước)
 
-_Cập nhật: 2026-11-02 chiều (v6.31–v6.36, mở công khai, logo, hiển thị kỹ năng; trang chủ + bộ đo + telemetry theo build). Nhật ký đầy đủ các phiên trước (22/10 → 01/11, 1 677 dòng):
+_Cập nhật: 2026-11-05 (bong bóng mặt §12.5 v6.38, Q44 đóng) · 2026-11-02 (v6.31–v6.36, mở công khai, logo, hiển thị kỹ năng; trang chủ + bộ đo + telemetry theo build). Nhật ký đầy đủ các phiên trước (22/10 → 01/11, 1 677 dòng):
 `docs/history/PROGRESS_den_2026-11-01.md` — chuyển nguyên văn, không xoá._
 
 ## Cách chạy (máy dev)
@@ -33,7 +33,7 @@ node tools/browsertest/review.mjs <url> docs/review/<mục> <tên> [--full]   # 
 | Đa ngôn ngữ | ✅ bản nháp | vi + en/pt-BR/es/id/th (`_draft`, cần người bản ngữ duyệt — `client/src/i18n/NOTES.md`) |
 | SEO | ✅ | `/`, `/en/`, `/pt/`, `/es/`, `/id/`, `/th/`, hreflang, `sitemap.xml` |
 | Hiệu năng | ✅ server/mạng · 🔴 thiết bị thật | `docs/reports/2026-11-01-hieu-nang/`; FPS/GPU iPhone thật chưa đo |
-| Đối chiếu spec | — | `docs/SPEC_AUDIT_v630.md` + mục 6b (rà lại 02/11): còn **3 mục** chưa làm — lớp mặt (Q42), 1 anim giật, Web Worker/RenderTexture. 2 mục từng chấm là lỗi hoá ra chấm sai |
+| Đối chiếu spec | — | `docs/SPEC_AUDIT_v630.md` + mục 6b (rà lại 02/11): còn **2 mục** chưa làm — 1 anim giật, Web Worker/RenderTexture (lớp mặt đã ĐÓNG 05/11 bằng bong bóng mặt, Q44). 2 mục từng chấm là lỗi hoá ra chấm sai |
 | Bộ đo browsertest | ✅ | 15 bài từng chết im lặng vì i18n (02/11) — nay dùng selector theo class, luật ở `tools/browsertest/README.md` |
 
 ## Lượt cuối 01/11/2026 — đã làm
@@ -109,6 +109,33 @@ nhất nằm trên đường gói tin — lên từ 1/11 nên đã nằm trong s
 có máy thật: vùng cuộn trang chủ dùng `mask-image`, trên điện thoại yếu nó có thể tốn; trang
 chủ không nằm trong kịch bản S1–S13 nào nên chưa có số.
 
+### 05/11 — bong bóng mặt (§12.5 v6.38, đóng Q44)
+
+Hướng A "một thân nhiều mặt" bỏ hẳn. Thay bằng **bong bóng mặt**: dùng lại 4 chân dung
+biểu cảm §12.4 **sẵn có** làm emote nổi trên đầu 1,5 s khi tâm trạng đổi — `chase` → cười
+nham hiểm, `flee` → hoảng, ngủ/mù → hoảng, hạ được người → cười. Viền trắng, đuôi chỉ xuống,
+nảy khi hiện, cooldown 3 s/người, ẩn khi Ẩn Thân/trong bụi, tắt ở chất lượng Thấp khi > 15
+người. **Không cần art mới.**
+
+Đọc tâm trạng thẳng từ snapshot (`md`, `st`) chứ không nối thêm event; "hạ được người" đi
+qua `KillFeed` có nạn nhân — `KillFeed` còn dùng cho đột phá và Thiên Môn nên phải lọc bằng
+`e.b`, không thì ai đột phá cũng cười nham hiểm một cái.
+
+Hai lỗi tự gây ra và tự bắt khi xem ảnh:
+- **Trộn đơn vị**: vẽ bán kính `22 * zoom` trong khi quy ước của `Nameplate` là vẽ cỡ pixel
+  cố định rồi `scale = 1/zoom`. Bong bóng teo mất ở mức phóng thường gặp — 24 ảnh chụp đầu
+  tiên không dính cái nào dù log báo đã bật.
+- **Đè lên bảng tên**: đặt lệch phải vẫn che mất tên người chơi. Nay đo mép trên của cụm
+  bảng tên rồi đặt lên trên hẳn.
+
+Art thử 54 tệp (`body/` + `faces/` của 3 nhân vật) chuyển vào `assets/library/q44_than_mat_roi/`
+theo luật 13, INDEX ghi rõ lý do. `bodyface.go` giữ lại nhưng `abandoned = true` nên `artgen
+plan` không còn liệt 6 job của hướng đã bỏ — prompt vẫn còn đó nếu sau này làm rig cắt mảnh 2D.
+
+Công cụ mới `tools/browsertest/emoteshots.mjs`: bong bóng sống 1,5 s nên chụp theo nhịp cố
+định là trò may rủi; nay `emote.ts` báo một dòng `[EMOTE]` ra console khi `?debug=true` và
+bài chụp bấm máy ngay khi nghe thấy. Ảnh: `docs/review/emote/` (3 PC + 3 iPhone).
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở
@@ -133,13 +160,10 @@ chủ không nằm trong kịch bản S1–S13 nào nên chưa có số.
 - Thẻ hồi chiêu tiếng Bồ "Recarga 30s · 2 cargas" dài nhất — vừa thẻ trên ảnh, cần xem máy thật.
 - FPS điện thoại / bộ nhớ GPU iPhone thật **chưa đo** (B13b, B17) — cần máy thật.
 - Telemetry staging ghi vào ổ container, mất mỗi lần deploy (cần `-telemetry-db /data/...`, hỏi trước).
-- **Lớp mặt nhân vật §12.5 A — art thử KHÔNG ghép được (đánh giá 02/11, → Q44).** Bước đánh
-  giá mà anh chốt hôm 30/10 ("sinh 3 nhân vật thử rồi mới code") nay đã làm: thân AI vẽ vốn
-  ĐÃ có sẵn mặt đầy đủ nên chồng lớp mặt lên là hai mặt đè nhau; hai bộ còn khác mũ, khác
-  nét, khác góc nhìn (thân nghiêng / mặt chính diện) và không chung neo. `prep` cũng chỉ
-  neo CHÂN, chưa có neo đầu. **Không sinh art cho 7 nhân vật còn lại** — sẽ tốn 14 lượt
-  quota cho art chắc chắn không dùng được. Bằng chứng: `docs/review/q44_than_vs_mat.png`.
-  Ba hướng đi tiếp nằm trong Q44; hiện game chạy như cũ, không tệp nào nạp `faces/`.
+- ~~Lớp mặt nhân vật §12.5 A~~ **ĐÓNG (Q44, spec v6.38)** — bỏ hướng A, thay bằng **bong bóng
+  mặt**: dùng lại 4 chân dung §12.4 sẵn có làm emote nổi trên đầu 1,5 s khi tâm trạng đổi
+  (`client/src/render/emote.ts`). Không cần art mới. 54 tệp art thử chuyển vào
+  `assets/library/q44_than_mat_roi/` theo luật 13; `bodyface.go` giữ lại nhưng thôi phát job.
 - 1 anim lặp còn vượt ngưỡng giật 45 (`docs/JITTER_REPORT.md`).
 - Netcode bước 2/4/5/7 (Room Shared Cache, encode-once, IndexedDB, Service Worker) chưa làm — số đo hiện
   đạt ngân sách nên không phải nút thắt.
@@ -170,11 +194,8 @@ thật, nên đừng coi việc hoãn là coi nhẹ.
 2. **Q43**: `minimap.size_mobile` — spec ghi 96 ở dòng 534 và 120 ở dòng 1585. Code theo 96.
    Chốt một số rồi sửa dòng còn lại trong spec.
 3. Điền email trong `SECURITY.md`. (Việc viết lại lịch sử git đã làm xong 02/11.)
-4. **Q44**: lớp mặt §12.5 A — art thử không ghép được (xem ảnh `docs/review/q44_than_vs_mat.png`).
-   Chọn một trong ba: **A1** sửa prompt + thêm neo đầu rồi thử lại 1 nhân vật (rẻ nhất, tôi
-   nghiêng về cái này) · **A2** bỏ hướng A, giữ mỗi mood một bộ frame · **A3** nhảy thẳng
-   sang rig cắt mảnh 2D như chính spec gợi ý. Q42 ("hoãn vì thiếu art") nay thay bằng Q44:
-   vấn đề không phải thiếu art mà là art sinh ra không ghép được.
+4. Xem ảnh **bong bóng mặt** (`docs/review/emote/`, PC + iPhone) — Q44 đã đóng, chỉ còn duyệt
+   bằng mắt. Thấy chướng thì chỉnh cỡ `R` hoặc thời gian `LIFE` trong `render/emote.ts`.
 5. Xem ảnh trang admin mới trên staging (`docs/review/11-admin/`) rồi tự đăng nhập thử.
 6. Tìm người bản ngữ duyệt 5 bản dịch + danh sách tên bot (`client/src/i18n/NOTES.md`).
 7. Đo FPS/GPU trên điện thoại thật — cũng là thứ mở khoá mục 4 ở bảng trên.

@@ -342,6 +342,31 @@ Spec v6.25 §6.3 bỏ vật phẩm Bí Kíp (kỹ năng tự hồi chiêu + tíc
 | `items/skill_scroll.png` | 2026-11-01 | `item_skill_scroll` — prompt trong `server/cmd/artgen/catalog.go` | chuyển từ assets/src (git mv) |
 | `ui/icon_skill_scroll.png` | 2026-11-01 | `icon_skill_scroll` — prompt trong `server/cmd/artgen/catalog.go` | chuyển từ assets/src (git mv); trước nằm cạnh số lượt trên nút kỹ năng |
 
+## q44_than_mat_roi
+
+Bộ thử hướng A "một thân nhiều mặt" (§12.5) cho 3 nhân vật: thân `run`6 + `idle`4 không mặt,
+và 8 khuôn mặt rời. **Q44 (02/11, spec v6.38) bỏ hướng A** — art không ghép được:
+
+1. Thân AI vẽ ĐÃ có sẵn mặt đầy đủ (mắt, lông mày, giọt mồ hôi) dù prompt yêu cầu để đầu
+   trống → chồng lớp mặt lên là hai mặt đè nhau.
+2. Thân và mặt khác mũ, khác nét vẽ, khác góc nhìn (thân nghiêng / mặt chính diện).
+3. Không chung neo, không chung tỉ lệ; `prep` cũng chỉ neo CHÂN, chưa có neo đầu.
+
+Bằng chứng: `docs/review/q44_than_vs_mat.png`. Thay bằng **bong bóng mặt** dùng lại 4 chân
+dung §12.4 sẵn có (`client/src/render/emote.ts`) — không cần art mới.
+
+Giữ lại vì luật 13, và vì nếu sau này làm **rig cắt mảnh 2D** (A3) thì bộ mặt rời này là
+nguyên liệu sẵn có để cắt.
+
+| Tệp | Ngày | Job / prompt gốc | Ghi chú |
+|---|---|---|---|
+| `a_hon/body/` (10 tệp: idle_00.png, idle_01.png, idle_02.png…) | 2026-10-30 | `bodyA_a_hon` — prompt: `server/cmd/artgen/bodyface.go` | Q44: không ghép được |
+| `a_hon/faces/` (8 tệp: cry.png, dizzy.png, evil.png…) | 2026-10-30 | `facesA_a_hon` — prompt: `server/cmd/artgen/bodyface.go` | Q44: không ghép được |
+| `su_phu_mi/body/` (10 tệp: idle_00.png, idle_01.png, idle_02.png…) | 2026-10-30 | `bodyA_su_phu_mi` — prompt: `server/cmd/artgen/bodyface.go` | Q44: không ghép được |
+| `su_phu_mi/faces/` (8 tệp: cry.png, dizzy.png, evil.png…) | 2026-10-30 | `facesA_su_phu_mi` — prompt: `server/cmd/artgen/bodyface.go` | Q44: không ghép được |
+| `dai_ca_dep/body/` (10 tệp: idle_00.png, idle_01.png, idle_02.png…) | 2026-10-30 | `bodyA_dai_ca_dep` — prompt: `server/cmd/artgen/bodyface.go` | Q44: không ghép được |
+| `dai_ca_dep/faces/` (8 tệp: cry.png, dizzy.png, evil.png…) | 2026-10-30 | `facesA_dai_ca_dep` — prompt: `server/cmd/artgen/bodyface.go` | Q44: không ghép được |
+
 ## Bản cũ của ảnh bị ghi đè — KHÔNG chuyển vào thư viện, lấy lại bằng git
 
 Lịch sử git còn **396 bản cũ** của **196 ảnh**. Mỗi bản là ảnh trước khi artgen sinh lại

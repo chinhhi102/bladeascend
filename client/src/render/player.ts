@@ -8,8 +8,9 @@ import { AnimController, type AnimOut } from './animctl';
 import { animJitter, JITTER_RED } from './jitter';
 import { animShort, initials } from './catalog';
 import { BUFF_COLORS, charColor } from './palette';
-import { moodName } from '../net/protocol';
+import { moodName, statusOn } from '../net/protocol';
 import { Input } from '../input';
+import { Emote, type EmoteFace } from './emote';
 import { Nameplate, PLATE_FAR_PX } from './nameplate';
 import { StatusView } from './statusview';
 import { SwordRing } from './swordring';
@@ -64,6 +65,12 @@ export class PlayerSprite {
   private body: AnimatedSprite | Container | null = null;
   /** Bảng tên trên đầu: danh hiệu · cảnh giới · tên, gộp thành một cụm (spec §12.3). */
   private readonly plate: Nameplate;
+  /** Bong bóng MẶT khi tâm trạng đổi (spec §12.5 v6.38) — khác `showBubble` là bong bóng CHỮ
+   *  cho câu thoại kỹ năng. Hai thứ có thể cùng hiện; mặt nằm trên đầu, chữ nằm cao hơn. */
+  private readonly faceEmote = new Emote();
+  /** Mood và bit trạng thái của khung TRƯỚC — để biết lúc nào là "vừa đổi". */
+  private prevMood = -1;
+  private prevStatus = 0;
   private atlas: AnimSet | null;
   private mood = '';
   private bubble: Container | null = null;
@@ -121,7 +128,7 @@ export class PlayerSprite {
     // kiếm tím. Phía trên đầu là chỗ duy nhất luôn trống.
     this.animInfo.y = -2.6;
     this.animInfo.visible = false;
-    this.root.addChild(this.shadow, this.aura, this.statusView.under, this.bodyBox, this.statusView.over, this.plate.root, this.animInfo);
+    this.root.addChild(this.shadow, this.aura, this.statusView.under, this.bodyBox, this.statusView.over, this.plate.root, this.faceEmote.root, this.animInfo);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -290,6 +297,7 @@ export class PlayerSprite {
     this.swordRing.update(f, now, showHitbox, swordDetail);
     this.updateAnimInfo(headY, zoom);
     this.statusView.update({ id: this.id, st: s.st ?? 0, r, sc: s.sc, headY, zoom, now, vx, vy, wx: f.x, wy: f.y });
+    this.updateEmote(s, headY, zoom, now);
     this.swordRing.haloColor = this.statusView.halo;
     // Gồng phồng 10% rồi xẹp lại mượt (lớp ③/⑤) — lerp chứ không nhảy cỡ.
     const k = this.bodyBox.scale.x + (this.statusView.bodyScale - this.bodyBox.scale.x) * Math.min(1, dt * 12);
@@ -516,6 +524,57 @@ export class PlayerSprite {
     this.swordRing.visible = !(flags & FLAG.dead);
   }
 
+  // ---- bong bóng MẶT (spec §12.5 v6.38) ------------------------------------
+
+  /**
+   * updateEmote: tâm trạng vừa đổi thì bật bong bóng mặt.
+   *
+   * Đọc từ SNAPSHOT chứ không nghe event: mood và bit trạng thái đã có sẵn trong mỗi gói,
+   * nên không phải nối thêm đường ống nào. Server đã quyết tâm trạng — client chỉ chọn mặt.
+   *
+   * Ánh xạ theo spec: `chase` → cười nham hiểm · `flee` → hoảng · bị đẩy/ngủ/mù → hoảng.
+   * "Hạ được người → cười" đi đường khác (`onKill`, gọi từ scene khi có event KillFeed) vì
+   * giết người không phải một tâm trạng, nó là một khoảnh khắc.
+   *
+   * Chỉ bắt CẠNH LÊN (khung trước chưa có, khung này có). Không thế thì suốt thời gian còn
+   * đang đuổi, khung nào cũng đòi hiện lại mặt.
+   */
+  private updateEmote(s: PlayerFrame['s'], headY: number, zoom: number, now: number): void {
+    const mood = s.md ?? 0;
+    const st = s.st ?? 0;
+    if (mood !== this.prevMood) {
+      const name = moodName(mood);
+      const face: EmoteFace | null = name === 'chase' ? 'evil' : name === 'flee' ? 'panic' : null;
+      if (face) {
+        this.faceEmote.show(this.char, face, now);
+      }
+      this.prevMood = mood;
+    }
+    // Ngủ và mù là BIT trạng thái; "bị đẩy" không có bit (chỉ có event), nên ở đây bắt hai
+    // cái có bit. Đẩy thì `statusView` đã có mũi tên + icon riêng nên không mất dấu hiệu.
+    for (const name of ['sleep', 'blind'] as const) {
+      const on = statusOn(st, name);
+      const was = statusOn(this.prevStatus, name);
+      if (on && !was) {
+        this.faceEmote.show(this.char, 'panic', now);
+      }
+    }
+    this.prevStatus = st;
+    // Đặt trên MÉP TRÊN của cụm bảng tên, không phải trên đầu: cụm đó cao thấp tuỳ danh
+    // hiệu và cảnh giới, nên đo thẳng từ nó. `bounds.minY` là toạ độ cục bộ, đã gồm cả
+    // `scale = 1/zoom` của bảng tên.
+    const plateTop = this.plate.root.visible
+      ? this.plate.root.y + this.plate.root.getLocalBounds().minY * this.plate.root.scale.y
+      : headY;
+    // Dùng CHUNG luật ẩn với bảng tên: Ẩn Thân hoặc trong bụi thì giấu (spec §12.5).
+    this.faceEmote.update(Math.min(plateTop, headY), zoom, now, this.plate.root.visible);
+  }
+
+  /** onKill: vừa hạ được người → mặt cười. Scene gọi khi nhận event KillFeed có nạn nhân. */
+  onKill(now: number): void {
+    this.faceEmote.show(this.char, 'evil', now);
+  }
+
   // ---- emote bubble --------------------------------------------------------
 
   showBubble(text: string, now: number): void {
@@ -602,6 +661,7 @@ export class PlayerSprite {
   }
 
   destroy(): void {
+    this.faceEmote.destroy();
     this.plate.destroy();
     this.root.destroy({ children: true });
     this.swordRing.destroy();

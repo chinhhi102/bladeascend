@@ -31,8 +31,30 @@ var faceExpressions = []string{
 // cái mặt đè nhau.
 const faceNeutral = "face area left plain and neutral (closed mouth, simple eyes), same head position in every frame"
 
+// HƯỚNG A ĐÃ BỎ — Q44, spec v6.38 (02/11/2026).
+//
+// Bộ thử 3 nhân vật cho thấy cách sinh này không dùng được: AI luôn tự vẽ mặt vào thân dù
+// prompt yêu cầu để đầu trống, thân và mặt khác mũ/khác nét/khác góc nhìn, và `prep` chỉ
+// neo CHÂN nên không có dữ liệu nói hộp đầu nằm đâu. Chồng lớp mặt lên là hai mặt đè nhau.
+// Bằng chứng: `docs/review/q44_than_vs_mat.png`.
+//
+// Thay bằng **bong bóng mặt** (`client/src/render/emote.ts`) dùng lại 4 chân dung §12.4 sẵn
+// có — không cần art mới.
+//
+// Vì sao GIỮ tệp này thay vì xoá: prompt và các câu ép ("face area left plain", lưới 4×2,
+// đoạn ép chặt "chỉ có đầu") là thứ đã trả giá mới biết. Nếu sau này làm **rig cắt mảnh 2D**
+// (A3) thì đây là điểm bắt đầu, cùng với 54 tệp art thử trong
+// `assets/library/q44_than_mat_roi/`.
+//
+// Đổi `abandoned = false` là job sống lại — nhưng đọc Q44 trong `docs/QUESTIONS_DONE.md`
+// trước, vì cả ba lỗi trên vẫn còn nguyên nếu không sửa prompt và thêm neo đầu.
+const abandoned = true
+
 // bodyFaceJobs dựng job cho hướng A: thân không mặt + bộ 8 khuôn mặt.
 func bodyFaceJobs() []Job {
+	if abandoned {
+		return nil
+	}
 	var jobs []Job
 	for _, ch := range characters {
 		if !contains(bodyFaceChars, ch.id) {

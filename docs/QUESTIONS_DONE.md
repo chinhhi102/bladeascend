@@ -320,7 +320,8 @@ toả tròn 360°, Ông Ba Võng thêm Trộm Kiếm 4 s, ví dụ Uy Danh sửa
 | Q39 | Ảnh góp ý: mã hoá lại hay gỡ metadata | **Mã hoá lại** (spec v6.34). Server giải mã + mã hoá lại JPEG/PNG bằng thư viện chuẩn Go (sau lớp gỡ theo cấu trúc); client luôn gửi JPEG; WebP bị từ chối vì Go chuẩn không đọc được — không cần thêm thư viện. |
 | Q40 | ADMIN_SPEC "không thêm framework UI" vs React + antd | Anh đã sửa ADMIN_SPEC. Xong. |
 | Q41 | Font dự phòng cho tên lạ | Giữ như cũ (PixiJS tự vẽ thêm ký tự thiếu). Xong. |
-| Q42 | Lớp mặt nhân vật §12.5 A | **Hoãn** — ghi vào việc tiếp theo trong `PROGRESS.md`. |
+| Q42 | Lớp mặt nhân vật §12.5 A | Lúc đó hoãn vì tưởng "thiếu art cho 7 nhân vật". Chẩn đoán đó SAI — xem Q44: art đã có cho 3 nhân vật và nó không ghép được. |
 | Q37 | Số config chỉnh theo sim chưa có trong spec | Anh giữ config, đã ghi bảng số + thời gian farm vào spec §6.0 (v6.35); Nam Châm ghi dạng `bonus: 0.2`. |
 | Q38 | Spec còn sót luật "rớt cảnh giới" | Anh đã xoá trong spec v6.35 (14 dòng Claude liệt kê). |
 | Q43 | `minimap.size_mobile`: spec ghi 96 ở bảng §16 và 120 ở khối JSON mẫu | **Giữ 96** — anh sửa spec v6.37, nay cả hai dòng đều 96. `config/game.json` vốn đã 96 nên KHÔNG đổi code. Bản rà `SPEC_AUDIT_v630.md` từng chấm đây là lỗi cài đặt; đã sửa lại ở mục 6b — code không sai, spec tự mâu thuẫn. |
+| Q44 | §12.5 A "một thân nhiều mặt": art thử không ghép được, chọn hướng nào | **Bỏ hướng A** (spec v6.38 §12.5). Lý do: AI luôn tự vẽ mặt vào thân dù prompt bắt để đầu trống; thân và mặt khác mũ/khác nét/khác góc nhìn; `prep` chỉ neo chân nên không có hộp đầu. Thay bằng **bong bóng mặt** dùng lại 4 chân dung §12.4 sẵn có — không cần art mới. 54 tệp art thử chuyển vào `assets/library/q44_than_mat_roi/` (luật 13); `bodyface.go` giữ lại nhưng thôi phát job (`abandoned = true`) để còn prompt cho rig cắt mảnh 2D sau này. Bằng chứng: `docs/review/q44_than_vs_mat.png`. |

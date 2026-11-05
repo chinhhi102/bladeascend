@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.38:** bỏ hướng A (một thân nhiều mặt), thay bằng bong bóng mặt dùng 4 chân dung biểu cảm sẵn có (§12.5, Q44).
+
 **Thay đổi v6.37:** minimap điện thoại chốt 96px (Q43).
 
 **Thay đổi v6.36:** mọi kỹ năng phải có đủ 5 lớp hình ảnh (người dùng, vùng, mục tiêu, đếm ngược, kết thúc) + icon trạng thái trên HUD người bị trúng (§6.5).
@@ -1270,6 +1272,10 @@ Thay vòng tròn số "14" ở góc trên trái bằng **ảnh đại diện nh�
 ### 12.5 Hoạt ảnh liền mạch & tự nhiên
 
 **Vấn đề**: các frame sinh bằng AI lệch nhau (to nhỏ, vị trí, dáng, nét vẽ khác nhau) → nhân vật "giật, nhảy lung tung". Mỗi mood (run / chase / flee) lại là 1 bộ frame AI riêng → đổi mood là đổi cả dáng người, nhìn như 3 nhân vật khác nhau.
+
+**Quyết định Q44 (02/11, v6.38) — bỏ hướng A "một thân nhiều mặt"**: bộ art thử cho thấy AI luôn tự vẽ mặt vào thân, thân và mặt khác nét/khác góc, không có neo đầu → không ghép được. Không sinh thêm art mặt rời.
+Thay bằng **bong bóng mặt (face emote)**: dùng lại **4 chân dung biểu cảm đã có của mỗi nhân vật** (§12.4: bình thường · cười nham hiểm · hoảng · khóc) làm emote nổi phía trên đầu khi mood đổi — vd vừa chuyển sang `chase` → bong bóng mặt cười nham hiểm hiện 1.5s; `flee` → mặt hoảng; bị đẩy/ngủ/mù → mặt hoảng; hạ được người → mặt cười. Thân vẫn chạy bằng bộ frame hiện có, không đổi dáng người. Bong bóng có viền trắng + đuôi chỉ xuống đầu, nảy nhẹ khi hiện, cooldown 3s/người, ẩn khi Ẩn Thân/trong bụi, tắt ở chất lượng Thấp khi > 15 người trên màn hình. Không cần art mới.
+Rig cắt mảnh 2D (A3) để lại làm nâng cấp xa, chỉ cân nhắc khi có art thủ công.
 
 **Giải pháp gồm 3 lớp — thứ tự làm: B → C → A** (B chữa gốc vì phần lớn điểm giật đến từ frame lệch nhau; C làm mượt phần còn lại; A cần art mới nên làm sau):
 
