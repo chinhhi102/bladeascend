@@ -18,7 +18,7 @@ góp ý 3 ảnh, i18n/SEO đa ngôn ngữ — không chấm theo code `main`).
 | CHƯA | 3 | 0 | 3 |
 | ĐANG LÀM | 2 | 3 | 5 |
 
-§17 (81 dòng): **PASS 73 · FAIL 3 · CẦN MÁY THẬT 2** · 3 dòng **lỗi thời** (mâu thuẫn với luật hiện hành, không chấm).
+§17 (81 dòng, bản 01/11): **PASS 73 · FAIL 3 · CẦN MÁY THẬT 2** — xem mục 6d, nay **FAIL 0** · 3 dòng **lỗi thời** (mâu thuẫn với luật hiện hành, không chấm).
 
 ---
 
@@ -426,6 +426,28 @@ khi hiện, ẩn khi Ẩn Thân/trong bụi — đủ.
 
 Nên §17 còn **FAIL 2** chứ không phải 3: mục 20 (Gom Đơn khi choáng) đã sửa; mục 30 là dòng
 lỗi thời chờ chủ dự án sửa spec; mục 31 (anim giật) còn thật.
+
+## 6d. Rà lại 05/11 (chiều) — spec v6.39, §17 FAIL 0
+
+Sau khi chủ dự án sửa spec (Q45) và sau khi đo lại độ giật trên ĐÚNG bản ship:
+
+| §17 | Trước | Nay |
+|---|---|---|
+| #20 Gom Đơn khi choáng | FAIL | **PASS** — `skills.go` miễn trừ `shipper` |
+| #30 run→chase→flee | FAIL | **PASS** — spec v6.39 bỏ vế "chỉ đổi mặt"; crossfade · không reset frame · chống lật qua lại · tốc độ bước chân đều có trong `animctl.ts` |
+| #31 không frame nào vượt ngưỡng | FAIL | **PASS** — 0 đỏ trên `frames_norm/` (thứ atlas ghép); xem dưới |
+| (mới) bong bóng mặt | — | **PASS** — `emote.ts`, đối chiếu từng chữ v6.38 |
+
+**§17 nay: PASS 76 · FAIL 0 · CẦN MÁY THẬT 2.**
+
+Mục #31 hoá ra chưa bao giờ là lỗi art. `artgen jitter` mặc định chấm `frames/` (ảnh nguồn)
+trong khi `buildAtlasesIn` ghép atlas từ `frames_norm/` — bảng điểm nói về những khung không
+ai nhìn thấy. Trên bản ship: **47 anim lặp 0 tệ · 102 anim một lần 0 lạc lõng**, tệ nhất
+`dep_lao idle` 44,1 < 45. Đã đổi mặc định của `jitter` sang thư mục atlas dùng, thêm `-raw`
+cho ảnh nguồn, và in ra một dòng nói rõ đang chấm cái nào.
+
+Còn lại (giữ hoãn theo quyết định chủ dự án 05/11, chỉ làm khi số đo máy thật cho thấy cần):
+Web Worker giải mã · vòng kiếm RenderTexture · `/api/admin/ws`.
 
 ## 6. Top 10 việc FAIL / CHƯA quan trọng nhất (theo mức người chơi thấy)
 

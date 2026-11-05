@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.39:** dọn 2 chỗ còn mô tả lớp mặt (§12.5, §17), thêm dòng nghiệm thu bong bóng mặt (Q45).
+
 **Thay đổi v6.38:** bỏ hướng A (một thân nhiều mặt), thay bằng bong bóng mặt dùng 4 chân dung biểu cảm sẵn có (§12.5, Q44).
 
 **Thay đổi v6.37:** minimap điện thoại chốt 96px (Q43).
@@ -1277,11 +1279,11 @@ Thay vòng tròn số "14" ở góc trên trái bằng **ảnh đại diện nh�
 Thay bằng **bong bóng mặt (face emote)**: dùng lại **4 chân dung biểu cảm đã có của mỗi nhân vật** (§12.4: bình thường · cười nham hiểm · hoảng · khóc) làm emote nổi phía trên đầu khi mood đổi — vd vừa chuyển sang `chase` → bong bóng mặt cười nham hiểm hiện 1.5s; `flee` → mặt hoảng; bị đẩy/ngủ/mù → mặt hoảng; hạ được người → mặt cười. Thân vẫn chạy bằng bộ frame hiện có, không đổi dáng người. Bong bóng có viền trắng + đuôi chỉ xuống đầu, nảy nhẹ khi hiện, cooldown 3s/người, ẩn khi Ẩn Thân/trong bụi, tắt ở chất lượng Thấp khi > 15 người trên màn hình. Không cần art mới.
 Rig cắt mảnh 2D (A3) để lại làm nâng cấp xa, chỉ cân nhắc khi có art thủ công.
 
-**Giải pháp gồm 3 lớp — thứ tự làm: B → C → A** (B chữa gốc vì phần lớn điểm giật đến từ frame lệch nhau; C làm mượt phần còn lại; A cần art mới nên làm sau):
+**Giải pháp — B và C** (B chữa gốc vì phần lớn điểm giật đến từ frame lệch nhau; C làm mượt phần còn lại; A đã bỏ):
 
-**A. Một thân, nhiều khuôn mặt** (bỏ việc mỗi mood một bộ chạy riêng)
-- Mỗi nhân vật chỉ có **1 chu kỳ chạy** (`run`, 6 frame) và **1 chu kỳ đứng** (`idle`, 4 frame) cho phần thân.
-- Biểu cảm (bình thường, la hét, cười nham hiểm, hoảng, khóc, choáng...) là **lớp mặt riêng** chồng lên đầu (sprite mặt 6–8 cái, cùng kích thước, cùng vị trí neo). Đổi mood = **chỉ đổi mặt**, thân vẫn chạy liền mạch.
+**A. ~~Một thân, nhiều khuôn mặt~~ — ĐÃ BỎ (Q44, v6.38)**, thay bằng bong bóng mặt. Các gạch đầu dòng dưới chỉ giữ làm lịch sử, KHÔNG triển khai:
+- ~~Mỗi nhân vật chỉ có 1 chu kỳ chạy (`run`, 6 frame) và 1 chu kỳ đứng (`idle`, 4 frame) cho phần thân.~~
+- ~~Lớp mặt riêng chồng lên đầu~~ — **đã bỏ (Q44, v6.38)**. Biểu cảm hiện bằng **bong bóng mặt** (ghi chú Q44 ở đầu mục này). Thân dùng bộ frame theo mood, chuyển mood bằng crossfade không reset frame.
 - `chase` / `flee` khác `run` bằng **tư thế thủ tục** (procedural): chase ngả người tới trước 8° + hai tay xoa (lớp tay nếu có); flee ngả ra sau 6° + nảy cao hơn + giọt mồ hôi văng (particle).
 - Anim một lần (hit, levelup, breakthrough, death, respawn, teleport, skill) vẫn là frame riêng nhưng phải qua bước chuẩn hóa B.
 
@@ -1745,7 +1747,8 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Qua cổng sang khu chưa tải: chờ tối đa 2s rồi vào, không màn hình đen.
 
 - [ ] Không có tên bot nào chứa "bot"; 2 bot trong cùng room không trùng tên; bot chết thì 70% quay lại cùng tên sau 4–12s.
-- [ ] Đổi run → chase → flee: thân chạy liên tục không reset frame, chỉ đổi mặt + tư thế; quay trái/phải không lật qua lại khi chạy dọc; tốc độ bước chân khớp tốc độ di chuyển.
+- [ ] Đổi run → chase → flee: crossfade giữa các bộ frame, không reset frame; quay trái/phải không lật qua lại khi chạy dọc; tốc độ bước chân khớp tốc độ di chuyển.
+- [ ] Bong bóng mặt: đổi sang chase → mặt cười nham hiểm 1,5s; flee / bị đẩy / ngủ / mù → mặt hoảng; hạ được người → mặt cười; cooldown 3s/người; ẩn khi Ẩn Thân/trong bụi; chất lượng Thấp + > 15 người trên màn hình → tắt.
 - [ ] `assets:report` có điểm độ giật mọi animation; không frame nào vượt ngưỡng trong build thật.
 
 - [ ] Thế giới 5 khu, mỗi khu 12 000²; không đi bộ sang khu khác được; 200 lượt qua cổng: ra đều các cổng còn lại, không bao giờ ra lại cổng vừa vào, ~80% sang khu khác.

@@ -1,6 +1,17 @@
 # Bảng điểm "độ giật" — KẾT QUẢ SAU BƯỚC B
 
-> Cập nhật 2026-10-30. Anh đã duyệt: giữ ngưỡng 45, tách 2 nhóm,
+> **Cập nhật 05/11/2026 — không còn anim nào đỏ.** Chấm trên `frames_norm/`, tức ĐÚNG thư mục
+> `buildAtlasesIn` ghép atlas từ đó (nó ưu tiên `frames_norm` khi có):
+> **47 anim lặp (0 tệ) · 102 anim một lần (0 lạc lõng)**. Tệ nhất là `dep_lao idle` 44,1 — dưới
+> ngưỡng 45.
+>
+> Mục "Còn đỏ: 1" bên dưới là **lỗi của phép đo, không phải của art**: `artgen jitter` mặc
+> định chấm `frames/` (ảnh NGUỒN) trong khi game ship `frames_norm/`. Bảng điểm nói về những
+> khung không ai nhìn thấy, và nó đã báo đỏ suốt nhiều ngày — suýt nữa đẩy đi sinh lại art
+> không có gì sai. Từ 05/11 mặc định của `jitter` là thư mục atlas dùng; `-raw` để xem ảnh
+> nguồn (ở đó vẫn còn 1 đỏ: `su_phu_mi run` 49,1 → chuẩn hoá kéo xuống **29,0**).
+>
+> Cập nhật 2026-10-30 (bản gốc bên dưới). Anh đã duyệt: giữ ngưỡng 45, tách 2 nhóm,
 > thứ tự **B → C → A**. Đây là kết quả B (chuẩn hoá frame) + sinh lại art hỏng.
 
 ## Tóm tắt
@@ -25,9 +36,9 @@
 | a_hon | `flee` | 20.0 | **9.9** |
 | dan_em | `run` | 36.6 | **26.9** |
 
-## Còn đỏ: 1
+## ~~Còn đỏ: 1~~ → 0 (xem ghi chú đầu trang, 05/11)
 
-- **dep_lao `idle`** — 56.8
+- ~~**dep_lao `idle`** — 56.8~~ · nay **44,1** trên bản ship, **44,8** trên ảnh nguồn — đạt.
 
 `dep_lao` là quái hình dép. Ảnh onion-skin (`docs/anim_preview/dep_lao_idle_sau_onion.png`)
 cho thấy **thân trùng khớp tốt**, chỉ có cặp mắt chạy lung tung giữa các frame. Rất có thể đó

@@ -332,6 +332,23 @@ func animOf(file string) (string, bool) {
 // để so ĐƯỢC trước/sau — không so được thì không biết chuẩn hoá có tác dụng hay không.
 func buildJitter(assets string) (*JitterReport, error) { return buildJitterIn(assets, "frames", true) }
 
+// anyHasNorm: có nhân vật/quái nào đã chạy `normalize` chưa.
+//
+// Dùng để `jitter` mặc định chấm đúng thư mục mà atlas ghép từ đó. Repo chưa chạy
+// `normalize` lần nào thì `frames_norm` rỗng và cả hai bên cùng dùng `frames` — lúc đó
+// chấm `frames_norm` sẽ ra bảng rỗng, im lặng và vô dụng.
+func anyHasNorm(assets string) bool {
+	for _, pat := range []string{"characters", "monsters"} {
+		dirs, _ := filepath.Glob(filepath.Join(assets, pat, "*", "frames_norm"))
+		for _, d := range dirs {
+			if files, _ := filepath.Glob(filepath.Join(d, "*.png")); len(files) > 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func buildJitterIn(assets, sub string, write bool) (*JitterReport, error) {
 	dirs, _ := filepath.Glob(filepath.Join(assets, "characters", "*", sub))
 	more, _ := filepath.Glob(filepath.Join(assets, "monsters", "*", sub))

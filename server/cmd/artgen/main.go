@@ -36,7 +36,8 @@ func main() {
 	redo := fs.Bool("redo", false, "regenerate even if the raw image exists")
 	// `jitter -norm`: chấm điểm trên `frames_norm/` thay vì `frames/`, để so ĐƯỢC trước/sau
 	// chuẩn hoá. Không so được thì không biết chuẩn hoá có tác dụng hay chỉ làm cho vui.
-	norm := fs.Bool("norm", false, "jitter: chấm trên frames_norm/ thay vì frames/")
+	norm := fs.Bool("norm", false, "jitter: (cũ) chấm trên frames_norm/ — nay là mặc định, giữ cờ cho script cũ")
+	raw := fs.Bool("raw", false, "jitter: chấm ảnh NGUỒN frames/ thay vì bản đã chuẩn hoá")
 	allowDrop := fs.Bool("allow-drop", false, "prep: cho phép manifest MẤT dòng (mặc định: dừng, không ghi)")
 	limit := fs.Int("n", 60, "max images to generate this run (minigen allows ~60-100 per 5 hours)")
 	_ = fs.Parse(os.Args[2:])
@@ -88,11 +89,22 @@ func main() {
 		// Chấm điểm độ giật cho mọi animation (GAME_SPEC §12.5 B.5). Tách thành lệnh riêng
 		// chứ không gộp vào `prep`: `prep` phải chạy nhanh sau mỗi lần thả ảnh mới, còn
 		// chấm điểm thì đọc lại toàn bộ ~900 frame.
-		sub := "frames"
-		if *norm {
-			sub = "frames_norm"
+		// MẶC ĐỊNH chấm thư mục mà ATLAS thật sự ghép từ đó.
+		//
+		// Trước 05/11 mặc định là `frames` (ảnh nguồn) trong khi `buildAtlasesIn` ưu tiên
+		// `frames_norm` nếu có — tức bảng điểm nói về những khung KHÔNG ai nhìn thấy.
+		// Hậu quả: `JITTER_REPORT.md` báo "còn 1 anim đỏ" suốt nhiều ngày, mà chấm trên
+		// đúng bản đang ship thì 0 đỏ. Một bảng điểm đo nhầm đối tượng còn tệ hơn không đo,
+		// vì nó đẩy người ta đi sinh lại art không có gì sai.
+		//
+		// `-raw` để chấm ảnh nguồn khi muốn biết bước chuẩn hoá đã cứu được bao nhiêu.
+		sub := "frames_norm"
+		if *raw || !anyHasNorm(assets) {
+			sub = "frames"
 		}
-		rep, err := buildJitterIn(assets, sub, !*norm)
+		fmt.Printf("chấm trên %s/ (%s)\n", sub,
+			map[bool]string{true: "ảnh nguồn", false: "đúng thứ atlas ghép — thứ người chơi thấy"}[sub == "frames"])
+		rep, err := buildJitterIn(assets, sub, sub == "frames")
 		if err != nil {
 			log.Fatal(err)
 		}
