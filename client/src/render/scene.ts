@@ -1,6 +1,7 @@
 import { Application, Container } from 'pixi.js';
 import { AnimViewer } from './animviewer';
 import { setEmoteCharCount } from './emote';
+import { paceTicker } from './framepace';
 import { assets } from './assets';
 import { SkillPresenter, type StatusChip } from './skillpresent';
 import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuTextureCount, trackGpuMemory } from './gpumem';
@@ -116,6 +117,8 @@ export class GameScene {
   private readonly lastMood = new Map<number, string>();
   private zoom = 1;
   private viewH = 900;
+  /** Tâm máy quay (toạ độ thế giới), đuổi theo nhân vật — null = chưa có, đặt thẳng lần đầu. */
+  private camAt: { x: number; y: number } | null = null;
   private world: ClientWorld | null = null;
   private lastFrames: ReturnType<ClientWorld['playerFrames']> = [];
   private fps = 0;
@@ -217,6 +220,7 @@ export class GameScene {
   setWorld(w: ClientWorld): void {
     this.world = w;
     this.clear();
+    this.camAt = null; // khu mới: đặt máy quay thẳng vào chỗ đứng, không lướt từ khu cũ sang
     if (!w.map) {
       return;
     }
@@ -296,7 +300,7 @@ export class GameScene {
       this.myReach.x = me.x;
       this.myReach.y = me.y;
       this.myReach.r = ringGeom(this.cfg, me.s.sc, me.s.n).reach;
-      this.updateCamera(me.x, me.y, me.s.sc, this.myReach.r, now);
+      this.updateCamera(me.x, me.y, me.s.sc, this.myReach.r, now, dt);
     }
     autoQuality(this.fps, now); // máy yếu thì tự hạ chất lượng (spec §13.6 mục 8)
     this.applyEmergencyResolution();
@@ -377,6 +381,11 @@ export class GameScene {
     }
   }
 
+  /** paceFrames: vẽ đúng mỗi `n` khung quét màn hình (1 = mọi khung) — xem framepace.ts. */
+  paceFrames(n: number): void {
+    paceTicker(this.app.ticker, n);
+  }
+
   /** toggleHitbox shows the server's sword capsules over the drawn swords (debug key H). */
   toggleHitbox(): void {
     this.showHitbox = !this.showHitbox;
@@ -401,14 +410,35 @@ export class GameScene {
     return -1;
   }
 
-  private updateCamera(x: number, y: number, scale: number, reach: number, now: number): void {
+  private updateCamera(x: number, y: number, scale: number, reach: number, now: number, dt: number): void {
     // Smoothly follow the camera height so growing does not pop.
     const targetH = cameraViewHeight(this.cfg, scale, reach);
     this.viewH += (targetH - this.viewH) * 0.08;
     this.zoom = this.app.screen.height / this.viewH;
+    const c = this.followCamera(x, y, dt);
     const shake = this.vfx.shakeOffset(now);
     this.camera.scale.set(this.zoom);
-    this.camera.position.set(this.app.screen.width / 2 - (x + shake.x) * this.zoom, this.app.screen.height / 2 - (y + shake.y) * this.zoom);
+    this.camera.position.set(this.app.screen.width / 2 - (c.x + shake.x) * this.zoom, this.app.screen.height / 2 - (c.y + shake.y) * this.zoom);
+  }
+
+  /**
+   * followCamera: máy quay ĐUỔI theo nhân vật (giảm dần theo hàm mũ, `camera_follow_ms`)
+   * thay vì dính cứng. Dính cứng thì mọi cú kéo vị trí nhỏ (server sửa khi trượt dọc vật
+   * cản, nhịp gửi phím lệch vài ms) làm CẢ màn hình giật theo — chủ dự án 05/11. Hằng số
+   * nhỏ (~70 ms) nên đi thẳng chỉ lệch tâm vài đơn vị, mắt không thấy trễ.
+   * Nhảy xa (cổng, hồi sinh, đổi khu) thì đặt thẳng: lướt nửa bản đồ là chóng mặt.
+   */
+  private followCamera(x: number, y: number, dt: number): { x: number; y: number } {
+    const tau = (this.cfg.player.camera_follow_ms ?? 0) / 1000;
+    const c = this.camAt;
+    if (!c || tau <= 0 || Math.hypot(x - c.x, y - c.y) > this.viewH * 0.5) {
+      this.camAt = { x, y };
+      return this.camAt;
+    }
+    const k = 1 - Math.exp(-Math.max(dt, 0) / tau);
+    c.x += (x - c.x) * k;
+    c.y += (y - c.y) * k;
+    return c;
   }
 
   /**

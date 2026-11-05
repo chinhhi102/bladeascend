@@ -117,6 +117,7 @@
     "camera_view_h": 900,
     "camera_exp": 0.85,
     "camera_reach_mult": 2.6,
+    "camera_follow_ms": 70,
     "rob_cap_realms": 2,
     "rob_cap_tien_realms": 1,
     "death_orbs_max": 40,

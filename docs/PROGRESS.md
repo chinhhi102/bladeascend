@@ -109,6 +109,18 @@ nhất nằm trên đường gói tin — lên từ 1/11 nên đã nằm trong s
 có máy thật: vùng cuộn trang chủ dùng `mask-image`, trên điện thoại yếu nó có thể tốn; trang
 chủ không nằm trong kịch bản S1–S13 nào nên chưa có số.
 
+### 06/11 — máy quay mượt hơn (chủ dự án: "góc quay hơi giật, nhất là qua vật cản")
+
+- **Nhịp khung đều** (`client/src/render/framepace.ts`): bỏ `ticker.maxFPS = 60` trên máy
+  tính — Pixi làm tròn xuống nên bỏ khung trên màn 60 Hz, và vẽ lệch nhịp trên 120/144 Hz.
+  Nay đo tần số quét, vẽ đúng mỗi n khung quét (60 Hz → 60, 120 → 60, 144 → 72). Điện thoại
+  giữ trần 45 như cũ.
+- **Nhân vật của mình**: mỗi khung chỉ nội suy thẳng giữa hai bước dự đoán (không chạy lại
+  phép trượt va chạm với bước lẻ — nguồn rung sát vật cản); chia theo nhịp gửi THẬT.
+- **Máy quay đuổi theo** nhân vật (`player.camera_follow_ms` = 70 trong `config/game.json`)
+  thay vì dính cứng; nhảy xa (cổng, hồi sinh, đổi khu) thì đặt thẳng.
+- Đo: `node tools/browsertest/wallhug.mjs http://127.0.0.1:9998` (phần `mayQuay`) — PERF_LOG #30.
+
 ### 05/11 — bong bóng mặt (§12.5 v6.38, đóng Q44)
 
 Hướng A "một thân nhiều mặt" bỏ hẳn. Thay bằng **bong bóng mặt**: dùng lại 4 chân dung

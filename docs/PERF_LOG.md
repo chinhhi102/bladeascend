@@ -105,13 +105,15 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 25 | 2026-11-01 | `5447e31` | Mục 1.3 đo lại — giả lập iPhone WebKit (máy rảnh) | S9 | – | – | – | 43.6 (tham khảo, WebKit phần mềm) | – | – | – | – | texMB đỉnh **110.3** / trần iOS 256 · lỗi JS 0 | So #20 (95.8, máy rảnh) +14.5 MB — trong biên dao động B13c |
 | 25 | 2026-11-01 | `f8bbb8e` | Mục 1.3 — giá từng mức chất lượng (khu 2, CPU 4×, RTX 3060) | QCOST | – | – | – | Vừa / Cao / Thấp 59.9 / 29.9 · ĐT Thấp 59.9 / 59.5 | – | – | – | – | Như #23: mọi mức 60 FPS p50; "Cao −motes" p1 20.0 (1 mẫu) | Bước cuối của bài lỗi chờ trang chủ (timeout 60 s) — số các mức trên vẫn đủ |
 | 25 | 2026-11-01 | `f8bbb8e` | Mục 1.3 — respawn khi entity ra/vào khung (60 bot, 4 tab × 120 s) | WANDER | – | – | – | – | – | – | – | **0.13** ✅ | respawn 1 (do Despawn đúng luật 1, do hết hạn 2 s 0) · lỗi JS 0 | So #22 (2 lần/4 tab): giữ ≈ 0 |
-| 26 | 2026-11-01 | `0009e21` | Lượt cuối — sau B6–E17 (máy đang chạy 2 agent build/test song song) | S1 | 1.75 / **4.01** ❌ | 5.7 / – ✅ | 2.4 ✅ | – | – | – | – | – | So #22 cùng máy (1.35 / 2.37): p95 +1.64 ms — nghi do máy bận, chưa kết luận | B20 |
+| 26 | 2026-11-01 | `0009e21` | Lượt cuối — sau B6–E17 (máy đang chạy 2 agent build/test song song) | S1 | 1.75 / **4.01** ❌ | 5.7 / – ✅ | 2.4 ✅ | – | – | – | – | – | So #22 cùng máy (1.35 / 2.37): p95 +1.64 ms — nghi do máy bận, chưa kết luận | B22 | **Máy quay giật: trần 60 FPS của Pixi bỏ khung** | 2–3 % khung đứng im trên màn 60 Hz; nhịp lệch trên 120/144 Hz | #30: wallhug `mayQuay` dung 2–3 % → 0 % | **Đóng** — `framepace.ts` | #30 |
+| B20 |
 | 26 | 2026-11-01 | `0009e21` | Lượt cuối — `assets:size` + `loadtime.mjs` (dev :9998) | S7 | – | – | – | – | – | – | – | – | gói chặn home 0.89 + boot 2.76 = **3.65 MB** ✅ · 4G 10 Mbps mở trang→trận 8.8 s ✅, bấm→trận 0.6 s · Fast 4G 13.0 s | B9 (4 Mbps) |
 | 27 | 2026-11-01 | `87d7cd6` | Lượt cuối — đo lại S1 lúc máy rảnh (load 3,4) | S1 | 0.92 / **1.38** ✅ | 5.7 / – ✅ | 2.4 ✅ | – | – | – | – | – | Khu nặng nhất (Thiên Đình) p95 1.27 ms; 4 khu kia ≤ 0.39 ms. So #26 (4.01): chênh do máy bận, KHÔNG phải thoái lui | B20 đóng |
 | 27 | 2026-11-01 | `87d7cd6` | Lượt cuối — WebKit giả lập iPhone, `:9999`, 45 s | S9 | – | – | – | 43.2 / – | – | 0 | 113.1 | – | lỗi 0 · 201 texture · 4990 sprite. So #25 (43.6 / 110.3): giữ nguyên | – |
 | 28 | 2026-11-02 | `994e508`+ | v6.35 sàn bot theo khu — trước khi bật production (5 lần, máy đang bận, load ~8) | S13 | 1.99 / 3.55 ✅ (trung vị) | 4.9 / – ✅ | 2.8 ✅ | – | – | – | – | – | Khu tệ nhất mỗi lần: 3.51 · 3.75 · **4.74 ❌** (Linh Sơn, seed 3) · 3.70 (seed 3 chạy lại) · 3.60 — trung vị 3.70 | Thiên Đình p95 3.22–3.75 ms, biên ~7% so với 4 ms |
 | 29 | 2026-11-02 | `bb1cd96` | v6.36 lớp hiển thị kỹ năng + event StatusStart/End (3 lần seed 7, load ~6) | S1 | – (chỉ ghi p95 khu) | – | – | – | – | – | – | – | Thiên Đình p95 **1.43 · 1.31 · 1.29 ms** (trung vị 1.31) ✅; 4 khu kia ≤ 0.92 ms. So #27 (1.27): giữ nguyên | – |
 | 29 | 2026-11-02 | `bb1cd96` | v6.36 — WebKit giả lập iPhone, `:9999`, 45 s (load ~6–7) | S9 | – | – | – | 42.4 / – | – | 0 | **107.4** | – | lỗi 0 · 166 texture · 2146 sprite. So #27 (43.2 / 113.1 / 4990 sprite): không tăng | – |
+| 30 | 2026-11-06 | (sau `362258a`) | Máy quay mượt: nhịp khung đều + nội suy nhân vật mình + máy quay đuổi 70 ms (`wallhug.mjs`, headless 60 Hz, 4 lần, dev :9998) | CAM | – | – | – | 60 / – | – | – | – | – | Độ giật máy quay đi thẳng **0,17–0,29 → 0,09–0,15**; khung màn hình đứng im **2–3 % → 0 %**. Nhánh màn tần số cao (vẽ mỗi 2 khung quét): khoảng cách khung p5/p50/p95 32,2 / 33,3 / 34,4 ms | B22 đóng |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -781,6 +783,23 @@ không có trạng thái), `SkillVfx` (trần 48 hiệu ứng, bỏ hiệu ứng
 | S9 FPS / texMB / sprite | 43.2 / 113.1 / 4990 | 42.4 / 107.4 / 2146 | – / < 180 MB |
 
 Không có nút thắt mới. (Log S1 lần này chỉ giữ dòng p95 theo khu, không có tick TB phòng.)
+
+### #30 — 06/11/2026 · máy quay giật (chủ dự án 05/11)
+
+Đo bằng `tools/browsertest/wallhug.mjs` (thêm phần `mayQuay`: vị trí camera mỗi rAF, tính
+theo VẬN TỐC trên màn hình). `giat` = trung bình |Δ vận tốc| / vận tốc TB; `dung` = % khung
+màn hình không nhích. Số sát tường lẫn những lúc nhân vật kẹt góc (dung 40–90 %) nên chỉ
+dùng số đi thẳng làm mốc.
+
+| Bản | Đi thẳng: giat / dung | Sát tường: giat |
+|---|---|---|
+| Trước (`362258a`, trần Pixi 60) | 0.17–0.29 / 2.1–2.9 % | 0.20–0.24 |
+| Chỉ bỏ trần (`&fps=1000`) | 0.10–0.12 / 0 % | 0.10–0.16 |
+| Sau (nhịp đều + nội suy + máy quay đuổi) | 0.09–0.15 / 0 % | 0.11–0.15 |
+
+Nút thắt B22: trần `ticker.maxFPS = 60` của Pixi làm tròn `(now-last)|0` nên bỏ khung trên
+màn 60 Hz, và trên 120/144 Hz vẽ cách 1–2 khung quét xen kẽ. Sửa: `render/framepace.ts` đo
+tần số quét, vẽ đúng mỗi n khung quét. Điện thoại giữ trần 45 (chưa đo máy thật).
 
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 

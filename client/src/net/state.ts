@@ -134,6 +134,15 @@ export class ClientWorld {
   /** Số cú nhảy thẳng (dịch chuyển, hồi sinh) — tách khỏi hiệu chỉnh để không làm sai số đo. */
   teleports = 0;
   private lastSendAt = 0;
+  /**
+   * Vị trí dự đoán ở nhịp gửi KẾ TIẾP (giữ nguyên phím đang bấm). Mỗi khung vẽ chỉ nội suy
+   * thẳng từ `predicted` tới đây — không chạy lại phép trượt va chạm với bước lẻ mỗi khung
+   * (bước lẻ sát vật cản cho ra điểm không nằm trên đường đi của bước đủ → nhân vật và máy
+   * quay rung qua lại; chủ dự án 05/11 "giật nhất là lúc đi qua vật cản").
+   */
+  private next: Vec = { x: 0, y: 0 };
+  /** Khoảng cách thật giữa hai lần gửi (trung bình trượt, ms) — `setInterval` hay trễ hơn 1/tick_hz. */
+  private sendGapMs = 0;
   private lastInput: PendingInput = { seq: 0, angle: 0, moving: false, burn: false };
   lastSnapAt = 0;
 
@@ -460,13 +469,24 @@ export class ClientWorld {
     const inp = { seq: ++this.seq, angle: quantize(angle), moving, burn };
     this.pending.push(inp);
     const me = this.me();
+    const nowMs = performance.now();
+    // Điểm đang vẽ ngay trước nhịp này: gửi sớm/muộn vài ms hoặc vừa đổi hướng thì điểm mới
+    // lệch chút ít — dồn phần lệch vào `correction` (tan dần) thay vì để hình nhảy một khung.
+    const before = this.shown(nowMs);
     if (me && !(me.fl & 16)) {
       const r = this.step(this.predicted, this.predictedVel, inp, me, 1 / this.cfg.net.tick_hz);
       this.predicted = r.pos;
       this.predictedVel = r.vel;
     }
     this.lastInput = inp;
-    this.lastSendAt = performance.now();
+    this.noteSendGap(nowMs - this.lastSendAt);
+    this.lastSendAt = nowMs;
+    this.advance(me);
+    const after = this.shown(nowMs);
+    if (Math.hypot(before.x - after.x, before.y - after.y) < this.cfg.net.correction_snap) {
+      this.correction.x += before.x - after.x;
+      this.correction.y += before.y - after.y;
+    }
     const msg: Record<string, unknown> = { t: 'in', s: inp.seq, a: Math.round((inp.angle / (2 * Math.PI)) * 256) & 255, m: moving, b: burn };
     if (skill) {
       // Chỉ gửi khi thật sự bấm: đây là sự kiện một lần, không phải trạng thái giữ phím.
@@ -509,8 +529,14 @@ export class ClientWorld {
       this.fixAt = nowMs;
     }
     // Keep the displayed position continuous; the correction fades out in renderFrame.
-    this.correction.x += this.predicted.x - pos.x;
-    this.correction.y += this.predicted.y - pos.y;
+    // So ĐÚNG điểm đang vẽ trước/sau (đang nằm giữa predicted và next), không chỉ predicted.
+    const before = this.shown(nowMs);
+    this.predicted = pos;
+    this.predictedVel = vel;
+    this.advance(me);
+    const after = this.shown(nowMs);
+    this.correction.x += before.x - after.x;
+    this.correction.y += before.y - after.y;
     // Spec §8.2a: lệch nhỏ thì kéo dần về trong `correction_tau_ms`; lệch lớn (dịch chuyển
     // qua cổng, hồi sinh) thì nhảy thẳng — kéo dần một cú nhảy nửa bản đồ chỉ làm nhân vật
     // trôi dài qua màn hình. Ngưỡng cũ 400 đơn vị quá rộng: một cú lệch 200 đơn vị vẫn bị
@@ -519,8 +545,35 @@ export class ClientWorld {
       this.correction = { x: 0, y: 0 };
       this.teleports++;
     }
-    this.predicted = pos;
-    this.predictedVel = vel;
+  }
+
+  /** advance tính `next`: một bước đủ từ `predicted` với phím đang giữ. */
+  private advance(me: PlayerState | null): void {
+    this.next = me && !(me.fl & 16)
+      ? this.step(this.predicted, this.predictedVel, this.lastInput, me, 1 / this.cfg.net.tick_hz).pos
+      : { ...this.predicted };
+  }
+
+  private noteSendGap(gap: number): void {
+    const ideal = 1000 / this.cfg.net.tick_hz;
+    if (this.sendGapMs === 0) {
+      this.sendGapMs = ideal;
+    }
+    // Bỏ khoảng hở dài (tab vừa quay lại, máy khựng): đó không phải nhịp gửi bình thường.
+    if (gap > 0 && gap < ideal * 4) {
+      this.sendGapMs += (gap - this.sendGapMs) * 0.1;
+    }
+  }
+
+  /**
+   * shown: điểm vẽ nhân vật của mình lúc `nowMs` — nội suy thẳng predicted → next theo phần
+   * nhịp gửi đã trôi. Chia cho nhịp gửi THẬT (không phải 1/tick_hz): `setInterval` trễ đều
+   * vài ms thì chia cho số lý thuyết sẽ chạm trần 1 sớm và nhân vật đứng hình một khung.
+   */
+  private shown(nowMs: number): Vec {
+    const gap = this.sendGapMs || 1000 / this.cfg.net.tick_hz;
+    const a = Math.min(Math.max((nowMs - this.lastSendAt) / gap, 0), 1);
+    return { x: lerp(this.predicted.x, this.next.x, a), y: lerp(this.predicted.y, this.next.y, a) };
   }
 
   /** One movement step, mirroring game.movePlayer on the server. */
@@ -587,9 +640,7 @@ export class ClientWorld {
   private myFrame(v: PlayerView): PlayerFrame {
     const last = v.snaps[v.snaps.length - 1];
     const s = last.s;
-    // Advance within the current input step so motion is smooth at high frame rates.
-    const since = Math.min((performance.now() - this.lastSendAt) / 1000, 1 / this.cfg.net.tick_hz);
-    const ahead = this.step(this.predicted, this.predictedVel, this.lastInput, s, since).pos;
+    const ahead = this.shown(performance.now());
     const ringAngle = s.ph + s.d * omega(this.cfg, s, v.char) * (this.serverNow() - last.t);
     return { view: v, s, x: ahead.x + this.correction.x, y: ahead.y + this.correction.y, ringAngle };
   }

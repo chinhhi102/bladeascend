@@ -70,6 +70,8 @@ export interface GameConfig {
     camera_view_h: number;
     camera_exp: number;
     camera_reach_mult: number;
+  /** Hằng số thời gian máy quay đuổi theo nhân vật (ms); 0 = dính cứng. Chỉ client dùng. */
+  camera_follow_ms?: number;
     name_min: number;
     name_max: number;
   };

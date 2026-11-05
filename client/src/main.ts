@@ -21,6 +21,7 @@ import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
 import { isMobile } from './render/device';
 import { loadFonts } from './render/fonts';
+import { frameDivider, measureRefreshHz } from './render/framepace';
 import { GameScene } from './render/scene';
 import { loadJitter } from './render/jitter';
 import { cycleQuality, quality } from './render/quality';
@@ -65,6 +66,18 @@ function fpsCap(): number {
     return q;
   }
   return Input.isTouchDevice() ? 45 : 60;
+}
+
+/**
+ * paceFrames: máy tính thì đổi trần 60 thô thành nhịp chia đều theo màn hình (framepace.ts).
+ * Điện thoại giữ trần 45 như cũ (pin, nhiệt) — chưa đo lại trên máy thật nên chưa đụng.
+ * `?fps=` trên URL là lệnh tay của bài đo, giữ nguyên.
+ */
+async function paceFrames(scene: GameScene): Promise<void> {
+  if (Input.isTouchDevice() || Number(new URLSearchParams(location.search).get('fps')) > 0) {
+    return;
+  }
+  scene.paceFrames(frameDivider(await measureRefreshHz(), fpsCap()));
 }
 
 class App {
@@ -137,6 +150,7 @@ class App {
 
   async start(stage: HTMLElement): Promise<void> {
     await this.scene.init(stage, fpsCap());
+    void paceFrames(this.scene);
     this.scene.app.ticker.add((t) => {
       // FPS trượt mượt để đính kèm vào góp ý — số tức thời nhảy quá, đọc không ra gì.
       this.lastFps = this.lastFps * 0.9 + (1000 / Math.max(t.deltaMS, 1)) * 0.1;

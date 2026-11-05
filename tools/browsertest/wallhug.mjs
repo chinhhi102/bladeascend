@@ -1,6 +1,6 @@
 // Đo "hiệu chỉnh/giây" khi ĐI SÁT TƯỜNG (GAME_SPEC §8.2a) — con số chủ dự án hỏi.
 //
-//   node wallhug.mjs [url]
+//   node wallhug.mjs [url] [&fps=144]
 //
 // Vì sao cần script riêng: con số trong PROGRESS (20,2 → 4,8) đo ở **rìa bản đồ**, không
 // phải ở tường. Hai chỗ lệch vì hai phép khác nhau (rìa là phép kẹp `play_margin`, tường là
@@ -15,6 +15,8 @@ import { requireDebug } from './needdebug.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const URL = process.argv[2] ?? 'http://127.0.0.1:9999';
+// Tham số thêm cho URL, vd `&fps=144` để đo với trần khung khác (mặc định của game).
+const QS = process.argv[3] ?? '';
 
 const SAMPLE_MS = 250;
 const SLIDE_MS = 4000;
@@ -47,13 +49,32 @@ await p.addInitScript(() => {
   };
 });
 
-await p.goto(`${URL}/?debug=true`, { waitUntil: 'domcontentloaded' });
+await p.goto(`${URL}/?debug=true${QS}`, { waitUntil: 'domcontentloaded' });
 await p.waitForSelector('input', { timeout: 60000 });
 await p.fill('input', 'WallHug');
 await p.locator('.home .btn.primary').click();
 await p.waitForFunction(() => window.__playing?.() === true && window.__map, null, { timeout: 60000 });
 await requireDebug(p, 'wallhug.mjs');
 await sleep(2500);
+
+// Độ giật MÁY QUAY theo từng khung (chủ dự án 05/11: "góc quay hơi giật, nhất là qua vật cản").
+// `fix/giây` chỉ đếm lần server kéo về; cái mắt thấy là bước dịch màn hình mỗi khung có ĐỀU
+// không. Ghi vị trí camera (px màn hình) mỗi rAF, gắn nhãn pha (`__phase`), rồi tính:
+//   - giat: trung bình |vận tốc khung này − khung trước| / vận tốc TB (0 = đều tuyệt đối)
+//   - dung: % khung mà màn hình KHÔNG nhích (< 5 % vận tốc TB) — cái "khựng"
+await p.evaluate(() => {
+  window.__phase = '';
+  window.__cam = [];
+  const loop = () => {
+    const c = window.kx.scene.camera;
+    if (window.__phase) {
+      window.__cam.push([window.__phase, performance.now(), c.position.x, c.position.y]);
+    }
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+});
+const phase = (name) => p.evaluate((n) => (window.__phase = n), name);
 
 const probe = () =>
   p.evaluate(() => {
@@ -163,7 +184,10 @@ const free = [];
 
 // ——— Mốc so sánh: đi giữa đồng trống ———
 await hold(['KeyD']);
+await sleep(300); // bỏ đoạn tăng tốc
+await phase('free');
 await sample(4000, free);
+await phase('');
 await hold([]);
 await sleep(400);
 
@@ -179,7 +203,10 @@ for (const pick of picks.slice(0, WALLS_TO_TRY)) {
   used++;
   for (const side of pick.along) {
     await hold([pick.into, side]);
+    await sleep(300);
+    await phase('wall');
     await sample(SLIDE_MS, wall);
+    await phase('');
   }
   await hold([]);
   await sleep(400);
@@ -188,6 +215,39 @@ for (const pick of picks.slice(0, WALLS_TO_TRY)) {
 const avg = (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0);
 const max = (a) => (a.length ? Math.max(...a) : 0);
 const fin = await probe();
+
+/** camStats tính độ giật trên từng đoạn liên tục cùng pha (không nối qua chỗ đổi pha). */
+function camStats(rows, name) {
+  const steps = [];
+  let prev = null;
+  for (const r of rows) {
+    if (r[0] !== name) {
+      prev = null;
+      continue;
+    }
+    if (prev) {
+      // Vận tốc px/ms chứ không phải bước px: khung dài khung ngắn (rAF không đều) thì bước
+      // khác nhau là đúng, không phải giật. Giật là VẬN TỐC trên màn hình nhảy lên xuống.
+      steps.push(Math.hypot(r[2] - prev[2], r[3] - prev[3]) / Math.max(r[1] - prev[1], 1));
+    } else {
+      steps.push(null); // mốc đầu đoạn
+    }
+    prev = r;
+  }
+  const v = steps.filter((x) => x !== null);
+  const mean = v.reduce((a, b) => a + b, 0) / Math.max(v.length, 1);
+  let jerk = 0;
+  let n = 0;
+  for (let i = 1; i < steps.length; i++) {
+    if (steps[i] !== null && steps[i - 1] !== null) {
+      jerk += Math.abs(steps[i] - steps[i - 1]);
+      n++;
+    }
+  }
+  const stall = v.filter((x) => x < mean * 0.05).length;
+  return { khung: v.length, vanTocTB_pxms: +mean.toFixed(3), giat: +(jerk / Math.max(n, 1) / Math.max(mean, 1e-6)).toFixed(3), dung_pct: +((stall * 100) / Math.max(v.length, 1)).toFixed(1) };
+}
+const cam = await p.evaluate(() => window.__cam);
 
 console.log(
   JSON.stringify(
@@ -198,6 +258,7 @@ console.log(
       satTuong: { mau: wall.length, tb: +avg(wall).toFixed(2), dinh: +max(wall).toFixed(2) },
       dongTrong: { mau: free.length, tb: +avg(free).toFixed(2), dinh: +max(free).toFixed(2) },
       lechNhatDonVi: +fin.worst.toFixed(2),
+      mayQuay: { dongTrong: camStats(cam, 'free'), satTuong: camStats(cam, 'wall') },
     },
     null,
     1,
