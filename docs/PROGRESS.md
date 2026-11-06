@@ -261,6 +261,22 @@ spec ở `docs/GAME_SPEC.md`, thiếu luật 10 (hỏi khi spec chưa rõ), 11 (
 (không commit dữ liệu người chơi). Nó đã lọt vào ngữ cảnh một phiên chat và suýt được làm
 theo. Nay chỉ còn `CLAUDE.md` ở gốc repo; dòng cảnh báo trong đó viết lại cho đúng.
 
+### 06/11 — vá `docs/perf_log.csv`: 3 dòng output `grep` lọt vào tệp dữ liệu
+
+Gộp stash số đo cũ thì lộ ra tệp đang hỏng. Dòng 62–64 không phải dữ liệu mà là output của
+`grep` bị ghi đè vào: `1 matches in 1 files:`, một dòng trống, và một dòng bị cắt cụt
+`61:0:30 → 05/11 12:00",S6,0.48,2.22,…` kết thúc bằng dấu `...`. Lọt vào từ commit
+`362258a`.
+
+Vá bằng cách đối chiếu **báo cáo gốc** (`docs/perf/real/*.md` §2 có sẵn dòng CSV đầy đủ),
+không đoán: khoảng 04/11 23:30 → 05/11 12:00 đúng là `0.48 / 2.22` (N=1) như báo cáo ghi.
+Dòng cùng khoảng trong stash (`0.92 / 5.93`) là bản sinh cũ hơn, bỏ. Dòng
+05/11 12:00 → 05/11 23:30 (`1.20 / 7.80`, N=9) khớp đúng báo cáo `2026-11-05_2330.md` nên
+thêm vào. Nay 11 dòng S6 đều phân tích được bằng `csv`, đúng thứ tự thời gian.
+
+**Rút ra**: `docs/perf_log.csv` là tệp dữ liệu, đừng bao giờ ghi vào bằng `>>` sau một lệnh
+có đường ống — một lần nhầm là hỏng im lặng, và chỉ lộ ra khi có người đọc kỹ ba tháng sau.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở
