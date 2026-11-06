@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.43:** xếp hạng phòng & danh hiệu theo cảnh giới → Uy Danh → EXP; bỏ +1 Uy Danh/giây khi giữ Top 1 (top1_secs vẫn đếm, chỉ hiện ở Tổng kết) (§11.1–§11.3).
+
 **Thay đổi v6.42:** ngưỡng Nam Châm ≤ 2,0× (Q47, chấp nhận số đo 6 lượt); bỏ khoá minh hoạ monster_value_mult không tồn tại.
 
 **Thay đổi v6.41:** orb_value_mult chốt 1.32 theo sim; Nam Châm cho phép nhanh hơn tối đa ~1,75× (Q46); bảng số đo mới §6.0.
@@ -1083,7 +1085,7 @@ Quyết định lại mỗi 0.3–0.6s (random), tìm đường bằng A* trên 
 
 ## 11. Leaderboard (không cần login)
 
-EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừa tầng 10) → ai chơi lâu cũng bằng nhau. Thay bằng điểm **Uy Danh** thưởng cho việc đánh nhau, lật kèo và giữ ngôi.
+EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừa tầng 10) → ai chơi lâu cũng bằng nhau. Bảng **toàn cục** dùng điểm **Uy Danh** (thưởng cho đánh nhau, lật kèo, đột phá). Bảng **trong phòng** xếp cảnh giới trước rồi mới Uy Danh (§11.2).
 
 ### 11.1 Điểm Uy Danh (tính trong 1 mạng, server tính)
 
@@ -1093,7 +1095,7 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 | Thưởng thêm khi chém chết | +50 (mọi lần chém trúng giờ đều là chém chết) |
 | **Lật kèo**: nạn nhân cao cảnh giới hơn mình | `lật_kèo = 1 + 0.5 × (r_nạn_nhân − r_mình)`, tối thiểu 1 |
 | **Đột phá** cảnh giới mới (lần đầu trong mạng đó) | `20 × r_mới` |
-| **Giữ Top 1 phòng** | +1 điểm mỗi giây |
+| ~~Giữ Top 1 phòng~~ | ~~+1/giây~~ — **bỏ (v6.43)**: tránh vòng lặp tự nuôi; Uy Danh chỉ đến từ chém, hạ người, đột phá. Thời gian giữ Top 1 vẫn đếm và hiện ở màn Tổng kết |
 
 - Ví dụ: Trúc Cơ (r=1) chém trúng Nguyên Anh (r=3) → `100 × 4 × (1 + 0.5×2) + 50 = 850`. Đại Thừa chém Luyện Khí → `100 × 1 × 1 + 50 = 150`.
 - Nạn nhân là **bot** → nhận 50% điểm.
@@ -1103,7 +1105,7 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 
 ### 11.2 Các bảng xếp hạng
 
-- **Trong phòng** (realtime, 1 lần/giây): top 10 xếp theo **Uy Danh** của mạng hiện tại, tính **chung cả phòng (5 khu)**. Thiết kế bảng ở §11.5.
+- **Trong phòng** (realtime, 1 lần/giây): top 10 xếp theo **cảnh giới + tầng ↓**, hoà thì **Uy Danh ↓**, hoà nữa thì **tổng EXP ↓** (v6.43, một hàm so sánh dùng chung `RankLess` cho bảng, danh hiệu, vương miện, hệ số lật kèo), tính **chung cả phòng (5 khu)**. Thiết kế bảng ở §11.5.
 - **Toàn cục**, tab **Hôm nay / Tuần này / Mọi thời đại**, 3 bảng:
   - **Uy Danh** (bảng chính): điểm Uy Danh cao nhất trong 1 mạng.
   - **Sát Thần**: số lần chém trúng người nhiều nhất trong 1 mạng.
@@ -1121,7 +1123,7 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 | Top 3 | **Chỗ này nhiều máu nè** | Đồng |
 | Top 4–10 | Theo mảng `titles` trong config (giữ đúng bộ danh hiệu đang chạy trong code) | Trắng |
 
-- **Danh hiệu tính theo cả PHÒNG, không theo khu**: xếp hạng Uy Danh của mọi người thật + bot trong cả 5 khu của phòng, Top 1 của phòng chỉ có **1 người**. Người ở khu khác vẫn thấy đúng danh hiệu của họ khi gặp. (Bất kỳ chỗ nào trong code đang tính hạng trong 1 khu → sửa.)
+- **Danh hiệu tính theo cả PHÒNG, không theo khu**: xếp hạng (cảnh giới → Uy Danh → EXP, như §11.2) của mọi người thật + bot trong cả 5 khu của phòng, Top 1 của phòng chỉ có **1 người**. Người ở khu khác vẫn thấy đúng danh hiệu của họ khi gặp. (Bất kỳ chỗ nào trong code đang tính hạng trong 1 khu → sửa.)
 - Danh hiệu hiện **phía trên tên** nhân vật trong trận và trong bảng phòng (§11.5).
 - Chống nhấp nháy: giữ hạng mới liên tục 3s mới đổi danh hiệu.
 - Kill feed khi lên ngôi / mất Top 1 (như cũ). Người Ẩn Thân / trong bụi: danh hiệu ẩn theo.
@@ -1608,7 +1610,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "minimap": { "size_pc": 180, "size_mobile": 96, "show_top1": true, "show_chest": true, "show_others": false },
   "score": {
     "hit_base": 100, "kill_bonus": 50, "upset_per_realm": 0.5,
-    "breakthrough_per_realm": 20, "top1_per_sec": 1,
+    "breakthrough_per_realm": 20,
     "bot_victim_mult": 0.5, "same_victim_cooldown_secs": 60
   },
   "altars": {

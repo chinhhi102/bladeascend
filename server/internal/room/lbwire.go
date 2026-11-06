@@ -29,12 +29,18 @@ func (r *Room) lbRows(top []*game.Player) []byte {
 	prog := r.zones[0].G.Prog
 	buf := make([]byte, 0, 32*len(top))
 	for i, p := range top {
+		// Cảnh giới và Uy Danh đều lấy từ BẢN CHỤP đã giữ, cùng nhịp với thứ tự
+		// (heldboard.go). Lấy tức thời thì ai vừa đột phá sẽ hiện cảnh giới mới ngay mà vẫn
+		// nằm ở hạng cũ — từ v6.43 cảnh giới là khoá sắp xếp chính nên bảng đọc như sai.
+		// Uy Danh của chính mình ở HUD đi `LbHead.MyScore` — vẫn tức thời.
+		lv := p.Level
+		if held, ok := r.board.level(p.ID); ok {
+			lv = held
+		}
 		row := wire.LbRow{
 			ID: p.ID, Name: p.Name, Character: charIndex(r.cfg.Characters, p.Char),
 			TitleID: clampU8(p.Title), Rank: uint8(i + 1), ZoneID: clampU8(zoneOf[p.ID]),
-			Realm: clampU8(prog.Realm(p.Level)), Tier: clampU8(prog.Tier(p.Level) + 1),
-			// Điểm từ bản chụp đã giữ, CÙNG nhịp với thứ tự (heldboard.go). Uy Danh của chính
-			// mình ở HUD đi `LbHead.MyScore` — vẫn tức thời.
+			Realm: clampU8(prog.Realm(lv)), Tier: clampU8(prog.Tier(lv) + 1),
 			Score: roundU32(r.board.score(p.ID)),
 		}
 		if stealthy[p.ID] {

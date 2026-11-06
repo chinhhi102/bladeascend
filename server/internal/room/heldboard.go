@@ -10,13 +10,18 @@ import "slices"
 // Đếm riêng từng người còn sinh ra hai người cùng đeo một danh hiệu khi các lần đổi hạng
 // lệch nhịp nhau. Giữ CẢ THỨ TỰ một lần thì hai thứ không thể lệch — chúng đọc cùng một mảng.
 //
-// Điểm Uy Danh trên bảng cũng phải từ CÙNG bản chụp (duyệt 1/11: dòng 8 = 75 đứng trên dòng
-// 9 = 95, vì thứ tự giữ 3 s còn điểm thì cập nhật ngay). `scores` chỉ được cập nhật lúc thứ
-// tự thật TRÙNG thứ tự đang hiện, hoặc lúc nhận thứ tự mới — cả hai lúc đó dãy điểm đều giảm
-// dần, nên bảng không bao giờ có dòng điểm thấp đứng trên dòng điểm cao.
+// MỌI con số hiện trên bảng phải từ CÙNG bản chụp với thứ tự — Uy Danh và cả CẢNH GIỚI.
+// Duyệt 1/11 bắt được kiểu lỗi này với điểm: dòng 8 = 75 đứng trên dòng 9 = 95, vì thứ tự
+// giữ 3 s còn điểm thì cập nhật ngay. Từ v6.43 cảnh giới là khoá sắp xếp CHÍNH (§11.2), nên
+// nó dính y hệt: ai vừa đột phá sẽ hiện cảnh giới mới ngay mà vẫn nằm ở hạng cũ, bảng đọc
+// như sai suốt 3–6 giây.
+//
+// Bản chụp chỉ cập nhật lúc thứ tự thật TRÙNG thứ tự đang hiện, hoặc lúc nhận thứ tự mới —
+// cả hai lúc đó dãy số đều đúng chiều với `RankLess`, nên bảng không bao giờ tự mâu thuẫn.
 type heldBoard struct {
 	held         []uint32
 	scores       map[uint32]float64
+	levels       map[uint32]int
 	pending      []uint32
 	pendingSince float64
 	// divergedSince: lúc thứ tự thật bắt đầu khác thứ tự đang hiện; 0 = đang khớp.
@@ -31,11 +36,11 @@ type heldBoard struct {
 //
 // `present`: mọi người đang được xếp hạng. Ai rời phòng hoặc chết thì rút khỏi bảng NGAY
 // (không chờ 3 s) — giữ một cái tên đã đi khỏi phòng là sai, không phải "chống nhấp nháy".
-func (b *heldBoard) step(live []uint32, score map[uint32]float64, present map[uint32]bool, now, hold float64) {
+func (b *heldBoard) step(live []uint32, score map[uint32]float64, level map[uint32]int, present map[uint32]bool, now, hold float64) {
 	b.held = slices.DeleteFunc(b.held, func(id uint32) bool { return !present[id] })
 	if slices.Equal(live, b.held) {
 		b.pending, b.divergedSince = nil, 0
-		b.snapScores(score)
+		b.snap(score, level)
 		return
 	}
 	if b.divergedSince == 0 {
@@ -46,21 +51,30 @@ func (b *heldBoard) step(live []uint32, score map[uint32]float64, present map[ui
 	}
 	if len(b.held) == 0 || now-b.pendingSince >= hold || now-b.divergedSince >= 2*hold {
 		b.held, b.pending, b.divergedSince = slices.Clone(live), nil, 0
-		b.snapScores(score)
+		b.snap(score, level)
 	}
 }
 
-// snapScores chụp điểm của những người đang hiện trên bảng.
-func (b *heldBoard) snapScores(score map[uint32]float64) {
+// snap chụp điểm VÀ cấp của những người đang hiện trên bảng.
+func (b *heldBoard) snap(score map[uint32]float64, level map[uint32]int) {
 	b.scores = make(map[uint32]float64, len(b.held))
+	b.levels = make(map[uint32]int, len(b.held))
 	for _, id := range b.held {
 		b.scores[id] = score[id]
+		b.levels[id] = level[id]
 	}
 }
 
 // score: Uy Danh hiển thị trên bảng của `id` — từ bản chụp, không phải điểm tức thời.
 func (b *heldBoard) score(id uint32) float64 {
 	return b.scores[id]
+}
+
+// level: cấp hiển thị trên bảng của `id` — từ bản chụp, cùng nhịp với thứ tự. `ok` = false
+// khi `id` không có trong bảng, người gọi tự quyết lấy cấp tức thời hay bỏ qua.
+func (b *heldBoard) level(id uint32) (int, bool) {
+	l, ok := b.levels[id]
+	return l, ok
 }
 
 // rank trả hạng đang hiện (1-based) của `id`; 0 nếu không có trong bảng.

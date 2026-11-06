@@ -548,15 +548,17 @@ func (r *Room) snapshotRanks() {
 	present := make(map[uint32]bool, len(ranking))
 	live := make([]uint32, 0, leaderboardTop)
 	score := make(map[uint32]float64, leaderboardTop)
+	level := make(map[uint32]int, leaderboardTop)
 	for i, p := range ranking {
 		r.rankAt[p.ID] = i + 1
 		present[p.ID] = true
 		if i < min(leaderboardTop, len(r.cfg.Titles)) {
 			live = append(live, p.ID)
 			score[p.ID] = p.Score
+			level[p.ID] = p.Level
 		}
 	}
-	r.board.step(live, score, present, r.zones[0].G.Time, r.cfg.TitleHold)
+	r.board.step(live, score, level, present, r.zones[0].G.Time, r.cfg.TitleHold)
 	// Cắm hạng CẢ PHÒNG vào từng khu, để `updateTitles` phát danh hiệu theo phòng chứ
 	// không theo khu (GAME_SPEC v6.19 §11.3). Cắm lại mỗi tick thay vì một lần lúc dựng:
 	// khu có thể được thay bản đồ giữa chừng, và một con trỏ hàm cũ trỏ vào phòng cũ là

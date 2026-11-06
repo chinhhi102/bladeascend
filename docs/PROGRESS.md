@@ -301,6 +301,37 @@ biến mất.
 "Giữ Top 1 phòng | +1 điểm mỗi giây" (dòng 1096); §11.3 dòng 1106 và 1124 còn ghi xếp hạng
 và danh hiệu theo Uy Danh; khối config §17 dòng 1611 còn `"top1_per_sec": 1`.
 
+### 06/11 (đêm) — rà §11 theo spec v6.43: bắt được lỗi bảng tự mâu thuẫn
+
+Đối chiếu từng dòng §11.1–§11.5 với code. Khớp hết, trừ **một lỗi do chính thay đổi xếp
+hạng hôm nay sinh ra**:
+
+`heldBoard` giữ **thứ tự** bảng 3 giây để chống nhấp nháy, nhưng `lbRows` đọc **cảnh giới
+tức thời** từ `p.Level`. Trước v6.43 không sao vì cảnh giới chỉ là chữ trang trí trên dòng.
+Nay nó là **khoá sắp xếp chính**, nên ai vừa đột phá sẽ hiện cảnh giới mới ngay trong lúc
+vẫn nằm ở hạng cũ — bảng đọc như sai suốt 3–6 giây (hạng 5 cảnh giới cao hơn hạng 4).
+
+Đây đúng là lỗi chủ dự án chụp được hôm 1/11 với cột điểm ("dòng 8 = 75 đứng trên dòng
+9 = 95"), chỉ đổi cột. Lần đó chữa bằng cách chụp điểm cùng nhịp với thứ tự; nay chụp thêm
+**cấp**. `heldBoard.snapScores` → `snap(score, level)`, `lbRows` lấy cảnh giới từ bản chụp.
+Test `TestHeldBoardSnapshotsLevelWithOrder` canh đúng ca đó.
+
+Mấy mục còn lại đã đối chiếu và **đúng**, ghi lại để lần sau khỏi dò lại:
+
+| §11 | Kiểm |
+|---|---|
+| 11.1 công thức điểm | `hit_base 100 × (r_nạn_nhân+1) × lật_kèo + kill_bonus 50`; ví dụ 850 và 150 của spec khớp |
+| 11.1 bot, chống cày | `bot_victim_mult 0.5`; chặn cùng `guest_id` trong 60 s |
+| 11.1 bỏ Top 1/giây | hằng `ScoreTop1` và khoá config đã xoá; `top1_secs` vẫn đếm |
+| 11.2 bảng phòng | top 10, 1 lần/giây, chung cả 5 khu, một hàm `RankLess` |
+| 11.2 bảng toàn cục | **vẫn xếp theo Uy Danh** — `ORDER BY score/hits/dai_thua_secs`, không dính thay đổi xếp hạng phòng |
+| 11.2 lưu trữ | đủ cột; `GET /api/leaderboard?period&board` top 50, cache 10 s; bot không ghi |
+| 11.3 danh hiệu | 10 danh hiệu, giữ 3 s, kill feed `title_gain`/`title_lose` khi lên/mất Top 1 |
+| 11.3 Ẩn Thân | `player.ts` ẩn cả bảng tên (gồm danh hiệu) khi tàng hình hoặc trong bụi |
+
+**Lệch tên, không phải lệch luật**: §11.2 ghi cột `secs_to_dai_thua`, CSDL đặt tên
+`dai_thua_secs`. Chỉ là chữ trong spec, không ảnh hưởng gì.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở

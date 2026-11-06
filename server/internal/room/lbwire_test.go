@@ -154,11 +154,11 @@ func TestBoardOrderAndTitlesNeverDisagree(t *testing.T) {
 func TestHeldBoardNeverFreezes(t *testing.T) {
 	var b heldBoard
 	present := map[uint32]bool{1: true, 2: true, 3: true}
-	b.step([]uint32{1, 2, 3}, nil, present, 1, 3)
+	b.step([]uint32{1, 2, 3}, nil, nil, present, 1, 3)
 	churn := [][]uint32{{2, 1, 3}, {2, 3, 1}, {3, 2, 1}, {3, 1, 2}}
 	adopted := -1.0
 	for i, now := 0, 2.0; now < 20; i, now = i+1, now+1 {
-		b.step(churn[i%len(churn)], nil, present, now, 3)
+		b.step(churn[i%len(churn)], nil, nil, present, now, 3)
 		if adopted < 0 && b.held[0] != 1 {
 			adopted = now
 		}
@@ -169,20 +169,20 @@ func TestHeldBoardNeverFreezes(t *testing.T) {
 
 	// Đổi qua lại A↔B mỗi giây, quay về thứ tự đang hiện: bảng đứng yên, không nhấp nháy.
 	var c heldBoard
-	c.step([]uint32{1, 2}, nil, present, 1, 3)
+	c.step([]uint32{1, 2}, nil, nil, present, 1, 3)
 	for now := 2.0; now < 20; now++ {
 		live := []uint32{1, 2}
 		if int(now)%2 == 0 {
 			live = []uint32{2, 1}
 		}
-		c.step(live, nil, present, now, 3)
+		c.step(live, nil, nil, present, now, 3)
 		if c.held[0] != 1 {
 			t.Fatalf("giây %.0f: đổi qua lại liên tục mà bảng vẫn đổi theo — đó là nhấp nháy", now)
 		}
 	}
 
 	// Người rời phòng rút khỏi bảng NGAY, không chờ giữ.
-	b.step([]uint32{2}, nil, map[uint32]bool{2: true}, 30, 3)
+	b.step([]uint32{2}, nil, nil, map[uint32]bool{2: true}, 30, 3)
 	if b.rank(1) != 0 || b.rank(2) != 1 {
 		t.Fatalf("người đã rời vẫn nằm trên bảng: %v", b.held)
 	}
@@ -229,5 +229,38 @@ func TestBoardScoresNeverOutOfOrder(t *testing.T) {
 				t.Fatalf("lượt %d: dòng hạng %d đeo danh hiệu %d", turn, rows[i].Rank, rows[i].TitleID)
 			}
 		}
+	}
+}
+
+// Cảnh giới hiện trên bảng phải đi CÙNG NHỊP với thứ tự đã giữ (§11.2, v6.43).
+//
+// Từ v6.43 cảnh giới là khoá sắp xếp chính. Nếu bảng giữ thứ tự 3 s mà đọc cảnh giới tức
+// thời thì ngay khi ai đó đột phá, dòng của họ hiện cảnh giới mới trong lúc vẫn nằm ở hạng
+// cũ — người xem thấy một bảng tự mâu thuẫn, hạng 5 cảnh giới cao hơn hạng 4. Đây đúng là
+// lỗi đã bắt được với điểm Uy Danh hôm 1/11, chỉ đổi cột.
+func TestHeldBoardSnapshotsLevelWithOrder(t *testing.T) {
+	var b heldBoard
+	present := map[uint32]bool{1: true, 2: true}
+	score := map[uint32]float64{1: 10, 2: 5}
+	level := map[uint32]int{1: 50, 2: 10}
+	b.step([]uint32{1, 2}, score, level, present, 1, 3)
+
+	// Người thứ hai đột phá vọt lên — thứ tự THẬT đảo, nhưng chưa đủ 3 s nên bảng giữ nguyên.
+	level[2] = 90
+	b.step([]uint32{2, 1}, score, level, present, 2, 3)
+	if b.held[0] != 1 {
+		t.Fatalf("chưa đủ hold mà bảng đã đổi thứ tự: %v", b.held)
+	}
+	if lv, ok := b.level(2); !ok || lv != 10 {
+		t.Fatalf("cấp hiện trên bảng = %d, phải là 10 (bản chụp cũ, cùng nhịp với thứ tự)", lv)
+	}
+
+	// Qua mốc giữ thì nhận thứ tự mới, và cấp mới hiện cùng lúc — không lệch chiều nào.
+	b.step([]uint32{2, 1}, score, level, present, 6, 3)
+	if b.held[0] != 2 {
+		t.Fatalf("quá hold mà bảng chưa nhận thứ tự mới: %v", b.held)
+	}
+	if lv, _ := b.level(2); lv != 90 {
+		t.Fatalf("nhận thứ tự mới rồi mà cấp vẫn cũ: %d", lv)
 	}
 }
