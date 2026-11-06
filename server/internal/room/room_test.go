@@ -103,8 +103,10 @@ func TestTopFiveKillAnnouncedServerWide(t *testing.T) {
 	r.Step(1.0 / 30)
 
 	killer := r.Zone(0).G.AddPlayer(game.SpawnOptions{Name: "SátThủ", Level: 30, Swords: 20})
-	victim := r.Zone(0).G.AddPlayer(game.SpawnOptions{Name: "ĐạiCa", Level: 0, Swords: 1})
-	victim.Score = 9999 // đang đứng hạng 1 trong phòng
+	// Hạng 1 giờ tính CẢNH GIỚI trước rồi mới Uy Danh (06/11): để nạn nhân thật sự đứng đầu
+	// thì phải CAO cảnh giới hơn sát thủ. Vẫn chỉ 1 vòng kiếm nên chém thân được.
+	victim := r.Zone(0).G.AddPlayer(game.SpawnOptions{Name: "ĐạiCa", Level: 35, Swords: 1})
+	victim.Score = 9999
 	collected := map[string][]netproto.Feed{}
 	collect := func(room *Room) {
 		for _, c := range room.Clients() {

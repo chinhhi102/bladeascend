@@ -354,7 +354,6 @@
     "kill_bonus": 50,
     "upset_per_realm": 0.5,
     "breakthrough_per_realm": 20,
-    "top1_per_sec": 1,
     "bot_victim_mult": 0.5,
     "same_victim_cooldown_secs": 60
   },

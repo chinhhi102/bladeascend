@@ -404,25 +404,44 @@ func (g *Game) Ranking() []*Player {
 			out = append(out, p)
 		}
 	}
-	// Spec §11.2: the room board ranks by Uy Danh — the board is about who is winning the
-	// fight, not who farmed longest. total_exp only breaks ties.
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Score != out[j].Score {
-			return out[i].Score > out[j].Score
-		}
-		return out[i].TotalExp > out[j].TotalExp
-	})
+	sort.SliceStable(out, func(i, j int) bool { return RankLess(out[i], out[j]) })
 	return out
 }
 
-// RankOf is p's 1-based place in the room board (same order as Ranking).
+// RankLess là THỨ TỰ XẾP HẠNG DUY NHẤT của cả trò chơi (chủ dự án chốt 06/11): cảnh giới
+// trước, hoà thì Uy Danh, hoà nữa thì tổng EXP.
+//
+// Một hàm cho tất cả, vì thứ tự này quyết định nhiều thứ hơn vẻ ngoài của nó: bảng xếp
+// hạng phòng (§11.5), danh hiệu Top 1–10 (§11.3), vương miện, và hệ số lật kèo khi chém
+// người hạng cao. Trước đây `game.Ranking` và `room.Ranking` mỗi chỗ chép một bản so sánh
+// riêng — hai bản ấy mà lệch nhau thì bảng của phòng 5 khu xếp khác bảng của khu đơn, và
+// không có bài test nào bắt được.
+//
+// Bản v6.42 trở về trước xếp theo Uy Danh trước. Đổi vì cảnh giới mới là thứ người chơi
+// nhìn thấy ở nhau trong trận; một người Đại Thừa đứng dưới một người Luyện Khí vừa chém
+// trộm được vài mạng thì bảng đọc như sai.
+func RankLess(a, b *Player) bool {
+	if a.Level != b.Level {
+		return a.Level > b.Level
+	}
+	if a.Score != b.Score {
+		return a.Score > b.Score
+	}
+	return a.TotalExp > b.TotalExp
+}
+
+// RankOf là hạng (đếm từ 1) của p trong bảng phòng — cùng thứ tự với `Ranking`.
+//
+// Đếm bằng chính `RankLess` chứ không chép lại phép so sánh: bản cũ chép tay và khi thứ tự
+// đổi sang "cảnh giới trước" (06/11) thì nó vẫn xếp theo Uy Danh, tức `Ranking()[0]` và
+// `RankOf(...) == 1` chỉ vào hai người khác nhau.
 func (g *Game) RankOf(p *Player) int {
 	rank := 1
 	for _, o := range g.PlayerList() {
 		if o == p || o.Dead {
 			continue
 		}
-		if o.Score > p.Score || (o.Score == p.Score && o.TotalExp > p.TotalExp) {
+		if RankLess(o, p) {
 			rank++
 		}
 	}

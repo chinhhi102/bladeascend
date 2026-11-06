@@ -277,6 +277,30 @@ thêm vào. Nay 11 dòng S6 đều phân tích được bằng `csv`, đúng th�
 **Rút ra**: `docs/perf_log.csv` là tệp dữ liệu, đừng bao giờ ghi vào bằng `>>` sau một lệnh
 có đường ống — một lần nhầm là hỏng im lặng, và chỉ lộ ra khi có người đọc kỹ ba tháng sau.
 
+### 06/11 (tối) — xếp hạng theo CẢNH GIỚI trước · bỏ điểm giữ Top 1
+
+**1. Thứ tự xếp hạng** (chủ dự án chốt): cảnh giới/tầng trước, hoà thì Uy Danh, hoà nữa thì
+tổng EXP. Áp dụng **toàn bộ**, không chỉ mặt bảng: danh hiệu Top 1–10, vương miện, và hệ số
+lật kèo khi chém người hạng cao đều đi theo thứ tự này. Trước đây Uy Danh đứng trước.
+
+Phép so sánh gom về **một hàm duy nhất** `game.RankLess`. Trước đó nó bị chép tay ở **ba**
+chỗ — `game.Ranking`, `room.Ranking`, và `game.RankOf` — và đúng như rủi ro của kiểu chép
+này, `RankOf` đã lệch ngay khi đổi luật: `Ranking()[0]` chỉ vào một người còn
+`RankOf(...) == 1` chỉ vào người khác. Bài test mới bắt được ngay.
+
+**2. Bỏ `top1_per_sec`** ("ai cũng giống nhau"). Người dẫn đầu không còn được +1 Uy Danh mỗi
+giây. Đó là vòng lặp tự nuôi: lên đầu rồi thì càng đứng lâu càng khó bị đuổi kịp mà không
+phải đánh thêm trận nào. Nay Uy Danh chỉ đến từ việc làm — chém trúng, hạ người, đột phá.
+`top1_secs` vẫn **đếm** (hiện ở màn Tổng kết, lưu trong sổ), chỉ không quy ra điểm nữa.
+
+Bỏ khỏi: `config/game.json`, `config.Score.Top1PerSec`, hằng `ScoreTop1`, kiểu config của
+client. Màn Tổng kết không cần sửa — nó duyệt `score_by` chung nên khoá biến mất là dòng tự
+biến mất.
+
+**Spec cần anh sửa** (Claude không ghi vào `docs/_raw/`): §11.1 bảng nguồn điểm còn dòng
+"Giữ Top 1 phòng | +1 điểm mỗi giây" (dòng 1096); §11.3 dòng 1106 và 1124 còn ghi xếp hạng
+và danh hiệu theo Uy Danh; khối config §17 dòng 1611 còn `"top1_per_sec": 1`.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở

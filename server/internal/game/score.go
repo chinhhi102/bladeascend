@@ -10,7 +10,6 @@ const (
 	ScoreHit          = "hit"
 	ScoreKill         = "kill"
 	ScoreBreakthrough = "breakthrough"
-	ScoreTop1         = "top1"
 )
 
 // victimKey identifies a victim for the anti-farm cooldown: humans by guest_id so
@@ -88,17 +87,20 @@ func (g *Game) awardBreakthrough(p *Player, realm int) {
 	g.addScore(p, ScoreBreakthrough, g.Cfg.Score.BreakthroughPerRealm*float64(realm))
 }
 
-// updateTop1 credits top1_per_sec to whoever currently leads the room and tracks how long
-// they have held the lead (spec §11.1, stored as top1_secs).
+// updateTop1 đếm thời gian người đang đứng đầu phòng giữ ngôi (`top1_secs`, hiện ở màn
+// Tổng kết và lưu trong sổ).
+//
+// KHÔNG còn cộng điểm: `top1_per_sec` bỏ hẳn 06/11 (chủ dự án chốt "ai cũng giống nhau").
+// Điểm thưởng mỗi giây cho người dẫn đầu là vòng lặp tự nuôi — ai lên đầu thì càng ở đầu
+// lâu càng khó bị đuổi kịp, mà chẳng cần đánh thêm trận nào. Giờ Uy Danh chỉ đến từ việc
+// làm: chém trúng, hạ người, đột phá.
 func (g *Game) updateTop1(dt float64) {
 	ranking := g.Ranking()
 	if len(ranking) == 0 {
 		return
 	}
-	// Credited silently: at tick_hz this would otherwise emit 30 pop-ups per second.
 	lead := ranking[0]
 	lead.Top1Secs += dt
-	g.creditScore(lead, ScoreTop1, g.Cfg.Score.Top1PerSec*dt)
 }
 
 // ChestMarker returns where the minimap should draw the Rương Báu: either the live chest

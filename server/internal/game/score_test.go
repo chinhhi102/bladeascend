@@ -109,8 +109,9 @@ func TestScoreBreakthroughOncePerRealm(t *testing.T) {
 	}
 }
 
-// Spec §11.1: giữ Top 1 phòng → +top1_per_sec mỗi giây, và đếm top1_secs.
-func TestScoreTop1PerSecond(t *testing.T) {
+// Giữ Top 1 vẫn ĐẾM `top1_secs` (hiện ở màn Tổng kết) nhưng KHÔNG còn cộng điểm —
+// `top1_per_sec` bỏ hẳn 06/11, "ai cũng giống nhau".
+func TestTop1CountsSecondsButGivesNoScore(t *testing.T) {
 	g := quietGame(t, nil)
 	lead := g.AddPlayer(SpawnOptions{Name: "Lead", Level: 40, Swords: 1})
 	g.AddPlayer(SpawnOptions{Name: "Other", Level: 5, Swords: 1})
@@ -120,28 +121,35 @@ func TestScoreTop1PerSecond(t *testing.T) {
 	if math.Abs(lead.Top1Secs-1) > 2*dt {
 		t.Fatalf("top1_secs = %v, muốn ≈1", lead.Top1Secs)
 	}
-	if math.Abs(lead.ScoreBy[ScoreTop1]-g.Cfg.Score.Top1PerSec) > 0.05 {
-		t.Fatalf("điểm giữ Top 1 = %v, muốn ≈%v", lead.ScoreBy[ScoreTop1], g.Cfg.Score.Top1PerSec)
+	if lead.Score != 0 {
+		t.Fatalf("đứng đầu 1 giây mà được %v Uy Danh, phải là 0", lead.Score)
 	}
 }
 
-// Spec §11.2: bảng phòng xếp theo Uy Danh, KHÔNG theo cảnh giới; total_exp chỉ phá hòa.
-func TestRankingByScoreNotRealm(t *testing.T) {
+// Thứ tự xếp hạng (chủ dự án chốt 06/11): CẢNH GIỚI trước, hoà thì Uy Danh, hoà nữa thì
+// tổng EXP. Trước v6.42 xếp Uy Danh trước.
+func TestRankingByRealmThenScore(t *testing.T) {
 	g := quietGame(t, nil)
-	rich := g.AddPlayer(SpawnOptions{Name: "CảnhGiớiCao", Level: 60, Swords: 1})
+	high := g.AddPlayer(SpawnOptions{Name: "CảnhGiớiCao", Level: 60, Swords: 1})
 	fighter := g.AddPlayer(SpawnOptions{Name: "ÍtTuViNhiềuĐiểm", Level: 3, Swords: 1})
 	g.creditScore(fighter, ScoreHit, 500)
-	r := g.Ranking()
-	if r[0] != fighter {
-		t.Fatalf("đứng đầu là %s, phải là người nhiều Uy Danh hơn", r[0].Name)
+	if r := g.Ranking(); r[0] != high {
+		t.Fatalf("đứng đầu là %s, phải là người cảnh giới cao hơn dù ít Uy Danh", r[0].Name)
 	}
-	if g.RankOf(fighter) != 1 || g.RankOf(rich) != 2 {
-		t.Fatalf("hạng = %d, %d; muốn 1, 2", g.RankOf(fighter), g.RankOf(rich))
+	if g.RankOf(high) != 1 || g.RankOf(fighter) != 2 {
+		t.Fatalf("hạng = %d, %d; muốn 1, 2", g.RankOf(high), g.RankOf(fighter))
 	}
-	// Hòa điểm thì mới so tu vi.
-	g.creditScore(rich, ScoreHit, 500)
-	if r := g.Ranking(); r[0] != rich {
-		t.Fatalf("hòa điểm thì người nhiều EXP phải lên trước, đang là %s", r[0].Name)
+	// Cùng cảnh giới thì Uy Danh mới quyết.
+	same := g.AddPlayer(SpawnOptions{Name: "CùngTầngNhiềuĐiểm", Level: 60, Swords: 1})
+	g.creditScore(same, ScoreHit, 10)
+	if r := g.Ranking(); r[0] != same {
+		t.Fatalf("cùng cảnh giới thì nhiều Uy Danh hơn phải đứng trên, đang là %s", r[0].Name)
+	}
+	// Cùng cảnh giới, cùng điểm → tổng EXP phá hoà.
+	g.creditScore(high, ScoreHit, 10)
+	high.TotalExp = same.TotalExp + 1000
+	if r := g.Ranking(); r[0] != high {
+		t.Fatalf("hoà cả cảnh giới lẫn điểm thì nhiều EXP hơn phải đứng trên, đang là %s", r[0].Name)
 	}
 }
 

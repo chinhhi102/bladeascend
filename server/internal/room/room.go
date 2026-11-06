@@ -119,7 +119,8 @@ func (r *Room) ZoneCount() int { return len(r.zones) }
 func (r *Room) ZoneOf(id uint32) *Zone { return r.zoneOf(id) }
 
 // Ranking xếp hạng CHUNG CẢ THẾ GIỚI (spec §8.0: bảng xếp hạng phòng và danh hiệu tính
-// chung, không theo khu) — gộp người của mọi khu rồi xếp theo Uy Danh, hoà thì theo EXP.
+// chung, không theo khu) — gộp người của mọi khu rồi xếp bằng `game.RankLess`, đúng một
+// bộ so sánh với bảng của từng khu.
 func (r *Room) Ranking() []*game.Player {
 	if len(r.zones) == 1 {
 		return r.zones[0].G.Ranking()
@@ -128,12 +129,7 @@ func (r *Room) Ranking() []*game.Player {
 	for _, z := range r.zones {
 		out = append(out, z.G.Ranking()...)
 	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Score != out[j].Score {
-			return out[i].Score > out[j].Score
-		}
-		return out[i].TotalExp > out[j].TotalExp
-	})
+	sort.SliceStable(out, func(i, j int) bool { return game.RankLess(out[i], out[j]) })
 	return out
 }
 

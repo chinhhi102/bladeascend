@@ -126,7 +126,7 @@ export interface GameConfig {
   characters: string[];
   titles: string[];
   minimap: { size_pc: number; size_mobile: number; show_top1: boolean; show_chest: boolean; show_others: boolean };
-  score: { hit_base: number; kill_bonus: number; upset_per_realm: number; breakthrough_per_realm: number; top1_per_sec: number };
+  score: { hit_base: number; kill_bonus: number; upset_per_realm: number; breakthrough_per_realm: number };
 }
 
 export async function loadConfig(): Promise<GameConfig> {

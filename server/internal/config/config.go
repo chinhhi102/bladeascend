@@ -570,7 +570,6 @@ type Score struct {
 	KillBonus            float64 `json:"kill_bonus"`
 	UpsetPerRealm        float64 `json:"upset_per_realm"`
 	BreakthroughPerRealm float64 `json:"breakthrough_per_realm"`
-	Top1PerSec           float64 `json:"top1_per_sec"`
 	BotVictimMult        float64 `json:"bot_victim_mult"`
 	SameVictimCooldown   float64 `json:"same_victim_cooldown_secs"`
 }
