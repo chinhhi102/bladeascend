@@ -48,8 +48,9 @@ func TestBodyHitKillsAnyRealm(t *testing.T) {
 	if math.Abs(sum-math.Round(victimExp*g.Cfg.Player.DropShare)) > 1 || n > g.Cfg.Player.DeathOrbsMax {
 		t.Errorf("xác rơi %.0f Linh khí / %d viên, muốn %.0f / ≤ %d", sum, n, victimExp*0.3, g.Cfg.Player.DeathOrbsMax)
 	}
-	if got := bundleSwords(g); got != 5 {
-		t.Errorf("xác rơi %d kiếm, muốn 5 (50%% của 10)", got)
+	// v6.40: rơi toàn bộ kiếm còn trên người + kiếm bể 10s cuối (ở đây không mài, nên = 10).
+	if got := bundleSwords(g); got != 10 {
+		t.Errorf("xác rơi %d kiếm, muốn 10 (toàn bộ kiếm còn lại, v6.40)", got)
 	}
 }
 

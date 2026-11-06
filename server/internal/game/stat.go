@@ -1,10 +1,6 @@
 package game
 
-import (
-	"math"
-
-	"bladeascend/server/internal/config"
-)
+import "bladeascend/server/internal/config"
 
 // Luật chung spec v6.32 §4.0: mọi thưởng/phạt CỘNG trên base, không nhân dồn.
 //
@@ -72,12 +68,6 @@ func BuffTerm(b config.Buff) float64 {
 		return b.Bonus
 	}
 	return Bonus(b.Mult)
-}
-
-// scalePickupTerm: phần cảnh giới của bán kính nhặt `scale^e − 1` (e = 0.5 → √scale − 1),
-// để Luyện Khí 1 (scale 1) đúng bằng base.
-func (g *Game) scalePickupTerm(p *Player) float64 {
-	return math.Pow(p.Scale, g.pickupScaleExp()) - 1
 }
 
 // expBonus: khoản cộng EXP nhận (Song Bội Đan +1.0).

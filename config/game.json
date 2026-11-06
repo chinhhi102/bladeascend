@@ -106,13 +106,14 @@
   "player": {
     "body_r": 30,
     "move_base": 195,
-    "pickup_r": 90,
     "invuln_on_hit": 1.0,
     "invuln_on_spawn": 5.0,
     "attacker_share": 0.3,
     "drop_share": 0.3,
     "kill_bonus_exp": 30,
-    "death_sword_drop": 0.5,
+    "death_drop_lost_window_secs": 10,
+    "death_drop_include_remaining": true,
+    "death_drop_max_bundles": 12,
     "orb_owner_secs": 1.5,
     "camera_view_h": 900,
     "camera_exp": 0.85,
@@ -154,7 +155,7 @@
       "secs": 10
     },
     "magnet": {
-      "bonus": 0.2,
+      "bonus": 0.5,
       "secs": 15
     },
     "hard": {
@@ -209,9 +210,9 @@
     "scatter_r": 90,
     "max_orbs": 600
   },
+  "pickup": { "base": 90, "scale_mode": "linear", "cap_mult": 2.0 },
   "exp_economy": {
-    "orb_value_mult": 1.5,
-    "pickup_scale_exp": 0.5,
+    "orb_value_mult": 1.32,
     "bot_steal_share": 0.15
   },
   "exp_orbs": {
@@ -484,7 +485,7 @@
     "shipper":     { "speed":  0.15, "pickup":  0.00, "spin": -0.05, "durability": -0.10 },
     "cu_rua":      { "speed": -0.15, "pickup":  0.00, "spin":  0.00, "durability":  0.15 }
   },
-  "stats": { "pickup_cap": 4.0, "spin_cap": 2.0 },
+  "stats": { "spin_cap": 2.0 },
   "characters": [
     "a_hon",
     "ba_tam_loa",
@@ -541,7 +542,7 @@
     "tien_extra_charges": 1,
     "lock_secs": 3.0,
     "knock_secs": 0.25,
-    "range_unit": "pickup_r",
+    "range_unit": "pickup.base",
     "push_secs": 0.3,
     "ranges_u": {
       "loa_radius": 6.0,

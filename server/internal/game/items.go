@@ -78,18 +78,27 @@ func (g *Game) removeItem(it *Item) {
 	}
 }
 
-// PickupRadius: bán kính nhặt đồ theo luật cộng §4.0 (spec v6.32):
+// PickupRadius: bán kính nhặt đồ theo luật cộng §4.0 (spec v6.40):
 //
-//	90 × min(1 + nội tại + (√scale − 1) + Nam Châm + Gom Đơn, ×4)
+//	90 × scale × min(1 + nội tại + Nam Châm + Gom Đơn, ×2)
 //
-// Không nhân thẳng scale và không nhân dồn buff: Đại Thừa có Nam Châm từng hút ×2,2 × 1,5.
-// Gom Đơn chỉ +0.1 base (v6.31), không còn "hút sạch 3 U".
+// Base ĐÃ nhân cảnh giới (`90 × scale`, tuyến tính — to đúng theo thân: Luyện Khí 90 px,
+// Đạo Tổ 540 px). Mọi khoản thưởng là **phần trăm của bán kính theo cảnh giới đó**, nên
+// Nam Châm +50% đáng giá 45 px ở Luyện Khí và 270 px ở Đạo Tổ — thưởng lớn lên cùng người.
+//
+// Bản v6.21–v6.39 dùng `90 × √scale` với thưởng là % của 90 cố định; đổi ở v6.40 vì vòng
+// hút nhìn càng ngày càng bé so với thân và so với màn hình (camera giãn theo scale^0.85).
 func (g *Game) PickupRadius(p *Player) float64 {
-	terms := []float64{g.innate(p).Pickup, g.scalePickupTerm(p), g.buffBonus(p, BuffMagnet, "magnet")}
+	terms := []float64{g.innate(p).Pickup, g.buffBonus(p, BuffMagnet, "magnet")}
 	if p.HasStatus(StGhost, g.Time) {
 		terms = append(terms, g.Cfg.Skills.GomDonPickup)
 	}
-	return Stat(g.Cfg.Player.PickupR, StatOpts{Cap: g.Cfg.Stats.PickupCap}, terms...)
+	return Stat(g.pickupBase(p), StatOpts{Cap: g.Cfg.Pickup.CapMult}, terms...)
+}
+
+// pickupBase: base bán kính nhặt ĐÃ tính cảnh giới — `90 × scale` (v6.40).
+func (g *Game) pickupBase(p *Player) float64 {
+	return g.Cfg.Pickup.Base * math.Pow(p.Scale, g.Cfg.Pickup.ScaleExp())
 }
 
 // CanPickUp: người này có nhặt được gì không.

@@ -2,7 +2,7 @@ package game
 
 // Phạm vi kỹ năng theo đơn vị U của NGƯỜI DÙNG (GAME_SPEC §6.3, CHANGES_v6_5 mục 1–2).
 //
-//	U = player.pickup_r × scale_người_dùng
+//	U = pickup.base × scale_người_dùng
 //
 // Đây là đúng bán kính vòng hút Linh khí của họ: Luyện Khí 1 = 90 · Kim Đan ≈ 190 ·
 // Đại Thừa 10 = 450 · Đạo Tổ = 540.
@@ -18,7 +18,7 @@ import "math"
 
 // SkillU là đơn vị phạm vi của một người chơi.
 func (g *Game) SkillU(p *Player) float64 {
-	return g.Cfg.Player.PickupR * p.Scale
+	return g.Cfg.Pickup.Base * p.Scale
 }
 
 // skillRange đổi hệ số trong `ranges_u` thành khoảng cách thật cho người dùng `p`.

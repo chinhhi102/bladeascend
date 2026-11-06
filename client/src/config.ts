@@ -65,8 +65,6 @@ export interface GameConfig {
   player: {
     body_r: number;
     move_base: number;
-    /** pickup_r: bán kính hút Linh khí — cũng là đơn vị **U** của phạm vi kỹ năng (§6.3). */
-    pickup_r: number;
     camera_view_h: number;
     camera_exp: number;
     camera_reach_mult: number;
@@ -80,7 +78,12 @@ export interface GameConfig {
   burn: { exp_frac_per_sec: number; keep_realm: boolean };
   buffs: Record<string, BuffCfg>;
   innate?: Record<string, InnateCfg>;
-  stats?: { pickup_cap: number; spin_cap: number };
+  stats?: { spin_cap: number };
+  /**
+   * pickup: bán kính nhặt đồ (§4.0, §6.0 — v6.40) `base × scale^e × (1 + Σ thưởng)`.
+   * `base` cũng là đơn vị **U** của phạm vi kỹ năng (§6.3).
+   */
+  pickup: { base: number; scale_mode?: string; cap_mult?: number };
   /** Mặt băng ở Băng Nguyệt Hồ (spec §8.0): quán tính khi trượt. */
   ice: { friction: number; accel: number };
   /**
@@ -136,14 +139,14 @@ export async function loadConfig(): Promise<GameConfig> {
 
 /**
  * skillU: đơn vị phạm vi kỹ năng của một người (GAME_SPEC §6.3) — **khớp từng chữ với
- * `Game.SkillU` bên server**: `pickup_r × scale`.
+ * `Game.SkillU` bên server**: `pickup.base × scale`.
  *
  * Client chỉ dùng nó để VẼ chỉ báo (nón, vòng tròn). Server mới là bên xét trúng. Nhưng hai
  * bên phải ra cùng một con số, nếu không người chơi ngắm theo một vòng tròn rồi ăn đòn ở
  * ngoài vòng đó — kiểu sai không ai chứng minh được bằng mắt, chỉ thấy "game ăn gian".
  */
 export function skillU(cfg: GameConfig, scale: number): number {
-  return cfg.player.pickup_r * scale;
+  return cfg.pickup.base * scale;
 }
 
 /** skillRange: `ranges_u[key] × U`. Thiếu khoá thì 0 — không vẽ gì còn hơn vẽ sai vùng. */

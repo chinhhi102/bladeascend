@@ -509,8 +509,10 @@ func TestKillRewardAndDeathSwordDrop(t *testing.T) {
 	}
 	bundles, swords := countItems(g, "bundle")
 	_, orbs := countItems(g, "orb")
-	if bundles != 3 || swords != 25 {
-		t.Fatalf("corpse dropped %d bundles / %v swords, want 3 bundles holding floor(50*0.5)=25", bundles, swords)
+	// v6.40: rơi toàn bộ kiếm còn trên người, nhưng TRẦN là kiếm tối đa của cảnh giới nạn
+	// nhân — B đứng Luyện Khí (trần 10) nên 50 kiếm trong tay vẫn chỉ rơi 10.
+	if bundles != 10 || swords != 10 {
+		t.Fatalf("corpse dropped %d bundles / %v swords, want 10/10 (trần cảnh giới, v6.40)", bundles, swords)
 	}
 	if orbs != 24 {
 		t.Fatalf("dropped orb EXP %v, want 24 (30%% of 80)", orbs)

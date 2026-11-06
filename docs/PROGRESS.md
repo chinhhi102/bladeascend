@@ -181,6 +181,38 @@ hạt gạo. Màn Tổng kết và màn tải giữ nguyên cả tấm ảnh —
 
 Trước/sau + cách làm: `docs/reports/2026-11-05-cat-chan-dung/`.
 
+### 06/11 — spec v6.40: bán kính nhặt tuyến tính · chết rơi kiếm theo sổ 10 giây
+
+**1. Bán kính nhặt = `90 × scale × (1 + Σ thưởng %)`** (§4.0, §6.0). Trước là
+`90 × √scale` với thưởng tính trên 90 cố định. Hai thay đổi đi kèm: base ĐÃ nhân cảnh giới
+nên mọi khoản thưởng là **% của bán kính theo cảnh giới** (Nam Châm đáng 45 px ở Luyện Khí,
+270 px ở Đạo Tổ), và trần đổi từ ×4 thành **×2**. Config gom vào khối mới
+`pickup { base, scale_mode, cap_mult }` — `player.pickup_r`, `stats.pickup_cap`,
+`exp_economy.pickup_scale_exp` bỏ hẳn, không để hai nguồn số. Nam Châm +0.2 → **+0.5**.
+Con số nghiệm thu §17 khớp đúng: Luyện Khí 1 = 90 px, Đạo Tổ = 540, Shipper Đại Thừa 10 +
+Gom Đơn + Nam Châm = 720, Thằng Mập Đạo Tổ + Nam Châm = 891.
+
+**`orb_value_mult` 1.5 → 1.32** (§6.0 luật 2 yêu cầu chỉnh lại sau khi đổi bán kính). Hút xa
+hơn ở cảnh giới cao làm farm nhanh gấp ~2,4 lần ở Đại Thừa; 1.32 kéo về đúng bảng nhịp —
+`cmd/sim --farm` xanh cả 9 cảnh giới, hai lượt liên tiếp (cộng dồn 27,3 và 27,6 phút so với
+mốc ~28).
+
+**Còn đỏ, đã ghi Q46**: `cmd/sim --farm --magnet-always` trượt luật "≤ 1,5 lần nhanh hơn
+bảng" ở 4 cảnh giới thấp (Luyện Khí 1,55× · Trúc Cơ 1,74× · Kim Đan 1,65× · Nguyên Anh
+1,60× · Luyện Hư 1,57×). Không chữa được bằng `orb_value_mult`: hệ số đó vào theo `m^r` nên
+ở Luyện Khí `m^0 = 1`. Đây là hệ quả trực tiếp của Nam Châm +50% — chờ chủ dự án chốt hướng.
+
+**2. Chết rơi kiếm theo sổ cửa sổ trượt** (§7). Trước: `floor(kiếm_còn × 0.5)` — mài sạch
+kiếm người ta rồi giết thì xác gần như trống. Nay mỗi người có sổ **"kiếm BỂ trong 10 giây
+gần nhất"**, chết thì rơi sổ đó **cộng số kiếm còn trên người**. Kiếm bị **cướp** (Hút Mì,
+Trộm Kiếm) không vào sổ — số đó đã sang vòng người khác, ghi nữa là nhân đôi kiếm trong
+phòng. Trần tổng = kiếm tối đa của cảnh giới nạn nhân; chia đều **tối đa 12 bó** (bó có thể
+> 10 cây — Đạo Tổ 1 050 kiếm mà chia 10 cây/bó là 105 vật phẩm quanh một cái xác).
+
+6 bài test mới trong `death_drop_v640_test.go` phủ đúng hai dòng §17: kịch bản Kim Đan
+60 kiếm mài mất 50 trong 8 s, kiếm ngoài cửa sổ không tính, Hút Mì và Trộm Kiếm không tính,
+trần cảnh giới, và 4 con số bán kính nhặt của spec.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở

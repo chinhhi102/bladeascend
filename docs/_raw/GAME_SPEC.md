@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.40:** bán kính nhặt = 90 × scale (tuyến tính, Đạo Tổ 540 px), thưởng là % của bán kính theo cảnh giới, Nam Châm +50%, chỉnh lại orb_value_mult theo sim; chết rơi toàn bộ kiếm bị bể trong 10s + kiếm còn lại (không tính kiếm bị cướp) (§4.0, §5.1, §6.0, §7).
+
 **Thay đổi v6.39:** dọn 2 chỗ còn mô tả lớp mặt (§12.5, §17), thêm dòng nghiệm thu bong bóng mặt (Q45).
 
 **Thay đổi v6.38:** bỏ hướng A (một thân nhiều mặt), thay bằng bong bóng mặt dùng 4 chân dung biểu cảm sẵn có (§12.5, Q44).
@@ -358,18 +360,19 @@ giá_trị = base × (1 + Σ phần_thưởng − Σ phần_phạt)        // KH
 
 - Mỗi nguồn đóng góp **một phần trăm của base**, cộng lại với nhau. Cùng một nguồn không cộng 2 lần.
 - Hệ số kiểu "× k" ghi trong bảng cũ được hiểu là **phần thưởng = k − 1** (vd Nam Châm ×1.5 → +0.5; Tốc Kiếm ×1.6 → +0.6; Song Bội Đan ×2 → +1.0; Cương Kiếm ×1.5 → +0.5; Gồng Cơ ×2 → +1.0).
-- Phần đóng góp của **cảnh giới/scale** cũng là một khoản cộng như mọi nguồn khác (vd bán kính hút: `√scale − 1`), để Luyện Khí 1 đúng bằng base.
+- **Base có thể đã tính theo cảnh giới** (vd bán kính nhặt = 90 × scale); các khoản thưởng là **% của base theo cảnh giới đó**, cộng lại với nhau rồi nhân 1 lần (v6.40). Ví dụ Đạo Tổ: base 540 px, nội tại +15% → +81 px.
 
 | Chỉ số | base | Các khoản cộng | Trần |
 |---|---|---|---|
-| Bán kính nhặt đồ | 90 | nội tại nhân vật (§6.4) · cảnh giới `√scale − 1` · Nam Châm +0.2 · Gom Đơn (Shipper) +0.1 | ×4 base |
+| Bán kính nhặt đồ | **90 × scale** (to theo đúng tỉ lệ thân: Luyện Khí 90 → Đạo Tổ 540) | nội tại nhân vật (§6.4) · Nam Châm **+0.5** · Gom Đơn (Shipper) +0.1 — **% của bán kính hiện tại theo cảnh giới** | ×2 của 90 × scale |
 | Tốc chạy | 195 | nội tại nhân vật · Thần Hành +0.4 · Thiêu Đốt +0.8 · Gom Đơn +2.0 · gió ±; bùn −0.4, tuyết −0.2 | ×2 (×3 khi Gom Đơn), sàn ×0.4 |
 | Tốc quay kiếm ω | 2π/1s | nội tại nhân vật · Tốc Kiếm +0.6 | ×2 |
 | Độ bền kiếm khi va (D) | `1.2^r` | nội tại nhân vật · Cương Kiếm +0.5 · Gồng Cơ +1.0 · (Trộm Kiếm của Ông Ba: không mẻ) | — |
 | EXP nhận | giá trị viên/quái | Song Bội Đan +1.0 | — |
 
-Ví dụ bán kính nhặt đồ của Shipper Đại Thừa 10 (scale 5) đang Gom Đơn và có Nam Châm:
-`90 × (1 + (√5 − 1) + 0.2 + 0.1) = 90 × 2.536 ≈ 228` (cách nhân dồn: 90 × 2.236 × 1.2 × 1.1 ≈ 266).
+Ví dụ bán kính nhặt đồ (v6.40):
+- Đạo Tổ (scale 6) Thằng Mập (+15%) có Nam Châm (+50%): `90 × 6 × (1 + 0.15 + 0.5) = 540 × 1.65 = 891 px`.
+- Shipper Đại Thừa 10 (scale 5) đang Gom Đơn (+10%) và có Nam Châm (+50%): `450 × 1.6 = 720 px`.
 
 ## 4. Kiếm, vòng quay, tầm đánh
 
@@ -453,7 +456,7 @@ Thứ tự xử lý mỗi tick server:
 (A ≠ B, B không bất tử, không có khiên, không đang dịch chuyển, B chỉ còn ≤ 1 vòng kiếm — §5.2)
 - **Chém trúng thân là chết ở MỌI cảnh giới** (bỏ luật rớt 1 đại cảnh giới). **Ván của B kết thúc ngay**: B bị đưa ra khỏi phòng tới **màn hình Tổng kết (end game)** — không hồi sinh tại chỗ, không tự vào lại (§7).
 - **A nhận Linh khí** = `30% × B.total_exp`, **trần**: không vượt quá lượng đủ đưa A **lên thêm 2 đại cảnh giới** so với hiện tại (`trần = sàn(r_A + 2) − A.total_exp`, tối thiểu 0). Nạn nhân là bot → 15% (thay 30%). Kèm Uy Danh (§11.1) + `kill_bonus_exp` (30).
-- **Rơi tại xác**: `30% × B.total_exp` thành viên Linh khí (mệnh giá lớn trước, tối đa 40 viên, ai nhặt được theo luật hấp thụ thường) + 50% số kiếm thành Bó Kiếm (§7) + Tiên khí nếu B ở Tiên giới (§3.4).
+- **Rơi tại xác**: `30% × B.total_exp` thành viên Linh khí (mệnh giá lớn trước, tối đa 40 viên, ai nhặt được theo luật hấp thụ thường) + **toàn bộ số kiếm B bị bể trong 10 giây trước khi chết** thành Bó Kiếm (§7) + Tiên khí nếu B ở Tiên giới (§3.4).
 - 40% còn lại **biến mất** (chống lạm phát).
 - Mỗi tick, mỗi nạn nhân tối đa 1 hit. Người chém không bị đẩy lùi.
 - Nếu B có buff Khiên (Kim Cang): khiên vỡ, B **không chết**, bất tử 1s, bị đẩy lùi khỏi A.
@@ -531,8 +534,8 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 | `exp_orbs.cell` | 160 | 1 viên / 160×160 |
 | `exp_orbs.values` / `weights` | [5, 20, 60] / [80, 18, 2] | |
 | `exp_economy.orb_value_mult` | 1.5 | giá trị viên × 1.5^r |
-| bán kính nhặt | `90 × √scale` + các khoản cộng §4.0 | (`pickup_scale_exp` 0.5) |
-| `buffs.magnet` | **+0.2** bán kính nhặt | theo §4.0 (thay +0.5) |
+| bán kính nhặt | ~~`90 × √scale`~~ → **`90 × scale × (1 + Σ%)`** (v6.40) | số đo bảng dưới là của bản cũ — đo lại |
+| `buffs.magnet` | ~~+0.2~~ → **+0.5** (v6.40) | |
 | `exp_economy.bot_steal_share` | 0.15 | |
 | `cultivation.exp_base` / `realm_mult` / `tier_step` | 100 / 2.0 / 0.08 | |
 | `room.monster_count` | 150 **mỗi khu** | 750 / phòng |
@@ -555,8 +558,8 @@ Luyện Hư 1 → Chân Tiên có Nam Châm suốt: 23,1 phút (≥ 15 ✅). B�
 
 **Luật gốc (mọi nguồn EXP phải theo)**
 1. **Giá trị viên EXP môi trường** = giá trị gốc (5 / 20 / 60) × `orb_value_mult^r`, với `orb_value_mult = 1.5` (không phải 2). EXP cần tăng ×2 mỗi cảnh giới nên mỗi cảnh giới farm lâu hơn cảnh giới trước một chút — đúng cảm giác "càng lên càng khó".
-2. **Bán kính hút đồ** = `90 × (1 + (√scale − 1) + Σ thưởng)` theo luật cộng §4.0 (không nhân thẳng scale, không nhân dồn buff). Vẫn rộng ra khi to lên nhưng không tăng tốc hút theo cấp số.
-3. **Nam Châm**: bán kính hút **+0.2 base** (cộng, §4.0), 15s.
+2. **Bán kính hút đồ** (v6.40) = `90 × scale × (1 + Σ thưởng %)` — to đúng theo thân (Đạo Tổ 540 px). Hút xa hơn ở cảnh giới cao làm farm nhanh hơn → **chỉnh lại `orb_value_mult`** bằng `cmd/sim --farm` cho trúng bảng nhịp (không đổi bảng nhịp).
+3. **Nam Châm**: bán kính hút **+50%** (cộng, §4.0), 15s.
 4. **Quái**: EXP khi hạ = giá trị gốc × `orb_value_mult^r_người_chém` (cùng hệ số, không riêng).
 5. **Cướp EXP khi chém người** (§5.1, v6.26): chém trúng = giết; người chém nhận **30%** EXP nạn nhân, trần +2 đại cảnh giới; nạn nhân là bot → 15%. Vẫn là đường lên cấp nhanh nhất — phần thưởng của giao tranh.
 6. Song Bội Đan ×2 giữ nguyên (20s, hiếm).
@@ -584,7 +587,7 @@ Luyện Hư 1 → Chân Tiên có Nam Châm suốt: 23,1 phút (≥ 15 ✅). B�
 - Bản đồ luôn phủ đều viên EXP: mật độ mặc định **1 viên / 140×140 đơn vị** (≈ 7 300 viên trên bản đồ 12 000²).
 - Tỉ lệ: nhỏ +5 (80%) · vừa +20 (18%) · lớn +60 (2%).
 - Viên bị nhặt → 5s sau mọc lại ở vị trí ngẫu nhiên **trong cùng ô lưới 1 000×1 000** (khu vực bị vét sạch sẽ tự đầy lại, không dồn về một chỗ).
-- Bán kính hút đồ mặc định: `90 * sqrt(scale)` (§6.0).
+- Bán kính hút đồ mặc định: `90 × scale` (§6.0, v6.40).
 - Nhịp độ farm thuần chỉ để tham khảo, **không phải mục tiêu cân bằng**: lên cấp chủ yếu nhờ cướp Linh khí (§3.2). Dùng `cmd/sim --farm` để ghi lại số đo hiện tại vào `docs/PROGRESS.md` sau mỗi lần đổi config.
 - Mạng: viên EXP đứng yên → chỉ gửi theo AOI khi vào tầm nhìn, sau đó chỉ gửi sự kiện nhặt/mọc.
 
@@ -596,7 +599,7 @@ Luyện Hư 1 → Chân Tiên có Nam Châm suốt: 23,1 phút (≥ 15 ✅). B�
 | Bó Kiếm | +15 kiếm (cũng là dạng rơi ra khi chết, khi đó chứa đúng số kiếm rơi) | – | 6 |
 | Tốc Kiếm | **Chỉ** tăng tốc độ quay: ω **+0.6 base** (cộng, §4.0). **Không** đổi chiều dài/bán kính/tầm chém | 12s | 12 |
 | Thần Hành | Tốc chạy **+0.4 base** (cộng, §4.1) | 10s | 12 |
-| Nam Châm | Bán kính hút đồ **+0.2 base** (cộng, §4.0; chốt theo sim 02/11) | 15s | 8 |
+| Nam Châm | Bán kính hút đồ **+50%** (cộng, §4.0) | 15s | 8 |
 | **Cương Kiếm** (độ cứng) | Kiếm cứng hơn: độ bền khi va kiếm **+0.5** (cộng, §4.0, §5.2), sát thương lên quái × 2, **chém được vật cản cao hơn 1 bậc** (§8.2) | 10s | 7 |
 | Kim Cang (khiên) | Chặn 1 lần bị chém vào thân | 8s hoặc tới khi vỡ | 7 |
 | Song Bội Đan | EXP nhận **+1.0** (cộng, §4.0) | 20s | 5 |
@@ -734,7 +737,11 @@ Mỗi nhân vật có **nội tại** chỉnh nhẹ 4 chỉ số gốc. Nội t�
 - Cơ chế tự vào lại khi trang bị tải lại (vd mất WebGL trên điện thoại, `pendingRejoin`) **chỉ áp dụng khi người chơi còn sống**; nếu ván đã kết thúc vì chết thì sau khi tải lại phải hiện lại màn hình Tổng kết, không tự vào trận.
 - Bot chết vẫn theo luật hồi sinh/rút bot ở §9.3 (bot không có màn hình Tổng kết).
 
-- **Rơi kiếm khi chết** (người và bot): `floor(n * death_sword_drop)` kiếm (mặc định 50%) văng ra quanh xác dưới dạng Bó Kiếm (mỗi bó ≤ 10). Ví dụ chết (ở Luyện Khí) với 10 kiếm → 1 bó 5 kiếm.
+- **Rơi kiếm khi chết** (người và bot, v6.40): rơi **tổng số kiếm nạn nhân đã bị bể trong 10 giây trước khi chết** (bể do va kiếm, kể cả Ông Ba "không mẻ" thì phía đối thủ vẫn tính), **cộng số kiếm còn trên người lúc chết**.
+  - **Không tính** kiếm đã bị **cướp** (Hút Mì, Trộm Kiếm) — số đó đã sang người khác, tính lại là nhân đôi.
+  - Server giữ sổ "kiếm bể 10 giây gần nhất" cho mỗi người (cửa sổ trượt).
+  - Văng thành Bó Kiếm quanh xác: **tối đa 12 bó**, số kiếm chia đều cho các bó (bó có thể > 10 kiếm khi nạn nhân mất nhiều); trần tổng = số kiếm tối đa của cảnh giới nạn nhân.
+  - Ví dụ: Kim Đan 60 kiếm bị mài mất 50 trong 8 giây rồi bị chém chết với 10 kiếm còn lại → rơi 60 kiếm (12 bó × 5).
 - **Người thật**: anim `death` 1s → rời phòng → **Màn hình Tổng kết** hiển thị:
   - Bị ai chém (tên + nhân vật), câu tấu hài random ("Bạn đã được tiễn về quê nuôi cá").
   - Cảnh giới cao nhất đạt được, tổng EXP đỉnh, số người đã chém, thời gian sống, hạng trong phòng.
@@ -1555,13 +1562,13 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "invuln_on_hit": 1.0, "invuln_on_spawn": 5.0,
     "burn_speed_mult": 1.8, "burn_exp_per_sec": 0.08, "burn_tien_frac_per_sec": 0.008,
     "attacker_share": 0.3, "drop_share": 0.3, "hit_kills": true, "rob_cap_realms": 2, "rob_cap_tien_realms": 1, "rob_share_bot_victim": 0.15, "kill_bonus_exp": 30,
-    "death_sword_drop": 0.5, "orb_owner_secs": 1.5,
+    "death_drop_lost_window_secs": 10, "death_drop_include_remaining": true, "death_drop_max_bundles": 12, "orb_owner_secs": 1.5,
     "camera_view_h": 900, "camera_exp": 0.85, "camera_reach_mult": 2.6
   },
   "buffs": {
     "spin":   { "bonus": 0.6, "secs": 12 },
     "haste":  { "mult": 1.4, "secs": 10 },
-    "magnet": { "bonus": 0.2, "secs": 15 },
+    "magnet": { "bonus": 0.5, "secs": 15 },
     "hard":   { "durability_bonus": 0.5, "damage_bonus": 1.0, "secs": 10 },
     "shield": { "secs": 8 },
     "exp2":   { "bonus": 1.0, "secs": 20 },
@@ -1574,8 +1581,8 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   },
   "stat_stacking": "additive_on_base",
   "character_traits": {"a_hon": {"move": -0.05, "pickup": 0.1, "spin": -0.05, "durability": 0.0}, "ba_tam_loa": {"move": -0.05, "pickup": -0.05, "spin": 0.0, "durability": 0.1}, "ong_ba_vong": {"move": -0.1, "pickup": 0.0, "spin": -0.05, "durability": 0.15}, "dai_ca_dep": {"move": -0.1, "pickup": 0.0, "spin": 0.05, "durability": 0.05}, "map_tra_sua": {"move": -0.1, "pickup": 0.15, "spin": 0.0, "durability": -0.05}, "co_ba_ganh": {"move": 0.1, "pickup": 0.05, "spin": -0.05, "durability": -0.1}, "su_phu_mi": {"move": 0.0, "pickup": -0.05, "spin": 0.1, "durability": -0.05}, "be_ti": {"move": -0.05, "pickup": -0.1, "spin": 0.05, "durability": 0.1}, "shipper": {"move": 0.15, "pickup": 0.0, "spin": -0.05, "durability": -0.1}, "cu_rua": {"move": -0.15, "pickup": 0.0, "spin": 0.0, "durability": 0.15}},
-  "pickup": { "base": 90, "scale_term": "sqrt_minus_1", "cap": 4.0 },
-  "exp_economy": { "orb_value_mult": 1.5, "pickup_scale_mode": "sqrt", "monster_value_mult": 1.5, "rob_share_bot_victim": 0.15, "sim_tolerance": 0.25, "magnet_max_speedup": 1.5 },
+  "pickup": { "base": 90, "scale_mode": "linear", "cap_mult": 2.0 },
+  "exp_economy": { "orb_value_mult": 1.5, "pickup_scale_mode": "linear", "monster_value_mult": 1.5, "rob_share_bot_victim": 0.15, "sim_tolerance": 0.25, "magnet_max_speedup": 1.5 },
   "exp_orbs": {
     "cell": 140, "values": [5, 20, 60], "weights": [80, 18, 2],
     "respawn_secs": 5, "respawn_region": 1000
@@ -1696,6 +1703,9 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 
 ## 17. Checklist test chấp nhận
 
+- [ ] Kim Đan 60 kiếm bị mài mất 50 trong 8s rồi chết với 10 kiếm → xác rơi 60 kiếm (≤ 12 bó); kiếm bị Hút Mì cướp không tính vào số rơi.
+- [ ] Sau khi đổi bán kính nhặt: `cmd/sim --farm` vẫn trúng bảng nhịp §6.0 (±25%), có Nam Châm ≤ 1,5 lần nhanh hơn; gửi hệ số orb_value_mult mới.
+
 - [ ] Với cả 10 kỹ năng: người đứng xem (không dính) nhìn thấy vùng tác dụng + dấu hiệu trên mục tiêu + đếm ngược; người bị trúng thấy icon trạng thái + giây trên HUD. Chụp ảnh từng kỹ năng ở docs/review/skills/.
 
 - [ ] Phòng vắng production: Thiên Đình có đủ 30 nhân vật, mỗi khu rìa 20; loadtest phòng 110 nhân vật (50 người + bot) tick p95 mỗi khu < 4 ms.
@@ -1733,7 +1743,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Cô Ba Kim Đan bày sạp (bậc 3): người Kim Đan và thấp hơn không chém được, phải đi vòng; người Nguyên Anh chém được; Cô Ba đi xuyên sạp của mình; dẫm vỏ chuối → trượt + choáng 1s; sau 6s sạp biến mất; Shipper đang Gom Đơn đi xuyên qua.
 
 - [ ] Hút Mì: địch 100 kiếm → Sư Phụ cướp 25 (không vượt 20% tối đa của mình, dư rơi Bó Kiếm); không ai trong nón → hụt, mất lượt.
-- [ ] Bán kính nhặt Shipper Đại Thừa 10 + Gom Đơn + Nam Châm ≈ 228 (cộng §4.0, không phải 266); đang bị trói/ngủ/choáng dùng được và thoát ngay.
+- [ ] Bán kính nhặt: Luyện Khí 1 = 90 px, Đạo Tổ = 540 px; Shipper Đại Thừa 10 + Gom Đơn + Nam Châm = 720 px; Thằng Mập Đạo Tổ + Nam Châm = 891 px; đang bị trói/ngủ/choáng dùng được và thoát ngay.
 
 - [ ] Luyện Khí chém rào tre → biến mất ngay, không hoạt ảnh; chém tường gạch → không có tác dụng + chữ "Cần Kim Đan"; 30s sau rào mọc lại đúng chỗ.
 - [ ] `mapgen --check` pass cả 5 khu × 14 cảnh giới: không túi kín, mọi cổng/Đài/Thiên Môn tới được, trống ≥ 60%.

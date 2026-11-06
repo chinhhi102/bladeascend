@@ -67,8 +67,9 @@ func TestInnateAppliesToStats(t *testing.T) {
 		t.Fatalf("Cụ Rùa bền %+.2f, muốn +0.15", got)
 	}
 	mt := g.AddPlayer(SpawnOptions{Name: "M", Char: "map_tra_sua", Swords: 1})
-	if got := g.PickupRadius(mt); math.Abs(got-g.Cfg.Player.PickupR*1.15) > 1e-6 {
-		t.Fatalf("Thằng Mập nhặt %.1f, muốn %.1f (+15%%)", got, g.Cfg.Player.PickupR*1.15)
+	want := g.Cfg.Pickup.Base * mt.Scale * 1.15
+	if got := g.PickupRadius(mt); math.Abs(got-want) > 1e-6 {
+		t.Fatalf("Thằng Mập nhặt %.1f, muốn %.1f (+15%%)", got, want)
 	}
 }
 
@@ -79,10 +80,12 @@ func TestGomDonPickupOnlyTenPercent(t *testing.T) {
 	before := g.PickupRadius(p)
 	g.ApplyStatus(p, StGhost, 4)
 	after := g.PickupRadius(p)
-	if math.Abs(after-before-0.1*g.Cfg.Player.PickupR) > 1e-6 {
-		t.Fatalf("Gom Đơn thêm %.1f, muốn đúng 0.1 base = %.1f", after-before, 0.1*g.Cfg.Player.PickupR)
+	// v6.40: +10% của bán kính THEO CẢNH GIỚI, không phải 10% của 90 cố định.
+	step := 0.1 * g.Cfg.Pickup.Base * p.Scale
+	if math.Abs(after-before-step) > 1e-6 {
+		t.Fatalf("Gom Đơn thêm %.1f, muốn đúng 0.1 base cảnh giới = %.1f", after-before, step)
 	}
-	if after >= 3*g.Cfg.Player.PickupR*p.Scale {
+	if after >= 3*g.Cfg.Pickup.Base*p.Scale {
 		t.Fatalf("Gom Đơn vẫn hút tới 3 U (%.0f)", after)
 	}
 }
@@ -99,12 +102,12 @@ func TestSpinCap(t *testing.T) {
 	}
 }
 
-// Nam Châm ghi dạng `bonus: 0.2` (spec v6.35 §4.0) — giá trị bằng `mult 1.2` cũ; buff cũ còn
-// ghi `mult` vẫn đổi đúng `mult − 1`.
+// Nam Châm ghi dạng `bonus: 0.5` (spec v6.40 §4.0) — % của bán kính theo cảnh giới; buff cũ
+// còn ghi `mult` vẫn đổi đúng `mult − 1`.
 func TestMagnetBonusForm(t *testing.T) {
 	cfg := config.MustLoadDefault()
-	if got := BuffTerm(cfg.Buffs["magnet"]); math.Abs(got-0.2) > 1e-12 {
-		t.Fatalf("Nam Châm +%.3f, cần +0.2", got)
+	if got := BuffTerm(cfg.Buffs["magnet"]); math.Abs(got-0.5) > 1e-12 {
+		t.Fatalf("Nam Châm +%.3f, cần +0.5", got)
 	}
 	if got := BuffTerm(config.Buff{Mult: 1.6}); math.Abs(got-0.6) > 1e-12 {
 		t.Fatalf("mult 1.6 phải ra +0.6, ra %.3f", got)

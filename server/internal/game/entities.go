@@ -73,6 +73,12 @@ type Transit struct {
 	WarnSent bool
 }
 
+// swordLoss: một lần bể kiếm, cho sổ cửa sổ trượt `Player.lostSwords` (spec §7, v6.40).
+type swordLoss struct {
+	at float64
+	n  int
+}
+
 type Player struct {
 	ID      uint32
 	Name    string
@@ -182,6 +188,10 @@ type Player struct {
 	// nếu mỗi cây gãy bắn một sự kiện thì 20 người đánh nhau đẻ ra ~1900 sự kiện/giây —
 	// server vẫn nhẹ nhưng client phải dựng từng ấy hiệu ứng + tiếng động và tụt khung hình.
 	breakPending int
+	// lostSwords: sổ "kiếm BỂ trong cửa sổ trượt" của người này (spec §7, v6.40) — chết thì
+	// rơi hết số đó cộng số kiếm còn trên người. Chỉ ghi kiếm BỂ: kiếm bị CƯỚP (Hút Mì,
+	// Trộm Kiếm) đã sang vòng người khác, ghi vào đây nữa là nhân đôi số kiếm trong phòng.
+	lostSwords []swordLoss
 	// orbPicked*: gộp lượt nhặt viên trong một tick (xem `flushOrbPickups`).
 	orbPicked     int
 	orbPickedID   uint32

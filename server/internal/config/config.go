@@ -86,16 +86,20 @@ type Sword struct {
 }
 
 type Player struct {
-	BodyR          float64 `json:"body_r"`
-	MoveBase       float64 `json:"move_base"`
-	PickupR        float64 `json:"pickup_r"`
-	InvulnOnHit    float64 `json:"invuln_on_hit"`
-	InvulnOnSpawn  float64 `json:"invuln_on_spawn"`
-	AttackerShare  float64 `json:"attacker_share"`
-	DropShare      float64 `json:"drop_share"`
-	KillBonusExp   float64 `json:"kill_bonus_exp"`
-	DeathSwordDrop float64 `json:"death_sword_drop"`
-	OrbOwnerSecs   float64 `json:"orb_owner_secs"`
+	BodyR         float64 `json:"body_r"`
+	MoveBase      float64 `json:"move_base"`
+	InvulnOnHit   float64 `json:"invuln_on_hit"`
+	InvulnOnSpawn float64 `json:"invuln_on_spawn"`
+	AttackerShare float64 `json:"attacker_share"`
+	DropShare     float64 `json:"drop_share"`
+	KillBonusExp  float64 `json:"kill_bonus_exp"`
+	// Rơi kiếm khi chết (spec §7, v6.40): rơi TOÀN BỘ số kiếm bị bể trong
+	// `DeathDropLostWindowSecs` giây cuối + số kiếm còn trên người. Kiếm bị CƯỚP (Hút Mì,
+	// Trộm Kiếm) không tính — số đó đã sang người khác, tính lại là nhân đôi.
+	DeathDropLostWindowSecs float64 `json:"death_drop_lost_window_secs"`
+	DeathDropIncludeRemain  bool    `json:"death_drop_include_remaining"`
+	DeathDropMaxBundles     int     `json:"death_drop_max_bundles"`
+	OrbOwnerSecs            float64 `json:"orb_owner_secs"`
 	CameraViewH    float64 `json:"camera_view_h"`
 	CameraExp      float64 `json:"camera_exp"`
 	CameraReachMul float64 `json:"camera_reach_mult"`
@@ -199,8 +203,6 @@ type ExpEconomy struct {
 	// OrbValueMult: viên EXP môi trường và EXP quái × OrbValueMult^r (r = cảnh giới của người
 	// nhặt / người chém). Không nguồn nào khác nhân theo cảnh giới.
 	OrbValueMult float64 `json:"orb_value_mult"`
-	// PickupScaleExp: bán kính hút = pickup_r × scale^PickupScaleExp (0.5 = √scale, 1 = thẳng).
-	PickupScaleExp float64 `json:"pickup_scale_exp"`
 	// BotStealShare: phần EXP người chém nhận khi nạn nhân là BOT (người thật: attacker_share).
 	BotStealShare float64 `json:"bot_steal_share"`
 }
@@ -624,6 +626,7 @@ type Config struct {
 	Characters  []string           `json:"characters"`
 	Innate      map[string]Innate  `json:"innate"`
 	Stats       Stats              `json:"stats"`
+	Pickup      Pickup             `json:"pickup"`
 	Mood        Mood               `json:"mood"`
 	Titles      []string           `json:"titles"`
 	TitleHold   float64            `json:"title_hold_secs"`
@@ -725,8 +728,28 @@ func (n Innate) Sum() float64 { return n.Speed + n.Pickup + n.Spin + n.Durabilit
 
 // Stats: trần của các chỉ số tính theo luật cộng §4.0 (bội số của base).
 type Stats struct {
-	PickupCap float64 `json:"pickup_cap"` // bán kính nhặt ≤ ×4 base
-	SpinCap   float64 `json:"spin_cap"`   // tốc quay kiếm ≤ ×2 base
+	SpinCap float64 `json:"spin_cap"` // tốc quay kiếm ≤ ×2 base
+}
+
+// Pickup: bán kính nhặt đồ (spec §4.0, §6.0 — v6.40).
+//
+//	bán kính = Base × scale^e × min(1 + Σ thưởng, CapMult)
+//
+// `Base` cũng là đơn vị **U** của phạm vi kỹ năng (§6.3): `U = Base × scale`.
+type Pickup struct {
+	Base float64 `json:"base"`
+	// ScaleMode: "linear" = × scale (v6.40, mặc định), "sqrt" = × √scale (luật cũ v6.21).
+	ScaleMode string `json:"scale_mode"`
+	// CapMult: trần của phần THƯỞNG, tính theo bội số của base-đã-nhân-scale (v6.40: ×2).
+	CapMult float64 `json:"cap_mult"`
+}
+
+// ScaleExp đổi `scale_mode` thành số mũ của scale. Mặc định tuyến tính (v6.40).
+func (p Pickup) ScaleExp() float64 {
+	if p.ScaleMode == "sqrt" {
+		return 0.5
+	}
+	return 1
 }
 
 // innateMaxAbs: mỗi chỉ số nội tại lệch tối đa ±15% (spec §6.4).

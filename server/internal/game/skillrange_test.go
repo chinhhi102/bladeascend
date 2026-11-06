@@ -44,8 +44,8 @@ var specRangesU = map[string]float64{
 func TestSkillRangesMatchSpec(t *testing.T) {
 	g := skillGame(t)
 	sc := g.Cfg.Skills
-	if sc.RangeUnit != "pickup_r" {
-		t.Errorf("range_unit = %q, spec nói U = pickup_r × scale", sc.RangeUnit)
+	if sc.RangeUnit != "pickup.base" {
+		t.Errorf("range_unit = %q, spec nói U = pickup.base × scale", sc.RangeUnit)
 	}
 	if sc.PushSecs != 0.3 {
 		t.Errorf("push_secs = %g, spec nói 0.3", sc.PushSecs)
@@ -67,7 +67,7 @@ func TestSkillUMatchesPickupRadius(t *testing.T) {
 	g := skillGame(t)
 	// Level 0 = Luyện Khí tầng 1, scale 1.0 — đúng dòng đầu bảng tham khảo của spec.
 	p := put(g, "ba_tam_loa", Vec{X: 3000, Y: 3000}, 0, 1)
-	if got, want := g.SkillU(p), g.Cfg.Player.PickupR*p.Scale; got != want {
+	if got, want := g.SkillU(p), g.Cfg.Pickup.Base*p.Scale; got != want {
 		t.Fatalf("U = %g, muốn pickup_r × scale = %g", got, want)
 	}
 	// Spec §6.3 bảng tham khảo: Luyện Khí 1 → U = 90.

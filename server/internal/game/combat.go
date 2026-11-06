@@ -442,9 +442,10 @@ func (g *Game) stealOnClash(a, b *Player, lostA, lostB int) (int, int) {
 	if sb {
 		thief, victim, lost = b, a, lostA
 	}
-	before := victim.Ring.Count
-	g.breakSwords(victim, lost)
-	if got := before - victim.Ring.Count; got > 0 {
+	// Cướp, không phải bể: dùng `stealLoseSwords` để số này KHÔNG vào sổ rơi-khi-chết —
+	// nó đã nhập vòng kẻ cướp, ghi sổ nữa là lúc nạn nhân chết lại rơi thêm một lần.
+	got := g.stealLoseSwords(victim, lost)
+	if got > 0 {
 		g.giveSwords(thief, got)
 		g.emit(Event{Kind: "SkillEffect", A: thief.ID, B: victim.ID, S: "trom_kiem_hit", N: got,
 			X: float32(victim.Pos.X), Y: float32(victim.Pos.Y)})
@@ -466,15 +467,26 @@ func (g *Game) pushApart(a, b *Player) {
 	a.KnockVel, a.KnockUntil = away.Mul(-sc.ClashKnockback/secs), g.Time+secs
 }
 
-func (g *Game) breakSwords(p *Player, n int) {
+// breakSwords: kiếm BỂ do va chạm — ghi vào sổ cửa sổ trượt để lúc chết rơi lại (§7, v6.40).
+func (g *Game) breakSwords(p *Player, n int) { g.loseSwordsHit(p, n, true) }
+
+// stealLoseSwords: kiếm bị CƯỚP (Trộm Kiếm) — cùng hiệu ứng bể nhưng KHÔNG ghi sổ, vì số
+// kiếm đó bay sang vòng kẻ cướp chứ không mất khỏi phòng. Trả về số thật sự mất.
+func (g *Game) stealLoseSwords(p *Player, n int) int { return g.loseSwordsHit(p, n, false) }
+
+// loseSwordsHit trừ kiếm vì va chạm. `record` = có ghi vào sổ "kiếm bể 10s gần nhất" không.
+func (g *Game) loseSwordsHit(p *Player, n int, record bool) int {
 	if n <= 0 {
-		return
+		return 0
 	}
 	if p.HasStatus(StShell, g.Time) {
-		return // đang rụt trong mai: không bị bể kiếm (spec §6.3)
+		return 0 // đang rụt trong mai: không bị bể kiếm (spec §6.3)
 	}
 	lost := g.LoseSwords(p, n)
 	if lost > 0 {
+		if record {
+			g.recordSwordLoss(p, lost)
+		}
 		p.breakPending += lost
 		if p.Ring.Count == 0 {
 			g.emote(p, "no_swords") // spec §5.2: bị tước sạch kiếm → hoảng loạn
@@ -482,6 +494,40 @@ func (g *Game) breakSwords(p *Player, n int) {
 			g.emote(p, "sword_lost")
 		}
 	}
+	return lost
+}
+
+// recordSwordLoss ghi một lần bể kiếm vào sổ cửa sổ trượt, và dọn luôn mục đã hết hạn —
+// dọn ngay lúc ghi thì sổ không bao giờ dài quá vài mục, khỏi cần việc dọn định kỳ.
+func (g *Game) recordSwordLoss(p *Player, n int) {
+	p.lostSwords = append(trimSwordLosses(p.lostSwords, g.Time-g.deathDropWindow()), swordLoss{at: g.Time, n: n})
+}
+
+// swordsLostRecently: tổng số kiếm bể còn trong cửa sổ.
+func (g *Game) swordsLostRecently(p *Player) int {
+	p.lostSwords = trimSwordLosses(p.lostSwords, g.Time-g.deathDropWindow())
+	total := 0
+	for _, l := range p.lostSwords {
+		total += l.n
+	}
+	return total
+}
+
+// trimSwordLosses bỏ các mục cũ hơn `since`. Sổ xếp theo thời gian tăng dần nên chỉ cần
+// cắt từ đầu.
+func trimSwordLosses(ls []swordLoss, since float64) []swordLoss {
+	i := 0
+	for i < len(ls) && ls[i].at < since {
+		i++
+	}
+	return ls[i:]
+}
+
+func (g *Game) deathDropWindow() float64 {
+	if w := g.Cfg.Player.DeathDropLostWindowSecs; w > 0 {
+		return w
+	}
+	return 0
 }
 
 // flushSwordBreaks gộp số kiếm bể của mỗi người thành MỘT sự kiện mỗi swordBreakFlushSecs,
@@ -684,11 +730,48 @@ func (g *Game) obstacleOccupied(id int) bool {
 	return false
 }
 
-// dropDeathSwords spills floor(n * death_sword_drop) swords around a corpse as bundles (spec §7).
+// dropDeathSwords rải kiếm quanh xác (spec §7, v6.40).
+//
+// Rơi = **toàn bộ kiếm bị BỂ trong `death_drop_lost_window_secs` giây cuối** + số kiếm còn
+// trên người. Ý đồ: người bị mài sạch kiếm rồi mới bị chém vẫn để lại chiến lợi phẩm đúng
+// bằng công sức mài — bản cũ (`floor(n × 0.5)`) thì mài xong giết là xác gần như trống.
+//
+// Hai chỗ KHÔNG được quên:
+//   - kiếm bị **cướp** (Hút Mì, Trộm Kiếm) không nằm trong sổ, nên không rơi lần hai;
+//   - trần tổng = **kiếm tối đa của cảnh giới nạn nhân**, để một người bị mài đi mài lại
+//     nhiều đợt trong 10 giây không đẻ ra nhiều kiếm hơn vòng của họ chứa nổi.
 func (g *Game) dropDeathSwords(b *Player) {
-	n := int(math.Floor(float64(b.Ring.Count) * g.Cfg.Player.DeathSwordDrop))
-	b.Ring.Count -= n
-	g.dropBundles(b.Pos, n, b.Geom.Reach)
+	n := g.swordsLostRecently(b)
+	if g.Cfg.Player.DeathDropIncludeRemain {
+		n += b.Ring.Count
+		b.Ring.Count = 0
+		g.refreshDerived(b)
+	}
+	if cap := g.Prog.MaxSwords(g.Prog.Realm(b.Level)); n > cap {
+		n = cap
+	}
+	b.lostSwords = nil
+	g.dropDeathBundles(b.Pos, n, b.Geom.Reach)
+}
+
+// dropDeathBundles chia n kiếm thành tối đa `death_drop_max_bundles` bó ĐỀU NHAU (§7).
+//
+// Khác `dropBundles` (bó ≤ 10 cây, dùng cho rơi vặt): một Đạo Tổ chết với 1 050 kiếm mà
+// chia 10 cây một bó là 105 vật phẩm quanh một cái xác — đủ để chết cả khung hình lẫn
+// trần `max_orbs` của khu. Chia đều cho 12 bó thì bó to nhưng số vật phẩm luôn chặn trên.
+func (g *Game) dropDeathBundles(pos Vec, n int, spread float64) {
+	if n <= 0 {
+		return
+	}
+	nb := min(n, max(g.Cfg.Player.DeathDropMaxBundles, 1))
+	per, rem := n/nb, n%nb
+	for i := 0; i < nb; i++ {
+		k := per
+		if i < rem {
+			k++ // chia dư cho mấy bó đầu, không bỏ sót cây nào
+		}
+		g.spawnItemNear("bundle", float64(k), pos, spread)
+	}
 }
 
 // dropBundles drops n swords as Bó Kiếm of at most drop_bundle_max swords each (spec §5.1).

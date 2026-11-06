@@ -7,7 +7,7 @@ import { type GameConfig, skillRange } from '../config';
  *
  * Vẽ **đúng vùng server xét trúng**: nón của Loa Phường / Phun Trân Châu, vòng tròn của Ru
  * Ngủ / Lưới Mì / sóng Rụt Cổ. Hệ số lấy từ `skills.ranges_u` — cùng bảng server đọc — nhân
- * với U của **người dùng** (`pickup_r × scale`).
+ * với U của **người dùng** (`pickup.base × scale`).
  *
  * Vì sao phải vẽ: từ v6.5 phạm vi co giãn theo cảnh giới, nên cùng một kỹ năng ở Luyện Khí
  * với 540 đơn vị còn ở Đạo Tổ với 3 240. Không vẽ ra thì người chơi không có cách nào biết
