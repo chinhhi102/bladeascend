@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.41:** orb_value_mult chốt 1.32 theo sim; Nam Châm cho phép nhanh hơn tối đa ~1,75× (Q46); bảng số đo mới §6.0.
+
 **Thay đổi v6.40:** bán kính nhặt = 90 × scale (tuyến tính, Đạo Tổ 540 px), thưởng là % của bán kính theo cảnh giới, Nam Châm +50%, chỉnh lại orb_value_mult theo sim; chết rơi toàn bộ kiếm bị bể trong 10s + kiếm còn lại (không tính kiếm bị cướp) (§4.0, §5.1, §6.0, §7).
 
 **Thay đổi v6.39:** dọn 2 chỗ còn mô tả lớp mặt (§12.5, §17), thêm dòng nghiệm thu bong bóng mặt (Q45).
@@ -525,36 +527,38 @@ Kiếm bị bể: VFX vỡ vụn + SFX, mảnh văng ra (không thành item). Ch
 
 **Lỗi 1/11 — nguyên nhân thật (EXP_AUDIT, Q33)**: lỗi code ở Bí Kíp. Nhặt Bí Kíp khi đã đủ lượt, code cộng *toàn bộ EXP đang có + 20* thay vì +20 → mỗi cuốn gần như nhân đôi tu vi, chiếm 80–97% EXP thu được. Nam Châm chỉ làm nhặt Bí Kíp nhanh hơn. Đã sửa về **+20 Linh khí** (Tiên giới: +2 Tiên khí) đúng §6.3. Viên EXP và quái trong code khi đó **không** nhân theo cảnh giới.
 
-**Bảng nhịp bên dưới là CHUẨN** (Q33-b phương án A). Các hệ số trong "Luật mới" là điểm xuất phát; giá trị cuối cùng do `cmd/sim --farm` chỉnh cho trúng bảng (±25%) và trúng ràng buộc Nam Châm (≤ 1,5 lần), rồi ghi lại vào đây.
+**Bảng nhịp bên dưới là CHUẨN** (Q33-b phương án A). Các hệ số trong "Luật mới" là điểm xuất phát; giá trị cuối cùng do `cmd/sim --farm` chỉnh cho trúng bảng (±25%) và trúng ràng buộc Nam Châm (≤ 1,75 lần, Q46), rồi ghi lại vào đây.
 
-**Số đang chạy — chốt 02/11 (Q37, đo `cmd/sim --farm`, bản v6.33)**
+**Số đang chạy — chốt 03/11 (v6.40, commit 220bf25, `cmd/sim --farm` 8 khu × 12 bot, 3 lượt)**
 
 | Khoá config | Giá trị | Ghi chú |
 |---|---|---|
-| `exp_orbs.cell` | 160 | 1 viên / 160×160 |
+| bán kính nhặt | `90 × scale × (1 + Σ%)` | tuyến tính theo thân (v6.40) |
+| `exp_economy.orb_value_mult` | **1.32** | giảm từ 1.5 để bù bán kính tuyến tính |
+| `buffs.magnet` | **+0.5** | |
+| `exp_orbs.cell` | 160 | |
 | `exp_orbs.values` / `weights` | [5, 20, 60] / [80, 18, 2] | |
-| `exp_economy.orb_value_mult` | 1.5 | giá trị viên × 1.5^r |
-| bán kính nhặt | ~~`90 × √scale`~~ → **`90 × scale × (1 + Σ%)`** (v6.40) | số đo bảng dưới là của bản cũ — đo lại |
-| `buffs.magnet` | ~~+0.2~~ → **+0.5** (v6.40) | |
 | `exp_economy.bot_steal_share` | 0.15 | |
 | `cultivation.exp_base` / `realm_mult` / `tier_step` | 100 / 2.0 / 0.08 | |
-| `room.monster_count` | 150 **mỗi khu** | 750 / phòng |
-| `gates.transit_secs` | 2.0 | thời gian qua cổng |
+| `room.monster_count` | 150 mỗi khu | |
+| `gates.transit_secs` | 2.0 | |
 | `minimap.size_mobile` | 96 px | |
 
-| Cảnh giới | Farm đo (phút) | Cộng dồn | Có Nam Châm (phút) |
+| Cảnh giới | Farm thường (phút, 3 lượt) | Có Nam Châm suốt (phút) | Nhanh hơn |
 |---|---|---|---|
-| Luyện Khí | 1,19 | 1,2 | – |
-| Trúc Cơ | 1,31 | 2,5 | – |
-| Kim Đan | 1,55 | 4,1 | – |
-| Nguyên Anh | 1,94 | 6,0 | 1,65 |
-| Hóa Thần | 2,46 | 8,5 | 2,21 |
-| Luyện Hư | 3,13 | 11,6 | 2,84 |
-| Hợp Thể | 3,89 | 15,5 | 3,53 |
-| Độ Kiếp | 4,59 | 20,1 | 4,46 |
-| Đại Thừa | 5,64 | **25,7** | 5,93 |
+| Luyện Khí | 1,10 – 1,14 | 0,84 | ~1,55× |
+| Trúc Cơ | 1,15 – 1,19 | 0,86 – 0,91 | ~1,65× |
+| Kim Đan | 1,50 – 1,55 | 1,06 – 1,09 | ~1,70× |
+| Nguyên Anh | 1,88 – 1,96 | 1,27 – 1,31 | ~1,65× |
+| Hóa Thần | 2,46 – 2,60 | 1,62 – 1,77 | ~1,60× |
+| Luyện Hư | 3,05 – 3,33 | 2,09 – 2,10 | ~1,58× |
+| Hợp Thể | 3,90 – 4,08 | 2,76 – 2,87 | ~1,49× |
+| Độ Kiếp | 5,15 – 5,44 | 3,66 – 3,67 | ~1,42× |
+| Đại Thừa | 6,68 – 7,64 | 4,79 – 5,29 | ~1,38× |
+| **Cộng dồn** | **27,3 – 28,6** | | |
 
-Luyện Hư 1 → Chân Tiên có Nam Châm suốt: 23,1 phút (≥ 15 ✅). Bảng mục tiêu bên dưới giữ làm khoảng cho phép (±25%).
+- Luyện Hư 1 → Chân Tiên có Nam Châm suốt: 17,5 phút (≥ 15 ✅).
+- **Nam Châm (Q46, chủ dự án chốt 03/11)**: chấp nhận mức đo được — Nam Châm suốt nhanh hơn farm thường **tối đa ~1,75×** (thay ràng buộc cũ 1,5×). Ngưỡng nằm trong config, không chôn trong code.
 
 **Luật gốc (mọi nguồn EXP phải theo)**
 1. **Giá trị viên EXP môi trường** = giá trị gốc (5 / 20 / 60) × `orb_value_mult^r`, với `orb_value_mult = 1.5` (không phải 2). EXP cần tăng ×2 mỗi cảnh giới nên mỗi cảnh giới farm lâu hơn cảnh giới trước một chút — đúng cảm giác "càng lên càng khó".
@@ -579,7 +583,7 @@ Luyện Hư 1 → Chân Tiên có Nam Châm suốt: 23,1 phút (≥ 15 ✅). B�
 | Độ Kiếp | ~5,2 | 21,9 |
 | Đại Thừa (đủ 10 tầng) | ~6,6 | **~28 phút** |
 
-- Có Nam Châm liên tục (giả định xấu nhất): không được nhanh hơn bảng trên quá **1,5 lần** (tức Đại Thừa 10 không dưới ~19 phút).
+- Có Nam Châm liên tục (giả định xấu nhất): không được nhanh hơn bảng trên quá **1,75 lần** (Q46, chốt 03/11).
 - Đánh nhau / cướp EXP được phép nhanh hơn nhiều — đó là phần thưởng của giao tranh.
 - **CI**: `cmd/sim --farm` và `cmd/sim --farm --magnet-always` chạy mỗi build; trượt khỏi khoảng cho phép → build fail. Thêm bài kiểm "Luyện Hư → Chân Tiên có Nam Châm" phải ≥ 15 phút farm thuần.
 
@@ -1582,7 +1586,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "stat_stacking": "additive_on_base",
   "character_traits": {"a_hon": {"move": -0.05, "pickup": 0.1, "spin": -0.05, "durability": 0.0}, "ba_tam_loa": {"move": -0.05, "pickup": -0.05, "spin": 0.0, "durability": 0.1}, "ong_ba_vong": {"move": -0.1, "pickup": 0.0, "spin": -0.05, "durability": 0.15}, "dai_ca_dep": {"move": -0.1, "pickup": 0.0, "spin": 0.05, "durability": 0.05}, "map_tra_sua": {"move": -0.1, "pickup": 0.15, "spin": 0.0, "durability": -0.05}, "co_ba_ganh": {"move": 0.1, "pickup": 0.05, "spin": -0.05, "durability": -0.1}, "su_phu_mi": {"move": 0.0, "pickup": -0.05, "spin": 0.1, "durability": -0.05}, "be_ti": {"move": -0.05, "pickup": -0.1, "spin": 0.05, "durability": 0.1}, "shipper": {"move": 0.15, "pickup": 0.0, "spin": -0.05, "durability": -0.1}, "cu_rua": {"move": -0.15, "pickup": 0.0, "spin": 0.0, "durability": 0.15}},
   "pickup": { "base": 90, "scale_mode": "linear", "cap_mult": 2.0 },
-  "exp_economy": { "orb_value_mult": 1.5, "pickup_scale_mode": "linear", "monster_value_mult": 1.5, "rob_share_bot_victim": 0.15, "sim_tolerance": 0.25, "magnet_max_speedup": 1.5 },
+  "exp_economy": { "orb_value_mult": 1.32, "pickup_scale_mode": "linear", "monster_value_mult": 1.5, "rob_share_bot_victim": 0.15, "sim_tolerance": 0.25, "magnet_max_speedup": 1.75 },
   "exp_orbs": {
     "cell": 140, "values": [5, 20, 60], "weights": [80, 18, 2],
     "respawn_secs": 5, "respawn_region": 1000
@@ -1704,7 +1708,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 ## 17. Checklist test chấp nhận
 
 - [ ] Kim Đan 60 kiếm bị mài mất 50 trong 8s rồi chết với 10 kiếm → xác rơi 60 kiếm (≤ 12 bó); kiếm bị Hút Mì cướp không tính vào số rơi.
-- [ ] Sau khi đổi bán kính nhặt: `cmd/sim --farm` vẫn trúng bảng nhịp §6.0 (±25%), có Nam Châm ≤ 1,5 lần nhanh hơn; gửi hệ số orb_value_mult mới.
+- [ ] Sau khi đổi bán kính nhặt: `cmd/sim --farm` vẫn trúng bảng nhịp §6.0 (±25%), có Nam Châm ≤ 1,75 lần nhanh hơn (Q46); gửi hệ số orb_value_mult mới.
 
 - [ ] Với cả 10 kỹ năng: người đứng xem (không dính) nhìn thấy vùng tác dụng + dấu hiệu trên mục tiêu + đếm ngược; người bị trúng thấy icon trạng thái + giây trên HUD. Chụp ảnh từng kỹ năng ở docs/review/skills/.
 

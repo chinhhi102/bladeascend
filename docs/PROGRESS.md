@@ -220,6 +220,40 @@ phòng. Trần tổng = kiếm tối đa của cảnh giới nạn nhân; chia �
 60 kiếm mài mất 50 trong 8 s, kiếm ngoài cửa sổ không tính, Hút Mì và Trộm Kiếm không tính,
 trần cảnh giới, và 4 con số bán kính nhặt của spec.
 
+### 06/11 (chiều) — quái chiếm bao nhiêu % EXP farm · `monster_value_mult` hoá ra không tồn tại
+
+Câu hỏi: `exp_economy.monster_value_mult` vẫn 1.5 trong khi orb đã 1.32 — quái có bị lệch
+hệ số không?
+
+**Không có gì lệch, vì khoá đó không tồn tại.** `grep` cả `config/game.json`, toàn bộ Go và
+client: không chỗ nào đọc `monster_value_mult`. EXP quái đi qua đúng `OrbValueMult`
+(`combat.go:597` → `scatterOrbs(m.Exp × OrbValueMult(killer))`), tức đã là **1.32** từ lúc
+đổi v6.40 — đúng §6.0 luật 4 "cùng hệ số, không riêng". Con số 1.5 chỉ còn trong **khối
+config minh hoạ §17** của spec, là chữ cũ sót lại chưa bao giờ được cài.
+
+Vẫn đo như yêu cầu, vì "không có khoá" chưa chứng minh được "quái không đáng kể".
+`cmd/sim --audit` nay quét **đủ 9 cảnh giới** thay vì lấy mẫu 3 cái (0/5/8) — câu hỏi kiểu
+này sẽ còn lặp lại mỗi lần đổi hệ số EXP.
+
+| Cảnh giới | % EXP từ quái (không Nam Châm) | (có Nam Châm) |
+|---|---:|---:|
+| Luyện Khí | 5,6% | 3,7% |
+| Trúc Cơ | 11,1% | 4,3% |
+| Kim Đan | 6,5% | 11,5% |
+| Nguyên Anh | 5,9% | 6,0% |
+| Hóa Thần | 4,7% | 6,9% |
+| Luyện Hư | 5,8% | 5,8% |
+| Hợp Thể | 6,9% | 4,6% |
+| Độ Kiếp | 6,9% | 4,6% |
+| Đại Thừa | 4,7% | 3,1% |
+
+Cao nhất **11,5%**, dưới ngưỡng 15% ở mọi cảnh giới → **không chỉnh gì**. Gần như toàn bộ
+EXP farm đến từ viên môi trường (88–96%); quái chỉ là gia vị.
+
+**Q47 mở**: spec v6.41 ghi ngưỡng Nam Châm ≤ 1,75×, nhưng chạy 6 lượt thì Trúc Cơ lên 1,83×
+và Kim Đan 1,86× — đặt 1,75 là bài `--magnet-always` đỏ tuỳ seed (đã thử, trượt Kim Đan hai
+lượt liên tiếp). Config giữ **2,0** như Q46 chốt; chờ chủ dự án chọn sửa spec hay hạ config.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở

@@ -109,7 +109,10 @@ func auditMain(cfg *config.Config, mapID string, seed int64, seeds int) {
 	fmt.Println()
 	fmt.Println("| Cảnh giới | Nam Châm | Tổng EXP/s | " + strings.Join(game.ExpSourceNames[:game.ExpOther], " | ") + " | EXP cần cho 1 cảnh giới | Giây / cảnh giới |")
 	fmt.Println("|" + strings.Repeat("---|", int(game.ExpOther)+5))
-	for _, r := range []int{0, 5, 8} {
+	// ĐỦ 9 cảnh giới, không lấy mẫu 3 cái: câu hỏi hay gặp nhất với bảng này là "quái
+	// chiếm bao nhiêu % EXP ở cảnh giới X" (06/11, khi tách `monster_value_mult`), mà lấy
+	// mẫu thưa thì phải đoán nội suy mấy cảnh giới ở giữa.
+	for r := 0; r < len(cfg.Cultivation.Realms); r++ {
 		for _, mag := range []bool{false, true} {
 			var sum auditResult
 			for s := 0; s < seeds; s++ {
