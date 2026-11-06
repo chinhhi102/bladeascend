@@ -197,10 +197,17 @@ hơn ở cảnh giới cao làm farm nhanh gấp ~2,4 lần ở Đại Thừa; 1
 `cmd/sim --farm` xanh cả 9 cảnh giới, hai lượt liên tiếp (cộng dồn 27,3 và 27,6 phút so với
 mốc ~28).
 
-**Còn đỏ, đã ghi Q46**: `cmd/sim --farm --magnet-always` trượt luật "≤ 1,5 lần nhanh hơn
-bảng" ở 4 cảnh giới thấp (Luyện Khí 1,55× · Trúc Cơ 1,74× · Kim Đan 1,65× · Nguyên Anh
-1,60× · Luyện Hư 1,57×). Không chữa được bằng `orb_value_mult`: hệ số đó vào theo `m^r` nên
-ở Luyện Khí `m^0 = 1`. Đây là hệ quả trực tiếp của Nam Châm +50% — chờ chủ dự án chốt hướng.
+**Q46 — đã chốt (06/11)**: `cmd/sim --farm --magnet-always` trượt luật "≤ 1,5 lần nhanh hơn
+bảng" ở 4–6 cảnh giới thấp tuỳ seed (Luyện Khí 1,55× · Trúc Cơ 1,65–1,81× · Kim Đan
+1,65–1,70× · Nguyên Anh 1,60–1,65× · Hóa Thần và Luyện Hư ~1,58×). Không chữa được bằng
+`orb_value_mult`: hệ số đó vào theo `m^r` nên ở Luyện Khí `m^0 = 1`. Chủ dự án **chấp nhận
+khoảng đo được** → trần nới **1,5 → 2,0**, và chuyển từ hằng số trong `cmd/sim/farm.go` ra
+`exp_economy.magnet_max_speedup` (luật 2: số cân bằng nằm trong config). Chọn 2,0 chứ không
+1,8 vì Trúc Cơ dao động 1,65–1,81× giữa các seed — 1,8 đỏ ngay lượt chạy thứ hai. Nay cả
+hai bài xanh, exit 0; bài "Luyện Hư 1 → Chân Tiên ≥ 15 phút" đo 17,2–17,9 phút.
+
+**Spec còn ghi 1,5** ở §6.0 và §17 (`magnet_max_speedup` trong khối config §17 cũng ghi
+1.5). Claude không sửa `docs/_raw/` — chủ dự án cập nhật hai chỗ đó khi tiện.
 
 **2. Chết rơi kiếm theo sổ cửa sổ trượt** (§7). Trước: `floor(kiếm_còn × 0.5)` — mài sạch
 kiếm người ta rồi giết thì xác gần như trống. Nay mỗi người có sổ **"kiếm BỂ trong 10 giây

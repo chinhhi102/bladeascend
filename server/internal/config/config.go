@@ -203,6 +203,11 @@ type ExpEconomy struct {
 	// OrbValueMult: viên EXP môi trường và EXP quái × OrbValueMult^r (r = cảnh giới của người
 	// nhặt / người chém). Không nguồn nào khác nhân theo cảnh giới.
 	OrbValueMult float64 `json:"orb_value_mult"`
+	// MagnetMaxSpeedup: trần của bài `cmd/sim --farm --magnet-always` — có Nam Châm suốt thì
+	// không được nhanh hơn bảng nhịp §6.0 quá ngần này lần. Chỉ dùng cho bài đo, không vào
+	// luật chơi. v6.40 nới 1.5 → 1.8 (quyết định Q46: Nam Châm +50% làm mấy cảnh giới thấp
+	// vượt 1,5×, chủ dự án chấp nhận khoảng đo được).
+	MagnetMaxSpeedup float64 `json:"magnet_max_speedup"`
 	// BotStealShare: phần EXP người chém nhận khi nạn nhân là BOT (người thật: attacker_share).
 	BotStealShare float64 `json:"bot_steal_share"`
 }

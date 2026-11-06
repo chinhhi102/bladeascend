@@ -3,7 +3,7 @@ package main
 // --farm: nhịp farm thuần so với bảng chuẩn spec v6.24 §6.0 (Q33-b, phương án A).
 //
 //	go run ./cmd/sim --farm                    # bảng thường, ±25 % mỗi cảnh giới
-//	go run ./cmd/sim --farm --magnet-always    # Nam Châm suốt: không nhanh hơn bảng quá 1,5 lần
+//	go run ./cmd/sim --farm --magnet-always    # Nam Châm suốt: không nhanh hơn bảng quá N lần
 //
 // Thoát mã 1 khi trượt — CI chạy cả hai (spec: "trượt khỏi khoảng cho phép → build fail").
 // Bài thứ ba chạy cùng `--magnet-always`: Luyện Hư 1 → Chân Tiên phải ≥ 15 phút farm thuần.
@@ -23,9 +23,9 @@ import (
 var farmTarget = []float64{1.3, 1.5, 1.8, 2.1, 2.6, 3.3, 4.1, 5.2, 6.6}
 
 const (
-	farmTolerance  = 0.25 // ±25 %
-	magnetMaxSpeed = 1.5  // Nam Châm không được nhanh hơn bảng quá 1,5 lần
-	tienMinMinutes = 15.0 // Luyện Hư → Chân Tiên có Nam Châm ≥ 15 phút
+	farmTolerance     = 0.25 // ±25 %
+	magnetMaxSpeedDef = 2.0  // trần mặc định khi config không ghi (xem exp_economy.magnet_max_speedup)
+	tienMinMinutes    = 15.0 // Luyện Hư → Chân Tiên có Nam Châm ≥ 15 phút
 )
 
 type farmOpts struct {
@@ -159,7 +159,7 @@ func farmMain(cfg *config.Config, o farmOpts) bool {
 		d, reached := medianDur(lives, r)
 		lo, hi := want*(1-farmTolerance), want*(1+farmTolerance)
 		if o.magnet {
-			lo, hi = want/magnetMaxSpeed, 1e9
+			lo, hi = want/magnetMaxSpeed(cfg), 1e9
 		}
 		name := cfg.Cultivation.Realms[r]
 		if !reached {
@@ -238,4 +238,15 @@ func countAt(lives []farmLife, k int) int {
 		}
 	}
 	return n
+}
+
+// magnetMaxSpeed: trần "nhanh hơn bảng bao nhiêu lần khi có Nam Châm suốt" (§6.0).
+//
+// Lấy từ `exp_economy.magnet_max_speedup` chứ không chôn trong mã: đây là con số CÂN BẰNG,
+// và nó đã đổi một lần rồi (1.5 → 1.8 ở v6.40 khi Nam Châm lên +50%, quyết định Q46).
+func magnetMaxSpeed(cfg *config.Config) float64 {
+	if v := cfg.ExpEconomy.MagnetMaxSpeedup; v > 0 {
+		return v
+	}
+	return magnetMaxSpeedDef
 }
