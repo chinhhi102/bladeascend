@@ -250,9 +250,16 @@ này sẽ còn lặp lại mỗi lần đổi hệ số EXP.
 Cao nhất **11,5%**, dưới ngưỡng 15% ở mọi cảnh giới → **không chỉnh gì**. Gần như toàn bộ
 EXP farm đến từ viên môi trường (88–96%); quái chỉ là gia vị.
 
-**Q47 mở**: spec v6.41 ghi ngưỡng Nam Châm ≤ 1,75×, nhưng chạy 6 lượt thì Trúc Cơ lên 1,83×
-và Kim Đan 1,86× — đặt 1,75 là bài `--magnet-always` đỏ tuỳ seed (đã thử, trượt Kim Đan hai
-lượt liên tiếp). Config giữ **2,0** như Q46 chốt; chờ chủ dự án chọn sửa spec hay hạ config.
+**Q47 — đã chốt (06/11)**: spec v6.41 ghi ngưỡng Nam Châm ≤ 1,75×, nhưng chạy 6 lượt thì
+Trúc Cơ lên 1,83× và Kim Đan 1,86× — đặt 1,75 là bài `--magnet-always` đỏ tuỳ seed (đã thử,
+trượt Kim Đan hai lượt liên tiếp). Chủ dự án **chấp nhận số đo**: spec v6.42 sửa ngưỡng
+thành **2,0×** cho khớp config, và bỏ luôn khoá minh hoạ `monster_value_mult` chưa bao giờ
+tồn tại. Không đổi luật chơi, không đổi config — chỉ spec đuổi theo thực tế.
+
+**Xoá `docs/_raw/CLAUDE.md`** (06/11): bản cũ hơn bản gốc ở gốc repo — còn ghi cổng 8080,
+spec ở `docs/GAME_SPEC.md`, thiếu luật 10 (hỏi khi spec chưa rõ), 11 (không chờ art) và 15
+(không commit dữ liệu người chơi). Nó đã lọt vào ngữ cảnh một phiên chat và suýt được làm
+theo. Nay chỉ còn `CLAUDE.md` ở gốc repo; dòng cảnh báo trong đó viết lại cho đúng.
 
 ## Lỗi / hạn chế đã biết
 

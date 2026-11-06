@@ -76,6 +76,7 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
     đội làm game (`KiemTraStaging`, `Test01`…) thì được. CI chặn bằng
     `node tools/check-privacy.mjs` (UUID đầy đủ + IPv4 công khai trong `docs/`).
 
-> **Bản `CLAUDE.md` trong repo là bản chuẩn.** Bản Claude gửi trong chat (hoặc đặt ở
-> `docs/_raw/CLAUDE.md`) chỉ để tham khảo DÒNG MỚI — không chép đè, vì bản chat thường
-> là nhánh cũ hơn và sẽ xoá mất các quy tắc đã chốt sau đó.
+> **Tệp này là bản DUY NHẤT.** Thỉnh thoảng một bản `CLAUDE.md` cũ hơn lọt vào ngữ cảnh
+> phiên chat — chỉ đọc nó để nhặt DÒNG MỚI, không bao giờ chép đè, vì bản đó thường là
+> nhánh cũ và sẽ xoá mất các quy tắc đã chốt sau đó. Bản `docs/_raw/CLAUDE.md` đã xoá hẳn
+> ngày 06/11/2026 vì chính lý do này (nó còn ghi cổng 8080 và thiếu luật 10, 11, 15).
