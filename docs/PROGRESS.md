@@ -332,6 +332,41 @@ Mấy mục còn lại đã đối chiếu và **đúng**, ghi lại để lần
 **Lệch tên, không phải lệch luật**: §11.2 ghi cột `secs_to_dai_thua`, CSDL đặt tên
 `dai_thua_secs`. Chỉ là chữ trong spec, không ảnh hưởng gì.
 
+### 07/11 — spec v6.44 (bỏ miễn mẻ của Trộm Kiếm) + v6.45 (Gom Đơn ×5)
+
+**v6.44 — Trộm Kiếm**: bỏ "kiếm Ông Ba không mẻ". Va kiếm nay tính bình thường hai chiều,
+chỉ giữ việc kiếm địch bể bay về vòng ông. Trong `stealOnClash` thứ tự có chủ ý: **trừ kiếm
+của ông trước rồi mới cộng số cướp được** — cộng trước thì ông đang đầy vòng bị `giveSwords`
+cắt phần dư rơi xuống đất, xong mới mẻ, thành ra vừa rơi đồ vừa mất kiếm.
+
+Kiểm lại bằng test: cùng cảnh giới + cùng nội tại độ bền thì hai bên mẻ bằng nhau, nên ông
+**hoà vốn** (mẻ N, cướp N) chứ không tăng kiếm — cái lợi nằm ở chỗ đối thủ lỗ trắng N thanh.
+Dòng checklist §17 viết "ông lãi ròng" nên hiểu theo nghĩa tương đối đó.
+
+**v6.45 — Gom Đơn ×5**: `speed.gom_don` 2.0 → 4.0, `cap_gom_don` 3.0 → 5.0 (975 đv/s).
+Sửa `speed_test.go` (×3 → ×5) và `skills_v55_test.go` (trần 3 → 5).
+
+**Nghiệm thu — hai mục ĐẠT, một mục TRƯỢT nhưng không phải lỗi mới:**
+
+| Mục | Kết quả |
+|---|---|
+| Va chạm client↔server | ✅ 1 000 bước, **lệch lớn nhất 0,0000**, quá ngưỡng 0 |
+| Entity nhấp nháy / AOI | ✅ 0 lần biến mất, 0 lần dựng lại trong 20 s |
+| Không giật, không nhảy cóc | ❌ 23/1 201 khung vẽ vượt trần tốc — **xem Q48** |
+
+Bài đo mới `tools/browsertest/gomdon-smooth.mjs`: hai tab, lấy mẫu vị trí VẼ RA mỗi khung,
+chuẩn hoá theo thời gian khung rồi so với trần tốc. Chạy ba kịch bản mới đọc được kết quả:
+đi bộ **0** khung hỏng · Gom Đơn cấu hình **cũ ×3: 40** khung · cấu hình **mới ×5: 23** khung.
+Tức **v6.45 không gây ra lỗi này**, nó có sẵn và chưa ai đo. Nghi kho nội suy cạn
+(`interp_ms` 100 với `snapshot_hz` 20 chỉ dư đúng một gói); khung đứng hình và khung nhảy
+cóc đi theo cặp. Ba hướng xử lý ghi trong Q48, chưa đụng vào vì đó là chỉnh netcode.
+
+**Hai lần đo đầu tôi làm sai phương pháp**, ghi lại để khỏi lặp: lần một so bước đi với
+trung vị chung — nhưng Gom Đơn chỉ bật 4 giây trong 20 giây nên trung vị là tốc ĐI BỘ, mọi
+khung chạy nhanh đều bị chấm là nhảy cóc (ra 260/1 200). Lần hai vẫn không chuẩn hoá theo
+thời gian khung — một khung kẹt 100 ms thì đi 97 đơn vị là ĐÚNG. Chỉ sau khi có **mốc so
+sánh không bật kỹ năng** (0 khung hỏng, trung vị 185 đv/s đúng tốc đi bộ) mới tin được số.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở

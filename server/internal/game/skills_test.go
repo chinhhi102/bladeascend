@@ -93,8 +93,9 @@ func TestLoaPhuongPushesAllAround(t *testing.T) {
 	}
 }
 
-// Checklist §17 v6.30: Ông Ba Võng trong 4s Trộm Kiếm va kiếm với người cùng cảnh giới →
-// Ông Ba không mất kiếm, đối thủ mất kiếm và Ông Ba +đúng số đó (tới trần, dư rơi Bó Kiếm).
+// Checklist §17 v6.44: Ông Ba Võng trong 4s Trộm Kiếm va kiếm với người cùng cảnh giới →
+// **cả hai mất kiếm như thường**; đối thủ mất bao nhiêu thì Ông Ba +đúng số đó. Ông lãi
+// ròng khi mài nhau, không còn miễn mẻ (bỏ ở v6.44).
 func TestTromKiemStealsClashedSwords(t *testing.T) {
 	g := skillGame(t)
 	a := put(g, "ong_ba_vong", Vec{X: 3000, Y: 3000}, 10, 10)
@@ -114,9 +115,24 @@ func TestTromKiemStealsClashedSwords(t *testing.T) {
 	if lostB <= 0 {
 		t.Fatal("hai vòng không chạm nhau — bài test đặt sai")
 	}
-	if a.Ring.Count != beforeA+lostB {
-		t.Fatalf("Ông Ba %d → %d kiếm, đối thủ mất %d: muốn Ông Ba +%d, không mất thanh nào",
-			beforeA, a.Ring.Count, lostB, lostB)
+	// Sổ "kiếm bể 10 s gần nhất" chỉ ghi kiếm BỂ, nên nó đúng bằng số Ông Ba tự mẻ —
+	// phần cướp của đối thủ không vào sổ ai cả (§7).
+	lostA := g.swordsLostRecently(a)
+	if lostA <= 0 {
+		t.Fatal("v6.44: kiếm Ông Ba phải mẻ như thường, không còn miễn mẻ")
+	}
+	if want := beforeA - lostA + lostB; a.Ring.Count != want {
+		t.Fatalf("Ông Ba %d → %d kiếm (mẻ %d, cướp %d): muốn %d",
+			beforeA, a.Ring.Count, lostA, lostB, want)
+	}
+	// Cùng cảnh giới và cùng nội tại độ bền thì hai bên mẻ bằng nhau, nên Ông Ba hoà vốn
+	// (mẻ N, cướp N) chứ không tăng kiếm. Cái lợi nằm ở chỗ ĐỐI THỦ lỗ trắng N thanh: mài
+	// qua mài lại thì ông không bao giờ lỗ, còn người kia cạn dần.
+	if a.Ring.Count < beforeA {
+		t.Fatalf("Ông Ba lỗ kiếm khi mài nhau: %d → %d", beforeA, a.Ring.Count)
+	}
+	if b.Ring.Count >= beforeB {
+		t.Fatalf("đối thủ không mất kiếm: %d → %d", beforeB, b.Ring.Count)
 	}
 	g.Time = a.StealUntil + 0.01
 	if g.stealing(a) {

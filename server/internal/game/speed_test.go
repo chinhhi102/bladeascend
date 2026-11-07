@@ -7,7 +7,7 @@ import (
 	"bladeascend/server/internal/world"
 )
 
-// Spec v6.25 §4.1: tốc độ CỘNG trên base, kẹp [0.4, 2.0] (Gom Đơn: 3.0).
+// Spec §4.1: tốc độ CỘNG trên base, kẹp [0.4, 2.0] (Gom Đơn: 5.0 — v6.45).
 
 // speedGame: một khu có vùng gió (hướng 0 rad = sang phải) và vùng bùn tách nhau.
 func speedGame(t *testing.T) (*Game, *Player) {
@@ -40,8 +40,10 @@ func TestSpeedAdditiveCapped(t *testing.T) {
 	g.ApplyBuff(p, "haste")
 	wantSpeed(t, g, g.MoveSpeedAt(p, wind, right), 2.0, "Thần Hành + Thiêu Đốt + theo gió (cũ ×3.78)")
 
+	// v6.45: Gom Đơn +4.0 base và trần riêng ×5 — cộng thêm Thần Hành, Thiêu Đốt, theo gió
+	// vẫn kẹp đúng ×5, không nhân dồn.
 	g.ApplyStatus(p, StGhost, 4)
-	wantSpeed(t, g, g.MoveSpeedAt(p, wind, right), 3.0, "Gom Đơn + mọi buff")
+	wantSpeed(t, g, g.MoveSpeedAt(p, wind, right), 5.0, "Gom Đơn + mọi buff")
 
 	g2, q := speedGame(t)
 	place(g2, q, Vec{X: 6000, Y: 6000}, 0)

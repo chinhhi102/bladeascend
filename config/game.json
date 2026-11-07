@@ -130,11 +130,11 @@
   },
   "speed": {
     "cap": 2.0,
-    "cap_gom_don": 3.0,
+    "cap_gom_don": 5.0,
     "floor": 0.4,
     "haste": 0.4,
     "burn": 0.8,
-    "gom_don": 2.0,
+    "gom_don": 4.0,
     "wind_with": 0.5,
     "wind_against": -0.2,
     "mud": -0.4,

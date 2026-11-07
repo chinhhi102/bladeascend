@@ -430,27 +430,39 @@ func (g *Game) clash(a, b *Player, at Vec) {
 	g.breakSwords(b, lostB)
 }
 
-// stealOnClash: Trộm Kiếm của Ông Ba Võng (v6.30 §6.3). Trong `ru_ngu_steal_secs` kiếm của ông
-// không mẻ, và mỗi thanh của đối thủ bể khi va với ông bay về nhập vòng ông (tới trần, dư rơi
-// Bó Kiếm). Hai người cùng đang trộm thì triệt tiêu — va như thường.
+// stealOnClash: Trộm Kiếm của Ông Ba Võng (§6.3, v6.44).
+//
+// Trong `ru_ngu_steal_secs`, va kiếm tính **bình thường hai chiều** — kiếm ông vẫn mẻ theo
+// độ bền như mọi người (v6.44 bỏ "không mẻ") — nhưng mỗi thanh của đối thủ bể khi va với
+// ông thì **bay về nhập vòng ông** (tới trần, dư rơi Bó Kiếm). Ông lãi ròng khi mài nhau
+// chứ không còn bất tử về kiếm.
+//
+// Hai người cùng đang trộm thì triệt tiêu — va như thường.
+//
+// Thứ tự trong hàm có chủ ý: trừ kiếm của ông TRƯỚC rồi mới cộng số cướp được. Cộng trước
+// thì ông đang đầy vòng sẽ bị `giveSwords` cắt phần dư thành Bó Kiếm rơi xuống đất, xong
+// mới mẻ — thành ra vừa rơi đồ vừa mất kiếm. Trừ trước thì chỗ vừa trống nhận đúng số cướp,
+// đúng nghĩa "lãi ròng".
 func (g *Game) stealOnClash(a, b *Player, lostA, lostB int) (int, int) {
 	sa, sb := g.stealing(a), g.stealing(b)
 	if sa == sb {
 		return lostA, lostB
 	}
-	thief, victim, lost := a, b, lostB
+	thief, victim, lostThief, lostVictim := a, b, lostA, lostB
 	if sb {
-		thief, victim, lost = b, a, lostA
+		thief, victim, lostThief, lostVictim = b, a, lostB, lostA
 	}
-	// Cướp, không phải bể: dùng `stealLoseSwords` để số này KHÔNG vào sổ rơi-khi-chết —
-	// nó đã nhập vòng kẻ cướp, ghi sổ nữa là lúc nạn nhân chết lại rơi thêm một lần.
-	got := g.stealLoseSwords(victim, lost)
+	g.breakSwords(thief, lostThief) // v6.44: ông cũng mẻ, và vào sổ rơi-khi-chết như mọi người
+	// Phía nạn nhân là CƯỚP, không phải bể: dùng `stealLoseSwords` để số này KHÔNG vào sổ
+	// rơi-khi-chết — nó đã nhập vòng kẻ cướp, ghi sổ nữa là lúc nạn nhân chết lại rơi thêm
+	// một lần.
+	got := g.stealLoseSwords(victim, lostVictim)
 	if got > 0 {
 		g.giveSwords(thief, got)
 		g.emit(Event{Kind: "SkillEffect", A: thief.ID, B: victim.ID, S: "trom_kiem_hit", N: got,
 			X: float32(victim.Pos.X), Y: float32(victim.Pos.Y)})
 	}
-	return 0, 0
+	return 0, 0 // cả hai phía đã xử lý trong này
 }
 
 func (g *Game) stealing(p *Player) bool { return p.StealUntil > g.Time }

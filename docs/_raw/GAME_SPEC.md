@@ -4,6 +4,10 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.45:** Shipper Gom Đơn tốc chạy ×5 (+4.0 base, trần ×5) (§4.1, §6.3).
+
+**Thay đổi v6.44:** Ông Ba Võng Trộm Kiếm: kiếm ông vẫn bị mẻ khi va (bỏ miễn mẻ), chỉ giữ việc kiếm địch bể bay về ông; làm rõ 'mất chiêu' chỉ khi khiên đỡ đòn (§6.3).
+
 **Thay đổi v6.43:** xếp hạng phòng & danh hiệu theo cảnh giới → Uy Danh → EXP; bỏ +1 Uy Danh/giây khi giữ Top 1 (top1_secs vẫn đếm, chỉ hiện ở Tổng kết) (§11.1–§11.3).
 
 **Thay đổi v6.42:** ngưỡng Nam Châm ≤ 2,0× (Q47, chấp nhận số đo 6 lượt); bỏ khoá minh hoạ monster_value_mult không tồn tại.
@@ -371,9 +375,9 @@ giá_trị = base × (1 + Σ phần_thưởng − Σ phần_phạt)        // KH
 | Chỉ số | base | Các khoản cộng | Trần |
 |---|---|---|---|
 | Bán kính nhặt đồ | **90 × scale** (to theo đúng tỉ lệ thân: Luyện Khí 90 → Đạo Tổ 540) | nội tại nhân vật (§6.4) · Nam Châm **+0.5** · Gom Đơn (Shipper) +0.1 — **% của bán kính hiện tại theo cảnh giới** | ×2 của 90 × scale |
-| Tốc chạy | 195 | nội tại nhân vật · Thần Hành +0.4 · Thiêu Đốt +0.8 · Gom Đơn +2.0 · gió ±; bùn −0.4, tuyết −0.2 | ×2 (×3 khi Gom Đơn), sàn ×0.4 |
+| Tốc chạy | 195 | nội tại nhân vật · Thần Hành +0.4 · Thiêu Đốt +0.8 · Gom Đơn **+4.0** · gió ±; bùn −0.4, tuyết −0.2 | ×2 (**×5 khi Gom Đơn**), sàn ×0.4 |
 | Tốc quay kiếm ω | 2π/1s | nội tại nhân vật · Tốc Kiếm +0.6 | ×2 |
-| Độ bền kiếm khi va (D) | `1.2^r` | nội tại nhân vật · Cương Kiếm +0.5 · Gồng Cơ +1.0 · (Trộm Kiếm của Ông Ba: không mẻ) | — |
+| Độ bền kiếm khi va (D) | `1.2^r` | nội tại nhân vật · Cương Kiếm +0.5 · Gồng Cơ +1.0 | — |
 | EXP nhận | giá trị viên/quái | Song Bội Đan +1.0 | — |
 
 Ví dụ bán kính nhặt đồ (v6.40):
@@ -437,9 +441,9 @@ angle(i, k, t)    = phase + dir * ω * t + slot_angle(i) + stagger(k)
 
 ```
 move_speed = 195 × clamp(1 + Σ thưởng + Σ phạt, 0.4, trần)        // CỘNG trên base, KHÔNG nhân dồn
-  thưởng: Thần Hành +0.4 · Thiêu Đốt +0.8 · Gom Đơn (Shipper) +2.0 · theo gió +0.5
+  thưởng: Thần Hành +0.4 · Thiêu Đốt +0.8 · Gom Đơn (Shipper) +4.0 · theo gió +0.5
   phạt:   bùn −0.4 · bờ tuyết −0.2 · ngược gió −0.2 · hiệu ứng làm chậm của kỹ năng (theo kỹ năng)
-  trần:   2.0 (×2 base) bình thường · 3.0 khi Shipper đang Gom Đơn
+  trần:   2.0 (×2 base) bình thường · 5.0 khi Shipper đang Gom Đơn (v6.45)
   cùng một nguồn không cộng 2 lần (nhặt 2 Thần Hành = vẫn +0.4); mặt băng: quán tính tính sau, không đổi trần
 camera: chiều cao vùng nhìn thấy (đơn vị thế giới) = max(900 * scale^0.85, 2.6 * reach)
 ```
@@ -645,13 +649,13 @@ Mỗi nhân vật có **1 kỹ năng riêng**, **tự hồi** theo thời gian, 
 |---|---|---|---|---|
 | A Hớn Bánh Bao | **Bánh Bao Thần** | Ăn 1 cái bánh bao: **hồi ngay 20% số kiếm tối đa** của cảnh giới hiện tại (không vượt tối đa, lấp vào vòng trong trước), ợ một tiếng to | 30s | 2 |
 | Bà Tám Loa | **Loa Phường** | Hét vào loa: sóng âm **toả tròn 360°** bán kính **6 U**, **đẩy lùi mọi địch xung quanh** ra **6 U** (theo U của Bà Tám) và làm vòng kiếm của họ **đổi chiều**. Mạnh nhất khi tranh Đài Tiên Khí, Rương Báu, xác vừa nổ đồ — dọn sạch quanh mình rồi nhặt | 18s | 2 |
-| Ông Ba Võng | **Ru Ngủ Trưa — Trộm Kiếm** | Hát ru 1 câu (đứng yên 0.5s, bị chém trúng thì mất chiêu) rồi nằm võng **4s**: (1) mọi địch trong **4 U** **ngủ gục 2.5s** (không di chuyển/kỹ năng/Thiêu Đốt; kiếm vẫn quay và đánh trả); (2) trong 4s đó **kiếm của Ông Ba không bị mẻ** khi va kiếm, và **mỗi thanh kiếm của đối thủ bị bể khi va với Ông Ba bay về nhập vòng của ông** (tới trần; dư rơi Bó Kiếm). Ông Ba vẫn di chuyển được trên võng | 25s | 2 |
+| Ông Ba Võng | **Ru Ngủ Trưa — Trộm Kiếm** | Hát ru 1 câu (đứng yên 0.5s; nếu bị chém trúng mà có khiên Kim Cang đỡ thì mất chiêu) rồi nằm võng **4s**: (1) mọi địch trong **4 U** **ngủ gục 2.5s** (không di chuyển/kỹ năng/Thiêu Đốt; kiếm vẫn quay và đánh trả); (2) trong 4s đó, va kiếm **tính bình thường hai chiều — kiếm Ông Ba vẫn bị mẻ** theo độ bền (v6.44), nhưng **mỗi thanh kiếm của đối thủ bị bể khi va với Ông Ba bay về nhập vòng của ông** (tới trần; dư rơi Bó Kiếm). Ông Ba vẫn di chuyển được trên võng | 25s | 2 |
 | Đại Ca Dép Tổ Ong | **Gọi Đàn Em** | Huýt sáo gọi 2 đàn em (NPC nhỏ hơn đại ca 30%, cùng cảnh giới) chạy theo **8s**, bám quanh đại ca trong **3 U**, tìm đối thủ trong **8 U**. **Mỗi đàn em có số kiếm = 30% số kiếm hiện tại của đại ca** (giảm từ 50% — tỉ lệ thắng cũ 87%) (làm tròn xuống, tối thiểu 1, xếp vòng như người chơi), lao vào mài kiếm đối thủ gần nhất. Đàn em không chém thân được, không nhặt đồ, không qua cổng; hết kiếm hoặc hết giờ thì biến mất (khói + câu "Đại ca ơi em đi đây"). Đại ca không bị trừ kiếm khi gọi | 40s | 1 |
 | Thằng Mập Trà Sữa | **Phun Trân Châu (bịt mắt)** | Phun 1 loạt trân châu hình nón 45° dài **8 U** phía trước. Người trúng **bị mù 5s**: màn hình dính đầy trân châu, **không nhặt được gì**, và **kiếm của họ không chém trúng thân bất kỳ ai** (vẫn va kiếm, vẫn mài kiếm bình thường — chỉ không giết được người). Dùng để thoát thân hoặc cứu đồng đội đang còn 1 vòng | 20s | 2 |
 | Cô Ba Gánh Hàng | **Bày Hàng Chặn Lối** | Quăng gánh bày ra **1 dãy 5 sạp hàng** hình vòng cung, cách **3 U** theo hướng đang nhắm (chuột / hướng joystick), dài **6 U**, tồn tại **6s**. Sạp là **vật cản tạm** có bậc = **cảnh giới Cô Ba + 1** (tối đa 13): người **cùng cảnh giới hoặc thấp hơn** không chém được, phải đi vòng; Cô Ba **tự đi xuyên** sạp của mình → bỏ chạy chắc chắn trước người ngang cấp. Dọc chân dãy sạp rải **vỏ chuối** rộng **1 U**: địch dẫm phải → **trượt theo quán tính 1s và choáng**. Sạp không đặt đè lên người (đoạn nào trùng người thì bỏ trống đoạn đó). Dùng để chặn đường chạy của con mồi, chắn lối vào Đài, hoặc đặt sau lưng khi bỏ chạy | 22s | 2 |
 | Sư Phụ Mì Gói | **Hút Mì Đoạt Kiếm** | Ném sợi mì vào **1 địch gần nhất** trong nón 60° dài **5 U**, rồi húp "sùn sụt": **cướp 25% số kiếm hiện có** của họ (lấy từ vòng ngoài cùng), kiếm bay dọc sợi mì về **nhập vào vòng của Sư Phụ** (không vượt tối đa; tối đa cướp = 20% kiếm tối đa của Sư Phụ). Phần cướp vượt trần thì rơi xuống đất thành Bó Kiếm. Không có ai trong nón → sợi mì hụt, vẫn mất lượt | 30s | 2 |
 | Bé Tí Cơ Bắp | **Gồng Cơ** | Gồng **4s** (giảm từ 5s — tỉ lệ thắng cũ 85%): độ bền kiếm **× 2** (cộng với Cương Kiếm theo §4.0: cả hai = +1.5), không bị đẩy lùi/chậm/trói | 35s | 1 |
-| Anh Shipper Tia Chớp | **Gom Đơn Hỏa Tốc** | 4s: tốc chạy **+2.0 base** (trần ×3, §4.1), **đi xuyên mọi vật cản** (trừ biên), **miễn mọi khống chế** (chậm, trói, choáng, ngủ, đẩy lùi), và **bán kính nhặt đồ +10% base** (` +0.1 base, **cộng dồn** với cảnh giới và Nam Châm theo §4.0). Hết giờ mà kẹt trong vật cản → đẩy mượt ra chỗ trống gần nhất 0.3s. Điểm mạnh: chạy nhanh nhất game + xuyên vật cản + miễn khống chế để tới Đài / xác vừa nổ đồ trước người khác | 20s | 2 |
+| Anh Shipper Tia Chớp | **Gom Đơn Hỏa Tốc** | 4s: tốc chạy **+4.0 base** (= **×5**, trần ×5, §4.1), **đi xuyên mọi vật cản** (trừ biên), **miễn mọi khống chế** (chậm, trói, choáng, ngủ, đẩy lùi), và **bán kính nhặt đồ +10% base** (` +0.1 base, **cộng dồn** với cảnh giới và Nam Châm theo §4.0). Hết giờ mà kẹt trong vật cản → đẩy mượt ra chỗ trống gần nhất 0.3s. Điểm mạnh: chạy nhanh nhất game + xuyên vật cản + miễn khống chế để tới Đài / xác vừa nổ đồ trước người khác | 20s | 2 |
 | Cụ Rùa Thiền | **Rụt Cổ** | Rụt vào mai **5s**: đứng yên, **không bị bể kiếm, không bị chém thân**; ra khỏi mai bật sóng bán kính **2 U**, đẩy địch ra **3 U** | 30s | 2 |
 
 Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ hệ số:
@@ -703,7 +707,7 @@ Ngoài ra trên màn hình **người bị trúng**: icon trạng thái + giây 
 |---|---|---|---|
 | A Hớn — Bánh Bao Thần | Không (tự thân) | Hơi nóng bốc lên + **kiếm mới bay từ cái bánh vào vòng** từng thanh, số "+N kiếm" bay lên | Ợ một tiếng, khói tan |
 | Bà Tám — Loa Phường | Vòng sóng âm 360° lan từ tâm ra 6 U | Mỗi người bị đẩy: vệt bụi kéo dài theo hướng bị đẩy + icon 📢 nhỏ; vòng kiếm loé khi đổi chiều | Sóng mờ dần |
-| Ông Ba — Ru Ngủ Trưa / Trộm Kiếm | Vòng tím nhạt 4 U, nốt nhạc bay ra | Người ngủ: "zzz" + bong bóng mũi + icon 💤 đếm 2.5s; **Ông Ba**: võng đung đưa + viền tím quanh vòng kiếm 4s; mỗi thanh kiếm bị trộm **bay vệt tím từ nạn nhân về vòng ông** | Võng biến mất, "ngáp" |
+| Ông Ba — Ru Ngủ Trưa / Trộm Kiếm | Vòng tím nhạt 4 U, nốt nhạc bay ra | Người ngủ: "zzz" + bong bóng mũi + icon 💤 đếm 2.5s; **Ông Ba**: võng đung đưa + viền tím quanh vòng kiếm 4s (kiếm ông vẫn mẻ bình thường); mỗi thanh kiếm bị trộm **bay vệt tím từ nạn nhân về vòng ông** | Võng biến mất, "ngáp" |
 | Đại Ca — Gọi Đàn Em | Không | 2 đàn em chạy từ mép màn hình vào, mỗi đứa có thanh đếm ngược 8s trên đầu + vòng kiếm màu tím sẫm khác đại ca | Đàn em biến mất trong khói + "Đại ca ơi em đi đây" |
 | Thằng Mập — Phun Trân Châu | Nón 45° × 8 U, hạt trân châu bay | Người mù: **lớp trân châu dính trên vòng kiếm** + icon 🧋 đếm 5s; trên màn hình nạn nhân: trân châu dính kính (đã có) | Trân châu rơi lả tả |
 | Cô Ba — Bày Hàng Chặn Lối | Dãy 5 khung sạp nhấp nháy 0.3s trước khi bật lên | Sạp có **tấm bạt cam** + thanh đếm 6s nhỏ; vỏ chuối vàng dọc chân sạp; người trượt: vệt trượt + sao choáng 1s | Sạp sụp + vỏ chuối mờ |
@@ -745,7 +749,7 @@ Mỗi nhân vật có **nội tại** chỉnh nhẹ 4 chỉ số gốc. Nội t�
 - Cơ chế tự vào lại khi trang bị tải lại (vd mất WebGL trên điện thoại, `pendingRejoin`) **chỉ áp dụng khi người chơi còn sống**; nếu ván đã kết thúc vì chết thì sau khi tải lại phải hiện lại màn hình Tổng kết, không tự vào trận.
 - Bot chết vẫn theo luật hồi sinh/rút bot ở §9.3 (bot không có màn hình Tổng kết).
 
-- **Rơi kiếm khi chết** (người và bot, v6.40): rơi **tổng số kiếm nạn nhân đã bị bể trong 10 giây trước khi chết** (bể do va kiếm, kể cả Ông Ba "không mẻ" thì phía đối thủ vẫn tính), **cộng số kiếm còn trên người lúc chết**.
+- **Rơi kiếm khi chết** (người và bot, v6.40): rơi **tổng số kiếm nạn nhân đã bị bể trong 10 giây trước khi chết** (bể do va kiếm), **cộng số kiếm còn trên người lúc chết**.
   - **Không tính** kiếm đã bị **cướp** (Hút Mì, Trộm Kiếm) — số đó đã sang người khác, tính lại là nhân đôi.
   - Server giữ sổ "kiếm bể 10 giây gần nhất" cho mỗi người (cửa sổ trượt).
   - Văng thành Bó Kiếm quanh xác: **tối đa 12 bó**, số kiếm chia đều cho các bó (bó có thể > 10 kiếm khi nạn nhân mất nhiều); trần tổng = số kiếm tối đa của cảnh giới nạn nhân.
@@ -1564,7 +1568,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "clash_unit": 1, "flip_only_same_realm": true, "clash_knockback": 0, "clash_cooldown": 0, "body_hit_max_rings": 1, "drop_bundle_max": 10,
     "durability_per_realm": 1.2, "durability_mode": "compound"
   },
-  "speed": { "mode": "additive", "cap": 2.0, "cap_gom_don": 3.0, "floor": 0.4, "haste": 0.4, "burn": 0.8, "gom_don": 2.0, "wind_with": 0.5, "wind_against": -0.2, "mud": -0.4, "snow": -0.2 },
+  "speed": { "mode": "additive", "cap": 2.0, "cap_gom_don": 5.0, "floor": 0.4, "haste": 0.4, "burn": 0.8, "gom_don": 4.0, "wind_with": 0.5, "wind_against": -0.2, "mud": -0.4, "snow": -0.2 },
   "player": {
     "body_r": 30, "move_base": 195, "move_scale_sqrt": false, "pickup_r": 90,
     "invuln_on_hit": 1.0, "invuln_on_spawn": 5.0,
@@ -1724,7 +1728,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Grep code: không còn chỗ nào nhân 2 hệ số buff/kỹ năng/địa hình với nhau cho cùng một chỉ số; mọi chỉ số đi qua 1 hàm `stat(base, bonuses, cap)` dùng chung server + client.
 
 - [ ] Bà Tám dùng Loa: mọi địch trong 6 U ở mọi hướng bị đẩy ra 6 U + đổi chiều vòng kiếm.
-- [ ] Ông Ba Võng trong 4s Trộm Kiếm: va kiếm với người cùng cảnh giới → Ông Ba không mất kiếm, đối thủ mất kiếm và Ông Ba +đúng số đó (tới trần, dư rơi Bó Kiếm).
+- [ ] Ông Ba Võng trong 4s Trộm Kiếm: va kiếm với người cùng cảnh giới → cả hai mất kiếm như thường; đối thủ mất bao nhiêu thì Ông Ba +đúng số đó (tới trần, dư rơi Bó Kiếm) — ông lãi ròng khi mài nhau, không còn miễn mẻ.
 
 - [ ] Người thật bị chém chết → rời phòng ngay, màn hình Tổng kết; chờ 2 phút không tự vào lại; tải lại trang vẫn ở Tổng kết; bấm "Chơi tiếp" mới vào trận (Luyện Khí 1).
 
@@ -1738,7 +1742,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Người có Kim Cang bị chém → không chết, khiên vỡ.
 - [ ] Đạo Tổ bị chém → chết, rơi 30% Tiên khí; người chém Tiên giới nhận 30% nhưng không lên quá 1 cảnh giới Tiên.
 
-- [ ] Thần Hành + Thiêu Đốt + theo gió → tốc ×2.0 (không phải ×3.78); Shipper Gom Đơn + mọi buff → ≤ ×3.0; Thiêu Đốt trong bùn → ×1.4.
+- [ ] Thần Hành + Thiêu Đốt + theo gió → tốc ×2.0 (không phải ×3.78); Shipper Gom Đơn → ×5.0 (cộng thêm buff khác vẫn kẹp ×5.0); Thiêu Đốt trong bùn → ×1.4.
 - [ ] Không còn vật phẩm Bí Kíp trên bản đồ. Kỹ năng tự hồi đúng bảng, tích đủ số lượt, Tiên giới +1 lượt; vào trận có 1 lượt.
 
 - [ ] Bot mới sinh luôn Luyện Khí 1, 1 kiếm, không buff.
