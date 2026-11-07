@@ -367,6 +367,30 @@ khung chạy nhanh đều bị chấm là nhảy cóc (ra 260/1 200). Lần hai 
 thời gian khung — một khung kẹt 100 ms thì đi 97 đơn vị là ĐÚNG. Chỉ sau khi có **mốc so
 sánh không bật kỹ năng** (0 khung hỏng, trung vị 185 đv/s đúng tốc đi bộ) mới tin được số.
 
+### 07/11 (chiều) — Q48 bước 1 xong, bước 2 hoàn tác · lịch dọn Docker hàng tuần
+
+**Lịch dọn Docker**: `crontab` của người dùng, 04:00 Chủ nhật hàng tuần —
+`docker system prune -af --filter "until=168h"`, log ở `~/.local/state/docker-prune.log`.
+Chỉ xoá image không container nào dùng và quá 7 ngày; **không đụng volume**. Runner CI tự
+host bơm ~45 GB image không dùng mỗi hai ngày, đó là thứ làm đầy ổ hai lần trong tuần.
+
+**Q48 bước 1 — `interp_ms` 100 → 150**: số khung nhảy cóc giảm 5–10 lần (2,67–3,83% → 
+0,25–2,23%) nhưng **chưa về 0**, nên Q48 vẫn mở. Chi tiết số đo ở PERF_LOG lượt #31.
+
+**Q48 bước 2 — hoàn tác.** Viết đúng mô tả (ngoại suy tối đa 100 ms, kéo mượt 100 ms, nhảy
+thẳng khi lệch > 300 đv, áp cho người khác + quái) nhưng hai bản đều tệ hơn nền: bản 1 ra
+16,5% khung nhảy cóc vì gieo khoản lệch mỗi gói (20 lần/giây) nên entity đứng lệch vĩnh
+viễn và chạy đuổi; bản 2 sửa chỗ gieo thì entity đứng im hẳn. Hoàn tác thay vì đẩy netcode
+nửa vời lên server.
+
+**Hai cái bẫy của quy trình, ghi lại để khỏi lặp:**
+- Đổi code client thì **phải `npm run build`** trước khi đo — server dev chỉ phục vụ
+  `client/dist`. Hai lượt đo đầu của bước 2 chạy trên bundle cũ, ra số y hệt nền, suýt kết
+  luận "bước 2 không ảnh hưởng gì".
+- Bài đo phải giữ mục tiêu **trong khung nhìn**: để Shipper chạy 2 giây liền ở 975 đv/s là
+  đi 1 950 đơn vị, 84% số khung không thấy ai. Nay mỗi lượt chạy 0,7 giây và nạp lại lượt
+  kỹ năng bằng phím `G` để gần như cả cửa sổ đo là chạy nhanh.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở

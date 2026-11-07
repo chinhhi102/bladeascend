@@ -35,7 +35,10 @@ import { requireDebug } from './needdebug.mjs';
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const WATCH_MS = Number(process.env.WATCH_MS ?? 20000);
 const NO_SKILL = process.env.NO_SKILL === '1'; // mốc so sánh: cùng kịch bản nhưng KHÔNG bật Gom Đơn
-const JUMP_MULT = 1.5; // vẽ nhanh hơn trần tốc 1,5 lần = client giật tới trước, không phải nội suy
+const JUMP_MULT = 1.5;
+// Mỗi lượt chạy một hướng. Ngắn, vì 975 đv/s giữ 2 giây là đi 1 950 đơn vị — vượt khỏi
+// khung nhìn của người đứng xem và 84% số khung không thấy ai (lượt đo hỏng đầu tiên).
+const LEG_MS = Number(process.env.LEG_MS ?? 700); // vẽ nhanh hơn trần tốc 1,5 lần = client giật tới trước, không phải nội suy
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const cfg = await (await fetch(`${TARGET}/api/config`)).json();
@@ -76,18 +79,26 @@ if (!shipperID) {
   throw new Error('không lấy được id của Shipper');
 }
 
-// Shipper: bật Gom Đơn rồi chạy qua lại. Kỹ năng 4 s, hồi 20 s, vào trận có 1 lượt — nên
-// cứ bấm đều, lượt nào sẵn thì nổ, lượt nào chưa thì vẫn chạy để có mẫu nền so sánh.
+// Shipper: giữ Gom Đơn bật GẦN NHƯ LIÊN TỤC rồi chạy qua lại.
+//
+// Kỹ năng 4 s, hồi 20 s, vào trận 1 lượt — để tự nhiên thì trong 20 giây đo chỉ có 4–8 giây
+// chạy nhanh, và tỉ lệ đó đổi từng lượt chạy. Lượt đo đầu tôi dính đúng cái đó: cùng một
+// cấu hình mà trung vị tốc nhảy từ 641 xuống 250 đv/s, số khung hỏng thành ra không so
+// được với nhau. Phím debug `G` nạp đầy lượt nên cứ 4 giây bật lại một lần: gần như cả cửa
+// sổ đo là chạy nhanh, hai lần chạy mới so được. Mỗi lượt chạy chỉ `LEG_MS` để anh ta
+// không rời khung nhìn — xem ghi chú ở `LEG_MS`.
 const drive = (async () => {
   const t0 = Date.now();
+  let dir = 0;
   while (Date.now() - t0 < WATCH_MS) {
-    if (!NO_SKILL) await shipper.keyboard.press('Space');
-    for (const key of ['KeyD', 'KeyA']) {
-      await shipper.keyboard.down(key);
-      await sleep(2000);
-      await shipper.keyboard.up(key);
-      if (Date.now() - t0 >= WATCH_MS) break;
+    if (!NO_SKILL) {
+      await shipper.keyboard.press('KeyG'); // nạp đầy lượt kỹ năng
+      await shipper.keyboard.press('Space');
     }
+    const key = ['KeyD', 'KeyA'][dir++ % 2];
+    await shipper.keyboard.down(key);
+    await sleep(LEG_MS);
+    await shipper.keyboard.up(key);
   }
 })();
 
@@ -128,8 +139,11 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
   }
   fast.sort((a, c) => a - c);
   const pct = (q) => (fast.length ? +fast[Math.floor((fast.length - 1) * q)].toFixed(0) : 0);
+  const thay = frames - missing;
   return {
     frames,
+    khungThay: thay,
+    tyLeNhayCoc: thay ? +(100 * nhayCoc / thay).toFixed(2) : 0,
     tocTrungVi: pct(0.5),
     tocP99: pct(0.99),
     nhanhNhat: +nhanhNhat.toFixed(0),
@@ -152,5 +166,5 @@ await b.close();
 const ok = res.hienLai2s === 0 && res.nhayCoc === 0;
 console.log(ok
   ? `ĐẠT: nhìn từ tab khác, Shipper Gom Đơn trôi đều — nhanh nhất ${res.nhanhNhat} đv/s (trần ${res.tranToc}), 0 nhảy cóc, 0 dựng lại`
-  : `TRƯỢT: nhảy cóc ${res.nhayCoc} khung (nhanh nhất ${res.nhanhNhat} đv/s, trần ${res.tranToc}), dựng lại ${res.hienLai2s} lần`);
+  : `TRƯỢT: nhảy cóc ${res.nhayCoc}/${res.khungThay} khung thấy được (${res.tyLeNhayCoc}%, nhanh nhất ${res.nhanhNhat} đv/s, trần ${res.tranToc}), dựng lại ${res.hienLai2s} lần`);
 process.exit(ok ? 0 : 1);

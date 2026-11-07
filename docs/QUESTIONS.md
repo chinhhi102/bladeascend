@@ -6,38 +6,45 @@
 Bối cảnh chung: lượt cuối 01/11/2026; cập nhật 02/11: Q37–Q42 đã xong (spec v6.35). Chi tiết từng dòng: `docs/SPEC_AUDIT_v630.md`.
 Mỗi câu ghi **phương án đang dùng** (an toàn, không đổi luật) — anh chỉ cần trả lời nếu muốn khác.
 
-## Q48 — Nhìn người chạy Gom Đơn từ tab khác: đứng hình rồi nhảy cóc (CÓ TỪ TRƯỚC v6.45)
+## Q48 — Nhảy cóc khi nhìn người chạy nhanh từ tab khác (CÒN MỞ — bước 1 xong, chưa đạt)
 
-**Bối cảnh**: nghiệm thu v6.45 có dòng "nhìn Shipper đang Gom Đơn từ một tab khác — không
-giật, không nhảy cóc". Tôi viết bài đo `tools/browsertest/gomdon-smooth.mjs`: một tab đứng
-xem, một tab chạy Shipper; lấy mẫu vị trí VẼ RA mỗi khung, chuẩn hoá theo thời gian khung
-rồi so với trần tốc `move_base × cap_gom_don`.
+**Chốt của chủ dự án 07/11**: làm theo bước, đo lại sau mỗi bước, đạt (0 nhảy cóc, 0 đứng
+hình) thì dừng. Không đổi `snapshot_hz`.
 
-| Kịch bản | Trần tốc | Tốc vẽ lớn nhất | Khung nhảy cóc | Khung đứng hình | Dựng lại entity |
-|---|---:|---:|---:|---:|---:|
-| Đi bộ, KHÔNG Gom Đơn | 975 | 606 | **0** | 0 | 0 |
-| Gom Đơn, cấu hình CŨ ×3 | 585 | 3 025 (5,2× trần) | **40** | 95 | 0 |
-| Gom Đơn, cấu hình MỚI ×5 | 975 | 4 979 (5,1× trần) | **23** | 56 | 0 |
+**Bước 1 — `interp_ms` 100 → 150: ĐÃ LÀM, có tác dụng rõ, nhưng CHƯA ĐẠT.**
 
-**v6.45 KHÔNG gây ra lỗi này** — cấu hình cũ ×3 còn nhiều khung hỏng hơn, và tỉ lệ vượt
-trần gần như y nhau (5,2× so với 5,1×). Đây là lỗi có sẵn, chỉ là chưa ai đo.
+| Bản | Khung nhảy cóc / 1 200 | Đứng hình |
+|---|---|---|
+| `interp_ms` 100 (nền), 2 lượt | 32 và 46 (**2,67% · 3,83%**) | 32 · 24 |
+| **`interp_ms` 150, 4 lượt** | 3–21 (**0,25% – 2,23%**) | 4–59 |
 
-**Không phải do va chạm phía client**: `moveStep` (bản port của `resolveBlocking`) chỉ chạy
-cho CHÍNH MÌNH (`state.ts:617`), người khác thuần nội suy. Đối chiếu va chạm client↔server
-vẫn **lệch 0,0000 đơn vị**.
+Giảm 5–10 lần nhưng không về 0. Đang chạy với 150.
 
-**Nghi nhất là kho nội suy cạn**: `interp_ms` 100 với `snapshot_hz` 20 (một gói mỗi 50 ms)
-chỉ dư đúng một gói. Số liệu khớp: khung đứng hình và khung nhảy cóc đi theo cặp
-(56 ↔ 23, 95 ↔ 40) — giữ nguyên vị trí vì hết gói, rồi bù một nhát khi gói tới. Ở tốc đi bộ
-một nhát bù là vài đơn vị nên không ai thấy; ở 975 đv/s nó là hàng chục đơn vị.
+**Bước 2 — ĐÃ THỬ HAI BẢN, CẢ HAI TỆ HƠN, ĐÃ HOÀN TÁC.**
 
-**Phương án đang dùng**: không đổi gì. Đây là chỉnh netcode (§NETCODE_SPEC), không nằm
-trong v6.44/v6.45, và tôi không tự ý đụng vào nhịp mạng.
+Viết đúng như anh mô tả: kho cạn thì ngoại suy theo vận tốc cuối tối đa 100 ms rồi đứng
+chờ; gói mới tới mà lệch thì kéo mượt về trong 100 ms, lệch > 300 đv mới nhảy thẳng; áp cho
+người khác + quái, không áp cho mình.
 
-**Hướng xử lý nếu anh muốn làm** (cần đo lại sau mỗi hướng):
-1. **Nâng `interp_ms` lên 150** — dư hai gói thay vì một. Đổi một số, rủi ro thấp nhất; cái
-   giá là người khác hiện trễ thêm 50 ms.
-2. **Nâng `snapshot_hz` lên 30** (bằng `tick_hz`) — mượt nhất, nhưng tốn băng thông; phải đo
-   lại §B3b trong PERF_LOG trước khi chốt.
-3. **Ngoại suy khi hết gói**: client tự đoán tiếp theo vận tốc cuối thay vì đứng im. Mượt mà
-   không tốn mạng, nhưng đoán sai thì giật kiểu khác — việc lớn nhất trong ba hướng.
+- **Bản 1**: 16,5% khung nhảy cóc (nền 2,7%), tốc vẽ trung vị **1 281 đv/s vượt trần 975**.
+  Nguyên nhân: gieo khoản lệch mỗi lần có gói mới (20 lần/giây), khoản cũ chưa tiêu hết đã
+  bị thay → entity đứng lệch vĩnh viễn và chạy đuổi.
+- **Bản 2**: chỉ gieo khi không còn khoản nào đang tiêu và lệch > 2 đv → entity **đứng im
+  hẳn** trên màn người xem.
+
+Tôi hoàn tác cả hai thay vì đẩy netcode nửa vời lên `:9999`.
+
+**Cần anh quyết hai việc:**
+
+1. **Làm tiếp bước 2 thế nào?** Đề nghị: viết **bài đo đơn vị cho riêng `followSnaps`**
+   trước (bơm một chuỗi gói giả có lỗ hổng, canh quỹ đạo ra), rồi mới ráp vào client. Hai
+   lần vừa rồi tôi thử thẳng trên trình duyệt nên mỗi vòng mất ~10 phút và không nhìn thấy
+   trạng thái bên trong. Hoặc anh muốn dừng ở bước 1 và chấp nhận 0,25–2,2%?
+2. **Chưa đưa `gomdon-smooth.mjs` vào cổng trước deploy** như anh dặn, vì hai lẽ: ngưỡng
+   "0 nhảy cóc" sẽ chặn **mọi** lần deploy kể từ hôm nay (hiện 0,25–2,2%), và bài này cần
+   một server dev riêng + trình duyệt nên không chạy chung được với các `check:*` thuần
+   Node. Chạy tay: `cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9998
+   -debug=true` rồi `node tools/browsertest/gomdon-smooth.mjs http://127.0.0.1:9998`.
+   Anh muốn tôi đặt ngưỡng tạm theo mức hiện tại (vd ≤ 3%) để nó bắt được thoái lui, hay
+   chờ bước 2 xong mới gắn?
+

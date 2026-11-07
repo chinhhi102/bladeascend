@@ -63,3 +63,8 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 0,2026-11-05,,"Người thật 05/11 12:00 → 05/11 23:30",S6,1.20,7.80,16.2,4.3,14.4,5.5,37.0,58.0,9.5,,0,4316,177.6,0,2.26,,,,"",9
 30,2026-11-06,,Máy quay mượt — wallhug mayQuay 4 lần headless 60 Hz,CAM,,,,,,,,60,,,,,,,,,,,,,,,,"giật đi thẳng 0.17–0.29→0.09–0.15; khung đứng im 2–3%→0%",
 0,2026-11-06,,"Người thật 05/11 23:30 → 06/11 12:00",S6,0.83,5.88,11.5,4.2,7.2,1.4,11.0,58.8,1.5,,0,4860,182.7,0,0.30,,,,"ít mẫu, tham khảo (N=2)",2
+0,2026-11-06,,"Người thật 06/11 12:00 → 06/11 23:30",S6,1.65,10.18,26.9,4.9,15.4,1.6,2.0,59.8,2.3,,0,5076,192.6,0,9.51,,,,"ít mẫu, tham khảo (N=4)",4
+31,2026-11-07,,"Q48 nhảy cóc — nhìn Shipper Gom Đơn ×5 từ tab khác · interp_ms 100 (nền), 2 lượt",NET,,,,,,,,,,,,,,,,,,,,,,,,"nhảy cóc 32 và 46 khung/1200 (2,67% và 3,83%); đứng hình 32 và 24; 0 dựng lại entity; gomdon-smooth.mjs",2
+31,2026-11-07,,"Q48 bước 1 — interp_ms 150, 4 lượt",NET,,,,,,,,,,,,,,,,,,,,,,,,"nhảy cóc 3–21 khung (0,25%–2,23%); đứng hình 4–59; 0 dựng lại. Giảm ~5–10 lần so với nền nhưng CHƯA đạt 0",4
+31,2026-11-07,,"Q48 bước 2 (ngoại suy + kéo mượt) — ĐÃ HOÀN TÁC",NET,,,,,,,,,,,,,,,,,,,,,,,,"bản 1: 16,5% khung nhảy cóc, tốc vẽ trung vị 1281 > trần 975 (gieo lại khoản lệch mỗi gói); bản 2 sửa gieo: entity đứng im. Tệ hơn nền nên hoàn tác",2
+31,2026-11-07,,"Va chạm client↔server sau v6.44/v6.45",COL,,,,,,,,,,,,,,,,,,,,,,,,"1000 bước, lệch lớn nhất 0,0000 đv, quá ngưỡng 0",

@@ -801,6 +801,37 @@ Nút thắt B22: trần `ticker.maxFPS = 60` của Pixi làm tròn `(now-last)|0
 màn 60 Hz, và trên 120/144 Hz vẽ cách 1–2 khung quét xen kẽ. Sửa: `render/framepace.ts` đo
 tần số quét, vẽ đúng mỗi n khung quét. Điện thoại giữ trần 45 (chưa đo máy thật).
 
+### Lượt #31 (07/11) — Q48: nhảy cóc khi nhìn người chạy nhanh từ tab khác
+
+Bài đo `tools/browsertest/gomdon-smooth.mjs`: một tab đứng xem, một tab chạy Shipper bật
+Gom Đơn (975 đv/s). Lấy mẫu vị trí **vẽ ra** mỗi khung, chuẩn hoá theo thời gian khung rồi
+so với trần tốc `move_base × cap_gom_don`. Vẽ nhanh hơn trần 1,5 lần = client giật nhân vật
+tới trước, không phải nội suy.
+
+| Bản | Khung nhảy cóc | Đứng hình | Dựng lại entity |
+|---|---|---|---|
+| `interp_ms` 100 (nền), 2 lượt | 32 và 46 / 1 200 (**2,67% · 3,83%**) | 32 · 24 | 0 |
+| **`interp_ms` 150 (bước 1), 4 lượt** | 3–21 (**0,25% – 2,23%**) | 4–59 | 0 |
+| Bước 2 bản 1 (ngoại suy + kéo mượt) | **16,5%** — tệ hơn hẳn | 279–369 | 0 |
+| Bước 2 bản 2 (sửa chỗ gieo lệch) | entity đứng im hẳn | – | 0 |
+
+**Chốt: giữ bước 1, hoàn tác bước 2.** `interp_ms` 150 giảm số khung nhảy cóc **5–10 lần**
+nhưng chưa về 0 — mục tiêu Q48 chưa đạt, Q48 vẫn mở.
+
+Vì sao bước 2 hỏng, ghi lại để lần sau khỏi đi vào: bản 1 gieo khoản lệch mỗi lần có gói
+mới (20 lần/giây), khoản cũ chưa tiêu hết đã bị thay — entity đứng lệch vĩnh viễn và chạy
+đuổi, tốc vẽ trung vị vọt lên **1 281 đv/s so với trần 975**. Bản 2 chỉ gieo khi không còn
+khoản nào đang tiêu và lệch > 2 đơn vị, thì entity đứng im hẳn. Chuyện làm mượt sai số nội
+suy khó hơn vẻ ngoài của nó; làm tiếp thì phải có bài đo đơn vị cho riêng `followSnaps`
+trước, đừng thử thẳng trên trình duyệt như tôi vừa làm.
+
+**Một cái bẫy của quy trình**: hai lượt đo đầu của bước 2 chạy trên **bundle client CŨ** vì
+tôi quên `npm run build` — số ra y hệt bản nền và suýt kết luận "bước 2 không ảnh hưởng gì".
+Đổi code client thì phải dựng lại bundle trước khi đo, server dev chỉ phục vụ `client/dist`.
+
+Va chạm client↔server sau v6.44/v6.45: 1 000 bước, **lệch lớn nhất 0,0000 đơn vị**, quá
+ngưỡng 0.
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
