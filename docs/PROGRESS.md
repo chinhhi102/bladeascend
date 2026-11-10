@@ -391,6 +391,27 @@ nửa vời lên server.
   đi 1 950 đơn vị, 84% số khung không thấy ai. Nay mỗi lượt chạy 0,7 giây và nạp lại lượt
   kỹ năng bằng phím `G` để gần như cả cửa sổ đo là chạy nhanh.
 
+### 10/11 — Q48 bước 0 (đo) + bước 1 (xong) · bài đơn vị nội suy · cổng trước deploy
+
+**Bước 0 nối được nhân quả**: thêm ba con số chẩn đoán vào `gomdon-smooth.mjs` — kho nội
+suy còn dư, đồng hồ nhảy, khoảng cách gói của chính entity đang xem. **80% khung đứng hình
+trùng đúng lúc kho cạn**; khoảng cách gói trung vị 66 ms (không phải 50), có lúc 167 ms.
+
+**Bước 1 xong**: người chạy nhanh hơn 2× tốc gốc luôn gửi đủ nhịp, kệ khoảng cách
+(`fastMover` trong `broadcast.go`, dùng `MoveSpeed` thật nên kỹ năng mới sau này tự vào
+luật). Gói lớn nhất 167 → **67 ms**, gói cách > 75 ms: 16 → **0**, nhảy cóc còn
+**0,66–0,75%**. Đứng hình vẫn còn 24–34 khung → chưa đạt, Q48 còn bước 2–5.
+
+**Bài đơn vị trước, sửa sau** — `npm run check:interp`: bơm gói giả (dao động ±30 ms, mất
+5%, đồng hồ trôi 2%, đổi tốc ×1 ↔ ×5) rồi canh quỹ đạo vẽ. Hiện đỏ đúng chỗ cần đỏ (3 khung
+đứng hình). `followSnaps` tách ra `client/src/net/interp.ts`. Đây là thứ còn thiếu ở hai lần
+thất bại hôm 07/11 — sửa thẳng trong `state.ts` rồi thử bằng trình duyệt, mỗi vòng 10 phút
+và không thấy trạng thái bên trong.
+
+**Cổng trước deploy**: `gomdon-smooth.mjs` vào `tools/deploy.sh` bước **2b**, ngưỡng tạm
+≤ 3%. Đặt sau bước dựng client — lần đầu tôi đặt trước, tức là kiểm bản cũ, vô nghĩa.
+`SKIP_SMOOTH=1` để bỏ qua trên máy không có Playwright.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở

@@ -25,6 +25,12 @@ const (
 	smallOrbValue  = 20 // "nhỏ" = dưới mức này; viên vừa/lớn và Tiên khí luôn gửi
 	// Người/quái ở xa hơn nửa khung nhìn chỉ gửi 10 Hz thay vì 20 Hz.
 	farRateDivisor = 2
+	// Người chạy nhanh hơn ngần này lần tốc gốc thì LUÔN gửi đủ 20 Hz, kệ khoảng cách
+	// (Q48 bước 1). Đo 10/11: Shipper Gom Đơn (975 đv/s) băng qua ranh giới "nửa khung nhìn"
+	// mấy lần mỗi giây nên nhịp gửi nhảy 20↔10 Hz — khoảng cách gói trung vị ra 66 ms thay
+	// vì 50, có lúc 167 ms. Với `interp_ms` 150 thì kho nội suy cạn, người xem thấy đứng
+	// hình rồi nhảy cóc. Người đi bộ không bị vì 100 ms vẫn nằm gọn trong kho.
+	alwaysFastMult = 2.0
 )
 
 // broadcast sends each client a snapshot filtered by its area of interest (spec §13.3).
@@ -124,7 +130,7 @@ func (r *Room) snapshotFor(z *Zone, c *Client, viewer *game.Player, events []gam
 			continue
 		}
 		known := c.knownPlayers[p.ID] && !asked[p.ID]
-		if known && slow && p.ID != viewer.ID && p.Pos.Dist(viewer.Pos) > half {
+		if known && slow && p.ID != viewer.ID && p.Pos.Dist(viewer.Pos) > half && !fastMover(g, p) {
 			continue
 		}
 		s.Players = append(s.Players, playerState(g, viewer, p, resendNames || !known))
@@ -497,4 +503,12 @@ func daoToMarks(g *game.Game) []netproto.MapMark {
 		out = append(out, netproto.MapMark{X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 	}
 	return out
+}
+
+// fastMover: người này đang chạy nhanh hơn `alwaysFastMult` lần tốc gốc không (Q48 bước 1).
+//
+// Dùng tốc độ THẬT chứ không liệt kê kỹ năng: Gom Đơn, Thiêu Đốt + Thần Hành, hay bất cứ
+// thứ gì sau này đẩy tốc lên đều vào chung một luật, không phải nhớ sửa chỗ này.
+func fastMover(g *game.Game, p *game.Player) bool {
+	return g.MoveSpeed(p) > g.Cfg.Player.MoveBase*alwaysFastMult
 }

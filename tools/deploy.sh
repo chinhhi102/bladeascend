@@ -219,6 +219,26 @@ if ! grep -ql sendBeacon client/dist/static/*.js; then
   exit 1
 fi
 echo "   có telemetry ✓"
+# Q48: nhìn người chạy nhanh từ tab khác có nhảy cóc không. Cần server DEV riêng (window.kx
+# chỉ có khi server cấp quyền debug) nên không chạy chung với các `check:*` thuần Node.
+# Ngưỡng tạm ≤ 3% khung — bắt thoái lui; hạ về 0 khi xong Q48 bước 2–4.
+# Đặt SKIP_SMOOTH=1 để bỏ qua (máy không có Playwright).
+if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwright ]; then
+  echo "== 2b/5 nhìn Shipper Gom Đơn từ tab khác (bản VỪA dựng) =="
+  ( cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9997 -debug=true >/tmp/kx-smooth.log 2>&1 & echo $! > /tmp/kx-smooth.pid )
+  sleep 22
+  if MAX_PCT=3 node tools/browsertest/gomdon-smooth.mjs http://127.0.0.1:9997 2>&1 | tail -2; then
+    :
+  else
+    kill "$(cat /tmp/kx-smooth.pid)" 2>/dev/null || true
+    pkill -f "127.0.0.1:9997" 2>/dev/null || true
+    echo "LỖI: nhảy cóc vượt ngưỡng 3%. Dừng deploy." >&2
+    exit 1
+  fi
+  kill "$(cat /tmp/kx-smooth.pid)" 2>/dev/null || true
+  pkill -f "127.0.0.1:9997" 2>/dev/null || true
+fi
+
 
 echo "== 3/5 build server =="
 ( cd server && go build -o bladeascend ./cmd/server )

@@ -34,6 +34,9 @@ import { requireDebug } from './needdebug.mjs';
 
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const WATCH_MS = Number(process.env.WATCH_MS ?? 20000);
+// Ngưỡng ĐẠT theo TỈ LỆ khung nhảy cóc. Q48 chốt tạm ≤ 3% để bắt thoái lui; hạ về 0 khi
+// xong bước 2–4. Đặt `MAX_PCT=0` để canh tuyệt đối.
+const MAX_PCT = Number(process.env.MAX_PCT ?? 3);
 const NO_SKILL = process.env.NO_SKILL === '1'; // mốc so sánh: cùng kịch bản nhưng KHÔNG bật Gom Đơn
 const JUMP_MULT = 1.5;
 // Mỗi lượt chạy một hướng. Ngắn, vì 975 đv/s giữ 2 giây là đi 1 950 đơn vị — vượt khỏi
@@ -106,6 +109,11 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
   const fast = [];            // tốc độ vẽ (đv/s) của những khung có di chuyển
   let frames = 0, missing = 0, gone = 0, respawn2s = 0, goneAt = -1;
   let nhayCoc = 0, dungHinh = 0, nhanhNhat = 0;
+  let duMin = 1e9, duSum = 0, duN = 0, khoCan = 0;
+  let lastOff = null, offUp = 0, offDown = 0, offJumpMax = 0;
+  const gaps = [];
+  let seenT = 0;
+  let dungHinhKhoCan = 0, nhayCocKhoCan = 0;
   let prev = null, prevT = 0;
   const t0 = performance.now();
   const tick = () => new Promise((r) => requestAnimationFrame(r));
@@ -124,15 +132,39 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
       if (now - goneAt < 2000) respawn2s++;
       goneAt = -1;
     }
+    // --- Q48 bước 0: ba con số chẩn đoán, lấy cùng khung với mẫu vị trí ---
+    const w = window.kx.world;
+    const v = w.players.get(id);
+    const snaps = v?.snaps ?? [];
+    const lastT = snaps.length ? snaps[snaps.length - 1].t : 0;
+    // (a) bộ đệm còn dư bao nhiêu ms so với thời điểm vẽ
+    const du = (lastT - w.renderTime()) * 1000;
+    duMin = Math.min(duMin, du);
+    duSum += du; duN++;
+    if (du <= 0) khoCan++;
+    // (b) độ lệch đồng hồ ước tính (giây) — chỉ cần biết nó NHẢY bao nhiêu
+    const off = w.offset ?? 0;
+    if (lastOff !== null && off !== lastOff) {
+      const jump = (off - lastOff) * 1000;
+      offJumpMax = Math.max(offJumpMax, jump);
+      if (jump > 0) offUp++; else offDown++;
+    }
+    lastOff = off;
+    // (c) tần số gửi thực tế của entity đang xem — khoảng cách giữa hai dấu thời gian gói
+    if (lastT !== seenT) {
+      if (seenT > 0) gaps.push((lastT - seenT) * 1000);
+      seenT = lastT;
+    }
+
     const at = { x: sp.root.x, y: sp.root.y };
     const dt = (now - prevT) / 1000;
     if (prev && dt > 0 && dt < 0.5) {
       const v = Math.hypot(at.x - prev.x, at.y - prev.y) / dt;
       nhanhNhat = Math.max(nhanhNhat, v);
-      if (v > cap * jumpMult) nhayCoc++;
+      if (v > cap * jumpMult) { nhayCoc++; if (du <= 0) nhayCocKhoCan++; }
       if (v > 1) fast.push(v);
       // Đứng hình: khung gần như không nhúc nhích ngay giữa lúc đang chạy nhanh.
-      else if (fast.length && fast[fast.length - 1] > cap * 0.5) dungHinh++;
+      else if (fast.length && fast[fast.length - 1] > cap * 0.5) { dungHinh++; if (du <= 0) dungHinhKhoCan++; }
     }
     prev = at;
     prevT = now;
@@ -150,6 +182,19 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
     tranToc: +cap.toFixed(0),
     nhayCoc,
     dungHinh,
+    // --- chẩn đoán bước 0 ---
+    duTrungBinhMs: duN ? +(duSum / duN).toFixed(1) : 0,
+    duThapNhatMs: duMin < 1e8 ? +duMin.toFixed(1) : 0,
+    khungKhoCan: khoCan,
+    dungHinhLucKhoCan: dungHinhKhoCan,
+    nhayCocLucKhoCan: nhayCocKhoCan,
+    goiTrungViMs: (() => { const g = [...gaps].sort((a, c) => a - c); return g.length ? +g[Math.floor(g.length / 2)].toFixed(0) : 0; })(),
+    goiLonNhatMs: gaps.length ? +Math.max(...gaps).toFixed(0) : 0,
+    goiTren75ms: gaps.filter((x) => x > 75).length,
+    soGoi: gaps.length,
+    dongHoNhichLen: offUp,
+    dongHoLui: offDown,
+    dongHoNhayLonNhatMs: +offJumpMax.toFixed(1),
     bienMat: gone,
     hienLai2s: respawn2s,
     khungKhongThay: missing,
@@ -163,8 +208,8 @@ await b.close();
 
 // ĐẠT khi: không entity nào bị dựng lại trong khung nhìn, và không có nấc nhảy cóc nào.
 // `dungHinh` chỉ để đọc — Shipper có lúc đứng yên thật (giữa hai lần đổi hướng).
-const ok = res.hienLai2s === 0 && res.nhayCoc === 0;
+const ok = res.hienLai2s === 0 && res.tyLeNhayCoc <= MAX_PCT;
 console.log(ok
-  ? `ĐẠT: nhìn từ tab khác, Shipper Gom Đơn trôi đều — nhanh nhất ${res.nhanhNhat} đv/s (trần ${res.tranToc}), 0 nhảy cóc, 0 dựng lại`
-  : `TRƯỢT: nhảy cóc ${res.nhayCoc}/${res.khungThay} khung thấy được (${res.tyLeNhayCoc}%, nhanh nhất ${res.nhanhNhat} đv/s, trần ${res.tranToc}), dựng lại ${res.hienLai2s} lần`);
+  ? `ĐẠT (ngưỡng ≤ ${MAX_PCT}%): nhảy cóc ${res.tyLeNhayCoc}% — nhanh nhất ${res.nhanhNhat} đv/s (trần ${res.tranToc}), 0 dựng lại`
+  : `TRƯỢT (ngưỡng ≤ ${MAX_PCT}%): nhảy cóc ${res.nhayCoc}/${res.khungThay} khung thấy được (${res.tyLeNhayCoc}%, nhanh nhất ${res.nhanhNhat} đv/s, trần ${res.tranToc}), dựng lại ${res.hienLai2s} lần`);
 process.exit(ok ? 0 : 1);

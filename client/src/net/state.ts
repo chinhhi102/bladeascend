@@ -1,5 +1,6 @@
 import { realmOf, type GameConfig } from '../config';
 import { lerp, type Vec } from './geom';
+import { followSnaps, type Track } from './interp.ts';
 import { moveStep } from './movestep.ts';
 import { bonus, innate, stat } from './stat';
 import {
@@ -27,6 +28,8 @@ export interface PlayerView {
   name: string;
   char: string;
   snaps: Timed<PlayerState>[];
+  /** Trạng thái nội suy giữa các khung (net/interp.ts). Chính mình không dùng. */
+  track?: Track;
 }
 
 interface PendingInput {
@@ -71,6 +74,8 @@ export class ClientWorld {
   myId = 0;
   map: GameMap | null = null;
   readonly players = new Map<number, PlayerView>();
+  /** Trạng thái nội suy của quái — quái không có object riêng như người. */
+  private readonly mtracks = new Map<number, Track>();
   readonly monsters = new Map<number, Timed<MonsterState>[]>();
   readonly items = new Map<number, ItemState>();
   readonly brokenObstacles = new Map<number, boolean>();
@@ -648,9 +653,19 @@ export class ClientWorld {
   monsterFrames(): { s: MonsterState; x: number; y: number }[] {
     const rt = this.renderTime();
     const out: { s: MonsterState; x: number; y: number }[] = [];
-    for (const buf of this.monsters.values()) {
-      const { a, b, t } = bracket(buf, rt);
-      out.push({ s: b.s, x: lerp(a.s.x, b.s.x, t), y: lerp(a.s.y, b.s.y, t) });
+    for (const [id, buf] of this.monsters) {
+      let tr = this.mtracks.get(id);
+      if (!tr) {
+        tr = {};
+        this.mtracks.set(id, tr);
+      }
+      const at = followSnaps(buf, rt, tr, { jumpUnits: 600 });
+      out.push({ s: buf[buf.length - 1].s, x: at.x, y: at.y });
+    }
+    for (const id of this.mtracks.keys()) {
+      if (!this.monsters.has(id)) {
+        this.mtracks.delete(id);
+      }
     }
     return out;
   }
@@ -689,11 +704,12 @@ export function omega(cfg: GameConfig, s: PlayerState, char: string): number {
 }
 
 function interpPlayer(v: PlayerView, cfg: GameConfig, rt: number): PlayerFrame {
+  // `bracket` ở đây chỉ để lấy gói nền cho GÓC VÒNG KIẾM; vị trí do `followSnaps` lo.
   const { a, b, t } = bracket(v.snaps, rt);
-  // Large jumps (teleport, respawn) are not interpolated.
-  const jump = Math.hypot(b.s.x - a.s.x, b.s.y - a.s.y) > 600;
-  const k = jump ? 1 : t;
   const base = t >= 1 ? b : a;
   const ringAngle = base.s.ph + base.s.d * omega(cfg, base.s, v.char) * (rt - base.t);
-  return { view: v, s: b.s, x: lerp(a.s.x, b.s.x, k), y: lerp(a.s.y, b.s.y, k), ringAngle };
+  // Vị trí đi qua `net/interp.ts` để bài đơn vị `check:interp` phủ đúng đường đang chạy.
+  v.track ??= {};
+  const at = followSnaps(v.snaps, rt, v.track, { jumpUnits: 600 });
+  return { view: v, s: b.s, x: at.x, y: at.y, ringAngle };
 }

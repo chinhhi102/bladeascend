@@ -832,6 +832,59 @@ tôi quên `npm run build` — số ra y hệt bản nền và suýt kết luậ
 Va chạm client↔server sau v6.44/v6.45: 1 000 bước, **lệch lớn nhất 0,0000 đơn vị**, quá
 ngưỡng 0.
 
+### Lượt #32 (10/11) — Q48 bước 0 (đo) + bước 1 (gửi đủ nhịp cho người chạy nhanh)
+
+**Bước 0 — ba con số chẩn đoán mỗi khung**, lấy cùng lúc với mẫu vị trí (`gomdon-smooth.mjs`
+nay ghi thêm): (a) kho nội suy còn dư bao nhiêu ms so với thời điểm vẽ, (b) đồng hồ ước
+tính nhảy bao nhiêu, (c) khoảng cách giữa hai dấu thời gian gói của chính entity đang xem.
+
+| | Lượt xấu | Lượt tốt |
+|---|---:|---:|
+| Kho dư trung bình (ms) | 53,9 | 113,9 |
+| Kho dư thấp nhất (ms) | **−178,8** | +53,1 |
+| Khung kho cạn | 195 | 0 |
+| Đứng hình **lúc kho cạn** | 67 / 84 (**80%**) | 0 / 24 |
+| Nhảy cóc lúc kho cạn | 39 / 138 (28%) | 0 / 38 |
+| Khoảng cách gói trung vị (ms) | 66 | 67 |
+| Khoảng cách gói lớn nhất (ms) | **167** | 100 |
+| Gói cách > 75 ms | 16 | 1 |
+| Đồng hồ nhảy lên lớn nhất (ms) | 6,8 | 3,6 |
+
+Đọc ra ba thứ:
+1. **Nhịp gửi của entity không phải 20 Hz đều** — trung vị 66 ms, có lúc 167 ms. Nguyên
+   nhân ở `broadcast.go`: người xa hơn nửa khung nhìn chỉ gửi nửa nhịp, mà Shipper 975 đv/s
+   băng qua ranh giới đó mấy lần mỗi giây → nhịp nhảy qua lại.
+2. **80% khung đứng hình trùng đúng lúc kho cạn** — nối được nhân quả, không còn đoán.
+3. **Đồng hồ ước tính nhảy tới 6,8 ms một nhát** (`offset = max(ước tính)`, lùi 0,5 ms mỗi
+   gói). Nhảy lên là ăn thẳng vào kho dư. Đây là việc của bước 2.
+
+**Bước 1 — người chạy > 2× tốc gốc luôn gửi đủ nhịp** (`fastMover` trong `broadcast.go`,
+dùng `MoveSpeed` thật chứ không liệt kê kỹ năng).
+
+| | Trước bước 1 | Sau bước 1 (3 lượt) |
+|---|---:|---:|
+| Khoảng cách gói lớn nhất (ms) | 167 | **67** |
+| Gói cách > 75 ms | 16 | **0** |
+| Nhảy cóc | 38–138 khung (2,7–3,8% nền) | 4–9 khung (**0,66–0,75%**) |
+| Đứng hình | 24–84 | 24–34 |
+
+Nhảy cóc giảm ~4–5 lần nữa so với chỉ có bước 1 của hôm 07/11. **Đứng hình vẫn còn** → chưa
+đạt điều kiện dừng, Q48 còn bước 2–5.
+
+Ghi thêm một thứ đo được, chưa chữa: nhịp gửi dao động **33/67 ms xen kẽ** vì chu kỳ gửi
+50 ms (`snapshot_hz` 20) không chia hết cho nhịp tick 33,3 ms (`tick_hz` 30). Đó là dao
+động có sẵn trong thiết kế, và là lý do bước 3 (tự chỉnh `interp_delay` theo dao động đo
+được) sẽ cần tới.
+
+**Bài đơn vị `npm run check:interp`** (mới): bơm chuỗi gói giả — dao động ±30 ms, mất 5%,
+đồng hồ trôi 2%, đổi tốc ×1 ↔ ×5 — rồi canh quỹ đạo vẽ. Hiện **ĐỎ đúng chỗ cần đỏ**: 0 nhảy
+cóc, **3 khung đứng hình**. Chưa gắn vào `npm run build` vì nó đỏ; gắn vào là chặn deploy.
+`followSnaps` tách ra `client/src/net/interp.ts` để bài này phủ đúng đường đang chạy.
+
+**Cổng trước deploy**: `gomdon-smooth.mjs` vào `tools/deploy.sh` bước 2b, ngưỡng tạm **≤ 3%**
+khung nhảy cóc, chạy trên bản client VỪA dựng (lúc đầu tôi đặt trước bước dựng client nên
+nó kiểm bản cũ — vô nghĩa). Hai lần deploy đầu: 1,00% và 1,35% → ĐẠT.
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
