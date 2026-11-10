@@ -31,12 +31,20 @@
 //   - `bienMat` / `hienLai2s`: entity bị huỷ rồi dựng lại trong khung nhìn (ngân sách §1: 0)
 import { chromium } from 'playwright';
 import { requireDebug } from './needdebug.mjs';
+import { cpus, loadavg } from 'node:os';
 
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const WATCH_MS = Number(process.env.WATCH_MS ?? 20000);
 // Ngưỡng ĐẠT theo TỈ LỆ khung nhảy cóc. Q48 chốt tạm ≤ 3% để bắt thoái lui; hạ về 0 khi
 // xong bước 2–4. Đặt `MAX_PCT=0` để canh tuyệt đối.
 const MAX_PCT = Number(process.env.MAX_PCT ?? 3);
+// Máy chạy quá ngần này lần số nhân thì mọi con số bên dưới là nhiễu máy, không phải hành
+// vi netcode. Đặt `IGNORE_LOAD=1` để vẫn đọc số.
+//
+// Đo tải bằng `loadavg` chứ không bằng thời gian khung của tab xem: 10/11 máy chạy load 39
+// trên 12 nhân mà khung của tab vẫn ~16,7 ms (headless vẽ nhẹ), trong khi cùng một commit
+// cho ra 0,66% rồi 18,8% khung nhảy cóc. Thời gian khung không nhìn thấy cái đang phá.
+const MAX_LOAD_PER_CPU = Number(process.env.MAX_LOAD ?? 1.5);
 const NO_SKILL = process.env.NO_SKILL === '1'; // mốc so sánh: cùng kịch bản nhưng KHÔNG bật Gom Đơn
 const JUMP_MULT = 1.5;
 // Mỗi lượt chạy một hướng. Ngắn, vì 975 đv/s giữ 2 giây là đi 1 950 đơn vị — vượt khỏi
@@ -112,6 +120,7 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
   let duMin = 1e9, duSum = 0, duN = 0, khoCan = 0;
   let lastOff = null, offUp = 0, offDown = 0, offJumpMax = 0;
   const gaps = [];
+  const frameGaps = [];
   let seenT = 0;
   let dungHinhKhoCan = 0, nhayCocKhoCan = 0;
   let prev = null, prevT = 0;
@@ -157,6 +166,7 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
     }
 
     const at = { x: sp.root.x, y: sp.root.y };
+    if (prevT > 0) frameGaps.push(now - prevT);
     const dt = (now - prevT) / 1000;
     if (prev && dt > 0 && dt < 0.5) {
       const v = Math.hypot(at.x - prev.x, at.y - prev.y) / dt;
@@ -175,6 +185,7 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
   return {
     frames,
     khungThay: thay,
+    khungTrungViMs: (() => { const f = [...frameGaps].sort((a, c) => a - c); return f.length ? +f[Math.floor(f.length / 2)].toFixed(1) : 0; })(),
     tyLeNhayCoc: thay ? +(100 * nhayCoc / thay).toFixed(2) : 0,
     tocTrungVi: pct(0.5),
     tocP99: pct(0.99),
@@ -204,12 +215,22 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
 await drive;
 const res = await sample;
 console.log(JSON.stringify({ ...res, giay: WATCH_MS / 1000 }, null, 1));
-await b.close();
 
 // ĐẠT khi: không entity nào bị dựng lại trong khung nhìn, và không có nấc nhảy cóc nào.
 // `dungHinh` chỉ để đọc — Shipper có lúc đứng yên thật (giữa hai lần đổi hướng).
+// Máy quá tải thì KHÔNG kết luận gì.
+const perCpu = loadavg()[0] / cpus().length;
+console.log(`tải máy: ${loadavg()[0].toFixed(1)} trên ${cpus().length} nhân = ${perCpu.toFixed(2)}/nhân`);
+if (perCpu > MAX_LOAD_PER_CPU && process.env.IGNORE_LOAD !== '1') {
+  console.error(`\nKHÔNG DÙNG ĐƯỢC: máy đang chạy ${perCpu.toFixed(2)} lần số nhân ` +
+    `(ngưỡng ${MAX_LOAD_PER_CPU}). Số đo là nhiễu máy, không phải hành vi netcode.`);
+  console.error('Chạy lại lúc máy rảnh, hoặc IGNORE_LOAD=1 nếu cố tình muốn xem số.');
+  process.exit(2);
+}
+
 const ok = res.hienLai2s === 0 && res.tyLeNhayCoc <= MAX_PCT;
 console.log(ok
   ? `ĐẠT (ngưỡng ≤ ${MAX_PCT}%): nhảy cóc ${res.tyLeNhayCoc}% — nhanh nhất ${res.nhanhNhat} đv/s (trần ${res.tranToc}), 0 dựng lại`
   : `TRƯỢT (ngưỡng ≤ ${MAX_PCT}%): nhảy cóc ${res.nhayCoc}/${res.khungThay} khung thấy được (${res.tyLeNhayCoc}%, nhanh nhất ${res.nhanhNhat} đv/s, trần ${res.tranToc}), dựng lại ${res.hienLai2s} lần`);
 process.exit(ok ? 0 : 1);
+await b.close();

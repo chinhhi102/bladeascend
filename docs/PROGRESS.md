@@ -412,6 +412,40 @@ và không thấy trạng thái bên trong.
 ≤ 3%. Đặt sau bước dựng client — lần đầu tôi đặt trước, tức là kiểm bản cũ, vô nghĩa.
 `SKIP_SMOOTH=1` để bỏ qua trên máy không có Playwright.
 
+### 10/11 (chiều) — Q48 bước 2 viết xong, CHƯA ráp vào client · bài đo tự biết lúc máy quá tải
+
+**`Clock` (bước 2) nằm ở `client/src/net/interp.ts`, đã chứng minh trong bài đơn vị, nhưng
+`state.ts` CHƯA dùng.** A/B trong `check:interp` — cùng chuỗi gói, chỉ đổi đồng hồ:
+
+| Đồng hồ | Khung nhảy cóc | Tốc vẽ lớn nhất |
+|---|---:|---:|
+| Cũ (lấy ước tính tốt nhất, nhảy thẳng) | **15** | 2 194 đv/s (2,25× trần) |
+| Mới (chỉnh tốc độ ≤ 8%, không nhảy) | **0** | 1 053 (1,08× trần) |
+
+Chạy lại bằng `OLD_CLOCK=1 npm run check:interp` để so.
+
+**Vì sao chưa ráp**: ráp vào rồi đo trên trình duyệt thì chập chờn — 2/5 lượt tốt, 3/5 lượt
+kho nội suy âm 1,7–16 giây. Tìm được một nguyên nhân thật và đã sửa (đồng hồ khởi tạo từ
+ước tính của ĐÚNG MỘT gói đầu tiên, lệch 1,07 s, rồi bò về đích 8%/giây mất 13 giây → thêm
+cửa sổ "bắt sóng" 2 giây đầu bám thẳng đích). Nhưng vẫn còn chập chờn, nên trả `state.ts`
+về bản đang chạy.
+
+**Rồi phát hiện ra lý do thật sự của chập chờn: MÁY QUÁ TẢI.** `load average 39–47 trên máy
+12 nhân` (có tiến trình khác ngoài việc của tôi). Bằng chứng không cãi được: đo lại **chính
+commit đã deploy** trên máy đó ra 0,92% rồi 13% rồi 18,8% khung nhảy cóc — cùng một mã.
+
+Nên **mọi số đo trình duyệt của lượt này từ bước 2 trở đi không dùng được**, kể cả kết luận
+"bước 2 tệ hơn". Cái dùng được là bài đơn vị, vì nó chạy trong tiến trình, không phụ thuộc
+nhịp khung.
+
+Hai chốt thêm vào để lần sau không sập lại:
+- `gomdon-smooth.mjs` **tự từ chối kết luận** khi `loadavg/số nhân > 1.5`, thoát mã 2. Đo
+  tải bằng `loadavg` chứ không bằng thời gian khung của tab xem: lúc load 39 thì khung vẫn
+  ~16,7 ms (headless vẽ nhẹ) nên nhìn vào khung không thấy gì.
+- Cổng trong `tools/deploy.sh` **lấy đúng mã thoát của bài đo**. Trước đó tôi viết
+  `node ... | tail -2` trong `if`, tức là đọc mã thoát của `tail` — cổng luôn xanh dù bài đo
+  đỏ. Mã 1 chặn deploy, mã 2 (máy quá tải) chỉ cảnh báo rồi đi tiếp.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở

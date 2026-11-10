@@ -27,7 +27,7 @@
  * nguyên gói cuối. Q48 bước 2–5 phải làm cho bài này xanh. **Chưa gắn vào `npm run build`**
  * vì nó đỏ; gắn vào là chặn mọi lần deploy.
  */
-import { followSnaps, type Timed, type Track } from '../src/net/interp.ts';
+import { Clock, followSnaps, type Timed, type Track } from '../src/net/interp.ts';
 
 const BASE = 195;          // player.move_base
 const FAST = BASE * 5;     // Gom Đơn ×5 = 975 đv/s
@@ -64,42 +64,57 @@ function truth(t: number): { at: P; v: number } {
 
 const rand = rng(12345);
 
-// --- bơm gói ---------------------------------------------------------------------------
-const buf: Timed<P>[] = [];
-const sends: number[] = [];
-for (let t = 0; t <= SECONDS; t += SEND_MS / 1000) {
-  const jitter = ((rand() * 2 - 1) * JITTER_MS) / 1000;
-  const at = Math.max(0, t + jitter);
+// --- bơm gói -----------------------------------------------------------------------------
+//
+// Mô hình: đồng hồ MÁY chạy lệch `CLOCK_DRIFT` so với đồng hồ SERVER. Gói mang dấu thời
+// gian server, tới máy sau `LATENCY` kèm dao động. Client chỉ biết giờ máy và dấu thời gian
+// trong gói — đúng như thật.
+const LATENCY = 0.04;
+interface Pkt { tm: number; at: number; s: P }   // tm = giờ server, at = giờ máy lúc tới
+const pkts: Pkt[] = [];
+for (let ts = 0; ts <= SECONDS; ts += SEND_MS / 1000) {
   if (rand() < LOSS) continue;
-  sends.push(at);
+  const jitter = ((rand() * 2 - 1) * JITTER_MS) / 1000;
+  const arriveServer = ts + LATENCY + jitter;
+  pkts.push({ tm: ts, at: arriveServer / (1 + CLOCK_DRIFT), s: truth(ts).at });
 }
-sends.sort((a, b) => a - b);
-for (const at of sends) {
-  buf.push({ t: at, s: truth(at).at });
-}
+pkts.sort((a, b) => a.at - b.at);
 
-// --- vẽ từng khung ---------------------------------------------------------------------
+// --- vẽ từng khung -------------------------------------------------------------------------
+// `OLD_CLOCK=1` dựng lại đồng hồ CŨ (lấy ước tính tốt nhất, nhảy thẳng, lùi 0,5 ms mỗi
+// gói) để chứng minh chính `Clock` làm bài này xanh, chứ không phải tôi vừa đổi mô hình gói.
+const OLD = process.env.OLD_CLOCK === '1';
+const clock = new Clock({ rate: 0.08, windowSecs: 2 });
+let oldOff: number | null = null;
+const oldSample = (est: number): void => {
+  oldOff = oldOff === null || est > oldOff ? est : oldOff - 0.0005;
+};
+const buf: Timed<P>[] = [];
 const tr: Track = {};
 let prev: P | null = null;
 let jumps = 0;
 let stalls = 0;
 let worst = 0;
 let movingFrames = 0;
+let next = 0;
 for (let i = 0; ; i++) {
-  const wall = (i * FRAME_MS) / 1000;
-  if (wall > SECONDS) break;
-  // Đồng hồ client trôi 2% so với server, và thời điểm vẽ lùi lại `interp_ms`.
-  const rt = wall * (1 + CLOCK_DRIFT) - INTERP_MS / 1000;
-  if (rt < 0) continue;
-  const have = buf.filter((s) => s.t <= wall * (1 + CLOCK_DRIFT)); // chỉ gói ĐÃ tới
-  if (have.length < 2) continue;
-  const at = followSnaps(have, rt, tr, { jumpUnits: 600 });
+  const local = (i * FRAME_MS) / 1000;               // giờ MÁY
+  if (local * (1 + CLOCK_DRIFT) > SECONDS) break;
+  while (next < pkts.length && pkts[next].at <= local) {
+    const p = pkts[next++];
+    clock.sample(p.tm - p.at, p.at);
+    oldSample(p.tm - p.at);
+    buf.push({ t: p.tm, s: p.s });
+  }
+  clock.step(FRAME_MS / 1000, local);
+  if (buf.length < 2 || (OLD ? oldOff === null : !clock.has())) continue;
+  const rt = (OLD ? local + (oldOff ?? 0) : clock.now(local)) - INTERP_MS / 1000;
+  const at = followSnaps(buf, rt, tr, { jumpUnits: 600 });
   if (prev) {
     const v = Math.hypot(at.x - prev.x, at.y - prev.y) / (FRAME_MS / 1000);
     worst = Math.max(worst, v);
     if (v > FAST * 1.5) jumps++;
-    const real = truth(rt).v;
-    if (real > BASE * 1.5) {
+    if (truth(Math.max(0, rt)).v > BASE * 1.5) {
       movingFrames++;
       if (v < 1) stalls++;
     }
@@ -108,7 +123,8 @@ for (let i = 0; ; i++) {
 }
 
 const rows = [
-  ['gói gửi', String(sends.length)],
+  ['đồng hồ', OLD ? 'CŨ (nhảy thẳng)' : 'MỚI (chỉnh tốc độ)'],
+  ['gói gửi', String(pkts.length)],
   ['khung vẽ có mẫu', String(movingFrames)],
   ['nhảy cóc (vẽ > 1,5× trần)', String(jumps)],
   ['đứng hình lúc đang chạy nhanh', String(stalls)],

@@ -227,16 +227,22 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   echo "== 2b/5 nhìn Shipper Gom Đơn từ tab khác (bản VỪA dựng) =="
   ( cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9997 -debug=true >/tmp/kx-smooth.log 2>&1 & echo $! > /tmp/kx-smooth.pid )
   sleep 22
-  if MAX_PCT=3 node tools/browsertest/gomdon-smooth.mjs http://127.0.0.1:9997 2>&1 | tail -2; then
-    :
-  else
-    kill "$(cat /tmp/kx-smooth.pid)" 2>/dev/null || true
-    pkill -f "127.0.0.1:9997" 2>/dev/null || true
-    echo "LỖI: nhảy cóc vượt ngưỡng 3%. Dừng deploy." >&2
-    exit 1
-  fi
+  # Lấy mã thoát của BÀI ĐO, không phải của `tail`: `cmd | tail` trả mã của `tail` nên
+  # cổng này lúc đầu luôn xanh dù bài đo đỏ.
+  set +e
+  MAX_PCT=3 node tools/browsertest/gomdon-smooth.mjs http://127.0.0.1:9997 >/tmp/kx-smooth.out 2>&1
+  smooth_rc=$?
+  set -e
+  tail -3 /tmp/kx-smooth.out
   kill "$(cat /tmp/kx-smooth.pid)" 2>/dev/null || true
   pkill -f "127.0.0.1:9997" 2>/dev/null || true
+  # 0 = đạt · 1 = vượt ngưỡng, chặn deploy · 2 = máy quá tải, số không dùng được → chỉ cảnh báo
+  if [ "$smooth_rc" = "1" ]; then
+    echo "LỖI: nhảy cóc vượt ngưỡng 3%. Dừng deploy." >&2
+    exit 1
+  elif [ "$smooth_rc" = "2" ]; then
+    echo "   (bỏ qua: máy quá tải, số đo không dùng được)"
+  fi
 fi
 
 
