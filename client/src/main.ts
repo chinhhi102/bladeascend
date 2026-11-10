@@ -704,6 +704,9 @@ class App {
     this.hud.setStatuses(this.scene.myStatusChips(performance.now() / 1000));
     // F3 mở được bảng đo ở MỌI trang (spec §13.6), không chỉ khi `?debug=true` — trước đây
     // mở F3 trên trang thường thì bảng hiện ra nhưng số không bao giờ cập nhật.
+    // Đồng hồ theo hệ thống chỉ chạy khi có người XEM bảng — tắt thì mỗi mốc chỉ là một
+    // phép so boolean (render/probe.ts).
+    this.scene.setProbe(this.debug || this.hud.perfVisible);
     if (this.debug || this.hud.perfVisible) {
       this.hud.setPerf(this.scene.perfLine(dt, {
         rttMs: this.conn.rttMs,

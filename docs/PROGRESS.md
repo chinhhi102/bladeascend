@@ -446,6 +446,36 @@ Hai chốt thêm vào để lần sau không sập lại:
   `node ... | tail -2` trong `if`, tức là đọc mã thoát của `tail` — cổng luôn xanh dù bài đo
   đỏ. Mã 1 chặn deploy, mã 2 (máy quá tải) chỉ cảnh báo rồi đi tiếp.
 
+### 10/11 (tối) — tối ưu máy yếu, bước 0: dựng xong bộ đo, CHƯA có số sạch
+
+Anh dặn "báo bảng này TRƯỚC khi sửa", nên lượt này chỉ dựng bộ đo, không sửa gì về hiệu năng.
+
+**`client/src/render/probe.ts`** — bấm giờ TỪNG HỆ THỐNG trong vòng vẽ: nội suy · người ·
+quái · vật phẩm · thần thú · bản đồ · ambient · vfx · kỹ năng. Hiện thêm hai dòng trong
+bảng F3, kèm heap dùng và **biên độ răng cưa** (phẳng = không cấp phát trong vòng khung).
+Bật theo trạng thái F3, tắt thì mỗi mốc chỉ là một phép so boolean — người chơi thường
+không trả giá.
+
+Khoá mốc để **ASCII**, nhãn tiếng Việt để riêng: `check:i18n` chặn chuỗi tiếng Việt ngoài
+`ui/strings.ts` và nó chặn đúng — mấy chuỗi này trông y như chữ cho người chơi.
+
+**`tools/browsertest/weakperf.mjs`** — in thẳng bảng anh yêu cầu: FPS + ms từng hệ thống ở
+CPU 1× / 4× / 6×, heap và răng cưa, cộng phép thử nghẽn CPU hay GPU (hạ độ phân giải còn
+0,5 rồi so FPS). Dựng sẵn phòng đông: thả 3 bot cạnh mình rồi kéo cảnh giới lên Đạo Tổ.
+`scene.setResolution()` và `scene.fpsNow()` thêm vào chỉ để bài đo gọi.
+
+**Chưa có số sạch**: máy chạy `load average 31–46 trên 12 nhân` suốt lượt (có `vitest` của
+việc khác ăn 542% CPU). Bài đo tự từ chối kết luận ở mức tải đó. Chạy thử bằng
+`IGNORE_LOAD=1` thì bảng ra đúng khuôn, nhưng con số là nhiễu máy — ví dụ hạ độ phân giải
+còn 0,5 lại làm FPS **giảm** 30%, điều chỉ xảy ra khi máy đã nghẽn vì thứ khác.
+
+Chạy lại khi máy rảnh:
+
+```
+cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9998 -debug=true &
+node tools/browsertest/weakperf.mjs http://127.0.0.1:9998
+```
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở

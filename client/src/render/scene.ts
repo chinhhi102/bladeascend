@@ -2,6 +2,7 @@ import { Application, Container } from 'pixi.js';
 import { AnimViewer } from './animviewer';
 import { setEmoteCharCount } from './emote';
 import { paceTicker } from './framepace';
+import { probeEnabled, probeFrame, probeHeap, probeLines, probeMark, probeStats } from './probe';
 import { assets } from './assets';
 import { SkillPresenter, type StatusChip } from './skillpresent';
 import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuTextureCount, trackGpuMemory } from './gpumem';
@@ -293,7 +294,9 @@ export class GameScene {
     if (now < this.hitstopUntil) {
       return; // khựng hình: đóng băng cảnh một nhịp rất ngắn cho cú đột phá "nặng" hơn
     }
+    probeFrame();
     const frames = w.playerFrames(dt);
+    probeMark('interp');
     this.lastFrames = frames;
     const me = frames.find((f) => f.view.id === w.myId);
     if (me) {
@@ -328,22 +331,29 @@ export class GameScene {
     }
     this.glow.apply(); // mức chất lượng vừa đổi thì gắn lại bloom (§3.6)
     this.syncPlayers(frames, now);
+    probeMark('players');
     this.syncMonsters(now);
+    probeMark('monsters');
     this.syncItems(now, me ? banksTienKhi(this.cfg, me.s.L) : false);
     this.updateFlyingItems(now);
+    probeMark('items');
     this.updateBeasts(frames, now);
+    probeMark('beasts');
     const myBush = me && me.s.fl & 2 ? this.bushAt(me.x, me.y) : -1;
     if (me) {
       const v = this.viewSize();
       this.ambient.update(me.x, me.y, v.w / 2, v.h / 2, now);
     }
+    probeMark('ambient');
     const vs = this.viewSize();
     this.mapView.ghostPass = this.ghostRunners(frames);
     this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha,
       me ? { x: me.x, y: me.y, w: vs.w, h: vs.h } : undefined,
       me ? this.myReach : undefined);
+    probeMark('map');
     this.vfx.update(now);
     this.floatText.update(now);
+    probeMark('vfx');
     this.stallView.sync(w, {
       now,
       secs: this.cfg.skills.ranges_u.bay_sap_secs ?? 0,
@@ -353,6 +363,8 @@ export class GameScene {
       },
     });
     this.skill.update(now);
+    probeMark('skills');
+    probeHeap(now);
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
     this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;
     this.sampleFps(dt);
@@ -379,6 +391,34 @@ export class GameScene {
       drawCalls.acc = 0;
       drawCalls.frames = 0;
     }
+  }
+
+  /**
+   * setResolution: đổi độ phân giải bộ đệm khung — CHỈ cho bài đo (tối ưu máy yếu, bước 0).
+   *
+   * Phép thử nghẽn CPU hay GPU: hạ còn 0,5 rồi xem FPS. Tăng mạnh = GPU đang là nút thắt
+   * (ít pixel hơn thì nhanh hơn). Gần như không đổi = CPU, và lúc đó hạ độ phân giải không
+   * cứu được gì — biết điều đó TRƯỚC khi tối ưu thì khỏi làm nhầm cả tuần.
+   *
+   * Không dùng trong luật chơi: `applyEmergencyResolution` mới là đường tự động.
+   */
+  setResolution(res: number): void {
+    this.app.renderer.resize(this.app.screen.width, this.app.screen.height, res);
+  }
+
+  /** setProbe bật/tắt đồng hồ theo hệ thống; `main` gọi theo trạng thái bảng F3. */
+  setProbe(on: boolean): void {
+    probeEnabled(on);
+  }
+
+  /** fpsNow: FPS đang đo (trung bình trượt) — cho bài đo tự động. */
+  fpsNow(): number {
+    return this.fps;
+  }
+
+  /** probe trả số liệu thô cho bài đo tự động (`window.kx.scene.probe()`). */
+  probe(): Record<string, number> {
+    return probeStats();
   }
 
   /** paceFrames: vẽ đúng mỗi `n` khung quét màn hình (1 = mọi khung) — xem framepace.ts. */
@@ -839,6 +879,7 @@ export class GameScene {
       // Spec §8.2a: số lần server kéo nhân vật về chỗ khác. Dự đoán đúng thì ~0; lệch thì
       // nó chạy lên bằng tần số snapshot và người chơi thấy rung khi đi sát vật cản.
       `hiệu chỉnh ${(this.world?.fixPerSec ?? 0).toFixed(1)}/giây · lệch nhất ${(this.world?.fixMax ?? 0).toFixed(1)}`, // i18n-ok: lớp số liệu debug
+      ...probeLines(), // i18n-ok: lớp số liệu debug
     ].join('\n');
   }
 
