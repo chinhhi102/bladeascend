@@ -149,6 +149,40 @@ FPS thật của máy người chơi chỉ lấy từ **S4** (một tab, có gia
 
 ## 5. Chi tiết từng lượt
 
+### Lượt #28 — Máy yếu: vòng kiếm chỉ xoay, lớp trạng thái chỉ vẽ khi đổi (2026-11-11)
+
+**Đo bằng BỘ ĐẾM CÔNG VIỆC, không chỉ bằng mili-giây.** Máy dev dùng chung với việc khác
+nên con số thời gian nở ra co lại theo tải (luật 16). Hai bộ đếm mới (`ringWork`,
+`statusWork`, đọc qua `window.__stats()`) đếm SỐ LẦN GHI và SỐ LẦN VẼ LẠI — không đổi theo
+tải máy. Cả hai cột "trước" và "sau" đo trong CÙNG một khung hình: `ringWouldWrite` là số
+lần đường cũ **sẽ** ghi ở đúng khung đó.
+
+Cảnh đo: phòng dev, 9–12 người trong tầm nhìn, 311–368 thanh kiếm trên màn hình.
+
+| Chỉ số (trung vị mỗi khung) | Trước | Sau |
+|---|---:|---:|
+| Lần đặt lại thanh kiếm (x, y, góc) | **933–999** | **0** (trung bình 8–31, đỉnh 409 lúc dựng lại) |
+| Lớp trạng thái: vẽ lại / lượt gọi | 1,00 | **0,27** (≈ 15 nhịp/giây thay vì 60) |
+
+Thời gian (weakperf, CPU 4×, 3 lượt mỗi bên, load 0,80–1,84 — ghi kèm vì nó ảnh hưởng):
+
+| | Trước | Sau |
+|---|---|---|
+| Cột `players` | 2,95 · 3,99 · 4,96 ms | 0,94 · 1,60 · 3,01 ms |
+| trong đó vòng kiếm | 0,40 · 1,21 · 1,35 | 0,12 · 0,44 · 1,31 |
+| trong đó trạng thái | 0,57 · 1,18 · 1,42 | 0,16 · 0,24 · 0,66 |
+| FPS | 11 · 13 · 13 | 23 · 26 · 27 |
+
+FPS gấp đôi là con số DỄ NHẦM: lượt "trước" chạy lúc máy tải 1,13–1,84 còn lượt "sau"
+0,80–1,12. Bằng chứng thật nằm ở hai bộ đếm công việc, không ở FPS.
+
+**Kiểm hình không đổi**: chụp cùng một cảnh trên bản cũ (server phục vụ
+`deploy-archive/20261111_1248_ec20f26/client`) và bản mới — vòng kiếm cùng bố cục, cùng
+vệt mờ, cùng màu từng vòng. Và vòng vẫn QUAY: so ĐIỂM ẢNH hai khung cách nhau 140 ms,
+bản cũ 37,4% điểm đổi, bản mới 37,2%. (So byte PNG thì vô nghĩa — nén lại là cả luồng
+byte đổi, lần đầu tôi đo đúng kiểu đó và ra "100% khác" ở cả hai bên.)
+
+
 ### Lượt #4 — Mốc chuẩn sau tối ưu mục 26+27 (2026-10-30, commit `f5720c0`)
 
 Mục tiêu: tạo **mốc chuẩn** để mọi lượt NETCODE v6 so vào (CHANGES_v6 mục 7). Các dòng #0–#3
@@ -889,7 +923,7 @@ nó kiểm bản cũ — vô nghĩa). Hai lần deploy đầu: 1,00% và 1,35% �
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
-| B22 | **Trong cột "người", VÒNG KIẾM và LỚP TRẠNG THÁI ăn 2/3 thời gian** | Máy yếu tụt FPS khi đông người | `weakperf.mjs` (bảng mốc CON mới, 11/11): CPU 4× cột `players` 4,96 ms, chia ra thân 0,46 · bảng tên 0,41 · **vòng kiếm 1,35** · **trạng thái 1,42**. Lượt khác cùng dạng: vòng kiếm 1,21 / trạng thái 1,18; CPU 6× vòng kiếm 2,41. Bảng tên luôn rẻ nhất (0,15–0,41) | **Mở** — hướng sửa: vòng kiếm thành container CHỈ XOAY (hiện mỗi khung tính lại vị trí từng thanh), người ở xa dùng một sprite vành; lớp trạng thái vẽ lại `Graphics` mỗi khung cho mỗi người. CHƯA sửa: máy đang bận nên chưa có mốc "trước" đủ sạch để so "sau" | – |
+| B22 | **Trong cột "người", VÒNG KIẾM và LỚP TRẠNG THÁI ăn 2/3 thời gian** | Máy yếu tụt FPS khi đông người | `weakperf.mjs` (bảng mốc CON, 11/11): CPU 4× cột `players` 4,96 ms, chia ra thân 0,46 · bảng tên 0,41 · **vòng kiếm 1,35** · **trạng thái 1,42**. Bảng tên luôn rẻ nhất | **Đóng (11/11)** — xem lượt #28 ngay dưới: vòng kiếm thành container chỉ xoay, lớp trạng thái chỉ vẽ lại khi đổi | #28 |
 | B21 | ~~"Nhìn người chạy nhanh từ tab khác nhảy cóc 3,5%"~~ — **lỗi PHÉP ĐO** | Đã đuổi theo một con số sai suốt hai lượt | Bài cũ lấy vị trí sprite theo nhịp `rAF` của chính nó rồi chia cho giờ máy; nhịp ấy lệch nhịp vẽ của game nên một khung đo "thấy" hai khung vẽ gộp lại. Cùng một lượt: 2 807 đv/s theo nhịp bài, 816 đv/s theo VẾT trong vòng vẽ, trong khi cặp gói đang nội suy chỉ đi 939 đv/s (trần 975) | **Đóng (Q48)** — client ghi vết (thời điểm vẽ, x, y, tốc độ dữ liệu) trong chính vòng vẽ; đo lại 3 lượt máy rảnh: 0 nhảy cóc, 0 đứng hình. Cổng deploy canh 0/0 | Q48 |
 | B20 | **S1 p95 4,01 ms ở lượt #26 (sát trần)** | Có thể là thoái lui, có thể do máy bận | Lượt #26: máy chạy song song 2 agent; #22 cùng máy 2,37 ms · **#27 máy rảnh: 1,38 ms** | **Đóng** — do máy bận, không phải thoái lui | #27 |
 | B19 | **Phòng 50 người: khu có 10 Đạo Tổ chụm vượt p95 4 ms trên staging** | Chưa mở được giới hạn 50 trên staging (§9.1) | Lượt #24: S12 trên staging p95 khu nặng nhất 5.19 / 4.28 / 5.16 ms; máy dev 2.02 ms | **Đóng theo quyết định (v6.28, Q35)** — trần là cấu hình theo máy: production 50 (đạt 2.02 ms), staging 20. Trang admin cảnh báo vàng nếu đặt trần cao hơn mức đã qua loadtest. Tối ưu khu Đạo Tổ chụm vẫn là việc nên làm nếu muốn staging lên 50. | #24 |

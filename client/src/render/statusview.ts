@@ -46,6 +46,30 @@ const COLORS = {
 const ICON_ORDER: readonly StatusIconKey[] = ['sleep', 'stun', 'blind', 'invert', 'taunt', 'tether', 'push',
   'brace', 'ghost', 'giant', 'shell', 'steal'];
 const SELF_BUFFS: readonly StatusEv[] = ['brace', 'ghost', 'shell', 'steal', 'giant'];
+/** Trạng thái chỉ có trong event `StatusStart/End`, không có bit trong snapshot. */
+const EVENT_ONLY: readonly StatusEv[] = ['push', 'steal', 'minion'];
+/**
+ * Nhịp vẽ lại tối đa của lớp trạng thái khi KHÔNG có gì đổi (lần/giây).
+ *
+ * 15 là chỗ gặp nhau: hào quang thở và zzz nhấp nhô vẫn mượt với mắt, còn chi phí vẽ lại
+ * tụt xuống còn 1/4 so với 60. Trạng thái bật/tắt thì vẽ lại NGAY, không chờ nhịp.
+ */
+const ANIM_HZ = 15;
+
+/**
+ * statusWork: đếm CÔNG VIỆC của lớp trạng thái — `calls` là số lần có thứ để vẽ, `draws` là
+ * số lần thật sự vẽ lại. Đường cũ thì hai con số luôn bằng nhau; nay tỉ lệ phải tụt xuống
+ * cỡ `ANIM_HZ / FPS`.
+ */
+export const statusWork = { calls: 0, draws: 0, frameCalls: 0, frameDraws: 0 };
+
+/** statusWorkTick: gọi đầu mỗi khung vẽ (scene.ts). */
+export function statusWorkTick(): void {
+  statusWork.frameCalls = statusWork.calls;
+  statusWork.frameDraws = statusWork.draws;
+  statusWork.calls = 0;
+  statusWork.draws = 0;
+}
 
 export interface StatusInput {
   id: number;
@@ -87,6 +111,16 @@ export class StatusView {
   bodyScale = 1;
   /** drawn: khung trước có vẽ gì không (để biết có cần xoá khi hết trạng thái). */
   private drawn = true;
+  /**
+   * Ba con số của lần vẽ gần nhất — trạng thái đang bật, nhịp hoạt ảnh, và hình học (bán
+   * kính thân + zoom). Giống cả ba thì khung này không có gì mới để vẽ (xem `update`).
+   *
+   * So BA SỐ NGUYÊN chứ không ghép chuỗi: hàm này chạy cho MỌI người trong tầm nhìn, MỖI
+   * khung — một chuỗi mới mỗi lần là rác cho GC đúng ở đường nóng nhất.
+   */
+  private kState = -1;
+  private kPhase = -1;
+  private kGeom = -1;
 
   constructor(private readonly cfg: GameConfig) {
     this.over.addChild(this.fx, this.iconRow, this.bar);
@@ -100,8 +134,35 @@ export class StatusView {
     if (idle && !this.drawn) {
       return;
     }
-    this.drawn = !idle;
     const on = (k: StatusEv): boolean => this.isOn(s, k);
+    // v6.52 — CHỈ VẼ LẠI KHI ĐỔI.
+    //
+    // Trước đây: `clear()` rồi vẽ lại toàn bộ lớp trạng thái MỖI KHUNG cho mỗi người đang
+    // dính gì đó. Đo được (mốc con `p.status` trong weakperf, CPU 4×): 1,18–1,42 ms, tức
+    // ngang với vòng kiếm và gấp ba lần bảng tên.
+    //
+    // Phần lớn cái vẽ lại ấy ra đúng y hình cũ. Thứ thật sự đổi từng khung chỉ là NHỊP hoạt
+    // ảnh (hào quang thở, zzz nhấp nhô, sao quay) — và mắt không phân biệt được 60 nhịp với
+    // 15 nhịp mỗi giây. Nên: trạng thái đổi → vẽ lại NGAY; không đổi → vẽ lại tối đa
+    // `ANIM_HZ` lần/giây. Nội dung vẽ nằm trong hệ toạ độ của chính nhân vật nên người có
+    // chạy đi đâu hình vẫn bám theo, không cần vẽ lại.
+    const state = s.st | (this.eventMask(s) << 16);
+    const phase = Math.round(s.now * ANIM_HZ);
+    const geom = Math.round(s.r) * 1024 + Math.round(s.zoom * 64);
+    // NGOẠI LỆ — Gom Đơn: vệt tia chớp lấy mẫu vị trí thế giới rồi vẽ bằng toạ độ TƯƠNG ĐỐI
+    // với chỗ đang đứng, nên không vẽ lại mỗi khung là cả cái vệt trôi theo người. Mà đây
+    // đúng là người chạy nhanh nhất game. Cùng lúc tối đa một hai Shipper, nên ngoại lệ này
+    // không kéo lại cái vừa tiết kiệm được.
+    statusWork.calls++;
+    const live = on('ghost');
+    if (!live && state === this.kState && phase === this.kPhase && geom === this.kGeom && this.drawn) {
+      return;
+    }
+    this.kState = state;
+    this.kPhase = phase;
+    this.kGeom = geom;
+    this.drawn = !idle;
+    statusWork.draws++;
     const low = quality() === 'low';
     this.under.clear();
     this.fx.clear();
@@ -113,8 +174,20 @@ export class StatusView {
     this.bodyScale = on('brace') ? 1.1 : 1;
   }
 
+  /** eventMask: ba trạng thái CHỈ có trong event (không có bit trong snapshot) thành 3 bit. */
+  private eventMask(s: StatusInput): number {
+    let m = 0;
+    for (let i = 0; i < EVENT_ONLY.length; i++) {
+      if (statusTracker.active(s.id, EVENT_ONLY[i], s.now)) {
+        m |= 1 << i;
+      }
+    }
+    return m;
+  }
+
   reset(): void {
     this.drawn = true;
+    this.kState = this.kPhase = this.kGeom = -1;
     this.trail.length = 0;
     this.iconKey = '';
     this.iconRow.removeChildren().forEach((c) => c.destroy({ children: true }));

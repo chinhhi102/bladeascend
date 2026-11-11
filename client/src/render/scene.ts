@@ -4,6 +4,8 @@ import { setEmoteCharCount } from './emote';
 import { paceTicker } from './framepace';
 import { probeEnabled, probeFrame, probeHeap, probeLines, probeMark, probeStats, probeSubFlush } from './probe';
 import { assets } from './assets';
+import { statusWork, statusWorkTick } from './statusview';
+import { ringWork, ringWorkTick } from './swordring';
 import { SkillPresenter, type StatusChip } from './skillpresent';
 import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuTextureCount, trackGpuMemory } from './gpumem';
 import { rendererResolution } from './device';
@@ -283,6 +285,8 @@ export class GameScene {
 
   /** render one frame; dt in seconds. */
   render(dt: number): void {
+    ringWorkTick();
+    statusWorkTick();
     const w = this.world;
     if (!w || !this.mapView) {
       return;
@@ -822,6 +826,12 @@ export class GameScene {
       fixMax: this.world?.fixMax ?? 0,
       players: this.players.size,
       swords,
+      // ringWrites: số lần đặt lại một thanh kiếm trong khung vừa rồi (swordring.ts). Đây
+      // là bộ đếm CÔNG VIỆC — không nở ra co lại theo tải máy như mili-giây.
+      ringWrites: ringWork.frame,
+      ringWouldWrite: ringWork.wouldFrame,
+      statusDraws: statusWork.frameDraws,
+      statusCalls: statusWork.frameCalls,
       monsters: this.monsters.size,
       orbs: this.orbs.ids().length,
       items: this.items.size,

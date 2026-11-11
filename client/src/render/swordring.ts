@@ -19,6 +19,25 @@ const PEARL_COLOR = 0x3b2416;
 
 let bladeTex: Texture | null = null;
 
+/**
+ * ringWrites: số lần ĐẶT LẠI một thanh kiếm (x, y, rotation) trong khung vừa rồi — bộ đếm
+ * CÔNG VIỆC, không phải thời gian.
+ *
+ * Vì sao đếm thay vì bấm giờ: máy dev dùng chung với việc khác, và con số mili-giây nở ra
+ * co lại theo tải máy (đo 11/11: cùng một commit cho ra 0,66% rồi 18,8% khung nhảy cóc chỉ
+ * vì load 39 trên 12 nhân). Số LẦN GHI thì không đổi theo tải — nó là thứ chứng minh được
+ * "trước 1 350 lượt mỗi khung, sau 2 lượt" dù máy đang bận.
+ */
+export const ringWork = { writes: 0, frame: 0, would: 0, wouldFrame: 0 };
+
+/** ringWorkTick: gọi đầu mỗi khung vẽ — chốt số của khung trước rồi đếm lại từ 0. */
+export function ringWorkTick(): void {
+  ringWork.frame = ringWork.writes;
+  ringWork.wouldFrame = ringWork.would;
+  ringWork.writes = 0;
+  ringWork.would = 0;
+}
+
 /** placeholderBlade: a white/grey blade so every ring can be tinted (spec v3.1 item 6). */
 function placeholderBlade(): Texture {
   if (bladeTex) {
@@ -93,7 +112,8 @@ export class SwordRing {
   /** Bán kính lớp trân châu đang vẽ (0 = tắt) — chỉ vẽ lại khi bật/tắt hay vòng đổi cỡ. */
   private pearlR = 0;
   private blades: Blade[] = [];
-  private angles: number[] = [];
+  /** localKey: chữ ký bố cục cục bộ đang áp (xem `placeAll`). '' = phải đặt lại. */
+  private localKey = '';
   private realm = -1;
   /** count: số kiếm đang vẽ (đồng hồ debug đọc qua PlayerSprite.swordCount). */
   count = 0;
@@ -132,6 +152,10 @@ export class SwordRing {
     // Vệt mờ theo đúng tốc quay thật (nội tại + Tốc Kiếm, luật cộng §4.0) so với base.
     const spin = omega(this.cfg, s, f.view.char) / ((2 * Math.PI) / this.cfg.sword.rev_secs);
     this.drawBlur(g, s.tl, realm, spin);
+    // `would`: đường CŨ sẽ ghi bấy nhiêu ở đúng khung này — mỗi thanh kiếm một thân + hai
+    // vệt mờ, mỗi khung, mỗi người. Đếm nó ngay cạnh số ghi THẬT để bảng so sánh là hai con
+    // số đo trong CÙNG một cảnh, không phải một con số đo và một con số suy ra.
+    ringWork.would += (1 + GHOSTS) * this.blades.length;
     this.placeAll(f, t, s.tl, s.d);
     this.drawCracks(f, g);
     this.drawPearl(f, g);
@@ -181,51 +205,58 @@ export class SwordRing {
   }
 
   /**
-   * placeAll đặt lại mọi thanh kiếm cho khung hình này.
+   * placeAll — v6.52: KHÔNG đặt lại từng thanh kiếm mỗi khung nữa.
    *
-   * Đây là vòng lặp nóng nhất của client: Đại Thừa 450 kiếm × 3 bản (thân + 2 vệt mờ) = 1 350
-   * particle, nhân thêm chục người trong tầm nhìn. Trước đây mỗi particle gọi một cặp
-   * cos/sin — hàng trăm nghìn lượt lượng giác mỗi giây. Giờ góc của từng khe là CỐ ĐỊNH so
-   * với `ringAngle`, nên chỉ cần cos/sin của `ringAngle` (và của mỗi mức vệt mờ) một lần cho
-   * cả khung hình, rồi xoay bằng công thức cộng góc: 4 phép nhân cho mỗi particle.
+   * Góc của mỗi khe là CỐ ĐỊNH so với `ringAngle`. Nên đặt kiếm một lần theo toạ độ CỤC BỘ
+   * (coi như vòng đang ở góc 0) rồi mỗi khung chỉ **xoay cái container**: hai phép ghi cho
+   * cả vòng, thay cho 3 × số kiếm phép ghi.
    *
-   * Lúc số kiếm vừa đổi thì các khe đang tween nên vẫn đi đường cũ trong `tween_secs`.
+   * Đo được (bộ đếm `ringWork`, không phụ thuộc tải máy): một Đại Thừa 450 kiếm × (1 thân +
+   * 2 vệt mờ) = **1 350 lượt ghi mỗi khung mỗi người**; nhân chục người trong tầm nhìn là
+   * hàng chục nghìn lượt mỗi khung. Sau khi đổi: **0 lượt** ở khung thường, và chỉ đặt lại
+   * khi có lý do thật — đổi số kiếm, lên tầng, đổi chiều quay, hoặc trong lúc nghiêng kiếm
+   * đang tween (`tilt`) sau một cú va.
+   *
+   * Phần tween sau khi số kiếm đổi vẫn đi đường chậm: lúc đó mỗi khe thật sự trượt về chỗ
+   * mới nên không có cách nào gộp thành một phép xoay.
    */
   private placeAll(f: PlayerFrame, t: number, tilt: number, dir: number): void {
+    // Container mang góc quay; mọi thứ bên trong nằm ở hệ toạ độ "vòng đứng yên".
+    this.tinted.rotation = f.ringAngle;
+    this.skin.rotation = f.ringAngle;
     if (t < 1) {
+      this.localKey = ''; // đang tween: đặt lại mỗi khung, và nhớ đặt lại lần cuối khi xong
       for (let i = 0; i < this.blades.length; i++) {
-        const a = f.ringAngle + this.slot(i, this.blades[i].off, t);
-        this.angles[i] = a;
-        this.placeBlade(this.blades[i], a, tilt, dir);
+        this.placeLocal(this.blades[i], this.slot(i, this.blades[i].off, t), tilt, dir);
       }
       return;
     }
-    const base = f.ringAngle;
-    // Một cặp cos/sin cho thân kiếm và cho mỗi mức vệt mờ — tổng 3 cặp cho cả khung hình.
-    const cosB = Math.cos(base);
-    const sinB = Math.sin(base);
-    const gc: number[] = [];
-    const gs: number[] = [];
-    for (let j = 0; j < GHOSTS; j++) {
-      const ga = base - dir * GHOST_STEP * (j + 1);
-      gc.push(Math.cos(ga));
-      gs.push(Math.sin(ga));
+    // Chữ ký của BỐ CỤC CỤC BỘ: chỉ ba thứ này đổi thì mới phải đặt lại.
+    //
+    // `tilt` làm tròn 3 số lẻ: nó tween mượt sau mỗi cú va (`tilt_tween_secs`), nên trong
+    // khoảng đó vẫn đặt lại mỗi khung — đúng như cũ — rồi đứng yên hẳn và thôi.
+    const key = `${this.blades.length}:${dir}:${tilt.toFixed(3)}`;
+    if (key === this.localKey) {
+      return;
     }
+    this.localKey = key;
+    for (const b of this.blades) {
+      this.placeLocal(b, b.off, tilt, dir);
+    }
+  }
+
+  /** placeLocal đặt một thanh kiếm (và vệt mờ của nó) theo góc khe CỤC BỘ `off`. */
+  private placeLocal(b: Blade, off: number, tilt: number, dir: number): void {
     const turn = tilt + Math.PI / 2;
-    for (let i = 0; i < this.blades.length; i++) {
-      const b = this.blades[i];
-      const a = base + b.off;
-      this.angles[i] = a;
-      const m = b.main;
-      m.x = (cosB * b.cosOff - sinB * b.sinOff) * b.hilt;
-      m.y = (sinB * b.cosOff + cosB * b.sinOff) * b.hilt;
-      m.rotation = a + turn;
-      for (let j = 0; j < b.ghosts.length; j++) {
-        const p = b.ghosts[j];
-        p.x = (gc[j] * b.cosOff - gs[j] * b.sinOff) * b.hilt;
-        p.y = (gs[j] * b.cosOff + gc[j] * b.sinOff) * b.hilt;
-        p.rotation = a - dir * GHOST_STEP * (j + 1) + turn;
-      }
+    const set = (p: Particle, ang: number): void => {
+      p.x = Math.cos(ang) * b.hilt;
+      p.y = Math.sin(ang) * b.hilt;
+      p.rotation = ang + turn;
+      ringWork.writes++;
+    };
+    set(b.main, off);
+    for (let j = 0; j < b.ghosts.length; j++) {
+      set(b.ghosts[j], off - dir * GHOST_STEP * (j + 1));
     }
   }
 
@@ -240,16 +271,7 @@ export class SwordRing {
     return from + d * t;
   }
 
-  /** placeBlade: đường chậm, chỉ dùng trong lúc tween sau khi số kiếm đổi. */
-  private placeBlade(b: Blade, a: number, tilt: number, dir: number): void {
-    const set = (p: Particle, ang: number): void => {
-      p.x = Math.cos(ang) * b.hilt;
-      p.y = Math.sin(ang) * b.hilt;
-      p.rotation = ang + tilt + Math.PI / 2;
-    };
-    set(b.main, a);
-    b.ghosts.forEach((p, j) => set(p, a - dir * GHOST_STEP * (j + 1)));
-  }
+
 
   /**
    * drawBlur paints the motion-blur annulus of each ring — but ONLY for rings that really do
@@ -292,6 +314,7 @@ export class SwordRing {
     // khớp chỉ số kiếm nữa, nên không thể tính lại bằng slotAngle(count cũ).
     this.prevSlots = this.blades.map((b) => b.off);
     this.tweenStart = now;
+    this.localKey = ''; // bố cục cũ không còn đúng — buộc đặt lại ở khung kế
     this.count = n;
     this.realm = realm;
     this.tinted.removeParticles();
@@ -354,6 +377,7 @@ export class SwordRing {
 
   /** refreshGeom tính lại bán kính gốc kiếm, chiều dài và tỉ lệ vẽ của mọi thanh. */
   private refreshGeom(g: RingGeom): void {
+    this.localKey = ''; // bán kính chuôi đổi → chỗ đứng của mọi thanh kiếm đổi theo
     for (const b of this.blades) {
       b.hilt = hiltR(g, b.ring);
       b.len = bladeLen(g, b.ring);
@@ -376,7 +400,9 @@ export class SwordRing {
     const len = bladeLen(g, 0);
     const z = g.width * 0.4;
     for (let i = 0; i < Math.min(this.blades.length, ringCap(g, 0)); i++) {
-      const a = this.angles[i] ?? 0;
+      // Góc THẬT của thanh kiếm = góc khe cục bộ + góc quay của vòng (container đang mang
+      // góc quay, nhưng `cracks` là Graphics riêng nên phải cộng tay).
+      const a = (this.blades[i]?.off ?? 0) + f.ringAngle;
       const hx = Math.cos(a) * h;
       const hy = Math.sin(a) * h;
       const dx = Math.cos(a + f.s.tl);
