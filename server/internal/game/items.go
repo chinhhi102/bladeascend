@@ -108,7 +108,10 @@ func (g *Game) pickupBase(p *Player) float64 {
 // xuyên qua** — một cửa thì không thể sót loại nào, rải ra bốn chỗ thì chắc chắn sẽ sót.
 func (g *Game) CanPickUp(p *Player) bool {
 	if p.IsMinion {
-		return false // đàn em không nhặt đồ (spec v5.4 §6.3)
+		// v6.48: đàn em NHẶT ĐỒ HỘ ĐẠI CA — đồ vào thẳng túi đại ca (xem `pickupOwner`).
+		// Chỉ nhặt khi đại ca còn trong khu và còn sống; mất đại ca thì chúng chỉ còn chạy.
+		boss, ok := g.Players[p.MinionOf]
+		return ok && !boss.Dead
 	}
 	// Gom Đơn hút được **kể cả lúc đang bị bịt mắt** (spec v6.9 §6.3). Xét trước Trân Châu
 	// vì đó đúng là ngoại lệ spec ghi tên: Shipper lao qua Đài đang phun thì trân châu
@@ -130,18 +133,34 @@ func (g *Game) resolvePickups() {
 		if p.Dead || p.InTransit(g.Time) || !g.CanPickUp(p) {
 			continue
 		}
+		// Bán kính của NGƯỜI ĐI NHẶT (đàn em nhỏ hơn đại ca 30% nên vòng cũng nhỏ hơn),
+		// nhưng người NHẬN có thể là đại ca (v6.48 §6.3).
+		to := g.pickupOwner(p)
 		r := g.PickupRadius(p) + g.Cfg.Items.ItemR
 		r2 := r * r
 		var got []*Item
 		g.ItemsNear(p.Pos, r, r, func(it *Item) {
-			if it.Pos.Dist2(p.Pos) <= r2 && g.canAbsorb(p, it) && (it.Owner == 0 || it.Owner == p.ID || g.Time >= it.OwnerUntil) {
+			if it.Pos.Dist2(p.Pos) <= r2 && g.canAbsorb(to, it) && (it.Owner == 0 || it.Owner == to.ID || g.Time >= it.OwnerUntil) {
 				got = append(got, it)
 			}
 		})
 		for _, it := range got {
-			g.pickup(p, it)
+			g.pickup(to, it)
 		}
 	}
+}
+
+// pickupOwner: ai thật sự nhận món đồ mà `p` vừa chạm vào. Đàn em của Đại Ca nhặt hộ, nên
+// mọi thứ chúng chạm phải đi vào túi đại ca — kể cả luật "viên Linh khí vs Tiên khí" và
+// luật "đồ của người khác trong vài giây đầu" đều xét theo ĐẠI CA, không theo đàn em.
+func (g *Game) pickupOwner(p *Player) *Player {
+	if !p.IsMinion {
+		return p
+	}
+	if boss, ok := g.Players[p.MinionOf]; ok {
+		return boss
+	}
+	return p
 }
 
 // canAbsorb: viên Linh khí và viên Tiên khí không lẫn sang nhau (§3.4). Người không hấp thụ

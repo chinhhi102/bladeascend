@@ -21,10 +21,16 @@ type slick struct {
 	r float64
 }
 
+// minionSwords: mỗi đàn em mang `dan_em_sword_share` phần số kiếm HIỆN TẠI của đại ca
+// (v6.48: 15% mỗi đứa, hai đứa là 30% — ngang mức lời của Trộm Kiếm), tối thiểu 1.
+func (g *Game) minionSwords(boss *Player) int {
+	return max(int(float64(boss.Ring.Count)*g.Cfg.Skills.DanEmSwordShare), 1)
+}
+
 // spawnMinion thả một đàn em của Đại Ca Dép Tổ Ong (spec v5.4 §6.3).
 //
-// Đàn em là **người chơi do máy điều khiển**, cùng cảnh giới với đại ca và mang **50% số
-// kiếm hiện tại của đại ca** (tối thiểu 1), xếp vòng y như người chơi. Làm thành Player
+// Đàn em là **người chơi do máy điều khiển**, cùng cảnh giới với đại ca và mang `15%` số
+// kiếm hiện tại của đại ca (tối thiểu 1), xếp vòng y như người chơi. Làm thành Player
 // thay vì một loại thực thể mới để mọi luật va kiếm sẵn có chạy nguyên vẹn, khỏi phải viết
 // lại một bản va chạm thứ hai — và cũng để vòng kiếm của chúng dùng chung đúng đường vẽ của
 // người chơi ở client, đúng ghi chú hiệu năng của spec.
@@ -32,10 +38,7 @@ type slick struct {
 // Đại ca KHÔNG bị trừ kiếm: đây là bản sao, không phải chia của.
 func (g *Game) spawnMinion(boss *Player, at Vec, secs float64) *Player {
 	sc := g.Cfg.Skills
-	sw := int(float64(boss.Ring.Count) * sc.DanEmSwordShare)
-	if sw < 1 {
-		sw = 1
-	}
+	sw := g.minionSwords(boss)
 	m := g.AddPlayer(SpawnOptions{
 		Name: boss.Name + " (đàn em)", Char: boss.Char, IsBot: true,
 		Level: boss.Level, Swords: sw,

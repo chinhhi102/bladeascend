@@ -366,18 +366,41 @@ func (g *Game) finishRuNgu(p *Player) {
 	}
 }
 
-// Gọi Đàn Em — 2 NPC nhỏ cùng cảnh giới chạy theo 8 giây, lao vào mài kiếm địch gần nhất.
+// Gọi Đàn Em (v6.48 §6.3) — 2 đàn em trong 8 giây, mỗi đứa mang **15% số kiếm hiện tại**
+// của đại ca (tổng 30%, ngang mức lời của Trộm Kiếm) và **nhặt đồ hộ đại ca**.
+//
+// Gọi lần nữa khi còn đàn em thì **làm mới thời gian + kiếm**, không đẻ thêm: trần 2 đứa là
+// luật của spec, mà nếu gọi lần hai sinh thêm hai đứa nữa thì Đại Ca 25 s × 2 lượt dựng
+// được một đội bốn người.
 func castGoiDanEm(g *Game, p *Player, _ Vec) {
 	sc := g.Cfg.Skills
-	for i := 0; i < sc.DanEmCount; i++ {
+	have := g.minionsOf(p)
+	for _, m := range have {
+		m.MinionUntil = g.Time + sc.DanEmSecs
+		g.statusStart(p, m, StMinion, sc.DanEmSecs)
+		if want := g.minionSwords(p); m.Ring.Count < want {
+			g.AddSwords(m, want-m.Ring.Count)
+		}
+	}
+	for i := len(have); i < sc.DanEmCount; i++ {
 		a := p.Facing + float64(i)*math.Pi*2/float64(sc.DanEmCount)
 		at := p.Pos.Add(geom.FromAngle(a).Mul(g.Geom(p).Reach + 80))
-		m := g.spawnMinion(p, at, sc.DanEmSecs)
-		if m == nil {
+		if m := g.spawnMinion(p, at, sc.DanEmSecs); m == nil {
 			break
 		}
 	}
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "dan_em", N: sc.DanEmCount, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+}
+
+// minionsOf: đàn em còn sống của đại ca này.
+func (g *Game) minionsOf(boss *Player) []*Player {
+	var out []*Player
+	for _, m := range g.PlayerList() {
+		if m.IsMinion && m.MinionOf == boss.ID && !m.Dead {
+			out = append(out, m)
+		}
+	}
+	return out
 }
 
 // Phun Trân Châu — nón 45° dài 8 U, người trúng bị bịt mắt 5 giây (§6.3).

@@ -580,7 +580,7 @@
     "hut_mi_cone_deg": 60.0,
     "dan_em_count": 2,
     "dan_em_secs": 8.0,
-    "dan_em_sword_share": 0.3,
+    "dan_em_sword_share": 0.15,
     "dan_em_scale": 0.7,
     "tran_chau_cone_deg": 45.0,
     "tran_chau_secs": 5.0,

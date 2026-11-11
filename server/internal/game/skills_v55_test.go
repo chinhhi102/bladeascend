@@ -51,25 +51,83 @@ func TestMinionSwordsAtLeastOne(t *testing.T) {
 	}
 }
 
-// Đàn em không nhặt đồ và không qua cổng (spec v5.4).
-func TestMinionCannotPickUp(t *testing.T) {
+// Đàn em NHẶT ĐỒ HỘ ĐẠI CA (v6.48 §6.3) — đồ vào thẳng túi đại ca, không phải túi nó.
+//
+// Trước v6.48 đàn em bị cấm nhặt (spec v5.4). Đổi vì Đại Ca là nhân vật "nhiều tay": hai
+// đàn em quét đồ quanh đại ca trong 8 giây là lý do để gọi chúng ra, chứ không chỉ để chắn
+// kiếm.
+func TestMinionPicksUpForBoss(t *testing.T) {
 	g := skillGame(t)
 	boss := put(g, "dai_ca_dep", Vec{X: 3000, Y: 3000}, 30, 20)
 	giveCharge(boss)
 	g.CastSkill(boss)
 
-	found := false
+	var m *Player
+	for _, p := range g.PlayerList() {
+		if p.IsMinion {
+			m = p
+			break
+		}
+	}
+	if m == nil {
+		t.Fatal("không gọi được đàn em nào")
+	}
+	if !g.CanPickUp(m) {
+		t.Fatal("đàn em không nhặt được đồ — v6.48 cho phép nhặt hộ đại ca")
+	}
+	// Bó kiếm ngay cạnh đàn em, cách đại ca xa hơn vòng nhặt của chính ông.
+	before := boss.Ring.Count
+	g.spawnItemNear("bundle", 3, m.Pos, 0)
+	g.resolvePickups()
+
+	if n, _ := countItems(g, "bundle"); n != 0 {
+		t.Fatal("đàn em đứng cạnh bó kiếm mà không nhặt")
+	}
+	if boss.Ring.Count <= before {
+		t.Errorf("đại ca có %d kiếm, trước %d — đồ đàn em nhặt phải vào túi ĐẠI CA", boss.Ring.Count, before)
+	}
+	if m.Ring.Count != g.minionSwords(boss) && m.Ring.Count > g.minionSwords(boss)+3 {
+		t.Errorf("đàn em tự giữ đồ: %d kiếm", m.Ring.Count)
+	}
+}
+
+// Mỗi đàn em mang 15% kiếm của đại ca; gọi lần nữa thì LÀM MỚI, không đẻ thêm.
+func TestDanEmShareAndRecall(t *testing.T) {
+	g := skillGame(t)
+	boss := put(g, "dai_ca_dep", Vec{X: 3000, Y: 3000}, 30, 40)
+	giveCharge(boss)
+	g.CastSkill(boss)
+
+	want := int(40 * g.Cfg.Skills.DanEmSwordShare)
+	n := 0
 	for _, p := range g.PlayerList() {
 		if !p.IsMinion {
 			continue
 		}
-		found = true
-		if g.CanPickUp(p) {
-			t.Error("đàn em nhặt được đồ — spec cấm")
+		n++
+		if p.Ring.Count != want {
+			t.Errorf("đàn em có %d kiếm, muốn %d (15%% của 40)", p.Ring.Count, want)
 		}
 	}
-	if !found {
-		t.Fatal("không gọi được đàn em nào")
+	if n != g.Cfg.Skills.DanEmCount {
+		t.Fatalf("gọi ra %d đàn em, muốn %d", n, g.Cfg.Skills.DanEmCount)
+	}
+
+	step(g, g.Cfg.Skills.DanEmSecs/2)
+	giveCharge(boss)
+	boss.SkillReadyAt = 0
+	g.CastSkill(boss)
+	again := 0
+	for _, p := range g.PlayerList() {
+		if p.IsMinion {
+			again++
+			if p.MinionUntil < g.Time+g.Cfg.Skills.DanEmSecs-0.01 {
+				t.Error("gọi lần hai mà không làm mới thời gian của đàn em")
+			}
+		}
+	}
+	if again != g.Cfg.Skills.DanEmCount {
+		t.Fatalf("gọi lần hai ra %d đàn em, trần là %d", again, g.Cfg.Skills.DanEmCount)
 	}
 }
 
