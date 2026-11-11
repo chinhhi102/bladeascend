@@ -296,10 +296,16 @@ export class SkillPresenter {
           this.fx.circle(at.x, at.y, at.sc, 'rut_co_taunt_r', C.shell, now);
         }
         break;
-      case 'buoc_sap':
-        // Vòng dây quanh CÁI SẠP (e.x/e.y là tâm sạp), không quanh người bày.
+      case 'buoc_sap': {
+        // Vòng dây quanh CÁI SẠP (e.x/e.y là tâm sạp), không quanh người bày, và SỢI DÂY
+        // GÁNH nối người bị buộc với cái sạp đó (§6.5 v6.52 — thay cho vỏ chuối đã bỏ).
         this.fx.circle(e.x, e.y, at.sc, 'bay_sap_tether_leash', C.stall, now);
+        const vic = this.host.casterAt(e.b ?? 0);
+        if (vic) {
+          this.vfx.rope({ x0: vic.x, y0: vic.y, x1: e.x, y1: e.y }, e.f ?? 3, now);
+        }
         break;
+      }
       case 'bay_hang_day':
         this.vfx.puff(e.x, e.y, r * 1.6, C.dust, now);
         break;

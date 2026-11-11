@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.52:** Hút Mì toả tròn 5 U ở mọi chỗ trong spec (Q50); Trân Châu mù 3s cả luật lẫn hiệu ứng màn hình; Cô Ba bỏ vỏ chuối (Q51) (§6.3, §6.5).
+
 **Thay đổi v6.51:** Cụ Rùa rụt mai 4s → 2s (trùng thời gian khiêu khích) (§6.3).
 
 **Thay đổi v6.50:** Cụ Rùa: trong mai kiếm không mẻ (tránh bị hội đồng), khiêu khích 4 U · 2s, kiếm địch bể rơi Bó Kiếm (cụ không nhận) (§6.3).
@@ -687,7 +689,7 @@ Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ h�
 | Ru Ngủ Trưa: bán kính ngủ (4 U) | 360 | 684 | 1 800 | 2 160 |
 | Phun Trân Châu: nón (8 U) | 720 | 1 368 | 3 600 | 4 320 |
 | Bày Hàng: khoảng cách / độ dài dãy sạp (3 U / 6 U) | 270 / 540 | 513 / 1 026 | 1 350 / 2 700 | 1 620 / 3 240 |
-| Hút Mì: nón (5 U) | 450 | 855 | 2 250 | 2 700 |
+| Hút Mì: bán kính (5 U, toả tròn) | 450 | 855 | 2 250 | 2 700 |
 | Rụt Cổ: sóng / đẩy (2 U / 3 U) | 180 / 270 | 342 / 513 | 900 / 1 350 | 1 080 / 1 620 |
 
 
@@ -700,10 +702,10 @@ Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ h�
 
 **Trân châu dính màn hình** (hiệu ứng của Thằng Mập):
 - Chỉ hiện trên màn hình **người bị trúng** (lớp overlay phía client, server gửi event `Blinded {secs}`).
-- 25–40 viên trân châu đen bóng kèm vệt trà sữa **bắn "bẹp" lên màn hình** ở vị trí ngẫu nhiên, phủ khoảng **55–65%** diện tích, dày hơn ở giữa; mỗi viên **trượt chậm xuống** để lại vệt, rồi rơi/tan dần trong 5s.
-- Trong 5s đó người bị trúng **không nhặt được bất cứ thứ gì** và **kiếm không chém trúng thân ai** (server bỏ qua chém thân, va kiếm vẫn tính); quanh nhân vật hiện icon 🚫 nhỏ, vòng kiếm phủ lớp trân châu mờ để người khác biết họ đang "mù". Có tiếng "bẹp bẹp" + "rột rột".
+- 25–40 viên trân châu đen bóng kèm vệt trà sữa **bắn "bẹp" lên màn hình** ở vị trí ngẫu nhiên, phủ khoảng **55–65%** diện tích, dày hơn ở giữa; mỗi viên **trượt chậm xuống** để lại vệt, rồi rơi/tan dần trong **3s** (khớp thời gian mù, v6.52).
+- Trong 3s đó người bị trúng **không nhặt được bất cứ thứ gì** và **kiếm không chém trúng thân ai** (server bỏ qua chém thân, va kiếm vẫn tính); quanh nhân vật hiện icon 🚫 nhỏ, vòng kiếm phủ lớp trân châu mờ để người khác biết họ đang "mù". Có tiếng "bẹp bẹp" + "rột rột".
 - Không che HUD (thanh tiến độ, nút, minimap) để người chơi vẫn biết mình đang ở đâu.
-- Bot bị trúng: tầm nhìn còn 40%, không nhặt đồ, và kiếm không chém trúng thân ai trong 5s.
+- Bot bị trúng: tầm nhìn còn 40%, không nhặt đồ, kiếm không chém trúng thân ai, và đi ngược hướng muốn đi trong 3s.
 - Trúng lần nữa khi đang bị: làm mới thời gian, thêm 10 viên.
 
 - Mỗi kỹ năng có câu thoại tấu hài khi dùng (bong bóng thoại) + SFX riêng.
@@ -730,9 +732,9 @@ Ngoài ra trên màn hình **người bị trúng**: icon trạng thái + giây 
 | Bà Tám — Loa Phường | Vòng sóng âm 360° lan từ tâm ra 6 U | Mỗi người bị đẩy: vệt bụi kéo dài theo hướng bị đẩy + icon 📢 nhỏ; vòng kiếm loé khi đổi chiều | Sóng mờ dần |
 | Ông Ba — Ru Ngủ Trưa / Trộm Kiếm | Vòng tím nhạt 4 U, nốt nhạc bay ra | Người ngủ: "zzz" + bong bóng mũi + icon 💤 đếm 2.5s; **Ông Ba**: võng đung đưa + viền tím quanh vòng kiếm 4s (kiếm ông vẫn mẻ bình thường); mỗi thanh kiếm bị trộm **bay vệt tím từ nạn nhân về vòng ông** | Võng biến mất, "ngáp" |
 | Đại Ca — Gọi Đàn Em | Không | 2 đàn em chạy từ mép màn hình vào, mỗi đứa có thanh đếm ngược 8s trên đầu + vòng kiếm màu tím sẫm khác đại ca | Đàn em biến mất trong khói + "Đại ca ơi em đi đây" |
-| Thằng Mập — Phun Trân Châu | Nón 45° × 8 U, hạt trân châu bay | Người mù: **lớp trân châu dính trên vòng kiếm** + icon 🧋 đếm 5s; trên màn hình nạn nhân: trân châu dính kính (đã có) | Trân châu rơi lả tả |
-| Cô Ba — Bày Hàng Chặn Lối | Dãy 5 khung sạp nhấp nháy 0.3s trước khi bật lên | Sạp có **tấm bạt cam** + thanh đếm 6s nhỏ; vỏ chuối vàng dọc chân sạp; người trượt: vệt trượt + sao choáng 1s | Sạp sụp + vỏ chuối mờ |
-| Sư Phụ Mì — Hút Mì Đoạt Kiếm | Nón 60° × 5 U loé | **Sợi mì vàng nối Sư Phụ ↔ nạn nhân** 0.5s, kiếm bay dọc sợi mì; số "−N kiếm" trên nạn nhân, "+N" trên Sư Phụ; hụt → sợi mì rơi xuống đất | Sợi mì rút về |
+| Thằng Mập — Phun Trân Châu | Nón 45° × 8 U, hạt trân châu bay | Người mù: **lớp trân châu dính trên vòng kiếm** + icon 🧋 đếm 3s + icon ⇄ đảo điều khiển; trên màn hình nạn nhân: trân châu dính kính (đã có) | Trân châu rơi lả tả |
+| Cô Ba — Bày Hàng Chặn Lối | Dãy 5 khung sạp nhấp nháy 0.3s trước khi bật lên | Sạp có **tấm bạt cam** + thanh đếm 6s nhỏ; người bị đẩy: vệt bụi; người bị buộc: **sợi dây gánh nối người ↔ sạp** + vòng 2 U mờ quanh sạp + icon 🪢 đếm 3s | Sạp sụp, dây đứt |
+| Sư Phụ Mì — Hút Mì Đoạt Kiếm | **Vòng tròn 5 U** loé (toả 360°) trong 0.6s húp | **Sợi mì vàng nối Sư Phụ ↔ từng nạn nhân** 0.6s, kiếm bay dọc sợi mì; số "−N kiếm" trên mỗi nạn nhân, "+N" trên Sư Phụ; kiếm vượt trần rơi Bó Kiếm quanh ông; không ai trong vòng → sợi mì rơi xuống đất | Sợi mì rút về |
 | Bé Tí — Gồng Cơ | Không | Người phồng to 10%, **hào quang cam** + gân đỏ, vòng kiếm viền cam, icon 💪 đếm 4s | Xì hơi, xẹp lại |
 | Shipper — Gom Đơn Hỏa Tốc | Không | **Vệt tia chớp vàng** sau lưng, đi xuyên vật cản thì vật cản mờ 50% khi đi qua, icon ⚡ đếm 4s; vòng nhặt đồ hiện mờ (+10%) | Phanh gấp, khói bánh xe |
 | Cụ Rùa — Rụt Cổ | Không | Mai rùa **phát sáng xanh** + khiên bán trong suốt, icon 🐢 đếm 5s; ra mai: vòng sóng đẩy 2 U | Sóng đẩy lan + "à há" |
@@ -1682,7 +1684,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "ice": { "friction": 0.92, "accel": 0.25, "snow_mult": 0.8 },
   "skills": { "key": "Space", "source": "cooldown", "start_charges": 1, "tien_extra_charges": 1, "lockout_secs": 3,
     "cooldowns": { "a_hon": [25, 2], "ba_tam_loa": [25, 2], "ong_ba_vong": [25, 2], "dai_ca_dep": [25, 2], "map_tra_sua": [25, 2], "co_ba_ganh": [25, 2], "su_phu_mi": [35, 1], "be_ti": [25, 2], "shipper": [20, 2], "cu_rua": [25, 2] },
-    "ranges_u": { "loa_radius": 6, "loa_shape": "circle", "loa_inhale_secs": 0.8, "loa_vacuum_r": 6, "loa_push": 6, "ru_ngu_r": 4, "ru_ngu_steal_secs": 4, "ru_ngu_secs": 2.5, "ru_ngu_channel": 0.5, "dan_em_follow": 3, "dan_em_share": 0.15, "dan_em_secs": 8, "dan_em_collect_for_owner": true, "gong_co_secs": 4, "bung_co_r": 2, "bung_co_push": 3, "bung_co_sword_loss": 0.1, "banh_bao_instant": 0.1, "banh_bao_regen": 0.2, "banh_bao_regen_secs": 4, "tran_chau_blind_secs": 3, "tran_chau_invert_secs": 3, "map_giant_mult": 2, "map_giant_secs": 2, "sap_indestructible": true, "sap_tether_r": 2, "sap_tether_secs": 3, "rut_co_secs": 2, "rut_co_swords_unbreakable": true, "khieu_khich_r": 4, "khieu_khich_secs": 2, "dan_em_seek": 8, "tran_chau_cone": 8, "bay_sap_dist": 3, "bay_sap_len": 6, "bay_sap_count": 5, "bay_sap_secs": 6, "bay_sap_tier_bonus": 1, "bay_sap_owner_passes": true, "vo_chuoi_w": 1, "hut_mi_radius": 5, "hut_mi_steal": 0.25, "hut_mi_channel": 0.6, "hut_mi_overflow": "drop_bundles", "gom_don_pickup_bonus": 0.1, "gom_don_secs": 4, "rut_co_wave": 2, "rut_co_push": 3 },
+    "ranges_u": { "loa_radius": 6, "loa_shape": "circle", "loa_inhale_secs": 0.8, "loa_vacuum_r": 6, "loa_push": 6, "ru_ngu_r": 4, "ru_ngu_steal_secs": 4, "ru_ngu_secs": 2.5, "ru_ngu_channel": 0.5, "dan_em_follow": 3, "dan_em_share": 0.15, "dan_em_secs": 8, "dan_em_collect_for_owner": true, "gong_co_secs": 4, "bung_co_r": 2, "bung_co_push": 3, "bung_co_sword_loss": 0.1, "banh_bao_instant": 0.1, "banh_bao_regen": 0.2, "banh_bao_regen_secs": 4, "tran_chau_blind_secs": 3, "tran_chau_invert_secs": 3, "map_giant_mult": 2, "map_giant_secs": 2, "sap_indestructible": true, "sap_tether_r": 2, "sap_tether_secs": 3, "rut_co_secs": 2, "rut_co_swords_unbreakable": true, "khieu_khich_r": 4, "khieu_khich_secs": 2, "dan_em_seek": 8, "tran_chau_cone": 8, "bay_sap_dist": 3, "bay_sap_len": 6, "bay_sap_count": 5, "bay_sap_secs": 6, "bay_sap_tier_bonus": 1, "bay_sap_owner_passes": true, "hut_mi_radius": 5, "hut_mi_steal": 0.25, "hut_mi_channel": 0.6, "hut_mi_overflow": "drop_bundles", "gom_don_pickup_bonus": 0.1, "gom_don_secs": 4, "rut_co_wave": 2, "rut_co_push": 3 },
     "push_secs": 0.3, "lockout_secs": 3, "overcap_exp": 20, "overcap_tien_khi": 2, "blind": { "secs": 5, "no_pickup": true, "pearls": [25, 40], "cover": [0.55, 0.65], "bot_vision_mult": 0.4 } },
   "movement": { "slide_iterations": 3, "smooth_correct_max": 30, "smooth_correct_ms": 100 },
   "room": {
@@ -1793,7 +1795,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Admin đổi trần phòng 50 → 30: phòng mới chỉ nhận 30 người; phòng đang 35 người không đuổi ai, chỉ ngừng nhận. Giá trị còn nguyên sau deploy.
 - [ ] Production: người thật ≥ 40 → ngừng sinh bot, < 35 → sinh lại. Staging: ≥ 20 → ngừng. Mỗi khu được lấp đủ 10 nhân vật khi bot được phép.
 
-- [ ] Người bị Ru Ngủ / choáng vỏ chuối: không di chuyển nhưng vòng kiếm vẫn quay, va kiếm hai chiều bình thường, vẫn chém chết được người lao vào thân mình.
+- [ ] Người bị Ru Ngủ / bị buộc vào sạp / bị khiêu khích: không tự di chuyển được nhưng vòng kiếm vẫn quay, va kiếm hai chiều bình thường, vẫn chém chết được người lao vào thân mình.
 - [ ] Người bị Thằng Mập bịt mắt: trong 5s kiếm chạm thân người khác không gây chết; va kiếm vẫn bể kiếm bình thường.
 
 - [ ] Chém trúng thân người Kim Đan (còn 1 vòng) → chết ngay, vào lại Luyện Khí 1; người chém nhận 30% Linh khí nạn nhân nhưng không lên quá 2 đại cảnh giới; xác rơi 30% Linh khí + 50% kiếm.
@@ -1810,9 +1812,9 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Top 1 thẻ to viền vàng động + vương miện + chân dung; Top 2/3 thẻ nửa rộng bạc/đồng; 4–10 dạng dòng; dòng của mình ghim cuối khi ngoài top 10.
 - [ ] Bảng không tràn ở 1366×768 và iPhone dọc; điện thoại mặc định thu gọn, chạm để mở.
 
-- [ ] Cô Ba Kim Đan bày sạp (bậc 3): người Kim Đan và thấp hơn không chém được, phải đi vòng; người Nguyên Anh chém được; Cô Ba đi xuyên sạp của mình; dẫm vỏ chuối → trượt + choáng 1s; sau 6s sạp biến mất; Shipper đang Gom Đơn đi xuyên qua.
+- [ ] Cô Ba bày sạp: sạp không chém được (kể cả Đạo Tổ), Cô Ba đi xuyên, Shipper đang Gom Đơn đi xuyên; địch đứng trên đường sạp bị đẩy ra; địch trong 2 U quanh dãy sạp bị buộc 3s, chỉ đi trong 2 U quanh sạp; KHÔNG còn vỏ chuối; sau 6s sạp biến mất.
 
-- [ ] Hút Mì: địch 100 kiếm → Sư Phụ cướp 25 (không vượt 20% tối đa của mình, dư rơi Bó Kiếm); không ai trong nón → hụt, mất lượt.
+- [ ] Hút Mì: 3 địch trong 5 U (100, 60, 40 kiếm) → mỗi người mất 25% (25/15/10), Sư Phụ nhận đủ tới trần, dư rơi Bó Kiếm quanh ông; không ai trong vòng → hụt, mất lượt.
 - [ ] Bán kính nhặt: Luyện Khí 1 = 90 px, Đạo Tổ = 540 px; Shipper Đại Thừa 10 + Gom Đơn + Nam Châm = 720 px; Thằng Mập Đạo Tổ + Nam Châm = 891 px; đang bị trói/ngủ/choáng dùng được và thoát ngay.
 
 - [ ] Luyện Khí chém rào tre → biến mất ngay, không hoạt ảnh; chém tường gạch → không có tác dụng + chữ "Cần Kim Đan"; 30s sau rào mọc lại đúng chỗ.
@@ -1836,7 +1838,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Băng Nguyệt Hồ: trên băng trượt có quán tính.
 - [ ] 4 khu (trừ Thiên Đình) có Thiên Môn ở tâm, đường tới thông; bước vào luôn ra ở đúng Bến Thiên Môn của khu đó ở Thiên Đình; minimap có icon + mũi tên chỉ hướng.
 - [ ] Đi sát/đi dọc tường, rào, đá tảng: không giật, không rung; F3 'hiệu chỉnh/giây' ≈ 0 khi chỉ đi sát vật cản.
-- [ ] Trúng Phun Trân Châu: màn hình bị che ~60% trong 5s, không nhặt được gì trong 5s; HUD và minimap không bị che.
+- [ ] Trúng Phun Trân Châu: màn hình bị che ~60% trong 3s, không nhặt được gì, đảo điều khiển 3s; HUD và minimap không bị che.
 - [ ] Shipper dùng Giao Hỏa Tốc đi xuyên vách đá được nhưng không ra khỏi biên khu; hết giờ trong vật cản thì được đẩy ra chỗ trống.
 
 - [ ] Hai Kim Đan 60 kiếm mài nhau 1 giây → mỗi bên còn ~30 kiếm; đi xuyên qua nhau được; chỉ người còn 1 vòng mới bị chém thân.

@@ -222,26 +222,18 @@ func TestStallTethersNearbyFoes(t *testing.T) {
 	}
 }
 
-// "Dẫm vỏ chuối → trượt + choáng 1s." Vỏ chuối rải dọc CHÂN dãy, tức phía Cô Ba: con mồi
-// bị dãy sạp chặn, quay lại thì dẫm vỏ.
-func TestBananaPeelsSlipAndStun(t *testing.T) {
+// v6.52 (Q51): Cô Ba KHÔNG còn rải vỏ chuối. Bài này canh đúng việc đó — bỏ một cơ chế mà
+// không có bài kiểm thì lần sau rất dễ có người "sửa lại cho đủ" theo §6.5 bản cũ.
+func TestNoBananaPeelsAnyMore(t *testing.T) {
 	g := skillGame(t)
-	p, _ := coBaAt(t, g, 20)
-	if len(g.slicks) == 0 {
-		t.Fatal("bày hàng mà không rải vỏ chuối nào")
-	}
-	peel := g.slicks[0]
-	if d := peel.at.Dist(p.Pos); d >= g.skillRange(p, "bay_sap_dist") {
-		t.Errorf("vỏ chuối cách %.0f, phải nằm trong cung sạp (%.0f)", d, g.skillRange(p, "bay_sap_dist"))
-	}
-
-	o := put(g, "cu_rua", Vec{X: peel.at.X, Y: peel.at.Y}, 20, 10)
+	co, _ := coBaAt(t, g, 20)
+	// Đứng đúng chân dãy sạp — chỗ vỏ chuối từng nằm.
+	at := co.Pos.Add(Vec{X: g.skillRange(co, "bay_sap_dist") * 0.9})
+	o := put(g, "cu_rua", at, 20, 10)
+	o.Status[StTether] = 0 // bỏ dây buộc để chỉ còn đo phần trượt/choáng
 	g.updateSkillState(1.0 / 30)
-	if !o.HasStatus(StSlip, g.Time) {
-		t.Error("dẫm vỏ chuối mà không trượt")
-	}
-	if !o.HasStatus(StStun, g.Time) {
-		t.Error("dẫm vỏ chuối mà không choáng")
+	if o.HasStatus(StSlip, g.Time) || o.HasStatus(StStun, g.Time) {
+		t.Fatal("vẫn còn vỏ chuối: đứng chân dãy sạp mà bị trượt/choáng")
 	}
 }
 

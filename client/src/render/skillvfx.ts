@@ -152,6 +152,27 @@ export class SkillVfx {
    * noodle: sợi mì vàng nối Sư Phụ ↔ nạn nhân 0,5 s rồi rút về (spec §6.5). Hụt thì sợi mì
    * vươn tới mũi nón rồi RƠI xuống đất.
    */
+  /**
+   * rope: sợi dây gánh nối người bị buộc ↔ cái sạp (Cô Ba, §6.5 v6.52).
+   *
+   * Dây CHÙNG xuống giữa (parabol nhẹ) chứ không kéo thẳng căng: thẳng băng thì nhìn như
+   * tia laser, còn võng xuống thì đọc ra ngay "bị buộc vào đó", kể cả khi người chơi chưa
+   * đọc dòng mô tả kỹ năng lần nào.
+   */
+  rope(p: Path, secs: number, now: number): void {
+    const len = Math.hypot(p.x1 - p.x0, p.y1 - p.y0) || 1;
+    this.add(0, 0, now, secs, (g, k) => {
+      const sag = len * 0.12 * (1 - k * 0.3);
+      const steps = 14;
+      g.moveTo(p.x0, p.y0);
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        g.lineTo(p.x0 + (p.x1 - p.x0) * t, p.y0 + (p.y1 - p.y0) * t + Math.sin(Math.PI * t) * sag);
+      }
+      g.stroke({ color: 0xc98b4b, width: Math.max(3, len * 0.012), alpha: 0.9 * (1 - k * 0.5), cap: 'round' });
+    });
+  }
+
   noodle(p: Path, now: number, miss: boolean): void {
     this.add(0, 0, now, miss ? 0.6 : 0.65, (g, k) => {
       const out = Math.min(1, k / 0.2);

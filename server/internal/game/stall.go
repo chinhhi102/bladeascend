@@ -38,7 +38,7 @@ type tempStall struct {
 }
 
 // castBayHang bày 5 sạp thành vòng cung cách `bay_sap_dist` U theo hướng nhắm, dãy dài
-// `bay_sap_len` U, sống `bay_sap_secs` giây; dọc chân dãy rải vỏ chuối rộng `vo_chuoi_w` U.
+// `bay_sap_len` U, sống `bay_sap_secs` giây.
 //
 // Vòng cung chứ không đường thẳng: đường thẳng vuông góc với hướng nhắm thì hai đầu dãy xa
 // Cô Ba hơn khúc giữa, nên con mồi chạy chéo là lách được đúng chỗ dãy mỏng nhất. Cung có
@@ -89,15 +89,9 @@ func castBayHang(g *Game, p *Player, dir Vec) {
 		g.emit(Event{Kind: "StallUp", A: p.ID, B: g.stallSeq, N: tier, F: float32(w),
 			X: float32(c.X), Y: float32(c.Y)})
 	}
-	// Vỏ chuối dọc CHÂN dãy, tức phía Cô Ba: con mồi bị dãy sạp chặn, quay lại thì dẫm vỏ.
-	// Dùng lại `g.slicks` của Gánh Lướt — cùng một luật "trượt theo quán tính + choáng", nên
-	// viết bản thứ hai chỉ là thêm một chỗ nữa phải sửa khi spec đổi số giây.
-	peelR := g.skillRange(p, "vo_chuoi_w")
-	for i := 0; i < n; i++ {
-		a := base + span*((float64(i)+0.5)/float64(n)-0.5)
-		at := p.Pos.Add(Vec{X: math.Cos(a), Y: math.Sin(a)}.Mul(dist - peelR))
-		g.slicks = append(g.slicks, slick{at: at, until: g.Time + secs, owner: p.ID, r: peelR})
-	}
+	// v6.52 (Q51): BỎ vỏ chuối. Cộng cả sạp bất hoại + đẩy văng + buộc 3 giây thì Cô Ba đã
+	// đủ nặng; thêm một lớp trượt-và-choáng nữa là một kỹ năng làm bốn việc. Chủ dự án chốt
+	// 11/11, spec §6.5 đổi sang "sợi dây gánh nối người ↔ sạp".
 	g.tetherToStalls(p, mine)
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "bay_hang", N: placed, F: float32(secs),
 		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})

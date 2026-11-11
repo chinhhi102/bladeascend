@@ -596,7 +596,11 @@
     "brace": "Gồng",
     "ghost": "Gom đơn",
     "shell": "Rụt cổ",
-    "steal": "Trộm kiếm"
+    "steal": "Trộm kiếm",
+    "invert": "Đảo điều khiển",
+    "giant": "Khổng lồ",
+    "tether": "Buộc vào sạp",
+    "taunt": "Bị khiêu khích"
   },
   "likeTop": "Được thích nhất",
   "likeTitle": "Thích nhân vật này",

@@ -6,20 +6,9 @@ import (
 	"bladeascend/server/internal/geom"
 )
 
-// Trạng thái phụ trợ cho kỹ năng (spec §6.3): vệt trơn của Cô Ba, đàn em của Đại Ca, và
-// sổ ghi kiếm vừa bể của A Hớn.
-
-// slick là một vũng trái cây trên đất: ai đi vào thì trượt theo quán tính.
-type slick struct {
-	at    Vec
-	until float64
-	owner uint32
-	// r: bán kính vũng, = `ranges_u.slick_width × U` của người ĐÃ TẠO ra nó, chốt ngay lúc
-	// lướt (spec v6.5 §6.3). Lưu vào vũng chứ không tính lại mỗi tick: vũng sống 4 giây và
-	// trong 4 giây đó Cô Ba có thể lên cảnh giới, rớt cảnh giới, hoặc rời phòng — tính lại
-	// theo người thì vũng tự phình ra hoặc biến mất mà không có lý do nào nhìn thấy được.
-	r float64
-}
+// Trạng thái phụ trợ cho kỹ năng (spec §6.3): đàn em của Đại Ca, phần kiếm Bánh Bao còn
+// nợ, và mấy khoảnh khắc "vừa hết hiệu lực" phải bắt bằng cờ riêng (ra mai, hết gồng, hết
+// khổng lồ) — tick có thể nhảy qua đúng mốc hết hạn.
 
 // minionSwords: mỗi đàn em mang `dan_em_sword_share` phần số kiếm HIỆN TẠI của đại ca
 // (v6.48: 15% mỗi đứa, hai đứa là 30% — ngang mức lời của Trộm Kiếm), tối thiểu 1.
@@ -56,31 +45,15 @@ func (g *Game) spawnMinion(boss *Player, at Vec, secs float64) *Player {
 	return m
 }
 
-// updateSkillState chạy mỗi tick: hết hạn vệt trơn, hết hạn đàn em, bắt người đi vào vệt
-// trơn, và bật sóng đẩy khi Cụ Rùa ra khỏi mai.
+// updateSkillState chạy mỗi tick: hết hạn sạp, hết hạn đàn em, nhả dần kiếm Bánh Bao, và
+// bật sóng đẩy khi Cụ Rùa ra khỏi mai / Bé Tí hết gồng.
+//
+// v6.52 (Q51) bỏ hẳn phần "vệt trơn": Cô Ba thôi rải vỏ chuối, và đó là nguồn DUY NHẤT sinh
+// ra chúng. Giữ lại một hệ thống không ai sinh ra nữa là giữ một vòng lặp chạy mỗi tick cho
+// một mảng luôn rỗng, cộng bốn khoá config không còn nghĩa. `StSlip` thì GIỮ (mặt băng §8.0
+// vẫn dùng chung luật trượt, và đánh số lại bảng trạng thái là đổi bit trên dây).
 func (g *Game) updateSkillState(dt float64) {
 	g.regenSwords(dt)
-	// Vệt trơn: dọn vũng hết hạn rồi bắt người đi vào.
-	keep := g.slicks[:0]
-	for _, s := range g.slicks {
-		if g.Time >= s.until {
-			continue
-		}
-		keep = append(keep, s)
-		for _, p := range g.PlayerList() {
-			if p.Dead || p.ID == s.owner || p.InTransit(g.Time) {
-				continue
-			}
-			if p.Pos.Dist(s.at) <= s.r {
-				// Trượt VÀ choáng cùng lúc (spec v5.5): trượt theo quán tính, đồng thời
-				// mất quyền điều khiển trong đúng khoảng đó.
-				owner := g.Players[s.owner] // nil nếu Cô Ba đã rời phòng — vẫn trượt như thường
-				g.ApplyStatusFrom(owner, p, StSlip, g.Cfg.Skills.SlipSecs)
-				g.ApplyStatusFrom(owner, p, StStun, g.Cfg.Skills.SlipSecs)
-			}
-		}
-	}
-	g.slicks = keep
 	g.updateStalls()
 
 	for _, p := range g.PlayerList() {

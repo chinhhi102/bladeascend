@@ -612,7 +612,11 @@
     "brace": "Braced",
     "ghost": "Rush",
     "shell": "Shell",
-    "steal": "Steal"
+    "steal": "Steal",
+    "invert": "Reversed controls",
+    "giant": "Giant",
+    "tether": "Tied to a stall",
+    "taunt": "Taunted"
   },
   "likeTop": "Most liked",
   "likeTitle": "Like this character",

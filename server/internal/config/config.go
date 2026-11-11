@@ -411,11 +411,6 @@ type Skills struct {
 	TranChauNoPickup  bool    `json:"tran_chau_no_pickup"`
 	TranChauBotVision float64 `json:"tran_chau_bot_vision"`
 
-	DashSecs   float64 `json:"dash_secs"`
-	SlickCount int     `json:"slick_count"`
-	SlickSecs  float64 `json:"slick_secs"`
-	SlipSecs   float64 `json:"slip_secs"`
-
 	BraceSecs       float64 `json:"brace_secs"`
 	BraceDurability float64 `json:"brace_durability"`
 	// GomDonPickup: Gom Đơn cộng ngần này base vào bán kính nhặt (spec v6.31 §6.3: +0.1),

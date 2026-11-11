@@ -52,9 +52,7 @@ type Game struct {
 	// bladeBuf dùng lại giữa các lần so kiếm — spec §13.4 cấm cấp phát trong vòng nóng.
 	bladeBuf []blade
 	// obsBuf: danh sách id vật cản gần, dùng lại để khỏi cấp phát mỗi bước di chuyển.
-	obsBuf []int
-	// slicks: vệt trơn do Gánh Lướt rơi lại (spec §6.3).
-	slicks    []slick
+	obsBuf    []int
 	Obstacles []ObstacleState
 	// RoomRank trả hạng Uy Danh của một người trong CẢ PHÒNG (5 khu), 1 là cao nhất; 0 nếu
 	// không biết. `Room` cắm vào mỗi tick (GAME_SPEC v6.19 §11.3).

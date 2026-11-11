@@ -36,7 +36,6 @@ var specRangesU = map[string]float64{
 	"bay_sap_tether_r":      2,
 	"bay_sap_tether_leash":  2,
 	"bay_sap_tether_secs":   3,
-	"vo_chuoi_w":            1,
 	"hut_mi_r":              5,
 	"hut_mi_steal":          0.25,
 	"hut_mi_channel":        0.6,

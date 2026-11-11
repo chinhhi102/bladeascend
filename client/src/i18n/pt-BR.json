@@ -612,7 +612,11 @@
     "brace": "Firme",
     "ghost": "Pressa",
     "shell": "Casco",
-    "steal": "Roubo"
+    "steal": "Roubo",
+    "invert": "Controles invertidos",
+    "giant": "Gigante",
+    "tether": "Preso à barraca",
+    "taunt": "Provocado"
   },
   "likeTop": "Mais curtido",
   "likeTitle": "Curtir este personagem",

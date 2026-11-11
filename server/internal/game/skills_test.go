@@ -572,23 +572,6 @@ func TestTranChauBlinds(t *testing.T) {
 	}
 }
 
-// Vệt trái cây của Gánh Lướt làm người đi vào bị trượt theo quán tính.
-func TestGanhLuotLeavesSlickTrail(t *testing.T) {
-	g := skillGame(t)
-	a := put(g, "co_ba_ganh", Vec{X: 3000, Y: 3000}, 10, 20)
-	a.Facing = 0
-	giveCharge(a)
-	g.CastSkill(a)
-	if len(g.slicks) != g.Cfg.Skills.SlickCount {
-		t.Fatalf("rơi %d vũng, muốn %d", len(g.slicks), g.Cfg.Skills.SlickCount)
-	}
-	b := put(g, "cu_rua", g.slicks[0].at, 10, 20)
-	g.updateSkillState(1.0 / 30)
-	if !b.HasStatus(StSlip, g.Time) {
-		t.Fatal("đi vào vệt trái cây mà không trượt")
-	}
-}
-
 // Bung Cơ (v6.48 §6.3): hết 4 giây gồng thì đẩy địch trong 2 U ra 3 U và mỗi người mất 10%
 // số kiếm hiện có — kiếm rơi quanh HỌ thành Bó Kiếm, Bé Tí không nhận được thanh nào.
 func TestBungCoPushesAndDropsSwords(t *testing.T) {

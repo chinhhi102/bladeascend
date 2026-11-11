@@ -612,7 +612,11 @@
     "brace": "Firme",
     "ghost": "Prisa",
     "shell": "Caparazón",
-    "steal": "Robo"
+    "steal": "Robo",
+    "invert": "Controles invertidos",
+    "giant": "Gigante",
+    "tether": "Atado al puesto",
+    "taunt": "Provocado"
   },
   "likeTop": "El más querido",
   "likeTitle": "Me gusta este personaje",

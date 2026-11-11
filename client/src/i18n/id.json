@@ -612,7 +612,11 @@
     "brace": "Kuat",
     "ghost": "Ngebut",
     "shell": "Cangkang",
-    "steal": "Curi"
+    "steal": "Curi",
+    "invert": "Kendali terbalik",
+    "giant": "Raksasa",
+    "tether": "Terikat ke lapak",
+    "taunt": "Terprovokasi"
   },
   "likeTop": "Paling disukai",
   "likeTitle": "Sukai karakter ini",

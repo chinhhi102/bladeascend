@@ -148,32 +148,6 @@ func TestBlindBlocksEveryPickup(t *testing.T) {
 	}
 }
 
-// Vệt trái cây của Cô Ba gây CHOÁNG: không đi, không dùng kỹ năng, không Thiêu Đốt.
-func TestSlickStuns(t *testing.T) {
-	g := skillGame(t)
-	co := put(g, "co_ba_ganh", Vec{X: 3000, Y: 3000}, 10, 20)
-	co.Facing = 0
-	victim := put(g, "cu_rua", Vec{X: 3000 + 200, Y: 3000}, 10, 20)
-	giveCharge(co)
-	g.CastSkill(co)
-	g.updateSkillState(1.0 / 30)
-
-	if !victim.HasStatus(StStun, g.Time) {
-		t.Fatal("đi vào vệt trái cây mà không bị choáng (spec v5.5)")
-	}
-	if g.MoveSpeed(victim) != 0 {
-		t.Errorf("đang choáng mà tốc độ %.1f — phải là 0", g.MoveSpeed(victim))
-	}
-	giveCharge(victim)
-	if g.CanCastSkill(victim) {
-		t.Error("đang choáng mà vẫn dùng được kỹ năng")
-	}
-	victim.Moving, victim.Burning = true, true
-	g.GainExp(victim, g.Prog.ExpNeeded(victim.Level)*0.9, false)
-	if g.Burning(victim) {
-		t.Error("đang choáng mà vẫn Thiêu Đốt được")
-	}
-}
 
 // Gồng Cơ miễn choáng — spec nói "không bị đẩy lùi/chậm/trói", và choáng cùng nhóm đó.
 func TestBraceImmuneToStun(t *testing.T) {
