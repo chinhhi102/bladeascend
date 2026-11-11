@@ -49,10 +49,10 @@ type Cultivation struct {
 	// TienTiers: số tầng mỗi cảnh giới Tiên. TienTierStep: tầng s nặng `1 + step·s` —
 	// cùng nhịp `tier_step` của phàm giới. TienScalePerTier: scale +0.02 mỗi tầng,
 	// Chân Tiên 1 = 5.02 … Đạo Tổ 10 = 6.00.
-	TienTiers        int     `json:"tien_tiers"`
-	TienTierStep     float64 `json:"tien_tier_step"`
-	TienScalePerTier float64 `json:"tien_scale_per_tier"`
-	TienAuraColors  []string  `json:"tien_aura_colors"`
+	TienTiers        int      `json:"tien_tiers"`
+	TienTierStep     float64  `json:"tien_tier_step"`
+	TienScalePerTier float64  `json:"tien_scale_per_tier"`
+	TienAuraColors   []string `json:"tien_aura_colors"`
 }
 
 type Sword struct {
@@ -106,9 +106,9 @@ type Player struct {
 	DeathDropIncludeRemain  bool    `json:"death_drop_include_remaining"`
 	DeathDropMaxBundles     int     `json:"death_drop_max_bundles"`
 	OrbOwnerSecs            float64 `json:"orb_owner_secs"`
-	CameraViewH    float64 `json:"camera_view_h"`
-	CameraExp      float64 `json:"camera_exp"`
-	CameraReachMul float64 `json:"camera_reach_mult"`
+	CameraViewH             float64 `json:"camera_view_h"`
+	CameraExp               float64 `json:"camera_exp"`
+	CameraReachMul          float64 `json:"camera_reach_mult"`
 	// RobCapRealms: chém chết thì người chém nhận Linh khí tối đa tới sàn cảnh giới r+N
 	// (spec v6.26 §5.1, N = 2). RobCapTienRealms: Tiên khí tối đa tới trần cảnh giới Tiên +N.
 	RobCapRealms     int `json:"rob_cap_realms"`
@@ -596,9 +596,23 @@ type Net struct {
 	// MaxRingFlips: tối đa bao nhiêu sự kiện va kiếm được gửi cho MỘT người trong một gói
 	// (giữ cái gần họ nhất). Va kiếm không mang luật chơi — chiều quay mới nằm ở trường `d`
 	// mỗi gói — nên đây thuần là ngân sách băng thông cho tia lửa. 0 = không giới hạn.
-	MaxRingFlips       int     `json:"max_ring_flips"`
-	TickHz             int     `json:"tick_hz"`
-	SnapshotHz         int     `json:"snapshot_hz"`
+	MaxRingFlips int `json:"max_ring_flips"`
+	TickHz       int `json:"tick_hz"`
+	SnapshotHz   int `json:"snapshot_hz"`
+	// Trễ nội suy TỰ ĐIỀU CHỈNH (Q48 bước c): `interp_ms` là sàn, đo nhịp gói thật rồi
+	// nâng dần tới tối đa `interp_ms_max`, đổi không quá `interp_adapt_ms_per_sec` ms mỗi
+	// giây (đổi nhanh hơn thì chính việc đổi làm hình giật).
+	InterpMsMax         float64 `json:"interp_ms_max"`
+	InterpAdaptMsPerSec float64 `json:"interp_adapt_ms_per_sec"`
+	// Đồng hồ vẽ của client (Q48 bước b, NETCODE_SPEC): kéo offset về đích tối đa
+	// `clock_rate` phần mỗi giây, lấy ước tính tốt nhất trong `clock_window_secs` giây gần
+	// nhất, và bắt sóng lại NGAY khi lệch quá `clock_resync_secs`.
+	//
+	// Server không dùng ba số này — chúng đi ra client qua `/api/config`, nhưng vẫn để ở
+	// đây để mọi con số cân bằng nằm cùng một chỗ (CLAUDE.md luật 2).
+	ClockRate          float64 `json:"clock_rate"`
+	ClockWindowSecs    float64 `json:"clock_window_secs"`
+	ClockResyncSecs    float64 `json:"clock_resync_secs"`
 	InterpMs           int     `json:"interp_ms"`
 	AOIMargin          float64 `json:"aoi_margin"`
 	AOIAspect          float64 `json:"aoi_aspect"`

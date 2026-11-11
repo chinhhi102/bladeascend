@@ -132,6 +132,13 @@ export interface GameConfig {
   net: {
     tick_hz: number;
     snapshot_hz: number;
+    /** Trễ nội suy tối đa khi mạng xấu, và tốc độ đổi (Q48 bước c). */
+    interp_ms_max?: number;
+    interp_adapt_ms_per_sec?: number;
+    // Đồng hồ vẽ (Q48 bước b): tốc kéo tối đa, cửa sổ lấy ước tính, ngưỡng bắt sóng lại.
+    clock_rate?: number;
+    clock_window_secs?: number;
+    clock_resync_secs?: number;
     interp_ms: number;
     /** Lệch quá ngần này thì nhảy thẳng thay vì kéo dần (spec §8.2a). */
     correction_snap: number;

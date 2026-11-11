@@ -221,7 +221,8 @@ fi
 echo "   có telemetry ✓"
 # Q48: nhìn người chạy nhanh từ tab khác có nhảy cóc không. Cần server DEV riêng (window.kx
 # chỉ có khi server cấp quyền debug) nên không chạy chung với các `check:*` thuần Node.
-# Ngưỡng tạm ≤ 3% khung — bắt thoái lui; hạ về 0 khi xong Q48 bước 2–4.
+# Ngưỡng: 0 nhảy cóc, 0 đứng hình (Q48 xong 11/11 — đồng hồ chỉnh tốc + trễ nội suy tự
+# điều chỉnh). Ngưỡng tạm ≤ 3% cũ đã bỏ cùng với cách đo cũ.
 # Đặt SKIP_SMOOTH=1 để bỏ qua (máy không có Playwright).
 if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwright ]; then
   echo "== 2b/5 nhìn Shipper Gom Đơn từ tab khác (bản VỪA dựng) =="
@@ -230,7 +231,7 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   # Lấy mã thoát của BÀI ĐO, không phải của `tail`: `cmd | tail` trả mã của `tail` nên
   # cổng này lúc đầu luôn xanh dù bài đo đỏ.
   set +e
-  MAX_PCT=3 node tools/browsertest/gomdon-smooth.mjs http://127.0.0.1:9997 >/tmp/kx-smooth.out 2>&1
+  node tools/browsertest/gomdon-smooth.mjs http://127.0.0.1:9997 >/tmp/kx-smooth.out 2>&1
   smooth_rc=$?
   set -e
   tail -3 /tmp/kx-smooth.out
@@ -254,7 +255,7 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   fi
   # 0 = đạt · 1 = vượt ngưỡng, chặn deploy · 2 = máy quá tải, số không dùng được → chỉ cảnh báo
   if [ "$smooth_rc" = "1" ]; then
-    echo "LỖI: nhảy cóc vượt ngưỡng 3%. Dừng deploy." >&2
+    echo "LỖI: còn nhảy cóc / đứng hình khi nhìn người chạy nhanh. Dừng deploy." >&2
     exit 1
   elif [ "$smooth_rc" = "2" ]; then
     echo "   (bỏ qua: máy quá tải, số đo không dùng được)"

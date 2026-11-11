@@ -35,9 +35,11 @@ import { cpus, loadavg } from 'node:os';
 
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const WATCH_MS = Number(process.env.WATCH_MS ?? 20000);
-// Ngưỡng ĐẠT theo TỈ LỆ khung nhảy cóc. Q48 chốt tạm ≤ 3% để bắt thoái lui; hạ về 0 khi
-// xong bước 2–4. Đặt `MAX_PCT=0` để canh tuyệt đối.
-const MAX_PCT = Number(process.env.MAX_PCT ?? 3);
+// Ngưỡng ĐẠT nay là TUYỆT ĐỐI: 0 nhảy cóc, 0 đứng hình — tính trên VẾT trong vòng vẽ
+// (xem phần phán quyết ở cuối). Ngưỡng tạm "≤ 3% khung" của Q48 đã bỏ: nó đo theo nhịp của
+// chính bài đo, và nhịp ấy lệch với nhịp vẽ nên con số dao động 0–3,5% giữa các lượt trên
+// CÙNG một bản (đo 11/11). Hạ về 0 là bước cuối của Q48, chốt 11/11 sau khi đồng hồ chỉnh
+// tốc + trễ nội suy tự điều chỉnh vào chạy thật.
 // Máy chạy quá ngần này lần số nhân thì mọi con số bên dưới là nhiễu máy, không phải hành
 // vi netcode. Đặt `IGNORE_LOAD=1` để vẫn đọc số.
 //
@@ -114,9 +116,14 @@ const drive = (async () => {
 })();
 
 const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
+  // Vết (thời_điểm_vẽ, x, y) ghi TRONG vòng vẽ của game — xem `ClientWorld.traceEntity`.
+  window.kx.world.traceEntity?.(id);
   const fast = [];            // tốc độ vẽ (đv/s) của những khung có di chuyển
   let frames = 0, missing = 0, gone = 0, respawn2s = 0, goneAt = -1;
   let nhayCoc = 0, dungHinh = 0, nhanhNhat = 0;
+  let toNhat = {};
+  let nhayCocTheoVe = 0, nhanhNhatTheoVe = 0, prevRt = 0;
+  let nhayCocNoiSuy = 0, nhanhNhatNoiSuy = 0, prevRaw = null, capNoiSuy = {};
   let duMin = 1e9, duSum = 0, duN = 0, khoCan = 0;
   let lastOff = null, offUp = 0, offDown = 0, offJumpMax = 0;
   const gaps = [];
@@ -152,7 +159,7 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
     duSum += du; duN++;
     if (du <= 0) khoCan++;
     // (b) độ lệch đồng hồ ước tính (giây) — chỉ cần biết nó NHẢY bao nhiêu
-    const off = w.offset ?? 0;
+    const off = w.clockOffsetSecs ? w.clockOffsetSecs() : (w.offset ?? 0);
     if (lastOff !== null && off !== lastOff) {
       const jump = (off - lastOff) * 1000;
       offJumpMax = Math.max(offJumpMax, jump);
@@ -168,10 +175,71 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
     const at = { x: sp.root.x, y: sp.root.y };
     if (prevT > 0) frameGaps.push(now - prevT);
     const dt = (now - prevT) / 1000;
+    // Tốc độ đo theo THỜI ĐIỂM VẼ, không theo giờ máy.
+    //
+    // Hai con số này chỉ khác nhau khi vòng lấy mẫu (rAF của bài đo) lệch nhịp với vòng vẽ
+    // của game: lúc ấy một khung lấy mẫu "thấy" hai khung vẽ gộp lại, và tốc độ tính theo
+    // giờ máy vọt lên gấp đôi dù hình vẽ ra hoàn toàn đều. Đây chính là kiểu lỗi PHÉP ĐO
+    // từng làm lượt đo 10/11 đỏ oan.
+    // Vị trí NỘI SUY THUẦN (đầu ra của `followSnaps`, trước khi lớp vẽ đụng vào) — so với
+    // vị trí SPRITE để biết cú nhảy sinh ra ở netcode hay ở lớp vẽ.
+    const raw = v?.track?.shown;
+    if (raw && prevRaw && prevRt > 0) {
+      const rtPrev = prevRt;
+      const dRt = w.renderTime() - rtPrev;
+      if (dRt > 0) {
+        const vRaw = Math.hypot(raw.x - prevRaw.x, raw.y - prevRaw.y) / dRt;
+        nhanhNhatNoiSuy = Math.max(nhanhNhatNoiSuy, vRaw);
+        if (vRaw > cap * jumpMult) {
+        nhayCocNoiSuy++;
+        // Cặp gói ĐANG ĐƯỢC NỘI SUY ở đúng khung này (không phải hai gói mới nhất): nếu
+        // chính cặp ấy đã đi 1 700 đv/s thì dữ liệu server vốn có cú dịch nhanh (đòn đẩy
+        // lùi của kỹ năng đi 6 U trong 0,3 s = gấp đôi tốc chạy), và "nhảy cóc" là THẬT
+        // nhưng đúng luật — không phải lỗi nội suy.
+        if (vRaw > (capNoiSuy.v ?? 0)) {
+          const rtv = w.renderTime();
+          let ia = -1;
+          for (let k = snaps.length - 1; k > 0; k--) {
+            if (snaps[k - 1].t <= rtv) { ia = k - 1; break; }
+          }
+          capNoiSuy = ia >= 0 ? {
+            v: +vRaw.toFixed(0),
+            goiCachMs: +((snaps[ia + 1].t - snaps[ia].t) * 1000).toFixed(0),
+            goiDoiCho: +Math.hypot(snaps[ia + 1].s.x - snaps[ia].s.x, snaps[ia + 1].s.y - snaps[ia].s.y).toFixed(0),
+            tocCapGoi: +(Math.hypot(snaps[ia + 1].s.x - snaps[ia].s.x, snaps[ia + 1].s.y - snaps[ia].s.y) / Math.max(snaps[ia + 1].t - snaps[ia].t, 1e-6)).toFixed(0),
+          } : { v: +vRaw.toFixed(0), goiCachMs: -1 };
+        }
+      }
+      }
+    }
+    prevRaw = raw ? { x: raw.x, y: raw.y } : null;
+    const rtNow = w.renderTime();
+    if (prev && prevRt > 0 && rtNow > prevRt) {
+      const vRt = Math.hypot(at.x - prev.x, at.y - prev.y) / (rtNow - prevRt);
+      nhanhNhatTheoVe = Math.max(nhanhNhatTheoVe, vRt);
+      if (vRt > cap * jumpMult) nhayCocTheoVe++;
+    }
+    prevRt = rtNow;
     if (prev && dt > 0 && dt < 0.5) {
       const v = Math.hypot(at.x - prev.x, at.y - prev.y) / dt;
       nhanhNhat = Math.max(nhanhNhat, v);
-      if (v > cap * jumpMult) { nhayCoc++; if (du <= 0) nhayCocKhoCan++; }
+      if (v > cap * jumpMult) {
+        nhayCoc++;
+        if (du <= 0) nhayCocKhoCan++;
+        // Ghi lại BỐI CẢNH của cú nhảy to nhất: hai gói gần nhất và thời điểm vẽ. Không có
+        // nó thì chỉ biết "có nhảy" mà không biết nhảy vì kho cạn, vì đồng hồ, hay vì chính
+        // dữ liệu server gửi đã nhảy.
+        if (v > (toNhat.v ?? 0)) {
+          const n = snaps.length;
+          toNhat = {
+            v: +v.toFixed(0), du: +du.toFixed(1), interpMs: w.interpNowMs ? +w.interpNowMs().toFixed(0) : 0,
+            doiKhung: +Math.hypot(at.x - prev.x, at.y - prev.y).toFixed(0),
+            goiCach: n >= 2 ? +((snaps[n - 1].t - snaps[n - 2].t) * 1000).toFixed(0) : 0,
+            goiDoiCho: n >= 2 ? +Math.hypot(snaps[n - 1].s.x - snaps[n - 2].s.x, snaps[n - 1].s.y - snaps[n - 2].s.y).toFixed(0) : 0,
+            co: n ? (snaps[n - 1].s.fl ?? 0) : 0,
+          };
+        }
+      }
       if (v > 1) fast.push(v);
       // Đứng hình: khung gần như không nhúc nhích ngay giữa lúc đang chạy nhanh.
       else if (fast.length && fast[fast.length - 1] > cap * 0.5) { dungHinh++; if (du <= 0) dungHinhKhoCan++; }
@@ -199,6 +267,41 @@ const sample = watcher.evaluate(async ({ ms, id, cap, jumpMult }) => {
     khungKhoCan: khoCan,
     dungHinhLucKhoCan: dungHinhKhoCan,
     nhayCocLucKhoCan: nhayCocKhoCan,
+    cuNhayToNhat: toNhat,
+    ...(() => {
+      // Tốc độ tính từ VẾT: cặp (thời điểm vẽ, vị trí) lấy cùng một khung, nên không còn
+      // lệch nhịp giữa vòng đo và vòng vẽ.
+      const tr = window.kx.world.takeTrace?.() ?? [];
+      // Vết là bộ 4: (thời điểm vẽ, x, y, tốc độ của DỮ LIỆU ở khung đó).
+      //
+      // Có cột cuối mới tách được ba thứ nhìn ra đều giống "giật":
+      //   · dữ liệu nhảy (qua cổng, hồi sinh) → hình phải nhảy theo, ĐÚNG;
+      //   · dữ liệu đứng (người ta dừng thật) → hình đứng, ĐÚNG;
+      //   · dữ liệu đều mà hình nhảy hoặc đứng → LỖI nội suy, chính là thứ Q48 đi chữa.
+      let n = 0, fastest = 0, stalls = 0, teleports = 0;
+      for (let i = 4; i < tr.length; i += 4) {
+        const dRt = tr[i] - tr[i - 4];
+        if (dRt <= 0) continue;
+        const vv = Math.hypot(tr[i + 1] - tr[i - 3], tr[i + 2] - tr[i - 2]) / dRt;
+        const dataV = tr[i + 3];
+        if (dataV > cap * 1.3) {
+          teleports++; // dịch chuyển/hồi sinh: dữ liệu vốn đã nhảy
+          continue;
+        }
+        fastest = Math.max(fastest, vv);
+        if (vv > cap * jumpMult) n++;
+        if (vv < 1 && dataV > cap * 0.5) stalls++;
+      }
+      return {
+        nhayCocTheoVet: n, nhanhNhatTheoVet: +fastest.toFixed(0),
+        dungHinhTheoVet: stalls, soMauVet: tr.length / 4, dichChuyenThat: teleports,
+      };
+    })(),
+    nhayCocNoiSuyThuan: nhayCocNoiSuy,
+    capGoiLucNhay: capNoiSuy,
+    nhanhNhatNoiSuyThuan: +nhanhNhatNoiSuy.toFixed(0),
+    nhayCocTheoThoiDiemVe: nhayCocTheoVe,
+    nhanhNhatTheoThoiDiemVe: +nhanhNhatTheoVe.toFixed(0),
     goiTrungViMs: (() => { const g = [...gaps].sort((a, c) => a - c); return g.length ? +g[Math.floor(g.length / 2)].toFixed(0) : 0; })(),
     goiLonNhatMs: gaps.length ? +Math.max(...gaps).toFixed(0) : 0,
     goiTren75ms: gaps.filter((x) => x > 75).length,
@@ -219,6 +322,16 @@ console.log(JSON.stringify({ ...res, giay: WATCH_MS / 1000 }, null, 1));
 // ĐẠT khi: không entity nào bị dựng lại trong khung nhìn, và không có nấc nhảy cóc nào.
 // `dungHinh` chỉ để đọc — Shipper có lúc đứng yên thật (giữa hai lần đổi hướng).
 // Máy quá tải thì KHÔNG kết luận gì.
+// Thấy được bao nhiêu khung? Lượt nào Shipper chết sớm (hoặc chưa kịp vào tầm nhìn) thì
+// bài này đo trên vài chục khung rồi báo "nhảy cóc 0%" — một màu XANH GIẢ, nguy hiểm hơn
+// hẳn một lần đỏ. Đo được 11/11: hai lượt liền chỉ thấy ~150/1 200 khung mà vẫn ĐẠT.
+const thayTyLe = res.frames > 0 ? res.khungThay / res.frames : 0;
+if (thayTyLe < 0.5) {
+  console.error(`\nKHÔNG ĐO ĐƯỢC: chỉ thấy ${res.khungThay}/${res.frames} khung ` +
+    `(${Math.round(thayTyLe * 100)}%) — Shipper chết sớm hoặc chưa vào tầm nhìn. Chạy lại.`);
+  await b.close();
+  process.exit(2);
+}
 const perCpu = loadavg()[0] / cpus().length;
 console.log(`tải máy: ${loadavg()[0].toFixed(1)} trên ${cpus().length} nhân = ${perCpu.toFixed(2)}/nhân`);
 if (perCpu > MAX_LOAD_PER_CPU && process.env.IGNORE_LOAD !== '1') {
@@ -228,9 +341,18 @@ if (perCpu > MAX_LOAD_PER_CPU && process.env.IGNORE_LOAD !== '1') {
   process.exit(2);
 }
 
-const ok = res.hienLai2s === 0 && res.tyLeNhayCoc <= MAX_PCT;
+// PHÁN QUYẾT đọc từ VẾT, không từ vòng lấy mẫu.
+//
+// Hai cột `nhayCoc*` cũ đo bằng cách: lấy vị trí sprite ở nhịp `rAF` của bài đo, chia cho
+// giờ máy. Vòng đo và vòng vẽ của game không cùng nhịp, nên một khung đo có lúc "thấy" hai
+// khung vẽ gộp lại và tốc độ vọt gấp đôi dù hình chạy hoàn toàn đều. Đo 11/11 cho thấy rõ:
+// cùng một lượt, đo theo nhịp bài là 2 807 đv/s, đo theo vết (vị trí + thời điểm vẽ lấy
+// trong CÙNG một khung vẽ) là 816 đv/s — trong khi cặp gói đang nội suy chỉ đi 939 đv/s,
+// tức dữ liệu vốn đã đúng. Giữ hai cột cũ để đọc, nhưng không cho chúng quyết đỏ/xanh nữa.
+const ok = res.hienLai2s === 0 && res.nhayCocTheoVet === 0 && res.dungHinhTheoVet === 0;
 console.log(ok
-  ? `ĐẠT (ngưỡng ≤ ${MAX_PCT}%): nhảy cóc ${res.tyLeNhayCoc}% — nhanh nhất ${res.nhanhNhat} đv/s (trần ${res.tranToc}), 0 dựng lại`
-  : `TRƯỢT (ngưỡng ≤ ${MAX_PCT}%): nhảy cóc ${res.nhayCoc}/${res.khungThay} khung thấy được (${res.tyLeNhayCoc}%, nhanh nhất ${res.nhanhNhat} đv/s, trần ${res.tranToc}), dựng lại ${res.hienLai2s} lần`);
-process.exit(ok ? 0 : 1);
+  ? `ĐẠT: 0 nhảy cóc, 0 đứng hình trên ${res.soMauVet} khung vẽ — nhanh nhất ${res.nhanhNhatTheoVet} đv/s (trần ${res.tranToc})`
+  : `TRƯỢT: ${res.nhayCocTheoVet} nhảy cóc + ${res.dungHinhTheoVet} đứng hình trên ${res.soMauVet} khung vẽ ` +
+    `(nhanh nhất ${res.nhanhNhatTheoVet} đv/s, trần ${res.tranToc}), dựng lại ${res.hienLai2s} lần`);
 await b.close();
+process.exit(ok ? 0 : 1);

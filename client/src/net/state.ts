@@ -1,6 +1,6 @@
 import { realmOf, type GameConfig } from '../config';
 import { lerp, type Vec } from './geom';
-import { followSnaps, type Track } from './interp.ts';
+import { bracket, Clock, followSnaps, type Track } from './interp.ts';
 import { statusTracker } from '../render/statustrack';
 import { moveStep } from './movestep.ts';
 import { bonus, innate, stat } from './stat';
@@ -68,7 +68,6 @@ const SNAP_KEEP = 30;
  * — nếu không thì vẫn nhấp nháy, chỉ chậm hơn.
  */
 const KEEP_GONE_SECS = 2;
-const OFFSET_DECAY = 0.0005; // lets the clock estimate adapt if latency grows
 
 /** ClientWorld holds the replicated world: interpolation for others, prediction for me. */
 export class ClientWorld {
@@ -124,7 +123,18 @@ export class ClientWorld {
   private readonly descCache = new Map<number, { name: string; char: string; at: number }>();
   /** missingDesc: entity chưa biết vẽ nhân vật nào — xem takeMissingDesc. */
   private readonly missingDesc = new Set<number>();
-  private offset: number | null = null;
+  /**
+   * clock: đồng hồ vẽ theo giờ server, kéo về đích có giới hạn tốc (`net/interp.ts`).
+   * Thay cho `offset` thô trước đây — xem ghi chú trong `applySnapshot`.
+   */
+  private readonly clock: Clock;
+  /** traceId/trace: vết của một entity cho bài đo (xem `traceEntity`); 0 = tắt. */
+  private traceId = 0;
+  private readonly trace: number[] = [];
+  /** gaps: khoảng cách giữa các gói snapshot gần đây (ms) — nguồn của `interpTarget`. */
+  private readonly gaps: number[] = [];
+  private interpMs: number;
+  private interpTarget: number;
   private pending: PendingInput[] = [];
   private seq = 0;
   private predicted: Vec = { x: 0, y: 0 };
@@ -152,7 +162,14 @@ export class ClientWorld {
   private lastInput: PendingInput = { seq: 0, angle: 0, moving: false, burn: false };
   lastSnapAt = 0;
 
-  constructor(private readonly cfg: GameConfig) {}
+  constructor(private readonly cfg: GameConfig) {
+    this.clock = new Clock({
+      rate: cfg.net.clock_rate ?? 0.08,
+      windowSecs: cfg.net.clock_window_secs ?? 2,
+    });
+    this.interpMs = cfg.net.interp_ms;
+    this.interpTarget = cfg.net.interp_ms;
+  }
 
   reset(w: Welcome, map: GameMap): void {
     this.myId = w.id;
@@ -167,21 +184,104 @@ export class ClientWorld {
       this.brokenObstacles.set(o.id, o.b);
     }
     this.pending = [];
-    this.offset = null;
+    this.clock.reset();
+    this.gaps.length = 0;
+    this.interpMs = this.interpTarget = this.cfg.net.interp_ms;
   }
 
   /** Estimated current server time in seconds. */
   serverNow(): number {
-    return performance.now() / 1000 + (this.offset ?? 0);
+    return this.clock.now(performance.now() / 1000);
   }
 
+  /**
+   * renderTime: thời điểm được VẼ — luôn trễ hơn giờ server đúng `interpMs`.
+   *
+   * `interpMs` TỰ ĐIỀU CHỈNH theo nhịp gói thật (Q48 bước c): mạng đều thì bám sàn
+   * `net.interp_ms`, mạng giật thì nâng lên tới `interp_ms_max`. Đo 11/11 trên bài
+   * `gomdon-smooth`: khoảng cách hai gói trung vị 66 ms nhưng có lúc 100 ms, và kho nội
+   * suy có lúc chỉ còn **11,9 ms** dự trữ — một gói về muộn hơn thế là kho cạn, và lúc kho
+   * cạn thì hình nhảy (đo được 2 732 đv/s trên trần 975).
+   */
   renderTime(): number {
-    return this.serverNow() - this.cfg.net.interp_ms / 1000;
+    return this.serverNow() - this.interpMs / 1000;
+  }
+
+  /**
+   * traceEntity / takeTrace: ghi vết (thời_điểm_vẽ, x, y) của MỘT entity, cho bài đo Q48.
+   *
+   * Vì sao phải nằm TRONG client chứ không đo từ ngoài: bài đo chạy vòng `rAF` riêng, còn
+   * vị trí nội suy chỉ đổi theo vòng vẽ của game. Đọc vị trí ở nhịp này mà đọc thời điểm vẽ
+   * ở nhịp kia là ghép sai cặp — ra "tốc vẽ 2 807 đv/s" trong khi hai gói đang nội suy chỉ
+   * đi 939 đv/s. Ghi cả cặp trong CÙNG một khung vẽ thì con số mới có nghĩa.
+   *
+   * Tắt mặc định (`traceId = 0`): không ai gọi thì chi phí là một phép so số nguyên/khung.
+   */
+  traceEntity(id: number): void {
+    this.traceId = id;
+    this.trace.length = 0;
+  }
+
+  takeTrace(): number[] {
+    const out = this.trace.slice();
+    this.trace.length = 0;
+    return out;
+  }
+
+  /**
+   * clockOffsetSecs: lệch giờ client↔server đang dùng (bài đo đọc để đếm "đồng hồ nhảy").
+   *
+   * Phải có getter vì `offset` thô đã bị thay bằng `Clock`; bài đo cũ đọc `world.offset`
+   * và từ lúc đó nó im lặng trả về 0 — tức là cột chẩn đoán quan trọng nhất của Q48 báo
+   * "đồng hồ không nhảy lần nào" bất kể thực tế.
+   */
+  clockOffsetSecs(): number {
+    return this.clock.now(0);
+  }
+
+  /** interpNowMs: trễ nội suy đang dùng (bài đo `gomdon-smooth` đọc qua `window.kx`). */
+  interpNowMs(): number {
+    return this.interpMs;
+  }
+
+  /**
+   * adaptInterp: nâng/hạ trễ nội suy theo khoảng cách gói THẬT.
+   *
+   * Đích = gói thưa nhất trong 40 gói gần nhất + một nhịp tick dự phòng. Lấy mốc cao nhất
+   * chứ không trung bình: kho chỉ cần cạn MỘT lần là người xem thấy giật, còn trễ thêm vài
+   * chục ms thì không ai nhận ra.
+   */
+  private adaptInterp(gapMs: number): void {
+    if (gapMs > 0 && gapMs < 2000) {
+      this.gaps.push(gapMs);
+      if (this.gaps.length > 40) {
+        this.gaps.shift();
+      }
+    }
+    const base = this.cfg.net.interp_ms;
+    const max = this.cfg.net.interp_ms_max ?? base;
+    const worst = this.gaps.length > 0 ? Math.max(...this.gaps) : 0;
+    this.interpTarget = Math.min(max, Math.max(base, worst + 1000 / this.cfg.net.tick_hz));
   }
 
   applySnapshot(s: Snapshot): GameEvent[] {
-    const est = s.tm - performance.now() / 1000;
-    this.offset = this.offset === null || est > this.offset ? est : this.offset - OFFSET_DECAY;
+    // Đồng hồ vẽ CHỈNH TỐC, không nhảy thẳng (Q48 bước b, `net/interp.ts`).
+    //
+    // Bản cũ: `offset = max(ước tính)` rồi rỉ xuống 0,5 ms mỗi gói. Mỗi lần một gói về sớm
+    // hơn thường lệ, offset nhảy thẳng tới mốc mới — thời điểm vẽ nhảy theo, và mọi người
+    // trên màn hình dịch một phát. Bài đo đơn vị `npm run check:interp` đếm được 15 khung
+    // nhảy cóc với đồng hồ cũ, tốc vẽ đỉnh 2 194 đv/s trên trần 975; với đồng hồ này là 0
+    // khung và 1 053 đv/s (đúng bằng trần + 8% cho phép của chính nó).
+    const now = performance.now() / 1000;
+    const est = s.tm - now;
+    this.clock.sample(est, now);
+    // Lệch quá nhiều thì bắt sóng lại ngay: bò 8%/giây từ chỗ lệch vài giây mất hàng chục
+    // giây, và suốt từng ấy thời gian thời điểm vẽ chạy trước cả gói mới nhất — người xem
+    // thấy cả phòng đứng hình (đo 10/11: 3/5 lượt kẹt ở mức lệch 1,7–16 giây).
+    if (Math.abs(est - (this.clock.now(now) - now)) > (this.cfg.net.clock_resync_secs ?? 1)) {
+      this.clock.resync();
+    }
+    this.adaptInterp(performance.now() - this.lastSnapAt);
     this.lastSnapAt = performance.now();
     this.updatePlayers(s);
     this.updateMonsters(s);
@@ -650,6 +750,14 @@ export class ClientWorld {
 
   /** Interpolated (others) or predicted (me) state for rendering. */
   playerFrames(dt: number): PlayerFrame[] {
+    // Nhích đồng hồ MỘT LẦN mỗi khung vẽ, ngay trước khi dùng nó: `playerFrames` là cửa
+    // đầu tiên của vòng vẽ, nên mọi thứ vẽ sau đó đọc cùng một thời điểm.
+    this.clock.step(dt, performance.now() / 1000);
+    // Kéo trễ nội suy về đích CHẬM: đổi nhanh thì chính việc đổi làm thời điểm vẽ nhảy, tức
+    // là tự gây ra đúng cái giật đang đi chữa.
+    const stepMs = (this.cfg.net.interp_adapt_ms_per_sec ?? 20) * dt;
+    const d = this.interpTarget - this.interpMs;
+    this.interpMs += Math.max(-stepMs, Math.min(stepMs, d));
     const decay = Math.exp((-dt * 1000) / Math.max(this.cfg.net.correction_tau_ms, 1));
     this.correction.x *= decay;
     this.correction.y *= decay;
@@ -657,6 +765,19 @@ export class ClientWorld {
     const out: PlayerFrame[] = [];
     for (const v of this.players.values()) {
       out.push(v.id === this.myId ? this.myFrame(v) : interpPlayer(v, this.cfg, rt));
+    }
+    if (this.traceId !== 0 && this.trace.length < 40000) {
+      const f = out.find((p) => p.view.id === this.traceId);
+      if (f) {
+        // Kèm TỐC ĐỘ CỦA DỮ LIỆU ở đúng khung này: cặp gói đang được nội suy đi nhanh bao
+        // nhiêu. Có nó mới tách được ba thứ khác hẳn nhau mà nhìn ra đều là "giật":
+        // dịch chuyển qua cổng (dữ liệu nhảy — đúng), entity dừng thật (dữ liệu đứng —
+        // đúng), và lỗi nội suy (dữ liệu đều mà hình nhảy — sai).
+        const { a, b } = bracket(f.view.snaps, rt);
+        const span = b.t - a.t;
+        const dataV = span > 0 ? Math.hypot(b.s.x - a.s.x, b.s.y - a.s.y) / span : 0;
+        this.trace.push(rt, f.x, f.y, dataV);
+      }
     }
     return out;
   }
@@ -696,19 +817,6 @@ function quantize(angle: number): number {
   return Math.round(a / step) * step;
 }
 
-/** bracket finds the two snapshots around time t and the blend factor between them. */
-function bracket<T>(buf: Timed<T>[], t: number): { a: Timed<T>; b: Timed<T>; t: number } {
-  for (let i = buf.length - 1; i > 0; i--) {
-    if (buf[i - 1].t <= t) {
-      const a = buf[i - 1];
-      const b = buf[i];
-      const span = b.t - a.t;
-      return { a, b, t: span > 0 ? Math.min(1, (t - a.t) / span) : 1 };
-    }
-  }
-  return { a: buf[0], b: buf[0], t: 1 };
-}
-
 /**
  * omega: tốc độ quay vòng kiếm, rad/giây. Server KHÔNG gửi con số này nữa (spec mục 27) —
  * nó suy ra được từ `rev_secs` trong config và buff Tốc Kiếm mà client đã có sẵn, nên gửi
@@ -724,8 +832,8 @@ export function omega(cfg: GameConfig, s: PlayerState, char: string): number {
 
 function interpPlayer(v: PlayerView, cfg: GameConfig, rt: number): PlayerFrame {
   // `bracket` ở đây chỉ để lấy gói nền cho GÓC VÒNG KIẾM; vị trí do `followSnaps` lo.
-  const { a, b, t } = bracket(v.snaps, rt);
-  const base = t >= 1 ? b : a;
+  const { a, b, k } = bracket(v.snaps, rt);
+  const base = k >= 1 ? b : a;
   const ringAngle = base.s.ph + base.s.d * omega(cfg, base.s, v.char) * (rt - base.t);
   // Vị trí đi qua `net/interp.ts` để bài đơn vị `check:interp` phủ đúng đường đang chạy.
   v.track ??= {};
