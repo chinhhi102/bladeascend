@@ -19,6 +19,7 @@
 | **S10** | `node tools/browsertest/pingsource.mjs <url> <giây> [--cpu=N] [--daoto] [--tabs=N]` | **Trễ đến từ đâu**: chạy đồng thời ping luồng chính và ping trong Web Worker, cùng đường truyền cùng server. Chênh lệch = phần trễ do luồng chính bận. `--cpu=N` bóp CPU giả lập máy yếu; `--daoto` lên Đạo Tổ 1050 kiếm. |
 | **S11** | `node tools/browsertest/cputrace.mjs <url> <giây> [--cpu=N] [--daoto]` | **Hồ sơ CPU luồng chính** (CDP `Profiler`, 1000 mẫu/giây): thời gian TỰ THÂN từng hàm. Trả lời "mỗi khung tốn N ms thì N ms đó nằm ở hàm nào". |
 | **WANDER** | `node tools/browsertest/respawn-wander.mjs [client-dir] 120 4` | **Respawn 2 giây như người chơi gặp**: server riêng 9993, 60 bot, 4 tab đi lang thang 120 s, đọc thẳng `world.respawnBy` (tách do Despawn / do hết hạn / quái). `client-dir` trỏ vào `server/data/deploy-archive/<build>/client` để so theo build. Dao động giữa các lượt ~±10 — so khác biệt cỡ chục lần, không so 2 với 4. |
+| **TEXLEAK** | `MINUTES=14 node tools/browsertest/texleak.mjs <url>` | **Rò rỉ texture theo thời gian**: vào trận rồi đi lang thang nhiều phút, mỗi 30 s đọc số texture đang giữ + MB. Mở trang với `?textrace=1` nên bảng cuối gom texture **theo nơi cấp phát** (tên tệp art, hay dòng mã dựng canvas). Kết luận đọc ở ĐỘ DỐC, không ở con số lẻ: MB nhấp nhô theo atlas đang nạp, còn rò rỉ thì SỐ TEXTURE đi lên một chiều. Phải chạy ≥ 10 phút — mọi kịch bản khác chỉ 20–120 s nên không kịch bản nào thấy được nó. |
 | **QCOST** | `node tools/browsertest/qualitycost.mjs 20 --zone=2 --cpu=4 --runs=2` | **Mức chất lượng tốn ở đâu**: server riêng 9995, vào đúng một khu, CPU 4×, ép mức tay, hạ từng hiệu ứng bằng `?qf=`. FPS p1 với 2 lượt KHÔNG đủ mẫu; tin cột "cập nhật cảnh (ms)". |
 | **S8** *(ngừng 01/11 — luồng bản đồ 5 Hz đã bỏ theo ADMIN_SPEC §5, `livemap.mjs` đã xoá; Q40)* | `node tools/browsertest/livemap.mjs <cổng>` | **Giá của trang quản trị** (ADMIN_SPEC §11): đo tick TB cao nhất khi KHÔNG ai xem bản đồ, rồi khi 2 admin xem ở 5 lần/giây, lấy hiệu. Trần 0,3 ms. |
 | **S12** | `go run ./cmd/loadtest --scenario S12 --seed 7` | **Phòng 50 người** (spec v6.22 §9.1): 50 người thật + 20 bot (bật bot tay), 10 Đạo Tổ đủ kiếm chụm, 120s. In p95 TỪNG KHU (cửa sổ 10 s tệ nhất); ngưỡng mở giới hạn 50 là mọi khu < 4 ms **trên server thật**. |
@@ -114,6 +115,8 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 29 | 2026-11-02 | `bb1cd96` | v6.36 lớp hiển thị kỹ năng + event StatusStart/End (3 lần seed 7, load ~6) | S1 | – (chỉ ghi p95 khu) | – | – | – | – | – | – | – | Thiên Đình p95 **1.43 · 1.31 · 1.29 ms** (trung vị 1.31) ✅; 4 khu kia ≤ 0.92 ms. So #27 (1.27): giữ nguyên | – |
 | 29 | 2026-11-02 | `bb1cd96` | v6.36 — WebKit giả lập iPhone, `:9999`, 45 s (load ~6–7) | S9 | – | – | – | 42.4 / – | – | 0 | **107.4** | – | lỗi 0 · 166 texture · 2146 sprite. So #27 (43.2 / 113.1 / 4990 sprite): không tăng | – |
 | 30 | 2026-11-06 | (sau `362258a`) | Máy quay mượt: nhịp khung đều + nội suy nhân vật mình + máy quay đuổi 70 ms (`wallhug.mjs`, headless 60 Hz, 4 lần, dev :9998) | CAM | – | – | – | 60 / – | – | – | – | – | Độ giật máy quay đi thẳng **0,17–0,29 → 0,09–0,15**; khung màn hình đứng im **2–3 % → 0 %**. Nhánh màn tần số cao (vẽ mỗi 2 khung quét): khoảng cách khung p5/p50/p95 32,2 / 33,3 / 34,4 ms | B22 đóng |
+| 33 | 2026-11-11 | `ec38aee` (trước sửa) | **Rò rỉ texture — đo trước**: 1 tab, đi lang thang, `?textrace=1` (dev :9998 / vite :5174) | TEXLEAK | – | – | – | 60 / – | – | – | – | – | 5 phút: **118 → 625 texture**, 82 → 202 MB — **91 texture/phút · +17,9 MB/phút**, một chiều. Nhóm phình: `mapview.noiseMask` 128×128 (387 tấm) | B23 mở |
+| 33 | 2026-11-11 | (sau sửa) | **Rò rỉ texture — đo sau**: cùng bài, 14 phút | TEXLEAK | – | – | – | 60 / – | – | – | – | – | 14 phút: **191 → 224 texture** (nhấp nhô 168–276, KHÔNG có xu hướng), 141 → 133 MB (**−0,6 MB/phút**). Mặt nạ nền đứng ở 20 tấm | B23 đóng |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -922,10 +925,62 @@ cóc, **3 khung đứng hình**. Chưa gắn vào `npm run build` vì nó đỏ;
 khung nhảy cóc, chạy trên bản client VỪA dựng (lúc đầu tôi đặt trước bước dựng client nên
 nó kiểm bản cũ — vô nghĩa). Hai lần deploy đầu: 1,00% và 1,35% → ĐẠT.
 
+### Lượt #33 (11/11) — Rò rỉ texture: 120 MB → 1,4 GB sau 55 phút chơi
+
+**Tìm ra từ lỗi NGƯỜI CHƠI, không phải từ bài đo.** Đọc `telemetry.db` theo luật §4: mọi
+ngoại lệ JavaScript đều thuộc build 30–31/10 (đã sửa cả ba). Thứ còn sống trên build hôm nay
+`ec38aee` là `gpu_pressure` và `webgl_context_lost` — và một phiên 55 phút ghi
+**1 431 MB / 13 736 texture**. Ba phiên dài khác: 823 MB/6 273, 1 117 MB/10 134, 812 MB/6 218.
+Trần ngân sách iOS là 256 MB, và Safari không báo lỗi khi vượt — nó **giết tab**.
+
+**Vì sao chưa kịch bản nào thấy:** S4/S9/QCOST/weakperf đều chạy 20–120 giây. Ở nhịp
+~90 texture/phút thì hai phút đầu trông hoàn toàn bình thường. Phải có một kịch bản tính
+bằng CHỤC PHÚT mới thấy — nay là `TEXLEAK` trong §1.
+
+**Dụng cụ phải viết trước.** `tex_mb` nói CÓ rò rỉ chứ không nói rò rỉ Ở ĐÂU, mà bọc
+`texImage2D` thì ngăn xếp chỉ thấy ruột PixiJS (`uploadImageWebGL2`) — lúc tải lên thì đang
+giữa vòng vẽ, không còn dấu gì của chỗ tạo. Ba bước mới lần ra:
+
+1. gom theo KÍCH THƯỚC → toàn luỹ thừa 2 (128², 256²) ⇒ không phải ảnh art;
+2. gom theo `TextureSource` (bọc `GlTextureSystem.onSourceUpdate`) → `CanvasSource` ⇒ canvas
+   do mã game vẽ, không phải tệp tải về;
+3. bọc `Texture.from` ghi ngăn xếp CHỖ GỌI → `mapview.ts` 252 tấm, `decals.ts` 64 tấm.
+
+Bước 1 cũng loại luôn một nghi can: bể texture của Pixi chỉ phát ra **14** tấm cả phiên, nên
+không phải nó. Cả ba bước nằm sau `?textrace=1`, mặc định tắt.
+
+**Hai chỗ quên nhả, cùng một gốc: huỷ node KHÔNG huỷ texture.**
+
+- `mapview.buildBlendChunk` dựng cho mỗi ô nền một mặt nạ loang 128×128 riêng (gieo theo ô).
+  Ô ra khỏi khung nhìn thì `node.destroy({ children: true })` — bỏ node, **giữ nguyên ảnh trên
+  GPU**. Đi lại là bỏ quên vài chục tấm mỗi phút. Không thể chữa bằng `destroy({ texture: true })`
+  cho cả ô: `TilingSprite` trong ô dùng CHUNG texture tile của art, huỷ là xoá nền mọi ô khác.
+  Nay ô giữ kèm danh sách texture mặt nạ của riêng nó và `dropBlendChunk` huỷ đúng chừng ấy.
+- Đổi khu dựng `MapView` mới, còn cái cũ chỉ bị `camera.removeChildren()` gỡ ra rồi **bỏ mặc**
+  — JavaScript dọn được object, không dọn được ảnh trên GPU. Telemetry ghi **181 lượt đổi khu**.
+  Nay có `MapView.destroy()`.
+
+**Đo lại (TEXLEAK, cùng máy, cùng phiên làm việc):**
+
+| | trước | sau |
+|---|---|---|
+| texture sau 5 phút | 118 → 625 (một chiều) | – |
+| texture sau 14 phút | – | 191 → 224, nhấp nhô 168–276, **không xu hướng** |
+| nhịp | **+91 texture/phút · +17,9 MB/phút** | **+2 texture/phút · −0,6 MB/phút** |
+| mặt nạ nền còn giữ | 387 và còn tăng | 20, đứng yên |
+
+Con số MB nhấp nhô theo atlas nhân vật đang nạp/nhả nên **đọc ở số TEXTURE**, không đọc MB.
+Bài này đếm đồ vật, không đếm mili-giây, nên tải máy không làm sai kết quả (§1 quy tắc vàng
+vẫn áp dụng cho mọi dòng FPS/ms trong cùng lượt).
+
+Kiểm hình sau khi sửa: lên cảnh giới qua ranh giới khu, chụp màn hình — nền trộn, decal,
+decor, vật cản hiện đủ, `pageerror` 0.
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
+| B23 | **Rò rỉ texture: càng chơi lâu bộ nhớ GPU càng phình, 120 MB → 1,4 GB** | Người chơi lâu bị `gpu_pressure`, tự hạ chất lượng rồi **mất ngữ cảnh WebGL** (màn hình trắng / tab bị thu hồi). Trên iPhone là bị Safari giết tab | Telemetry build `ec38aee`: một phiên 55 phút **1 431 MB / 13 736 texture**; 3 phiên dài khác 812–1 117 MB. `TEXLEAK` tái hiện được: +91 texture/phút, nhóm phình là `mapview.noiseMask` | **Đóng (#33)** — mặt nạ nền huỷ theo ô, `MapView.destroy()` khi đổi khu. Đo lại 14 phút: không còn xu hướng tăng | #33 |
 | B22 | **Trong cột "người", VÒNG KIẾM và LỚP TRẠNG THÁI ăn 2/3 thời gian** | Máy yếu tụt FPS khi đông người | `weakperf.mjs` (bảng mốc CON, 11/11): CPU 4× cột `players` 4,96 ms, chia ra thân 0,46 · bảng tên 0,41 · **vòng kiếm 1,35** · **trạng thái 1,42**. Bảng tên luôn rẻ nhất | **Đóng (11/11)** — xem lượt #28 ngay dưới: vòng kiếm thành container chỉ xoay, lớp trạng thái chỉ vẽ lại khi đổi | #28 |
 | B21 | ~~"Nhìn người chạy nhanh từ tab khác nhảy cóc 3,5%"~~ — **lỗi PHÉP ĐO** | Đã đuổi theo một con số sai suốt hai lượt | Bài cũ lấy vị trí sprite theo nhịp `rAF` của chính nó rồi chia cho giờ máy; nhịp ấy lệch nhịp vẽ của game nên một khung đo "thấy" hai khung vẽ gộp lại. Cùng một lượt: 2 807 đv/s theo nhịp bài, 816 đv/s theo VẾT trong vòng vẽ, trong khi cặp gói đang nội suy chỉ đi 939 đv/s (trần 975) | **Đóng (Q48)** — client ghi vết (thời điểm vẽ, x, y, tốc độ dữ liệu) trong chính vòng vẽ; đo lại 3 lượt máy rảnh: 0 nhảy cóc, 0 đứng hình. Cổng deploy canh 0/0 | Q48 |
 | B20 | **S1 p95 4,01 ms ở lượt #26 (sát trần)** | Có thể là thoái lui, có thể do máy bận | Lượt #26: máy chạy song song 2 agent; #22 cùng máy 2,37 ms · **#27 máy rảnh: 1,38 ms** | **Đóng** — do máy bận, không phải thoái lui | #27 |

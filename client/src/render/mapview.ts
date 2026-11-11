@@ -286,8 +286,19 @@ export class MapView {
   private readonly blendRoot = new Container();
   /** blendNames: tên tile của lớp trộn; rỗng nghĩa là biome này chỉ có một lớp nền. */
   private blendNames: string[] = [];
-  /** blendChunks: ô đang dựng, khoá `"cx,cy"`. Ra ngoài khung nhìn là **huỷ**, không ẩn. */
-  private readonly blendChunks = new Map<string, Container>();
+  /**
+   * blendChunks: ô đang dựng, khoá `"cx,cy"`. Ra ngoài khung nhìn là **huỷ**, không ẩn.
+   *
+   * Giữ kèm `masks` — texture mặt nạ của chính ô đó — vì huỷ ô KHÔNG huỷ texture:
+   * `Container.destroy({ children: true })` chỉ bỏ các node, còn ảnh trên GPU thì ở lại.
+   * Mỗi ô dựng ra một mặt nạ canvas 128×128 riêng (gieo theo ô), nên người chơi đi lại là
+   * mỗi phút bỏ quên vài chục tấm. Đo được: **~100 texture/phút, ~9–27 MB/phút** — chính
+   * là chỗ telemetry người thật thấy bộ nhớ texture leo từ 120 MB lên 1,4 GB sau 25 phút.
+   *
+   * Không huỷ bằng `destroy({ texture: true })` cho cả ô được: `TilingSprite` trong ô dùng
+   * CHUNG texture tile của art, huỷ nó là xoá nền của mọi ô còn lại.
+   */
+  private readonly blendChunks = new Map<string, { node: Container; masks: Texture[] }>();
   readonly decor = new Container();
   readonly under = new Container(); // zones under entities (mud, wind)
   /**
@@ -331,6 +342,31 @@ export class MapView {
   }
 
   /**
+   * destroy vứt cả bản đồ này đi — gọi khi người chơi sang khu khác.
+   *
+   * Mỗi khu dựng một `MapView` mới. Trước đây khu cũ chỉ bị `camera.removeChildren()` gỡ ra
+   * khỏi cảnh rồi **bỏ mặc**: node mất tham chiếu nhưng texture thì vẫn nằm trên GPU, vì
+   * PixiJS không tự thu hồi ảnh theo bộ dọn rác của JavaScript. Telemetry người thật ghi
+   * **181 lượt đổi khu**, nên đây là một phần của chuyện 120 MB thành 1,4 GB.
+   *
+   * KHÔNG huỷ texture của sprite thường: vật cản, decor, decal đều dùng chung ảnh trong
+   * `assets` (và `decals.baked`), huỷ là khu sau hiện ra trống. Chỉ mặt nạ nền là của riêng
+   * bản đồ này.
+   */
+  destroy(): void {
+    for (const [key, chunk] of this.blendChunks) {
+      this.dropBlendChunk(key, chunk);
+    }
+    for (const c of [this.ground, this.decor, this.under, this.over, this.gateLayer]) {
+      c.destroy({ children: true });
+    }
+    for (const n of this.obstacleNodes.values()) {
+      n.node.destroy({ children: true });
+    }
+    this.obstacleNodes.clear();
+  }
+
+  /**
    * updateGroundChunks dựng ô nền trộn quanh khung nhìn và **huỷ** ô đi xa.
    *
    * Huỷ chứ không chỉ ẩn: `renderable = false` vẫn giữ nguyên texture trên GPU, mà texture
@@ -347,28 +383,43 @@ export class MapView {
     const cy0 = Math.max(0, Math.floor((view.y - view.h / 2) / GROUND_CHUNK) - GROUND_PAD);
     const cy1 = Math.min(last, Math.floor((view.y + view.h / 2) / GROUND_CHUNK) + GROUND_PAD);
 
-    for (const [key, node] of this.blendChunks) {
+    for (const [key, chunk] of this.blendChunks) {
       const [kx, ky] = key.split(',').map(Number);
       if (kx < cx0 || kx > cx1 || ky < cy0 || ky > cy1) {
-        node.destroy({ children: true });
-        this.blendChunks.delete(key);
+        this.dropBlendChunk(key, chunk);
       }
     }
     for (let cy = cy0; cy <= cy1; cy++) {
       for (let cx = cx0; cx <= cx1; cx++) {
         const key = `${cx},${cy}`;
         if (!this.blendChunks.has(key)) {
-          const node = this.buildBlendChunk(cx, cy);
-          this.blendChunks.set(key, node);
-          this.blendRoot.addChild(node);
+          const chunk = this.buildBlendChunk(cx, cy);
+          this.blendChunks.set(key, chunk);
+          this.blendRoot.addChild(chunk.node);
         }
       }
     }
   }
 
+  /**
+   * dropBlendChunk huỷ một ô nền — KỂ CẢ texture mặt nạ của nó.
+   *
+   * `destroy(true)` (huỷ cả nguồn ảnh) chứ không `destroy()`: mặt nạ là canvas dựng riêng
+   * cho ô này, không ai dùng chung, và bỏ lại nguồn ảnh thì con số `texMB` không nhúc nhích
+   * — đúng cái bẫy đã mắc một lần ở `assets.releaseChar`.
+   */
+  private dropBlendChunk(key: string, chunk: { node: Container; masks: Texture[] }): void {
+    chunk.node.destroy({ children: true });
+    for (const t of chunk.masks) {
+      t.destroy(true);
+    }
+    this.blendChunks.delete(key);
+  }
+
   /** buildBlendChunk dựng một ô: mỗi lớp trộn là một TilingSprite che bởi mặt nạ cỡ ô. */
-  private buildBlendChunk(cx: number, cy: number): Container {
+  private buildBlendChunk(cx: number, cy: number): { node: Container; masks: Texture[] } {
     const node = new Container();
+    const masks: Texture[] = [];
     const x = cx * GROUND_CHUNK;
     const y = cy * GROUND_CHUNK;
     const w = Math.min(GROUND_CHUNK, this.map.size - x);
@@ -391,9 +442,10 @@ export class MapView {
       mask.width = w;
       mask.height = h;
       layer.mask = mask;
+      masks.push(mask.texture);
       node.addChild(layer, mask);
     });
-    return node;
+    return { node, masks };
   }
 
   /**

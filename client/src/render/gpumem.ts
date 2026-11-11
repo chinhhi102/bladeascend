@@ -19,11 +19,86 @@ interface Alloc {
   bytes: number;
   w: number;
   h: number;
+  site?: string;
 }
 
 const alloc = new Map<WebGLTexture, Alloc>();
 let totalBytes = 0;
 let peakBytes = 0;
+
+/**
+ * TRACE: ghi lại NƠI cấp phát từng texture (`?textrace=1`).
+ *
+ * Vì sao cần: telemetry người thật cho thấy số texture leo từ 150 lên hơn 5 000 trong một
+ * phiên 25 phút. Biết "có rò rỉ" là chưa đủ để sửa — phải biết dòng lệnh nào sinh ra chúng.
+ * Tắt mặc định vì `new Error().stack` trong đường cấp phát texture là rất đắt.
+ */
+const TRACE = typeof location !== 'undefined' && location.search.includes('textrace');
+
+function siteOf(): string | undefined {
+  if (!TRACE) {
+    return undefined;
+  }
+  return curSource || '(outside onSourceUpdate)';
+}
+
+/**
+ * trackSourceNames gắn TÊN NGUỒN ẢNH vào mỗi texture — thứ duy nhất chỉ đúng thủ phạm.
+ *
+ * Vết ngăn xếp ở `texImage2D` chỉ thấy ruột PixiJS (`uploadImageWebGL2`…): lúc tải lên thì
+ * đang ở giữa vòng vẽ, không còn dấu gì của chỗ tạo. Nhưng Pixi tải lên THEO `TextureSource`
+ * và mỗi nguồn có `label` (đường dẫn tệp, `text:…`, `renderTexture`…). Bọc đúng một hàm
+ * `GlTextureSystem.onSourceUpdate` là biết texture vừa tải lên thuộc nguồn nào.
+ */
+let curSource = '';
+
+/** fromStacks: nguồn ảnh dựng bằng `Texture.from(canvas)` → ngăn xếp của chỗ gọi. */
+const fromStacks = new WeakMap<object, string>();
+
+/** trackTextureFrom bọc `Texture.from` để biết MÃ NÀO của game dựng ra canvas đó. */
+export function trackTextureFrom(TextureClass: object): void {
+  if (!TRACE) {
+    return;
+  }
+  const holder = TextureClass as { from: (...a: unknown[]) => unknown };
+  const orig = holder.from.bind(TextureClass);
+  holder.from = (...a: unknown[]): unknown => {
+    const tex = orig(...a) as { source?: object } | undefined;
+    const src = tex?.source;
+    if (src && !fromStacks.has(src)) {
+      const lines = (new Error().stack ?? '').split('\n').slice(2, 6);
+      fromStacks.set(
+        src,
+        lines
+          .map((l) => l.trim().replace(/^at /, '').replace(/\?[^ )]*/g, '').split('/').slice(-1)[0])
+          .join(' ← '),
+      );
+    }
+    return tex;
+  };
+}
+
+export function trackSourceNames(texSystem: Record<string, unknown>): void {
+  if (!TRACE || typeof texSystem.onSourceUpdate !== 'function') {
+    return;
+  }
+  const orig = (texSystem.onSourceUpdate as (s: unknown) => unknown).bind(texSystem);
+  texSystem.onSourceUpdate = (src: unknown): unknown => {
+    const s = src as
+      | { label?: string; uid?: number; resource?: { src?: string; nodeName?: string } }
+      | null;
+    const kind = (s as { constructor?: { name?: string } } | null)?.constructor?.name ?? '?';
+    const res = s?.resource;
+    const resKind = res ? ((res as { nodeName?: string }).nodeName ?? res.constructor?.name ?? '?') : 'none';
+    curSource =
+      (s ? fromStacks.get(s) : undefined) || s?.label || res?.src || `${kind}/${resKind}`;
+    try {
+      return orig(src);
+    } finally {
+      curSource = '';
+    }
+  };
+}
 
 /** BYTES_PER_PIXEL: giả định RGBA8. Phần lớn texture của game là PNG/WebP có alpha. */
 const BYTES_PER_PIXEL = 4;
@@ -40,7 +115,7 @@ function note(gl: WebGLRenderingContext | WebGL2RenderingContext, w: number, h: 
   if (old) {
     totalBytes -= old.bytes;
   }
-  alloc.set(tex, { bytes, w, h });
+  alloc.set(tex, { bytes, w, h, site: old?.site ?? siteOf() });
   totalBytes += bytes;
   peakBytes = Math.max(peakBytes, totalBytes);
 }
@@ -109,6 +184,30 @@ export function gpuPeakMB(): number {
 /** gpuTextureCount là số texture đang giữ trên GPU. */
 export function gpuTextureCount(): number {
   return alloc.size;
+}
+
+/**
+ * gpuSites gom texture ĐANG GIỮ theo nơi cấp phát — chỉ có số khi mở `?textrace=1`.
+ *
+ * Đây là thứ trả lời "rò rỉ từ đâu": một nhóm có số lượng tăng đều theo thời gian trong khi
+ * các nhóm khác đứng yên thì chính nó là chỗ quên nhả.
+ */
+export function gpuSites(n = 12): { site: string; count: number; mb: number }[] {
+  const by = new Map<string, { count: number; bytes: number }>();
+  for (const a of alloc.values()) {
+    // Gộp tên: `uid:123` và tệp có hash trong tên là MỖI CÁI MỘT DÒNG nếu để nguyên, và
+    // một bảng 500 dòng count=1 thì không thấy được nhóm nào đang phình.
+    const raw = a.site ?? '(no ?textrace=1)';
+    const key = `${a.w}x${a.h} ${raw.replace(/\d+/g, '#').replace(/^.*\/assets\//, 'assets/')}`;
+    const cur = by.get(key) ?? { count: 0, bytes: 0 };
+    cur.count++;
+    cur.bytes += a.bytes;
+    by.set(key, cur);
+  }
+  return [...by.entries()]
+    .sort((x, y) => y[1].count - x[1].count)
+    .slice(0, n)
+    .map(([site, v]) => ({ site, count: v.count, mb: +(v.bytes / 1024 / 1024).toFixed(2) }));
 }
 
 /** gpuBiggest liệt kê vài texture to nhất — để biết cắt chỗ nào trước. */

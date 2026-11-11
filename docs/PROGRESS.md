@@ -584,6 +584,42 @@ một lần theo toạ độ cục bộ, mỗi khung chỉ xoay container) và l
 màn hình, Cô Ba bỏ vỏ chuối (Q51) — xoá luôn hệ thống "vệt trơn" vì Cô Ba là nguồn duy nhất.
 
 **Không còn câu nào chờ anh** — Q48, Q49, Q50, Q51 đều đã chuyển sang `QUESTIONS_DONE.md`.
+
+## Lượt 11/11 (chiều) — rà lỗi NGƯỜI CHƠI gửi về và sửa
+
+Đọc thẳng `server/data/telemetry.db` (bảng `events`, chỉ phiên `automated = 0`) thay vì đoán.
+
+**Ba ngoại lệ JavaScript đều là chuyện cũ, đã sửa xong từ trước:** `null.texture` ở
+`updateBody` (11 phiên, build 30/10) · `null.addressModeU` (3 phiên, build 31/10) ·
+`RangeError` khi giải mã (1 phiên, build 31/10). Không build nào từ 01/11 trở đi còn ngoại lệ.
+
+**Thứ còn sống trên build hôm nay là bộ nhớ GPU.** `gpu_pressure` và `webgl_context_lost`
+xuất hiện trên chính `ec38aee`, và một phiên 55 phút ghi **1 431 MB / 13 736 texture** (trần
+iOS là 256 MB — Safari không báo lỗi, nó giết tab). Ba phiên dài khác: 812–1 117 MB.
+
+Nguyên nhân là **rò rỉ texture**, một gốc hai chỗ — *huỷ node không huỷ ảnh trên GPU*:
+
+1. Mỗi ô nền 1 024 có một mặt nạ loang 128×128 riêng. Ô đi khỏi khung nhìn thì node bị huỷ
+   còn ảnh ở lại. Đi lại trong bản đồ là bỏ quên ~90 tấm mỗi phút.
+2. Đổi khu dựng `MapView` mới, cái cũ chỉ bị gỡ khỏi cảnh rồi bỏ mặc — telemetry đếm được
+   **181 lượt đổi khu** một phiên.
+
+Sửa: ô nền giữ kèm danh sách texture của riêng nó và huỷ đúng chừng ấy (không huỷ chung được
+vì `TilingSprite` dùng chung ảnh tile); thêm `MapView.destroy()` gọi khi đổi khu.
+
+Đo bằng kịch bản MỚI `TEXLEAK` (`tools/browsertest/texleak.mjs`, PERF_LOG §1) — **mọi kịch
+bản cũ đều chỉ chạy 20–120 giây nên không cái nào thấy được**:
+
+| | trước | sau |
+|---|---|---|
+| 5 phút | 118 → 625 texture, một chiều | – |
+| 14 phút | – | 191 → 224, nhấp nhô 168–276, không xu hướng |
+| nhịp | +91 texture/phút · +17,9 MB/phút | +2 texture/phút · −0,6 MB/phút |
+
+Kèm theo: `?textrace=1` gom texture **theo nơi cấp phát** (`window.__texsites()`). Không có
+nó thì chỉ biết "có rò rỉ" chứ không biết ở đâu — vết ngăn xếp lúc tải ảnh lên chỉ thấy ruột
+PixiJS. Mặc định tắt, không tốn gì cho người chơi. Chi tiết ở PERF_LOG lượt #33 (nút thắt B23).
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có

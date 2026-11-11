@@ -469,7 +469,13 @@ class App {
       const [cd, maxC] = this.cfg.skills.cooldowns[char] ?? [0, 0];
       this.hud.setSkill({ char, charges: 0, maxCharges: maxC, remainSecs: 0, cooldownSecs: cd });
     }
-    const g = window as unknown as { kx?: unknown; __stats?: unknown; __playing?: unknown; __rb?: unknown };
+    const g = window as unknown as {
+      kx?: unknown;
+      __stats?: unknown;
+      __playing?: unknown;
+      __rb?: unknown;
+      __texsites?: unknown;
+    };
     // `__stats` KHÔNG khoá sau quyền debug: nó chỉ là số đo (FPS, bộ nhớ texture, số
     // sprite, ping) — không có một quyền nào lên luật chơi. Khoá nó lại thì bộ đo hiệu
     // năng không chạy được trên server THẬT, mà server thật là nơi duy nhất đo đúng: đó
@@ -487,6 +493,9 @@ class App {
       zone: this.zoneIndex,
     });
     g.__playing = (): boolean => this.playing;
+    // `__texsites`: texture đang giữ gom theo nơi cấp phát. Cùng loại với `__stats` — chỉ
+    // là số đo, không cầm trạng thái game. Chỉ có dữ liệu khi mở trang với `?textrace=1`.
+    g.__texsites = (n = 12): { site: string; count: number; mb: number }[] => this.scene.gpuSites(n);
     // `__rb`: số đếm của bảng xếp hạng cho bài §17 `tools/browsertest/rbstable.mjs` — gói
     // nhận được mấy dòng, có gói nào thiếu bị bỏ không. Cùng loại với `__stats`: chỉ số đo.
     g.__rb = (): Record<string, number> => ({ ...rbStats });

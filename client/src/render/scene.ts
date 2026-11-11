@@ -1,4 +1,4 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Container, Texture } from 'pixi.js';
 import { AnimViewer } from './animviewer';
 import { setEmoteCharCount } from './emote';
 import { paceTicker } from './framepace';
@@ -7,7 +7,7 @@ import { assets } from './assets';
 import { statusWork, statusWorkTick } from './statusview';
 import { ringWork, ringWorkTick } from './swordring';
 import { SkillPresenter, type StatusChip } from './skillpresent';
-import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuTextureCount, trackGpuMemory } from './gpumem';
+import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuSites, gpuTextureCount, trackGpuMemory, trackSourceNames, trackTextureFrom } from './gpumem';
 import { rendererResolution } from './device';
 import { FADE_OUT_SECS, ViewPool } from './viewpool';
 import { BobaOverlay } from './boba';
@@ -165,6 +165,7 @@ export class GameScene {
   }
 
   async init(parent: HTMLElement, maxFps: number): Promise<void> {
+    trackTextureFrom(Texture);
     await this.app.init({
       // Ép WebGL. Pixi 8 vốn xếp WebGL trước, nhưng ghi rõ để một lần nâng Pixi đổi thứ tự
       // mặc định không lặng lẽ chuyển người chơi sang WebGPU — đường đó chưa từng được đo
@@ -186,6 +187,9 @@ export class GameScene {
       // khung hình. Khác hẳn `countDrawCalls` (bọc đúng hàm vẽ, chạy hàng nghìn lần/giây)
       // nên cái đó vẫn chỉ bật khi đang đo.
       trackGpuMemory(gl);
+      trackSourceNames(
+        (this.app.renderer as unknown as { texture: Record<string, unknown> }).texture,
+      );
       if (new URLSearchParams(location.search).get('debug') === 'true') {
         countDrawCalls(gl);
       }
@@ -223,6 +227,11 @@ export class GameScene {
   setWorld(w: ClientWorld): void {
     this.world = w;
     this.clear();
+    // Bản đồ khu CŨ phải được huỷ hẳn, không chỉ gỡ khỏi cảnh: `camera.removeChildren()`
+    // bỏ node nhưng texture nền vẫn nằm trên GPU (PixiJS không thu hồi theo bộ dọn rác JS).
+    // Telemetry người thật: 181 lượt đổi khu một phiên — bỏ quên mỗi lượt vài chục MB.
+    this.mapView?.destroy();
+    this.mapView = null;
     this.camAt = null; // khu mới: đặt máy quay thẳng vào chỗ đứng, không lướt từ khu cũ sang
     if (!w.map) {
       return;
@@ -802,6 +811,11 @@ export class GameScene {
   /** gpuBiggest: vài texture to nhất đang giữ — để biết cắt chỗ nào trước (debug). */
   gpuBiggest(n = 10): { w: number; h: number; mb: number }[] {
     return gpuBiggest(n);
+  }
+
+  /** gpuSites: texture đang giữ gom theo nơi cấp phát — cần mở trang với `?textrace=1`. */
+  gpuSites(n = 12): { site: string; count: number; mb: number }[] {
+    return gpuSites(n);
   }
 
   /** perfStats là cùng bộ số của overlay F3 nhưng ở dạng object (tools/browsertest đọc). */
