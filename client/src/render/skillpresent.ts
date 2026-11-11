@@ -199,6 +199,14 @@ export class SkillPresenter {
       case 'ru_ngu_huy':
         this.host.floatText.show(STR.skillCancelled, e.x, e.y, now, 0xffb3b3);
         return;
+      case 'sap_bat_hoai':
+        // "Cạch" — kiếm chém vào sạp bất hoại (v6.48). Một tia trắng nhỏ, không phá gì.
+        this.vfx.wave(e.x, e.y, 40, 0xffffff, now, 0.18);
+        return;
+      case 'mai_rua_roi':
+        // Kiếm địch bể vào mai cụ rùa thì RƠI XUỐNG ĐẤT (v6.50), không bay về ai cả.
+        this.host.floatText.show(STR.swordsStolen(e.n ?? 0), e.x, e.y, now, 0xffe14d);
+        return;
       case 'dan_em_gone':
         this.host.vfx.play('death_smoke', e.x, e.y, 160, now);
         this.host.floatText.show(STR.minionBye, e.x, e.y - 60, now, 0xe0c3f5);
@@ -253,6 +261,48 @@ export class SkillPresenter {
       case 'gong_co':
         this.vfx.puff(at.x, at.y, r * 2, C.brace, now);
         break;
+      // ── v6.48/v6.50: nhịp "chờ" của Bà Tám và Sư Phụ, bung cơ, khổng lồ, buộc sạp, khiêu khích ──
+      case 'loa_lay_hoi':
+        // Vòng BÁO TRƯỚC trong lúc lấy hơi: ai kịp chạy ra khỏi 6 U thì thoát cả hút lẫn đẩy.
+        this.fx.circle(at.x, at.y, at.sc, 'loa_radius', C.loa, now);
+        this.vfx.puff(at.x, at.y - r * 0.6, r * 1.6, C.loa, now);
+        break;
+      case 'loa_het':
+        this.fx.circle(at.x, at.y, at.sc, 'loa_radius', C.loa, now);
+        this.vfx.wave(at.x, at.y, skillRange(this.cfg, at.sc, 'loa_radius'), C.loa, now);
+        break;
+      case 'hut_mi_hup':
+        this.fx.circle(at.x, at.y, at.sc, 'hut_mi_r', C.noodle, now);
+        break;
+      case 'banh_bao_hoi':
+        this.host.floatText.show(STR.swordsGained(e.n ?? 0), at.x, at.y - r * 1.6, now, 0x9cff9c);
+        break;
+      case 'bung_co_song':
+        this.fx.circle(at.x, at.y, at.sc, 'bung_co_wave', C.brace, now);
+        this.vfx.wave(at.x, at.y, skillRange(this.cfg, at.sc, 'bung_co_wave'), C.brace, now);
+        break;
+      case 'bung_co':
+        this.host.floatText.show(STR.swordsStolen(e.n ?? 0), e.x, e.y, now, 0xffb36b);
+        break;
+      case 'khong_lo':
+        this.vfx.wave(at.x, at.y, r * 3, C.pearl, now);
+        this.host.floatText.show(STR.swordsGained(e.n ?? 0), at.x, at.y - r * 1.6, now, C.pearl);
+        break;
+      case 'khong_lo_tan':
+        this.vfx.puff(at.x, at.y, r * 2.4, C.pearl, now);
+        break;
+      case 'khieu_khich':
+        if (this.once(`taunt:${e.a}`, now)) {
+          this.fx.circle(at.x, at.y, at.sc, 'rut_co_taunt_r', C.shell, now);
+        }
+        break;
+      case 'buoc_sap':
+        // Vòng dây quanh CÁI SẠP (e.x/e.y là tâm sạp), không quanh người bày.
+        this.fx.circle(e.x, e.y, at.sc, 'bay_sap_tether_leash', C.stall, now);
+        break;
+      case 'bay_hang_day':
+        this.vfx.puff(e.x, e.y, r * 1.6, C.dust, now);
+        break;
       case 'gom_don':
       case 'dan_em':
         this.vfx.puff(at.x, at.y + r * 0.75, r * 2, C.dust, now);
@@ -300,13 +350,15 @@ export class SkillPresenter {
     }
   }
 
-  /** Hút Mì: nón 60° loé + sợi mì nối hai người, kiếm bay dọc sợi mì; hụt thì mì rơi. */
+  /** Hút Mì (v6.48): vòng 5 U loé + sợi mì nối tới TỪNG nạn nhân; hụt thì mì rơi. */
   private onHutMi(e: GameEvent, at: Caster, now: number): void {
     const miss = e.s === 'hut_mi_miss';
     const face = miss ? e.f ?? at.f : at.f;
-    this.fx.cone(at.x, at.y, face, at.sc, 'hut_mi_cone', this.cfg.skills.hut_mi_cone_deg, C.noodle, now);
+    if (this.once(`mi:${e.a}`, now)) {
+      this.fx.circle(at.x, at.y, at.sc, 'hut_mi_r', C.noodle, now);
+    }
     if (miss) {
-      const len = skillRange(this.cfg, at.sc, 'hut_mi_cone');
+      const len = skillRange(this.cfg, at.sc, 'hut_mi_r');
       this.vfx.noodle({ x0: at.x, y0: at.y, x1: at.x + Math.cos(face) * len, y1: at.y + Math.sin(face) * len }, now, true);
       return;
     }
