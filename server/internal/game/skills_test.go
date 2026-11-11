@@ -82,7 +82,7 @@ func TestDeathClearsCharges(t *testing.T) {
 	}
 }
 
-// Loa Phường đẩy lùi và làm vòng kiếm địch đổi chiều, CHỈ với người đứng trong nón.
+// Loa Phường (v6.48): lấy hơi 0.8s rồi HÉT — đẩy lùi toả tròn + đổi chiều vòng kiếm địch.
 func TestLoaPhuongPushesAllAround(t *testing.T) {
 	g := skillGame(t)
 	a := put(g, "ba_tam_loa", Vec{X: 3000, Y: 3000}, 10, 20)
@@ -96,6 +96,10 @@ func TestLoaPhuongPushesAllAround(t *testing.T) {
 	if !g.CastSkill(a) {
 		t.Fatal("không dùng được Loa Phường")
 	}
+	if front.KnockUntil > g.Time {
+		t.Fatal("chưa lấy hơi xong đã đẩy được người — mất luôn cách chống lại kỹ năng")
+	}
+	step(g, g.skillNum("loa_channel")+0.1)
 	if front.KnockUntil <= g.Time || back.KnockUntil <= g.Time || back.Ring.Dir == dirBefore {
 		t.Fatal("Loa toả tròn 360° (v6.30): người trước mặt VÀ sau lưng đều phải bị đẩy + đổi chiều")
 	}
@@ -233,46 +237,60 @@ func TestRuNguCancelledByBodyHit(t *testing.T) {
 	}
 }
 
-// Hút Mì Đoạt Kiếm (spec v6.9 §6.3) — checklist §17: "địch 100 kiếm → Sư Phụ cướp 25
-// (không vượt 20% tối đa của mình, dư rơi Bó Kiếm); không ai trong nón → hụt, mất lượt."
-func TestHutMiStealsQuarterOfTargetSwords(t *testing.T) {
+// Hút Mì Đoạt Kiếm (v6.48 §6.3): húp 0.6s rồi cướp 25% kiếm của MỌI địch trong 5 U,
+// không giới hạn số cướp.
+func TestHutMiStealsQuarterFromEveryoneNear(t *testing.T) {
 	g := skillGame(t)
-	// Sư Phụ cấp 50 để trần 20%-kiếm-tối-đa-của-mình KHÔNG phải là thứ chặn ở đây — bài
-	// này đo đúng phép "25% của địch". Trần có bài riêng ngay dưới.
 	a := put(g, "su_phu_mi", Vec{X: 3000, Y: 3000}, 50, 5)
-	a.Facing = 0
-	b := put(g, "cu_rua", Vec{X: 3000 + g.skillRange(a, "hut_mi_cone")*0.5, Y: 3000}, 10, 40)
-	if lim := int(float64(g.Prog.MaxSwords(g.Prog.Realm(a.Level))) * g.skillNum("hut_mi_cap_of_own_max")); lim < 10 {
-		t.Fatalf("trần của Sư Phụ chỉ %d — bài này cần trần ≥ 10 mới đo được phép 25%%", lim)
-	}
+	r := g.skillRange(a, "hut_mi_r")
+	b := put(g, "cu_rua", Vec{X: 3000 + r*0.5, Y: 3000}, 10, 40)
+	c := put(g, "cu_rua", Vec{X: 3000 - r*0.5, Y: 3000}, 10, 40) // SAU LƯNG: v6.48 là bán kính
+	far := put(g, "cu_rua", Vec{X: 3000, Y: 3000 + r*2}, 10, 40)
+	before := a.Ring.Count
 
 	giveCharge(a)
 	g.CastSkill(a)
-
-	if got := 40 - b.Ring.Count; got != 10 {
-		t.Errorf("địch mất %d kiếm, muốn 10 (25%% của 40)", got)
+	if b.Ring.Count != 40 {
+		t.Fatal("chưa húp xong đã cướp được kiếm")
 	}
-	if got := a.Ring.Count - 5; got != 10 {
-		t.Errorf("Sư Phụ nhận %d kiếm, muốn 10", got)
+	step(g, g.skillNum("hut_mi_channel")+0.1)
+
+	for _, o := range []*Player{b, c} {
+		if got := 40 - o.Ring.Count; got != 10 {
+			t.Errorf("địch mất %d kiếm, muốn 10 (25%% của 40)", got)
+		}
+	}
+	if far.Ring.Count != 40 {
+		t.Errorf("người ngoài 5 U cũng mất %d kiếm", 40-far.Ring.Count)
+	}
+	if got := a.Ring.Count - before; got != 20 {
+		t.Errorf("Sư Phụ nhận %d kiếm, muốn 20 (hai người × 10, không còn trần)", got)
 	}
 }
 
-// Trần "20% kiếm tối đa của MÌNH": không thì một Sư Phụ cấp thấp hút một Đạo Tổ là nhảy
-// vọt lên trăm kiếm mà không tu luyện gì.
-func TestHutMiCappedByOwnMax(t *testing.T) {
+// v6.48 BỎ trần "20% kiếm tối đa của mình": phần vượt trần vòng của Sư Phụ rơi xuống đất
+// thành Bó Kiếm, không bốc hơi — người khác (kể cả nạn nhân) nhặt lại được.
+func TestHutMiOverflowDropsAsBundles(t *testing.T) {
 	g := skillGame(t)
-	a := put(g, "su_phu_mi", Vec{X: 3000, Y: 3000}, 0, 1) // Luyện Khí: kiếm tối đa nhỏ
-	a.Facing = 0
-	b := put(g, "cu_rua", Vec{X: 3000 + g.skillRange(a, "hut_mi_cone")*0.5, Y: 3000}, 89, 200)
+	a := put(g, "su_phu_mi", Vec{X: 3000, Y: 3000}, 0, 1) // Luyện Khí: trần vòng nhỏ
+	b := put(g, "cu_rua", Vec{X: 3000 + g.skillRange(a, "hut_mi_r")*0.5, Y: 3000}, 89, 200)
 	ownMax := g.Prog.MaxSwords(g.Prog.Realm(a.Level))
-	cap := int(float64(ownMax) * g.skillNum("hut_mi_cap_of_own_max"))
 
 	before := b.Ring.Count
 	giveCharge(a)
 	g.CastSkill(a)
+	step(g, g.skillNum("hut_mi_channel")+0.1)
 
-	if got := before - b.Ring.Count; got != cap {
-		t.Errorf("cướp %d kiếm, trần phải là %d (20%% của %d)", got, cap, ownMax)
+	stolen := before - b.Ring.Count
+	if want := before / 4; stolen != want {
+		t.Fatalf("cướp %d kiếm, muốn %d (25%% của %d — không còn trần)", stolen, want, before)
+	}
+	if a.Ring.Count != ownMax {
+		t.Errorf("Sư Phụ có %d kiếm, phải đầy đúng trần vòng %d", a.Ring.Count, ownMax)
+	}
+	_, dropped := countItems(g, "bundle")
+	if want := stolen - (ownMax - 1); int(dropped) != want {
+		t.Errorf("rơi %.0f kiếm thành Bó Kiếm, muốn %d (phần vượt trần)", dropped, want)
 	}
 }
 
@@ -280,14 +298,14 @@ func TestHutMiCappedByOwnMax(t *testing.T) {
 func TestHutMiMissStillSpendsCharge(t *testing.T) {
 	g := skillGame(t)
 	a := put(g, "su_phu_mi", Vec{X: 3000, Y: 3000}, 10, 20)
-	a.Facing = 0
-	// Đứng sau lưng: ngoài nón.
-	put(g, "cu_rua", Vec{X: 3000 - 200, Y: 3000}, 10, 40)
+	// Đứng ngoài 5 U (v6.48 là BÁN KÍNH, không còn nón — đứng sau lưng vẫn dính).
+	put(g, "cu_rua", Vec{X: 3000 - g.skillRange(a, "hut_mi_r")*2, Y: 3000}, 10, 40)
 
 	// vào trận có sẵn đúng 1 lượt (v6.25)
 	if !g.CastSkill(a) {
 		t.Fatal("không dùng được kỹ năng")
 	}
+	step(g, g.skillNum("hut_mi_channel")+0.1)
 	if a.SkillCharges != 0 {
 		t.Error("hụt mà được giữ lượt")
 	}
@@ -612,5 +630,47 @@ func TestBungCoOnlyHitsNearby(t *testing.T) {
 	step(g, g.Cfg.Skills.BraceSecs+0.2)
 	if far.Ring.Count != before {
 		t.Fatalf("người đứng ngoài tầm cũng mất %d kiếm", before-far.Ring.Count)
+	}
+}
+
+// Loa Phường v6.48 nhịp 1: lấy hơi 0.8s thì HÚT mọi thứ nhặt được trong 6 U về mình —
+// theo đúng luật hấp thụ thường (§6.3).
+func TestLoaVacuumsItemsInRadius(t *testing.T) {
+	g := skillGame(t)
+	p := put(g, "ba_tam_loa", Vec{X: 3000, Y: 3000}, 10, 5)
+	r := g.skillRange(p, "loa_radius")
+	// Một bó kiếm trong tầm, một bó ngoài tầm.
+	g.spawnItemNear("bundle", 4, Vec{X: 3000 + r*0.6, Y: 3000}, 0)
+	g.spawnItemNear("bundle", 4, Vec{X: 3000 + r*2, Y: 3000}, 0)
+	before := p.Ring.Count
+
+	giveCharge(p)
+	g.CastSkill(p)
+	if n, _ := countItems(g, "bundle"); n != 2 {
+		t.Fatal("chưa lấy hơi xong đã hút được đồ")
+	}
+	step(g, g.skillNum("loa_channel")+0.1)
+
+	if n, _ := countItems(g, "bundle"); n != 1 {
+		t.Errorf("còn %d bó kiếm trên đất, muốn 1 (bó trong 6 U phải bị hút)", n)
+	}
+	if p.Ring.Count <= before {
+		t.Error("hút bó kiếm mà số kiếm không tăng")
+	}
+}
+
+// "Đang bị mù thì không hút được" (§6.3) — dùng chung luật `CanPickUp` với việc nhặt thường.
+func TestLoaVacuumBlockedWhenBlind(t *testing.T) {
+	g := skillGame(t)
+	p := put(g, "ba_tam_loa", Vec{X: 3000, Y: 3000}, 10, 5)
+	g.spawnItemNear("bundle", 4, Vec{X: 3000 + g.skillRange(p, "loa_radius")*0.5, Y: 3000}, 0)
+	g.ApplyStatus(p, StBlind, 5)
+
+	giveCharge(p)
+	g.CastSkill(p)
+	step(g, g.skillNum("loa_channel")+0.1)
+
+	if n, _ := countItems(g, "bundle"); n != 1 {
+		t.Fatalf("đang mù mà vẫn hút được đồ (còn %d bó)", n)
 	}
 }

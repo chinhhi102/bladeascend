@@ -143,16 +143,19 @@ func (b *Brain) wantsRuNgu(g *game.Game, me *game.Player) bool {
 	return false
 }
 
-// aimHutMi — Sư Phụ Mì: có địch NHIỀU KIẾM (không ít hơn mình) trong nón Hút Mì. Xoay mặt
-// về địch đó rồi mới dùng, vì nón tính theo hướng mặt (spec §9 v6.9).
+// aimHutMi — Sư Phụ Mì: có địch NHIỀU KIẾM (không ít hơn mình) trong BÁN KÍNH Hút Mì.
+//
+// v6.48 bỏ hình nón: kỹ năng ăn 360°, nên bot không phải canh hướng nữa. Vẫn xoay mặt về
+// con mồi béo nhất — không đổi kết quả kỹ năng, nhưng người xem nhìn vào thì hiểu ngay ông
+// đang nhắm ai, và hoạt ảnh `skill` quay đúng phía (§6.5 lớp ①).
 func (b *Brain) aimHutMi(g *game.Game, me *game.Player) bool {
-	r := g.SkillRangeOf(me, "hut_mi_cone")
+	r := g.SkillRangeOf(me, "hut_mi_r")
 	var best *game.Player
 	for _, o := range g.PlayerList() {
 		if o.ID == me.ID || o.Dead || o.Ring.Count < me.Ring.Count || o.Ring.Count == 0 {
 			continue
 		}
-		if o.Pos.Dist(me.Pos) > r || !b.inFront(me, o, g.Cfg.Skills.HutMiConeDeg*2) {
+		if o.Pos.Dist(me.Pos) > r {
 			continue
 		}
 		if best == nil || o.Ring.Count > best.Ring.Count {

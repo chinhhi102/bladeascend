@@ -112,6 +112,7 @@ func TestDisplayOnlyStatuses(t *testing.T) {
 	g.DrainEvents()
 	giveCharge(loa)
 	g.CastSkill(loa)
+	g.finishLoa(loa) // v6.48: cú hét nằm sau nhịp lấy hơi 0.8s
 	want := map[int]bool{}
 	for _, e := range statusEvents(g, "StatusStart") {
 		if e.A == vic.ID && e.B == loa.ID {

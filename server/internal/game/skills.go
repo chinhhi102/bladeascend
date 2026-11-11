@@ -264,13 +264,34 @@ func (g *Game) regenSwords(dt float64) {
 	}
 }
 
-// Loa Phường (v6.30 §6.3) — sóng âm TOẢ TRÒN 360° bán kính 6 U: đẩy mọi địch xung quanh ra
-// 6 U và làm vòng kiếm của họ đổi chiều. Bản nón 60° cũ thắng 17% tay đôi; toả tròn để dọn
-// sạch quanh mình khi tranh Đài / Rương / xác vừa nổ đồ.
+// Loa Phường (v6.48 §6.3) — hai nhịp: **lấy hơi 0.8s** hút sạch đồ trong 6 U về mình, rồi
+// **hét** đẩy mọi địch trong 6 U ra 6 U và đổi chiều vòng kiếm của họ.
+//
+// Bản v6.30 chỉ có cú đẩy. Đẩy là hiệu ứng *phòng thủ*: dọn chỗ quanh mình rồi… hết, địch
+// chạy lại ngay trong hai giây. Nhịp hút đồ cột kỹ năng vào vòng lặp chính (tranh Linh khí
+// ở Đài, ở xác vừa nổ đồ) đúng như §6.3 "Nguyên tắc thiết kế" mục 1 đòi, và vì phải đứng
+// yên 0,8 giây nên nó cũng có cách chống lại (mục 3): chém chết bà trong lúc lấy hơi.
 func castLoaPhuong(g *Game, p *Player, _ Vec) {
-	reach := g.skillRange(p, "loa_radius")
+	secs := g.skillNum("loa_channel")
+	p.channel = channelState{until: g.Time + secs, kind: "loa", at: p.Pos}
+	// Đặt thẳng `Status` chứ không qua `ApplyStatus` — xem ghi chú ở `castRuNgu`.
+	p.Status[StSing] = p.channel.until
+	g.statusStart(nil, p, StSing, secs)
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "loa_lay_hoi", F: float32(secs),
+		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+}
+
+// finishLoa chạy khi lấy hơi xong: hút đồ trước, rồi hét.
+//
+// Hút TRƯỚC khi đẩy, không ngược lại: đẩy trước thì Bó Kiếm rơi ra từ người bị đẩy đã nằm
+// ngoài tầm hút, và cái hay nhất của kỹ năng (hét cho rơi đồ rồi hốt) không bao giờ xảy ra.
+func (g *Game) finishLoa(p *Player) {
+	// Chốt phạm vi TRƯỚC khi hút: hút viên Linh khí có thể làm bà lên cảnh giới ngay giữa
+	// chiêu, và một cú hét tự dài ra vì vừa nhặt được mấy viên là thứ không ai đoán nổi.
+	r := g.skillRange(p, "loa_radius")
 	push := g.skillRange(p, "loa_push")
-	for _, o := range g.targetsNear(p, reach) {
+	got := g.vacuumInto(p, r)
+	for _, o := range g.targetsNear(p, r) {
 		if o.HasStatus(StBrace, g.Time) || o.HasStatus(StShell, g.Time) {
 			continue // đang gồng hoặc rụt mai thì không đẩy được
 		}
@@ -278,6 +299,31 @@ func castLoaPhuong(g *Game, p *Player, _ Vec) {
 		o.Ring.Dir = -o.Ring.Dir
 		g.emit(Event{Kind: "SkillEffect", A: p.ID, B: o.ID, S: "loa", X: float32(o.Pos.X), Y: float32(o.Pos.Y)})
 	}
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "loa_het", N: got,
+		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+}
+
+// vacuumInto hút mọi thứ nhặt được trong bán kính `r` về `p` — theo ĐÚNG luật hấp thụ
+// thường (§6.3: "nhặt luôn, theo luật hấp thụ thường; đang bị mù thì không hút được").
+//
+// Dùng lại `canAbsorb` + `pickup` của `resolvePickups` chứ không viết bản thứ hai: viên
+// Linh khí và Tiên khí không lẫn sang nhau (§3.4), và đồ còn trong thời gian "của người
+// khác" thì vẫn phải chờ — hai luật ấy mà chép lại là hai chỗ phải nhớ sửa.
+func (g *Game) vacuumInto(p *Player, r float64) int {
+	if !g.CanPickUp(p) {
+		return 0
+	}
+	r2 := r * r
+	var got []*Item
+	g.ItemsNear(p.Pos, r, r, func(it *Item) {
+		if it.Pos.Dist2(p.Pos) <= r2 && g.canAbsorb(p, it) && (it.Owner == 0 || it.Owner == p.ID || g.Time >= it.OwnerUntil) {
+			got = append(got, it)
+		}
+	})
+	for _, it := range got {
+		g.pickup(p, it)
+	}
+	return len(got)
 }
 
 // Ru Ngủ Trưa (spec v6.9 §6.3) — hát ru 0.5s rồi mọi địch trong 4 U ngủ gục 2.5s.
@@ -346,32 +392,40 @@ func castTranChau(g *Game, p *Player, dir Vec) {
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "tran_chau", X: float32(p.Pos.X), Y: float32(p.Pos.Y), F: float32(p.Facing)})
 }
 
-// Hút Mì Đoạt Kiếm (spec v6.9 §6.3) — cướp 25% kiếm của MỘT địch gần nhất trong nón 60°
-// dài 5 U; trần cướp là 20% kiếm tối đa của Sư Phụ, phần dư rơi xuống đất thành Bó Kiếm.
+// Hút Mì Đoạt Kiếm (v6.48 §6.3) — húp 0.6s (đứng yên) rồi cướp **25% số kiếm hiện có của
+// MỌI địch trong bán kính 5 U**, không giới hạn số cướp; phần vượt trần vòng của Sư Phụ rơi
+// thành Bó Kiếm quanh ông.
 //
-// Bản cũ (Lưới Mì) trói 5 giây: địch đứng im nhưng vòng kiếm vẫn quay, nên hai người vẫn
-// mài nhau y như không có kỹ năng. Bản này đụng thẳng vào **số kiếm** — thứ quyết định mọi
-// cuộc mài — nên nó mới đáng một lượt Bí Kíp.
-//
-// Hụt thì vẫn mất lượt (§6.3 mục 3): không ai trong nón → chỉ có sợi mì bay ra rồi rụng.
-func castHutMi(g *Game, p *Player, dir Vec) {
-	reach := g.skillRange(p, "hut_mi_cone")
-	var target *Player
-	best := math.Inf(1)
-	for _, o := range g.targetsNear(p, reach) {
-		if !inCone(p, o.Pos, dir, g.Cfg.Skills.HutMiConeDeg, reach) {
-			continue
-		}
-		if d := o.Pos.Dist(p.Pos); d < best {
-			target, best = o, d
-		}
-	}
-	if target == nil {
+// Ba thứ v6.48 đổi so với bản cũ, mỗi thứ một lý do:
+//   - **Mọi địch thay vì một người gần nhất**: đây là kỹ năng mạnh nhất về cướp kiếm, nên
+//     nó phải đáng với 35 giây hồi và chỉ 1 lượt. Một mục tiêu thì nó yếu hơn Trộm Kiếm của
+//     Ông Ba (25s × 2) ở mọi tình huống đông người.
+//   - **Bỏ trần 20% kiếm tối đa của mình**: trần ấy biến kỹ năng thành vô dụng đúng lúc
+//     đáng dùng nhất (vây giữa ba người đầy kiếm). Phần dư rơi xuống đất nên vẫn có giá —
+//     ai cũng nhặt được, kể cả nạn nhân.
+//   - **Húp 0.6s**: "cách chống lại" mà §6.3 mục 3 đòi. Chém chết ông trong lúc húp là mất
+//     cả chiêu lẫn lượt.
+func castHutMi(g *Game, p *Player, _ Vec) {
+	secs := g.skillNum("hut_mi_channel")
+	p.channel = channelState{until: g.Time + secs, kind: "hut_mi", at: p.Pos}
+	p.Status[StSing] = p.channel.until
+	g.statusStart(nil, p, StSing, secs)
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "hut_mi_hup", F: float32(secs),
+		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+}
+
+// finishHutMi: húp xong thì kéo kiếm. Bán kính tính lúc KẾT THÚC — ai chạy ra khỏi 5 U
+// trong 0,6 giây thì thoát, y như Ru Ngủ.
+func (g *Game) finishHutMi(p *Player) {
+	targets := g.targetsNear(p, g.skillRange(p, "hut_mi_r"))
+	if len(targets) == 0 {
 		g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "hut_mi_miss",
 			X: float32(p.Pos.X), Y: float32(p.Pos.Y), F: float32(p.Facing)})
 		return
 	}
-	g.stealSwords(p, target)
+	for _, o := range targets {
+		g.stealSwords(p, o)
+	}
 }
 
 // stealSwords chuyển kiếm từ `from` sang `to` theo luật Hút Mì.
@@ -379,21 +433,16 @@ func castHutMi(g *Game, p *Player, dir Vec) {
 // Thứ tự ba phép cắt ở đây không đổi được:
 //  1. cướp `hut_mi_steal` phần số kiếm HIỆN CÓ của địch (làm tròn xuống, tối thiểu 1 nếu
 //     họ còn kiếm) — tỉ lệ theo địch nên càng đông kiếm càng mất nhiều;
-//  2. cắt theo trần `hut_mi_cap_of_own_max` × kiếm tối đa của MÌNH — không thì Sư Phụ cấp
-//     thấp hút một Đạo Tổ là nhảy vọt lên 100 kiếm mà không tu luyện gì;
+//  2. (v6.48 bỏ trần "20% kiếm tối đa của mình" — xem `castHutMi`);
 //  3. phần vượt trần vòng của mình thì RƠI XUỐNG ĐẤT thành Bó Kiếm, không bốc hơi — người
 //     khác tranh được, nên hút đầy tay vẫn có cái giá.
 func (g *Game) stealSwords(to, from *Player) {
 	if from.Ring.Count <= 0 {
 		return
 	}
-	ownMax := g.Prog.MaxSwords(g.Prog.Realm(to.Level))
 	want := int(float64(from.Ring.Count) * g.skillNum("hut_mi_steal"))
 	if want < 1 {
 		want = 1
-	}
-	if lim := int(float64(ownMax) * g.skillNum("hut_mi_cap_of_own_max")); want > lim {
-		want = lim
 	}
 	// `LoseSwords` không bao giờ hạ địch xuống dưới `sword.min_count`, nên số cướp THẬT
 	// phải lấy từ nó, không phải từ ý muốn của mình: cướp 25 mà địch chỉ nhả 18 thì không

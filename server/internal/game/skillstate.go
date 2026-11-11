@@ -131,8 +131,13 @@ func (g *Game) updateChannel(p *Player) {
 	kind := p.channel.kind
 	p.channel = channelState{}
 	p.Status[StSing] = 0
-	if kind == "ru_ngu" {
+	switch kind {
+	case "ru_ngu":
 		g.finishRuNgu(p)
+	case "loa":
+		g.finishLoa(p)
+	case "hut_mi":
+		g.finishHutMi(p)
 	}
 }
 

@@ -33,9 +33,10 @@ var specRangesU = map[string]float64{
 	"bay_sap_tier_bonus":    1,
 	"bay_sap_owner_passes":  1,
 	"vo_chuoi_w":            1,
-	"hut_mi_cone":           5,
+	"hut_mi_r":              5,
 	"hut_mi_steal":          0.25,
-	"hut_mi_cap_of_own_max": 0.2,
+	"hut_mi_channel":        0.6,
+	"loa_channel":           0.8,
 	"gom_don_secs":          4,
 	"rut_co_wave":           2,
 	"rut_co_push":           3,
@@ -107,7 +108,6 @@ func TestPushDistanceUsesCasterU(t *testing.T) {
 	g := skillGame(t)
 	caster := put(g, "ba_tam_loa", Vec{X: 3000, Y: 3000}, 10, 1)
 	caster.Facing = 0
-	want := g.skillRange(caster, "loa_push")
 
 	for _, c := range []struct {
 		name  string
@@ -119,7 +119,11 @@ func TestPushDistanceUsesCasterU(t *testing.T) {
 		}
 		caster.SkillCharges = 1
 		caster.SkillReadyAt = 0
+		// Đo lại U mỗi lượt: nhịp lấy hơi của Loa HÚT luôn viên Linh khí quanh đó (v6.48),
+		// nên người đẩy có thể lên cảnh giới ngay giữa bài — U của họ đổi theo.
+		want := g.skillRange(caster, "loa_push")
 		g.CastSkill(caster)
+		step(g, g.skillNum("loa_channel")+0.1) // v6.48: Loa có nhịp lấy hơi 0.8s
 
 		if victim.KnockUntil <= g.Time {
 			t.Fatalf("%s: không bị đẩy", c.name)

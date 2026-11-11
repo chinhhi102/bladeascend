@@ -55,9 +55,10 @@ func TestBotSuPhuAimsAtSwordRichFoe(t *testing.T) {
 	if b.wantsSkill(g, me, poor, poor, poor) {
 		t.Fatal("địch ít kiếm hơn mình mà Sư Phụ vẫn hút mì")
 	}
-	rich := put(g, "be_ti", 12, c.Add(game.Vec{X: g.SkillU(me) * 2, Y: g.SkillU(me) * 0.5}))
+	// v6.48: bán kính 5 U, không còn nón — đứng SAU LƯNG cũng phải ăn.
+	rich := put(g, "be_ti", 12, c.Add(game.Vec{X: -g.SkillU(me) * 2, Y: g.SkillU(me) * 0.5}))
 	if !b.wantsSkill(g, me, rich, rich, nil) {
-		t.Fatal("địch nhiều kiếm trong nón mà Sư Phụ không hút mì")
+		t.Fatal("địch nhiều kiếm trong 5 U mà Sư Phụ không hút mì")
 	}
 	want := rich.Pos.Sub(me.Pos).Angle()
 	if math.Abs(me.Facing-want) > 1e-6 {
