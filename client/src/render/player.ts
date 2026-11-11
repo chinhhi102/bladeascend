@@ -14,6 +14,7 @@ import { Emote, type EmoteFace } from './emote';
 import { Nameplate, PLATE_FAR_PX } from './nameplate';
 import { StatusView } from './statusview';
 import { SwordRing } from './swordring';
+import { probeSub, probeSubMark } from './probe';
 
 // Visual proportions relative to the body hitbox radius (not balance numbers).
 const CHAR_HEIGHT_PER_R = 2.6; // drawn character height = 2.6 × body radius
@@ -285,6 +286,7 @@ export class PlayerSprite {
     this.lastFace = s.f;
     this.lastAt = now;
     this.ctl.setFacing(Math.cos(s.f) >= 0, now);
+    probeSub();
     this.updateBody(this.moodFor(moodName(s.md), now), r, dt, speed, turn, now);
     this.drawAura(s.bf, r, now);
     if (s.fl & FLAG.burning) {
@@ -293,11 +295,15 @@ export class PlayerSprite {
     this.applyAlpha(s.fl, now);
     // Xếp từ dưới lên: tên → cảnh giới → danh hiệu (spec §11.2, §11.3).
     const headY = -r * (CHAR_HEIGHT_PER_R - FEET_BELOW_CENTER) - 4 / zoom;
+    probeSubMark('p.body');
     this.plate.update(s.L, s.ti ?? 0, myRealm, headY, zoom, now, r * 2.6 * zoom >= PLATE_FAR_PX, plateFade);
+    probeSubMark('p.plate');
     this.swordRing.update(f, now, showHitbox, swordDetail);
+    probeSubMark('p.ring');
     this.updateAnimInfo(headY, zoom);
     this.statusView.update({ id: this.id, st: s.st ?? 0, r, sc: s.sc, headY, zoom, now, vx, vy, wx: f.x, wy: f.y });
     this.updateEmote(s, headY, zoom, now);
+    probeSubMark('p.status');
     this.swordRing.haloColor = this.statusView.halo;
     // Gồng phồng 10% rồi xẹp lại mượt (lớp ③/⑤) — lerp chứ không nhảy cỡ.
     const k = this.bodyBox.scale.x + (this.statusView.bodyScale - this.bodyBox.scale.x) * Math.min(1, dt * 12);

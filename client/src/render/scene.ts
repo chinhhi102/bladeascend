@@ -2,7 +2,7 @@ import { Application, Container } from 'pixi.js';
 import { AnimViewer } from './animviewer';
 import { setEmoteCharCount } from './emote';
 import { paceTicker } from './framepace';
-import { probeEnabled, probeFrame, probeHeap, probeLines, probeMark, probeStats } from './probe';
+import { probeEnabled, probeFrame, probeHeap, probeLines, probeMark, probeStats, probeSubFlush } from './probe';
 import { assets } from './assets';
 import { SkillPresenter, type StatusChip } from './skillpresent';
 import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuTextureCount, trackGpuMemory } from './gpumem';
@@ -331,6 +331,7 @@ export class GameScene {
     }
     this.glow.apply(); // mức chất lượng vừa đổi thì gắn lại bloom (§3.6)
     this.syncPlayers(frames, now);
+    probeSubFlush();
     probeMark('players');
     this.syncMonsters(now);
     probeMark('monsters');

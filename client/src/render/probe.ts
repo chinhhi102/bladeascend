@@ -25,15 +25,20 @@
  */
 export type ProbeKey =
   | 'interp' | 'players' | 'monsters' | 'items' | 'beasts'
-  | 'map' | 'ambient' | 'vfx' | 'skills' | 'other';
+  | 'map' | 'ambient' | 'vfx' | 'skills' | 'other'
+  // Mốc CON bên trong `players` — cộng lại xấp xỉ bằng `players`. Biết "người 3,5 ms" là
+  // chưa đủ để sửa: phải biết 3,5 ms đó là vòng kiếm, bảng tên hay thân nhân vật.
+  | 'p.body' | 'p.plate' | 'p.ring' | 'p.status';
 
 const KEYS: ProbeKey[] = ['interp', 'players', 'monsters', 'items', 'beasts',
-  'map', 'ambient', 'vfx', 'skills', 'other'];
+  'map', 'ambient', 'vfx', 'skills', 'other',
+  'p.body', 'p.plate', 'p.ring', 'p.status'];
 
 /** Nhãn hiện trên bảng F3. */
 const LABELS: Record<ProbeKey, string> = {
   interp: 'nội suy', players: 'người', monsters: 'quái', items: 'vật phẩm', beasts: 'thần thú', // i18n-ok: lớp số liệu debug
   map: 'bản đồ', ambient: 'ambient', vfx: 'vfx', skills: 'kỹ năng', other: 'khác', // i18n-ok: lớp số liệu debug
+  'p.body': 'ng.thân', 'p.plate': 'ng.bảngtên', 'p.ring': 'ng.vòngkiếm', 'p.status': 'ng.trạngthái', // i18n-ok: lớp số liệu debug
 };
 
 let on = false;
@@ -75,6 +80,45 @@ export function probeMark(key: ProbeKey): void {
   const i = idx.get(key) ?? KEYS.length - 1;
   ema[i] = ema[i] * 0.9 + (now - last) * 0.1;
   last = now;
+}
+
+/**
+ * Mốc CON: cộng dồn trong một khung rồi mới vào trung bình trượt ở `probeSubFlush`.
+ *
+ * Khác `probeMark` vì nó chạy MỘT LẦN MỖI NGƯỜI, không phải một lần mỗi khung. Dùng
+ * `probeMark` ở đây thì trung bình trượt chỉ nhớ người cuối cùng, không phải cả màn hình.
+ */
+const subAcc = new Float64Array(KEYS.length);
+const SUB_KEYS: ProbeKey[] = ['p.body', 'p.plate', 'p.ring', 'p.status'];
+let subLast = 0;
+
+export function probeSub(): void {
+  if (on) {
+    subLast = performance.now();
+  }
+}
+
+export function probeSubMark(key: ProbeKey): void {
+  if (!on) {
+    return;
+  }
+  const now = performance.now();
+  subAcc[idx.get(key) ?? KEYS.length - 1] += now - subLast;
+  subLast = now;
+}
+
+/** Gọi sau khi đã duyệt hết người trong khung: dồn tổng vào trung bình trượt. */
+export function probeSubFlush(): void {
+  if (!on) {
+    return;
+  }
+  // CHỈ các mốc con. Quét cả mảng thì mấy mốc chính (đặt bằng `probeMark`) bị nhân 0.9 với
+  // `subAcc = 0` mỗi khung và tắt dần về 0 — bảng sẽ nói "mọi hệ thống đều 0 ms".
+  for (const k of SUB_KEYS) {
+    const i = idx.get(k) ?? 0;
+    ema[i] = ema[i] * 0.9 + subAcc[i] * 0.1;
+    subAcc[i] = 0;
+  }
 }
 
 /** Gọi một lần mỗi giây: chụp heap để thấy răng cưa GC. */
