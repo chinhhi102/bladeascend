@@ -137,12 +137,22 @@ rows.push(await sample('CPU 4× · res 0.5'));
 await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
 
 const KEYS = ['interp', 'players', 'monsters', 'items', 'beasts', 'map', 'ambient', 'vfx', 'skills'];
+// Mốc CON bên trong cột `players` — biết "người 2,6 ms" chưa đủ để sửa, phải biết 2,6 ms
+// đó là thân, bảng tên, vòng kiếm hay lớp trạng thái (render/probe.ts).
+const SUB = ['p.body', 'p.plate', 'p.ring', 'p.status'];
 console.log('');
 console.log(`| Kịch bản | FPS | ${KEYS.join(' | ')} | heap MB | răng cưa |`);
 console.log(`|---|---:|${KEYS.map(() => '---:').join('|')}|---:|---:|`);
 for (const r of rows) {
   const cols = KEYS.map((k) => (r[k] ?? 0).toFixed(2));
   console.log(`| ${r.label} | ${r.fps} | ${cols.join(' | ')} | ${(r.heapMB ?? 0).toFixed(0)} | ${(r.heapRangeMB ?? 0).toFixed(0)} |`);
+}
+console.log('');
+console.log(`| Trong cột "người" | ${SUB.join(' | ')} | tổng |`);
+console.log(`|---|${SUB.map(() => '---:').join('|')}|---:|`);
+for (const r of rows) {
+  const vals = SUB.map((k) => r[k] ?? 0);
+  console.log(`| ${r.label} | ${vals.map((v) => v.toFixed(2)).join(' | ')} | ${vals.reduce((a, c) => a + c, 0).toFixed(2)} |`);
 }
 
 const full = rows.find((r) => r.label === 'CPU 4×');

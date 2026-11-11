@@ -563,6 +563,25 @@ tự loại phiên máy, nên chỉ cần ít ngày là có nền sạch. Mục 
 p1 ≥ 25; PC p1 ≥ 30**. Hai phiên iPhone thật 31/10 cho FPS 11,5 — mẫu mỏng nhưng là tín hiệu
 thật, nên đừng coi việc hoãn là coi nhẹ.
 
+## Lượt 11/11 — spec v6.46 → v6.51 + Q48, Q49 (đã deploy `:9999`, đã push)
+
+| Mục | Kết quả |
+|---|---|
+| **v6.46** `96cc3b8` | Cờ `can_absorb_tien` (hết lỗi Đại Thừa 10 chưa đầy thanh đã hiện Tiên khí); Tiên giới 10 tầng/cảnh giới; bảng xếp hạng bỏ phá hoà bằng EXP |
+| **v6.47** `d9d3473` | Bảng xếp hạng KÍCH THƯỚC CỐ ĐỊNH. Lỗi ở cả hai phía: server gửi danh sách thiếu khi đang giữ 3 s (đo được 5 dòng trong phòng 13 người sống), client dựng lại DOM theo dữ liệu + `trimToScreen()` ẩn dòng theo độ dài tên (phòng 105 người chỉ hiện 5 dòng). Bài mới `rbstable.mjs` ghi 20 mẫu/giây, đã cắm vào cổng deploy |
+| **v6.49** `e3bd837` | Q49: số dòng theo chiều cao màn hình (≥900 → 10 · 700–899 → 7 · <700 → 5), thu nhỏ sàn 0,85, bấm tiêu đề mở lớp phủ đủ 10 dòng |
+| **v6.48 §6.3** `2022b27` `611b2cd` `fb8302f` `9c17c95` `9eef83f` `b8c6aaf` | Viết lại 9 kỹ năng theo chuẩn Ông Ba Võng 25 s × 2 (Shipper giữ nguyên): A Hớn hồi 10% + 20%/4 s · Bà Tám lấy hơi hút đồ rồi hét · Đại Ca đàn em 15% + nhặt đồ hộ · Thằng Mập mù + đảo điều khiển + khổng lồ ×2 · Cô Ba sạp bất hoại + đẩy + buộc vào sạp · Sư Phụ hút 25% MỌI địch 5 U · Bé Tí bung cơ · Cụ Rùa (v6.50/51) mai 2 s + khiêu khích |
+| **v6.48 §6.6** `d24497e` `4d3ff63` | Mô tả kỹ năng sinh từ config (+ cổng CI `check:skilldesc` chặn số viết cứng ở cả 6 ngôn ngữ); lượt thích nhân vật (SQLite, `GET/POST /api/likes`, ❤ trên thẻ, nút ở Tổng kết, cột ♥ ở trang admin) |
+| **Q48** `ec20f26` | Đồng hồ vẽ chỉnh tốc + trễ nội suy tự điều chỉnh. Hermite KHÔNG cần: "3,5% khung nhảy cóc" hoá ra là lỗi PHÉP ĐO (bài lấy mẫu lệch nhịp vòng vẽ). Đo lại bằng vết trong vòng vẽ: **0 nhảy cóc, 0 đứng hình**, 3 lượt máy rảnh. Cổng deploy hạ xuống 0/0 |
+
+**Còn dở — tối ưu máy yếu (B22 trong PERF_LOG §6).** Đã ĐO xong phần chia nhỏ: trong cột
+"người" ở CPU 4×, vòng kiếm 1,35 ms và lớp trạng thái 1,42 ms chiếm 2/3; bảng tên rẻ nhất.
+CHƯA sửa — máy dev liên tục bận (load 1,5–3,3 mỗi nhân) nên chưa có mốc "trước" đủ sạch để
+chứng minh "sau". Hướng: vòng kiếm thành container chỉ xoay, người ở xa một sprite vành.
+
+**Hai câu đang chờ anh**: Q50 (Hút Mì — §6.3 nói bán kính, §6.5 còn ghi nón; đang dùng bán
+kính) và Q51 (Cô Ba còn rải vỏ chuối nữa không — đang GIỮ).
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
