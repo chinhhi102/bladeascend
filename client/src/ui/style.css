@@ -439,6 +439,23 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 .rb-mface.r2 .rb-face { border-color: var(--silver) !important; }
 .rb-mface.r3 .rb-face { border-color: var(--bronze) !important; }
 .rb-mrank { margin-left: 4px; font-weight: 900; font-size: 12px; color: var(--gold1); white-space: nowrap; }
+/* ── Số dòng theo chiều cao màn hình (§11.5 v6.49, Q49) ───────────────────────────────
+   Ô vẫn được DỰNG đủ 7 cái; màn thấp chỉ ẩn bớt ô cuối. Ẩn bằng `display:none` ở đây là
+   đúng — số ô ẩn là một con số CỐ ĐỊNH theo cỡ cửa sổ, không đổi theo dữ liệu, nên bảng
+   vẫn không co giãn trong lúc chơi. Mở lớp phủ (`.open`) thì hiện lại đủ 10 dòng. */
+.rb.h-mid:not(.open) .rb-list > .rb-row:nth-child(n+5),
+.rb.h-low:not(.open) .rb-list > .rb-row:nth-child(n+3) { display: none; }
+/* Màn thấp: thẻ Top 2/3 rút còn một dòng (bỏ danh hiệu + nhãn khu). */
+.rb.h-low:not(.open) .rb-pod .rb-title, .rb.h-low:not(.open) .rb-pod .rb-tags { display: none; }
+.rb-head { cursor: pointer; }
+/* Lớp phủ bảng đầy đủ trên PC — cùng dáng với bản điện thoại, nhưng neo góc phải. */
+.room-board.open:not(.compact) {
+  z-index: 70; max-height: 92vh; background: rgba(18,14,10,.94);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.6); text-shadow: none;
+}
+.room-board.open:not(.compact) .rb-close { display: block; }
+
 .room-board.compact:not(.open) { width: auto; padding: 4px 8px 4px 6px; border-radius: 999px; }
 .room-board.compact:not(.open) > :not(.rb-mini) { display: none !important; }
 .room-board.compact:not(.open) .rb-mini { display: flex; }

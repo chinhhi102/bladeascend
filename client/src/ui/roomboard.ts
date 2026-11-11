@@ -44,6 +44,28 @@ const HOLD_MS = 450;
 const IDLE_CLOSE_MS = 8000;
 /** Bảng không bao giờ cao quá ngần này màn hình (chủ dự án chốt 31/10). */
 const MAX_SCREEN_FRAC = 0.5;
+/** Thu nhỏ tới đâu là hết (v6.49): dưới mức này chữ bé quá, thà bớt dòng. */
+const MIN_SCALE = 0.85;
+/**
+ * Số ô dòng theo CHIỀU CAO MÀN HÌNH (Q49 / §11.5 v6.49) — tính 1 lần khi vào trận và khi
+ * đổi cỡ cửa sổ, KHÔNG theo dữ liệu.
+ *
+ * Hai luật "luôn đủ 10 dòng" và "không quá nửa màn hình" không cùng đúng được ở màn thấp:
+ * bảng 10 dòng cao ~539 px, nửa màn 1366×768 chỉ có 384 px. Chủ dự án chốt (Q49, phương án
+ * c): màn thấp thì hiện ít dòng hơn — nhưng ít dòng ấy cũng là một con số CỐ ĐỊNH, không
+ * phụ thuộc có bao nhiêu người trong phòng hay tên họ dài bao nhiêu.
+ */
+const HEIGHT_TIERS: { minH: number; rows: number; cls: string }[] = [
+  { minH: 900, rows: 7, cls: '' },      // đủ top 10
+  { minH: 700, rows: 4, cls: 'h-mid' }, // top 7
+  { minH: 0, rows: 2, cls: 'h-low' },   // top 5
+];
+
+/** heightTier: tầng chiều cao đang dùng cho cửa sổ hiện tại. */
+function heightTier(): { minH: number; rows: number; cls: string } {
+  const h = window.innerHeight;
+  return HEIGHT_TIERS.find((t) => h >= t.minH) ?? HEIGHT_TIERS[HEIGHT_TIERS.length - 1];
+}
 
 /**
  * rbStats: số liệu cho bài nghiệm thu §17 (`tools/browsertest/rbstable.mjs`) — bảng có bị
@@ -53,6 +75,10 @@ const MAX_SCREEN_FRAC = 0.5;
  * cửa vào trạng thái trò chơi, và bài đo phải chạy được trên bản build thật.
  */
 export const rbStats = { packets: 0, applied: 0, short: 0, rows: 0, total: 0 };
+
+/** Phím điều khiển: bấm là đóng bảng đầy đủ đang mở (§11.5 v6.49). */
+const MOVE_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD',
+  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space']);
 
 /** SelfInfo: cái gói bảng không chở về chính mình nhưng dòng ghim cần (§11.5). */
 interface SelfInfo {
@@ -256,6 +282,7 @@ export class RoomBoard {
   private raf = 0;
   private pending: { msg: RoomBoardMsg; ctx: Ctx } | null = null;
   private natural = 0;
+  private tier = HEIGHT_TIERS[0];
   private readonly closeBtn = h('button', 'rb-close', '✕');
 
   /** onOpenChange: báo HUD để ẩn nút kỹ năng/🔥, hoãn thông báo khi bảng mở (§11.5, duyệt 1/11). */
@@ -292,7 +319,21 @@ export class RoomBoard {
     this.el.addEventListener('pointerup', () => window.clearTimeout(this.holdTimer));
     window.addEventListener('resize', () => {
       this.natural = 0;
+      this.setTier();
     });
+    // Bấm TIÊU ĐỀ (không phải cả bảng — cả bảng thì rê chuột xem tên cũng mở) → bảng đầy đủ
+    // 10 dòng dạng lớp phủ, kể cả trên PC (§11.5 v6.49).
+    this.head.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.setOpen(!this.open);
+    });
+    // "Tự đóng khi di chuyển": phím điều khiển là tín hiệu sớm nhất và không cần ai gọi hộ.
+    window.addEventListener('keydown', (e) => {
+      if (this.open && MOVE_KEYS.has(e.code)) {
+        this.setOpen(false);
+      }
+    });
+    this.setTier();
   }
 
   /** isOpen: bảng đang mở to trên điện thoại. */
@@ -337,11 +378,8 @@ export class RoomBoard {
 
   private apply(msg: RoomBoardMsg, ctx: Ctx): void {
     const compact = narrowScreen();
-    if (!compact && this.open) {
-      this.setOpen(false);
-    }
     this.el.classList.toggle('compact', compact);
-    this.el.classList.toggle('open', compact && this.open);
+    this.el.classList.toggle('open', this.open);
     this.el.classList.toggle('lowfx', quality() === 'low');
     this.count.textContent = STR.board.players(msg.total);
 
@@ -451,8 +489,22 @@ export class RoomBoard {
    *
    * (Ghi vào docs/QUESTIONS.md — Q49: chủ dự án có thể muốn chữ nhỏ hơn thay vì thu cả bảng.)
    */
+  /** setTier: áp tầng chiều cao — đổi class trên gốc, CSS lo phần ẩn ô thừa. */
+  private setTier(): void {
+    const t = heightTier();
+    if (t === this.tier && this.el.classList.contains(t.cls || 'h-tall')) {
+      return;
+    }
+    this.tier = t;
+    for (const x of HEIGHT_TIERS) {
+      this.el.classList.toggle(x.cls || 'h-tall', x === t);
+    }
+  }
+
   private fit(): void {
-    if (this.el.classList.contains('compact')) {
+    // Thu gọn (điện thoại) hoặc đang mở lớp phủ: để nguyên cỡ thật. Lớp phủ do người chơi
+    // CHỦ ĐỘNG mở nên được phép cao hơn nửa màn hình (§11.5).
+    if (this.open || this.el.classList.contains('compact')) {
       this.el.style.transform = '';
       this.natural = 0;
       return;
@@ -470,7 +522,9 @@ export class RoomBoard {
       return;
     }
     this.natural = natural;
-    const k = Math.min(1, (window.innerHeight * MAX_SCREEN_FRAC) / natural);
+    // Sàn 0,85 (v6.49): số dòng đã giảm theo tầng chiều cao rồi, nên hệ số chỉ còn lo phần
+    // lẻ. Thu nhỏ sâu hơn nữa là chữ bảng bé hơn chữ HUD, đọc không ra.
+    const k = Math.max(MIN_SCALE, Math.min(1, (window.innerHeight * MAX_SCREEN_FRAC) / natural));
     this.el.style.transform = k < 1 ? `scale(${k.toFixed(3)})` : '';
   }
 
@@ -498,6 +552,10 @@ export class RoomBoard {
     }
     this.open = open;
     this.el.classList.toggle('open', open);
+    // Lớp phủ trên PC: cũng là `open`, nhưng CSS của điện thoại gắn với `.compact`. Lúc mở
+    // thì bỏ hệ số thu nhỏ đi — lớp phủ được phép cao hơn nửa màn hình.
+    this.el.style.transform = '';
+    this.natural = 0;
     window.clearTimeout(this.idleTimer);
     if (open) {
       this.armIdle();

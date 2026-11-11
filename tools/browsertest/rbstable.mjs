@@ -27,13 +27,14 @@ console.log(`tải máy: ${loadavg()[0].toFixed(1)} trên ${cpus().length} nhân
 
 // Cờ GPU như `weakperf.mjs`: thiếu nó thì Chrome headless vẽ bằng SwiftShader và cả trò
 // chơi chạy ~1 khung/giây — mẫu đo thưa tới mức có thể bỏ sót một lần bảng co trong 1 giây.
+const VIEW_H = Number(process.env.VIEW_H ?? 720);
 const b = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });
 
 async function join(name) {
-  const ctx = await b.newContext({ viewport: { width: 1280, height: 720 }, locale: 'vi-VN' });
+  const ctx = await b.newContext({ viewport: { width: 1280, height: VIEW_H }, locale: 'vi-VN' });
   const p = await ctx.newPage();
   p.on('pageerror', (e) => console.log(`  [${name}] pageerror`, String(e).slice(0, 160)));
   await p.goto(`${TARGET}/?debug=true`, { waitUntil: 'domcontentloaded' });
@@ -62,7 +63,14 @@ if (n0 < MIN_PLAYERS) {
   // chặn deploy vì phòng vắng là cách chắc chắn để người ta tắt cổng kiểm đi.
   process.exit(2);
 }
-console.log(`phòng ${n0} người, ghi mỗi khung trong ${SECS}s…`);
+// Số dòng CHỜ ĐỢI tính từ chiều cao cửa sổ, đúng luật §11.5 v6.49 (Q49): ≥900 px → 10,
+// 700–899 → 7, <700 → 5. Bài kiểm không được đòi 10 dòng trên màn 720 px — đòi sai thì
+// người ta sẽ tắt nó đi.
+const wantRows = await me.page.evaluate(() => {
+  const h = innerHeight;
+  return h >= 900 ? 10 : h >= 700 ? 7 : 5;
+});
+console.log(`phòng ${n0} người, cửa sổ cao ${VIEW_H} px → chờ ${wantRows} dòng; ghi trong ${SECS}s…`);
 
 // Đồng hồ ghi nằm TRONG trang: ra/vào Node mỗi lần đo thì chính phép đo làm tụt khung.
 //
@@ -159,7 +167,7 @@ const maxRows = Math.max(...rec.rows);
 console.log(`\n${rec.samples} mẫu / ${rec.frames} khung vẽ · ${joined} người vào rồi ra · người đo chết ${Math.max(revived, 0)} lần`);
 console.log(`chiều cao : ${hRuns.length - 1} lần đổi — ${hRuns.slice(0, 12).join(' → ')}${hRuns.length > 12 ? ' …' : ''}`);
 console.log(`phần tử   : ${nRuns.length - 1} lần đổi — ${nRuns.slice(0, 12).join(' → ')}${nRuns.length > 12 ? ' …' : ''}`);
-console.log(`số dòng   : ${minRows}–${maxRows}, ${rRuns.length - 1} lần đổi — ${rRuns.slice(0, 16).join(' → ')}${rRuns.length > 16 ? ' …' : ''}`);
+console.log(`số dòng   : ${minRows}–${maxRows} (chờ ${wantRows}), ${rRuns.length - 1} lần đổi — ${rRuns.slice(0, 16).join(' → ')}${rRuns.length > 16 ? ' …' : ''}`);
 if (pkt.length > 0) {
   console.log(`gói server: ${Math.min(...pkt)}–${Math.max(...pkt)} dòng, ${runs(pkt).length - 1} lần đổi`);
 } else {
@@ -173,8 +181,8 @@ if (hRuns.length > 1) {
 if (nRuns.length > 1) {
   fail.push(`số phần tử DOM đổi ${nRuns.length - 1} lần (spec: dựng 1 lần, chỉ sửa nội dung)`);
 }
-if (minRows !== maxRows || maxRows !== 10) {
-  fail.push(`số dòng ${minRows}–${maxRows} (spec: luôn 10, ô thừa trống giữ chiều cao)`);
+if (minRows !== maxRows || maxRows !== wantRows) {
+  fail.push(`số dòng ${minRows}–${maxRows} (spec: luôn ${wantRows} ở cửa sổ cao ${VIEW_H} px, ô thừa trống giữ chiều cao)`);
 }
 if (pkt.length > 0 && Math.min(...pkt) < 10) {
   fail.push(`gói server có lúc chỉ ${Math.min(...pkt)} dòng (spec: luôn gửi đủ top 10)`);
