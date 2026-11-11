@@ -5,6 +5,7 @@ import { charColor } from '../render/palette';
 import { button, h, portrait } from './dom';
 import { LANG } from '../i18n';
 import { langPicker } from './langpick';
+import { skillDesc } from './skilldesc';
 import { STR } from './strings';
 
 const LS_NAME = 'kx_name';
@@ -190,7 +191,7 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
       h('div', 'preview-skill', `${STR.skillLabel}: ${STR.skillNames[c] ?? '—'}`),
       h('div', 'preview-cd', cooldownText(cfg, c)),
       statBars(cfg, c),
-      h('div', 'preview-desc', STR.skillDesc[c] ?? '')));
+      h('div', 'preview-desc', skillDesc(cfg, c))));
   }
   const preview = h('div', 'char-preview',
     previewArt,

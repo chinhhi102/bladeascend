@@ -95,6 +95,20 @@ export interface GameConfig {
   skills: {
     ru_ngu_move: number;
     tran_chau_secs: number;
+    // Số của từng kỹ năng, cho mô tả ở bảng chọn nhân vật (§6.6 v6.48 — "sinh từ config",
+    // xem ui/skilldesc.ts). `/api/config` gửi NGUYÊN tệp `game.json` nên chỉ cần khai báo.
+    banh_bao_now: number;
+    banh_bao_regen: number;
+    banh_bao_regen_secs: number;
+    dan_em_count: number;
+    dan_em_secs: number;
+    dan_em_sword_share: number;
+    giant_secs: number;
+    giant_mult: number;
+    tran_chau_invert_secs: number;
+    brace_secs: number;
+    shell_secs: number;
+    slip_secs: number;
     /** Hồi chiêu theo nhân vật: [giây hồi 1 lượt, lượt tích tối đa] (spec v6.25 §6.3). */
     cooldowns: Record<string, [number, number]>;
     /** Tiên giới +N lượt tích tối đa. */
