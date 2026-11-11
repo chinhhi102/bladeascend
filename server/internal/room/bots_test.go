@@ -15,7 +15,7 @@ func TestBotSpawnsAsNewPlayer(t *testing.T) {
 	r := m.AllRooms()[0]
 	r.Step(1.0 / 30) // người chơi chỉ thật sự vào bàn cờ sau một nhịp Step
 	prog := r.zones[0].G.Prog
-	forceTopPlayer(t, r, cs[0].PlayerID, prog.TienLevel(prog.TienCount()-1))
+	forceTopPlayer(t, r, cs[0].PlayerID, prog.TienLevel(prog.TienCount()-1, 0))
 	for i := 0; i < 20; i++ {
 		p := r.spawnBot()
 		if p.Level != 0 || p.Ring.Count != 1 {

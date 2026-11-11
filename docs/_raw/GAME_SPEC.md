@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.46:** Tiên giới chia 10 tầng mỗi cảnh giới (scale +0.02/tầng); hiển thị Tiên khí chỉ khi Đại Thừa 10 đầy thanh; bảng xếp hạng chống nhảy (bỏ phá hoà bằng EXP, giữ 3 s, thứ tự ổn định) (§3.4, §11.2).
+
 **Thay đổi v6.45:** Shipper Gom Đơn tốc chạy ×5 (+4.0 base, trần ×5) (§4.1, §6.3).
 
 **Thay đổi v6.44:** Ông Ba Võng Trộm Kiếm: kiếm ông vẫn bị mẻ khi va (bỏ miễn mẻ), chỉ giữ việc kiếm địch bể bay về ông; làm rõ 'mất chiêu' chỉ khi khiên đỡ đòn (§6.3).
@@ -236,22 +238,30 @@ exp_needed(r, s) = round(100 * 2^r * (1 + 0.08 * s))      // realm_mult = 2.0: m
 
 ### 3.4 Tiên giới — lên cảnh giới bằng Tiên khí
 
-Sau Đại Thừa có thêm 5 cảnh giới. **Không dùng Linh khí (EXP)**, chỉ lên được bằng **Tiên khí** — loại viên đặc biệt chỉ phun ra từ các **Đài Tiên Khí** trên bản đồ (§8.5). Tiên giới **không chia tầng**. Cảnh giới Tiên được xác định thẳng từ **tổng Tiên khí đang có** (`tien_khi`, cộng dồn):
+Sau Đại Thừa có thêm 5 cảnh giới. **Không dùng Linh khí (EXP)**, chỉ lên được bằng **Tiên khí** — loại viên đặc biệt chỉ phun ra từ các **Đài Tiên Khí** trên bản đồ (§8.5). Tiên giới **cũng chia 10 tầng mỗi cảnh giới** như phàm giới (v6.46). Cảnh giới + tầng Tiên được xác định thẳng từ **tổng Tiên khí đang có** (`tien_khi`, cộng dồn):
 
 | r | Cảnh giới | Tiên khí (cộng dồn) | Trần | Kiếm tối đa | Số vòng | Scale |
 |---|---|---|---|---|---|---|
-| 9 | Chân Tiên | 1 – 1 000 | 1 000 | 550 | 10 | 5.2 |
-| 10 | Kim Tiên | 1 001 – 3 000 | 3 000 | 660 | 11 | 5.4 |
-| 11 | Thái Ất Ngọc Tiên | 3 001 – 6 000 | 6 000 | 780 | 12 | 5.6 |
-| 12 | Đại La Kim Tiên | 6 001 – 10 000 | 10 000 | 910 | 13 | 5.8 |
-| 13 | Đạo Tổ | 10 001 – 15 000 | 15 000 | 1 050 | 14 | 6.0 |
+| 9 | Chân Tiên | 1 – 1 000 | 1 000 | 550 | 10 | 5.02 → 5.20 |
+| 10 | Kim Tiên | 1 001 – 3 000 | 3 000 | 660 | 11 | 5.22 → 5.40 |
+| 11 | Thái Ất Ngọc Tiên | 3 001 – 6 000 | 6 000 | 780 | 12 | 5.42 → 5.60 |
+| 12 | Đại La Kim Tiên | 6 001 – 10 000 | 10 000 | 910 | 13 | 5.62 → 5.80 |
+| 13 | Đạo Tổ | 10 001 – 15 000 | 15 000 | 1 050 | 14 | 5.82 → 6.00 |
 
 (v6.6: **gấp 10 lần** bản gốc v5.7 — v6.4 từng thử ×20 nhưng ước tính ôm trọn 2 đài vẫn mất ~62 phút mới tới Đạo Tổ, quá lâu so với một ván; ×10 ≈ 30 phút khi ôm 2 đài. Nguồn Tiên khí từ đài giữ nguyên.)
 
-- **Điều kiện vào Tiên giới**: Đại Thừa tầng 10 **đầy thanh Linh khí** (694 960). Chỉ khi đó mới nhặt được Tiên khí; **viên Tiên khí đầu tiên (tien_khi = 1) → Chân Tiên ngay**.
+- **Điều kiện vào Tiên giới**: Đại Thừa tầng 10 **đầy thanh Linh khí** (694 960). Chỉ khi đó mới nhặt được Tiên khí; **viên Tiên khí đầu tiên (tien_khi = 1) → Chân Tiên tầng 1 ngay**.
+- **Hiển thị theo đúng ranh giới này** (sửa lỗi 07/11): Đại Thừa tầng 10 **chưa đầy** → HUD hiện **thanh Linh khí**, viên Linh khí sáng bình thường, viên Tiên khí mờ 30%. **Chỉ khi đầy thanh** (694 960) mới đổi HUD sang thanh Tiên khí, viên Linh khí mờ 30%, viên Tiên khí sáng. Thiêu Đốt kéo xuống dưới 694 960 → đổi ngược lại. Client lấy trạng thái này từ cờ `can_absorb_tien` do server gửi, không tự đoán theo cảnh giới.
 - Lên cảnh giới khi Tiên khí **vượt trần** cảnh giới hiện tại: 1 000 → 1 001 là Kim Tiên, 3 000 → 3 001 là Thái Ất, 6 000 → 6 001 là Đại La, **10 000 → 10 001 là Đạo Tổ**.
 - **Mốc khởi điểm** mỗi cảnh giới (đáy): Chân Tiên 1 · Kim Tiên 1 001 · Thái Ất 3 001 · Đại La 6 001 · Đạo Tổ 10 001.
 - Config: `tien_khi_ceilings: [1000, 3000, 6000, 10000, 15000]`.
+
+**10 tầng trong mỗi cảnh giới Tiên (v6.46)**
+- Độ rộng cảnh giới chia cho 10 tầng theo cùng nhịp phàm giới: tầng s (0–9) nặng `1 + 0.08·s` (tầng sau tốn hơn tầng trước 8% của tầng đầu). Ví dụ Chân Tiên: tầng 1 = 1–74, tầng 2 = 75–153, … tầng 10 = 875–1 000; Đạo Tổ: tầng 1 = 10 001–10 368, … tầng 10 = 14 369–15 000.
+- **Scale tăng đều theo tầng**: `scale = 5.0 + 0.02 × (10·k + s + 1)` (k = 0 Chân Tiên … 4 Đạo Tổ; s = 0…9) → Chân Tiên 1 = 5,02 … Đạo Tổ 10 = 6,00. Số vòng kiếm & kiếm tối đa vẫn theo **cảnh giới** (bảng trên), không theo tầng.
+- Hiển thị giống phàm giới: `Kim Tiên tầng 7`, thanh Tiên khí là **thanh của tầng hiện tại** (vd 120/221), bảng xếp hạng/bảng tên/HUD ghi tầng.
+- Lên tầng: glow nhỏ như phàm giới; lên **cảnh giới** Tiên mới có Thiên Kiếp. Thiêu Đốt Tiên khí có thể rớt tầng nhưng không rớt cảnh giới.
+- Đạo Tổ đổi Uy Danh khi **Đạo Tổ tầng 10 đầy** (15 000), như cũ.
 
 **Ai nhặt được Tiên khí**
 **Linh khí và Tiên khí tách hẳn nhau** (ranh giới: Đại Thừa tầng 10 đầy thanh):
@@ -1109,7 +1119,7 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 
 ### 11.2 Các bảng xếp hạng
 
-- **Trong phòng** (realtime, 1 lần/giây): top 10 xếp theo **cảnh giới + tầng ↓**, hoà thì **Uy Danh ↓**, hoà nữa thì **tổng EXP ↓** (v6.43, một hàm so sánh dùng chung `RankLess` cho bảng, danh hiệu, vương miện, hệ số lật kèo), tính **chung cả phòng (5 khu)**. Thiết kế bảng ở §11.5.
+- **Trong phòng** (realtime, 1 lần/giây): top 10 xếp theo **cảnh giới + tầng ↓**, hoà thì **Uy Danh ↓**, hoà nữa thì **giữ nguyên thứ tự đang hiện** (không dùng tổng EXP nữa — EXP đổi liên tục mỗi lần nhặt viên làm bảng nhảy, sửa 07/11) (v6.43, một hàm so sánh dùng chung `RankLess` cho bảng, danh hiệu, vương miện, hệ số lật kèo), tính **chung cả phòng (5 khu)**. Thiết kế bảng ở §11.5.
 - **Toàn cục**, tab **Hôm nay / Tuần này / Mọi thời đại**, 3 bảng:
   - **Uy Danh** (bảng chính): điểm Uy Danh cao nhất trong 1 mạng.
   - **Sát Thần**: số lần chém trúng người nhiều nhất trong 1 mạng.
@@ -1127,6 +1137,11 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 | Top 3 | **Chỗ này nhiều máu nè** | Đồng |
 | Top 4–10 | Theo mảng `titles` trong config (giữ đúng bộ danh hiệu đang chạy trong code) | Trắng |
 
+- **Chống nhảy bảng (v6.46)**:
+  - Chỉ đổi chỗ 2 người khi người dưới **vượt hẳn** (cao hơn tầng, hoặc cùng tầng và Uy Danh hơn ≥ 1) và giữ được **≥ 3 s** liên tục (cùng nhịp giữ danh hiệu).
+  - Cùng tầng + cùng Uy Danh → **không bao giờ đổi chỗ** (thứ tự ổn định; người mới vào xếp sau).
+  - Một dòng đổi chỗ tối đa **1 lần / 3 s**; hoạt ảnh trượt chỉ chạy khi hạng thật sự đổi.
+  - Người rời phòng/chết → rút khỏi bảng ngay (không chờ 3 s).
 - **Danh hiệu tính theo cả PHÒNG, không theo khu**: xếp hạng (cảnh giới → Uy Danh → EXP, như §11.2) của mọi người thật + bot trong cả 5 khu của phòng, Top 1 của phòng chỉ có **1 người**. Người ở khu khác vẫn thấy đúng danh hiệu của họ khi gặp. (Bất kỳ chỗ nào trong code đang tính hạng trong 1 khu → sửa.)
 - Danh hiệu hiện **phía trên tên** nhân vật trong trận và trong bảng phòng (§11.5).
 - Chống nhấp nháy: giữ hạng mới liên tục 3s mới đổi danh hiệu.
@@ -1552,7 +1567,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
     "tien_realms": ["Chân Tiên","Kim Tiên","Thái Ất Ngọc Tiên","Đại La Kim Tiên","Đạo Tổ"],
     "tien_khi_ceilings": [1000, 3000, 6000, 10000, 15000], "tien_entry_requires_full_exp": true,
     "tien_drop_share": 0.3,
-    "tien_scale_step": 0.2, "tien_overflow_score": 0.1,
+    "tien_tiers": 10, "tien_tier_step": 0.08, "tien_scale_per_tier": 0.02, "tien_overflow_score": 0.1,
     "tien_aura_colors": ["#E8F1FF", "#FFD60A", "#4CE0B3", "#B15CFF", "yin_yang"],
     "tiers_per_realm": 10,
     "exp_base": 100, "realm_mult": 2.0, "tier_step": 0.08,
@@ -1714,6 +1729,10 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - Việc chủ dự án cần làm: mua tên miền `bladeascend.io` (và nên giữ thêm `bladeascend.com`), kiểm tra trùng tên trên các cổng game .io lớn và cửa hàng ứng dụng, tra nhãn hiệu (WIPO Global Brand Database).
 
 ## 17. Checklist test chấp nhận
+
+- [ ] Đại Thừa 10 chưa đầy: HUD thanh Linh khí, viên Linh khí sáng, Tiên khí mờ; đầy 694 960 → đổi sang thanh Tiên khí.
+- [ ] Tiên khí 160 → hiện "Chân Tiên tầng 3" (154–238); 1 001 → "Kim Tiên tầng 1"; scale Chân Tiên 1 = 5,02, Đạo Tổ 10 = 6,00.
+- [ ] Phòng 40 bot Luyện Khí cùng tầng, Uy Danh 0: bảng không đổi thứ tự trong 60 s dù họ nhặt EXP liên tục.
 
 - [ ] Kim Đan 60 kiếm bị mài mất 50 trong 8s rồi chết với 10 kiếm → xác rơi 60 kiếm (≤ 12 bó); kiếm bị Hút Mì cướp không tính vào số rơi.
 - [ ] Sau khi đổi bán kính nhặt: `cmd/sim --farm` vẫn trúng bảng nhịp §6.0 (±25%), có Nam Châm ≤ 2,0 lần nhanh hơn (Q47); gửi hệ số orb_value_mult mới.

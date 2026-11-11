@@ -67,7 +67,7 @@ func quantPlayer(p netproto.PlayerState) wirePlayer {
 		RingDir:   p.Dir,
 		Mood:      p.Mood,
 		Buffs:     uint16(p.Buffs),
-		Flags:     uint16(p.Flags),
+		Flags:     p.Flags,
 		// Tilt |x| ≤ 35° = 0,61 rad; bước 1/128 rad cho sai số tối đa 0,2° — mắt không thấy.
 		Tilt:   int8(clampF(float64(p.Tilt)*128, -127, 127)),
 		Status: p.St,

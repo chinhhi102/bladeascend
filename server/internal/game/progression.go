@@ -84,7 +84,8 @@ func (p *Progression) MaxSwords(r int) int {
 // tien_scale_step per realm (spec §3.4: Chân Tiên 5.2 … Đạo Tổ 6.0).
 func (p *Progression) Scale(L int) float64 {
 	if r := p.Realm(L); p.IsTien(r) {
-		return p.cfg.ScaleMax + p.cfg.TienScaleStep*float64(p.TienIndex(r)+1)
+		// v6.46: scale tăng đều theo TẦNG, không theo cảnh giới — `5.0 + 0.02 × (10k + s + 1)`.
+		return p.cfg.ScaleMax + p.cfg.TienScalePerTier*float64(p.TienIndex(r)*p.TienTiers()+p.Tier(L)+1)
 	}
 	last := float64(len(p.needed) - 1)
 	return p.cfg.ScaleMin + (p.cfg.ScaleMax-p.cfg.ScaleMin)*float64(L)/last
@@ -124,9 +125,69 @@ func (p *Progression) TienCount() int { return len(p.cfg.TienRealms) }
 // TopMortalLevel is Đại Thừa tầng 10 — where sát mạng starts counting.
 func (p *Progression) TopMortalLevel() int { return len(p.needed) - 1 }
 
-// TienLevel is the level index of Tiên realm idx (0-based).
-func (p *Progression) TienLevel(idx int) int {
-	return (len(p.cfg.Realms) + idx) * p.cfg.TiersPerRealm
+// TienLevel is the level index of Tiên realm idx (0-based), tier s (0-based).
+//
+// Dùng chung cách mã hoá với phàm giới — `Realm(L) = L/10`, `Tier(L) = L%10` — nên mọi thứ
+// đã xếp theo `Level` (bảng xếp hạng, danh hiệu, scale) tự hiểu tầng Tiên mà không phải sửa.
+func (p *Progression) TienLevel(idx, tier int) int {
+	return (len(p.cfg.Realms)+idx)*p.cfg.TiersPerRealm + min(max(tier, 0), p.TienTiers()-1)
+}
+
+// TienTiers là số tầng mỗi cảnh giới Tiên (v6.46). Thiếu cấu hình thì coi như 1 tầng —
+// đúng hành vi trước v6.46, không phải 0 (chia cho 0).
+func (p *Progression) TienTiers() int {
+	if p.cfg.TienTiers > 0 {
+		return p.cfg.TienTiers
+	}
+	return 1
+}
+
+// tienTierWeights trả trọng số từng tầng Tiên: tầng s nặng `1 + step·s` (v6.46 §3.4).
+func (p *Progression) tienTierWeights() []float64 {
+	n := p.TienTiers()
+	w := make([]float64, n)
+	for s := range w {
+		w[s] = 1 + p.cfg.TienTierStep*float64(s)
+	}
+	return w
+}
+
+// TienTierTop là MỐC TRÊN (Tiên khí) của tầng s trong cảnh giới Tiên idx.
+//
+// Chia độ rộng cảnh giới theo trọng số rồi làm tròn GẦN NHẤT — khớp đúng bảng mốc spec ghi:
+// Chân Tiên tầng 1 = 1–74, tầng 2 = 75–153, tầng 3 = 154–238, … tầng 10 = 875–1 000; Đạo Tổ
+// tầng 1 = 10 001–10 368. (Làm tròn LÊN lệch 1 ở tầng 3: 238,2 thành 239.)
+// Tầng cuối lấy thẳng trần cảnh giới nên không bao giờ hụt vì làm tròn.
+func (p *Progression) TienTierTop(idx, s int) float64 {
+	n := p.TienTiers()
+	if s >= n-1 {
+		return p.TienCeil(idx)
+	}
+	w := p.tienTierWeights()
+	sum := 0.0
+	for _, v := range w {
+		sum += v
+	}
+	cum := 0.0
+	for i := 0; i <= s; i++ {
+		cum += w[i]
+	}
+	base := p.TienEntry(idx) - 1
+	return base + math.Round(p.TienWidth(idx)*cum/sum)
+}
+
+// TienTierForKhi là tầng (0-based) ứng với tổng Tiên khí này trong cảnh giới của nó.
+func (p *Progression) TienTierForKhi(khi float64) int {
+	idx := p.TienRealmForKhi(khi)
+	if idx < 0 {
+		return 0
+	}
+	for s := 0; s < p.TienTiers(); s++ {
+		if khi <= p.TienTierTop(idx, s) {
+			return s
+		}
+	}
+	return p.TienTiers() - 1
 }
 
 // Tiên giới tính theo TỔNG Tiên khí cộng dồn (spec v5.7 §3.4):

@@ -1,3 +1,4 @@
+import { FLAG } from './net/protocol';
 import { STR } from './ui/strings';
 
 // Subset of config/game.json the client needs. Fetched from GET /api/config — never hardcode numbers.
@@ -168,12 +169,14 @@ export function isTien(cfg: GameConfig, realm: number): boolean {
 }
 
 /**
- * banksTienKhi: từ Đại Thừa tầng 10 trở lên thì chỉ tu Tiên khí (spec §3.4). Dưới mức đó chỉ
+ * banksTienKhi: người này đang tu Tiên khí chưa — ĐỌC CỜ của server (spec §3.4, v6.46).
+ *
+ * Mốc thật là "Đại Thừa tầng 10 ĐẦY THANH Linh khí" (694 960), mà client không biết chắc
+ * tổng EXP của người khác, nên nó phải do server nói. Bản cũ suy từ cảnh giới
  * tu Linh khí — hai đường tu tách hẳn, không đổi qua lại.
  */
-export function banksTienKhi(cfg: GameConfig, level: number): boolean {
-  const c = cfg.cultivation;
-  return level >= c.realms.length * c.tiers_per_realm - 1;
+export function banksTienKhi(flags: number): boolean {
+  return (flags & FLAG.can_tien) !== 0;
 }
 
 /** absorbable: viên này người chơi hiện tại có hấp thụ được không. */

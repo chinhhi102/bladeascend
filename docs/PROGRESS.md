@@ -476,6 +476,41 @@ cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9998 -debug=true &
 node tools/browsertest/weakperf.mjs http://127.0.0.1:9998
 ```
 
+### 11/11 — spec v6.46: Tiên giới 10 tầng · cờ `can_absorb_tien` · bảng xếp hạng ổn định
+
+**1. Lỗi hiển thị Tiên khí ở Đại Thừa 10** — client đoán bằng CẤP (`level >= 89`) nên vừa
+chạm Đại Thừa tầng 10 là viên Linh khí đã mờ đi, trong khi người chơi vẫn đang cần nhặt
+chúng để nạp nốt thanh. Server vốn đã đúng (`BanksTienKhi` = `total_exp >= 694 960`); nay
+gửi thành cờ `FlagCanTien` và client đọc cờ đó. Thiêu Đốt kéo xuống dưới mốc thì cờ tắt,
+mọi thứ đổi ngược lại.
+
+Cờ cũ `Flags` là `uint8` và 8 bit đã đầy ở `FlagBurning`. Nới thành `uint16` — **không đổi
+gói tin**, vì giao thức nhị phân vốn đã chở `flags u16` (`proto/schema.txt`), chỉ struct
+msgpack còn hẹp.
+
+**2. Tiên giới chia 10 tầng mỗi cảnh giới** (§3.4). Tầng s nặng `1 + 0.08·s` như phàm giới;
+scale `5.0 + 0.02 × (10k + s + 1)` → Chân Tiên 1 = 5,02 … Đạo Tổ 10 = 6,00. Vòng kiếm và
+kiếm tối đa vẫn theo CẢNH GIỚI.
+
+Mã hoá tầng Tiên vào chính `Level` (`TienLevel(idx, tier)`), dùng chung công thức
+`Realm = L/10`, `Tier = L%10` với phàm giới — nhờ vậy bảng xếp hạng, danh hiệu, scale,
+HUD tự hiểu tầng Tiên mà không phải sửa chỗ nào. Thanh Tiên khí nay là thanh của TẦNG
+(Đạo Tổ cả cảnh giới rộng 5 000 điểm, nhích một viên không thấy gì động đậy). Lên tầng chỉ
+đồng bộ `Level`; chỉ lên CẢNH GIỚI mới báo Thiên Kiếp. Thiêu Đốt rớt tầng nhưng sàn vẫn là
+mốc khởi điểm cảnh giới nên không rớt cảnh giới.
+
+Mốc tầng làm tròn **gần nhất**, không làm tròn lên: tròn lên lệch 1 ở Chân Tiên tầng 3
+(238,2 → 239 trong khi spec ghi 154–238).
+
+**3. Bảng xếp hạng chống nhảy** (§11.2): bỏ phá hoà bằng tổng EXP. Cùng tầng + cùng Uy Danh
+→ `RankLess` trả `false` cả hai chiều, và mọi chỗ gọi đều `sort.SliceStable` trên
+`PlayerList()` (thứ tự vào phòng) nên thứ tự giữ nguyên. Trước đây EXP đổi mỗi lần nhặt một
+viên: 40 bot Luyện Khí cùng tầng, cùng 0 Uy Danh thì bảng đảo chỗ suốt ván. Luật "giữ 3 s
+mới đổi" và "chết/rời rút ngay" đã có sẵn trong `heldBoard` từ 01/11.
+
+4 bài test mới theo đúng 3 dòng checklist §17 (`tien_tiers_v646_test.go`). `go vet` sạch ·
+`go test -race` 439 pass · `mapgen --check` 14/14 ĐẠT · build pass.
+
 ## Lỗi / hạn chế đã biết
 
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở

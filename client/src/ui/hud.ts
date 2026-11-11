@@ -309,11 +309,11 @@ export class Hud {
     }
     this.meState = me;
     const r = realmOf(this.cfg, me.L);
-    const tienHere = tienIndex(this.cfg, r) >= 0;
-    this.setBadge(r, tienHere ? 0 : tierOf(this.cfg, me.L), me.ti ?? 0, moodName(me.md));
-    // Tiên giới: không chia tầng, thanh tiến độ đầy bằng sát mạng (spec §3.4).
+    // v6.46: Tiên giới CŨNG chia 10 tầng, nên huy hiệu và dòng cảnh giới ghi tầng y như
+    // phàm giới — `Kim Tiên tầng 7`. Trước v6.46 Tiên giới không có tầng nên chỗ này ghim 0.
     const tien = tienIndex(this.cfg, r) >= 0;
-    this.realm.textContent = tien ? realmName(this.cfg, r) : STR.realmTier(realmName(this.cfg, r), tierOf(this.cfg, me.L));
+    this.setBadge(r, tierOf(this.cfg, me.L), me.ti ?? 0, moodName(me.md));
+    this.realm.textContent = STR.realmTier(realmName(this.cfg, r), tierOf(this.cfg, me.L));
     this.expBar.classList.toggle('tien', tien);
     let frac: number;
     if (tien) {

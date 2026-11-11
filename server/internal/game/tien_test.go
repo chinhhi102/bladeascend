@@ -12,7 +12,7 @@ import "testing"
 func TestSpawnAtTienRealmSeatsTienKhi(t *testing.T) {
 	g := rulesGame(t)
 	for idx := 0; idx < g.Prog.TienCount(); idx++ {
-		lv := g.Prog.TienLevel(idx)
+		lv := g.Prog.TienLevel(idx, 0)
 		p := g.AddPlayer(SpawnOptions{Name: "B", IsBot: true, Level: lv, Swords: 10})
 		if got := g.TienRealmOf(p); got != idx {
 			t.Errorf("sinh ở %s (cấp %d): TienRealmOf = %d, muốn %d — thanh Tiên khí %v",
@@ -25,7 +25,7 @@ func TestSpawnAtTienRealmSeatsTienKhi(t *testing.T) {
 // Và hệ quả của nó: bot Chân Tiên bị chém thân thì chết và mất hết Tiên khí (v6.26).
 func TestChanTienBotDropsWhenHit(t *testing.T) {
 	g := rulesGame(t)
-	lv := g.Prog.TienLevel(0) // Chân Tiên
+	lv := g.Prog.TienLevel(0, 0) // Chân Tiên
 	victim := g.AddPlayer(SpawnOptions{Name: "B", IsBot: true, Level: lv, Swords: 10})
 	attacker := g.AddPlayer(SpawnOptions{Name: "A", Level: lv, Swords: 10})
 	if !g.Prog.IsTien(g.Prog.Realm(victim.Level)) {

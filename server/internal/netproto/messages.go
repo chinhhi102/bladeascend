@@ -139,6 +139,10 @@ const (
 	FlagBot
 	FlagRevealed
 	FlagBurning // Thiêu Đốt Tinh Huyết đang bật (spec §4.1c)
+	// FlagCanTien: người này đã qua mốc Đại Thừa 10 ĐẦY THANH nên hấp thụ Tiên khí
+	// (spec §3.4, v6.46). Client đổi HUD và độ mờ viên theo cờ NÀY, không tự đoán theo cảnh
+	// giới — đoán theo cảnh giới là lỗi 07/11: đứng Đại Thừa 10 chưa đầy thanh đã hiện Tiên khí.
+	FlagCanTien
 )
 
 type PlayerState struct {
@@ -156,7 +160,9 @@ type PlayerState struct {
 	// người mỗi gói, 20 lần/giây — mà nó hầu như không đổi.
 	Mood  uint8 `msgpack:"md"`
 	Buffs uint8 `msgpack:"bf"`
-	Flags uint8 `msgpack:"fl"`
+	// uint16, không phải uint8: 8 bit đã đầy ở `FlagBurning`, và giao thức nhị phân vốn đã
+	// chở u16 (proto/schema.txt `flags u16`) nên nới ở đây không đổi gói tin.
+	Flags uint16 `msgpack:"fl"`
 	// St: trạng thái do kỹ năng gây ra, mỗi bit một trạng thái (spec §6.3, game.StatusNames).
 	// Gửi cho mọi người vì client phải vẽ "zzz", mai rùa, vệt lướt… của người khác.
 	St    uint16  `msgpack:"st,omitempty"`

@@ -427,7 +427,12 @@ func RankLess(a, b *Player) bool {
 	if a.Score != b.Score {
 		return a.Score > b.Score
 	}
-	return a.TotalExp > b.TotalExp
+	// v6.46: HẾT tiêu chí. Cùng tầng + cùng Uy Danh thì GIỮ NGUYÊN thứ tự đang có — mọi chỗ
+	// gọi đều dùng `sort.SliceStable` trên `PlayerList()` (thứ tự vào phòng, ổn định).
+	//
+	// Trước đây phá hoà bằng tổng EXP, và EXP đổi mỗi lần nhặt một viên: 40 bot Luyện Khí
+	// cùng tầng, cùng 0 Uy Danh thì bảng đảo chỗ liên tục suốt ván.
+	return false
 }
 
 // RankOf là hạng (đếm từ 1) của p trong bảng phòng — cùng thứ tự với `Ranking`.

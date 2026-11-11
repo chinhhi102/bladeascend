@@ -293,7 +293,7 @@ func main() {
 	// theo TỪNG KHU chứ không dồn hết vào khu 0 — dồn một chỗ thì bốn khu kia rỗng và con
 	// số đo được không giống phòng thật.
 	prog := r.Zone(0).G.Prog
-	top := prog.TienLevel(len(cfg.Cultivation.TienRealms) - 1)
+	top := prog.TienLevel(len(cfg.Cultivation.TienRealms)-1, prog.TienTiers()-1)
 	maxSwords := prog.MaxSwords(prog.Realm(top))
 	type forcedOne struct {
 		p  *game.Player

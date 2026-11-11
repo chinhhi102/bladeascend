@@ -161,7 +161,9 @@ func TestPickupRadiusSpecNumbers(t *testing.T) {
 	low := g.AddPlayer(SpawnOptions{Name: "L", Char: plain, Level: 0, Swords: 1})
 	eq("Luyện Khí 1", g.PickupRadius(low), 90)
 
-	daoTo := g.AddPlayer(SpawnOptions{Name: "D", Char: plain, Level: 13 * tiers, Swords: 1})
+	// v6.46: Tiên giới có 10 tầng, scale tăng theo TẦNG — 540 px của spec là Đạo Tổ tầng 10
+	// (scale 6.00), không phải tầng 1 (5.82).
+	daoTo := g.AddPlayer(SpawnOptions{Name: "D", Char: plain, Level: 13*tiers + tiers - 1, Swords: 1})
 	if g.Prog.RealmName(g.Prog.Realm(daoTo.Level)) != "Đạo Tổ" {
 		t.Fatalf("cấp %d không phải Đạo Tổ", daoTo.Level)
 	}
@@ -172,7 +174,7 @@ func TestPickupRadiusSpecNumbers(t *testing.T) {
 	g.ApplyBuff(ship, "magnet")
 	eq("Shipper Đại Thừa 10 + Gom Đơn + Nam Châm", g.PickupRadius(ship), 720)
 
-	map_ := g.AddPlayer(SpawnOptions{Name: "M", Char: "map_tra_sua", Level: 13 * tiers, Swords: 1})
+	map_ := g.AddPlayer(SpawnOptions{Name: "M", Char: "map_tra_sua", Level: 13*tiers + tiers - 1, Swords: 1})
 	g.ApplyBuff(map_, "magnet")
 	eq("Thằng Mập Đạo Tổ + Nam Châm", g.PickupRadius(map_), 891)
 }

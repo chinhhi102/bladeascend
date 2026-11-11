@@ -138,6 +138,9 @@ func (g *Game) burnExp(p *Player, dt float64) {
 		// nhiêu tu vi", và với người Tiên giới thì tu vi của họ chính là Tiên khí.
 		p.BurnedExp += p.TienKhi - after
 		p.TienKhi = after
+		// v6.46: Tiên giới có tầng, nên đốt tụt Tiên khí là có thể RỚT TẦNG. Sàn vẫn là mốc
+		// khởi điểm cảnh giới (`tienFloor`) nên không bao giờ rớt cảnh giới.
+		g.syncTienLevel(p)
 		return
 	}
 	cost := g.Cfg.Burn.ExpFracPerSec * g.Prog.ExpNeeded(p.Level) * dt

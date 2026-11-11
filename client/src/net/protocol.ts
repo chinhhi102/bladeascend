@@ -280,6 +280,10 @@ export const FLAG = {
   bot: 32,
   revealed: 64,
   burning: 128, // Thiêu Đốt Tinh Huyết (spec §4.1c)
+  // can_tien: server bảo người này đã qua mốc Đại Thừa 10 ĐẦY THANH (spec §3.4, v6.46).
+  // Đừng đoán lại bằng cảnh giới — đó đúng là lỗi 07/11: đứng Đại Thừa 10 chưa đầy thanh
+  // mà HUD đã đổi sang Tiên khí và viên Linh khí đã mờ đi.
+  can_tien: 256,
 } as const;
 
 // Buff bit order = server game.BuffNames.

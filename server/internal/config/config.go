@@ -45,7 +45,13 @@ type Cultivation struct {
 	// mỗi lần rơi, vượt thì gộp phần nhỏ vào viên cuối (spec v6.4 §3.4).
 	TienDropUnits   []float64 `json:"tien_drop_units"`
 	TienDropMaxOrbs int       `json:"tien_drop_max_orbs"`
-	TienScaleStep   float64   `json:"tien_scale_step"`
+	// Tiên giới chia tầng như phàm giới (v6.46 §3.4).
+	// TienTiers: số tầng mỗi cảnh giới Tiên. TienTierStep: tầng s nặng `1 + step·s` —
+	// cùng nhịp `tier_step` của phàm giới. TienScalePerTier: scale +0.02 mỗi tầng,
+	// Chân Tiên 1 = 5.02 … Đạo Tổ 10 = 6.00.
+	TienTiers        int     `json:"tien_tiers"`
+	TienTierStep     float64 `json:"tien_tier_step"`
+	TienScalePerTier float64 `json:"tien_scale_per_tier"`
 	TienAuraColors  []string  `json:"tien_aura_colors"`
 }
 

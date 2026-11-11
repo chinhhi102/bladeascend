@@ -356,11 +356,11 @@ func TestHardBuffCutsOneTierHigher(t *testing.T) {
 func TestTienRealmsStillBlockedByHighTiers(t *testing.T) {
 	g := quietGame(t, obstacleMap("jade_pillar")) // bậc 11 = Thái Ất
 	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 10})
-	g.ForceState(p, g.Prog.TienLevel(1), 1, p.Pos) // Kim Tiên = chỉ số 10
+	g.ForceState(p, g.Prog.TienLevel(1, 0), 1, p.Pos) // Kim Tiên = chỉ số 10
 	if g.CanCutObstacle(p, 11) {
 		t.Error("Kim Tiên không được chém cột ngọc (bậc 11)")
 	}
-	g.ForceState(p, g.Prog.TienLevel(4), 1, p.Pos) // Đạo Tổ = 13
+	g.ForceState(p, g.Prog.TienLevel(4, 0), 1, p.Pos) // Đạo Tổ = 13
 	if !g.CanCutObstacle(p, 13) {
 		t.Error("Đạo Tổ phải chém được thạch bi (bậc 13)")
 	}
@@ -373,7 +373,7 @@ func TestTienRealmsStillBlockedByHighTiers(t *testing.T) {
 func TestBorderNeverCuttable(t *testing.T) {
 	g := quietGame(t, obstacleMap(config.BorderKind))
 	p := g.AddPlayer(SpawnOptions{Name: "P", Swords: 10})
-	g.ForceState(p, g.Prog.TienLevel(4), 1, p.Pos) // Đạo Tổ
+	g.ForceState(p, g.Prog.TienLevel(4, 0), 1, p.Pos) // Đạo Tổ
 	if g.CanCutObstacle(p, g.Map.Obstacles[0].Tier) {
 		t.Fatal("Đạo Tổ chém thủng được biên khu — biên phải là tuyệt đối")
 	}

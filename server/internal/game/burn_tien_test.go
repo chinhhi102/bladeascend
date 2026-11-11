@@ -87,14 +87,14 @@ func TestTienPromotesByKhi(t *testing.T) {
 	if got := g.TienRealmOf(p); got != 0 {
 		t.Fatalf("1 Tiên khí phải là Chân Tiên, ra idx %d", got)
 	}
-	if want := g.Prog.TienLevel(0); p.Level != want {
+	if want := g.Prog.TienLevel(0, 0); p.Level != want {
 		t.Errorf("level %d, muốn %d — `Level` phải đi theo Tiên khí", p.Level, want)
 	}
 	g.GainTienKhi(p, 1000) // 1 001 → Kim Tiên
 	if got := g.TienRealmOf(p); got != 1 {
 		t.Errorf("1 001 Tiên khí phải là Kim Tiên, ra idx %d", got)
 	}
-	if want := g.Prog.TienLevel(1); p.Level != want {
+	if want := g.Prog.TienLevel(1, 0); p.Level != want {
 		t.Errorf("level %d, muốn %d", p.Level, want)
 	}
 }

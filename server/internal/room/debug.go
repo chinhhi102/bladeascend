@@ -47,7 +47,7 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 		case "max":
 			// Lên thẳng Đạo Tổ với đủ kiếm. Chỉ dùng cho công cụ đo (tools/browsertest) —
 			// bấm phím "realm" 14 lần rồi "sword" 105 lần thì vừa chậm vừa hay lệch.
-			top := z.G.Prog.TienLevel(len(r.cfg.Cultivation.TienRealms) - 1)
+			top := z.G.Prog.TienLevel(len(r.cfg.Cultivation.TienRealms)-1, z.G.Prog.TienTiers()-1)
 			z.G.ForceState(p, top, z.G.Prog.MaxSwords(z.G.Prog.Realm(top)), p.Pos)
 			if d.N == 0 {
 				p.InvulnUntil = 0 // mặc định: đánh nhau thật

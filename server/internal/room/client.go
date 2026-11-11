@@ -426,9 +426,9 @@ func playerState(g *game.Game, viewer, p *game.Player, withName bool) netproto.P
 	return s
 }
 
-func playerFlags(g *game.Game, viewer, p *game.Player) uint8 {
-	var f uint8
-	set := func(cond bool, bit uint8) {
+func playerFlags(g *game.Game, viewer, p *game.Player) uint16 {
+	var f uint16
+	set := func(cond bool, bit uint16) {
 		if cond {
 			f |= bit
 		}
@@ -445,5 +445,6 @@ func playerFlags(g *game.Game, viewer, p *game.Player) uint8 {
 	// thức để không đổi schema.
 	set(p.RevealedUntil > g.Time, netproto.FlagRevealed)
 	set(g.Burning(p), netproto.FlagBurning)
+	set(g.BanksTienKhi(p), netproto.FlagCanTien)
 	return f
 }

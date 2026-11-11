@@ -15,7 +15,7 @@ func TestDaoToShowsOnMinimap(t *testing.T) {
 	if n := len(daoToMarks(g)); n != 0 {
 		t.Fatalf("người mới vào đã hiện %d chấm Đạo Tổ", n)
 	}
-	p.Level = g.Prog.TienLevel(g.Prog.TienCount() - 1)
+	p.Level = g.Prog.TienLevel(g.Prog.TienCount()-1, 0)
 	p.Bush = -1
 	if n := len(daoToMarks(g)); n != 1 {
 		t.Fatalf("Đạo Tổ không hiện trên minimap (%d chấm)", n)

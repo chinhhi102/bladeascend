@@ -66,7 +66,7 @@ func TestStallTierCappedAtTableMax(t *testing.T) {
 	g := skillGame(t)
 	p := put(g, "co_ba_ganh", Vec{X: 3000, Y: 3000}, 10, 20)
 	p.Facing = 0
-	g.ForceState(p, g.Prog.TienLevel(4), 20, p.Pos) // Đạo Tổ = 13
+	g.ForceState(p, g.Prog.TienLevel(4, 0), 20, p.Pos) // Đạo Tổ = 13
 	giveCharge(p)
 	g.CastSkill(p)
 

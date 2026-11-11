@@ -49,8 +49,12 @@ func (g *Game) GainTienKhi(p *Player, points float64) float64 {
 	g.overflowToScore(p)
 	// Cảnh giới suy ra từ tổng Tiên khí, nên chỉ cần tính lại một lần — không còn vòng lặp
 	// "cộng dồn rồi thăng từng bậc". Nhặt một cục 400 điểm thì nhảy thẳng mấy cảnh giới.
+	// v6.46: cảnh giới VÀ tầng đều suy từ tổng Tiên khí. Lên tầng thì chỉ đồng bộ `Level`
+	// (glow nhỏ do client tự vẽ khi `L` đổi); lên CẢNH GIỚI mới có Thiên Kiếp.
 	if after := g.TienRealmOf(p); after > before {
 		g.promoteTien(p, after)
+	} else if after >= 0 {
+		g.syncTienLevel(p)
 	}
 	return points
 }
@@ -75,9 +79,25 @@ func (g *Game) overflowToScore(p *Player) {
 	}
 }
 
+// syncTienLevel đồng bộ `Level` theo tổng Tiên khí (cảnh giới + TẦNG, v6.46) mà KHÔNG báo
+// Thiên Kiếp — dùng cho lên tầng trong cùng một cảnh giới, và cho Thiêu Đốt rớt tầng.
+func (g *Game) syncTienLevel(p *Player) {
+	idx := g.TienRealmOf(p)
+	if idx < 0 {
+		return
+	}
+	want := g.Prog.TienLevel(idx, g.Prog.TienTierForKhi(p.TienKhi))
+	if want == p.Level {
+		return
+	}
+	p.Level = want
+	p.PeakLevel = max(p.PeakLevel, p.Level)
+	g.refreshDerived(p)
+}
+
 // promoteTien moves a player up to Tiên realm idx with the Thiên Kiếp announcement.
 func (g *Game) promoteTien(p *Player, idx int) {
-	p.Level = g.Prog.TienLevel(idx)
+	p.Level = g.Prog.TienLevel(idx, g.Prog.TienTierForKhi(p.TienKhi))
 	p.PeakLevel = max(p.PeakLevel, p.Level)
 	g.refreshDerived(p)
 	realm := g.Prog.Realm(p.Level)
@@ -100,6 +120,13 @@ func (g *Game) TienProgress(p *Player) (have, at float64) {
 	if idx < 0 {
 		return 0, 0
 	}
+	// v6.46: thanh là của TẦNG hiện tại, không phải của cả cảnh giới — giống phàm giới.
+	// Thanh cả cảnh giới ở Đạo Tổ rộng 5 000 điểm, nhích một viên không thấy gì động đậy.
+	s := g.Prog.TienTierForKhi(p.TienKhi)
+	top := g.Prog.TienTierTop(idx, s)
 	from := g.Prog.TienEntry(idx)
-	return math.Max(0, p.TienKhi-from+1), g.Prog.TienWidth(idx)
+	if s > 0 {
+		from = g.Prog.TienTierTop(idx, s-1) + 1
+	}
+	return math.Max(0, p.TienKhi-from+1), math.Max(1, top-from+1)
 }

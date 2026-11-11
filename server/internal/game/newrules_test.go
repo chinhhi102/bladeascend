@@ -23,7 +23,7 @@ func TestDaoToSurplusBecomesScore(t *testing.T) {
 	// v5.7: Đạo Tổ phải nạp ĐẦY trần (1 500) rồi dư mới đổi Uy Danh — đứng ở đáy Đạo Tổ
 	// (1 001) thì Tiên khí nhặt thêm vẫn dùng để nạp thanh.
 	cap := g.Prog.TienMaxKhi()
-	p := &Player{Level: g.Prog.TienLevel(top), TienKhi: cap, TotalExp: g.Prog.MaxExp()}
+	p := &Player{Level: g.Prog.TienLevel(top, 0), TienKhi: cap, TotalExp: g.Prog.MaxExp()}
 	g.refreshDerived(p)
 
 	// Tỉ lệ chủ dự án chốt: 10 Tiên khí ăn 1 Uy Danh. Khoá lại ở đây vì đây là con số
@@ -49,7 +49,7 @@ func TestDaoToSurplusBecomesScore(t *testing.T) {
 // Chưa tới Đạo Tổ thì Tiên khí vẫn phải dùng để lên cảnh giới, KHÔNG được đổi sang Uy Danh.
 func TestBelowDaoToStillLevelsUp(t *testing.T) {
 	g := rulesGame(t)
-	p := &Player{Level: g.Prog.TienLevel(0), TotalExp: g.Prog.MaxExp()}
+	p := &Player{Level: g.Prog.TienLevel(0, 0), TotalExp: g.Prog.MaxExp()}
 	g.refreshDerived(p)
 
 	// v5.7: lên cảnh giới khi VƯỢT TRẦN cảnh giới hiện tại (100 → 101 là Kim Tiên).

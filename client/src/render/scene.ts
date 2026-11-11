@@ -334,7 +334,7 @@ export class GameScene {
     probeMark('players');
     this.syncMonsters(now);
     probeMark('monsters');
-    this.syncItems(now, me ? banksTienKhi(this.cfg, me.s.L) : false);
+    this.syncItems(now, me ? banksTienKhi(me.s.fl ?? 0) : false);
     this.updateFlyingItems(now);
     probeMark('items');
     this.updateBeasts(frames, now);
