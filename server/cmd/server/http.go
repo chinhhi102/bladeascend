@@ -55,6 +55,9 @@ func (s *server) routes(assetsDir, clientDir string) http.Handler {
 	mux.HandleFunc("GET /api/leaderboard", s.handleLeaderboard)
 	mux.HandleFunc("GET /api/rooms", s.handleRooms)
 	mux.HandleFunc("GET /api/map/{id}", s.handleMap)
+	// Lượt thích nhân vật (§6.6) — xem likes.go. Không ảnh hưởng luật chơi.
+	mux.HandleFunc("GET /api/likes", s.handleLikesGet)
+	mux.HandleFunc("POST /api/likes", s.handleLikesPost)
 	mux.HandleFunc("GET /ws", s.handleWS)
 	// Tóm tắt phiên lúc đóng tab: sendBeacon chỉ gửi được POST, và lúc đó WebSocket đã đứt.
 	mux.HandleFunc("POST /telemetry/end", s.handleTelemetryEnd)

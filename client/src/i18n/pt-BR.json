@@ -613,5 +613,12 @@
     "ghost": "Pressa",
     "shell": "Casco",
     "steal": "Roubo"
-  }
+  },
+  "likeTop": "Mais curtido",
+  "likeTitle": "Curtir este personagem",
+  "likedTitle": "Remover curtida",
+  "likeNeedPlay": "Termine uma partida (60 s ou mais) primeiro",
+  "likeIPLimit": "Curtidas demais desta conexão hoje",
+  "likeFailed": "Não deu para enviar sua curtida",
+  "likeAsk": "Curtir este personagem?"
 }

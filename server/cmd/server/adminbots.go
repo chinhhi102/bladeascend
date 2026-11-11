@@ -11,6 +11,7 @@ import (
 	"bladeascend/server/internal/admin"
 	"bladeascend/server/internal/game"
 	"bladeascend/server/internal/room"
+	"bladeascend/server/internal/store"
 )
 
 // Điều khiển bot — ADMIN_SPEC §4 "Điều khiển bot", GAME_SPEC §9.5.
@@ -112,5 +113,17 @@ func (s *server) handleAdminCharacters(w http.ResponseWriter, r *http.Request) {
 		adminJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	adminJSON(w, http.StatusOK, map[string]any{"days": days, "rows": rows})
+	// Lượt thích (§6.6 v6.48) đi KÈM bảng này chứ không có trang riêng: spec nói admin xem
+	// "bảng lượt thích + tỉ lệ chọn", và hai con số ấy chỉ có nghĩa khi đặt cạnh nhau —
+	// nhân vật được thích nhiều mà ít người chọn là tín hiệu khác hẳn với được thích nhiều
+	// vì ai cũng chơi.
+	likes, err := s.store.LikeCounts(time.Now())
+	if err != nil {
+		likes = map[string]int{}
+	}
+	for i := range rows {
+		rows[i].Likes = likes[rows[i].Character]
+	}
+	adminJSON(w, http.StatusOK, map[string]any{"days": days, "rows": rows, "likes": likes,
+		"top_liked": store.TopLiked(likes)})
 }

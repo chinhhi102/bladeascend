@@ -43,6 +43,8 @@ type Store struct {
 	medians medianCache
 	// langs: phân bố ngôn ngữ 7 ngày, cache 10 phút (xem langshares.go).
 	langs langCache
+	// likes: bảng đếm lượt thích nhân vật, cache 60 giây (xem likes.go, §6.6).
+	likes likeCache
 }
 
 type cached struct {
@@ -113,6 +115,9 @@ func Open(path string, cacheTTL time.Duration) (*Store, error) {
 	db.SetMaxOpenConns(1) // SQLite: one writer; also keeps :memory: on a single connection
 	if _, err := db.Exec(schema); err != nil {
 		return nil, fmt.Errorf("schema: %w", err)
+	}
+	if _, err := db.Exec(likeTable); err != nil {
+		return nil, fmt.Errorf("schema lượt thích: %w", err)
 	}
 	for _, m := range migrations {
 		if _, err := db.Exec(m); err != nil && !strings.Contains(err.Error(), "duplicate column name") {

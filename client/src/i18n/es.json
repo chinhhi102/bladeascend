@@ -613,5 +613,12 @@
     "ghost": "Prisa",
     "shell": "Caparazón",
     "steal": "Robo"
-  }
+  },
+  "likeTop": "El más querido",
+  "likeTitle": "Me gusta este personaje",
+  "likedTitle": "Quitar me gusta",
+  "likeNeedPlay": "Termina una partida (60 s o más) primero",
+  "likeIPLimit": "Demasiados me gusta desde esta conexión hoy",
+  "likeFailed": "No se pudo enviar tu me gusta",
+  "likeAsk": "¿Te gusta este personaje?"
 }

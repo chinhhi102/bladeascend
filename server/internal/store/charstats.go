@@ -13,6 +13,9 @@ type CharStat struct {
 	AvgPeakRealm float64 `json:"avg_peak_realm"` // cảnh giới cao nhất TB mỗi mạng (0 = Luyện Khí)
 	CastsPerMin  float64 `json:"casts_per_min"`  // lần dùng kỹ năng / phút sống
 	Casts        int     `json:"casts"`          // tổng lần dùng kỹ năng
+	// Likes: lượt thích nhân vật (§6.6 v6.48) — KHÔNG lọc theo khoảng ngày như các cột
+	// khác: lượt thích là ý kiến hiện tại của người chơi, không phải sự kiện trong kỳ.
+	Likes int `json:"likes"`
 }
 
 type charAcc struct {

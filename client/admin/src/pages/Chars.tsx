@@ -10,6 +10,8 @@ import { clickRow, tableBase } from '../ui';
 interface CharsResp {
   days: number;
   rows: CharRow[] | null;
+  /** Nhân vật được thích nhất (§6.6 v6.48); '' khi chưa ai thích. */
+  top_liked?: string;
 }
 
 export function CharsPage(): ReactNode {
@@ -19,7 +21,7 @@ export function CharsPage(): ReactNode {
   const [open, setOpen] = useState<CharRow | null>(null);
   return (
     <div>
-      <Typography.Paragraph type="secondary">Cân bằng theo số liệu người chơi thật ≥ 2 ngày (GAME_SPEC v6.30 §6.3). Bỏ mạng &lt; 30 s và mạng đã ẩn.</Typography.Paragraph>
+      <Typography.Paragraph type="secondary">Cân bằng theo số liệu người chơi thật ≥ 2 ngày (GAME_SPEC v6.30 §6.3). Bỏ mạng &lt; 30 s và mạng đã ẩn. Cột ♥ là lượt thích (§6.6) — tính trên TOÀN BỘ thời gian, không theo khoảng ngày.</Typography.Paragraph>
       <Space style={{ marginBottom: 12 }}>
         <span>Số ngày</span>
         <Select value={days} onChange={setDays} style={{ width: 100 }} options={[1, 2, 7, 30].map((d) => ({ value: d, label: String(d) }))} />
@@ -37,6 +39,13 @@ export function CharsPage(): ReactNode {
           { title: 'Nhân vật', dataIndex: 'character', sorter: (a, b) => a.character.localeCompare(b.character) },
           { title: 'Số mạng', dataIndex: 'lives', align: 'right', sorter: (a, b) => a.lives - b.lives, defaultSortOrder: 'descend' },
           { title: 'Tỉ lệ chọn', dataIndex: 'pick_share', align: 'right', render: (v: number) => `${f1(v)}%`, sorter: (a, b) => a.pick_share - b.pick_share },
+          // Lượt thích đặt NGAY CẠNH tỉ lệ chọn: nhân vật được thích nhiều mà ít người chọn
+          // là tín hiệu khác hẳn với được thích nhiều vì ai cũng chơi (§6.6 v6.48).
+          {
+            title: '♥ Lượt thích', dataIndex: 'likes', align: 'right',
+            sorter: (a, b) => a.likes - b.likes,
+            render: (v: number, row: CharRow) => (row.character === data?.top_liked && v > 0 ? `${v} ★` : v),
+          },
           { title: 'Uy Danh/phút', dataIndex: 'score_per_min', align: 'right', render: f1, sorter: (a, b) => a.score_per_min - b.score_per_min },
           { title: 'Sống TB', dataIndex: 'avg_survive', align: 'right', render: (v: number) => `${Math.round(v)} s`, sorter: (a, b) => a.avg_survive - b.avg_survive },
           { title: 'Cảnh giới cao nhất TB', dataIndex: 'avg_peak_realm', align: 'right', render: f1, sorter: (a, b) => a.avg_peak_realm - b.avg_peak_realm },
@@ -48,6 +57,7 @@ export function CharsPage(): ReactNode {
           <Descriptions size="small" column={1} bordered items={[
             { key: 'l', label: 'Số mạng', children: open.lives },
             { key: 'p', label: 'Tỉ lệ chọn', children: `${f1(open.pick_share)}%` },
+            { key: 'k', label: 'Lượt thích', children: open.character === data?.top_liked && open.likes > 0 ? `${open.likes} (được thích nhất)` : open.likes },
             { key: 's', label: 'Uy Danh / phút sống', children: f1(open.score_per_min) },
             { key: 'a', label: 'Sống TB', children: `${Math.round(open.avg_survive)} s` },
             { key: 'r', label: 'Cảnh giới cao nhất TB', children: f1(open.avg_peak_realm) },

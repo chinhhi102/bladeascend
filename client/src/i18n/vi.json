@@ -597,5 +597,12 @@
     "ghost": "Gom đơn",
     "shell": "Rụt cổ",
     "steal": "Trộm kiếm"
-  }
+  },
+  "likeTop": "Được thích nhất",
+  "likeTitle": "Thích nhân vật này",
+  "likedTitle": "Bỏ thích",
+  "likeNeedPlay": "Chơi xong một mạng (≥ 60 giây) rồi thích nhé",
+  "likeIPLimit": "Mạng này đã thích quá nhiều lần hôm nay",
+  "likeFailed": "Không gửi được lượt thích",
+  "likeAsk": "Thích nhân vật này?"
 }

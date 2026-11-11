@@ -613,5 +613,12 @@
     "ghost": "Rush",
     "shell": "Shell",
     "steal": "Steal"
-  }
+  },
+  "likeTop": "Most liked",
+  "likeTitle": "Like this character",
+  "likedTitle": "Remove like",
+  "likeNeedPlay": "Finish one run (60s or more) first",
+  "likeIPLimit": "Too many likes from this connection today",
+  "likeFailed": "Could not send your like",
+  "likeAsk": "Like this character?"
 }

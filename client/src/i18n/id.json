@@ -613,5 +613,12 @@
     "ghost": "Ngebut",
     "shell": "Cangkang",
     "steal": "Curi"
-  }
+  },
+  "likeTop": "Paling disukai",
+  "likeTitle": "Sukai karakter ini",
+  "likedTitle": "Batal suka",
+  "likeNeedPlay": "Selesaikan satu ronde (60 detik atau lebih) dulu",
+  "likeIPLimit": "Terlalu banyak suka dari koneksi ini hari ini",
+  "likeFailed": "Gagal mengirim suka",
+  "likeAsk": "Suka karakter ini?"
 }

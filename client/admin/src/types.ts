@@ -152,6 +152,8 @@ export interface CharRow {
   avg_peak_realm: number;
   casts_per_min: number;
   casts: number;
+  /** Lượt thích nhân vật (§6.6 v6.48) — không lọc theo khoảng ngày. */
+  likes: number;
 }
 
 export interface BotRoom {

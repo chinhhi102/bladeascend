@@ -3,6 +3,7 @@ import { realmOf, tierOf } from '../config';
 import type { DeadMsg } from '../net/protocol';
 import { assets } from '../render/assets';
 import { button, h } from './dom';
+import { likeButton, loadLikes } from './likes';
 import { pick, STR } from './strings';
 import { num as fmtNum } from '../i18n';
 
@@ -56,6 +57,9 @@ export function summaryScreen(cfg: GameConfig, d: DeadMsg, myChar: string, act: 
   const stat = (label: string, value: string): HTMLElement => h('div', 'stat', h('span', '', label), h('b', '', value));
   const killer = d.killer ? `${STR.killedBy(d.killer)} (${STR.characters[d.killer_char] ?? d.killer_char})` : STR.killedByUnknown;
   const num = (n: number): string => fmtNum(n);
+  const likeMsg = h('div', 'error');
+  // Bảng đếm có thể đã cũ (người này vừa chơi xong mạng đầu tiên → giờ mới đủ điều kiện).
+  void loadLikes();
   panel.append(
     h('h2', '', STR.summaryTitle),
     ...(ghost ? [ghost] : []),
@@ -72,6 +76,12 @@ export function summaryScreen(cfg: GameConfig, d: DeadMsg, myChar: string, act: 
     stat(STR.top1Held, STR.secs(d.top1_secs ?? 0)),
     stat(STR.survive, STR.secs(d.survive)),
     stat(STR.roomRank, `#${d.rank}`),
+    // "Thích nhân vật này?" ngay sau một mạng vừa chơi xong — đúng lúc người ta có ý kiến
+    // nhất, và cũng là lúc chắc chắn đã đủ điều kiện thích (§6.6 v6.48).
+    h('div', 'summary-like', h('span', '', STR.likeAsk), likeButton(() => myChar, (msg) => {
+      likeMsg.textContent = msg;
+    })),
+    likeMsg,
     h('div', 'row', button(STR.playAgain, 'btn primary', act.playAgain), button(STR.leaderboard, 'btn', act.leaderboard), button(STR.changeCharacter, 'btn', act.changeCharacter)),
   );
   root.append(panel);

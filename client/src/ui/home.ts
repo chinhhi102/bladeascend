@@ -5,6 +5,7 @@ import { charColor } from '../render/palette';
 import { button, h, portrait } from './dom';
 import { LANG } from '../i18n';
 import { langPicker } from './langpick';
+import { likeBadge, likeButton, likeCount, likeState, loadLikes, onLikes } from './likes';
 import { skillDesc } from './skilldesc';
 import { STR } from './strings';
 
@@ -33,6 +34,23 @@ function lsSet(k: string, v: string): void {
 function cooldownText(cfg: GameConfig, char: string): string {
   const cd = cfg.skills.cooldowns[char];
   return cd ? STR.skillCooldown(cd[0], cd[1]) : '';
+}
+
+/**
+ * likeCountEl: "♥ 12" trên thẻ nhân vật, tự cập nhật khi bảng đếm về (§6.6 v6.48).
+ *
+ * Thẻ chỉ HIỆN số, không bấm được: nút bấm nằm ở khung chi tiết bên dưới, vì bấm thích
+ * ngay trên thẻ thì rất dễ nhầm với bấm CHỌN nhân vật.
+ */
+function likeCountEl(char: string): HTMLElement {
+  const el = h('span', 'card-like');
+  const draw = (): void => {
+    const n = likeState().counts[char] ?? 0;
+    el.textContent = n > 0 ? `♥ ${likeCount(n)}` : '';
+  };
+  onLikes(draw);
+  draw();
+  return el;
 }
 
 const STAT_KEYS = ['speed', 'pickup', 'spin', 'durability'] as const;
@@ -161,6 +179,8 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     }
   };
   applyBg();
+  // Bảng lượt thích tải NGẦM: trang chủ không chờ nó, cái tim hiện ra khi số về (§6.6).
+  void loadLikes();
   // Nút 💬 ở trang chủ (ADMIN_SPEC §7.1). Đặt ở đây chứ không ở `main.ts` để nó sống và
   // chết cùng màn hình chủ — gắn vào body thì nó còn lại trên màn hình trong trận.
   mountButton(root, 'home');
@@ -191,7 +211,11 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
       h('div', 'preview-skill', `${STR.skillLabel}: ${STR.skillNames[c] ?? '—'}`),
       h('div', 'preview-cd', cooldownText(cfg, c)),
       statBars(cfg, c),
-      h('div', 'preview-desc', skillDesc(cfg, c))));
+      h('div', 'preview-desc', skillDesc(cfg, c)),
+      // Nút thích nằm ở khung chi tiết (§6.6): chỗ duy nhất người chơi đọc kỹ về nhân vật.
+      h('div', 'preview-like', likeButton(() => c, (msg) => {
+        err.textContent = msg;
+      }))));
   }
   const preview = h('div', 'char-preview',
     previewArt,
@@ -209,7 +233,9 @@ export function homeScreen(cfg: GameConfig, onPlay: (p: Profile) => void, onLead
     // tên đầy đủ để rê chuột trên PC vẫn đọc được ngay tại thẻ.
     const card = h('button', 'char-card', portrait(c, (p) => assets.url(p), toHex(charColor(c)[0])),
       h('span', 'card-name', STR.charactersShort[c] ?? STR.characters[c] ?? c),
-      h('span', 'card-cd', cooldownText(cfg, c)));
+      h('span', 'card-cd', cooldownText(cfg, c)),
+      // ❤ + số lượt thích, và nhãn "Được thích nhất" cho người đứng đầu (§6.6 v6.48).
+      h('span', 'card-likes', likeCountEl(c), likeBadge(() => c)));
     card.title = STR.characters[c] ?? c;
     const pick = (): void => {
       selected = c;
