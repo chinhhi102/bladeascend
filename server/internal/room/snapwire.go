@@ -41,7 +41,7 @@ type wirePlayer struct {
 	X, Y      uint16
 	Facing    uint8
 	Level     uint8
-	Scale     uint8
+	Scale     uint16
 	Swords    uint16
 	RingPhase uint16
 	RingDir   int8
@@ -53,15 +53,23 @@ type wirePlayer struct {
 	Crack     uint8
 }
 
+// scaleStep: bước lượng tử của `scale` trên dây (proto/schema.txt). Đổi ở đây thì phải đổi
+// cả `snapwire.ts` bên client — `npm run check:wire` canh hai bên khớp nhau.
+const scaleStep = 0.001
+
 // quantPlayer lượng tử hoá theo §4.6.
 func quantPlayer(p netproto.PlayerState) wirePlayer {
 	return wirePlayer{
 		X: netproto.QuantPos(float64(p.X)), Y: netproto.QuantPos(float64(p.Y)),
 		Facing: quantAngle(float64(p.Facing)),
 		Level:  clampU8(p.Level),
-		// Scale bước 0,02: cỡ nhân vật chạy từ 1 tới ~5, nên 0,02 là 1/250 của khoảng đó —
-		// nhỏ hơn một điểm ảnh ở mọi mức phóng to.
-		Scale:     clampU8(int(math.Round(float64(p.Scale) / 0.02))),
+		// Scale bước 0,001 trong u16 (proto/schema.txt).
+		//
+		// Trước là u8 bước 0,02 — trần 5,10 — và `clampU8` cắt IM LẶNG mọi thứ cao hơn.
+		// Đạo Tổ (6,00) bị vẽ nhỏ hơn thật 15%, còn Thằng Mập hoá khổng lồ ở Đạo Tổ (12,00)
+		// thì KHÔNG đổi gì trên màn hình: cả trước lẫn sau đều ra đúng 5,10. Server vẫn tính
+		// vòng kiếm và phạm vi theo số thật, nên hình vẽ và vùng ăn đòn lệch hẳn nhau.
+		Scale:     clampU16(int(math.Round(float64(p.Scale) / scaleStep))),
 		Swords:    clampU16(p.Count),
 		RingPhase: quantAngle16(float64(p.Phase)),
 		RingDir:   p.Dir,

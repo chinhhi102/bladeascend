@@ -13,7 +13,7 @@ import (
 
 // SchemaHash là băm của proto/schema.txt. Client gửi hash của nó lúc bắt tay;
 // lệch nghĩa là hai bên đang nói hai thứ tiếng — từ chối kết nối thay vì đọc rác (§4.9).
-const SchemaHash = "8d7e643435704931"
+const SchemaHash = "853b9a79e85416bb"
 
 // SchemaVersion lấy từ dòng `version` trong schema.
 const SchemaVersion = 2
@@ -52,7 +52,7 @@ type Spawn struct {
 	Y uint16
 	Facing uint8 // góc 0..255 ứng với 0..2π
 	Level uint8
-	Scale uint8 // bước 0.02
+	Scale uint16 // bước 0.001 (u8 bước 0.02 chỉ chở nổi tới 5.10 — xem ghi chú dưới)
 	Swords uint16
 	RingPhase uint16
 	RingDir int8
@@ -75,7 +75,7 @@ func (v Spawn) Encode(dst []byte) []byte {
 	dst = putU16(dst, v.Y)
 	dst = putU8(dst, v.Facing)
 	dst = putU8(dst, v.Level)
-	dst = putU8(dst, v.Scale)
+	dst = putU16(dst, v.Scale)
 	dst = putU16(dst, v.Swords)
 	dst = putU16(dst, v.RingPhase)
 	dst = putI8(dst, v.RingDir)
@@ -129,7 +129,7 @@ func DecodeSpawn(src []byte) (Spawn, int, error) {
 	if err != nil {
 		return v, p, err
 	}
-	v.Scale, p, err = getU8(src, p)
+	v.Scale, p, err = getU16(src, p)
 	if err != nil {
 		return v, p, err
 	}
@@ -228,7 +228,7 @@ type Update struct {
 	Y uint16
 	Facing uint8
 	Level uint8
-	Scale uint8
+	Scale uint16
 	Swords uint16
 	RingPhase uint16
 	RingDir int8
@@ -257,7 +257,7 @@ func (v Update) Encode(dst []byte) []byte {
 		dst = putU8(dst, v.Level)
 	}
 	if v.Changed&(1<<4) != 0 {
-		dst = putU8(dst, v.Scale)
+		dst = putU16(dst, v.Scale)
 	}
 	if v.Changed&(1<<5) != 0 {
 		dst = putU16(dst, v.Swords)
@@ -327,7 +327,7 @@ func DecodeUpdate(src []byte) (Update, int, error) {
 		}
 	}
 	if v.Changed&(1<<4) != 0 {
-		v.Scale, p, err = getU8(src, p)
+		v.Scale, p, err = getU16(src, p)
 		if err != nil {
 			return v, p, err
 		}

@@ -1,9 +1,11 @@
 package room
 
 import (
-	"bladeascend/server/internal/config"
+	"math"
 	"testing"
 
+	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/game"
 	"bladeascend/server/internal/netproto"
 	"bladeascend/server/internal/wire"
 )
@@ -281,5 +283,33 @@ func TestZoneChangeForcesKeyframe(t *testing.T) {
 	if updates > 0 {
 		t.Errorf("ngay sau khi qua cổng vẫn gửi %d Update — delta đang so với trạng thái "+
 			"của khu CŨ", updates)
+	}
+}
+
+// Dây phải chở được MỌI cỡ nhân vật mà luật chơi sinh ra — kể cả cỡ to nhất (GAME_SPEC
+// §3.4 Đạo Tổ = 6,00) nhân đôi bởi Hoá Khổng Lồ (§6.3 v6.48) = 12,00.
+//
+// Bản đầu dùng u8 bước 0,02, trần 5,10, và `clampU8` cắt IM LẶNG: Đạo Tổ được vẽ nhỏ hơn
+// thật 15%, còn Thằng Mập hoá khổng lồ ở Đạo Tổ thì trên màn hình KHÔNG đổi gì — trước và
+// sau đều ra đúng 5,10. Người chơi báo "không thấy to ra" mới lộ (11/11).
+func TestScaleWireCarriesGiantDaoTo(t *testing.T) {
+	cfg := config.MustLoadDefault()
+	prog := game.NewProgression(cfg.Cultivation, cfg.Sword.MaxSwords)
+	// Đạo Tổ tầng 10 — cỡ lớn nhất luật chơi sinh ra (§3.4 v6.46).
+	top := prog.Scale(prog.TienLevel(prog.TienCount()-1, prog.TienTiers()-1))
+	for _, c := range []struct {
+		name string
+		want float64
+	}{
+		{"Luyện Khí 1", prog.Scale(0)},
+		{"Đạo Tổ", top},
+		{"Đạo Tổ + Hoá Khổng Lồ", top * cfg.Skills.GiantMult},
+	} {
+		q := quantPlayer(netproto.PlayerState{Scale: float32(c.want)})
+		got := float64(q.Scale) * scaleStep
+		if math.Abs(got-c.want) > 0.01 {
+			t.Errorf("%s: scale %.2f đi qua dây về %.2f (lệch %.2f) — dây cắt mất cỡ thật",
+				c.name, c.want, got, got-c.want)
+		}
 	}
 }

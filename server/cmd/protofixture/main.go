@@ -143,8 +143,8 @@ func goldenCases() []Case {
 		add("ItemDel", map[string]any{"id": d.ID}, d.Encode(nil))
 	}
 	for _, m := range []wire.Monster{
-		{ID: 1, X: 2, Y: 3, Has: 0},            // quái đứng yên: 9 byte, ca hay gặp nhất
-		{ID: 2, X: 4, Y: 5, Has: 1, Hp: 7},     // chỉ máu đổi
+		{ID: 1, X: 2, Y: 3, Has: 0},                                        // quái đứng yên: 9 byte, ca hay gặp nhất
+		{ID: 2, X: 4, Y: 5, Has: 1, Hp: 7},                                 // chỉ máu đổi
 		{ID: 3, X: 6, Y: 7, Has: 0xF, Hp: 100, Kind: 3, MaxHp: 100, R: 60}, // lần đầu thấy
 	} {
 		add("Monster", maskFields(
@@ -230,7 +230,7 @@ func fuzzCases(r *rand.Rand, n int) []Case {
 				ID: r.Uint32(), DescVer: uint16(r.Intn(65536)), Name: names[r.Intn(len(names))],
 				Char: uint8(r.Intn(256)), Title: uint8(r.Intn(256)),
 				X: uint16(r.Intn(65536)), Y: uint16(r.Intn(65536)), Facing: uint8(r.Intn(256)),
-				Level: uint8(r.Intn(256)), Scale: uint8(r.Intn(256)), Swords: uint16(r.Intn(65536)),
+				Level: uint8(r.Intn(256)), Scale: uint16(r.Intn(13000)), Swords: uint16(r.Intn(65536)),
 				RingPhase: uint16(r.Intn(65536)), RingDir: int8(r.Intn(256) - 128),
 				Mood: uint8(r.Intn(256)), Buffs: uint16(r.Intn(65536)), Flags: uint16(r.Intn(65536)),
 				Tilt: int8(r.Intn(256) - 128), Status: uint16(r.Intn(65536)), Crack: uint8(r.Intn(256)),
@@ -249,7 +249,7 @@ func fuzzCases(r *rand.Rand, n int) []Case {
 				// tới nhánh mới thì xanh một cách vô nghĩa.
 				ID: r.Uint32(), Changed: uint16(r.Intn(1 << 14)),
 				X: uint16(r.Intn(65536)), Y: uint16(r.Intn(65536)), Facing: uint8(r.Intn(256)),
-				Level: uint8(r.Intn(256)), Scale: uint8(r.Intn(256)), Swords: uint16(r.Intn(65536)),
+				Level: uint8(r.Intn(256)), Scale: uint16(r.Intn(13000)), Swords: uint16(r.Intn(65536)),
 				RingPhase: uint16(r.Intn(65536)), RingDir: int8(r.Intn(256) - 128),
 				Mood: uint8(r.Intn(256)), Buffs: uint16(r.Intn(65536)), Flags: uint16(r.Intn(65536)),
 				Tilt: int8(r.Intn(256) - 128), Status: uint16(r.Intn(65536)), Crack: uint8(r.Intn(256)),

@@ -18,7 +18,7 @@ func TestMaHoaRoiGiaiMaRaDungGiaTri(t *testing.T) {
 			ID: r.Uint32(), DescVer: uint16(r.Intn(65536)), Name: randName(r),
 			Char: uint8(r.Intn(256)), Title: uint8(r.Intn(256)),
 			X: uint16(r.Intn(65536)), Y: uint16(r.Intn(65536)), Facing: uint8(r.Intn(256)),
-			Level: uint8(r.Intn(256)), Scale: uint8(r.Intn(256)), Swords: uint16(r.Intn(65536)),
+			Level: uint8(r.Intn(256)), Scale: uint16(r.Intn(13000)), Swords: uint16(r.Intn(65536)),
 			RingPhase: uint16(r.Intn(65536)), RingDir: int8(r.Intn(256) - 128),
 			Mood: uint8(r.Intn(256)), Buffs: uint16(r.Intn(65536)), Flags: uint16(r.Intn(65536)),
 		}
@@ -59,7 +59,7 @@ func TestUpdateChiChoTruongCoBitBat(t *testing.T) {
 		size int
 		name string
 	}{
-		{0, 2, "x"}, {1, 2, "y"}, {2, 1, "facing"}, {3, 1, "level"}, {4, 1, "scale"},
+		{0, 2, "x"}, {1, 2, "y"}, {2, 1, "facing"}, {3, 1, "level"}, {4, 2, "scale"},
 		{5, 2, "swords"}, {6, 2, "ring_phase"}, {7, 1, "ring_dir"}, {8, 1, "mood"},
 		{9, 2, "buffs"}, {10, 2, "flags"},
 	}

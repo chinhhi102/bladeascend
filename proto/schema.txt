@@ -24,6 +24,15 @@
 # ⚠ `id` của message và THỨ TỰ các trường là một phần của giao thức. Đổi chúng khi đã có
 #   người chơi đang kết nối nghĩa là mọi client cũ đọc sai. Thêm trường mới vào CUỐI.
 
+# ── Vì sao `scale` là u16 ───────────────────────────────────────────────────────────────
+# Bản đầu là `u8` bước 0,02, tức trần 255 × 0,02 = **5,10**. Lúc viết, cỡ nhân vật chạy từ
+# 1 tới ~5 nên vừa đủ. Hai thay đổi sau đó vượt trần mà không ai báo, vì `clampU8` cắt im
+# lặng: v6.46 cho Tiên giới 10 tầng (Đạo Tổ = 6,00) và v6.48 cho Thằng Mập hoá khổng lồ ×2
+# (tới 12,00). Hậu quả: Đạo Tổ được vẽ nhỏ hơn thật 15%, và Hoá Khổng Lồ ở Đạo Tổ KHÔNG đổi
+# gì trên màn hình — server tính vòng kiếm theo 12,00 còn client vẽ theo 5,10.
+# u16 bước 0,001 chở tới 65,5 và mịn hơn 20 lần; tốn thêm 1 byte, và chỉ khi scale ĐỔI
+# (Update chở trường này theo bitmask `changed`).
+
 version 2
 
 message Spawn 1
@@ -38,7 +47,7 @@ message Spawn 1
   y           u16
   facing      u8      # góc 0..255 ứng với 0..2π
   level       u8
-  scale       u8      # bước 0.02
+  scale       u16     # bước 0.001 (u8 bước 0.02 chỉ chở nổi tới 5.10 — xem ghi chú dưới)
   swords      u16
   ring_phase  u16
   ring_dir    i8
@@ -66,7 +75,7 @@ message Update 3
   y           u16     if y
   facing      u8      if facing
   level       u8      if level
-  scale       u8      if scale
+  scale       u16     if scale
   swords      u16     if swords
   ring_phase  u16     if ring_phase
   ring_dir    i8      if ring_dir

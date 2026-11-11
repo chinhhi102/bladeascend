@@ -12,7 +12,7 @@
  * Không có bước này thì client cũ gặp server mới sẽ đọc rác và đứng hình — đã dính
  * đúng một lần với trường `mood`.
  */
-export const SCHEMA_HASH = "8d7e643435704931";
+export const SCHEMA_HASH = "853b9a79e85416bb";
 
 export const SCHEMA_VERSION = 2;
 
@@ -49,7 +49,7 @@ export interface Spawn {
   y: number;
   facing: number; // góc 0..255 ứng với 0..2π
   level: number;
-  scale: number; // bước 0.02
+  scale: number; // bước 0.001 (u8 bước 0.02 chỉ chở nổi tới 5.10 — xem ghi chú dưới)
   swords: number;
   ringPhase: number;
   ringDir: number;
@@ -73,7 +73,7 @@ export function decodeSpawn(r: Reader): Spawn {
   v.y = r.u16();
   v.facing = r.u8v();
   v.level = r.u8v();
-  v.scale = r.u8v();
+  v.scale = r.u16();
   v.swords = r.u16();
   v.ringPhase = r.u16();
   v.ringDir = r.i8v();
@@ -97,7 +97,7 @@ export function encodeSpawn(w: Writer, v: Spawn): void {
   w.putU16(v.y ?? 0);
   w.putU8(v.facing ?? 0);
   w.putU8(v.level ?? 0);
-  w.putU8(v.scale ?? 0);
+  w.putU16(v.scale ?? 0);
   w.putU16(v.swords ?? 0);
   w.putU16(v.ringPhase ?? 0);
   w.putI8(v.ringDir ?? 0);
@@ -181,7 +181,7 @@ export function decodeUpdate(r: Reader): Update {
     v.level = r.u8v();
   }
   if ((v.changed & (1 << 4)) !== 0) {
-    v.scale = r.u8v();
+    v.scale = r.u16();
   }
   if ((v.changed & (1 << 5)) !== 0) {
     v.swords = r.u16();
@@ -230,7 +230,7 @@ export function encodeUpdate(w: Writer, v: Update): void {
     w.putU8(v.level ?? 0);
   }
   if ((v.changed & (1 << 4)) !== 0) {
-    w.putU8(v.scale ?? 0);
+    w.putU16(v.scale ?? 0);
   }
   if ((v.changed & (1 << 5)) !== 0) {
     w.putU16(v.swords ?? 0);

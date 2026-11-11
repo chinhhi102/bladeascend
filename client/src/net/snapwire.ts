@@ -10,6 +10,16 @@ import {
 } from './wire.gen.ts';
 
 /**
+ * SCALE_STEP: bước lượng tử của `scale` trên dây — phải KHỚP `scaleStep` bên server
+ * (`internal/room/snapwire.go`), `npm run check:wire` canh hai bên.
+ *
+ * Trước đây là 0.02 trong một byte, tức trần 5,10: Đạo Tổ (6,00) bị vẽ nhỏ hơn thật 15% và
+ * Hoá Khổng Lồ ở Đạo Tổ (12,00) không đổi gì trên màn hình.
+ */
+const SCALE_STEP = 0.001;
+
+
+/**
  * Giải mã snapshot nhị phân — Protocol v2 (NETCODE_SPEC §4.1).
  *
  * Trả về ĐÚNG hình dạng `Snapshot` mà renderer đã dùng từ bản msgpack. Đó là chủ ý: đổi
@@ -96,7 +106,7 @@ export class SnapshotDecoder {
           this.known.set(s.id, {
             id: s.id, x: s.x, y: s.y, f: deAngle8(s.facing), L: s.level,
             n: s.swords, ph: deAngle16(s.ringPhase), d: s.ringDir,
-            tl: s.tilt / 128, sc: s.scale * 0.02, md: s.mood,
+            tl: s.tilt / 128, sc: s.scale * SCALE_STEP, md: s.mood,
             bf: s.buffs, fl: s.flags, st: s.status, ck: s.crack / 255,
             xp: 0,
           });
@@ -122,7 +132,7 @@ export class SnapshotDecoder {
           if (u.changed & CH.y) cur.y = u.y ?? 0;
           if (u.changed & CH.facing) cur.f = deAngle8(u.facing ?? 0);
           if (u.changed & CH.level) cur.L = u.level ?? 0;
-          if (u.changed & CH.scale) cur.sc = (u.scale ?? 0) * 0.02;
+          if (u.changed & CH.scale) cur.sc = (u.scale ?? 0) * SCALE_STEP;
           if (u.changed & CH.swords) cur.n = u.swords ?? 0;
           if (u.changed & CH.ringPhase) cur.ph = deAngle16(u.ringPhase ?? 0);
           if (u.changed & CH.ringDir) cur.d = u.ringDir ?? 0;
