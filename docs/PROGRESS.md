@@ -587,6 +587,8 @@ màn hình, Cô Ba bỏ vỏ chuối (Q51) — xoá luôn hệ thống "vệt tr
 
 ## Lượt 11/11 (chiều) — rà lỗi NGƯỜI CHƠI gửi về và sửa
 
+> Đã deploy `:9999` (build `20261111_2011_52adf2e`) và đã push — commit `52adf2e`.
+
 Đọc thẳng `server/data/telemetry.db` (bảng `events`, chỉ phiên `automated = 0`) thay vì đoán.
 
 **Ba ngoại lệ JavaScript đều là chuyện cũ, đã sửa xong từ trước:** `null.texture` ở
