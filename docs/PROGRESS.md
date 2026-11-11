@@ -574,14 +574,16 @@ thật, nên đừng coi việc hoãn là coi nhẹ.
 | **v6.48 §6.6** `d24497e` `4d3ff63` | Mô tả kỹ năng sinh từ config (+ cổng CI `check:skilldesc` chặn số viết cứng ở cả 6 ngôn ngữ); lượt thích nhân vật (SQLite, `GET/POST /api/likes`, ❤ trên thẻ, nút ở Tổng kết, cột ♥ ở trang admin) |
 | **Q48** `ec20f26` | Đồng hồ vẽ chỉnh tốc + trễ nội suy tự điều chỉnh. Hermite KHÔNG cần: "3,5% khung nhảy cóc" hoá ra là lỗi PHÉP ĐO (bài lấy mẫu lệch nhịp vòng vẽ). Đo lại bằng vết trong vòng vẽ: **0 nhảy cóc, 0 đứng hình**, 3 lượt máy rảnh. Cổng deploy hạ xuống 0/0 |
 
-**Còn dở — tối ưu máy yếu (B22 trong PERF_LOG §6).** Đã ĐO xong phần chia nhỏ: trong cột
-"người" ở CPU 4×, vòng kiếm 1,35 ms và lớp trạng thái 1,42 ms chiếm 2/3; bảng tên rẻ nhất.
-CHƯA sửa — máy dev liên tục bận (load 1,5–3,3 mỗi nhân) nên chưa có mốc "trước" đủ sạch để
-chứng minh "sau". Hướng: vòng kiếm thành container chỉ xoay, người ở xa một sprite vành.
+**Tối ưu máy yếu (B22) — XONG** `c2d5093`. Vòng kiếm thành container CHỈ XOAY (đặt kiếm
+một lần theo toạ độ cục bộ, mỗi khung chỉ xoay container) và lớp trạng thái chỉ vẽ lại khi
+đổi (không đổi thì tối đa 15 nhịp/giây). Đo bằng BỘ ĐẾM CÔNG VIỆC vì máy dev dùng chung:
+đặt lại thanh kiếm 933–999 → **0** lượt mỗi khung; lớp trạng thái vẽ lại/lượt gọi 1,00 →
+**0,27**. Chi tiết + bảng thời gian ở `PERF_LOG` lượt #28.
 
-**Hai câu đang chờ anh**: Q50 (Hút Mì — §6.3 nói bán kính, §6.5 còn ghi nón; đang dùng bán
-kính) và Q51 (Cô Ba còn rải vỏ chuối nữa không — đang GIỮ).
+**Spec v6.52** `e1b1c3e`: Hút Mì chốt toả tròn (Q50), Trân Châu 3 s ở cả luật lẫn hiệu ứng
+màn hình, Cô Ba bỏ vỏ chuối (Q51) — xoá luôn hệ thống "vệt trơn" vì Cô Ba là nguồn duy nhất.
 
+**Không còn câu nào chờ anh** — Q48, Q49, Q50, Q51 đều đã chuyển sang `QUESTIONS_DONE.md`.
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có

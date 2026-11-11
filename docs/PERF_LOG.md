@@ -176,6 +176,9 @@ Thời gian (weakperf, CPU 4×, 3 lượt mỗi bên, load 0,80–1,84 — ghi k
 FPS gấp đôi là con số DỄ NHẦM: lượt "trước" chạy lúc máy tải 1,13–1,84 còn lượt "sau"
 0,80–1,12. Bằng chứng thật nằm ở hai bộ đếm công việc, không ở FPS.
 
+**Netcode không bị kéo theo**: `gomdon-smooth` sau khi viết lại — ĐẠT, **0 nhảy cóc, 0
+đứng hình** trên 1 165 khung vẽ (lượt máy rảnh; hai lượt còn lại máy bận nên không tính).
+
 **Kiểm hình không đổi**: chụp cùng một cảnh trên bản cũ (server phục vụ
 `deploy-archive/20261111_1248_ec20f26/client`) và bản mới — vòng kiếm cùng bố cục, cùng
 vệt mờ, cùng màu từng vòng. Và vòng vẫn QUAY: so ĐIỂM ẢNH hai khung cách nhau 140 ms,
