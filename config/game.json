@@ -574,6 +574,8 @@
       "gom_don_secs": 4.0,
       "rut_co_wave": 2.0,
       "rut_co_push": 3.0,
+      "rut_co_taunt_r": 4.0,
+      "rut_co_taunt_secs": 2.0,
       "bung_co_wave": 2.0,
       "bung_co_push": 3.0,
       "bung_co_lose": 0.1
@@ -602,6 +604,6 @@
     "gom_don_pickup": 0.1,
     "ghost_unstick_secs": 0.3,
     "blind_no_body_hit": true,
-    "shell_secs": 5.0
+    "shell_secs": 2.0
   }
 }

@@ -13,6 +13,13 @@ export interface StatusTimer {
   total: number;
   /** src: id người gây; 0 = tự thân. */
   src: number;
+  /**
+   * x/y: chỗ NGƯỜI GÂY đứng lúc giáng trạng thái (event chở sẵn, dùng để vẽ mũi tên mép
+   * màn hình). Khiêu khích của Cụ Rùa còn dùng nó làm ĐIỂM NEO để dự đoán chuyển động:
+   * cụ đứng yên suốt 2 giây trong mai, nên một điểm cố định là đúng (net/state.ts).
+   */
+  x: number;
+  y: number;
 }
 
 /**
@@ -29,7 +36,7 @@ export class StatusTracker {
   private readonly byId = new Map<number, Map<StatusEv, StatusTimer>>();
 
   /** code: chỉ số trong `STATUS_EV`; mã lạ (server mới hơn client) thì bỏ qua. */
-  start(id: number, code: number, secs: number, src: number, now: number): StatusEv | null {
+  start(id: number, code: number, secs: number, src: number, now: number, x = 0, y = 0): StatusEv | null {
     const name = STATUS_EV[code];
     if (!name || secs <= 0) {
       return null;
@@ -40,7 +47,7 @@ export class StatusTracker {
       this.byId.set(id, m);
     }
     const show = Math.max(secs, MIN_SHOW[name] ?? 0);
-    m.set(name, { until: now + show, total: show, src });
+    m.set(name, { until: now + show, total: show, src, x, y });
     return name;
   }
 

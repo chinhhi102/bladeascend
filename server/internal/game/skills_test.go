@@ -769,3 +769,66 @@ func TestTempSwordsBreakFirstAndNeverTransfer(t *testing.T) {
 		t.Errorf("xác rơi %.0f kiếm, chỉ được rơi tối đa %d (kiếm tạm không rơi)", swords, real+2)
 	}
 }
+
+// Dòng §17 (v6.50/v6.51): "Cụ Rùa rụt mai giữa 3 địch: 2s không mất kiếm, không chết;
+// địch trong 4 U bị kéo về 2s; kiếm địch bể rơi thành Bó Kiếm, số kiếm của cụ không tăng."
+func TestRutCoTauntsAndDropsFoeSwords(t *testing.T) {
+	g := skillGame(t)
+	cu := put(g, "cu_rua", Vec{X: 3000, Y: 3000}, 10, 30)
+	r := g.skillRange(cu, "rut_co_taunt_r")
+	var foes []*Player
+	for i, off := range []Vec{{X: r * 0.5}, {X: -r * 0.5}, {Y: r * 0.5}} {
+		foes = append(foes, put(g, "a_hon", Vec{X: 3000, Y: 3000}.Add(off), 10, 20+i))
+	}
+	far := put(g, "a_hon", Vec{X: 3000 + r*3, Y: 3000}, 10, 20)
+	swordsBefore := cu.Ring.Count
+
+	giveCharge(cu)
+	g.CastSkill(cu)
+
+	for _, o := range foes {
+		if !o.HasStatus(StTaunt, g.Time) {
+			t.Fatalf("địch trong 4 U không bị khiêu khích")
+		}
+	}
+	if far.HasStatus(StTaunt, g.Time) {
+		t.Error("địch ngoài 4 U cũng bị khiêu khích")
+	}
+	// Bị kéo VỀ PHÍA cụ, không tự chọn hướng: bấm chạy ra xa vẫn tiến lại gần.
+	o := foes[0]
+	d0 := o.Pos.Dist(cu.Pos)
+	g.SetInput(o.ID, 1, 0, true, false) // bấm sang phải = ra xa
+	for i := 0; i < 10; i++ {
+		g.movePlayer(o, 1.0/30)
+	}
+	if o.Pos.Dist(cu.Pos) >= d0 {
+		t.Errorf("bị khiêu khích mà vẫn đi ra xa: %.0f → %.0f", d0, o.Pos.Dist(cu.Pos))
+	}
+	if g.CanCastSkill(o) {
+		t.Error("đang bị khiêu khích mà vẫn dùng được kỹ năng")
+	}
+
+	// Kiếm địch bể khi va với cụ: rơi thành Bó Kiếm, cụ KHÔNG nhận.
+	foeBefore := o.Ring.Count
+	lostA, lostB := g.shellDrop(cu, o, 0, 3, o.Pos)
+	if lostA != 0 || lostB != 0 {
+		t.Errorf("còn %d/%d kiếm bể lại lần nữa — shellDrop phải nuốt hết", lostA, lostB)
+	}
+	if got := foeBefore - o.Ring.Count; got != 3 {
+		t.Errorf("địch mất %d kiếm, muốn 3", got)
+	}
+	if cu.Ring.Count != swordsBefore {
+		t.Errorf("cụ có thêm %d kiếm — spec nói cụ KHÔNG nhận (khác Ông Ba)", cu.Ring.Count-swordsBefore)
+	}
+	if _, swords := countItems(g, "bundle"); int(swords) != 3 {
+		t.Errorf("rơi %.0f kiếm thành Bó Kiếm quanh chỗ va, muốn 3", swords)
+	}
+	if g.swordsLostRecently(o) != 0 {
+		t.Error("kiếm đã rơi thành Bó Kiếm còn vào sổ rơi-khi-chết — nạn nhân chết sẽ rơi hai lần")
+	}
+
+	// Trong mai: không mất kiếm.
+	if g.loseSwordsHit(cu, 5, true) != 0 {
+		t.Error("trong mai mà vẫn bị bể kiếm")
+	}
+}

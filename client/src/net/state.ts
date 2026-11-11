@@ -1,6 +1,7 @@
 import { realmOf, type GameConfig } from '../config';
 import { lerp, type Vec } from './geom';
 import { followSnaps, type Track } from './interp.ts';
+import { statusTracker } from '../render/statustrack';
 import { moveStep } from './movestep.ts';
 import { bonus, innate, stat } from './stat';
 import {
@@ -622,9 +623,23 @@ export class ClientWorld {
     // Đảo điều khiển (Phun Trân Châu, v6.48 §6.3): server quay hướng đi 180° ngay ở cửa
     // vào `SetInput`, nên client phải đảo Y HỆT. Không đảo thì suốt 3 giây client vẽ mình
     // đi một đằng còn server kéo về một nẻo — 20 lần mỗi giây.
-    const angle = statusOn(me.st, 'invert') ? inp.angle + Math.PI : inp.angle;
+    let angle = statusOn(me.st, 'invert') ? inp.angle + Math.PI : inp.angle;
+    let moving = inp.moving;
+    // Khiêu khích của Cụ Rùa (v6.50): không tự chọn hướng, bị kéo bước về phía cụ. Điểm neo
+    // là chỗ cụ đứng lúc giáng trạng thái — cụ ở trong mai nên đứng yên đúng 2 giây đó.
+    const taunt = statusOn(me.st, 'taunt') ? statusTracker.get(this.myId, 'taunt') : undefined;
+    if (taunt) {
+      const dx = taunt.x - from.x;
+      const dy = taunt.y - from.y;
+      if (Math.hypot(dx, dy) > this.cfg.player.body_r * me.sc * 2) {
+        angle = Math.atan2(dy, dx);
+        moving = true;
+      } else {
+        moving = false;
+      }
+    }
     return moveStep(this.cfg, map, from, angle, me.sc, dt,
-      (id: number) => this.brokenObstacles.get(id) === true, { bonus, cap, frozen }, vel, inp.moving,
+      (id: number) => this.brokenObstacles.get(id) === true, { bonus, cap, frozen }, vel, moving,
       statusOn(me.st, 'ghost'), this.blockingStalls(me));
   }
 

@@ -221,6 +221,7 @@ func (g *Game) movePlayers(dt float64) {
 }
 
 func (g *Game) movePlayer(p *Player, dt float64) {
+	g.applyTaunt(p)
 	if p.Moving {
 		p.Facing = p.InputAngle
 	}
@@ -249,6 +250,28 @@ func (g *Game) movePlayer(p *Player, dt float64) {
 	// Người chơi KHÔNG chặn đường nhau (spec §5.2 là luật chém, xem shield.go): đi tới gần
 	// ai cũng vẫn điều khiển được bình thường, hai vòng kiếm chồng lên nhau mà mài.
 	p.Pos = g.resolveBlockingFor(p, p.Pos, g.BodyR(p))
+}
+
+// applyTaunt: bị Cụ Rùa khiêu khích thì KHÔNG tự chọn hướng — bị kéo bước về phía cụ
+// (v6.50 §6.3). Kiếm vẫn quay, nên họ vẫn mài vào mai cụ như thường.
+//
+// Đè lên `InputAngle` chứ không cấm di chuyển: spec nói "bị kéo bước VỀ PHÍA cụ", tức vẫn
+// đi, chỉ là không được chọn đi đâu. Cụ đứng yên suốt (mai = `frozen`) nên điểm neo không
+// đổi trong 2 giây — client dự đoán lại được bằng đúng toạ độ trong event `StatusStart`.
+func (g *Game) applyTaunt(p *Player) {
+	if !p.HasStatus(StTaunt, g.Time) {
+		return
+	}
+	src, ok := g.Players[p.tauntAt]
+	if !ok || src.Dead {
+		return
+	}
+	d := src.Pos.Sub(p.Pos)
+	if d.Len() <= g.BodyR(src)+g.BodyR(p) {
+		p.Moving = false // tới nơi rồi thì đứng đó mài, khỏi xoay vòng quanh cụ
+		return
+	}
+	p.InputAngle, p.Moving = d.Angle(), true
 }
 
 // OnIce: điểm này có nằm trên mặt băng không (spec §8.0, khu Băng Nguyệt Hồ).

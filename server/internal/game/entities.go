@@ -159,6 +159,8 @@ type Player struct {
 	// giữa chừng — một sợi dây tự dài ra là thứ người bị buộc không hiểu nổi.
 	tetherAt Vec
 	tetherR  float64
+	// tauntAt: id Cụ Rùa đang khiêu khích mình (v6.50 §6.3) — bị kéo bước về phía người đó.
+	tauntAt uint32
 	// regen*: phần kiếm Bánh Bao Thần còn nợ, nhả dần (v6.48 §6.3). Chết là mất sạch.
 	regenLeft int
 	regenRate float64

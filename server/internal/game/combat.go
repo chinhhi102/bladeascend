@@ -426,6 +426,7 @@ func (g *Game) clash(a, b *Player, at Vec) {
 	// kiếm hai chiều bình thường (bản v6.9 cho "kiếm ngủ không đánh trả", đã bỏ).
 	lostA, lostB := out.LostA, out.LostB
 	lostA, lostB = g.stealOnClash(a, b, lostA, lostB)
+	lostA, lostB = g.shellDrop(a, b, lostA, lostB, at)
 	g.breakSwords(a, lostA)
 	g.breakSwords(b, lostB)
 }
@@ -466,6 +467,38 @@ func (g *Game) stealOnClash(a, b *Player, lostA, lostB int) (int, int) {
 }
 
 func (g *Game) stealing(p *Player) bool { return p.StealUntil > g.Time }
+
+// shellDrop — Cụ Rùa trong mai (v6.50 §6.3): "Kiếm địch bể khi va với cụ RƠI THÀNH BÓ KIẾM
+// quanh chỗ va (cụ **không** nhận kiếm — khác Ông Ba)".
+//
+// Khác Trộm Kiếm ở đúng một điểm và đó là cả vai của nhân vật: Ông Ba mài nhau để LÃI, cụ
+// rùa chỉ ngồi im chịu đòn — thứ rơi ra nằm trên đất cho cả phòng tranh, kể cả chính người
+// vừa mất nó. Cụ đổi 2 giây đứng yên lấy việc dừng một cuộc vây, không lấy kiếm.
+//
+// Hai người cùng trong mai thì không có gì xảy ra: cả hai đều không bị bể kiếm.
+func (g *Game) shellDrop(a, b *Player, lostA, lostB int, at Vec) (int, int) {
+	sa, sb := a.HasStatus(StShell, g.Time), b.HasStatus(StShell, g.Time)
+	if sa == sb {
+		return lostA, lostB
+	}
+	foe, lost := a, lostA
+	if sa {
+		foe, lost = b, lostB
+	}
+	// `loseSwordsHit` ghi sổ rơi-khi-chết như mọi lần bể thường; phần rơi ra đất là THÊM,
+	// nên phải dùng `stealLoseSwords` (không ghi sổ) — nếu không, nạn nhân chết sau đó sẽ
+	// rơi hai lần cùng một thanh kiếm.
+	got := g.stealLoseSwords(foe, lost)
+	if got > 0 {
+		g.dropBundles(at, got, g.Geom(foe).Reach)
+		g.emit(Event{Kind: "SkillEffect", A: foe.ID, S: "mai_rua_roi", N: got,
+			X: float32(at.X), Y: float32(at.Y)})
+	}
+	if sa {
+		return lostA, 0
+	}
+	return 0, lostB
+}
 
 // pushApart knocks both players away from each other so their rings separate (spec §5.2).
 func (g *Game) pushApart(a, b *Player) {

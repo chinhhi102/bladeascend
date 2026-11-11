@@ -65,18 +65,21 @@ const (
 	// StTether: bị "buộc" vào một cái sạp của Cô Ba (v6.48 §6.3) — chỉ đi được trong vòng
 	// `bay_sap_tether_leash` U quanh sạp đó. Kiếm vẫn quay bình thường.
 	StTether
+	// StTaunt: bị Cụ Rùa khiêu khích (v6.50 §6.3) — bị kéo bước VỀ PHÍA cụ, không tự chọn
+	// hướng, không kỹ năng, không Thiêu Đốt; kiếm vẫn quay.
+	StTaunt
 	StatusCount
 )
 
 // StatusNames dùng cho log và event gửi xuống client.
-var StatusNames = [StatusCount]string{"slow", "root", "blind", "slip", "brace", "ghost", "shell", "dash", "stun", "sleep", "sing", "invert", "giant", "tether"}
+var StatusNames = [StatusCount]string{"slow", "root", "blind", "slip", "brace", "ghost", "shell", "dash", "stun", "sleep", "sing", "invert", "giant", "tether", "taunt"}
 
 // HasStatus: trạng thái này còn hiệu lực không.
 func (p *Player) HasStatus(s int, now float64) bool { return p.Status[s] > now }
 
 // controlStatuses là những trạng thái bị người khác giáng lên; Gồng miễn hết nhóm này
 // (spec §6.3: "không bị đẩy lùi/chậm/trói").
-var controlStatuses = []int{StSlow, StRoot, StSlip, StBlind, StStun, StSleep, StInvert, StTether}
+var controlStatuses = []int{StSlow, StRoot, StSlip, StBlind, StStun, StSleep, StInvert, StTether, StTaunt}
 
 // ApplyStatus giáng một trạng thái lên người chơi trong `secs` giây.
 //

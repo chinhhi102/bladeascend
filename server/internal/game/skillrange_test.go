@@ -44,6 +44,8 @@ var specRangesU = map[string]float64{
 	"gom_don_secs":          4,
 	"rut_co_wave":           2,
 	"rut_co_push":           3,
+	"rut_co_taunt_r":        4,
+	"rut_co_taunt_secs":     2,
 	"bung_co_wave":          2,
 	"bung_co_push":          3,
 	"bung_co_lose":          0.1,

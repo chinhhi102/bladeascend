@@ -13,7 +13,7 @@ import { assets } from './assets';
  */
 
 export const STATUS_ICON_KEYS = ['sleep', 'blind', 'stun', 'push', 'brace', 'ghost', 'shell', 'steal',
-  'invert', 'giant'] as const;
+  'invert', 'giant', 'tether', 'taunt'] as const;
 export type StatusIconKey = (typeof STATUS_ICON_KEYS)[number];
 
 const INK = '#1b1410';
@@ -49,7 +49,14 @@ const SVG: Record<StatusIconKey, string> = {
     `<path d="M12 40c0-13 9-22 20-22s20 9 20 22z" fill="#7ad7b0" ${RING}/>`
     + `<path d="M32 23l7 4v7l-7 4-7-4v-7zM25 34l-8 5M39 34l8 5M32 38v4" fill="none" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`
     + `<path d="M10 42h44" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`),
-  // v6.48: 🔄 đảo điều khiển (Thằng Mập) · 🫧 hoá khổng lồ.
+  // v6.48/v6.50: 🔄 đảo điều khiển · 🫧 khổng lồ · 🪢 buộc vào sạp · 🐢 bị khiêu khích.
+  tether: badge('#b5651d',
+    `<circle cx="32" cy="18" r="6" fill="#ffe0c2" ${RING}/>`
+    + `<path d="M32 24c-10 6-14 16-10 26" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>`
+    + `<circle cx="22" cy="50" r="6" fill="#8b5a2b" ${RING}/>`),
+  taunt: badge('#2fbf8f',
+    `<path d="M14 40c0-11 8-18 18-18s18 7 18 18z" fill="#7ad7b0" ${RING}/>`
+    + `<path d="M24 52l8-8 8 8" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`),
   invert: badge('#7b4bd8',
     `<path d="M20 24h18a8 8 0 0 1 0 16H26" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>`
     + `<path d="M26 16l-8 8 8 8" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`

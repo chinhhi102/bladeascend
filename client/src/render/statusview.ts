@@ -43,8 +43,8 @@ const COLORS = {
 } as const;
 
 /** Thứ tự icon cố định: người xem quen vị trí, icon không nhảy chỗ khi một cái hết. */
-const ICON_ORDER: readonly StatusIconKey[] = ['sleep', 'stun', 'blind', 'invert', 'push', 'brace', 'ghost',
-  'giant', 'shell', 'steal'];
+const ICON_ORDER: readonly StatusIconKey[] = ['sleep', 'stun', 'blind', 'invert', 'taunt', 'tether', 'push',
+  'brace', 'ghost', 'giant', 'shell', 'steal'];
 const SELF_BUFFS: readonly StatusEv[] = ['brace', 'ghost', 'shell', 'steal', 'giant'];
 
 export interface StatusInput {

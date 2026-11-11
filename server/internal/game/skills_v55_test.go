@@ -198,7 +198,7 @@ func TestSkillDurationsMatchSpec(t *testing.T) {
 		want float64
 	}{
 		{"Gồng Cơ", sc.BraceSecs, 4},
-		{"Rụt Cổ", sc.ShellSecs, 5},
+		{"Rụt Cổ", sc.ShellSecs, 2}, // v6.51: 4s → 2s, trùng thời gian khiêu khích
 		{"Gọi Đàn Em", sc.DanEmSecs, 8},
 		{"Phun Trân Châu bịt mắt", sc.TranChauSecs, 3},           // v6.48
 		{"Phun Trân Châu đảo điều khiển", sc.TranChauInvertSecs, 3}, // v6.48

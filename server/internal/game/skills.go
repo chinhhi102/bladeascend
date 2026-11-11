@@ -141,9 +141,10 @@ func (g *Game) CanCastSkill(p *Player) bool {
 	return p.Char == "shipper" || !g.actionLocked(p)
 }
 
-// actionLocked: đang choáng hoặc ngủ gục — không kỹ năng, không Thiêu Đốt (spec §6.3).
+// actionLocked: đang choáng, ngủ gục hoặc bị khiêu khích — không kỹ năng, không Thiêu Đốt
+// (spec §6.3; khiêu khích thêm ở v6.50).
 func (g *Game) actionLocked(p *Player) bool {
-	return p.HasStatus(StStun, g.Time) || p.HasStatus(StSleep, g.Time)
+	return p.HasStatus(StStun, g.Time) || p.HasStatus(StSleep, g.Time) || p.HasStatus(StTaunt, g.Time)
 }
 
 // CastSkill dùng kỹ năng của nhân vật. Trả về false nếu chưa dùng được.
@@ -610,14 +611,29 @@ func castGomDon(g *Game, p *Player, _ Vec) {
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "gom_don", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 
-// Rụt Cổ — 2,5 giây đứng yên, không bị bể kiếm và không bị chém thân; ra khỏi mai bật sóng đẩy.
+// Rụt Cổ — Khiêu Khích (v6.50/v6.51 §6.3): rụt vào mai 2 giây — đứng yên, **thân bất tử**
+// và **kiếm không bị mẻ** khi va (mai che cả vòng kiếm). Ngay lúc rụt, mọi địch trong 4 U
+// bị **khiêu khích 2 giây**: bị kéo bước về phía cụ, không tự chọn hướng, không kỹ năng,
+// không Thiêu Đốt; kiếm họ vẫn quay. Ra mai: sóng đẩy 2 U ra 3 U.
+//
+// Khiêu khích là thứ biến kỹ năng từ "trốn 2 giây" thành một nước đi: cụ kéo cả đám vào
+// sát mình đúng lúc mình không bị gì, rồi kiếm họ bể vào mai và RƠI XUỐNG ĐẤT (`shellDrop`)
+// cho cả phòng tranh. Cụ không nhận thanh nào — đó là chỗ khác Ông Ba Võng.
 func castRutCo(g *Game, p *Player, _ Vec) {
 	sc := g.Cfg.Skills
 	g.ApplyStatus(p, StShell, sc.ShellSecs)
 	// Bật cờ ngay tại đây, không đợi updateSkillState: nếu mai hết hạn trước tick kế tiếp
 	// (hoặc test nhảy thẳng thời gian) thì cờ chưa kịp bật và sóng đẩy mất tăm.
 	p.shellOn = true
-	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "rut_co", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+	secs := g.skillNum("rut_co_taunt_secs")
+	for _, o := range g.targetsNear(p, g.skillRange(p, "rut_co_taunt_r")) {
+		o.tauntAt = p.ID
+		g.ApplyStatusFrom(p, o, StTaunt, secs)
+		g.emit(Event{Kind: "SkillEffect", A: p.ID, B: o.ID, S: "khieu_khich", F: float32(secs),
+			X: float32(o.Pos.X), Y: float32(o.Pos.Y)})
+	}
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "rut_co", F: float32(sc.ShellSecs),
+		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 
 // shellBurst là sóng đẩy khi Cụ Rùa ra khỏi mai (sóng 2 U, đẩy 3 U — §6.3), gọi lúc

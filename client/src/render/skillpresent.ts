@@ -334,7 +334,7 @@ export class SkillPresenter {
   private onStatusStart(e: GameEvent, now: number): void {
     const id = e.a ?? 0;
     const src = e.b ?? 0;
-    const name = statusTracker.start(id, e.n ?? 0, e.f ?? 0, src, now);
+    const name = statusTracker.start(id, e.n ?? 0, e.f ?? 0, src, now, e.x, e.y);
     if (name === 'minion') {
       this.dashes.set(id, { x: e.x, y: e.y, at: now });
       return;
