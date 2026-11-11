@@ -22,6 +22,19 @@ Tương tự, nhỏ hơn: **Trân Châu** — bảng §6.3 v6.48 ghi *mù 3s*, c
 màn hình" bên dưới vẫn ghi 5s ở cả ba chỗ (hiệu ứng rơi/tan, không nhặt được, bot tầm nhìn).
 Đang dùng **3 s cho LUẬT** (bảng §6.3), phần vẽ trên màn hình vẫn tan trong 5 s như cũ.
 
+## Q51 — Cô Ba còn rải vỏ chuối nữa không? (đang GIỮ)
+
+Bảng kỹ năng §6.3 v6.48 tả Cô Ba là "sạp bất hoại + đẩy + buộc vào sạp" — **không nhắc
+vỏ chuối**. Nhưng §6.5 (bảng hiển thị) vẫn ghi: *"Sạp có tấm bạt cam + thanh đếm 6s nhỏ;
+**vỏ chuối vàng dọc chân sạp**; người trượt: vệt trượt + sao choáng 1s"*.
+
+**Đang GIỮ vỏ chuối** (trượt + choáng 1 s như cũ), vì bỏ một cơ chế mà spec chưa bảo bỏ
+thì rủi ro hơn giữ. Nhưng cộng lại thì Cô Ba giờ khá nặng: chặn đường bất hoại + đẩy văng
++ buộc 3 s + vỏ chuối (trượt + choáng 1 s).
+
+**Cần anh quyết**: (a) giữ nguyên cả bốn; (b) bỏ vỏ chuối (và sửa §6.5 cho khớp); (c) giữ
+vỏ chuối nhưng bỏ phần choáng, chỉ còn trượt.
+
 ## Q48 — Nhảy cóc khi nhìn người chạy nhanh từ tab khác (CÒN MỞ — bước 1 xong, chưa đạt)
 
 **Chốt của chủ dự án 07/11**: làm theo bước, đo lại sau mỗi bước, đạt (0 nhảy cóc, 0 đứng

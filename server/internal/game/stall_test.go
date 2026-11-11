@@ -164,11 +164,10 @@ func TestStallArcGeometry(t *testing.T) {
 	}
 }
 
-// "Sạp không đặt đè lên người (đoạn nào trùng người thì bỏ trống đoạn đó)."
-//
-// Bỏ trống chứ không đẩy người ra: đẩy người là cho Cô Ba một đòn dịch chuyển cưỡng chế
-// miễn phí, và dãy sạp thành vũ khí thay vì địa hình.
-func TestStallSkipsSpotsWithPeopleOnThem(t *testing.T) {
+// v6.48: "Lúc sạp bật lên, địch đứng trên đường sạp bị ĐẨY VĂNG ra ngoài (theo hướng ra xa
+// Cô Ba)" — thay cho luật cũ "bỏ trống đoạn có người". Dãy sạp hở đúng ngay chỗ con mồi
+// đang đứng nghĩa là kỹ năng tự hỏng khi dùng đúng lúc nhất.
+func TestStallPushesPeopleOffTheLine(t *testing.T) {
 	g := skillGame(t)
 	probe := put(g, "co_ba_ganh", Vec{X: 3000, Y: 3000}, 20, 20)
 	probe.Facing = 0
@@ -177,15 +176,49 @@ func TestStallSkipsSpotsWithPeopleOnThem(t *testing.T) {
 
 	// Đứng đúng giữa cung, nơi cái sạp giữa dãy sẽ rơi vào.
 	blocker := put(g, "cu_rua", Vec{X: 3000 + dist, Y: 3000}, 20, 10)
-	_, stalls := coBaAt(t, g, 20)
+	co, stalls := coBaAt(t, g, 20)
 
-	for _, st := range stalls {
-		if _, hit := st.Shape.PushOut(blocker.Pos, g.BodyR(blocker)); hit {
-			t.Fatalf("có sạp đè lên người đang đứng ở %+v", blocker.Pos)
-		}
+	if len(stalls) != g.skillInt("bay_sap_count") {
+		t.Errorf("bày được %d sạp, muốn đủ %d — người đứng chắn không còn làm hở dãy",
+			len(stalls), g.skillInt("bay_sap_count"))
 	}
-	if len(stalls) >= g.skillInt("bay_sap_count") {
-		t.Error("không bỏ trống đoạn nào — người đứng giữa cung mà vẫn bày đủ 5 sạp")
+	if blocker.KnockUntil <= g.Time {
+		t.Fatal("người đứng trên đường sạp không bị đẩy")
+	}
+	// Đẩy RA XA Cô Ba, không phải về phía cô.
+	if blocker.KnockVel.Dot(blocker.Pos.Sub(co.Pos).Norm()) <= 0 {
+		t.Error("bị đẩy về phía Cô Ba — phải đẩy ra xa")
+	}
+}
+
+// "Địch trong 2 U quanh dãy sạp lúc bật bị buộc vào sạp gần nhất 3s: chỉ đi được trong
+// vòng 2 U quanh sạp đó" (v6.48 §6.3).
+func TestStallTethersNearbyFoes(t *testing.T) {
+	g := skillGame(t)
+	probe := put(g, "co_ba_ganh", Vec{X: 3000, Y: 3000}, 20, 20)
+	probe.Facing = 0
+	dist := g.skillRange(probe, "bay_sap_dist")
+	leash := g.skillRange(probe, "bay_sap_tether_leash")
+	g.RemovePlayer(probe.ID)
+
+	near := put(g, "cu_rua", Vec{X: 3000 + dist + g.skillRange(probe, "bay_sap_tether_r")*0.5, Y: 3000}, 20, 10)
+	far := put(g, "cu_rua", Vec{X: 3000 + dist*4, Y: 3000}, 20, 10)
+	coBaAt(t, g, 20)
+
+	if !near.HasStatus(StTether, g.Time) {
+		t.Fatal("địch đứng sát dãy sạp mà không bị buộc")
+	}
+	if far.HasStatus(StTether, g.Time) {
+		t.Error("địch ở xa cũng bị buộc")
+	}
+	// Chạy thẳng ra xa trong 2 giây: không bao giờ vượt quá dây.
+	near.KnockUntil = 0
+	for i := 0; i < 60; i++ {
+		g.SetInput(near.ID, uint32(i+1), 0, true, false)
+		g.movePlayer(near, 1.0/30)
+		if d := near.Pos.Dist(near.tetherAt); d > leash+1 {
+			t.Fatalf("thoát khỏi dây: cách sạp %.0f, dây dài %.0f", d, leash)
+		}
 	}
 }
 
@@ -226,5 +259,36 @@ func TestOwnerCannotCutOwnStalls(t *testing.T) {
 	}
 	if len(g.stalls) != n {
 		t.Errorf("Cô Ba tự chém mất %d sạp của mình", n-len(g.stalls))
+	}
+}
+
+// v6.48: sạp BẤT HOẠI — người hơn Cô Ba cả cảnh giới cũng không chém bay được, và thân
+// vẫn bị chặn. Chỉ Cô Ba và Shipper đang Gom Đơn đi xuyên.
+func TestStallsAreIndestructible(t *testing.T) {
+	g := skillGame(t)
+	co, stalls := coBaAt(t, g, 10)
+	if len(stalls) == 0 {
+		t.Fatal("không bày được sạp nào")
+	}
+	st := stalls[0]
+	c := st.Shape.Center()
+
+	// Người cảnh giới CAO HƠN hẳn, đứng sát sạp, kiếm quét qua.
+	strong := put(g, "cu_rua", c.Add(Vec{X: g.BodyR(co) * 2}), g.Prog.TopMortalLevel(), 40)
+	g.hitStalls(strong)
+	if len(g.StallList()) != len(stalls) {
+		t.Fatalf("còn %d sạp, muốn %d — sạp phải bất hoại", len(g.StallList()), len(stalls))
+	}
+
+	// …và thân họ vẫn bị chặn.
+	inside := c
+	if got := g.stallBlocking(strong, inside, g.BodyR(strong)); got.Dist(inside) < 1 {
+		t.Error("người cảnh giới cao đi xuyên được sạp")
+	}
+	// Shipper đang Gom Đơn thì đi xuyên.
+	ship := put(g, "shipper", c, 10, 10)
+	g.ApplyStatus(ship, StGhost, 4)
+	if got := g.stallBlocking(ship, inside, g.BodyR(ship)); got.Dist(inside) > 1 {
+		t.Error("Shipper đang Gom Đơn phải đi xuyên được dãy sạp")
 	}
 }

@@ -238,6 +238,14 @@ func (g *Game) movePlayer(p *Player, dt float64) {
 	if p.KnockUntil > g.Time {
 		p.Pos = p.Pos.Add(p.KnockVel.Mul(dt))
 	}
+	// "Buộc vào sạp" của Cô Ba (v6.48 §6.3): đi đâu cũng được, miễn trong vòng `tetherR`
+	// quanh cái sạp đã buộc. KẸP vị trí thay vì cấm di chuyển — spec nói "chỉ đi được trong
+	// vòng 2 U quanh sạp đó", tức vẫn lái được, chỉ là có dây.
+	if p.HasStatus(StTether, g.Time) && p.tetherR > 0 {
+		if d := p.Pos.Sub(p.tetherAt); d.Len() > p.tetherR {
+			p.Pos = p.tetherAt.Add(d.Norm().Mul(p.tetherR))
+		}
+	}
 	// Người chơi KHÔNG chặn đường nhau (spec §5.2 là luật chém, xem shield.go): đi tới gần
 	// ai cũng vẫn điều khiển được bình thường, hai vòng kiếm chồng lên nhau mà mài.
 	p.Pos = g.resolveBlockingFor(p, p.Pos, g.BodyR(p))

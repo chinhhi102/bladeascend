@@ -64,23 +64,28 @@ func castBayHang(g *Game, p *Player, dir Vec) {
 	// Bề rộng mỗi sạp = độ dài dãy / số sạp, nên 5 sạp phủ kín dãy không hở.
 	w := arc / float64(n)
 	placed := 0
+	var mine []Vec
 	for i := 0; i < n; i++ {
 		// `(i+0.5)/n - 0.5` rải tâm các sạp đều trên cung, đối xứng quanh hướng nhắm.
 		a := base + span*((float64(i)+0.5)/float64(n)-0.5)
 		c := p.Pos.Add(Vec{X: math.Cos(a), Y: math.Sin(a)}.Mul(dist))
 		sh := world.Shape{X: c.X - w/2, Y: c.Y - w/2, W: w, H: w}
-		// "Sạp không đặt đè lên người (đoạn nào trùng người thì bỏ trống đoạn đó)" — spec.
+		// v6.48: "Lúc sạp bật lên, địch đứng trên đường sạp bị ĐẨY VĂNG ra ngoài (theo
+		// hướng ra xa Cô Ba)". Trước đây chỗ có người thì bỏ trống đoạn đó — dãy sạp hở
+		// đúng ngay chỗ con mồi đang đứng, tức kỹ năng tự hỏng khi dùng đúng lúc nhất.
 		//
-		// Bỏ trống chứ không đẩy người ra: đẩy người là cho Cô Ba một đòn dịch chuyển cưỡng
-		// chế miễn phí, và dãy sạp thành vũ khí thay vì địa hình.
-		if g.stallWouldTrap(sh) {
+		// Quái thì vẫn bỏ trống: đẩy quái không có trong spec, và nhốt quái trong sạp là
+		// cách chắc chắn để sinh ra một con quái kẹt vĩnh viễn.
+		if g.stallWouldTrapMonster(sh) {
 			continue
 		}
+		g.pushOffStall(p, sh)
 		g.stallSeq++
 		g.stalls = append(g.stalls, tempStall{
 			ID: g.stallSeq, Owner: p.ID, Tier: tier, Shape: sh, Until: g.Time + secs,
 		})
 		placed++
+		mine = append(mine, c)
 		g.emit(Event{Kind: "StallUp", A: p.ID, B: g.stallSeq, N: tier, F: float32(w),
 			X: float32(c.X), Y: float32(c.Y)})
 	}
@@ -93,26 +98,72 @@ func castBayHang(g *Game, p *Player, dir Vec) {
 		at := p.Pos.Add(Vec{X: math.Cos(a), Y: math.Sin(a)}.Mul(dist - peelR))
 		g.slicks = append(g.slicks, slick{at: at, until: g.Time + secs, owner: p.ID, r: peelR})
 	}
+	g.tetherToStalls(p, mine)
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "bay_hang", N: placed, F: float32(secs),
 		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 
-// stallWouldTrap: chỗ này có người hay quái đang đứng không.
-func (g *Game) stallWouldTrap(sh world.Shape) bool {
-	for _, o := range g.PlayerList() {
-		if o.Dead || o.InTransit(g.Time) {
-			continue
-		}
-		if _, hit := sh.PushOut(o.Pos, g.BodyR(o)); hit {
-			return true
-		}
-	}
+// stallWouldTrapMonster: chỗ này có quái đang đứng không (người thì bị đẩy, xem `pushOffStall`).
+func (g *Game) stallWouldTrapMonster(sh world.Shape) bool {
 	for _, m := range g.Monsters {
 		if _, hit := sh.PushOut(m.Pos, m.R); hit {
 			return true
 		}
 	}
 	return false
+}
+
+// pushOffStall đẩy địch đang đứng đúng chỗ sắp mọc sạp ra NGOÀI, theo hướng xa Cô Ba.
+//
+// Đẩy ra xa `p` chứ không đẩy ra theo cạnh gần nhất của sạp: spec ghi rõ hướng, và đẩy
+// theo cạnh gần nhất thì một người đứng hơi lệch sẽ bị hất về PHÍA Cô Ba — tức kỹ năng
+// chặn đường tự kéo con mồi vào lòng mình.
+func (g *Game) pushOffStall(p *Player, sh world.Shape) {
+	push := g.skillRange(p, "bay_sap_push")
+	for _, o := range g.PlayerList() {
+		if o.Dead || o.ID == p.ID || o.InTransit(g.Time) {
+			continue
+		}
+		if _, hit := sh.PushOut(o.Pos, g.BodyR(o)); !hit {
+			continue
+		}
+		g.pushAway(p, o, push)
+		g.emit(Event{Kind: "SkillEffect", A: p.ID, B: o.ID, S: "bay_hang_day",
+			X: float32(o.Pos.X), Y: float32(o.Pos.Y)})
+	}
+}
+
+// tetherToStalls buộc địch trong `bay_sap_tether_r` U quanh dãy sạp vào CÁI SẠP GẦN NHẤT
+// trong `bay_sap_tether_secs` giây (v6.48 §6.3): họ chỉ đi được trong vòng
+// `bay_sap_tether_leash` U quanh sạp đó, kiếm vẫn quay bình thường.
+//
+// Chọn sạp gần nhất TRONG SỐ SẠP VỪA BÀY, không phải mọi sạp trên bản đồ: hai Cô Ba bày
+// chồng lên nhau thì mỗi người buộc theo dãy của mình.
+func (g *Game) tetherToStalls(p *Player, mine []Vec) {
+	if len(mine) == 0 {
+		return
+	}
+	r := g.skillRange(p, "bay_sap_tether_r")
+	leash := g.skillRange(p, "bay_sap_tether_leash")
+	secs := g.skillNum("bay_sap_tether_secs")
+	for _, o := range g.PlayerList() {
+		if o.Dead || o.ID == p.ID || o.InTransit(g.Time) {
+			continue
+		}
+		best, bd := Vec{}, math.Inf(1)
+		for _, c := range mine {
+			if d := o.Pos.Dist(c); d < bd {
+				best, bd = c, d
+			}
+		}
+		if bd > r {
+			continue
+		}
+		o.tetherAt, o.tetherR = best, leash
+		g.ApplyStatusFrom(p, o, StTether, secs)
+		g.emit(Event{Kind: "SkillEffect", A: p.ID, B: o.ID, S: "buoc_sap", F: float32(secs),
+			X: float32(best.X), Y: float32(best.Y)})
+	}
 }
 
 // updateStalls dọn sạp hết hạn.
@@ -134,9 +185,8 @@ func (g *Game) updateStalls() {
 // Ba trường hợp đi xuyên được, mỗi cái là một dòng trong spec:
 //  1. **Chủ sạp** (`bay_sap_owner_passes`) — "Cô Ba tự đi xuyên sạp của mình → bỏ chạy chắc
 //     chắn trước người ngang cấp". Đây là toàn bộ giá trị tấn công của kỹ năng.
-//  2. **Người chém được bậc đó** — bậc sạp = cảnh giới Cô Ba + 1, nên người hơn cô một
-//     cảnh giới chém qua. Chém sạp thì sạp mất ngay như mọi vật cản (§8.2); ở đây chỉ nói
-//     về việc THÂN có bị chặn hay không.
+//  2. (v6.48 BỎ: sạp nay **bất hoại**, không ai chém qua, không ai đi xuyên vì cảnh giới
+//     cao hơn — xem `hitStalls`.)
 //  3. **Shipper đang Gom Đơn** (`StGhost`) — "Shipper đi xuyên được dãy sạp của Cô Ba → hai
 //     người khắc nhau" (§6.3 nguyên tắc 4).
 func (g *Game) stallBlocking(p *Player, pos Vec, r float64) Vec {
@@ -154,9 +204,6 @@ func (g *Game) stallBlocking(p *Player, pos Vec, r float64) Vec {
 			if ownerPasses && st.Owner == p.ID {
 				continue
 			}
-			if g.CanCutObstacle(p, st.Tier) {
-				continue
-			}
 			if np, hit := st.Shape.PushOut(pos, r); hit {
 				pos, moved = np, true
 			}
@@ -168,27 +215,27 @@ func (g *Game) stallBlocking(p *Player, pos Vec, r float64) Vec {
 	return pos
 }
 
-// hitStalls: kiếm của `a` quét trúng sạp nào mà họ đủ bậc chém thì sạp đó biến mất ngay.
+// hitStalls: v6.48 — sạp **BẤT HOẠI**, kiếm quét qua chỉ kêu "cạch" chứ không phá được.
 //
-// Chủ sạp KHÔNG chém được sạp của mình: nó đi xuyên người cô, nên kiếm cô cũng đi xuyên nó.
-// Nếu không, Cô Ba vừa bày là tự xoá ngay trong nhịp kiếm kế tiếp.
+// Trước đây ai hơn Cô Ba một cảnh giới là chém bay cả dãy trong một nhịp kiếm, nên kỹ năng
+// "dựng địa hình" chỉ hiệu nghiệm với người yếu hơn — đúng những người cô không cần chặn.
+// Giờ chỉ có hai đường qua: chính Cô Ba, và Shipper đang Gom Đơn (§6.3 nguyên tắc 4 — hai
+// người khắc nhau). Sạp vẫn tự tan sau 6 giây.
 func (g *Game) hitStalls(a *Player) {
 	if len(g.stalls) == 0 || !g.canFight(a) {
 		return
 	}
-	keep := g.stalls[:0]
-	for _, st := range g.stalls {
-		cut := st.Owner != a.ID && g.CanCutObstacle(a, st.Tier)
-		if cut {
-			c := st.Shape.Center()
-			if _, ok := g.swordTouchesCircle(a, c, math.Max(st.Shape.W, st.Shape.H)/2); ok {
-				g.emit(Event{Kind: "StallDown", A: a.ID, B: st.ID, X: float32(c.X), Y: float32(c.Y)})
-				continue
-			}
+	for i := range g.stalls {
+		st := &g.stalls[i]
+		if st.Owner == a.ID {
+			continue
 		}
-		keep = append(keep, st)
+		c := st.Shape.Center()
+		if _, ok := g.swordTouchesCircle(a, c, math.Max(st.Shape.W, st.Shape.H)/2); ok {
+			g.emit(Event{Kind: "SkillEffect", A: a.ID, B: st.ID, S: "sap_bat_hoai",
+				X: float32(c.X), Y: float32(c.Y)})
+		}
 	}
-	g.stalls = keep
 }
 
 // StallList cho room gửi xuống client (snapshot) và cho test đọc.

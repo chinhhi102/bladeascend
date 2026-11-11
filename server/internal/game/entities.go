@@ -154,6 +154,11 @@ type Player struct {
 	braceOn bool
 	// giantOn: đang khổng lồ — bắt khoảnh khắc HẾT để kiếm tạm tan (v6.48 §6.3).
 	giantOn bool
+	// tetherAt/tetherR: tâm và bán kính sợi dây buộc vào sạp Cô Ba (v6.48 §6.3). Chốt lúc
+	// bị buộc chứ không tính lại: sạp đứng yên, còn cảnh giới của Cô Ba thì có thể đổi
+	// giữa chừng — một sợi dây tự dài ra là thứ người bị buộc không hiểu nổi.
+	tetherAt Vec
+	tetherR  float64
 	// regen*: phần kiếm Bánh Bao Thần còn nợ, nhả dần (v6.48 §6.3). Chết là mất sạch.
 	regenLeft int
 	regenRate float64
