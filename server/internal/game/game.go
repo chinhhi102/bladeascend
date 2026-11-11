@@ -279,6 +279,13 @@ func (g *Game) SetInput(id uint32, seq uint32, angle float64, moving, burning bo
 	if !ok {
 		return
 	}
+	// Đảo điều khiển (Phun Trân Châu, v6.48 §6.3): trái↔phải VÀ lên↔xuống = quay hướng đi
+	// 180°. Đảo ngay ở CỬA VÀO, không rải vào từng chỗ đọc `InputAngle`: `movePlayer` đọc
+	// nó ở bốn chỗ (mặt nhìn, đi thường, trượt băng, tăng tốc) và sót một chỗ nghĩa là đứng
+	// trên băng thì hết bị đảo.
+	if p.HasStatus(StInvert, g.Time) {
+		angle += math.Pi
+	}
 	p.InputAngle, p.Moving, p.Burning = angle, moving, burning
 	if seq > p.LastSeq {
 		p.LastSeq = seq
@@ -288,6 +295,15 @@ func (g *Game) SetInput(id uint32, seq uint32, angle float64, moving, burning bo
 // refreshDerived recomputes scale and ring geometry from level, sword count and buffs.
 func (g *Game) refreshDerived(p *Player) {
 	p.Scale = g.Prog.Scale(p.Level)
+	// Hoá Khổng Lồ (v6.48 §6.3): thân và bán kính vòng kiếm ×2 trong 2 giây.
+	if p.HasStatus(StGiant, g.Time) {
+		p.Scale *= g.Cfg.Skills.GiantMult
+	}
+	// Đàn em nhỏ hơn đại ca 30%. Đặt ở ĐÂY chứ không ở `spawnMinion`: scale được tính lại
+	// mỗi lần số kiếm hay cảnh giới đổi, nên chỉnh một lần lúc sinh ra là mất ngay lần sau.
+	if p.IsMinion {
+		p.Scale *= g.Cfg.Skills.DanEmScale
+	}
 	// Spec v4.3 bỏ Trường Kiếm: tầm chém chỉ tăng theo số vòng và cảnh giới (§4.1a).
 	p.Geom = ComputeRingGeom(g.Cfg.Sword, g.Cfg.Player.BodyR, p.Scale, p.Ring.Count)
 	g.refreshView(p)

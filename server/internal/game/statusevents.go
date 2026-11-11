@@ -64,7 +64,7 @@ func (g *Game) statusActive(p *Player, code int) bool {
 // (`p.Status[s] = 0`), quên một chỗ là icon treo mãi trên đầu người chơi.
 func (g *Game) endShownStatuses(p *Player, all bool) {
 	for code := 0; p.statusShown != 0 && code < EventStatusCount; code++ {
-		bit := uint16(1) << code
+		bit := uint32(1) << code
 		if p.statusShown&bit == 0 || (!all && g.statusActive(p, code)) {
 			continue
 		}

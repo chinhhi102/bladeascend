@@ -54,18 +54,26 @@ const (
 	// nếu client không biết thì nó dự đoán mình đang chạy, server kéo về, và người chơi
 	// thấy nhân vật giật tại chỗ đúng nửa giây mỗi lần dùng kỹ năng.
 	StSing
+	// StInvert: đảo điều khiển (Phun Trân Châu, v6.48 §6.3) — trái↔phải, lên↔xuống.
+	//
+	// Phải là một bit TRÊN DÂY chứ không chỉ xử lý ở server: client dự đoán chuyển động của
+	// chính mình mỗi khung. Server đảo mà client không biết thì client vẽ mình đi một đằng,
+	// server kéo về một nẻo, suốt 3 giây.
+	StInvert
+	// StGiant: hoá khổng lồ ×2 (Thằng Mập, v6.48 §6.3) — thân, vòng kiếm và số kiếm ×2.
+	StGiant
 	StatusCount
 )
 
 // StatusNames dùng cho log và event gửi xuống client.
-var StatusNames = [StatusCount]string{"slow", "root", "blind", "slip", "brace", "ghost", "shell", "dash", "stun", "sleep", "sing"}
+var StatusNames = [StatusCount]string{"slow", "root", "blind", "slip", "brace", "ghost", "shell", "dash", "stun", "sleep", "sing", "invert", "giant"}
 
 // HasStatus: trạng thái này còn hiệu lực không.
 func (p *Player) HasStatus(s int, now float64) bool { return p.Status[s] > now }
 
 // controlStatuses là những trạng thái bị người khác giáng lên; Gồng miễn hết nhóm này
 // (spec §6.3: "không bị đẩy lùi/chậm/trói").
-var controlStatuses = []int{StSlow, StRoot, StSlip, StBlind, StStun, StSleep}
+var controlStatuses = []int{StSlow, StRoot, StSlip, StBlind, StStun, StSleep, StInvert}
 
 // ApplyStatus giáng một trạng thái lên người chơi trong `secs` giây.
 //
@@ -135,6 +143,12 @@ func (g *Game) onDeathClear(p *Player) {
 	p.SkillCharges, p.SkillRecharge, p.StealUntil = 0, 0, 0
 	// "Bị chém chết thì mất phần chưa hồi" (Bánh Bao Thần, v6.48 §6.3).
 	p.regenLeft, p.regenAcc, p.braceOn = 0, 0, false
+	// Kiếm tạm của Hoá Khổng Lồ "không rơi khi chết" (v6.48 §6.3): bỏ chúng khỏi vòng
+	// TRƯỚC khi xác rơi kiếm, nếu không chúng biến thành Bó Kiếm thật.
+	if n := min(p.TempSwords, p.Ring.Count); n > 0 {
+		p.Ring.Count -= n
+	}
+	p.TempSwords, p.giantOn = 0, false
 	p.Vel = Vec{}
 	p.shellOn = false
 	p.orbPicked, p.orbPickedID, p.orbPickedKind = 0, 0, ""

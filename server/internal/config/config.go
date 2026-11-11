@@ -400,6 +400,13 @@ type Skills struct {
 
 	TranChauConeDeg float64 `json:"tran_chau_cone_deg"`
 	TranChauSecs    float64 `json:"tran_chau_secs"`
+	// TranChauInvertSecs: người trúng trân châu còn bị ĐẢO ĐIỀU KHIỂN ngần này giây
+	// (v6.48 §6.3) — trái↔phải, lên↔xuống.
+	TranChauInvertSecs float64 `json:"tran_chau_invert_secs"`
+	// GiantSecs/GiantMult: Thằng Mập hoá khổng lồ ×2 trong 2 giây — thân, bán kính vòng
+	// kiếm và SỐ KIẾM đều nhân `giant_mult` (v6.48 §6.3).
+	GiantSecs float64 `json:"giant_secs"`
+	GiantMult float64 `json:"giant_mult"`
 	// TranChauNoPickup: người đang bị bịt mắt không nhặt được gì (spec v5.5 §6.3).
 	TranChauNoPickup  bool    `json:"tran_chau_no_pickup"`
 	TranChauBotVision float64 `json:"tran_chau_bot_vision"`

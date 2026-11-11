@@ -152,12 +152,20 @@ type Player struct {
 	shellOn bool
 	// braceOn: đang gồng — bắt khoảnh khắc HẾT gồng để bung cơ (v6.48 §6.3).
 	braceOn bool
+	// giantOn: đang khổng lồ — bắt khoảnh khắc HẾT để kiếm tạm tan (v6.48 §6.3).
+	giantOn bool
 	// regen*: phần kiếm Bánh Bao Thần còn nợ, nhả dần (v6.48 §6.3). Chết là mất sạch.
 	regenLeft int
 	regenRate float64
 	regenAcc  float64
 	// statusShown: mã trạng thái đã báo `StatusStart` mà chưa báo `StatusEnd` (statusevents.go).
-	statusShown uint16
+	//
+	// uint32 chứ không uint16: mã hiển thị nối SAU `StatusCount` (push/steal/minion), nên
+	// mỗi trạng thái mới đẩy chúng lên một bit. v6.48 thêm 2 trạng thái là đã chạm bit 15.
+	statusShown uint32
+	// TempSwords: kiếm TẠM của Hoá Khổng Lồ (v6.48 §6.3) — nằm trong `Ring.Count`, nhưng bể
+	// trước kiếm thật, hết 2 giây thì tan, không rơi khi chết và không bị cướp.
+	TempSwords int
 	// channel: chiêu đang "hát" dở (Ru Ngủ Trưa, spec v6.9 §6.3). Xem `channelState`.
 	channel channelState
 	// ghostOn + unstick*: Giao Hỏa Tốc hết hạn giữa lòng vật cản thì trượt mượt ra chỗ

@@ -403,16 +403,59 @@ func (g *Game) minionsOf(boss *Player) []*Player {
 	return out
 }
 
-// Phun Trân Châu — nón 45° dài 8 U, người trúng bị bịt mắt 5 giây (§6.3).
+// Phun Trân Châu + Hoá Khổng Lồ (v6.48 §6.3) — nón 45° dài 8 U: người trúng **mù 3s** và
+// **bị đảo điều khiển 3s**; đồng thời Thằng Mập **hoá khổng lồ ×2 trong 2s**.
+//
+// Bản cũ chỉ bịt mắt. Hai thứ thêm vào đổi vai của nhân vật: đảo điều khiển biến người
+// trúng thành kẻ tự chạy vào kiếm mình, còn hai giây khổng lồ là CỬA SỔ TẤN CÔNG — thân to
+// gấp đôi, vòng kiếm rộng gấp đôi, số kiếm gấp đôi — đủ để lao vào mài một người đang quờ
+// quạng, rồi tan đi trước khi ai kịp phản đòn.
 func castTranChau(g *Game, p *Player, dir Vec) {
 	sc := g.Cfg.Skills
 	reach := g.skillRange(p, "tran_chau_cone")
 	for _, o := range g.targetsNear(p, reach) {
 		if inCone(p, o.Pos, dir, sc.TranChauConeDeg, reach) {
 			g.ApplyStatusFrom(p, o, StBlind, sc.TranChauSecs)
+			g.ApplyStatusFrom(p, o, StInvert, sc.TranChauInvertSecs)
 		}
 	}
+	g.giantOn(p, sc.GiantSecs)
 	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "tran_chau", X: float32(p.Pos.X), Y: float32(p.Pos.Y), F: float32(p.Facing)})
+}
+
+// giantOn bật Hoá Khổng Lồ: thân + vòng kiếm ×2 (qua `refreshDerived`) và nhân đôi SỐ KIẾM
+// bằng kiếm tạm.
+//
+// Kiếm tạm nằm thẳng trong `Ring.Count` chứ không là một vòng thứ hai: mọi luật va chạm,
+// hình học vòng kiếm và đường vẽ ở client đều đã chạy theo `Ring.Count`, nên thêm một loại
+// kiếm "ở ngoài" nghĩa là viết bản thứ hai của tất cả những thứ đó. Cái giá phải trả là bốn
+// chỗ phải nhớ trừ `TempSwords` ra: lúc bể (bể trước kiếm thật), lúc chết (không rơi), lúc
+// bị cướp (không cướp được), và lúc hết giờ (tan).
+//
+// KHÔNG đi qua `AddSwords`: hàm đó quy phần vượt trần thành EXP, mà §6.3 cấm kỹ năng đổi
+// EXP trực tiếp — và kiếm khổng lồ thì vốn được phép vượt trần cảnh giới.
+func (g *Game) giantOn(p *Player, secs float64) {
+	g.ApplyStatus(p, StGiant, secs)
+	add := int(float64(p.Ring.Count)*g.Cfg.Skills.GiantMult) - p.Ring.Count
+	if add > 0 {
+		p.Ring.Count += add
+		p.TempSwords += add
+	}
+	p.giantOn = true
+	g.refreshDerived(p)
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "khong_lo", N: add, F: float32(secs),
+		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+}
+
+// giantOff: hết 2 giây thì kiếm tạm tan, thân co lại.
+func (g *Game) giantOff(p *Player) {
+	if n := min(p.TempSwords, p.Ring.Count); n > 0 {
+		p.Ring.Count -= n
+		g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "khong_lo_tan", N: n,
+			X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+	}
+	p.TempSwords = 0
+	g.refreshDerived(p)
 }
 
 // Hút Mì Đoạt Kiếm (v6.48 §6.3) — húp 0.6s (đứng yên) rồi cướp **25% số kiếm hiện có của
@@ -469,8 +512,9 @@ func (g *Game) stealSwords(to, from *Player) {
 	}
 	// `LoseSwords` không bao giờ hạ địch xuống dưới `sword.min_count`, nên số cướp THẬT
 	// phải lấy từ nó, không phải từ ý muốn của mình: cướp 25 mà địch chỉ nhả 18 thì không
-	// được tạo ra 7 thanh kiếm từ không khí.
-	got := g.LoseSwords(from, want)
+	// được tạo ra 7 thanh kiếm từ không khí. `stealLoseSwords` còn trừ nốt phần kiếm TẠM
+	// của Hoá Khổng Lồ — bể được nhưng không cướp được (v6.48).
+	got := g.stealLoseSwords(from, want)
 	if got <= 0 {
 		return
 	}

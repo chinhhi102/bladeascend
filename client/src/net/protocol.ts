@@ -132,7 +132,8 @@ export interface Snapshot {
  * dính đúng một lần: client nói `mood` là chỉ số, server cũ vẫn gửi chuỗi.
  */
 /** Thứ tự phải khớp game.StatusNames bên server (spec §6.3). */
-export const STATUS = ['slow', 'root', 'blind', 'slip', 'brace', 'ghost', 'shell', 'dash', 'stun', 'sleep', 'sing'] as const;
+export const STATUS = ['slow', 'root', 'blind', 'slip', 'brace', 'ghost', 'shell', 'dash', 'stun', 'sleep', 'sing',
+  'invert', 'giant'] as const;
 
 /** statusOn: trạng thái này đang bật không (bit theo đúng thứ tự `STATUS` = `game.St*`). */
 export function statusOn(st: number | undefined, name: (typeof STATUS)[number]): boolean {

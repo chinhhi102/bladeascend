@@ -484,7 +484,17 @@ func (g *Game) breakSwords(p *Player, n int) { g.loseSwordsHit(p, n, true) }
 
 // stealLoseSwords: kiếm bị CƯỚP (Trộm Kiếm) — cùng hiệu ứng bể nhưng KHÔNG ghi sổ, vì số
 // kiếm đó bay sang vòng kẻ cướp chứ không mất khỏi phòng. Trả về số thật sự mất.
-func (g *Game) stealLoseSwords(p *Player, n int) int { return g.loseSwordsHit(p, n, false) }
+// stealLoseSwords: trừ kiếm vì bị CƯỚP — không vào sổ rơi-khi-chết, và chỉ trả về số kiếm
+// THẬT, vì kiếm tạm của Hoá Khổng Lồ "không bị cướp" (v6.48 §6.3).
+//
+// Kiếm tạm vẫn BỂ như thường (chúng chắn đòn đúng như kiếm thật) — chỉ là kẻ cướp không
+// nhận được chúng: chúng vốn chỉ sống hai giây, chuyển sang vòng người khác là đẻ ra kiếm
+// vĩnh viễn từ không khí.
+func (g *Game) stealLoseSwords(p *Player, n int) int {
+	before := p.TempSwords
+	lost := g.loseSwordsHit(p, n, false)
+	return max(lost-(before-p.TempSwords), 0)
+}
 
 // loseSwordsHit trừ kiếm vì va chạm. `record` = có ghi vào sổ "kiếm bể 10s gần nhất" không.
 func (g *Game) loseSwordsHit(p *Player, n int, record bool) int {
@@ -496,8 +506,12 @@ func (g *Game) loseSwordsHit(p *Player, n int, record bool) int {
 	}
 	lost := g.LoseSwords(p, n)
 	if lost > 0 {
-		if record {
-			g.recordSwordLoss(p, lost)
+		// Kiếm TẠM của Hoá Khổng Lồ bể TRƯỚC kiếm thật (v6.48 §6.3) và không vào sổ rơi khi
+		// chết: chúng không phải tài sản của người chơi, chỉ là hai giây hào nhoáng.
+		temp := min(p.TempSwords, lost)
+		p.TempSwords -= temp
+		if record && lost > temp {
+			g.recordSwordLoss(p, lost-temp)
 		}
 		p.breakPending += lost
 		if p.Ring.Count == 0 {
@@ -755,8 +769,10 @@ func (g *Game) obstacleOccupied(id int) bool {
 func (g *Game) dropDeathSwords(b *Player) {
 	n := g.swordsLostRecently(b)
 	if g.Cfg.Player.DeathDropIncludeRemain {
-		n += b.Ring.Count
-		b.Ring.Count = 0
+		// Kiếm TẠM của Hoá Khổng Lồ "không rơi khi chết" (v6.48 §6.3): trừ ra ở ĐÂY, vì
+		// `dropDeathSwords` chạy TRƯỚC `onDeathClear`.
+		n += max(b.Ring.Count-b.TempSwords, 0)
+		b.Ring.Count, b.TempSwords = 0, 0
 		g.refreshDerived(b)
 	}
 	if cap := g.Prog.MaxSwords(g.Prog.Realm(b.Level)); n > cap {

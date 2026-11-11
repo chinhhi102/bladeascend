@@ -37,7 +37,6 @@ func (g *Game) minionSwords(boss *Player) int {
 //
 // Đại ca KHÔNG bị trừ kiếm: đây là bản sao, không phải chia của.
 func (g *Game) spawnMinion(boss *Player, at Vec, secs float64) *Player {
-	sc := g.Cfg.Skills
 	sw := g.minionSwords(boss)
 	m := g.AddPlayer(SpawnOptions{
 		Name: boss.Name + " (đàn em)", Char: boss.Char, IsBot: true,
@@ -52,9 +51,8 @@ func (g *Game) spawnMinion(boss *Player, at Vec, secs float64) *Player {
 	m.MinionUntil = g.Time + secs
 	g.statusStart(boss, m, StMinion, secs)
 	m.InvulnUntil = 0
-	// Nhỏ hơn đại ca 30% (spec). Đặt SAU khi vào bàn cờ vì `AddPlayer` tự tính scale theo
-	// cảnh giới, mà đàn em thì cùng cảnh giới với đại ca nên sẽ to bằng nếu không chỉnh.
-	m.Scale *= sc.DanEmScale
+	// Nhỏ hơn đại ca 30%: `refreshDerived` lo (nó chạy lại mỗi khi kiếm/cảnh giới đổi).
+	g.refreshDerived(m)
 	return m
 }
 
@@ -96,6 +94,14 @@ func (g *Game) updateSkillState(dt float64) {
 		}
 		if p.HasStatus(StShell, g.Time) {
 			p.shellOn = true
+		}
+		// Thằng Mập hết khổng lồ → kiếm tạm tan, thân co lại (v6.48).
+		if p.giantOn && !p.HasStatus(StGiant, g.Time) {
+			p.giantOn = false
+			g.giantOff(p)
+		}
+		if p.HasStatus(StGiant, g.Time) {
+			p.giantOn = true
 		}
 		// Bé Tí vừa hết gồng → bung cơ (v6.48). Cùng kiểu cờ như mai rùa, cùng lý do.
 		if p.braceOn && !p.HasStatus(StBrace, g.Time) {

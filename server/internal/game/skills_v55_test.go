@@ -200,7 +200,9 @@ func TestSkillDurationsMatchSpec(t *testing.T) {
 		{"Gồng Cơ", sc.BraceSecs, 4},
 		{"Rụt Cổ", sc.ShellSecs, 5},
 		{"Gọi Đàn Em", sc.DanEmSecs, 8},
-		{"Phun Trân Châu bịt mắt", sc.TranChauSecs, 5},
+		{"Phun Trân Châu bịt mắt", sc.TranChauSecs, 3},           // v6.48
+		{"Phun Trân Châu đảo điều khiển", sc.TranChauInvertSecs, 3}, // v6.48
+		{"Hoá Khổng Lồ", sc.GiantSecs, 2},                        // v6.48
 		{"Gom Đơn Hỏa Tốc", g.skillNum("gom_don_secs"), 4},
 		{"Ru Ngủ Trưa ngủ", g.skillNum("ru_ngu_secs"), 2.5},
 		{"Ru Ngủ Trưa hát", g.skillNum("ru_ngu_channel"), 0.5},

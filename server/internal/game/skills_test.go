@@ -674,3 +674,98 @@ func TestLoaVacuumBlockedWhenBlind(t *testing.T) {
 		t.Fatalf("đang mù mà vẫn hút được đồ (còn %d bó)", n)
 	}
 }
+
+// Phun Trân Châu v6.48: nạn nhân bị MÙ và ĐẢO ĐIỀU KHIỂN 3 giây; Thằng Mập tự hoá khổng lồ
+// ×2 trong 2 giây — thân, vòng kiếm và số kiếm đều gấp đôi.
+func TestTranChauBlindsInvertsAndGrows(t *testing.T) {
+	g := skillGame(t)
+	sc := g.Cfg.Skills
+	fat := put(g, "map_tra_sua", Vec{X: 3000, Y: 3000}, 10, 20)
+	fat.Facing = 0
+	vic := put(g, "a_hon", Vec{X: 3000 + g.skillRange(fat, "tran_chau_cone")*0.4, Y: 3000}, 10, 20)
+	scale0, reach0, sw0 := fat.Scale, fat.Geom.Reach, fat.Ring.Count
+
+	giveCharge(fat)
+	g.CastSkill(fat)
+
+	if !vic.HasStatus(StBlind, g.Time) || !vic.HasStatus(StInvert, g.Time) {
+		t.Fatal("nạn nhân phải vừa mù vừa bị đảo điều khiển")
+	}
+	if fat.Scale <= scale0*1.9 || fat.Geom.Reach <= reach0*1.5 {
+		t.Errorf("khổng lồ: scale %.2f→%.2f, tầm %.0f→%.0f — phải ×2", scale0, fat.Scale, reach0, fat.Geom.Reach)
+	}
+	if want := int(float64(sw0) * sc.GiantMult); fat.Ring.Count != want {
+		t.Errorf("khổng lồ có %d kiếm, muốn %d", fat.Ring.Count, want)
+	}
+	if fat.TempSwords != fat.Ring.Count-sw0 {
+		t.Errorf("kiếm tạm = %d, muốn %d", fat.TempSwords, fat.Ring.Count-sw0)
+	}
+
+	// Hết 2 giây: kiếm tạm tan, thân co lại.
+	step(g, sc.GiantSecs+0.1)
+	if fat.Ring.Count != sw0 || fat.TempSwords != 0 {
+		t.Errorf("hết khổng lồ còn %d kiếm (tạm %d), muốn %d", fat.Ring.Count, fat.TempSwords, sw0)
+	}
+	if math.Abs(fat.Scale-scale0) > 1e-9 {
+		t.Errorf("hết khổng lồ mà scale còn %.2f, muốn %.2f", fat.Scale, scale0)
+	}
+}
+
+// Đảo điều khiển: bấm sang phải thì đi sang TRÁI (§6.3 v6.48).
+func TestInvertFlipsInput(t *testing.T) {
+	g := skillGame(t)
+	p := put(g, "a_hon", Vec{X: 3000, Y: 3000}, 10, 5)
+	g.SetInput(p.ID, 1, 0, true, false)
+	g.movePlayer(p, 0.1)
+	if p.Pos.X <= 3000 {
+		t.Fatal("chưa bị đảo mà bấm phải lại không đi sang phải")
+	}
+
+	p.Pos = Vec{X: 3000, Y: 3000}
+	g.ApplyStatus(p, StInvert, 3)
+	g.SetInput(p.ID, 2, 0, true, false)
+	g.movePlayer(p, 0.1)
+	if p.Pos.X >= 3000 {
+		t.Fatalf("đang bị đảo mà vẫn đi sang phải (x %.0f)", p.Pos.X)
+	}
+}
+
+// Kiếm TẠM: bể trước kiếm thật, không rơi khi chết, không bị cướp.
+func TestTempSwordsBreakFirstAndNeverTransfer(t *testing.T) {
+	g := skillGame(t)
+	fat := put(g, "map_tra_sua", Vec{X: 3000, Y: 3000}, 10, 20)
+	giveCharge(fat)
+	g.CastSkill(fat)
+	temp := fat.TempSwords
+	if temp <= 2 {
+		t.Fatalf("chỉ có %d kiếm tạm — bài này cần nhiều hơn", temp)
+	}
+
+	// Bể 2 cây: trừ vào kiếm TẠM trước.
+	g.loseSwordsHit(fat, 2, true)
+	if fat.TempSwords != temp-2 {
+		t.Errorf("kiếm tạm còn %d, muốn %d — kiếm tạm phải bể trước", fat.TempSwords, temp-2)
+	}
+	if g.swordsLostRecently(fat) != 0 {
+		t.Error("kiếm tạm bể mà vào sổ rơi-khi-chết")
+	}
+
+	// Cướp: kẻ cướp chỉ nhận được phần kiếm THẬT.
+	thief := put(g, "su_phu_mi", Vec{X: 3000 + 50, Y: 3000}, 10, 1)
+	before := thief.Ring.Count
+	got := g.stealLoseSwords(fat, fat.TempSwords)
+	if got != 0 {
+		t.Errorf("cướp được %d kiếm tạm — spec nói không cướp được", got)
+	}
+	g.giveSwords(thief, got)
+	if thief.Ring.Count != before {
+		t.Errorf("kẻ cướp có thêm %d kiếm từ kiếm tạm", thief.Ring.Count-before)
+	}
+
+	// Chết: kiếm tạm không rơi.
+	real := fat.Ring.Count - fat.TempSwords
+	g.dropDeathSwords(fat)
+	if _, swords := countItems(g, "bundle"); int(swords) > real+2 {
+		t.Errorf("xác rơi %.0f kiếm, chỉ được rơi tối đa %d (kiếm tạm không rơi)", swords, real+2)
+	}
+}

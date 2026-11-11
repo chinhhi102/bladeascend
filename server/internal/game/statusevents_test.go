@@ -26,13 +26,19 @@ func TestStatusStartCarriesSourceAndSecs(t *testing.T) {
 	if !g.CastSkill(fat) {
 		t.Fatal("không dùng được kỹ năng")
 	}
-	evs := statusEvents(g, "StatusStart")
-	if len(evs) != 1 {
-		t.Fatalf("muốn 1 StatusStart, có %d", len(evs))
+	// v6.48: một cú phun giáng HAI trạng thái lên nạn nhân (mù + đảo điều khiển), và người
+	// phun tự bật Hoá Khổng Lồ — nên lọc đúng cái đang kiểm thay vì đếm tổng.
+	var e *Event
+	for _, ev := range statusEvents(g, "StatusStart") {
+		if ev.A == vic.ID && ev.N == StBlind {
+			e = &ev
+		}
 	}
-	e := evs[0]
-	if e.A != vic.ID || e.B != fat.ID || e.N != StBlind || e.F != float32(g.Cfg.Skills.TranChauSecs) {
-		t.Errorf("event sai: %+v", e)
+	if e == nil {
+		t.Fatal("nạn nhân không nhận StatusStart mù")
+	}
+	if e.B != fat.ID || e.F != float32(g.Cfg.Skills.TranChauSecs) {
+		t.Errorf("event sai: %+v", *e)
 	}
 	if e.X != float32(fat.Pos.X) || e.Y != float32(fat.Pos.Y) {
 		t.Errorf("X/Y phải là chỗ người gây (để vẽ mũi tên), có (%v,%v)", e.X, e.Y)

@@ -619,7 +619,11 @@ export class ClientWorld {
       bonus += sp.gom_don;
       cap = sp.cap_gom_don;
     }
-    return moveStep(this.cfg, map, from, inp.angle, me.sc, dt,
+    // Đảo điều khiển (Phun Trân Châu, v6.48 §6.3): server quay hướng đi 180° ngay ở cửa
+    // vào `SetInput`, nên client phải đảo Y HỆT. Không đảo thì suốt 3 giây client vẽ mình
+    // đi một đằng còn server kéo về một nẻo — 20 lần mỗi giây.
+    const angle = statusOn(me.st, 'invert') ? inp.angle + Math.PI : inp.angle;
+    return moveStep(this.cfg, map, from, angle, me.sc, dt,
       (id: number) => this.brokenObstacles.get(id) === true, { bonus, cap, frozen }, vel, inp.moving,
       statusOn(me.st, 'ghost'), this.blockingStalls(me));
   }

@@ -12,7 +12,8 @@ import { assets } from './assets';
  * artgen `icon_status_<tên>` sinh ra `ui/status/<tên>.png` thì ảnh đó thay chỗ vector.
  */
 
-export const STATUS_ICON_KEYS = ['sleep', 'blind', 'stun', 'push', 'brace', 'ghost', 'shell', 'steal'] as const;
+export const STATUS_ICON_KEYS = ['sleep', 'blind', 'stun', 'push', 'brace', 'ghost', 'shell', 'steal',
+  'invert', 'giant'] as const;
 export type StatusIconKey = (typeof STATUS_ICON_KEYS)[number];
 
 const INK = '#1b1410';
@@ -48,6 +49,15 @@ const SVG: Record<StatusIconKey, string> = {
     `<path d="M12 40c0-13 9-22 20-22s20 9 20 22z" fill="#7ad7b0" ${RING}/>`
     + `<path d="M32 23l7 4v7l-7 4-7-4v-7zM25 34l-8 5M39 34l8 5M32 38v4" fill="none" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`
     + `<path d="M10 42h44" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`),
+  // v6.48: 🔄 đảo điều khiển (Thằng Mập) · 🫧 hoá khổng lồ.
+  invert: badge('#7b4bd8',
+    `<path d="M20 24h18a8 8 0 0 1 0 16H26" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>`
+    + `<path d="M26 16l-8 8 8 8" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+    + `<path d="M20 48l8-8-8-8" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`),
+  giant: badge('#d8a05a',
+    `<circle cx="32" cy="24" r="9" fill="#ffe0c2" ${RING}/>`
+    + `<path d="M18 52c0-9 6-15 14-15s14 6 14 15z" fill="#ffe0c2" ${RING}/>`
+    + `<path d="M8 20l6 6M56 20l-6 6M32 6v8" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>`),
   steal: badge('#8e44ad',
     `<circle cx="32" cy="32" r="16" fill="#c39bd3" ${RING}/>`
     + `<path d="M23 41l16-16" stroke="#fff" stroke-width="5" stroke-linecap="round"/>`
