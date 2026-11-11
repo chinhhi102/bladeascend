@@ -14,7 +14,7 @@
 // Mỗi cấu hình đo `--runs` lượt, mỗi lượt vào trận MỚI (chỗ hồi sinh ngẫu nhiên), in trung
 // vị. Số đo là khoảng cách giữa hai lần requestAnimationFrame — tức là khung hình người
 // chơi thật thấy, gồm cả phần GPU chặn luồng chính.
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -70,7 +70,7 @@ srv.stderr.on('data', () => {});
 process.on('exit', () => srv.kill());
 await sleep(3000);
 
-const browser = await chromium.launch({
+const browser = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });

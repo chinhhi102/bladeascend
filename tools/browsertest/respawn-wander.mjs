@@ -12,7 +12,7 @@
 // (`world.respawnBy`: do `Despawn` của server · do luật hết hạn 2 giây ở client).
 // `client-dir` cho phép chạy CÙNG bài trên một bản client cũ trong `server/data/deploy-archive/`
 // để so trước/sau theo build.
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -34,7 +34,7 @@ const srv = spawn(join(REPO, 'server', 'bladeascend'), [
 process.on('exit', () => srv.kill());
 await sleep(3000);
 
-const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launch({ headless: true, args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'] });
 async function tab(i) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await ctx.newPage();

@@ -20,7 +20,7 @@
 //
 // Nhờ vậy hai lần chạy khác nhau chỉ còn khác vì thứ ta vừa sửa, không phải vì hôm nay bot
 // đi đâu. Muốn so hai cấu hình thì chạy bài này cho từng cấu hình, cùng số lượt.
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -317,7 +317,7 @@ async function round(browser) {
 }
 
 // ── 3. Chạy nhiều lượt rồi tổng hợp ─────────────────────────────────────────────────────
-const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=gl'] });
+const browser = await launch({ headless: true, args: ['--use-gl=angle', '--use-angle=gl'] });
 const rows = [];
 for (let i = 0; i < ROUNDS; i++) {
   rows.push(await round(browser));

@@ -6,7 +6,7 @@
 //   1. ẩn xong thì `/api/leaderboard` **bớt ngay** tên đó (giữa chúng có một lớp cache);
 //   2. dữ liệu CÒN NGUYÊN — `/api/admin/lives` vẫn thấy nó, mang cờ `hidden`;
 //   3. người chưa đăng nhập KHÔNG ẩn được của ai (và CSRF chặn request không có token).
-import { webkit } from 'playwright';
+import { launchWebkit } from './browser.mjs';
 
 const PORT = Number(process.argv[2] ?? 9997);
 const PASSWORD = process.argv[3] ?? 'mat-khau-thu-nghiem-123';
@@ -87,7 +87,7 @@ check(audit.some((a) => a.action === 'leaderboard_hide' && a.target === target.g
   'thao tác ẩn có để lại dấu trong nhật ký (§9)');
 
 // ── 4. Trang admin hiện đúng, và tên người chơi không chạy được mã ────────────────────────
-const br = await webkit.launch({ headless: true });
+const br = await launchWebkit({ headless: true });
 const ctx = await br.newContext();
 await ctx.addCookies([{ name: 'kx_admin', value: cookie.split('=')[1], domain: '127.0.0.1', path: '/' }]);
 const page = await ctx.newPage();

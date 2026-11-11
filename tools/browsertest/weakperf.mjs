@@ -17,7 +17,7 @@
 //
 // Bài này TỪ CHỐI kết luận khi máy đang tải cao — xem ghi chú ở `gomdon-smooth.mjs`: ngày
 // 10/11 cùng một commit cho ra 0,66% rồi 18,8% chỉ vì máy chạy load 39 trên 12 nhân.
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { cpus, loadavg } from 'node:os';
 import { requireDebug } from './needdebug.mjs';
 
@@ -35,7 +35,7 @@ if (perCpu > MAX_LOAD_PER_CPU && process.env.IGNORE_LOAD !== '1') {
   process.exit(2);
 }
 
-const b = await chromium.launch({
+const b = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });

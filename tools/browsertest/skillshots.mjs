@@ -9,7 +9,7 @@
 //   <nhân vật>_trung.jpg     màn hình người bị trúng (HUD icon + giây, mũi tên nếu có)
 //                            — kỹ năng tự thân thì là màn hình NGƯỜI DÙNG (<nv>_dung.jpg)
 // Tên thử là tên đội làm game (CLAUDE.md quy tắc 15), không phải người chơi thật.
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -40,7 +40,7 @@ const PLAN = {
 const cfg = await (await fetch(`${TARGET}/api/config`)).json();
 const chars = cfg.characters.filter((c) => !ONLY || ONLY.includes(c));
 
-const b = await chromium.launch({
+const b = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });

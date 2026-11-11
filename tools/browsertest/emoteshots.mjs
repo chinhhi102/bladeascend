@@ -10,7 +10,8 @@
 //
 // Chụp một LOẠT ảnh rồi chọn, không chụp một phát: bong bóng sống 1,5 s trong khi lượt
 // chụp mất ~0,3 s, nên canh đúng khoảnh khắc bằng cách hẹn giờ là trò may rủi.
-import { chromium, devices } from 'playwright';
+import { devices } from 'playwright';
+import { launch } from './browser.mjs';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,7 +22,7 @@ const OUT = join(ROOT, 'docs/review/emote');
 mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const browser = await chromium.launch({
+const browser = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });

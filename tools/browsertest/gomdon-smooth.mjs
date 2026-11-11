@@ -29,7 +29,7 @@
 //   - `nhanhNhat`: tốc độ vẽ lớn nhất quan sát được (đv/s) — đọc kèm để biết còn cách trần bao xa
 //   - `dungHinh`: số khung đứng im trong lúc ĐANG chạy nhanh (gói chưa tới, nội suy hết đà)
 //   - `bienMat` / `hienLai2s`: entity bị huỷ rồi dựng lại trong khung nhìn (ngân sách §1: 0)
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { requireDebug } from './needdebug.mjs';
 import { cpus, loadavg } from 'node:os';
 
@@ -59,7 +59,7 @@ if (shipperIdx < 0) {
   throw new Error('config không có nhân vật shipper');
 }
 
-const b = await chromium.launch({
+const b = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });

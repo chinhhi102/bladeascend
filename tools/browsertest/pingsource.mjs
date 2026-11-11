@@ -22,7 +22,7 @@
 //
 // Hai số cùng lúc, cùng đường truyền, cùng server. Chênh lệch giữa chúng **chính là** phần
 // trễ do luồng chính bận — không còn gì khác để nó là.
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const SECS = Number(process.argv[3] ?? 60);
@@ -100,7 +100,7 @@ const fmt = (a) => (a.length
   : '(không có mẫu)');
 
 // GPU thật, MỘT tab duy nhất: đây là điểm khác bài 10 tab — không có 9 tab kia tranh CPU.
-const br = await chromium.launch({
+const br = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });

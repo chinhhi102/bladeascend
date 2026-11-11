@@ -10,7 +10,7 @@
 // bản đồ 12 000 đơn vị thì 7 giây đi được 1 365, không đụng gì cả. Nên bây giờ nó **đọc
 // bản đồ**: chặn `fetch` để lấy JSON `/api/map/…` client vừa tải, chọn một dãy TƯỜNG KHÔNG
 // PHÁ ĐƯỢC (`hp: 0`) dài nhất ở gần, đi tới đó, rồi ép vào tường và trượt dọc.
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { requireDebug } from './needdebug.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -23,7 +23,7 @@ const SLIDE_MS = 4000;
 const WALK_TIMEOUT_MS = 45000;
 const WALLS_TO_TRY = 3;
 
-const b = await chromium.launch({
+const b = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });

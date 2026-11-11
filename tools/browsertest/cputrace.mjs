@@ -8,7 +8,7 @@
 // Dùng `Profiler` của CDP (hồ sơ lấy mẫu), không dùng `tracing`: hồ sơ lấy mẫu cho ra
 // **thời gian tự thân từng hàm**, đúng thứ cần để biết sửa chỗ nào. Tracing cho ra dòng
 // thời gian sự kiện — đẹp để nhìn, nhưng không cộng được thành bảng.
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const SECS = Number(process.argv[3] ?? 30);
@@ -16,7 +16,7 @@ const CPU = Number((process.argv.find((a) => a.startsWith('--cpu=')) ?? '--cpu=1
 const DAOTO = process.argv.includes('--daoto');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const br = await chromium.launch({
+const br = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });

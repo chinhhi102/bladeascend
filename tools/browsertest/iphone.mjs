@@ -9,7 +9,7 @@
 // Bốn chặng theo đúng kịch bản chủ dự án yêu cầu: trang chủ → vào trận → đứng chỗ đông
 // 2 phút → đi cổng sang khu khác. Mỗi chặng đọc `texMB` (ước tính bộ nhớ texture mà client
 // tự tính) và FPS, rồi so với trần 256 MB của iOS.
-import { webkit } from 'playwright';
+import { launchWebkit } from './browser.mjs';
 
 const URL = process.argv[2] ?? 'http://localhost:9999';
 const PHASE_S = Number(process.argv[3] ?? 30);
@@ -22,7 +22,7 @@ const check = (ok, label) => {
   if (!ok) failures++;
 };
 
-const br = await webkit.launch({ headless: true });
+const br = await launchWebkit({ headless: true });
 const ctx = await br.newContext({
   viewport: { width: 390, height: 844 },
   deviceScaleFactor: 3, // iPhone thật: DPR 3 — đúng con số làm texture tốn gấp 9 lần

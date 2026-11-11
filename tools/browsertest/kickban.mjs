@@ -8,7 +8,7 @@
 //   3. người bị kick ĐỌC ĐƯỢC lý do (gói `kick` chở `reason`);
 //   4. người bị cấm không vào lại được, và biết tới bao giờ;
 //   5. gỡ cấm thì vào lại được ngay.
-import { webkit } from 'playwright';
+import { launchWebkit } from './browser.mjs';
 // Cùng đường dẫn như `dbggate.mjs`: dùng msgpack CỦA CLIENT để chắc chắn hai bên mã hoá
 // giống hệt nhau. `WebSocket` là bản dựng sẵn của Node 24, không cần gói ngoài.
 import { decode, encode } from '../../client/node_modules/@msgpack/msgpack/dist.esm/index.mjs';
@@ -153,7 +153,7 @@ back.ws.close();
 // từ một đường khác. Kiểm bằng thứ nhét vừa, chứ không bỏ hẳn phép kiểm.
 const xss = await join('<img src=x>abc', GUEST + '-xss');
 await sleep(400);
-const br = await webkit.launch({ headless: true });
+const br = await launchWebkit({ headless: true });
 const ctx = await br.newContext();
 await ctx.addCookies([{ name: 'kx_admin', value: cookie.split('=')[1], domain: '127.0.0.1', path: '/' }]);
 const page = await ctx.newPage();

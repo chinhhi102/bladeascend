@@ -8,7 +8,7 @@
 //   2. `<script>` trong nội dung VÀ trong tên → hiển thị nguyên văn, không chạy;
 //   3. ảnh chỉ xem được khi đã đăng nhập.
 import { dimText } from './contrast.mjs';
-import { webkit } from 'playwright';
+import { launchWebkit } from './browser.mjs';
 
 const PORT = Number(process.argv[2] ?? 9997);
 const PASSWORD = process.argv[3] ?? 'mat-khau-thu-nghiem-123';
@@ -22,7 +22,7 @@ const check = (ok, label) => {
 };
 
 // ── 1. Gửi góp ý từ WebKit giả lập iPhone ────────────────────────────────────────────────
-const br = await webkit.launch({ headless: true });
+const br = await launchWebkit({ headless: true });
 const iphone = await br.newContext({
   viewport: { width: 390, height: 844 },
   deviceScaleFactor: 3,
@@ -90,7 +90,7 @@ check(!!mine && mine.body.includes('<script>'),
   'nội dung lưu NGUYÊN VĂN (server không escape, chỗ hiển thị mới lo)');
 
 // Mở trang admin thật và xem `<script>` có chạy không.
-const br2 = await webkit.launch({ headless: true });
+const br2 = await launchWebkit({ headless: true });
 const ctx2 = await br2.newContext();
 await ctx2.addCookies([{
   name: 'kx_admin', value: cookie.split('=')[1], domain: '127.0.0.1', path: '/',

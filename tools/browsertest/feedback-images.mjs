@@ -7,7 +7,8 @@
 // <input type=file> (một JPEG có khối EXIF GPS + một PNG rất lớn), gửi đi, rồi đọc thẳng
 // thư mục ảnh của server để chắc: đủ số ảnh, đúng định dạng, ≤ 300 KB, cạnh dài ≤ 1 600 px,
 // và KHÔNG còn EXIF/GPS. Trên Chromium còn thử một tệp HEIC giả để thấy câu báo lỗi.
-import { chromium, webkit, devices } from 'playwright';
+import { devices } from 'playwright';
+import { launch } from './browser.mjs';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createServer } from 'node:net';
@@ -75,7 +76,7 @@ function exifGPS() {
 }
 
 async function makeFixtures() {
-  const b = await chromium.launch();
+  const b = await launch();
   const p = await b.newPage();
   const urls = await p.evaluate(() => {
     const draw = (w, h, noise) => {

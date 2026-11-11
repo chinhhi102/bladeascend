@@ -11,13 +11,13 @@
 // Cách ép bot ra mép: thả bot cạnh mình (phím B), rồi **tự mình chạy ra xa** cho tới khi
 // chúng nằm quanh ranh giới AOI — server bỏ qua entity xa hơn NỬA khung nhìn trên các tick
 // lẻ (tối ưu 10 Hz), nên mép đó chính là nơi "vắng mặt một gói" xảy ra liên tục.
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { requireDebug } from './needdebug.mjs';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const URL = process.argv[2] ?? 'http://127.0.0.1:9998';
 const WATCH_MS = 30000;
 
-const b = await chromium.launch({ headless: true, args: ['--use-gl=angle','--use-angle=gl','--enable-gpu','--ignore-gpu-blocklist'] });
+const b = await launch({ headless: true, args: ['--use-gl=angle','--use-angle=gl','--enable-gpu','--ignore-gpu-blocklist'] });
 const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
 await p.goto(`${URL}/?debug=true`, { waitUntil: 'domcontentloaded' });
 await p.waitForSelector('input', { timeout: 60000 });

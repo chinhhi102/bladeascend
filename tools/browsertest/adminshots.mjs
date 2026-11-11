@@ -3,6 +3,7 @@
 // Mật khẩu ĐỌC TỪ TỆP, không nhận qua dòng lệnh, không in ra (CLAUDE.md luật 14).
 import { readFileSync, mkdirSync } from 'node:fs';
 import { chromium, webkit, devices } from 'playwright';
+import { launchAny } from './browser.mjs';
 
 const [base, out, pwFile] = process.argv.slice(2);
 if (!base || !out || !pwFile) {
@@ -18,7 +19,7 @@ mkdirSync(privateOut, { recursive: true });
 const pages = process.env.PAGES ? process.env.PAGES.split(',') : ['dashboard', 'rooms', 'feedback', 'map', 'players', 'errors', 'bans', 'chars', 'board', 'audit'];
 
 async function shoot(browserType, ctxOpts, suffix) {
-  const b = await browserType.launch(browserType === chromium ? { args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist'] } : {});
+  const b = await launchAny(browserType, browserType === chromium ? { args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist'] } : {});
   const ctx = await b.newContext(ctxOpts);
   const pw = readFileSync(pwFile, 'utf8').trim();
   const res = await ctx.request.post(`${base}/api/admin/login`, { data: { password: pw } });

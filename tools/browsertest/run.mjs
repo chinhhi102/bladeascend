@@ -21,7 +21,7 @@
 // trên cùng một máy, nên **FPS ở đây thấp hơn thực tế rất nhiều — đừng dùng để kết luận về
 // FPS**. Số đáng tin là: ping, KB/s, kích thước snapshot, tick server, số sprite, draw call.
 
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { execSync, spawn } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
@@ -340,7 +340,7 @@ async function runOnce(label, slow) {
       /* không có quyền thì thôi, chỉ mất độ chính xác của cột tick server */
     }
   }
-  const browser = await chromium.launch({
+  const browser = await launch({
     headless: true,
     // Chrome mặc định chỉ cho ~16 ngữ cảnh WebGL cùng lúc rồi giết bớt cái cũ; 10 tab +
     // ngữ cảnh phụ là chạm trần, nên phải nới ra.

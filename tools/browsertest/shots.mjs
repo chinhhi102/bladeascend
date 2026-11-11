@@ -21,7 +21,7 @@
 // `APP_ENV=dev` + gọi từ localhost dành riêng cho công cụ đo. Thiếu `APP_ENV=dev` thì
 // phím dựng cảnh im lặng không làm gì và ảnh ra toàn người mới tay không; tệ hơn, không
 // có dòng lỗi nào để biết. Vì vậy tool TỰ KIỂM ở dưới, xem `ensureStaged`.
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -41,7 +41,7 @@ const W = 1920, H = 1080;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const b = await chromium.launch({
+const b = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });

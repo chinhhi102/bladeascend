@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { dimText } from './contrast.mjs';
 import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -110,7 +110,7 @@ async function kiemBangMo(p, s, kiem) {
 /** Vượt luật kích thước thì cả bài TRƯỢT — đếm ở đây. */
 let viPham = 0;
 
-const b = await chromium.launch({ headless: true, args: ['--use-gl=angle','--use-angle=gl','--enable-gpu','--ignore-gpu-blocklist'] });
+const b = await launch({ headless: true, args: ['--use-gl=angle','--use-angle=gl','--enable-gpu','--ignore-gpu-blocklist'] });
 for (const s of sizes) {
   const ctx = await b.newContext({ viewport: { width: s.w, height: s.h }, deviceScaleFactor: s.dpr, isMobile: s.mobile, hasTouch: s.mobile });
   const p = await ctx.newPage();

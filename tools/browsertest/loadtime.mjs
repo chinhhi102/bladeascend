@@ -10,7 +10,7 @@
 // Hai mốc được đo riêng, vì người chơi cảm nhận chúng khác nhau:
 //   - `trangChu`: từ lúc mở trang tới lúc THẤY được ô nhập tên (nhóm `home`).
 //   - `vaoTran` : từ lúc mở trang tới lúc nhân vật đã ở trong trận (`home+boot+char+zone`).
-import { chromium } from 'playwright';
+import { launch } from './browser.mjs';
 import { requireDebug } from './needdebug.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -24,7 +24,7 @@ const PROFILES = [
   { name: '4G 10 Mbps (20 ms)', down: (10 * 1e6) / 8, up: (3 * 1e6) / 8, rtt: 20, fresh: true },
 ];
 
-const b = await chromium.launch({
+const b = await launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });

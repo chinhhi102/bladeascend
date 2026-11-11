@@ -19,7 +19,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { webkit } from 'playwright';
+import { launchWebkit } from './browser.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Tên khác `URL`: hằng số đó che mất lớp `URL` dựng sẵn, và `new URL(...)` trong bộ
@@ -54,7 +54,7 @@ const check = (ok, label) => {
   if (!ok) failures++;
 };
 
-const br = await webkit.launch({ headless: true });
+const br = await launchWebkit({ headless: true });
 const ctx = await br.newContext({ viewport: { width: 1100, height: 760 } });
 const page = await ctx.newPage();
 const errors = [];

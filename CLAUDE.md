@@ -76,6 +76,14 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
     đội làm game (`KiemTraStaging`, `Test01`…) thì được. CI chặn bằng
     `node tools/check-privacy.mjs` (UUID đầy đủ + IPv4 công khai trong `docs/`).
 
+16. **Cuối mỗi lượt chạy `tools/cleanup.sh`, và không kết luận từ phép đo khi máy bận.**
+    Bài đo trình duyệt tự phá thứ nó đang đo: ngày 10/11 máy chạy load 31–46 trên 12 nhân và
+    CÙNG MỘT commit cho ra 0,66% rồi 18,8% khung nhảy cóc. Luật: mọi phép đo chỉ tính khi
+    `load average / số nhân < 1.5` (`tools/cleanup.sh` in sẵn con số này), chạy ≥ 3 lượt, ghi
+    min/max/TB vào `docs/PERF_LOG.md`. Máy bận → ghi "nhiễu", đo lại sau, **không** rút kết
+    luận. Bài đo trình duyệt phải mở qua `tools/browsertest/browser.mjs` để trình duyệt được
+    đóng cả khi bài đo ném lỗi.
+
 > **Tệp này là bản DUY NHẤT.** Thỉnh thoảng một bản `CLAUDE.md` cũ hơn lọt vào ngữ cảnh
 > phiên chat — chỉ đọc nó để nhặt DÒNG MỚI, không bao giờ chép đè, vì bản đó thường là
 > nhánh cũ và sẽ xoá mất các quy tắc đã chốt sau đó. Bản `docs/_raw/CLAUDE.md` đã xoá hẳn

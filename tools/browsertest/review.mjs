@@ -5,6 +5,7 @@
 // Ghi `<tên>_pc.png` và `<tên>_iphone.png` (thêm `_full` khi chụp cả trang). Dùng cho
 // docs/review/<mục>/ — luật "thứ người chơi nhìn thấy phải có ảnh PC + iPhone".
 import { chromium, webkit, devices } from 'playwright';
+import { launchAny } from './browser.mjs';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -17,7 +18,7 @@ const full = flags.includes('--full');
 mkdirSync(out, { recursive: true });
 
 async function shoot(browserType, ctxOpts, suffix) {
-  const b = await browserType.launch();
+  const b = await launchAny(browserType);
   const ctx = await b.newContext(ctxOpts);
   const page = await ctx.newPage();
   const errs = [];
