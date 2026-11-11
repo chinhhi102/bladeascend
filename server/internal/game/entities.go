@@ -150,6 +150,12 @@ type Player struct {
 	SkillReadyAt float64
 	// shellOn: đang trong mai rùa — dùng để bắt đúng khoảnh khắc RA khỏi mai.
 	shellOn bool
+	// braceOn: đang gồng — bắt khoảnh khắc HẾT gồng để bung cơ (v6.48 §6.3).
+	braceOn bool
+	// regen*: phần kiếm Bánh Bao Thần còn nợ, nhả dần (v6.48 §6.3). Chết là mất sạch.
+	regenLeft int
+	regenRate float64
+	regenAcc  float64
 	// statusShown: mã trạng thái đã báo `StatusStart` mà chưa báo `StatusEnd` (statusevents.go).
 	statusShown uint16
 	// channel: chiêu đang "hát" dở (Ru Ngủ Trưa, spec v6.9 §6.3). Xem `channelState`.

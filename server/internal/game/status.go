@@ -133,6 +133,8 @@ func (g *Game) ClearStatuses(p *Player) {
 // Rớt cảnh giới hay qua cổng thì KHÔNG mất lượt, nên việc xoá chỉ gắn vào đúng chỗ chết.
 func (g *Game) onDeathClear(p *Player) {
 	p.SkillCharges, p.SkillRecharge, p.StealUntil = 0, 0, 0
+	// "Bị chém chết thì mất phần chưa hồi" (Bánh Bao Thần, v6.48 §6.3).
+	p.regenLeft, p.regenAcc, p.braceOn = 0, 0, false
 	p.Vel = Vec{}
 	p.shellOn = false
 	p.orbPicked, p.orbPickedID, p.orbPickedKind = 0, 0, ""

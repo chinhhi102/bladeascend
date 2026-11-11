@@ -20,30 +20,35 @@ func TestSkillStartsWithOneAndRecharges(t *testing.T) {
 	if p.SkillCharges != 1 {
 		t.Fatalf("vào trận có %d lượt, spec: 1", p.SkillCharges)
 	}
-	stepFor(g, 17.9)
+	// Mốc lấy từ config chứ không gõ tay: bảng hồi chiêu đổi theo spec (v6.48 đổi cả 10
+	// nhân vật), còn LUẬT "đủ giờ thì +1 lượt, đầy thì dừng" thì không đổi — bài này kiểm luật.
+	cd := g.SkillCooldownSecs(p)
+	stepFor(g, cd-0.1)
 	if p.SkillCharges != 1 {
-		t.Fatalf("chưa đủ 18s đã hồi: %d lượt", p.SkillCharges)
+		t.Fatalf("chưa đủ %.0fs đã hồi: %d lượt", cd, p.SkillCharges)
 	}
 	stepFor(g, 0.2)
 	if p.SkillCharges != 2 || p.SkillRecharge != 0 {
-		t.Fatalf("sau 18s: %d lượt, đồng hồ %.2f — muốn 2 lượt, đồng hồ dừng", p.SkillCharges, p.SkillRecharge)
+		t.Fatalf("sau %.0fs: %d lượt, đồng hồ %.2f — muốn 2 lượt, đồng hồ dừng", cd, p.SkillCharges, p.SkillRecharge)
 	}
 	stepFor(g, 60)
 	if p.SkillCharges != 2 {
 		t.Fatalf("đầy rồi vẫn tích thêm: %d", p.SkillCharges)
 	}
 	// Dùng 1 lượt khi đang đầy → đồng hồ chạy lại từ đầu.
-	if !g.CastSkill(p) || p.SkillRecharge <= 17.9 {
-		t.Fatalf("dùng khi đầy: đồng hồ %.2f, muốn ~18", p.SkillRecharge)
+	if !g.CastSkill(p) || p.SkillRecharge <= cd-0.1 {
+		t.Fatalf("dùng khi đầy: đồng hồ %.2f, muốn ~%.0f", p.SkillRecharge, cd)
 	}
 }
 
 // Mỗi nhân vật đúng hồi chiêu + lượt tối đa trong bảng spec; Tiên giới +1, rớt về cắt bớt.
 func TestSkillCooldownTableAndTien(t *testing.T) {
 	g := skillGame(t)
-	want := map[string][2]float64{"a_hon": {30, 2}, "ba_tam_loa": {18, 2}, "ong_ba_vong": {25, 2},
-		"dai_ca_dep": {40, 1}, "map_tra_sua": {20, 2}, "co_ba_ganh": {22, 2}, "su_phu_mi": {30, 2},
-		"be_ti": {35, 1}, "shipper": {20, 2}, "cu_rua": {30, 2}}
+	// v6.48: lấy Ông Ba Võng (25s × 2) làm CHUẨN. Mạnh hơn chuẩn thì hồi lâu hơn hoặc ít
+	// lượt hơn (Sư Phụ 35s × 1), yếu hơn thì hồi nhanh hơn (Shipper 20s).
+	want := map[string][2]float64{"a_hon": {25, 2}, "ba_tam_loa": {25, 2}, "ong_ba_vong": {25, 2},
+		"dai_ca_dep": {25, 2}, "map_tra_sua": {25, 2}, "co_ba_ganh": {25, 2}, "su_phu_mi": {35, 1},
+		"be_ti": {25, 2}, "shipper": {20, 2}, "cu_rua": {25, 2}}
 	for ch, w := range want {
 		p := put(g, ch, Vec{X: 3000, Y: 3000}, 10, 1)
 		if g.SkillCooldownSecs(p) != w[0] || g.MaxSkillCharges(p) != int(w[1]) {

@@ -31,6 +31,7 @@ Câu **đang chờ** nằm ở `docs/QUESTIONS.md`.
 | Q25 | Bảng tỉ lệ thắng 10×10 sau v5.4/v5.5 | **Bỏ hẳn cách cân bằng theo tỉ lệ thắng 1-đấu-1** — kỹ năng có loại tăng sức mạnh, có loại khắc chế, tay đôi không phản ánh giá trị. Đã xoá `cmd/sim --duel`; cân bằng theo phản hồi người chơi + số liệu trận thật (§6.3) |
 | Q26 | Đạo Tổ vẫn không Thiêu Đốt được | Thay toàn bộ cách tính Tiên giới (spec v5.7): cảnh giới theo **tổng Tiên khí cộng dồn**, Đạo Tổ nạp 1 001 → 1 500 và chỉ đổi Uy Danh khi đang đúng 1 500 → Đạo Tổ Thiêu Đốt được |
 
+
 ## Hai việc chờ quyết, nay đã có
 
 - **Tối ưu (CHANGES_v4 mục 25–27)**: **đi tiếp**. Thứ tự chủ dự án chốt: mạng (27) → server
@@ -328,3 +329,4 @@ toả tròn 360°, Ông Ba Võng thêm Trộm Kiếm 4 s, ví dụ Uy Danh sửa
 | Q45 | Spec v6.38 bỏ hướng A nhưng §12.5 và §17 vẫn đòi nó | **Đã sửa trong spec v6.39**: khối A §12.5 gạch "ĐÃ BỎ (Q44, v6.38)" và giữ làm lịch sử; §17 bỏ vế "chỉ đổi mặt", dòng nghiệm thu nay là "crossfade giữa các bộ frame, không reset frame" + thêm dòng nghiệm thu cho bong bóng mặt. Code không đổi — đã đúng từ trước. |
 | Q46 | Nam Châm +50% làm 4–6 cảnh giới thấp trượt luật "≤ 1,5 lần nhanh hơn bảng" | Chấp nhận khoảng đo được: trần nới 1,5 → **2,0**, đưa vào `exp_economy.magnet_max_speedup` (trước là hằng số trong `cmd/sim/farm.go`). Nam Châm giữ +0.5, `orb_value_mult` giữ 1.32. Spec v6.41 ghi 1,75 — đo 6 lượt thấy tới 1,86 nên config giữ 2,0, xem **Q47** |
 | Q47 | Spec v6.41 ghi Nam Châm ≤ 1,75× nhưng 6 lượt đo được tới 1,86× (Kim Đan) | Chấp nhận số đo: spec v6.42 sửa ngưỡng thành **2,0×** cho khớp config, và bỏ khoá minh hoạ `monster_value_mult` chưa bao giờ tồn tại. Không đổi luật chơi — Nam Châm giữ +0.5, `orb_value_mult` giữ 1.32 |
+| Q49 | Bảng xếp hạng: 10 dòng cố định vs luật "không quá nửa màn hình" (31/10) | **Phương án (c)** (spec v6.49): số dòng theo CHIỀU CAO MÀN HÌNH — ≥900 px → 10, 700–899 → 7, <700 → 5, luôn kèm dòng của mình; tính lúc vào trận và lúc đổi cỡ cửa sổ, không theo dữ liệu. Thu nhỏ có sàn 0,85; bấm tiêu đề mở lớp phủ đủ 10 dòng (tự đóng sau 8 s / khi di chuyển). Bỏ hẳn `trimToScreen()` — chính nó làm bảng chỉ còn 1–6 dòng. Làm ở `e3bd837`, đo 3 tầng chiều cao đều 0 lần đổi |

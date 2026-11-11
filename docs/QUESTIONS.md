@@ -6,28 +6,6 @@
 Bối cảnh chung: lượt cuối 01/11/2026; cập nhật 02/11: Q37–Q42 đã xong (spec v6.35). Chi tiết từng dòng: `docs/SPEC_AUDIT_v630.md`.
 Mỗi câu ghi **phương án đang dùng** (an toàn, không đổi luật) — anh chỉ cần trả lời nếu muốn khác.
 
-## Q49 — Bảng xếp hạng 10 dòng vs "không quá nửa màn hình" (đang dùng: THU NHỎ cả bảng)
-
-**Bối cảnh**: v6.47 §11.5 bắt bảng luôn có đúng 3 thẻ Top + 7 ô dòng + ô của mình, kích
-thước cố định. Luật cũ (anh chốt 31/10) là bảng không bao giờ cao quá **nửa màn hình**.
-Hai luật này không cùng đúng được nếu chỉ có một cỡ chữ: bảng đủ 10 dòng cao ~539 px, mà
-nửa màn hình laptop 1366×768 chỉ có 384 px.
-
-Bản cũ xử lý bằng `trimToScreen()` — ẩn dần dòng cuối cho vừa. Đó chính là lỗi anh thấy:
-đo 07/11 trên phòng 21 người, bảng chỉ hiện **1–6 dòng** và số dòng đổi theo độ dài tên.
-
-**Phương án đang dùng (an toàn, không đổi luật nào)**: giữ đủ 10 dòng, THU NHỎ cả bảng bằng
-`transform: scale(k)` với `k = nửa màn hình / chiều cao tự nhiên`. Hệ số tính từ cỡ màn
-hình chứ không từ dữ liệu nên trong lúc chơi nó không đổi.
-
-- 1920×1080: k = 1,00 (bảng 539 px, vừa nguyên cỡ)
-- 1280×720: k = 0,67 (bảng hiện cao 360 px)
-- 960×540: k = 0,50 (bảng hiện cao 270 px — chữ khá nhỏ)
-
-**Cần anh quyết**: ở màn hình thấp, anh muốn (a) thu nhỏ cả bảng như đang làm, (b) giữ cỡ
-chữ và cho bảng cao hơn nửa màn hình, hay (c) rút xuống 5 dòng ở màn hình thấp (bảng vẫn
-cố định, chỉ là cố định ở con số khác tuỳ cỡ màn hình)?
-
 ## Q48 — Nhảy cóc khi nhìn người chạy nhanh từ tab khác (CÒN MỞ — bước 1 xong, chưa đạt)
 
 **Chốt của chủ dự án 07/11**: làm theo bước, đo lại sau mỗi bước, đạt (0 nhảy cóc, 0 đứng

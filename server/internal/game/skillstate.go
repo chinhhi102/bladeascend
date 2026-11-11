@@ -58,6 +58,7 @@ func (g *Game) spawnMinion(boss *Player, at Vec, secs float64) *Player {
 // updateSkillState chạy mỗi tick: hết hạn vệt trơn, hết hạn đàn em, bắt người đi vào vệt
 // trơn, và bật sóng đẩy khi Cụ Rùa ra khỏi mai.
 func (g *Game) updateSkillState(dt float64) {
+	g.regenSwords(dt)
 	// Vệt trơn: dọn vũng hết hạn rồi bắt người đi vào.
 	keep := g.slicks[:0]
 	for _, s := range g.slicks {
@@ -92,6 +93,14 @@ func (g *Game) updateSkillState(dt float64) {
 		}
 		if p.HasStatus(StShell, g.Time) {
 			p.shellOn = true
+		}
+		// Bé Tí vừa hết gồng → bung cơ (v6.48). Cùng kiểu cờ như mai rùa, cùng lý do.
+		if p.braceOn && !p.HasStatus(StBrace, g.Time) {
+			p.braceOn = false
+			g.braceBurst(p)
+		}
+		if p.HasStatus(StBrace, g.Time) {
+			p.braceOn = true
 		}
 		g.endShownStatuses(p, false)
 		// Đàn em hết giờ thì biến mất.

@@ -23,6 +23,17 @@ func giveCharge(p *Player) bool {
 	return true
 }
 
+// step chạy `secs` giây giờ game bằng nhịp tick thật — dùng cho kỹ năng có phần hồi/đếm
+// dần. Gọi thẳng `updateSkillState` chứ không `Tick`: `Tick` còn chạy quái, vật phẩm và va
+// kiếm, những thứ làm nhiễu đúng con số đang đo.
+func step(g *Game, secs float64) {
+	const dt = 1.0 / 30
+	for t := 0.0; t < secs; t += dt {
+		g.Time += dt
+		g.updateSkillState(dt)
+	}
+}
+
 func put(g *Game, char string, at Vec, level, swords int) *Player {
 	p := g.AddPlayer(SpawnOptions{Name: char, Char: char, Level: level, Swords: swords})
 	p.Pos = at
@@ -331,10 +342,10 @@ func TestRutCoProtectsThenBursts(t *testing.T) {
 	}
 }
 
-// Bánh Bao Thần hồi 20% số kiếm TỐI ĐA của cảnh giới, không phụ thuộc vừa bị đánh hay chưa
-// (spec v5.5 §6.3).
-func TestBanhBaoRestoresShareOfMax(t *testing.T) {
+// Bánh Bao Thần (v6.48): hồi NGAY 10% kiếm tối đa, rồi 20% nữa rải đều trong 4 giây.
+func TestBanhBaoHealsNowThenOverTime(t *testing.T) {
 	g := skillGame(t)
+	sc := g.Cfg.Skills
 	p := put(g, "a_hon", Vec{X: 3000, Y: 3000}, 30, 10)
 	maxSw := g.Prog.MaxSwords(g.Prog.Realm(p.Level))
 
@@ -342,9 +353,37 @@ func TestBanhBaoRestoresShareOfMax(t *testing.T) {
 	giveCharge(p)
 	g.CastSkill(p)
 
-	want := int(float64(maxSw) * g.Cfg.Skills.BanhBaoMaxShare)
-	if got := p.Ring.Count - before; got != want {
-		t.Fatalf("hồi %d kiếm, muốn %d (20%% của trần %d)", got, want, maxSw)
+	wantNow := int(float64(maxSw) * sc.BanhBaoNow)
+	if got := p.Ring.Count - before; got != wantNow {
+		t.Fatalf("hồi ngay %d kiếm, muốn %d (%.0f%% của trần %d)", got, wantNow, sc.BanhBaoNow*100, maxSw)
+	}
+
+	// Nửa chừng: đã nhả khoảng một nửa phần hồi dần, chưa nhả hết.
+	wantLater := int(float64(maxSw) * sc.BanhBaoRegen)
+	step(g, sc.BanhBaoRegenSecs/2)
+	half := p.Ring.Count - before - wantNow
+	if half <= 0 || half >= wantLater {
+		t.Fatalf("giữa chừng hồi thêm %d, muốn trong khoảng (0, %d) — phải là hồi DẦN", half, wantLater)
+	}
+
+	step(g, sc.BanhBaoRegenSecs/2+0.2)
+	if got := p.Ring.Count - before; got != wantNow+wantLater {
+		t.Fatalf("hết 4 giây hồi tổng %d, muốn %d", got, wantNow+wantLater)
+	}
+}
+
+// "Bị chém chết thì mất phần chưa hồi" (§6.3 v6.48).
+func TestBanhBaoRegenLostOnDeath(t *testing.T) {
+	g := skillGame(t)
+	p := put(g, "a_hon", Vec{X: 3000, Y: 3000}, 30, 10)
+	giveCharge(p)
+	g.CastSkill(p)
+	if p.regenLeft <= 0 {
+		t.Fatal("ăn bánh xong mà không nợ thanh kiếm nào — không có gì để mất")
+	}
+	g.onDeathClear(p)
+	if p.regenLeft != 0 {
+		t.Fatalf("chết rồi còn nợ %d kiếm sẽ hồi", p.regenLeft)
 	}
 }
 
@@ -360,6 +399,11 @@ func TestBanhBaoNeverExceedsMax(t *testing.T) {
 
 	if p.Ring.Count != maxSw {
 		t.Fatalf("có %d kiếm, trần là %d — phải lấp đúng tới trần", p.Ring.Count, maxSw)
+	}
+	// Phần hồi dần cũng không được vượt trần.
+	step(g, g.Cfg.Skills.BanhBaoRegenSecs+0.2)
+	if p.Ring.Count != maxSw {
+		t.Fatalf("hồi dần xong có %d kiếm, vượt trần %d", p.Ring.Count, maxSw)
 	}
 }
 
@@ -524,5 +568,49 @@ func TestGanhLuotLeavesSlickTrail(t *testing.T) {
 	g.updateSkillState(1.0 / 30)
 	if !b.HasStatus(StSlip, g.Time) {
 		t.Fatal("đi vào vệt trái cây mà không trượt")
+	}
+}
+
+// Bung Cơ (v6.48 §6.3): hết 4 giây gồng thì đẩy địch trong 2 U ra 3 U và mỗi người mất 10%
+// số kiếm hiện có — kiếm rơi quanh HỌ thành Bó Kiếm, Bé Tí không nhận được thanh nào.
+func TestBungCoPushesAndDropsSwords(t *testing.T) {
+	g := skillGame(t)
+	p := put(g, "be_ti", Vec{X: 3000, Y: 3000}, 4, 20)
+	o := put(g, "cu_rua", Vec{X: 3000 + g.skillRange(p, "bung_co_wave")*0.5, Y: 3000}, 4, 20)
+	beforeMe, beforeThem, beforeAt := p.Ring.Count, o.Ring.Count, o.Pos
+
+	giveCharge(p)
+	g.CastSkill(p)
+	if !o.HasStatus(StBrace, g.Time) && o.Ring.Count != beforeThem {
+		t.Fatal("vừa gồng xong đã mất kiếm — phần bung phải đợi hết 4 giây")
+	}
+	step(g, g.Cfg.Skills.BraceSecs+0.2)
+
+	want := int(float64(beforeThem) * g.skillNum("bung_co_lose"))
+	if got := beforeThem - o.Ring.Count; got != want {
+		t.Errorf("địch mất %d kiếm, muốn %d (10%% của %d)", got, want, beforeThem)
+	}
+	if p.Ring.Count != beforeMe {
+		t.Errorf("Bé Tí nhận %d kiếm — bung cơ KHÔNG cướp kiếm", p.Ring.Count-beforeMe)
+	}
+	if _, swords := countItems(g, "bundle"); int(swords) != want {
+		t.Errorf("rơi %.0f kiếm thành Bó Kiếm, muốn %d", swords, want)
+	}
+	if o.KnockUntil <= g.Time && o.Pos.Dist(beforeAt) < 1 {
+		t.Error("địch không bị đẩy")
+	}
+}
+
+// Ở ngoài 2 U thì không dính gì.
+func TestBungCoOnlyHitsNearby(t *testing.T) {
+	g := skillGame(t)
+	p := put(g, "be_ti", Vec{X: 3000, Y: 3000}, 4, 20)
+	far := put(g, "cu_rua", Vec{X: 3000 + g.skillRange(p, "bung_co_wave")*2, Y: 3000}, 4, 20)
+	before := far.Ring.Count
+	giveCharge(p)
+	g.CastSkill(p)
+	step(g, g.Cfg.Skills.BraceSecs+0.2)
+	if far.Ring.Count != before {
+		t.Fatalf("người đứng ngoài tầm cũng mất %d kiếm", before-far.Ring.Count)
 	}
 }

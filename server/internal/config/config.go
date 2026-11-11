@@ -378,10 +378,15 @@ type Skills struct {
 	PushSecs float64           `json:"push_secs"`
 	RangesU  map[string]SkillU `json:"ranges_u"`
 
-	// BanhBaoMaxShare: hồi ngay ngần này phần của số kiếm TỐI ĐA ở cảnh giới hiện tại
-	// (spec v5.5 §6.3). Bản v5.0 hồi theo số kiếm vừa bể trong 10s — đổi rồi, không còn
-	// sổ ghi kiếm bể nữa.
-	BanhBaoMaxShare float64 `json:"banh_bao_max_share"`
+	// Bánh Bao Thần (v6.48): hồi NGAY `banh_bao_now` phần số kiếm tối đa, rồi hồi dần thêm
+	// `banh_bao_regen` phần nữa rải đều trong `banh_bao_regen_secs` giây.
+	//
+	// Tách làm hai khoản là cả thiết kế của bản mới: phần hồi ngay cứu được lúc sắp chết,
+	// còn phần hồi dần thì mất nếu bị chém chết — nên ăn bánh bao không còn là nút "thoát
+	// hiểm chắc chắn", mà là canh bạc đứng vững thêm 4 giây.
+	BanhBaoNow       float64 `json:"banh_bao_now"`
+	BanhBaoRegen     float64 `json:"banh_bao_regen"`
+	BanhBaoRegenSecs float64 `json:"banh_bao_regen_secs"`
 
 	HutMiConeDeg float64 `json:"hut_mi_cone_deg"`
 

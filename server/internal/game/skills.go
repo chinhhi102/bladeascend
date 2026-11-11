@@ -202,25 +202,66 @@ func (g *Game) targetsNear(p *Player, r float64) []*Player {
 	return out
 }
 
-// Bánh Bao Thần — hồi ngay 20% số kiếm TỐI ĐA của cảnh giới hiện tại (spec v5.5 §6.3).
+// Bánh Bao Thần (v6.48 §6.3) — hồi NGAY 10% số kiếm tối đa, rồi hồi dần 20% nữa trong 4s.
 //
-// Bản v5.0 hồi theo "số kiếm vừa bể trong 10 giây", và cái đó có một lỗ hổng không chữa
-// được bằng cách chỉnh số: ai chưa bị đánh thì ăn bánh bao chẳng được gì, nên kỹ năng vô
-// dụng đúng lúc muốn dùng nhất là lúc mở đầu. Lấy mốc theo kiếm tối đa thì luôn có tác
-// dụng, và vẫn tự giới hạn vì không vượt được trần của cảnh giới.
+// Bản v5.5 hồi trọn 20% tức thì. Đổi vì nó làm A Hớn thành nút "huỷ đòn": sắp bị mài chết
+// thì bấm một cái là đầy lại nửa vòng, đối thủ mất toi mười giây vừa mài. Giờ phần lớn số
+// kiếm chỉ về nếu **sống thêm 4 giây** — chết là mất phần chưa hồi (xem `onDeathClear`).
 //
 // `AddSwords` lấp vòng trong trước (xem `ring.go`), đúng ý spec — đó cũng là chỗ che chắn
 // tốt nhất cho người vừa bị mài gần hết.
 func castBanhBao(g *Game, p *Player, _ Vec) {
+	sc := g.Cfg.Skills
 	maxSw := g.Prog.MaxSwords(g.Prog.Realm(p.Level))
-	back := int(float64(maxSw) * g.Cfg.Skills.BanhBaoMaxShare)
-	if room := maxSw - p.Ring.Count; back > room {
-		back = room // không vượt trần cảnh giới
+	now := g.addUpTo(p, int(float64(maxSw)*sc.BanhBaoNow), maxSw)
+	// Phần hồi dần: đặt mục tiêu theo kiếm TỐI ĐA, nhịp = tổng / số giây.
+	secs := math.Max(sc.BanhBaoRegenSecs, 1e-6)
+	p.regenLeft = int(float64(maxSw) * sc.BanhBaoRegen)
+	p.regenRate = float64(p.regenLeft) / secs
+	p.regenAcc = 0
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "banh_bao", N: now, F: float32(secs),
+		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+}
+
+// addUpTo thêm `n` kiếm nhưng không vượt trần cảnh giới; trả số thật sự thêm được.
+func (g *Game) addUpTo(p *Player, n, maxSw int) int {
+	if room := maxSw - p.Ring.Count; n > room {
+		n = room
 	}
-	if back > 0 {
-		g.AddSwords(p, back)
+	if n <= 0 {
+		return 0
 	}
-	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "banh_bao", N: back, X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+	g.AddSwords(p, n)
+	return n
+}
+
+// regenSwords chạy mỗi tick: nhả dần phần kiếm còn nợ của Bánh Bao Thần.
+//
+// Cộng dồn theo phần lẻ rồi mới nhả từng thanh: nhịp 5%/giây của Luyện Khí (20 kiếm tối đa)
+// là 1 thanh/giây, nhưng của Đạo Tổ (100 kiếm) là 5 thanh/giây — làm tròn mỗi tick thì cấp
+// thấp không bao giờ hồi được thanh nào.
+func (g *Game) regenSwords(dt float64) {
+	for _, p := range g.PlayerList() {
+		if p.regenLeft <= 0 || p.Dead {
+			continue
+		}
+		p.regenAcc += p.regenRate * dt
+		n := int(p.regenAcc)
+		if n <= 0 {
+			continue
+		}
+		p.regenAcc -= float64(n)
+		if n > p.regenLeft {
+			n = p.regenLeft
+		}
+		maxSw := g.Prog.MaxSwords(g.Prog.Realm(p.Level))
+		got := g.addUpTo(p, n, maxSw)
+		p.regenLeft -= n
+		if got > 0 {
+			g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "banh_bao_hoi", N: got,
+				X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+		}
+	}
 }
 
 // Loa Phường (v6.30 §6.3) — sóng âm TOẢ TRÒN 360° bán kính 6 U: đẩy mọi địch xung quanh ra
@@ -387,7 +428,12 @@ func (g *Game) giveSwords(to *Player, n int) {
 	}
 }
 
-// Gồng Cơ — 4 giây độ bền kiếm ×2 và miễn mọi khống chế.
+// Gồng Cơ — Bung Cơ (v6.48 §6.3): gồng 4 giây (độ bền kiếm +1.0, miễn mọi khống chế), hết
+// gồng thì BUNG — đẩy địch trong 2 U ra 3 U và mỗi người bị đẩy mất 10% số kiếm hiện có.
+//
+// Bản cũ chỉ có phần gồng: một kỹ năng phòng thủ thuần, không đổi kết quả cuộc mài kiếm,
+// đúng cái §6.3 "Nguyên tắc thiết kế" mục 1 gọi là hiệu ứng phụ. Phần bung đặt ở CUỐI nên
+// Bé Tí phải sống hết 4 giây mới ăn — và địch nhìn thấy trước mà tránh được.
 func castGongCo(g *Game, p *Player, _ Vec) {
 	sc := g.Cfg.Skills
 	g.ApplyStatus(p, StBrace, sc.BraceSecs)
@@ -395,7 +441,33 @@ func castGongCo(g *Game, p *Player, _ Vec) {
 	for _, s := range controlStatuses {
 		p.Status[s] = 0
 	}
-	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "gong_co", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+	// Bật cờ ngay tại đây chứ không đợi `updateSkillState` — cùng lý do với `shellOn`: gồng
+	// có thể hết trước tick kế tiếp (hoặc test nhảy thẳng thời gian) và sóng bung mất tăm.
+	p.braceOn = true
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "gong_co", F: float32(sc.BraceSecs),
+		X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
+}
+
+// braceBurst là sóng "bung cơ" lúc hết gồng (sóng 2 U, đẩy 3 U, mất 10% kiếm — §6.3 v6.48).
+//
+// Kiếm mất RƠI QUANH NẠN NHÂN thành Bó Kiếm, không về Bé Tí: nếu về tay người bung thì đây
+// thành bản thứ hai của Trộm Kiếm, mà §6.3 nguyên tắc 4 đòi mỗi nhân vật một vai riêng.
+func (g *Game) braceBurst(p *Player) {
+	push := g.skillRange(p, "bung_co_push")
+	share := g.skillNum("bung_co_lose")
+	for _, o := range g.targetsNear(p, g.skillRange(p, "bung_co_wave")) {
+		if o.HasStatus(StBrace, g.Time) || o.HasStatus(StShell, g.Time) {
+			continue
+		}
+		g.pushAway(p, o, push)
+		lost := g.loseSwordsHit(o, int(float64(o.Ring.Count)*share), true)
+		if lost > 0 {
+			g.dropBundles(o.Pos, lost, o.Geom.Reach)
+		}
+		g.emit(Event{Kind: "SkillEffect", A: p.ID, B: o.ID, S: "bung_co", N: lost,
+			X: float32(o.Pos.X), Y: float32(o.Pos.Y)})
+	}
+	g.emit(Event{Kind: "SkillEffect", A: p.ID, S: "bung_co_song", X: float32(p.Pos.X), Y: float32(p.Pos.Y)})
 }
 
 // Gom Đơn Hỏa Tốc (spec v6.9 §6.3) — 4s: tốc chạy ×3, xuyên mọi vật cản trừ biên khu,

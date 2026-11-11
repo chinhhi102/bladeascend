@@ -39,6 +39,9 @@ var specRangesU = map[string]float64{
 	"gom_don_secs":          4,
 	"rut_co_wave":           2,
 	"rut_co_push":           3,
+	"bung_co_wave":          2,
+	"bung_co_push":          3,
+	"bung_co_lose":          0.1,
 }
 
 func TestSkillRangesMatchSpec(t *testing.T) {

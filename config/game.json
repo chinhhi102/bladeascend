@@ -529,16 +529,16 @@
   },
   "skills": {
     "cooldowns": {
-      "a_hon": [30, 2],
-      "ba_tam_loa": [18, 2],
+      "a_hon": [25, 2],
+      "ba_tam_loa": [25, 2],
       "ong_ba_vong": [25, 2],
-      "dai_ca_dep": [40, 1],
-      "map_tra_sua": [20, 2],
-      "co_ba_ganh": [22, 2],
-      "su_phu_mi": [30, 2],
-      "be_ti": [35, 1],
+      "dai_ca_dep": [25, 2],
+      "map_tra_sua": [25, 2],
+      "co_ba_ganh": [25, 2],
+      "su_phu_mi": [35, 1],
+      "be_ti": [25, 2],
       "shipper": [20, 2],
-      "cu_rua": [30, 2]
+      "cu_rua": [25, 2]
     },
     "start_charges": 1,
     "tien_extra_charges": 1,
@@ -568,9 +568,14 @@
       "hut_mi_cap_of_own_max": 0.2,
       "gom_don_secs": 4.0,
       "rut_co_wave": 2.0,
-      "rut_co_push": 3.0
+      "rut_co_push": 3.0,
+      "bung_co_wave": 2.0,
+      "bung_co_push": 3.0,
+      "bung_co_lose": 0.1
     },
-    "banh_bao_max_share": 0.2,
+    "banh_bao_now": 0.1,
+    "banh_bao_regen": 0.2,
+    "banh_bao_regen_secs": 4.0,
     "hut_mi_cone_deg": 60.0,
     "dan_em_count": 2,
     "dan_em_secs": 8.0,
