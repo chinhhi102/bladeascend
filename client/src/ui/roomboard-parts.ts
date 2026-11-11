@@ -46,19 +46,37 @@ function svgIcon(path: string, color: string): SVGSVGElement {
   return svg;
 }
 
-/** zoneChip: icon + tên ngắn khu; "???" khi Ẩn Thân; chấm nhỏ khi cùng khu với mình. */
-export function zoneChip(row: RoomBoardRow, myZone: number): HTMLElement {
-  if (row.zoneId === LB_ZONE_HIDDEN || row.zoneId >= ZONE_ICONS.length) {
-    return h('span', 'rb-zone hidden', STR.board.zoneHidden);
+/**
+ * ZoneCell: icon + tên ngắn khu; "???" khi Ẩn Thân; chấm nhỏ khi cùng khu với mình.
+ *
+ * Là MỘT phần tử dựng sẵn rồi sửa nội dung, không phải hàm trả phần tử mới (v6.47 §11.5:
+ * "dựng một lần, cập nhật chỉ sửa nội dung trong ô, không xoá/tạo lại phần tử"). Cả ba
+ * trạng thái — có khu, Ẩn Thân, ô trống — đều dùng đúng số phần tử ấy; bản cũ trả về cây
+ * DOM khác nhau cho từng trạng thái nên số phần tử của bảng nhảy liên tục (đo 07/11: 15
+ * lần đổi trong 45 giây).
+ */
+export class ZoneCell {
+  readonly el = h('span', 'rb-zone');
+  private readonly icon = svgIcon('', '#888');
+  private readonly name = h('span', 'rb-zname');
+  private readonly same = h('i', 'rb-same');
+
+  constructor() {
+    this.same.title = STR.board.sameZone;
+    this.el.append(this.icon, this.name, this.same);
   }
-  const el = h('span', 'rb-zone');
-  el.append(svgIcon(ZONE_ICONS[row.zoneId], ZONE_COLORS[row.zoneId]), h('span', 'rb-zname', STR.board.zoneShort[row.zoneId] ?? ''));
-  if (row.zoneId === myZone) {
-    const dot = h('i', 'rb-same');
-    dot.title = STR.board.sameZone;
-    el.append(dot);
+
+  set(row: RoomBoardRow | null, myZone: number): void {
+    const hidden = !row || row.zoneId === LB_ZONE_HIDDEN || row.zoneId >= ZONE_ICONS.length;
+    this.el.classList.toggle('hidden', hidden);
+    this.el.classList.toggle('same', !!row && row.zoneId === myZone);
+    this.name.textContent = !row ? '' : hidden ? STR.board.zoneHidden : (STR.board.zoneShort[row.zoneId] ?? '');
+    if (!hidden && row) {
+      const p = this.icon.firstElementChild;
+      p?.setAttribute('d', ZONE_ICONS[row.zoneId]);
+      p?.setAttribute('stroke', ZONE_COLORS[row.zoneId]);
+    }
   }
-  return el;
 }
 
 /** realmShort: chữ cái đầu mỗi từ — "Kim Đan" → "KĐ" (§11.5 "hẹp quá thì viết tắt"). */
@@ -66,16 +84,30 @@ export function realmShort(name: string): string {
   return name.split(/\s+/).filter(Boolean).map((w) => w[0].toLocaleUpperCase('vi')).join('');
 }
 
-/** realmPill: viên thuốc màu huy hiệu cảnh giới §12.3, chữ "KIM ĐAN ⁵" hoặc "KĐ⁵". */
-export function realmPill(cfg: GameConfig, row: RoomBoardRow, short: boolean): HTMLElement {
-  const name = realmName(cfg, row.realm);
-  const tien = isTien(cfg, row.realm);
-  const el = h('span', `rb-pill${tien ? ' tien' : ''}`);
-  const bg = REALM_BADGE[Math.min(row.realm, REALM_BADGE.length - 1)] ?? 0x555555;
-  el.style.setProperty('--pill', `#${bg.toString(16).padStart(6, '0')}`);
-  el.append(h('span', 'rb-pname', short ? realmShort(name) : name.toLocaleUpperCase('vi')), h('sup', '', String(row.tier)));
-  el.title = `${name} ${row.tier}`;
-  return el;
+/** PillCell: viên thuốc màu huy hiệu cảnh giới §12.3, chữ "KIM ĐAN ⁵" hoặc "KĐ⁵". */
+export class PillCell {
+  readonly el = h('span', 'rb-pill');
+  private readonly name = h('span', 'rb-pname');
+  private readonly tier = h('sup');
+
+  constructor(private readonly cfg: GameConfig, private readonly short: boolean) {
+    this.el.append(this.name, this.tier);
+  }
+
+  set(row: RoomBoardRow | null): void {
+    if (!row) {
+      this.name.textContent = this.tier.textContent = '';
+      this.el.title = '';
+      return;
+    }
+    const name = realmName(this.cfg, row.realm);
+    this.el.classList.toggle('tien', isTien(this.cfg, row.realm));
+    const bg = REALM_BADGE[Math.min(row.realm, REALM_BADGE.length - 1)] ?? 0x555555;
+    this.el.style.setProperty('--pill', `#${bg.toString(16).padStart(6, '0')}`);
+    this.name.textContent = this.short ? realmShort(name) : name.toLocaleUpperCase('vi');
+    this.tier.textContent = String(row.tier);
+    this.el.title = `${name} ${row.tier}`;
+  }
 }
 
 /** realmBorder: màu viền chân dung theo cảnh giới (§11.5 "viền màu cảnh giới"). */
@@ -91,18 +123,30 @@ export function realmBorder(realm: number): string {
  * thân/toàn thân, nhét vào ô 28–40 px thì mặt bé bằng hạt gạo, nhìn ra cái người chứ không
  * ra ai.
  */
-export function face(cfg: GameConfig, row: RoomBoardRow, size: number): HTMLElement {
-  const char = cfg.characters[row.character] ?? '';
-  const url = char ? assets.url(`characters/${char}/portrait_neutral.png`) : '';
-  const wrap = h('span', 'rb-face');
-  wrap.style.width = wrap.style.height = `${size}px`;
-  wrap.style.borderColor = realmBorder(row.realm);
-  if (url) {
-    headCrop(wrap, url, char);
-  } else {
-    wrap.textContent = row.name.slice(0, 1).toLocaleUpperCase('vi');
+export class FaceCell {
+  readonly el = h('span', 'rb-face');
+
+  constructor(private readonly cfg: GameConfig, size: number) {
+    this.el.style.width = this.el.style.height = `${size}px`;
   }
-  return wrap;
+
+  set(row: RoomBoardRow | null): void {
+    if (!row) {
+      this.el.textContent = '';
+      this.el.style.backgroundImage = 'none';
+      return;
+    }
+    const char = this.cfg.characters[row.character] ?? '';
+    const url = char ? assets.url(`characters/${char}/portrait_neutral.png`) : '';
+    this.el.style.borderColor = realmBorder(row.realm);
+    if (url) {
+      this.el.textContent = '';
+      headCrop(this.el, url, char);
+    } else {
+      this.el.style.backgroundImage = 'none';
+      this.el.textContent = row.name.slice(0, 1).toLocaleUpperCase('vi');
+    }
+  }
 }
 
 /**
@@ -164,9 +208,22 @@ export function titleText(row: RoomBoardRow): string {
   return STR.titles[(row.titleId || row.rank) - 1] ?? '';
 }
 
-/** clip: phần tử chữ một dòng cắt "…", rê chuột thấy đủ (§11.5). */
-export function clip(cls: string, text: string): HTMLElement {
-  const el = h('span', `${cls} rb-clip`, text);
-  el.title = text;
-  return el;
+/**
+ * ClipCell: chữ một dòng cắt "…", rê chuột thấy đủ (§11.5).
+ *
+ * Ô TRỐNG nhận một khoảng trắng cứng chứ không phải chuỗi rỗng: chuỗi rỗng làm hộp dòng xẹp
+ * xuống 0 và bảng co lại đúng cái lỗi v6.47 phải sửa. Khoảng trắng cứng giữ nguyên chiều cao
+ * dòng mà không hiện gì.
+ */
+export class ClipCell {
+  readonly el: HTMLElement;
+
+  constructor(cls: string) {
+    this.el = h('span', `${cls} rb-clip`);
+  }
+
+  set(text: string): void {
+    this.el.textContent = text || '\u00a0';
+    this.el.title = text;
+  }
 }

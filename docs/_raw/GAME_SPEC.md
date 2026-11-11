@@ -4,6 +4,16 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.51:** Cụ Rùa rụt mai 4s → 2s (trùng thời gian khiêu khích) (§6.3).
+
+**Thay đổi v6.50:** Cụ Rùa: trong mai kiếm không mẻ (tránh bị hội đồng), khiêu khích 4 U · 2s, kiếm địch bể rơi Bó Kiếm (cụ không nhận) (§6.3).
+
+**Thay đổi v6.49:** bảng xếp hạng: số dòng cố định theo chiều cao màn hình (10 / 7 / 5 + dòng của mình), thu nhỏ tối đa còn 0,85, bấm tiêu đề mở bảng đủ (Q49).
+
+**Thay đổi v6.48:** làm lại kỹ năng lấy Ông Ba Võng làm chuẩn (A Hớn hồi 10% + 20%/4s; Bà Tám lấy hơi hút đồ rồi đẩy; Đại Ca đàn em 15% kiếm + nhặt đồ hộ; Thằng Mập mù + đảo điều khiển 3s + khổng lồ ×2 2s; Cô Ba sạp bất hoại + đẩy + buộc vào sạp; Sư Phụ hút 25% mọi địch 5 U, không giới hạn, 35s×1; Bé Tí bung cơ; Cụ Rùa khiêu khích); bảng chọn nhân vật sinh từ config; lượt thích nhân vật (§6.3, §6.6).
+
+**Thay đổi v6.47:** bảng xếp hạng kích thước cố định — dựng 1 lần, chỉ sửa nội dung ô, ô trống giữ chỗ, server luôn gửi đủ top 10, client áp trọn gói (§11.5).
+
 **Thay đổi v6.46:** Tiên giới chia 10 tầng mỗi cảnh giới (scale +0.02/tầng); hiển thị Tiên khí chỉ khi Đại Thừa 10 đầy thanh; bảng xếp hạng chống nhảy (bỏ phá hoà bằng EXP, giữ 3 s, thứ tự ổn định) (§3.4, §11.2).
 
 **Thay đổi v6.45:** Shipper Gom Đơn tốc chạy ×5 (+4.0 base, trần ×5) (§4.1, §6.3).
@@ -649,6 +659,7 @@ Mỗi nhân vật có **1 kỹ năng riêng**, **tự hồi** theo thời gian, 
   Đẩy lùi diễn ra trong 0.3s, trượt dọc vật cản (§8.2a), không xuyên vật cản.
   Thời gian hiệu ứng không đổi theo cảnh giới.
 - Vì sao chọn U (vòng hút EXP) thay vì tầm chém: vòng hút chỉ phụ thuộc cảnh giới (scale), không đổi khi mất/thêm kiếm, nên kỹ năng ổn định và dễ đoán. Tham khảo: tầm chém full kiếm ≈ 1.8 U (Luyện Khí) → 2.7 U (Đại Thừa); hệ số kỹ năng chọn 3–8 U để kỹ năng vươn xa hơn vòng kiếm 1.5–3 lần.
+- **Chuẩn sức mạnh (v6.48)**: lấy **Ông Ba Võng** làm mốc — 1 hiệu ứng khống chế/vùng + 1 nguồn lợi kiếm/tài nguyên trong ~4s, hồi 25s × 2 lượt. Kỹ năng mạnh hơn mốc → hồi lâu hơn hoặc ít lượt hơn (Sư Phụ 35s × 1); yếu hơn → hồi nhanh hơn (Shipper 20s).
 - **Cân bằng** (v6.30): **không dùng tỉ lệ thắng đấu tay đôi** để cân bằng. Kỹ năng có giá trị theo nhiều cách (tranh tài nguyên, lên cấp nhanh, thoát thân, đánh đông người), tay đôi không đo được. `cmd/sim --duel` chỉ còn là **số tham khảo** trong báo cáo, không phải hàng rào CI.
   - Cân bằng dựa trên **số liệu người chơi thật** (≥ 2 ngày telemetry): tỉ lệ chọn nhân vật, Uy Danh/phút, thời gian sống, cảnh giới cao nhất mỗi mạng, số lần dùng kỹ năng. Nhân vật có tỉ lệ chọn quá thấp kéo dài → chủ dự án quyết chỉnh.
 - **Không kỹ năng khống chế nào được vô hiệu hoá vòng kiếm** (v6.27): choáng, ngủ, trói, trượt chỉ được khoá **di chuyển / kỹ năng / Thiêu Đốt / tầm nhìn**; vòng kiếm của người bị khống chế **luôn quay và đánh trả bình thường** (vì chém trúng là chết — khoá kiếm = giết chắc). Ngoại lệ duy nhất: bị mù (Thằng Mập) thì kiếm không chém trúng **thân** người khác, nhưng vẫn va kiếm bình thường.
@@ -657,16 +668,16 @@ Mỗi nhân vật có **1 kỹ năng riêng**, **tự hồi** theo thời gian, 
 
 | Nhân vật | Kỹ năng | Hiệu ứng | Hồi 1 lượt | Tích tối đa |
 |---|---|---|---|---|
-| A Hớn Bánh Bao | **Bánh Bao Thần** | Ăn 1 cái bánh bao: **hồi ngay 20% số kiếm tối đa** của cảnh giới hiện tại (không vượt tối đa, lấp vào vòng trong trước), ợ một tiếng to | 30s | 2 |
-| Bà Tám Loa | **Loa Phường** | Hét vào loa: sóng âm **toả tròn 360°** bán kính **6 U**, **đẩy lùi mọi địch xung quanh** ra **6 U** (theo U của Bà Tám) và làm vòng kiếm của họ **đổi chiều**. Mạnh nhất khi tranh Đài Tiên Khí, Rương Báu, xác vừa nổ đồ — dọn sạch quanh mình rồi nhặt | 18s | 2 |
+| A Hớn Bánh Bao | **Bánh Bao Thần** | Ăn bánh bao (0.3s): **hồi ngay 10%** số kiếm tối đa, rồi **hồi dần thêm 20% trong 4s** (5%/giây) — bị chém chết thì mất phần chưa hồi; không vượt tối đa, lấp vòng trong trước; ợ một tiếng to | 25s | 2 |
+| Bà Tám Loa | **Loa Phường** | (1) **Lấy hơi 0.8s** (đứng yên, ngực phồng): **hút về mình mọi viên Linh khí/Tiên khí, vật phẩm, Bó Kiếm trong bán kính 6 U** (nhặt luôn, theo luật hấp thụ thường; đang bị mù thì không hút được); (2) **Hét**: sóng âm toả tròn 360°, **đẩy văng mọi địch trong 6 U** ra 6 U + đổi chiều vòng kiếm của họ. Bị chém chết trong lúc lấy hơi thì mất chiêu | 25s | 2 |
 | Ông Ba Võng | **Ru Ngủ Trưa — Trộm Kiếm** | Hát ru 1 câu (đứng yên 0.5s; nếu bị chém trúng mà có khiên Kim Cang đỡ thì mất chiêu) rồi nằm võng **4s**: (1) mọi địch trong **4 U** **ngủ gục 2.5s** (không di chuyển/kỹ năng/Thiêu Đốt; kiếm vẫn quay và đánh trả); (2) trong 4s đó, va kiếm **tính bình thường hai chiều — kiếm Ông Ba vẫn bị mẻ** theo độ bền (v6.44), nhưng **mỗi thanh kiếm của đối thủ bị bể khi va với Ông Ba bay về nhập vòng của ông** (tới trần; dư rơi Bó Kiếm). Ông Ba vẫn di chuyển được trên võng | 25s | 2 |
-| Đại Ca Dép Tổ Ong | **Gọi Đàn Em** | Huýt sáo gọi 2 đàn em (NPC nhỏ hơn đại ca 30%, cùng cảnh giới) chạy theo **8s**, bám quanh đại ca trong **3 U**, tìm đối thủ trong **8 U**. **Mỗi đàn em có số kiếm = 30% số kiếm hiện tại của đại ca** (giảm từ 50% — tỉ lệ thắng cũ 87%) (làm tròn xuống, tối thiểu 1, xếp vòng như người chơi), lao vào mài kiếm đối thủ gần nhất. Đàn em không chém thân được, không nhặt đồ, không qua cổng; hết kiếm hoặc hết giờ thì biến mất (khói + câu "Đại ca ơi em đi đây"). Đại ca không bị trừ kiếm khi gọi | 40s | 1 |
-| Thằng Mập Trà Sữa | **Phun Trân Châu (bịt mắt)** | Phun 1 loạt trân châu hình nón 45° dài **8 U** phía trước. Người trúng **bị mù 5s**: màn hình dính đầy trân châu, **không nhặt được gì**, và **kiếm của họ không chém trúng thân bất kỳ ai** (vẫn va kiếm, vẫn mài kiếm bình thường — chỉ không giết được người). Dùng để thoát thân hoặc cứu đồng đội đang còn 1 vòng | 20s | 2 |
-| Cô Ba Gánh Hàng | **Bày Hàng Chặn Lối** | Quăng gánh bày ra **1 dãy 5 sạp hàng** hình vòng cung, cách **3 U** theo hướng đang nhắm (chuột / hướng joystick), dài **6 U**, tồn tại **6s**. Sạp là **vật cản tạm** có bậc = **cảnh giới Cô Ba + 1** (tối đa 13): người **cùng cảnh giới hoặc thấp hơn** không chém được, phải đi vòng; Cô Ba **tự đi xuyên** sạp của mình → bỏ chạy chắc chắn trước người ngang cấp. Dọc chân dãy sạp rải **vỏ chuối** rộng **1 U**: địch dẫm phải → **trượt theo quán tính 1s và choáng**. Sạp không đặt đè lên người (đoạn nào trùng người thì bỏ trống đoạn đó). Dùng để chặn đường chạy của con mồi, chắn lối vào Đài, hoặc đặt sau lưng khi bỏ chạy | 22s | 2 |
-| Sư Phụ Mì Gói | **Hút Mì Đoạt Kiếm** | Ném sợi mì vào **1 địch gần nhất** trong nón 60° dài **5 U**, rồi húp "sùn sụt": **cướp 25% số kiếm hiện có** của họ (lấy từ vòng ngoài cùng), kiếm bay dọc sợi mì về **nhập vào vòng của Sư Phụ** (không vượt tối đa; tối đa cướp = 20% kiếm tối đa của Sư Phụ). Phần cướp vượt trần thì rơi xuống đất thành Bó Kiếm. Không có ai trong nón → sợi mì hụt, vẫn mất lượt | 30s | 2 |
-| Bé Tí Cơ Bắp | **Gồng Cơ** | Gồng **4s** (giảm từ 5s — tỉ lệ thắng cũ 85%): độ bền kiếm **× 2** (cộng với Cương Kiếm theo §4.0: cả hai = +1.5), không bị đẩy lùi/chậm/trói | 35s | 1 |
+| Đại Ca Dép Tổ Ong | **Gọi Đàn Em** | Huýt sáo gọi 2 đàn em (nhỏ hơn đại ca 30%, cùng cảnh giới) trong **8s**, mỗi đứa **15% số kiếm hiện tại của đại ca** (tổng 30%, ngang mức lời của Trộm Kiếm). Đàn em bám 3 U, tìm địch trong 8 U, **nhặt Linh khí/Tiên khí/vật phẩm/Bó Kiếm thay đại ca** (bán kính nhặt của đàn em, đồ nhặt được cộng thẳng cho đại ca). Không chém thân, không qua cổng; hết kiếm hoặc hết giờ thì biến mất. Tối đa 2 đàn em cùng lúc (gọi lần 2 khi còn đàn em → làm mới thời gian + kiếm) | 25s | 2 |
+| Thằng Mập Trà Sữa | **Phun Trân Châu + Hoá Khổng Lồ** | Phun trân châu nón 45° × 8 U: người trúng **mù 3s** (màn hình dính trân châu, không nhặt đồ, **kiếm không chém trúng thân ai**) và **bị đảo điều khiển 3s** (trái↔phải, lên↔xuống; chạm/joystick cũng đảo). Đồng thời Thằng Mập **hoá khổng lồ ×2 trong 2s**: thân, bán kính vòng kiếm và **số kiếm ×2** (kiếm tạm màu trà sữa, hết 2s tự tan, bể trước kiếm thật, không rơi khi chết, không bị cướp) | 25s | 2 |
+| Cô Ba Gánh Hàng | **Bày Hàng Chặn Lối** | Bày dãy 5 sạp hình vòng cung cách 3 U theo hướng nhắm, dài 6 U, **6s**. Sạp **không thể bị chém** (bất hoại, chỉ Shipper đang Gom Đơn đi xuyên được; Cô Ba đi xuyên sạp của mình). Lúc sạp bật lên, **địch đứng trên đường sạp bị đẩy văng ra ngoài** (theo hướng ra xa Cô Ba). Địch trong 2 U quanh dãy sạp lúc bật **bị "buộc" vào sạp gần nhất 3s**: chỉ đi được trong vòng 2 U quanh sạp đó (bị hàng hoá thu hút), kiếm vẫn quay bình thường | 25s | 2 |
+| Sư Phụ Mì Gói | **Hút Mì Đoạt Kiếm** | Quăng mì ra mọi hướng rồi **húp 0.6s** (đứng yên): mọi địch trong bán kính **5 U** bị sợi mì nối vào, **mỗi người mất 25% số kiếm hiện có**, kiếm bay dọc sợi mì về Sư Phụ — **không giới hạn số cướp**; phần vượt kiếm tối đa của Sư Phụ **rơi thành Bó Kiếm quanh ông** (ai cũng nhặt được). Bị chém chết trong lúc húp thì mất chiêu. Kỹ năng mạnh nhất về cướp kiếm nên hồi lâu, 1 lượt | 35s | 1 |
+| Bé Tí Cơ Bắp | **Gồng Cơ — Bung Cơ** | Gồng **4s**: phồng to 10%, độ bền kiếm **+1.0**, **miễn mọi khống chế**; hết gồng **bung cơ**: sóng đẩy địch trong 2 U ra 3 U và **mỗi địch bị đẩy mất 10% số kiếm hiện có** (kiếm rơi thành Bó Kiếm quanh họ, không về Bé Tí) | 25s | 2 |
 | Anh Shipper Tia Chớp | **Gom Đơn Hỏa Tốc** | 4s: tốc chạy **+4.0 base** (= **×5**, trần ×5, §4.1), **đi xuyên mọi vật cản** (trừ biên), **miễn mọi khống chế** (chậm, trói, choáng, ngủ, đẩy lùi), và **bán kính nhặt đồ +10% base** (` +0.1 base, **cộng dồn** với cảnh giới và Nam Châm theo §4.0). Hết giờ mà kẹt trong vật cản → đẩy mượt ra chỗ trống gần nhất 0.3s. Điểm mạnh: chạy nhanh nhất game + xuyên vật cản + miễn khống chế để tới Đài / xác vừa nổ đồ trước người khác | 20s | 2 |
-| Cụ Rùa Thiền | **Rụt Cổ** | Rụt vào mai **5s**: đứng yên, **không bị bể kiếm, không bị chém thân**; ra khỏi mai bật sóng bán kính **2 U**, đẩy địch ra **3 U** | 30s | 2 |
+| Cụ Rùa Thiền | **Rụt Cổ Khiêu Khích** | Rụt vào mai **2s** (v6.51): đứng yên, **thân bất tử** và **kiếm không bị mẻ** khi va (mai rùa che cả vòng kiếm — v6.50). Ngay lúc rụt **khiêu khích mọi địch trong 4 U trong 2s**: họ bị kéo bước về phía cụ (không tự chọn hướng, không dùng kỹ năng/Thiêu Đốt; kiếm vẫn quay). Kiếm địch bể khi va với cụ **rơi thành Bó Kiếm** quanh chỗ va (cụ **không** nhận kiếm — khác Ông Ba). Ra mai: sóng đẩy 2 U ra 3 U. Điểm yếu: đứng yên 2s, không lời kiếm, hết mai mà còn bị vây thì dễ bị dồn | 25s | 2 |
 
 Bảng tham khảo (đã nhân U) — chỉ để hình dung, code tính từ hệ số:
 
@@ -729,6 +740,20 @@ Ngoài ra trên màn hình **người bị trúng**: icon trạng thái + giây 
 **Icon trạng thái** dùng chung (64 px, sinh qua artgen hoặc vẽ vector): 💤 ngủ · 🧋 mù · 💫 choáng · 📢 bị đẩy · 💪 gồng · ⚡ gom đơn · 🐢 rụt cổ · 🟣 trộm kiếm. Không dùng emoji hệ thống (khác nhau giữa máy) — chỉ dùng làm tên gọi trong spec.
 
 **Hiệu năng**: mọi hiệu ứng là sprite/particle trong `vfxLayer`, theo chất lượng (Thấp: giữ ②③④ dạng đơn giản, tắt particle trang trí). Server gửi event `SkillCast` + `StatusStart/StatusEnd {id, status, secs, src}` — client không tự đoán trạng thái.
+
+
+### 6.6 Bảng chọn nhân vật & lượt thích (v6.48)
+
+**Bảng chọn nhân vật luôn khớp luật đang chạy**
+- Mô tả kỹ năng, hồi chiêu, số lượt tích và 4 thanh nội tại **sinh từ config + i18n**, không chép tay: chuỗi mô tả có chỗ trống `{cd}`, `{charges}`, `{radius_u}`, `{secs}`… điền từ `config.skills`. Đổi số trong config → bảng chọn tự đổi.
+- CI: mọi số xuất hiện trong mô tả kỹ năng (mọi ngôn ngữ) phải lấy từ config; viết số cứng trong chuỗi i18n → fail.
+
+**Lượt thích nhân vật**
+- Mỗi người chơi (theo `guest_id`) có **1 lượt thích** cho 1 nhân vật. Đổi ý: bấm thích nhân vật khác → lượt thích chuyển sang (bỏ ở nhân vật cũ). Bấm lại để bỏ thích.
+- Chỉ người đã **chơi ít nhất 1 mạng ≥ 60s** mới thích được (chống spam). Giới hạn thêm theo IP: tối đa 5 lượt thích hoạt động / IP / 24 giờ.
+- Thẻ nhân vật hiện ❤ + số lượt thích (làm tròn: 1,2k); nhân vật nhiều thích nhất có nhãn **"Được thích nhất"**. Nút thích ở khung chi tiết nhân vật và ở màn Tổng kết ("Thích nhân vật này?").
+- Lưu SQLite (`character_likes`: guest_id, character, ip_hash, thời gian); API `POST /api/likes`, `GET /api/likes` (đếm, cache 60s). Admin xem bảng lượt thích + tỉ lệ chọn từng nhân vật.
+- Bot không thích. Lượt thích không ảnh hưởng luật chơi.
 
 ### 6.4 Chỉ số gốc riêng từng nhân vật (nội tại, v6.33)
 
@@ -1195,6 +1220,16 @@ EXP **không** dùng để xếp hạng toàn cục vì có trần (Đại Thừ
 - **Không tràn màn hình**: rộng tối đa 300 px (PC), neo góc trên phải có lề 12 px; tên/danh hiệu dài cắt "…" (rê chuột/nhấn giữ thấy đủ).
 - **Điện thoại**: mặc định **thu gọn** = 1 hàng: 3 chân dung tròn Top 1–3 (vương miện trên Top 1) + "Bạn #14". Chạm để mở bảng đầy đủ, chạm ngoài để đóng.
 - Đa ngôn ngữ (§19): tên khu, cảnh giới, danh hiệu theo ngôn ngữ người xem.
+- **Bảng có kích thước CỐ ĐỊNH, không co giãn khi cập nhật (v6.47, sửa lỗi 07/11: bảng tụt còn 3 dòng rồi bung lại 10)**:
+  - Luôn có **đúng 3 thẻ Top + 7 ô dòng (hạng 4–10) + 1 ô "dòng của mình"**, dựng **một lần** khi vào trận; mỗi lần cập nhật chỉ **sửa nội dung trong ô** (tên, số, màu), **không xoá/tạo lại phần tử**, không `innerHTML = ''`.
+  - Phòng ít hơn 10 người → ô thừa hiện **trống mờ** (giữ nguyên chiều cao), không co bảng.
+  - **Số dòng theo chiều cao màn hình (Q49, v6.49)** — tính **1 lần khi vào trận và khi đổi cỡ cửa sổ**, KHÔNG theo dữ liệu: màn cao ≥ 900 px → Top 3 + 7 dòng (đủ 10); 700–899 px → Top 3 + 4 dòng (top 7); < 700 px → Top 3 + 2 dòng (top 5). Luôn kèm dòng của mình. Thẻ Top 2/3 ở màn thấp dùng bản gọn 1 dòng.
+  - Được thu nhỏ thêm nhưng **không dưới 0,85** (chữ không quá nhỏ); bảng không quá nửa chiều cao màn hình.
+  - Bấm vào tiêu đề bảng → mở **bảng đầy đủ 10 dòng** dạng lớp phủ (như điện thoại), tự đóng sau 8 s hoặc khi di chuyển.
+  - Bỏ hẳn `trimToScreen()` (ẩn dòng theo độ dài nội dung) — nguyên nhân bảng chỉ hiện 1–6 dòng.
+  - Mỗi dòng gắn theo **id người chơi** (keyed); đổi hạng = dịch ô bằng `transform` (không đổi luồng bố cục), chiều cao bảng không đổi.
+  - Server **luôn gửi đủ top 10 + hạng của người nhận** trong mỗi gói Leaderboard (không gửi phần thay đổi / danh sách tạm thiếu người khi đang giữ 3 s). Client áp gói **trọn một lần** trong 1 khung (`requestAnimationFrame`), không vẽ nửa chừng.
+  - Gói tới thiếu dòng (lỗi mạng/giải mã) → **giữ bảng cũ**, không vẽ bảng thiếu.
 - **Hiệu năng**: cập nhật 1 lần/giây, chỉ vẽ lại dòng thay đổi; thẻ Top 1–3 cache, hiệu ứng động là lớp chồng; chất lượng Thấp tắt vệt sáng/lấp lánh.
 - **Dữ liệu từ server** (gói Leaderboard 1 Hz): mỗi dòng `{id, name, character, title_id, rank, zone_id, realm, tier, score, stealth}` + hạng thật của người nhận. Server tính hạng 1 lần/giây cho cả phòng.
 
@@ -1646,8 +1681,8 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "zones_def": ["thien_dinh", "linh_son_coc", "truc_lam_me_cung", "pham_tran", "bang_nguyet_ho"],
   "ice": { "friction": 0.92, "accel": 0.25, "snow_mult": 0.8 },
   "skills": { "key": "Space", "source": "cooldown", "start_charges": 1, "tien_extra_charges": 1, "lockout_secs": 3,
-    "cooldowns": { "a_hon": [30, 2], "ba_tam_loa": [18, 2], "ong_ba_vong": [25, 2], "dai_ca_dep": [40, 1], "map_tra_sua": [20, 2], "co_ba_ganh": [22, 2], "su_phu_mi": [30, 2], "be_ti": [35, 1], "shipper": [20, 2], "cu_rua": [30, 2] },
-    "ranges_u": { "loa_radius": 6, "loa_shape": "circle", "loa_push": 6, "ru_ngu_r": 4, "ru_ngu_steal_secs": 4, "ru_ngu_secs": 2.5, "ru_ngu_channel": 0.5, "dan_em_follow": 3, "dan_em_share": 0.3, "dan_em_secs": 8, "gong_co_secs": 4, "dan_em_seek": 8, "tran_chau_cone": 8, "bay_sap_dist": 3, "bay_sap_len": 6, "bay_sap_count": 5, "bay_sap_secs": 6, "bay_sap_tier_bonus": 1, "bay_sap_owner_passes": true, "vo_chuoi_w": 1, "hut_mi_cone": 5, "hut_mi_steal": 0.25, "hut_mi_cap_of_own_max": 0.2, "gom_don_pickup_bonus": 0.1, "gom_don_secs": 4, "rut_co_wave": 2, "rut_co_push": 3 },
+    "cooldowns": { "a_hon": [25, 2], "ba_tam_loa": [25, 2], "ong_ba_vong": [25, 2], "dai_ca_dep": [25, 2], "map_tra_sua": [25, 2], "co_ba_ganh": [25, 2], "su_phu_mi": [35, 1], "be_ti": [25, 2], "shipper": [20, 2], "cu_rua": [25, 2] },
+    "ranges_u": { "loa_radius": 6, "loa_shape": "circle", "loa_inhale_secs": 0.8, "loa_vacuum_r": 6, "loa_push": 6, "ru_ngu_r": 4, "ru_ngu_steal_secs": 4, "ru_ngu_secs": 2.5, "ru_ngu_channel": 0.5, "dan_em_follow": 3, "dan_em_share": 0.15, "dan_em_secs": 8, "dan_em_collect_for_owner": true, "gong_co_secs": 4, "bung_co_r": 2, "bung_co_push": 3, "bung_co_sword_loss": 0.1, "banh_bao_instant": 0.1, "banh_bao_regen": 0.2, "banh_bao_regen_secs": 4, "tran_chau_blind_secs": 3, "tran_chau_invert_secs": 3, "map_giant_mult": 2, "map_giant_secs": 2, "sap_indestructible": true, "sap_tether_r": 2, "sap_tether_secs": 3, "rut_co_secs": 2, "rut_co_swords_unbreakable": true, "khieu_khich_r": 4, "khieu_khich_secs": 2, "dan_em_seek": 8, "tran_chau_cone": 8, "bay_sap_dist": 3, "bay_sap_len": 6, "bay_sap_count": 5, "bay_sap_secs": 6, "bay_sap_tier_bonus": 1, "bay_sap_owner_passes": true, "vo_chuoi_w": 1, "hut_mi_radius": 5, "hut_mi_steal": 0.25, "hut_mi_channel": 0.6, "hut_mi_overflow": "drop_bundles", "gom_don_pickup_bonus": 0.1, "gom_don_secs": 4, "rut_co_wave": 2, "rut_co_push": 3 },
     "push_secs": 0.3, "lockout_secs": 3, "overcap_exp": 20, "overcap_tien_khi": 2, "blind": { "secs": 5, "no_pickup": true, "pearls": [25, 40], "cover": [0.55, 0.65], "bot_vision_mult": 0.4 } },
   "movement": { "slide_iterations": 3, "smooth_correct_max": 30, "smooth_correct_ms": 100 },
   "room": {
@@ -1729,6 +1764,10 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - Việc chủ dự án cần làm: mua tên miền `bladeascend.io` (và nên giữ thêm `bladeascend.com`), kiểm tra trùng tên trên các cổng game .io lớn và cửa hàng ứng dụng, tra nhãn hiệu (WIPO Global Brand Database).
 
 ## 17. Checklist test chấp nhận
+
+- [ ] Cụ Rùa rụt mai giữa 3 địch: 2s không mất kiếm, không chết; địch trong 4 U bị kéo về 2s; kiếm địch bể rơi thành Bó Kiếm, số kiếm của cụ không tăng.
+
+- [ ] Ghi lại chiều cao + số dòng bảng xếp hạng mỗi khung trong 2 phút (phòng 20 người, có người vào/ra/chết): chiều cao KHÔNG đổi lần nào, số dòng luôn 10 (+ dòng của mình); số phần tử DOM của bảng không đổi.
 
 - [ ] Đại Thừa 10 chưa đầy: HUD thanh Linh khí, viên Linh khí sáng, Tiên khí mờ; đầy 694 960 → đổi sang thanh Tiên khí.
 - [ ] Tiên khí 160 → hiện "Chân Tiên tầng 3" (154–238); 1 001 → "Kim Tiên tầng 1"; scale Chân Tiên 1 = 5,02, Đạo Tổ 10 = 6,00.

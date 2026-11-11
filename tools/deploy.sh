@@ -234,8 +234,24 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   smooth_rc=$?
   set -e
   tail -3 /tmp/kx-smooth.out
+
+  # §11.5/§17 (v6.47): bảng xếp hạng không được co giãn. Chạy trên CÙNG server dev đó —
+  # dựng thêm một server nữa chỉ để đo một bảng DOM là tốn 22 giây vô ích.
+  echo "== 2c/5 bảng xếp hạng đứng yên (§11.5) =="
+  set +e
+  SECS=45 node tools/browsertest/rbstable.mjs http://127.0.0.1:9997 >/tmp/kx-rbstable.out 2>&1
+  rb_rc=$?
+  set -e
+  tail -6 /tmp/kx-rbstable.out
+
   kill "$(cat /tmp/kx-smooth.pid)" 2>/dev/null || true
   pkill -f "127.0.0.1:9997" 2>/dev/null || true
+  if [ "$rb_rc" = "1" ]; then
+    echo "LỖI: bảng xếp hạng co giãn (§11.5). Dừng deploy." >&2
+    exit 1
+  elif [ "$rb_rc" != "0" ]; then
+    echo "   (bỏ qua: không đo được — xem /tmp/kx-rbstable.out)"
+  fi
   # 0 = đạt · 1 = vượt ngưỡng, chặn deploy · 2 = máy quá tải, số không dùng được → chỉ cảnh báo
   if [ "$smooth_rc" = "1" ]; then
     echo "LỖI: nhảy cóc vượt ngưỡng 3%. Dừng deploy." >&2

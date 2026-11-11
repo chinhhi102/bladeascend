@@ -33,6 +33,7 @@ import { kickedScreen } from './ui/kicked';
 import { guestId, homeScreen, type Profile, savedProfile } from './ui/home';
 import { Hud } from './ui/hud';
 import { leaderboardScreen } from './ui/leaderboard';
+import { rbStats } from './ui/roomboard';
 import * as feedback from './ui/feedback';
 import { LANG } from './i18n';
 import { STR } from './ui/strings';
@@ -468,7 +469,7 @@ class App {
       const [cd, maxC] = this.cfg.skills.cooldowns[char] ?? [0, 0];
       this.hud.setSkill({ char, charges: 0, maxCharges: maxC, remainSecs: 0, cooldownSecs: cd });
     }
-    const g = window as unknown as { kx?: unknown; __stats?: unknown; __playing?: unknown };
+    const g = window as unknown as { kx?: unknown; __stats?: unknown; __playing?: unknown; __rb?: unknown };
     // `__stats` KHÔNG khoá sau quyền debug: nó chỉ là số đo (FPS, bộ nhớ texture, số
     // sprite, ping) — không có một quyền nào lên luật chơi. Khoá nó lại thì bộ đo hiệu
     // năng không chạy được trên server THẬT, mà server thật là nơi duy nhất đo đúng: đó
@@ -486,6 +487,9 @@ class App {
       zone: this.zoneIndex,
     });
     g.__playing = (): boolean => this.playing;
+    // `__rb`: số đếm của bảng xếp hạng cho bài §17 `tools/browsertest/rbstable.mjs` — gói
+    // nhận được mấy dòng, có gói nào thiếu bị bỏ không. Cùng loại với `__stats`: chỉ số đo.
+    g.__rb = (): Record<string, number> => ({ ...rbStats });
     if (w.debug) {
       // ?debug=true: mở cửa sau cho console của trình duyệt (xem VFX, đếm thần thú...).
       //

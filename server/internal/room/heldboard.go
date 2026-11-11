@@ -38,6 +38,7 @@ type heldBoard struct {
 // (không chờ 3 s) — giữ một cái tên đã đi khỏi phòng là sai, không phải "chống nhấp nháy".
 func (b *heldBoard) step(live []uint32, score map[uint32]float64, level map[uint32]int, present map[uint32]bool, now, hold float64) {
 	b.held = slices.DeleteFunc(b.held, func(id uint32) bool { return !present[id] })
+	b.fill(live, score, level)
 	if slices.Equal(live, b.held) {
 		b.pending, b.divergedSince = nil, 0
 		b.snap(score, level)
@@ -55,6 +56,30 @@ func (b *heldBoard) step(live []uint32, score map[uint32]float64, level map[uint
 	}
 }
 
+// fill bù cho bảng đủ người từ thứ tự THẬT, giữ nguyên chỗ của những ai đang đứng trên bảng.
+//
+// Đây là nửa server của lỗi 07/11 "bảng tụt còn 3 dòng rồi bung lại 10" (v6.47 §11.5). Hai
+// việc ở trên đúng riêng lẻ nhưng sai khi đi cùng nhau: người chết/rời bị rút NGAY, còn thứ
+// tự mới thì phải chờ đứng yên 3 s. Khoảng giữa hai mốc đó `held` ngắn hơn 10 và gói đi ra
+// đúng y số dòng ngắn ấy — đo được 5 dòng trong phòng còn 13 người sống.
+//
+// Bù vào CUỐI theo thứ tự thật: ai vừa lọt vào top hiện ở dòng dưới rồi mới trèo lên khi
+// thứ tự mới được nhận. Đổi chỗ của những người cũ vẫn phải chờ đủ 3 s như trước.
+func (b *heldBoard) fill(live []uint32, score map[uint32]float64, level map[uint32]int) {
+	if b.scores == nil {
+		b.scores, b.levels = map[uint32]float64{}, map[uint32]int{}
+	}
+	for _, id := range live {
+		if len(b.held) >= len(live) {
+			return
+		}
+		if !slices.Contains(b.held, id) {
+			b.held = append(b.held, id)
+			b.scores[id], b.levels[id] = score[id], level[id]
+		}
+	}
+}
+
 // snap chụp điểm VÀ cấp của những người đang hiện trên bảng.
 func (b *heldBoard) snap(score map[uint32]float64, level map[uint32]int) {
 	b.scores = make(map[uint32]float64, len(b.held))
@@ -66,8 +91,10 @@ func (b *heldBoard) snap(score map[uint32]float64, level map[uint32]int) {
 }
 
 // score: Uy Danh hiển thị trên bảng của `id` — từ bản chụp, không phải điểm tức thời.
-func (b *heldBoard) score(id uint32) float64 {
-	return b.scores[id]
+// `ok` = false khi `id` không có trong bản chụp (người vừa được bù vào cho đủ 10 dòng).
+func (b *heldBoard) score(id uint32) (float64, bool) {
+	v, ok := b.scores[id]
+	return v, ok
 }
 
 // level: cấp hiển thị trên bảng của `id` — từ bản chụp, cùng nhịp với thứ tự. `ok` = false

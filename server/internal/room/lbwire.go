@@ -33,15 +33,21 @@ func (r *Room) lbRows(top []*game.Player) []byte {
 		// (heldboard.go). Lấy tức thời thì ai vừa đột phá sẽ hiện cảnh giới mới ngay mà vẫn
 		// nằm ở hạng cũ — từ v6.43 cảnh giới là khoá sắp xếp chính nên bảng đọc như sai.
 		// Uy Danh của chính mình ở HUD đi `LbHead.MyScore` — vẫn tức thời.
-		lv := p.Level
+		lv, sc := p.Level, p.Score
 		if held, ok := r.board.level(p.ID); ok {
 			lv = held
+		}
+		// Người vừa được BÙ vào cho đủ 10 dòng chưa có trong bản chụp — lấy số tức thời của
+		// họ. Lấy số 0 mặc định của map thì bảng hiện "0 Uy Danh, Luyện Khí 1" cho một người
+		// đang đứng hạng 6, còn khó hiểu hơn cả việc thiếu dòng.
+		if held, ok := r.board.score(p.ID); ok {
+			sc = held
 		}
 		row := wire.LbRow{
 			ID: p.ID, Name: p.Name, Character: charIndex(r.cfg.Characters, p.Char),
 			TitleID: clampU8(p.Title), Rank: uint8(i + 1), ZoneID: clampU8(zoneOf[p.ID]),
 			Realm: clampU8(prog.Realm(lv)), Tier: clampU8(prog.Tier(lv) + 1),
-			Score: roundU32(r.board.score(p.ID)),
+			Score: roundU32(sc),
 		}
 		if stealthy[p.ID] {
 			row.ZoneID, row.Stealth = lbZoneHidden, 1
@@ -58,10 +64,26 @@ func (r *Room) heldTop(ranking []*game.Player) []*game.Player {
 	for _, p := range ranking {
 		byID[p.ID] = p
 	}
-	top := make([]*game.Player, 0, len(r.board.held))
+	top := make([]*game.Player, 0, leaderboardTop)
+	seen := make(map[uint32]bool, leaderboardTop)
 	for _, id := range r.board.held {
 		if p, ok := byID[id]; ok {
 			top = append(top, p)
+			seen[id] = true
+		}
+	}
+	// CHỐT CHẶN CUỐI của "luôn gửi đủ top 10" (§11.5 v6.47): bù từ thứ tự thật cho đủ.
+	//
+	// `heldBoard.fill` đã bù lúc bước nhịp, nhưng giữa lúc bước nhịp (đầu tick) và lúc gửi
+	// bảng có người chết — họ rơi khỏi `ranking` nên vòng trên bỏ qua, và gói đi ra 9 dòng.
+	// Cổng deploy bắt được đúng ca này: "gói server 9–10 dòng, 2 lần đổi".
+	for _, p := range ranking {
+		if len(top) >= min(leaderboardTop, len(ranking)) {
+			break
+		}
+		if !seen[p.ID] {
+			top = append(top, p)
+			seen[p.ID] = true
 		}
 	}
 	return top

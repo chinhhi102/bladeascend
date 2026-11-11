@@ -59,20 +59,50 @@ async function join(name, charIdx) {
 const me = await join('KiemTraYeu', 0);
 await requireDebug(me, 'weakperf.mjs');
 await sleep(6000);
-await me.keyboard.press('F3'); // bật bảng đo → bật luôn đồng hồ theo hệ thống
-for (let i = 0; i < 3; i++) {
-  await me.keyboard.press('KeyB'); // thả bot cùng cảnh giới ngay cạnh
-  await sleep(200);
-}
-for (let i = 0; i < 13; i++) {
+// KHÔNG bấm F3: `?debug=true` đã mở sẵn bảng đo, bấm nữa là TẮT nó — và tắt bảng thì
+// `main` gọi `setProbe(false)` mỗi khung, đè lên lệnh bật của bài đo. Lượt đo đầu ra một
+// bảng toàn số 0 vì đúng chỗ này.
+for (let i = 0; i < 9; i++) {
   await me.keyboard.press('KeyR'); // lên cảnh giới: vòng kiếm dày lên, thân to ra
-  await sleep(120);
+  await sleep(400);                // thưa tay: lên dồn dập thì client kẹt giữa lúc đổi khu
 }
 await sleep(3000);
+
+// KHÔNG thả thêm bot bằng `B`: phòng dev đã sẵn hơn chục người, và bot thả cạnh mình ở
+// cảnh giới cao thì chém chết người đo trong vài giây (lượt trước ra `playing=false`).
+// Chết thì bấm "Chơi tiếp" rồi lên cảnh giới lại.
+async function reviveIfDead() {
+  if (!(await me.$('.summary'))) {
+    return;
+  }
+  await me.locator('.summary .btn.primary').click();
+  await me.waitForSelector('.room-board', { timeout: 30000 });
+  await sleep(2500);
+  for (let i = 0; i < 9; i++) {
+    await me.keyboard.press('KeyR');
+    await sleep(400);
+  }
+  await sleep(2000);
+}
+await reviveIfDead();
+
+// Vào trận thật chưa? Bảng số 0 trông y như "game nhẹ tênh", nguy hiểm hơn là báo lỗi.
+const ready = await me.evaluate(() => ({
+  playing: window.kx.playing?.() ?? false,
+  players: window.kx.world.players.size,
+  probeOn: Object.values(window.kx.scene.probe()).some((v) => v > 0),
+}));
+if (!ready.playing || ready.players === 0 || !ready.probeOn) {
+  console.error(`\nKHÔNG ĐO ĐƯỢC: playing=${ready.playing} người=${ready.players} probe=${ready.probeOn}.`);
+  console.error('Bảng toàn số 0 là dấu hiệu client chưa vào trận hoặc bảng đo đang tắt.');
+  await b.close();
+  process.exit(1);
+}
 
 const cdp = await me.context().newCDPSession(me);
 
 async function sample(label) {
+  await reviveIfDead();
   // Xoá biên độ heap cũ: tắt/bật đồng hồ là reset.
   await me.evaluate(() => { window.kx.scene.setProbe(false); window.kx.scene.setProbe(true); });
   const t0 = Date.now();
@@ -82,6 +112,9 @@ async function sample(label) {
     fps.push(await me.evaluate(() => window.kx.scene.fpsNow?.() ?? 0));
   }
   const probe = await me.evaluate(() => window.kx.scene.probe());
+  if (!Object.values(probe).some((v) => v > 0)) {
+    throw new Error(`đồng hồ theo hệ thống trả toàn 0 ở "${label}" — bảng đo bị tắt giữa chừng`);
+  }
   const good = fps.filter((f) => f > 0).sort((a, c) => a - c);
   return {
     label,
@@ -122,5 +155,11 @@ if (full && half) {
     ? '→ NGHẼN GPU: ít pixel hơn thì nhanh hơn rõ. Dynamic resolution sẽ ăn tiền.'
     : '→ NGHẼN CPU: ít pixel hơn gần như không đổi. Phải cắt việc trong JS, hạ độ phân giải không cứu.');
 }
+const after = loadavg()[0] / cpus().length;
 console.log(`\nbản đồ: ${cfg.brand?.name ?? '?'} · mẫu ${SAMPLE_MS / 1000}s mỗi kịch bản`);
+console.log(`tải: đầu ${perCpu.toFixed(2)} · cuối ${after.toFixed(2)} (mỗi nhân)`);
+if (Math.max(perCpu, after) > 1.5) {
+  console.log('LƯU Ý: FPS tuyệt đối trong bảng này là NHIỄU MÁY. Phép so res 1.0 ↔ 0.5 trong' +
+    ' cùng một lượt vẫn đọc được, vì hai mẫu cách nhau vài giây dưới cùng điều kiện.');
+}
 await b.close();

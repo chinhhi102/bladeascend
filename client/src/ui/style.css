@@ -318,10 +318,12 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
   font-size: 13px; color: #fff;
   width: 300px;
   max-width: calc(100vw - 24px);
-  /* KHÔNG BAO GIỜ quá nửa chiều cao màn hình (chủ dự án chốt 31/10). `trimToScreen()` trong
-     roomboard.ts ẩn bớt dòng cuối cho vừa; `max-height` là chốt chặn cuối. */
-  max-height: 50vh;
-  overflow: hidden;
+  /* KHÔNG BAO GIỜ quá nửa chiều cao màn hình (chủ dự án chốt 31/10) — nhưng từ v6.47 việc đó
+     làm bằng cách THU NHỎ cả bảng (`fit()` trong roomboard.ts đặt `transform: scale`), không
+     bằng `max-height` + ẩn dòng. `max-height` ở đây sẽ CẮT bảng: `transform` không đổi hộp
+     bố cục, nên hộp vẫn cao nguyên và phần dưới bị `overflow: hidden` ăn mất. */
+  transform-origin: top right;
+  overflow: visible;
   /* `.hud` tắt chuột/chạm cho mọi thứ con; bảng phải BẬT lại: điện thoại chạm để mở (§11.5),
      PC rê chuột xem đủ tên bị cắt "…". Hướng đi theo `mousemove` trên window nên không mất. */
   pointer-events: auto;
@@ -411,8 +413,23 @@ body:not(.in-game):has(.home) #overlay { position: absolute; inset: 0 0 auto; he
 .rb-row.me { background: rgba(255,210,63,.16); box-shadow: inset 0 0 0 1px rgba(255,210,63,.55); }
 .rb-me { display: block; margin-top: 5px; background: rgba(255,210,63,.2); box-shadow: inset 0 0 0 1px rgba(255,210,63,.6); }
 .rb-me .rb-rank { width: auto; color: var(--gold1); }
-.rb-arrow { flex: none; font-size: 10px; animation: rb-fade 2s forwards; }
+/* Mũi tên đổi hạng là phần tử CỐ ĐỊNH, chỉ bật/tắt bằng class `show` (v6.47: thêm/xoá phần
+   tử làm số phần tử DOM của bảng nhảy, và §17 đếm đúng con số đó). */
+.rb-arrow { flex: none; font-size: 10px; opacity: 0; }
+.rb-arrow.show { animation: rb-fade 2s forwards; }
 .rb-arrow.up { color: #46e37a; } .rb-arrow.down { color: #ff5a5a; }
+
+/* Ô TRỐNG (phòng dưới 10 người): giữ nguyên chiều cao, chỉ không hiện gì. `visibility` chứ
+   không `display` — `display:none` làm hộp xẹp và bảng co lại, đúng lỗi v6.47 phải sửa. */
+.rb .empty { opacity: .45; }
+.rb .empty .rb-pill, .rb .empty .rb-zone, .rb .empty .rb-score, .rb .empty .rb-face,
+.rb .empty .rb-medal, .rb .empty .rb-crown, .rb .empty .rb-shine, .rb .empty .rb-spark,
+.rb .empty .rb-rank { visibility: hidden; }
+.rb-row.empty .rb-name::before { content: '·'; opacity: .5; }
+/* Chấm khu "cùng khu với mình" luôn có mặt, chỉ hiện khi đúng khu. */
+.rb-same { display: none; }
+.rb-zone.same .rb-same { display: inline-block; }
+.rb-zone.hidden .rb-zicon { visibility: hidden; }
 
 /* Điện thoại: thu gọn mặc định = 1 hàng (3 chân dung + "Bạn #N"); chạm để mở. */
 .rb-mini { display: none; align-items: center; gap: 4px; cursor: pointer; }
