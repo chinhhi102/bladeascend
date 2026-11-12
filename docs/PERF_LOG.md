@@ -116,6 +116,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 29 | 2026-11-02 | `bb1cd96` | v6.36 — WebKit giả lập iPhone, `:9999`, 45 s (load ~6–7) | S9 | – | – | – | 42.4 / – | – | 0 | **107.4** | – | lỗi 0 · 166 texture · 2146 sprite. So #27 (43.2 / 113.1 / 4990 sprite): không tăng | – |
 | 30 | 2026-11-06 | (sau `362258a`) | Máy quay mượt: nhịp khung đều + nội suy nhân vật mình + máy quay đuổi 70 ms (`wallhug.mjs`, headless 60 Hz, 4 lần, dev :9998) | CAM | – | – | – | 60 / – | – | – | – | – | Độ giật máy quay đi thẳng **0,17–0,29 → 0,09–0,15**; khung màn hình đứng im **2–3 % → 0 %**. Nhánh màn tần số cao (vẽ mỗi 2 khung quét): khoảng cách khung p5/p50/p95 32,2 / 33,3 / 34,4 ms | B22 đóng |
 | 33 | 2026-11-11 | `ec38aee` (trước sửa) | **Rò rỉ texture — đo trước**: 1 tab, đi lang thang, `?textrace=1` (dev :9998 / vite :5174) | TEXLEAK | – | – | – | 60 / – | – | – | – | – | 5 phút: **118 → 625 texture**, 82 → 202 MB — **91 texture/phút · +17,9 MB/phút**, một chiều. Nhóm phình: `mapview.noiseMask` 128×128 (387 tấm) | B23 mở |
+| 34 | 2026-11-12 | `52adf2e` | **Tick NGƯỜI THẬT 13 ngày** (đọc `server_samples`, 4 963 dòng khu-có-người; `cmd/tickquery`) | S6 | 1.93 / **2.57** ✅ (trung vị p95) | – | – | – | – | – | – | – | Thiên Đình p95 4.80 vs khu khác 1.74–2.97 · 21–30 n.vật p95 5.27 · đông nhất từng gặp **3 người/khu** | B24, B25 mở — và xem §5 #34: cùng build, máy rảnh 2.13 → máy bận 6.03 |
 | 33 | 2026-11-11 | (sau sửa) | **Rò rỉ texture — đo sau**: cùng bài, 14 phút | TEXLEAK | – | – | – | 60 / – | – | – | – | – | 14 phút: **191 → 224 texture** (nhấp nhô 168–276, KHÔNG có xu hướng), 141 → 133 MB (**−0,6 MB/phút**). Mặt nạ nền đứng ở 20 tấm | B23 đóng |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
@@ -976,10 +977,46 @@ vẫn áp dụng cho mọi dòng FPS/ms trong cùng lượt).
 Kiểm hình sau khi sửa: lên cảnh giới qua ranh giới khu, chụp màn hình — nền trộn, decal,
 decor, vật cản hiện đủ, `pageerror` 0.
 
+### #34 — 12/11/2026 · Tick server của NGƯỜI THẬT, 13 ngày (`52adf2e` đang chạy)
+
+Không sửa gì — **lượt ĐỌC SỐ**, lấy từ `server_samples` trong `telemetry.db` (25 920 dòng,
+30/10 13:19 → 12/11 09:38), loại hết phiên `automated = 1`. Công cụ:
+`cd server && go run ./cmd/tickquery -db data/telemetry.db`. Báo cáo đầy đủ:
+[`docs/TICK_NGUOI_THAT.md`](TICK_NGUOI_THAT.md).
+
+**Khu đang có người thật** (4 963 dòng): tick TB 1,93 · p95 trung vị **2,57 ms** / ngân sách
+33,3 · p99 19,77 · vượt nửa ngân sách 2,24% · CPU tiến trình trung vị 18,5%, RSS 44 MB.
+
+Theo khu (p95 trung vị): **Thiên Đình 4,80** · Linh Sơn 2,97 · Trúc Lâm 2,11 · Phàm Trấn 1,85
+· Băng Nguyệt 1,74. Theo mật độ: 6–10 nhân vật 1,21 → 11–20 là 2,24 → **21–30 là 5,27** —
++50% nhân vật thì tick ×2,4.
+
+**Ba điều số này KHÔNG nói được:**
+
+1. *Không nói gì về lúc đông.* Đông nhất từng ghi: **3 người/khu** (87% số mốc chỉ 1 người).
+   Tải hiện nay là bot. Trần 50 người vẫn chỉ được chứng minh bằng loadtest (#24).
+2. *Không so được giữa các build.* Cùng build `52adf2e`, cùng người chơi, sáng 12/11:
+   **09:00–09:31 máy rảnh p95 trung vị 2,13 ms** → **09:31–09:50 máy đang biên dịch Go 6,03 ms**
+   (vượt 3,5 ms: 15% → 68%). Log server có 160 dòng `tick chậm` kể từ 11/11 20:13 và **tất cả**
+   nằm trong 09:31–09:44; phần tốn thời gian nhảy ngẫu nhiên giữa bot/game/gửi, 44 dòng có
+   tick TB > tick p95 → cả tiến trình bị dừng, không phải một đoạn mã nặng. Đúng vết xe quy
+   tắc 16 và B20/B13c. **Lưu ý ngược:** load lúc đó là 1,08/nhân, tức **ĐẠT** ngưỡng "máy
+   rảnh < 1,5" của quy tắc 16 — ngưỡng ấy hợp cho số đo THÔNG LƯỢNG, không đủ chặt cho số đo
+   ĐỘ TRỄ như tick. Với tick nên đòi load/nhân < 0,5 và không biên dịch/không chạy bài đo
+   trình duyệt trong suốt khoảng đo.
+3. *Không giải thích được client giật.* Lúc người thật tụt < 45 FPS (25,6% mẫu), tick server
+   cùng lúc trung vị **2,59 ms**, còn thấp hơn mức chung 3,29 → nghẽn ở máy người chơi.
+
+Mẹo khử nhiễu đã dùng: chia tick khu 0 cho tick **khu đối chứng** (0 người, 19–21 bot, khối
+lượng việc không đổi) CÙNG BUILD. Tỉ lệ đi từ 1,32–1,91× (trước 06/11) lên 2,37–2,93× (từ
+06/11, ngày lên kỹ năng v6.48 §6.3) — **dấu hiệu, chưa phải kết luận**, xem B24.
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
+| B25 | **Ngưỡng cảnh báo tick 3,5 ms nổ 37,9% thời gian** | Cảnh báo nổ hơn một phần ba thời gian là cảnh báo không ai đọc nữa | #34: 4 963 dòng khu-có-người, 1 883 dòng vượt 3,5 ms. Thiên Đình riêng nó vượt 61,3% vì sàn bot 30 | Mở — hoặc nâng ngưỡng, hoặc đặt ngưỡng RIÊNG theo khu | – |
+| B24 | **Khu đông có thể đã đắt lên từ 06/11 (v6.48 §6.3)** | Chưa biết là thoái lui thật hay nhiễu của máy | #34: tick khu 0 chia cho khu đối chứng cùng build (khử nhiễu máy) đi từ 1,32–1,91× (02–05/11) lên 2,37–2,93× (từ 06/11). Mẫu nhỏ, máy nhiễu, thành phần bot cũng đổi | Mở — phải chạy S12/S13 trên **máy rảnh** ở `d2f1331` và commit hiện tại, cùng seed, mới kết luận được | – |
 | B23 | **Rò rỉ texture: càng chơi lâu bộ nhớ GPU càng phình, 120 MB → 1,4 GB** | Người chơi lâu bị `gpu_pressure`, tự hạ chất lượng rồi **mất ngữ cảnh WebGL** (màn hình trắng / tab bị thu hồi). Trên iPhone là bị Safari giết tab | Telemetry build `ec38aee`: một phiên 55 phút **1 431 MB / 13 736 texture**; 3 phiên dài khác 812–1 117 MB. `TEXLEAK` tái hiện được: +91 texture/phút, nhóm phình là `mapview.noiseMask` | **Đóng (#33)** — mặt nạ nền huỷ theo ô, `MapView.destroy()` khi đổi khu. Đo lại 14 phút: không còn xu hướng tăng | #33 |
 | B22 | **Trong cột "người", VÒNG KIẾM và LỚP TRẠNG THÁI ăn 2/3 thời gian** | Máy yếu tụt FPS khi đông người | `weakperf.mjs` (bảng mốc CON, 11/11): CPU 4× cột `players` 4,96 ms, chia ra thân 0,46 · bảng tên 0,41 · **vòng kiếm 1,35** · **trạng thái 1,42**. Bảng tên luôn rẻ nhất | **Đóng (11/11)** — xem lượt #28 ngay dưới: vòng kiếm thành container chỉ xoay, lớp trạng thái chỉ vẽ lại khi đổi | #28 |
 | B21 | ~~"Nhìn người chạy nhanh từ tab khác nhảy cóc 3,5%"~~ — **lỗi PHÉP ĐO** | Đã đuổi theo một con số sai suốt hai lượt | Bài cũ lấy vị trí sprite theo nhịp `rAF` của chính nó rồi chia cho giờ máy; nhịp ấy lệch nhịp vẽ của game nên một khung đo "thấy" hai khung vẽ gộp lại. Cùng một lượt: 2 807 đv/s theo nhịp bài, 816 đv/s theo VẾT trong vòng vẽ, trong khi cặp gói đang nội suy chỉ đi 939 đv/s (trần 975) | **Đóng (Q48)** — client ghi vết (thời điểm vẽ, x, y, tốc độ dữ liệu) trong chính vòng vẽ; đo lại 3 lượt máy rảnh: 0 nhảy cóc, 0 đứng hình. Cổng deploy canh 0/0 | Q48 |

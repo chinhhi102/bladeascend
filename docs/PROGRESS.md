@@ -622,6 +622,24 @@ Kèm theo: `?textrace=1` gom texture **theo nơi cấp phát** (`window.__texsit
 nó thì chỉ biết "có rò rỉ" chứ không biết ở đâu — vết ngăn xếp lúc tải ảnh lên chỉ thấy ruột
 PixiJS. Mặc định tắt, không tốn gì cho người chơi. Chi tiết ở PERF_LOG lượt #33 (nút thắt B23).
 
+## Lượt 12/11 (sáng) — đọc số liệu TICK của người chơi thật
+
+Không sửa gì, chỉ đọc: `server/cmd/tickquery` (mới) bóc bảng `server_samples` trong
+`telemetry.db` — 25 920 dòng (mỗi khu × 10 s), 30/10 → 12/11, loại hết phiên do máy điều
+khiển. Báo cáo đầy đủ ở **`docs/TICK_NGUOI_THAT.md`**, tóm tắt ở `PERF_LOG` lượt #34.
+
+- **Tick rất thoáng:** khu đang có người thật, p95 trung vị **2,57 ms / 33,3 ms** ngân sách.
+- **Nhưng chưa nói được gì về lúc đông:** đông nhất từng ghi là **3 người trong một khu**,
+  87% số mốc chỉ có 1 người. Tải tick hiện nay là bot, không phải người.
+- Thiên Đình đắt gấp ~2,8 lần khu thường (p95 4,80 so với 1,74–2,97) — sàn bot 30.
+- Client giật **không phải tại server**: lúc người thật tụt < 45 FPS, tick cùng lúc 2,59 ms,
+  còn thấp hơn mức chung 3,29.
+- **Phép đo bị chính máy dev làm nhiễu:** cùng build, cùng người chơi, sáng nay 09:00–09:31
+  máy rảnh p95 2,13 ms → 09:31–09:50 máy đang biên dịch Go **6,03 ms**. 160 dòng `tick chậm`
+  trong log server đều nằm gọn trong 13 phút đó. Hai nút thắt mới: **B24** (khu đông có thể
+  đã đắt lên từ 06/11 — phải đo lại trên máy rảnh mới dám kết luận) và **B25** (ngưỡng cảnh
+  báo 3,5 ms nổ 37,9% thời gian).
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
