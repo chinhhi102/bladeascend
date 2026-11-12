@@ -66,6 +66,7 @@ func (s *server) routes(assetsDir, clientDir string) http.Handler {
 func (s *server) mux(assetsDir, clientDir string) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/config", s.handleConfig)
+	mux.HandleFunc("GET /api/debug-allowed", s.handleDebugAllowed)
 	mux.HandleFunc("GET /api/leaderboard", s.handleLeaderboard)
 	mux.HandleFunc("GET /api/rooms", s.handleRooms)
 	mux.HandleFunc("GET /api/map/{id}", s.handleMap)
@@ -158,6 +159,21 @@ func writeJSON(w http.ResponseWriter, v any) {
 func (s *server) handleConfig(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_, _ = w.Write(s.rawCfg)
+}
+
+// handleDebugAllowed: kết nối NÀY có quyền dùng lệnh test không (ADMIN_SPEC §1.1).
+//
+// Cảnh thử `?scene=testbed` không nối WebSocket — nó dựng cảnh bằng dữ liệu bịa tại client
+// để ảnh chụp luôn giống nhau. Nhưng nó vẫn là một cửa debug, nên vẫn phải hỏi quyền, và
+// phải hỏi ĐÚNG người có quyền trả lời: `DebugGate`, cùng cổng mà `/ws` dùng. Tự đặt một
+// điều kiện riêng ở client (`?debug=true` là đủ) thì mở cửa cho bất kỳ ai gõ thêm một tham
+// số vào URL — đúng cái §1.1 cấm.
+func (s *server) handleDebugAllowed(w http.ResponseWriter, r *http.Request) {
+	src := ""
+	if s.debug {
+		src = string(s.debugGate.Allow(r))
+	}
+	writeJSON(w, map[string]any{"ok": src != "", "source": src})
 }
 
 // handleLeaderboard: GET /api/leaderboard?period=day|week|all&board=score|hits|speed (spec §11.2).

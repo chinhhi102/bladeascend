@@ -4,6 +4,7 @@ import { guardLines, killFilters, noteDrawError, noteSysError, sysOffList, sysRu
 import { census, type Census, censusFlat, censusLine, ledgerSet } from './ledger';
 import { setEmoteCharCount } from './emote';
 import { paceTicker } from './framepace';
+import { countDrawCalls, countNodes, drawCalls } from './drawstats';
 import { probeEnabled, probeFrame, probeHeap, probeLines, probeMark, probeStats, probeSubFlush } from './probe';
 import { assets } from './assets';
 import { statusWork, statusWorkTick } from './statusview';
@@ -53,41 +54,10 @@ const WATCHDOG_MS = 3000;
 /** Nhịp kiểm của watchdog. 1 giây là đủ: ngưỡng là 3 giây, chậm nhất phát hiện sau 4. */
 const WATCHDOG_CHECK_MS = 1000;
 
-/**
- * drawCalls đếm số lệnh vẽ WebGL mỗi khung. Pixi không công bố con số này, mà nó lại là chỉ
- * số quan trọng nhất để biết nghẽn ở GPU hay ở CPU, nên bọc thẳng hàm vẽ của ngữ cảnh WebGL.
- * Chỉ bật ở chế độ debug (spec §13.6).
- */
-export const drawCalls = { perFrame: 0, acc: 0, frames: 0, on: false, ready: false };
+// `drawCalls` / `countDrawCalls` chuyển sang `drawstats.ts` (cảnh thử dùng chung); xuất
+// lại ở đây để các chỗ đang `import { drawCalls } from './scene'` không phải sửa theo.
+export { countDrawCalls, drawCalls };
 
-/**
- * countDrawCalls bọc hàm vẽ — gọi một lần. Trước 1/11 chỉ gắn khi URL có `?debug=true`, còn
- * phím F3 thì mở được overlay ở MỌI trang: overlay đọc một bộ đếm chưa bao giờ được gắn và
- * ghi "draw call 0" giữa lúc đang vẽ 5 000 sprite (chủ dự án chụp được). Giờ mở overlay là
- * gắn (`perfLine`), và chưa đo xong cửa sổ đầu thì ghi "—" chứ không ghi số 0 giả.
- */
-export function countDrawCalls(gl: WebGL2RenderingContext): void {
-  if (drawCalls.on) {
-    return;
-  }
-  drawCalls.on = true;
-  for (const name of ['drawElements', 'drawArrays', 'drawElementsInstanced', 'drawArraysInstanced'] as const) {
-    const fn = gl[name] as (...a: unknown[]) => void;
-    (gl as unknown as Record<string, unknown>)[name] = (...a: unknown[]): void => {
-      drawCalls.acc += 1;
-      fn.apply(gl, a);
-    };
-  }
-}
-
-/** countNodes đếm số đối tượng hiển thị đang nằm trong cây vẽ. */
-function countNodes(c: { children?: unknown[] }): number {
-  let n = 1;
-  for (const k of (c.children ?? []) as { children?: unknown[] }[]) {
-    n += countNodes(k);
-  }
-  return n;
-}
 const MOOD_EMOTE_CHANCE = 0.12; // chance per mood change that a character shouts (run/chase/flee)
 
 /** GameScene renders the ClientWorld every frame with a camera that zooms out as you grow (spec §4.1). */

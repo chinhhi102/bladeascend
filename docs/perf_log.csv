@@ -86,3 +86,4 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 38,2026-11-12,26b13cc,"Vong kiem - gia ve rieng (bat/tat cung luot), TRUOC",RINGCOST,,,,,,,,,,,,,,,,,,,,,,,"CPU 4x ~1050 kiem 13 nguoi: Pixi ve +6.87 ms, FPS -3.1",
 38,2026-11-12,ca3c42f,"Vong kiem - gia ve rieng (bat/tat cung luot), SAU (be hat khai TINH)",RINGCOST,,,,,,,,,,,,,,,,,,,,,,,"CPU 4x ~1050 kiem 11 nguoi: Pixi ve +0.19 ms, FPS +-0.3",
 38,2026-11-12,ca3c42f,"Moc day du buoc 1 (weakperf, may ranh, 3 luot)",S14,,,,,,,,60/34/23,,,,,,,,,,,,,,,"CPU 1x/4x/6x: Pixi ve 4.00/15.89/21.72 ms; JS game 0.99/2.18/3.63 ms; 325-393 lo ve",
+0,2026-11-12,,"Người thật 12/11 12:00 → 12/11 23:30",S6,1.67,10.38,15.2,8.5,15.4,2.7,26.0,59.6,25.7,,0,5122,254.3,0,4.67,,,,"ít mẫu, tham khảo (N=2)",2

@@ -973,6 +973,19 @@ async function boot(): Promise<void> {
   const run = async (): Promise<void> => {
     const cfg = await loadConfig();
     await assets.init();
+    // `?scene=testbed`: cảnh thử cố định để so ảnh trước/sau một thay đổi đồ hoạ
+    // (`render/testbed.ts`). Quyền do SERVER quyết — `/api/debug-allowed` dùng đúng
+    // `admin.DebugGate` mà `/ws` dùng (ADMIN_SPEC §1.1). Tự xét ở client thì bất kỳ ai gõ
+    // thêm một tham số vào URL cũng vào được.
+    // Cả phần hỏi quyền lẫn câu từ chối nằm TRONG `testbed.ts` (tệp đã `i18n-ok-file`):
+    // thêm một chuỗi tiếng Việt vào `strings.ts` cho một màn hình chỉ công cụ đo nhìn thấy
+    // là thêm một khoá chưa dịch vào cả 5 bản dịch khác.
+    if (new URLSearchParams(location.search).get('scene') === 'testbed') {
+      const { runTestbed } = await import('./render/testbed');
+      await runTestbed(stage, cfg);
+      screen.done();
+      return;
+    }
     // Thứ tự nhân vật dự phòng = thứ tự trong config (NETCODE_SPEC §5 Hiển thị mục 1).
     // Thiếu atlas của một nhân vật thì vẽ bằng nhân vật đầu tiên CÓ atlas, không vẽ
     // placeholder — build thật cấm placeholder.
