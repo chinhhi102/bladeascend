@@ -159,6 +159,8 @@ export class GameScene {
   private readonly skill: SkillPresenter;
   private mapView: MapView | null = null;
   private readonly players = new Map<number, PlayerSprite>();
+  /** ringsMode: chế độ vòng kiếm của bài đo (xem `setRings`). Luôn 'all' khi chơi thật. */
+  private ringsMode: 'all' | 'mine' | 'none' = 'all';
   /** Chữ nổi trong thế giới: "Cần {cảnh giới}" khi chém vật cản quá bậc (§8.2). */
   private readonly floatText = new FloatTextLayer();
   /** Dãy sạp tạm của Cô Ba (§6.3 v6.10) — vòng đời 6 giây, tách khỏi MapView. */
@@ -182,6 +184,20 @@ export class GameScene {
   private fpsAcc = 0;
   private fpsFrames = 0;
   private lastRenderMs = 0;
+  /**
+   * pixiMs: thời gian của chính `app.render()` — trung bình trượt.
+   *
+   * `lastRenderMs` nghe như "thời gian vẽ" nhưng nó đo vòng CẬP NHẬT (mọi hệ thống trong
+   * `onFrame`). Lượt vẽ của Pixi — duyệt cây cảnh, gom lô, gói lại buffer particle, nạp lên
+   * GPU — trước nay không được đo ở đâu cả.
+   *
+   * Đó không phải chi tiết nhỏ: lượt đo 12/11 (máy rảnh, CPU 6×) cho khung 33 ms trong khi
+   * TỔNG mọi cột đo được chỉ ~5 ms. 28 ms còn lại nằm đúng ở chỗ không ai bấm giờ, và nó
+   * khớp với hồ sơ CPU của B15 ("không có hàm nào của mã game trong top 22, toàn bộ là
+   * PixiJS duyệt cây cảnh và gom lô"). Tối ưu phần vẽ mà không có cột này thì mọi phép đo
+   * trước/sau đều đọc ra "không đổi gì".
+   */
+  private pixiMs = 0;
   /** charsInUse: dùng lại mỗi khung thay vì cấp phát Set mới — §5 "không tạo object lúc chơi". */
   private readonly charsInUse = new Set<string>();
   /** myReach: tâm + tầm kiếm của mình, tính một lần mỗi khung (camera và viền vật cản dùng chung). */
@@ -310,7 +326,9 @@ export class GameScene {
         this.drawFaults--;
         throw new Error('lỗi giả trong khâu vẽ (kx.faultDraw)');
       }
+      const t = performance.now();
       this.app.render();
+      this.pixiMs = this.pixiMs * 0.9 + (performance.now() - t) * 0.1;
     } catch (err) {
       this.onDrawError(err);
     }
@@ -665,6 +683,33 @@ export class GameScene {
     this.app.renderer.resize(this.app.screen.width, this.app.screen.height, res);
   }
 
+  /**
+   * setRings bật/tắt TOÀN BỘ vòng kiếm — CHỈ cho bài đo (`tools/browsertest/ringcost.mjs`).
+   *
+   * Vì sao cần: so FPS giữa hai lần chạy khác nhau là so hai CẢNH khác nhau. Lượt đo 12/11
+   * cho thấy cùng một bài, cùng máy rảnh, số sprite trên màn hình đi từ 2 974 tới 4 813 tuỳ
+   * lúc đó có mấy con bot đứng gần — biên độ ấy lớn hơn thứ đang muốn đo.
+   *
+   * Bật/tắt trong CÙNG một lượt thì phép trừ tự khử cảnh: `Pixi vẽ ms (bật) − (tắt)` là giá
+   * của riêng vòng kiếm, đo trên đúng đám đông đang đứng đó. Đem con số ĐÓ so trước/sau mới
+   * là so cùng một thứ.
+   */
+  /**
+   * `mode`:
+   *   - `'all'`  — như lúc chơi thật (mặc định khi trả lại).
+   *   - `'mine'` — CHỈ vòng của mình. Cần cho bài so ảnh: vòng của người khác ra vào khung
+   *     tuỳ bot đứng đâu, và chính nó là nguồn nhiễu lớn nhất — hai phiên đo 12/11 có 6 và
+   *     13 người trong tầm, nên ảnh hiệu lệch 28,7/255 dù cùng một bản build.
+   *   - `'none'` — tắt sạch, để lấy nền trừ đi.
+   */
+  setRings(mode: 'all' | 'mine' | 'none'): void {
+    const myId = this.world?.myId;
+    for (const [id, p] of this.players) {
+      p.hideRings = mode === 'none' || (mode === 'mine' && id !== myId);
+    }
+    this.ringsMode = mode;
+  }
+
   /** setProbe bật/tắt đồng hồ theo hệ thống; `main` gọi theo trạng thái bảng F3. */
   setProbe(on: boolean): void {
     probeEnabled(on);
@@ -773,6 +818,10 @@ export class GameScene {
         // lần có người vào khung hình, là nguồn giật rác bộ nhớ — §5 nói rõ "không tạo/hủy
         // object trong lúc chơi".
         sp = this.pool.take(this.cfg, f.view.id, f.view.name, f.view.char, f.view.id === this.world?.myId);
+        // Người vào khung hình GIỮA pha đo phải theo đúng chế độ đang đo, không thì phép
+        // trừ của `ringcost.mjs` lẫn một người có vòng kiếm vào giữa pha "tắt".
+        sp.hideRings = this.ringsMode === 'none'
+          || (this.ringsMode === 'mine' && f.view.id !== this.world?.myId);
         this.players.set(f.view.id, sp);
         this.entities.addChild(sp.root);
         this.rings.addChild(sp.ring);
@@ -1079,6 +1128,8 @@ export class GameScene {
       fps: this.fps,
       frameMs: 1000 / Math.max(this.fps, 1),
       drawMs: this.lastRenderMs,
+      // pixiMs: lượt vẽ của Pixi, tách khỏi vòng cập nhật (xem khai báo `pixiMs`).
+      pixiMs: this.pixiMs,
       sprites: countNodes(this.app.stage),
       drawCalls: drawCalls.perFrame,
       texMB: gpuMemMB(),

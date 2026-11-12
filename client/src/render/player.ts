@@ -60,6 +60,11 @@ const SKILL_ANIM_SECS = 0.6;
 /** PlayerSprite draws one character: body, sword ring, aura, name tag, emote bubble. */
 export class PlayerSprite {
   readonly root = new Container();
+  /**
+   * CHỈ cho bài đo: ẩn vòng kiếm để lấy GIÁ của nó bằng phép trừ trong CÙNG một lượt
+   * (`tools/browsertest/ringcost.mjs`). Xem `Scene.setRings`.
+   */
+  hideRings = false;
   private readonly swordRing: SwordRing;
   private readonly shadow = new Graphics();
   private readonly aura = new Graphics();
@@ -299,7 +304,14 @@ export class PlayerSprite {
     probeSubMark('p.body');
     this.plate.update(s.L, s.ti ?? 0, myRealm, headY, zoom, now, r * 2.6 * zoom >= PLATE_FAR_PX, plateFade);
     probeSubMark('p.plate');
-    this.swordRing.update(f, now, showHitbox, swordDetail);
+    // `hideRings` bỏ CẢ cập nhật lẫn vẽ: phép trừ chỉ đúng khi tắt hẳn công việc, tắt mỗi
+    // phần vẽ thì vẫn còn JS chạy và con số đo được nhỏ hơn giá thật.
+    if (this.hideRings) {
+      this.swordRing.visible = false;
+    } else {
+      this.swordRing.visible = true;
+      this.swordRing.update(f, now, showHitbox, swordDetail);
+    }
     probeSubMark('p.ring');
     this.updateAnimInfo(headY, zoom);
     this.statusView.update({ id: this.id, st: s.st ?? 0, r, sc: s.sc, headY, zoom, now, vx, vy, wx: f.x, wy: f.y });

@@ -118,7 +118,7 @@ async function sample(label) {
   // trong khi vừa cắt hoặc vừa thêm vài ms mỗi khung.
   const draw = await me.evaluate(() => {
     const s = window.kx.scene.perfStats();
-    return { drawMs: s.drawMs ?? 0, drawCalls: s.drawCalls ?? 0, sprites: s.sprites ?? 0 };
+    return { drawMs: s.drawMs ?? 0, pixiMs: s.pixiMs ?? 0, drawCalls: s.drawCalls ?? 0, sprites: s.sprites ?? 0 };
   });
   if (!Object.values(probe).some((v) => v > 0)) {
     throw new Error(`đồng hồ theo hệ thống trả toàn 0 ở "${label}" — bảng đo bị tắt giữa chừng`);
@@ -145,16 +145,19 @@ await sleep(2500);
 rows.push(await sample('CPU 4× · res 0.5'));
 await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
 
-const KEYS = ['interp', 'players', 'monsters', 'items', 'beasts', 'map', 'ambient', 'vfx', 'skills'];
+// `other` PHẢI có mặt: nó là phần của vòng cập nhật không mốc nào nhận. Bỏ nó khỏi bảng thì
+// các cột cộng lại không bằng `cập nhật ms` và không ai nhận ra là bảng đang thiếu chỗ nào.
+const KEYS = ['interp', 'players', 'monsters', 'items', 'beasts', 'map', 'ambient', 'vfx', 'skills', 'other'];
 // Mốc CON bên trong cột `players` — biết "người 2,6 ms" chưa đủ để sửa, phải biết 2,6 ms
 // đó là thân, bảng tên, vòng kiếm hay lớp trạng thái (render/probe.ts).
 const SUB = ['p.body', 'p.plate', 'p.ring', 'p.status'];
 console.log('');
-console.log(`| Kịch bản | FPS | vẽ ms | lô vẽ | sprite | ${KEYS.join(' | ')} | heap MB | răng cưa |`);
-console.log(`|---|---:|---:|---:|---:|${KEYS.map(() => '---:').join('|')}|---:|---:|`);
+console.log(`| Kịch bản | FPS | khung ms | cập nhật ms | **Pixi vẽ ms** | lô vẽ | sprite | ${KEYS.join(' | ')} | heap MB | răng cưa |`);
+console.log(`|---|---:|---:|---:|---:|---:|---:|${KEYS.map(() => '---:').join('|')}|---:|---:|`);
 for (const r of rows) {
   const cols = KEYS.map((k) => (r[k] ?? 0).toFixed(2));
-  console.log(`| ${r.label} | ${r.fps} | ${(r.drawMs ?? 0).toFixed(2)} | ${r.drawCalls ?? 0} | ${r.sprites ?? 0} | ${cols.join(' | ')} | ${(r.heapMB ?? 0).toFixed(0)} | ${(r.heapRangeMB ?? 0).toFixed(0)} |`);
+  const frameMs = r.fps > 0 ? 1000 / r.fps : 0;
+  console.log(`| ${r.label} | ${r.fps} | ${frameMs.toFixed(1)} | ${(r.drawMs ?? 0).toFixed(2)} | **${(r.pixiMs ?? 0).toFixed(2)}** | ${Math.round(r.drawCalls ?? 0)} | ${r.sprites ?? 0} | ${cols.join(' | ')} | ${(r.heapMB ?? 0).toFixed(0)} | ${(r.heapRangeMB ?? 0).toFixed(0)} |`);
 }
 console.log('');
 console.log(`| Trong cột "người" | ${SUB.join(' | ')} | tổng |`);

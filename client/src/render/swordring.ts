@@ -97,8 +97,22 @@ interface Blade {
 export class SwordRing {
   readonly root = new Container();
   private readonly blur = new Graphics();
-  private readonly tinted = new ParticleContainer({ dynamicProperties: { position: true, rotation: true, vertex: true, color: true } });
-  private readonly skin = new ParticleContainer({ dynamicProperties: { position: true, rotation: true, vertex: true, color: true } });
+  /**
+   * Hai bể kiếm khai TĨNH hết — không một thuộc tính nào `dynamic`.
+   *
+   * Pixi gói lại buffer thuộc tính `dynamic` cho TỪNG hạt, MỖI khung, bất kể hạt có đổi hay
+   * không (`ParticleBuffer.update`: buffer tĩnh chỉ gói lại khi `_childrenDirty`). Bản cũ
+   * khai cả bốn là dynamic, nên một Đại Thừa 1 050 kiếm vẫn tốn 1 050 lượt gói × 4 thuộc
+   * tính × mỗi khung × mỗi người — ngay cả sau khi v6.52 đã làm JS không ghi gì nữa. Việc
+   * đó không nằm trong cột `p.ring` của bảng F3 (nó xảy ra trong `app.render()`), nên suốt
+   * hai lượt tối ưu nó vô hình.
+   *
+   * Góc quay của cả vòng là `rotation` của CHÍNH container này — một phép ghi, không phải
+   * thuộc tính hạt — nên vòng vẫn quay mà buffer không cần gói lại. Đổi chỗ kiếm thật (đổi
+   * số kiếm, lên tầng, nghiêng sau cú va) thì gọi `markDirty()`.
+   */
+  private readonly tinted = new ParticleContainer({ dynamicProperties: { position: false, rotation: false, vertex: false, color: false } });
+  private readonly skin = new ParticleContainer({ dynamicProperties: { position: false, rotation: false, vertex: false, color: false } });
   private readonly cracks = new Graphics();
   private readonly hitbox = new Graphics();
   private readonly pearl = new Graphics();
@@ -111,6 +125,20 @@ export class SwordRing {
   reach = 0;
   /** Bán kính lớp trân châu đang vẽ (0 = tắt) — chỉ vẽ lại khi bật/tắt hay vòng đổi cỡ. */
   private pearlR = 0;
+  /**
+   * layoutSeq: tăng mỗi lần `rebuild` xếp lại các thanh kiếm.
+   *
+   * Chữ ký của vành mờ và vết nứt phải đổi mỗi khi BỐ CỤC đổi. Dùng `blades.length` là
+   * chưa đủ: đổi số kiếm cùng lúc đổi mức giãn chi tiết có thể ra đúng số thanh cũ với góc
+   * khe MỚI, và khi đó hình vẽ phải đổi mà chữ ký thì không. Một bộ đếm thì không có kẽ hở
+   * nào kiểu đó — và chỗ này là loại lỗi chỉ hiện ra bằng mắt, rất lâu sau, trên máy người
+   * chơi.
+   */
+  private layoutSeq = 0;
+  /** Chữ ký vành mờ / vết nứt / hộp va chạm đang vẽ — '' nghĩa là Graphics đang rỗng. */
+  private blurKey = '';
+  private crackKey = '';
+  private hitboxKey = '';
   private blades: Blade[] = [];
   /** localKey: chữ ký bố cục cục bộ đang áp (xem `placeAll`). '' = phải đặt lại. */
   private localKey = '';
@@ -229,6 +257,7 @@ export class SwordRing {
       for (let i = 0; i < this.blades.length; i++) {
         this.placeLocal(this.blades[i], this.slot(i, this.blades[i].off, t), tilt, dir);
       }
+      this.markDirty();
       return;
     }
     // Chữ ký của BỐ CỤC CỤC BỘ: chỉ ba thứ này đổi thì mới phải đặt lại.
@@ -243,6 +272,19 @@ export class SwordRing {
     for (const b of this.blades) {
       this.placeLocal(b, b.off, tilt, dir);
     }
+    this.markDirty();
+  }
+
+  /**
+   * markDirty báo Pixi gói lại buffer TĨNH của hai bể kiếm ở khung này.
+   *
+   * Quên gọi nó sau khi dời kiếm thì kiếm đứng im ở chỗ cũ — mà "đứng im" là hỏng lặng lẽ,
+   * không ném lỗi, không hiện trong bảng số. Nên mọi đường ghi vào hạt đều phải đi qua đây:
+   * `rebuild` (thêm/bớt hạt), `refreshGeom` (đổi tỉ lệ), `placeAll` (dời chỗ).
+   */
+  private markDirty(): void {
+    this.tinted.update();
+    this.skin.update();
   }
 
   /** placeLocal đặt một thanh kiếm (và vệt mờ của nó) theo góc khe CỤC BỘ `off`. */
@@ -282,6 +324,17 @@ export class SwordRing {
    * the drawn range looked far wider than what the blades can actually hit.
    */
   private drawBlur(g: RingGeom, tilt: number, realm: number, spin: number): void {
+    // Vành mờ KHÔNG đổi mỗi khung: nó chỉ phụ thuộc hình học vòng, số kiếm, độ nghiêng, cảnh
+    // giới và tốc quay. `clear()` một Graphics là đánh dấu dựng lại toàn bộ hình học của nó,
+    // kể cả khi vẽ ra đúng hình cũ — và chỗ này chạy cho MỌI người trong tầm nhìn, mỗi khung.
+    //
+    // `spin` làm tròn 1/50: nó chỉ vào alpha (≤ 0,4), nên một bậc là 0,008 độ mờ — mắt không
+    // thấy, mà vòng chạy đều thì chữ ký đứng yên hẳn thay vì nhảy theo số thực.
+    const key = `${this.layoutSeq}:${g.rings}:${g.width}:${g.reach}:${this.count}:${tilt.toFixed(3)}:${realm}:${Math.round(spin * 50)}`;
+    if (key === this.blurKey) {
+      return;
+    }
+    this.blurKey = key;
     const gr = this.blur.clear();
     const sweepPerTick = (2 * Math.PI * spin) / (this.cfg.sword.rev_secs * this.cfg.net.tick_hz);
     for (let k = g.rings - 1; k >= 0; k--) {
@@ -313,6 +366,7 @@ export class SwordRing {
     // Giữ góc cũ của chính các thanh đang vẽ: khi giãn chi tiết thì chỉ số mảng không còn
     // khớp chỉ số kiếm nữa, nên không thể tính lại bằng slotAngle(count cũ).
     this.prevSlots = this.blades.map((b) => b.off);
+    this.layoutSeq++;
     this.tweenStart = now;
     this.localKey = ''; // bố cục cũ không còn đúng — buộc đặt lại ở khung kế
     this.count = n;
@@ -387,12 +441,24 @@ export class SwordRing {
         p.scaleX = p.texture === bladeTex ? g.width / p.texture.width : ky;
       }
     }
+    this.markDirty();
   }
 
   // Light crack lines across ring 1 while the player carries crack damage (spec §5.2).
   private drawCracks(f: PlayerFrame, g: RingGeom): void {
-    const gr = this.cracks.clear();
     const ck = f.s.ck ?? 0;
+    // Vẽ bằng toạ độ CỤC BỘ rồi xoay cả Graphics, y như bể kiếm làm từ v6.52. Bản cũ cộng
+    // `f.ringAngle` vào từng đường nứt, nên góc đổi mỗi khung và phải vẽ lại mỗi khung —
+    // trong khi hình vẽ ra thì xoay đúng một góc. Giờ nó chỉ vẽ lại khi vết nứt thật sự đổi.
+    //
+    // `ck` làm tròn 1/50: nó chỉ vào alpha (0,35 + 0,5·ck).
+    this.cracks.rotation = f.ringAngle;
+    const key = ck <= 0 ? '' : `${this.layoutSeq}:${Math.round(ck * 50)}:${g.width}:${f.s.tl.toFixed(3)}:${hiltR(g, 0)}:${bladeLen(g, 0)}`;
+    if (key === this.crackKey) {
+      return;
+    }
+    this.crackKey = key;
+    const gr = this.cracks.clear();
     if (ck <= 0) {
       return;
     }
@@ -402,7 +468,7 @@ export class SwordRing {
     for (let i = 0; i < Math.min(this.blades.length, ringCap(g, 0)); i++) {
       // Góc THẬT của thanh kiếm = góc khe cục bộ + góc quay của vòng (container đang mang
       // góc quay, nhưng `cracks` là Graphics riêng nên phải cộng tay).
-      const a = (this.blades[i]?.off ?? 0) + f.ringAngle;
+      const a = this.blades[i]?.off ?? 0;
       const hx = Math.cos(a) * h;
       const hy = Math.sin(a) * h;
       const dx = Math.cos(a + f.s.tl);
@@ -417,13 +483,21 @@ export class SwordRing {
 
   /** drawHitbox overlays the server's sword capsules (debug key H, spec §17). */
   private drawHitbox(f: PlayerFrame, g: RingGeom, show: boolean): void {
+    // Cũng vẽ cục bộ rồi xoay: hộp va chạm bật bằng phím H nên gần như luôn TẮT, mà bản cũ
+    // vẫn `clear()` nó mỗi khung cho mọi người chỉ để không vẽ gì.
+    this.hitbox.rotation = f.ringAngle;
+    const key = show ? `${f.s.n}:${g.width}:${g.reach}:${f.s.tl.toFixed(3)}:${f.s.sc}` : '';
+    if (key === this.hitboxKey) {
+      return;
+    }
+    this.hitboxKey = key;
     const gr = this.hitbox.clear();
     if (!show) {
       return;
     }
     for (let i = 0; i < f.s.n; i++) {
       const k = ringOf(g, i);
-      const a = f.ringAngle + slotAngle(g, f.s.n, i);
+      const a = slotAngle(g, f.s.n, i);
       const h = hiltR(g, k);
       const hx = Math.cos(a) * h;
       const hy = Math.sin(a) * h;
