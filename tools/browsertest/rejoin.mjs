@@ -79,18 +79,51 @@ expect('đã cấp mã phiên MỚI', keyAfter.length === 64 && keyAfter !== key
 
 // ── Bị chém chết trong lúc "mất kết nối" ────────────────────────────────────────────────
 //
-// Giả lập bằng cách: ngắt WebSocket (server giữ nhân vật 20 s), rồi giết nhân vật đó từ
-// một kết nối khác thì phức tạp — ở đây dùng lệnh test `die` NGAY TRƯỚC khi tải lại, nên
-// cú chết rơi đúng vào lúc client đang khởi động lại.
-console.log('\n— chết đúng lúc tải lại trang —');
-await p.evaluate(() => {
-  window.kx.conn.send({ t: 'dbg', cmd: 'die', n: 0 });
-  // Tải lại NGAY: cú chết tới server trong lúc trang đang dựng lại.
-  setTimeout(() => location.reload(), 120);
-});
-await sleep(9000);
+// Đúng câu của checklist §17: "bị chém trong lúc mất kết nối → chết, F5 xong thấy Tổng kết".
+// Nên phải có NGƯỜI KHÁC chém: mở tab thứ hai, tab 1 tải lại trang (nhân vật vào diện giữ
+// 20 giây), rồi tab 2 gửi `killid` vào đúng id đó trong lúc tab 1 còn đang dựng lại.
+//
+// Bản cũ làm bằng cách tự gửi `die` rồi hẹn `location.reload()` sau 120 ms. Đó là một cuộc
+// đua giữa việc đẩy gói đi và việc trình duyệt đóng socket: máy rảnh thì gói kịp đi (chết,
+// thấy Tổng kết), máy bận thì không kịp (nhân vật còn sống, vào thẳng trận). Ngày 12/11 nó
+// chặn một lượt deploy của đúng tính năng đang chạy đúng. Một bài đo mà kết quả phụ thuộc
+// tải máy thì nó đo tải máy, không đo tính năng.
+console.log('\n— bị người khác chém chết trong lúc mất kết nối —');
+const p2 = await ctx.newPage();
+await p2.goto(`${TARGET}/?debug=true`, { waitUntil: 'domcontentloaded' });
+await p2.waitForSelector('input', { timeout: 30000 });
+await p2.fill('input', 'KiemTraKeChem');
+await p2.locator('.char-card').nth(0).click();
+await p2.locator('.home .btn.primary').click();
+await p2.waitForSelector('.room-board', { timeout: 60000 });
+await sleep(2000);
+
+const victimID = after?.id;
+await p.evaluate(() => location.reload());
+// Chờ cho tab 1 rụng hẳn kết nối rồi mới chém: chém sớm quá thì nó chết lúc CÒN kết nối,
+// tức là lại kiểm một đường khác.
+await sleep(1500);
+await p2.evaluate((id) => window.kx.conn.send({ t: 'dbg', cmd: 'killid', n: id }), victimID);
+// Chờ tới khi trang dựng xong HẲN một trong ba màn, đừng chờ cứng theo đồng hồ: lúc
+// `tools/deploy.sh` chạy bài này thì máy đang vừa build vừa chạy server, và 12/11 một lượt
+// deploy đã TRƯỢT chỉ vì sau 9 giây trang còn đang nạp — không màn nào tồn tại, nên bài đọc
+// ra "không thấy Tổng kết" rồi kết luận sai về một tính năng đang chạy đúng.
+await p.waitForSelector('.summary, .room-board, .home', { timeout: 45000 }).catch(() => {});
+// Dựng xong rồi mới nghỉ một nhịp: nếu nó ĐỊNH tự nhảy vào trận mới thì nhịp này đủ để lộ ra.
+await sleep(2000);
 const onSummary = await p.evaluate(() => !!document.querySelector('.summary'));
 const inMatch = await p.evaluate(() => !!document.querySelector('.room-board'));
+if (!(onSummary && !inMatch)) {
+  // In trạng thái thật khi trượt. Một dòng "false (mong true)" không phân biệt được
+  // "tự vào trận mới" (lỗi thật) với "trang chưa nạp xong" (lỗi của phép đo).
+  console.log('  trạng thái lúc trượt:', JSON.stringify(await p.evaluate(() => ({
+    summary: !!document.querySelector('.summary'),
+    board: !!document.querySelector('.room-board'),
+    home: !!document.querySelector('.home'),
+    body: document.body.className,
+    ready: document.readyState,
+  }))));
+}
 expect('thấy màn Tổng kết, KHÔNG tự vào trận mới', onSummary && !inMatch, true);
 
 await b.close();

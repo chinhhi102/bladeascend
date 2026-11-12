@@ -66,6 +66,24 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			z.G.FillSkillCharges(p)
 		case "die":
 			z.G.DebugKill(p)
+		case "killid":
+			// Chém CHẾT NGƯỜI KHÁC theo id. Chỉ để nghiệm thu §7.1: "bị chém trong lúc mất
+			// kết nối → chết, F5 xong thấy Tổng kết".
+			//
+			// Trước đây bài đo làm việc đó bằng cách tự gửi `die` rồi `location.reload()` sau
+			// 120 ms, tức là đua giữa việc đẩy gói đi và việc trình duyệt đóng socket. Nó
+			// đúng khi máy rảnh và sai khi máy bận — ngày 12/11 chặn một lượt deploy của
+			// đúng tính năng đang chạy đúng. Và nó cũng không kiểm thứ spec nói: ở đó người
+			// chơi chết TRONG LÚC đã mất kết nối, do tay người khác.
+			//
+			// Quét cả 5 khu vì người bị chém có thể không ở cùng khu với người gửi lệnh. An
+			// toàn trong `r.Do`: không khu nào đang tick.
+			for _, tz := range r.zones {
+				if t, ok := tz.G.Players[uint32(d.N)]; ok && !t.Dead {
+					tz.G.DebugKill(t)
+					break
+				}
+			}
 		case "buff":
 			if d.N >= 0 && d.N < game.BuffCount {
 				z.G.ApplyBuff(p, game.BuffNames[d.N])
