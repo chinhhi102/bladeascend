@@ -4,7 +4,7 @@ import { guardLines, killFilters, noteDrawError, noteSysError, sysOffList, sysRu
 import { census, type Census, censusFlat, censusLine, ledgerSet } from './ledger';
 import { setEmoteCharCount } from './emote';
 import { paceTicker } from './framepace';
-import { countDrawCalls, countNodes, drawCalls } from './drawstats';
+import { countDrawCalls, countNodes, drawCalls, type LayerStat, measureLayers } from './drawstats';
 import { probeEnabled, probeFrame, probeHeap, probeLines, probeMark, probeStats, probeSubFlush } from './probe';
 import { assets } from './assets';
 import { statusWork, statusWorkTick } from './statusview';
@@ -678,6 +678,38 @@ export class GameScene {
       p.hideRings = mode === 'none' || (mode === 'mine' && id !== myId);
     }
     this.ringsMode = mode;
+  }
+
+  /**
+   * layerStats: lô vẽ theo TỪNG LỚP của cảnh đang chơi — mục 5 lượt tối ưu (B30).
+   *
+   * Danh sách lớp lấy ĐÚNG thứ tự `camera.addChild` ở `rebuildLayers`. Thêm một lớp mới mà
+   * quên thêm vào đây thì bảng vẫn ra, chỉ thiếu một dòng — nên khi tổng các dòng không bằng
+   * `drawCalls.perFrame` thì nghĩa là danh sách đã lạc hậu, không phải phép đo sai.
+   */
+  layerStats(): { layers: LayerStat[]; total: number } {
+    const mv = this.mapView;
+    const layers: { name: string; c: { visible?: boolean } }[] = [
+      // Tên lớp bằng ASCII, không tiếng Việt: đây là nhãn số liệu cho công cụ đo, không
+      // phải chữ cho người chơi — cùng lý do `probe.ts` đặt khoá ASCII (quy tắc 5 chặn đúng
+      // khi tôi viết tên tiếng Việt ở đây, và nó chặn đúng).
+      ...(mv ? [{ name: 'ground', c: mv.ground }, { name: 'decor', c: mv.decor }, { name: 'zone-under', c: mv.under }] : []),
+      { name: 'orbs', c: this.orbs.root },
+      { name: 'rings', c: this.rings },
+      ...(mv ? [{ name: 'gates', c: mv.gateLayer }] : []),
+      { name: 'glow', c: this.glow.root },
+      { name: 'entities', c: this.entities },
+      ...(mv ? [{ name: 'canopy', c: mv.over }] : []),
+      { name: 'ambient', c: this.ambient.root },
+      ...this.skill.layers.map((c, i) => ({ name: `skill-${i + 1}`, c })),
+      { name: 'vfx', c: this.vfx.layer },
+      { name: 'floattext', c: this.floatText.layer },
+    ];
+    const got = measureLayers(() => this.app.render(), layers);
+    // Vẽ lại một khung ĐẦY ĐỦ rồi mới trả về: khung cuối của vòng đo chỉ có một lớp bật, để
+    // nguyên là người chơi (hoặc ảnh chụp kế tiếp) thấy một cảnh khuyết.
+    this.app.render();
+    return { layers: got, total: got.reduce((a, c) => a + c.calls, 0) };
   }
 
   /** setProbe bật/tắt đồng hồ theo hệ thống; `main` gọi theo trạng thái bảng F3. */

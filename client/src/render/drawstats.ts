@@ -41,3 +41,102 @@ export function countNodes(c: { children?: unknown[] }): number {
   }
   return n;
 }
+
+/**
+ * ── Đếm lô vẽ THEO TỪNG LỚP, và vì sao lô bị ngắt ───────────────────────────────────────
+ *
+ * Tổng số lô vẽ nói "đang tốn", không nói "tốn ở đâu". Mục 5 của lượt tối ưu cần chỉ đích
+ * danh lớp nào ngốn lô và vì cớ gì, nếu không thì mọi cách chữa đều là đoán.
+ *
+ * Cách đo số lô của MỘT lớp: tắt mọi lớp khác, vẽ một khung, đọc bộ đếm. Thô nhưng đúng và
+ * không phải móc vào ruột bộ gom lô của Pixi — mà ruột đó đổi theo từng bản Pixi, còn bài đo
+ * thì phải sống lâu hơn một lần nâng cấp.
+ *
+ * Phần "vì sao ngắt" không đo được trực tiếp, nên thay bằng những thứ GÂY ra ngắt lô, đếm
+ * bằng cách duyệt cây: đổi texture (đếm số nguồn texture khác nhau), đổi blend mode, vật
+ * không gom lô được (Graphics, Text, Mesh), và filter/mask (mỗi cái là một lượt vẽ ra texture
+ * riêng). Một lớp 40 lô với 38 texture khác nhau và một lớp 40 lô với 1 texture nhưng 20
+ * Graphics là hai bệnh khác hẳn nhau.
+ */
+export interface LayerStat {
+  name: string;
+  calls: number;
+  nodes: number;
+  /** Số vật theo loại ống vẽ (`renderPipeId` — nhãn bền, không đổi khi minify). */
+  kinds: Record<string, number>;
+  /** Số NGUỒN texture khác nhau: mỗi lần đổi nguồn giữa hai vật liền nhau là một lần ngắt lô. */
+  textures: number;
+  /** Số blend mode khác nhau. Đổi blend là ngắt lô, không có cách nào gom. */
+  blends: number;
+  filters: number;
+  masks: number;
+}
+
+interface Walkable {
+  visible?: boolean;
+  renderPipeId?: string;
+  blendMode?: string;
+  filters?: unknown;
+  mask?: unknown;
+  texture?: { source?: { uid?: number } };
+  children?: Walkable[];
+}
+
+function tally(c: Walkable, st: LayerStat, tex: Set<number>, bl: Set<string>): void {
+  st.nodes++;
+  const id = c.renderPipeId;
+  if (id) {
+    st.kinds[id] = (st.kinds[id] ?? 0) + 1;
+  }
+  if (c.blendMode) {
+    bl.add(c.blendMode);
+  }
+  const uid = c.texture?.source?.uid;
+  if (uid !== undefined) {
+    tex.add(uid);
+  }
+  if (Array.isArray(c.filters) ? c.filters.length > 0 : Boolean(c.filters)) {
+    st.filters++;
+  }
+  if (c.mask) {
+    st.masks++;
+  }
+  for (const k of c.children ?? []) {
+    tally(k, st, tex, bl);
+  }
+}
+
+/**
+ * measureLayers trả bảng lô vẽ theo lớp. `render` phải vẽ ĐÚNG một khung.
+ *
+ * Trả lại nguyên trạng `visible` của mọi lớp khi xong — kể cả khi `render` ném lỗi, vì bỏ
+ * một lớp ở trạng thái ẩn là làm hỏng chính cái cảnh đang đo.
+ */
+export function measureLayers(render: () => void, layers: { name: string; c: Walkable }[]): LayerStat[] {
+  const was = layers.map((l) => l.c.visible !== false);
+  const out: LayerStat[] = [];
+  try {
+    for (let i = 0; i < layers.length; i++) {
+      for (let j = 0; j < layers.length; j++) {
+        layers[j].c.visible = i === j;
+      }
+      drawCalls.acc = 0;
+      render();
+      const st: LayerStat = {
+        name: layers[i].name, calls: drawCalls.acc, nodes: 0, kinds: {},
+        textures: 0, blends: 0, filters: 0, masks: 0,
+      };
+      const tex = new Set<number>();
+      const bl = new Set<string>();
+      tally(layers[i].c, st, tex, bl);
+      st.textures = tex.size;
+      st.blends = bl.size;
+      out.push(st);
+    }
+  } finally {
+    for (let j = 0; j < layers.length; j++) {
+      layers[j].c.visible = was[j];
+    }
+  }
+  return out;
+}

@@ -92,3 +92,4 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 39,2026-11-13,ca3c42f,"Do lai BUOC 1 tren canh thu - SAU",TESTBED,,,,,,,,60,,,23,,,,,,,,,,,"Pixi ve 1.27/3.30/5.70 ms o CPU 1x/4x/6x; FPS 60/60/60; hinh lech 0.001/255",
 40,2026-11-13,e756429,"B29 PixiJS 8.23.0 tren canh thu (3 vong xen ke)",TESTBED,,,,,,,,60,,,23,,,,,,,,,,,"Pixi ve 1.70/3.19/4.58 ms o CPU 1x/4x/6x; may ranh 0.37-0.53/nhan",
 40,2026-11-13,e756429,"B29 PixiJS 8.22.0 tren canh thu (3 vong xen ke)",TESTBED,,,,,,,,60,,,24,,,,,,,,,,,"Pixi ve 1.62/2.87/3.95 ms; chenh so 8.23 nho hon bien dao dong trong cung mot ban; GIU 8.23",
+41,2026-11-13,9136599,"Lo ve theo tung lop (drawbreak), canh that 3 nguoi + Dao To",S15,,,,,,,,,,,243,,,,,,,,,,,"entities 120 lo (86 nguon texture, 218 Graphics); ground 100 lo (48 mask); 12 lop con lai 23 lo; muc tieu < 120",

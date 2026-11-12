@@ -50,7 +50,7 @@ import { type GameConfig, realmOf, tienIndex } from '../config';
 import type { GameMap, PlayerState } from '../net/protocol';
 import type { PlayerFrame, PlayerView } from '../net/state';
 import { assets } from './assets';
-import { countDrawCalls, countNodes, drawCalls } from './drawstats';
+import { countDrawCalls, countNodes, drawCalls, measureLayers } from './drawstats';
 import { loadFonts } from './fonts';
 import { MapView } from './mapview';
 import { PlayerSprite } from './player';
@@ -307,6 +307,23 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
     ready: true,
     w: W,
     h: H,
+    // Lô vẽ theo lớp trên CẢNH CỐ ĐỊNH: con số này so được giữa hai bản build, khác với
+    // cảnh thật nơi nó đi từ 156 tới 460 tuỳ bot đứng đâu.
+    layers: () => {
+      const got = measureLayers(() => app.render(), [
+        { name: 'ground', c: mapView.ground },
+        { name: 'decor', c: mapView.decor },
+        { name: 'zone-under', c: mapView.under },
+        { name: 'rings-bg', c: rings },
+        { name: 'gates', c: mapView.gateLayer },
+        { name: 'glow-bg', c: glow },
+        { name: 'entities', c: entities },
+        { name: 'canopy', c: mapView.over },
+        { name: 'panels', c: panels },
+      ]);
+      app.render();
+      return got;
+    },
     stats: (): Record<string, number> => ({
       pixiMs: +pixiMs.toFixed(3),
       fps: +fps.toFixed(1),

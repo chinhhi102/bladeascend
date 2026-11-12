@@ -129,6 +129,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 39 | 2026-11-13 | `e756429` | **Cảnh thử cố định `?scene=testbed`** — bàn cân A/B cho mọi lượt tối ưu đồ hoạ | TESTBED | – | – | – | 60 / 60 / 60 (CPU 1×/4×/6×) | – | 23 | – | – | Độ tự lặp so ảnh: **0,002/255 · 32 trên 921 600 pixel**. Đối chứng âm (tắt sạch vòng kiếm): 36/255 · 66% | Thay `weakperf`/`ringcost` ở vai trò SO HAI BUILD |
 | 39 | 2026-11-13 | `26b13cc` → `ca3c42f` | **Đo lại BƯỚC 1 trên cảnh thử** (cùng 23 lô vẽ, cùng 475 nút) | TESTBED | – | – | – | 60/60/54 → 60/60/**60** | – | 23 | – | – | Pixi vẽ **2,52 → 1,27** (1×) · **8,92 → 3,30** (4×) · **14,29 → 5,70 ms** (6×). Hình: lệch 0,001/255, 19 pixel — dưới nhiễu tự lặp | Số cũ "6,87 → 0,19 ms" (#38) **BỎ** — xem §5 #39 |
 | 40 | 2026-11-13 | `e756429` | **B29 — PixiJS 8.22.0 vs 8.23.0** trên cảnh thử, 3 vòng XEN KẼ, máy rảnh 0,37–0,53/nhân | TESTBED | – | – | – | 60 / 60 / 60 ở CẢ HAI bản | – | 23–24 | – | – | Pixi vẽ ms (trung vị 3 vòng) — 8.23: **1,70 / 3,19 / 4,58**; 8.22: **1,62 / 2,87 / 3,95** (CPU 1×/4×/6×). Chênh 0,08–0,63 ms, NHỎ HƠN biên dao động trong cùng một bản (0,96–1,06 ms) | **B29 đóng** — giữ 8.23 |
+| 41 | 2026-11-13 | `9136599` | **Mục 5 bước đo — lô vẽ theo TỪNG LỚP** (`drawbreak.mjs`), cảnh thật 3 người, Đạo Tổ 1 050 kiếm | S15 | – | – | – | – | – | **243** | – | – | `entities` **120 lô** (86 nguồn texture, 218 Graphics) · `ground` **100 lô** (48 MASK) · 12 lớp còn lại cộng lại 23 | Mục tiêu < 120 lô · B30 |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1348,6 +1349,45 @@ qua) và #12369 (`CanvasTextPipe` giữ lại texture chữ đã huỷ). Hạ v�
 Ghi chú vận hành: `npm install pixi.js@x` đổi pin chính xác `"8.23.0"` thành dải `"^8.23.0"`.
 Đã trả lại pin — để dải thì một lần `npm install` sau tự nhảy 8.24 và không ai biết bản vừa
 đo là bản nào.
+
+---
+
+### Lượt 41 — 13/11/2026 · Mục 5 bước ĐO: 243 lô vẽ nằm ở đâu
+
+Tổng số lô vẽ nói "đang tốn", không nói "tốn ở đâu". `tools/browsertest/drawbreak.mjs` tắt
+mọi lớp trừ một, vẽ một khung, đọc bộ đếm — làm vậy cho từng lớp. Kèm theo là những thứ GÂY
+ngắt lô, đếm bằng cách duyệt cây: số nguồn texture khác nhau, số blend mode, số vật không gom
+lô được (Graphics/Text/Mesh), số filter và mask.
+
+Cảnh thật, 3 người trong tầm, mình Đạo Tổ 1 050 kiếm:
+
+| lớp | lô vẽ | nút | texture | blend | graphics | text | filter | mask |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **entities** | **120** | 1 557 | **86** | 2 | **218** | 16 | 0 | 3 |
+| **ground** | **100** | 1 266 | 54 | 1 | 2 | 0 | 1 | **48** |
+| glow | 9 | 7 | 1 | 2 | 4 | 0 | 1 | 0 |
+| gates | 5 | 6 | 0 | 1 | 5 | 0 | 0 | 0 |
+| rings | 4 | 25 | 2 | 1 | 15 | 0 | 0 | 0 |
+| decor | 2 | 63 | 3 | 1 | 0 | 0 | 1 | 0 |
+| orbs · ambient · floattext | 1 mỗi lớp | | | | | | | |
+| zone-under · canopy · skill-1 · skill-2 · vfx | 0 | | | | | | | |
+| **tổng** | **243** | | | | | | | |
+
+**Hai lớp chiếm 220 trên 243 lô. Mười hai lớp còn lại cộng lại 23.**
+
+`ground` — **48 mask**. Mỗi mask là một lượt vẽ ra texture riêng, thứ đắt nhất bảng. Đây là
+mặt nạ trộn nền chia theo ô 1 024 đơn vị (§8.6 mục 1, lượt #11). Chia ô đã cứu 1,4 GB bộ nhớ
+GPU, nhưng cái giá là mỗi ô một mask.
+
+`entities` — **86 nguồn texture khác nhau** và **218 Graphics** trong một lớp. Mỗi lần hai vật
+liền nhau dùng nguồn texture khác nhau là một lần ngắt lô; Graphics thì không gom lô được với
+sprite. 1 557 nút mà chỉ 120 lô nghĩa là phần sprite ĐANG gom tốt — chỗ vỡ là 86 nguồn và
+218 Graphics.
+
+Đáng chú ý: `rings` chỉ **4 lô** cho 1 050 thanh kiếm. Bước 1 (#39) làm xong việc của nó —
+vòng kiếm không còn là chỗ đáng sửa, cả về thời gian lẫn về số lô.
+
+Vòng tối ưu kế tiếp nhắm đúng hai lớp đó, không nhắm chỗ khác.
 
 ---
 
