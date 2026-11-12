@@ -83,3 +83,6 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 36,2026-11-12,,"Rò rỉ bộ nhớ server — đo SAU (60 phút game, 2703 lượt vào/ra)",LEAK-SRV,,,,,,,,,,,,,,,,,,,,,,,"heap/phòng +2.9% (+0.01 MB/phút); hết người: 8.30 → 0.92 MB; goroutine ±0",
 36,2026-11-12,c947f88,"Rò rỉ bộ nhớ client — 30 phút, 50 lượt đổi khu, 9 lượt chết",LEAK-CLI,,,,,,,,60,,,,,223.4,,,,,,,,,,"so phút 5: texMB -0.0%, display object -7.4%, texture +24.5%, heap +37.3%; nhưng phút 20-25 vs 25-30: texture +1.0%, heap -0.5% = chạm trần, xem Q53",
 37,2026-11-12,9ba5e3a,"PixiJS 8.22.0 -> 8.23.0 — CHUA DO DUOC (may ban)",S1,,,,,,,,,,,,,,,,,,,,,,,"load/nhan 2.17-3.87 tren 12 nhan ca ngay, luat 16 cam ket luan; nang cap van deploy vi la ban va loi #12259 + #12369; no phep do = B29",
+38,2026-11-12,26b13cc,"Vong kiem - gia ve rieng (bat/tat cung luot), TRUOC",RINGCOST,,,,,,,,,,,,,,,,,,,,,,,"CPU 4x ~1050 kiem 13 nguoi: Pixi ve +6.87 ms, FPS -3.1",
+38,2026-11-12,ca3c42f,"Vong kiem - gia ve rieng (bat/tat cung luot), SAU (be hat khai TINH)",RINGCOST,,,,,,,,,,,,,,,,,,,,,,,"CPU 4x ~1050 kiem 11 nguoi: Pixi ve +0.19 ms, FPS +-0.3",
+38,2026-11-12,ca3c42f,"Moc day du buoc 1 (weakperf, may ranh, 3 luot)",S14,,,,,,,,60/34/23,,,,,,,,,,,,,,,"CPU 1x/4x/6x: Pixi ve 4.00/15.89/21.72 ms; JS game 0.99/2.18/3.63 ms; 325-393 lo ve",

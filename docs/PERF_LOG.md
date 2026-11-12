@@ -124,6 +124,8 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 36 | 2026-11-12 | `c947f88` | **Rò rỉ bộ nhớ SERVER — đo sau** hai bản vá con trỏ (`itemGrid.remove`, `Manager.tryClose`) | LEAK-SRV | – | – | – | – | – | – | – | – | 60 phút / **2 703 lượt vào-ra**: heap mỗi phòng **+2,9 %** (+0,01 MB/phút); sau khi mọi người rời heap **8,30 → 0,92 MB**, goroutine ±0 | B27 đóng |
 | 36 | 2026-11-12 | `c947f88` | **Rò rỉ bộ nhớ CLIENT** (`leakcheck.mjs` 30 phút, 50 lượt đổi khu, 9 lượt chết) | LEAK-CLI | – | – | – | 60 / – | – | – | – | – | So phút 5: texMB **−0,0 %** ✅ · display object −7,4 % ✅ · texture +24,5 % ❌ · JS heap +37,3 % ❌. Nhưng phút 20–25 ↔ 25–30: texture **+1,0 %**, heap **−0,5 %** → chạm TRẦN, không dốc | **Q53** — mốc phút 5 của §13.9 quá sớm cho game này |
 | 37 | 2026-11-12 | `9ba5e3a` | **PixiJS 8.22.0 → 8.23.0 — CHƯA ĐO ĐƯỢC** | S1/S4 | – | – | – | – | – | – | – | – | Máy bận cả ngày: load/nhân **2,17 · 2,59 · 3,87** (12 nhân) — luật 16 cấm kết luận. Nâng cấp vẫn deploy vì nó là bản vá lỗi (#12259 mất texture sau khi đổi ngữ cảnh, #12369 rò bộ nhớ `CanvasTextPipe`) | **B29 mở** — nợ một lượt S1+S4 trước/sau lúc máy rảnh |
+| 38 | 2026-11-12 | `ca3c42f` | **Tối ưu client bước 1 — vòng kiếm xuống GPU** (bể hạt khai TĨNH, bỏ 3 lượt `clear()` mỗi khung) | RINGCOST | – | – | – | – | – | – | – | – | Giá vẽ riêng vòng kiếm (bật/tắt trong cùng lượt, CPU 4×, ~1 050 kiếm, 11–13 người): **+6,87 → +0,19 ms**, FPS −3,1 → ±0,3 | B30 mở — Pixi vẫn vẽ 19,8 ms KHI ĐÃ TẮT HẾT vòng kiếm |
+| 38 | 2026-11-12 | `ca3c42f` | Mốc đầy đủ của bước 1 (bảng `weakperf`, máy rảnh 0,33–0,47/nhân, 3 lượt) | S14 | – | – | – | 60 / 34 / 23 (CPU 1×/4×/6×, trung vị) | – | 325–393 | – | – | **Pixi vẽ 4,00 / 15,89 / 21,72 ms** · toàn bộ JS game 0,99 / 2,18 / 3,63 ms | Mục tiêu CPU 6× p50 ≥ 30 **CHƯA đạt** (23) |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1186,10 +1188,82 @@ Chạy thử runner (`--force`, rút bài client còn 2 phút): server 60 phút 
 
 ---
 
+### Lượt 38 — 12/11/2026 · Tối ưu client bước 1: vòng kiếm xuống GPU
+
+**Hai lỗ hổng của PHÉP ĐO phải sửa trước khi sửa code.**
+
+`drawMs` trên bảng F3 nghe như "thời gian vẽ", nhưng nó đo vòng **cập nhật** — `app.render()`
+chưa từng được bấm giờ ở đâu cả. Hậu quả: lượt đo đầu của hôm nay cho CPU 6× khung 43,5 ms
+trong khi TỔNG mọi cột đo được chỉ ~5 ms, và 38 ms kia không có tên. Thêm `pixiMs` (đo đúng
+`app.render()`) thì bảng tự nói ra chỗ cần sửa:
+
+| CPU | khung ms | JS game (mọi hệ thống) | **Pixi vẽ** |
+|---|---:|---:|---:|
+| 1× | 16,7 | 0,99 | **4,00** |
+| 4× | 29,4 | 2,18 | **15,89** |
+| 6× | 43,5 | 3,63 | **21,72** |
+
+Cột `other` cũng không được in trong bảng `weakperf`, nên các cột không cộng lại bằng tổng
+mà không ai thấy thiếu. Giờ có.
+
+**Chỗ tốn thật.** v6.52 đã làm JS không ghi gì mỗi khung cho vòng kiếm (đặt kiếm một lần
+theo toạ độ cục bộ rồi chỉ xoay container), và con số vẫn không nhúc nhích — vì
+`ParticleContainer` khai cả bốn thuộc tính là `dynamic`. Pixi gói lại buffer thuộc tính
+dynamic cho **từng hạt, mỗi khung**, bất kể hạt có đổi hay không
+(`ParticleBuffer.update`: buffer tĩnh chỉ gói lại khi `_childrenDirty`). Một Đại Thừa
+1 050 kiếm = 1 050 lượt gói × 4 thuộc tính × mỗi khung × mỗi người. Việc đó xảy ra TRONG
+`app.render()`, nên nó không nằm trong cột `p.ring` — suốt hai lượt tối ưu nó vô hình.
+
+Khai TĨNH hết, gọi `update()` chỉ khi kiếm thật sự dời chỗ (`markDirty`: `rebuild`,
+`refreshGeom`, `placeAll`). Góc quay vẫn là `rotation` của container — một phép ghi, không
+phải thuộc tính hạt — nên vòng vẫn quay mà buffer không cần gói lại.
+
+Thêm ba lượt `clear()` mỗi khung bị bỏ: vành mờ, vết nứt, hộp va chạm. `clear()` một Graphics
+là đánh dấu dựng lại toàn bộ hình học của nó, kể cả khi vẽ ra đúng hình cũ — và ba chỗ đó
+chạy cho MỌI người trong tầm, mỗi khung. Vết nứt và hộp va chạm chuyển sang vẽ toạ độ **cục
+bộ** rồi xoay cả Graphics, đúng cách bể kiếm đã làm từ v6.52.
+
+**Phép đo: `tools/browsertest/ringcost.mjs`** — bật/tắt vòng kiếm trong CÙNG một lượt rồi
+trừ. Phải làm vậy vì so FPS giữa hai lần chạy khác nhau là so hai CẢNH khác nhau: cùng một
+bài, cùng máy rảnh, số sprite trên màn hình đi từ **2 974 tới 4 813** chỉ vì lúc đó có mấy
+con bot đứng gần — biên độ ấy lớn hơn thứ đang muốn đo.
+
+| CPU 4×, ~1 050 kiếm, 11–13 người trong tầm | Pixi vẽ ms | FPS |
+|---|---:|---:|
+| trước (`26b13cc`) | **+6,87** (3 vòng: +6,86 · +2,14 · +9,23) | −3,1 |
+| sau (`ca3c42f`) | **+0,19** (3 vòng: −0,41 · +1,28 · +0,44) | ±0,3 |
+
+Cả hai lượt đo lúc máy rảnh (0,29–0,52 tải/nhân, luật 16).
+
+**Chưa làm được: so ẢNH trước/sau.** Chủ dự án yêu cầu "giữ nguyên hình ảnh (so ảnh chụp
+trước/sau)". Tôi dựng một bài so pixel và nó SAI ba lần liền, ghi lại để không ai làm lại:
+
+1. Đọc pixel bằng `drawImage(canvasWebGL)` → ảnh **rỗng** (`preserveDrawingBuffer` tắt, và
+   phải tắt). Bài báo "lệch 0,00/255" cho mọi thứ — kể cả khi tắt sạch vòng kiếm.
+2. So ảnh **thô** giữa hai phiên → 18,8/255, 37% pixel khác, toàn bộ là NỀN: mỗi phiên nhân
+   vật sinh ra ở khu khác.
+3. So **ảnh hiệu** |bật − tắt| trong cùng phiên → vẫn 32,5/255 trên CÙNG một build, vì hai
+   pha cách nhau ~5 giây và bot đã đi chỗ khác, nên phép trừ không khử được nền.
+
+Kết luận về phương pháp: **so pixel một cảnh multiplayer sống là không dùng được** nếu chưa
+ghim được camera, zoom và mọi thứ đang di chuyển. Bài đã xoá, không để lại một bài đo luôn
+báo ĐẠT. Thay bằng: chữ ký cache có `layoutSeq` (bộ đếm tăng mỗi lần `rebuild`) để không có
+đường nào đổi bố cục mà chữ ký không đổi — dùng `blades.length` là có kẽ hở, đổi số kiếm
+cùng lúc đổi mức giãn chi tiết ra đúng số thanh cũ với góc khe mới.
+
+**Và bước 2 của kế hoạch nên bỏ.** Lớp trạng thái đo được **0,07–0,39 ms** (mốc con
+`p.status`) — v6.52 đã làm nó chỉ vẽ lại khi trạng thái đổi. Cache nó vào texture là tối ưu
+một thứ không tốn gì. Số đo nói chỗ cần đi là **B30**: ở CPU 4×, tắt SẠCH mọi vòng kiếm thì
+Pixi vẫn vẽ **19,77 ms**. Phần còn lại nằm ở cây cảnh và số lô vẽ (325–393 lô, 2 850–4 800
+nút), tức là bước 3 của kế hoạch.
+
+---
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
+| B30 | **Lượt vẽ của Pixi là toàn bộ nút thắt máy yếu, và vòng kiếm KHÔNG còn là phần chính của nó** | Mục tiêu CPU 6× p50 ≥ 30 FPS chưa đạt (đang 23) | #38: ở CPU 4×, tắt SẠCH mọi vòng kiếm thì Pixi vẫn vẽ **19,77 ms** (bật: 19,96). Ở CPU 6×: khung 43,5 ms = Pixi vẽ 21,7 + JS game 3,6 + ~18 ms của trình duyệt. Mọi cột JS cộng lại chưa tới 4 ms | **Mở** — bước kế phải nhắm vào CÂY CẢNH và số lô vẽ (325–393 lô, 2 850–4 800 nút), không nhắm vào mã game. Lớp trạng thái (bước 2 của kế hoạch) đo được 0,07–0,39 ms: không phải chỗ đáng sửa | #38 |
 | B29 | **Nợ phép đo trước/sau cho PixiJS 8.22 → 8.23** | Không biết bản nâng làm FPS tốt lên, xấu đi, hay không đổi — đang deploy mà không có số | #37: máy ở load/nhân 2,17–3,87 suốt ngày 12/11, luật 16 cấm kết luận. #26 vs #27 đã chứng minh máy bận làm lệch p95 gấp ba | **Mở** — cần một lượt S1 + S4 (3 lần mỗi bên, min/max/TB) lúc `load/nhân < 1,5`. So `9ba5e3a^` với `9ba5e3a` | – |
 | B28 | **Rò rỉ bộ nhớ SERVER: 7 MB/phút, 420 MB sau một giờ** | Tiến trình chết trên VPS 1 GB trước khi hết một ca chơi | #36: `cmd/leakcheck` 25 phút → heap 8,2 → 159,0 MB tuyến tính. `pprof -inuse_objects`: `addAmbientOrb` giữ 309 477 object trong khi thế giới chỉ có ~27 000 viên sống | **Đóng (#36)** — hai con trỏ bỏ quên ngoài `len` (`itemGrid.remove`, `Manager.tryClose`). Đo lại 60 phút / 2 703 lượt vào-ra: heap mỗi phòng +2,9 %, hết người thì về 0,92 MB | #36 |
 | B27 | **Server game chạy chung máy với việc nặng của người khác** | Mọi số tick đo trên `:9999` đều có thể là số của CÁI MÁY chứ không của game | #35: server dùng **5% của một nhân** (pprof 1,88 s / 30 s) trong khi máy ở load 47, CPU 89,6%, swap 2 GB cạn — và tick p95 vẫn 17 ms. Mọi hệ thống trong tick đều có `max` 5–20 ms dù TB 0,04–0,17 ms | **Mở** — bộ thu gom §12 nay ghi `load1`/`cpu_pct` máy cạnh tick, và cảnh báo tự nói "có thể do máy bận". Muốn số tick sạch thì phải tách server sang máy riêng, hoặc đo lúc load/nhân < 0,5 | #35 |
