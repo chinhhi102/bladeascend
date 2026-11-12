@@ -96,6 +96,8 @@
   "versionMismatch": "A new version is out — click to reload.",
   "versionReload": "Reload",
   "disconnected": "Lost connection to the server. Retrying...",
+  "rejoining": "Returning to the match…",
+  "otherTab": "You are playing in another tab.",
   "badName": "Name must be 2–16 characters.",
   "loadUi": "Loading interface…",
   "loadChar": "Summoning {name}…",

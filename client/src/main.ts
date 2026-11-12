@@ -13,10 +13,11 @@ const ZONE_BANNER_SECS = 1.5;
  */
 const ZONE_ART_WAIT_MS = 2000;
 
-import { FLAG, PROTOCOL_VERSION } from './net/protocol';
+import { FLAG, KICK_OTHER_TAB, PROTOCOL_VERSION } from './net/protocol';
 import { SCHEMA_HASH } from './net/wire.gen';
-import { markRejoin, pendingRejoin, watchContextLoss } from './render/glrecover';
+import { watchContextLoss } from './render/glrecover';
 import { drawGuardStats, faultSystem, setSysErrorHook, type SysKey, sysResetRun, sysRun, sysSummary } from './render/guard';
+import { clearSession, loadSession, saveSession } from './net/session';
 import type { DeadMsg, GameMap, KickedMsg, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
@@ -173,9 +174,8 @@ class App {
     // Dựng lại renderer thất bại → tải lại trang và VÀO LẠI PHIÊN (§13.8 → §7.1). Đây là
     // đường lùi cuối cùng; tới đây thì cảnh đã hỏng tới mức không vẽ được nữa.
     this.scene.onRebuildFailed = () => {
-      if (this.playing && this.profile) {
-        markRejoin(this.profile);
-      }
+      // Mã phiên đã nằm trong sessionStorage từ lúc vào trận, nên chỉ cần tải lại: luồng
+      // khởi động ở `start()` tự gửi nó và vào lại đúng nhân vật (§7.1).
       window.setTimeout(() => location.reload(), 600);
     };
     window.setInterval(() => this.sendInput(), 1000 / this.cfg.net.tick_hz);
@@ -220,22 +220,36 @@ class App {
     this.conn.connect(
       () => undefined,
       () => {
-        if (this.playing) {
-          this.playing = false;
-          this.input.enabled = false;
-          this.hud.root.remove();
-          this.screens.show(h('div', 'screen center', h('div', 'panel', STR.disconnected)));
-          window.setTimeout(() => this.showHome(), 2500);
+        if (!this.playing) {
+          return;
         }
+        this.playing = false;
+        this.input.enabled = false;
+        this.hud.root.remove();
+        this.screens.show(h('div', 'screen center', h('div', 'panel', STR.disconnected)));
+        // §7.1: mạng rớt KHÔNG còn là mất ván. Nhân vật ở lại thế giới 20 giây, nên khi
+        // `Conn` tự nối lại (1,5 s sau) thì gửi mã phiên và vào lại đúng nhân vật đó.
+        // Chỉ khi quá hạn — hoặc không có mã — mới đành về trang chủ.
+        const s = loadSession();
+        if (s && !endedRun()) {
+          window.setTimeout(() => {
+            if (!this.playing) {
+              this.join({ name: s.name, char: s.char }, s.key);
+            }
+          }, 400);
+          return;
+        }
+        window.setTimeout(() => this.showHome(), 2500);
       },
     );
     // Mất ngữ cảnh WebGL (trình điều khiển card reset, máy ngủ dậy): canvas sẽ đen vĩnh
-    // viễn nếu không làm gì. Nhớ lại tên + nhân vật rồi tải lại trang và tự vào lại phòng.
+    // viễn nếu không làm gì — tải lại trang rồi vào lại ĐÚNG NHÂN VẬT bằng mã phiên §7.1.
+    //
+    // Không còn tham số "nhớ hồ sơ": mã phiên đã nằm sẵn trong `sessionStorage` từ lúc vào
+    // trận, nên mọi đường tải lại (F5, mất WebGL, dựng lại renderer hỏng) đều đi chung một
+    // cơ chế. `pendingRejoin` cũ chỉ nhớ tên + nhân vật và vào một trận MỚI.
     watchContextLoss(
       this.scene.app.canvas as HTMLCanvasElement,
-      // Chỉ nhớ hồ sơ để tự vào lại khi người chơi CÒN SỐNG trong trận (v6.29 §7): chết rồi
-      // thì tải lại phải về màn Tổng kết, không tự vào trận mới.
-      () => (this.playing ? this.profile : null),
       (canRecover) => {
         // Gửi về server KÈM BỐI CẢNH: mất ngữ cảnh WebGL trên iPhone gần như luôn là hệ quả
         // của hết bộ nhớ GPU, nên con số `texMB` đi cùng mới nói được nguyên nhân.
@@ -262,11 +276,14 @@ class App {
     // có lấy một phiên điện thoại nào. Thiết bị hỏng nặng nhất lại là thiết bị im lặng nhất.
     void this.startTelemetry();
 
-    // Vừa tải lại vì mất đồ hoạ thì vào thẳng phòng, đừng bắt bấm lại "Vào chơi" — nhưng
-    // chỉ khi ván chưa kết thúc: chết rồi thì luôn quay về màn Tổng kết (v6.29 §7).
-    const again = pendingRejoin();
-    if (again && !endedRun()) {
-      this.join(again);
+    // Vừa tải lại trang giữa trận (F5, mất đồ hoạ, dựng lại renderer hỏng): vào lại ĐÚNG
+    // nhân vật bằng mã phiên (§7.1), không bắt bấm lại "Vào chơi" và không vào trận mới.
+    //
+    // `endedRun()` đi trước: ván đã kết thúc vì chết thì luôn quay về màn Tổng kết, kể cả
+    // khi mã phiên còn hạn (v6.29 §7).
+    const again = endedRun() ? null : loadSession();
+    if (again) {
+      this.join({ name: again.name, char: again.char }, again.key);
     } else {
       this.resumeOrHome();
     }
@@ -289,7 +306,19 @@ class App {
     // client nối lại sau vài giây, server cấm tiếp, và người vừa bị cấm quay vòng giữa
     // "bị cấm" và "đang kết nối" mà không đọc kịp lý do.
     this.conn.stop();
+    this.playing = false;
+    this.input.enabled = false;
+    this.hud.root.remove();
     this.telemetry?.setPhase('home');
+    // Nhân vật vừa bị TAB KHÁC của chính người này chiếm (§7.1): tab cũ phải quên mã phiên
+    // ngay, nếu không nó nối lại và giành ngược nhân vật về — hai tab đá qua đá lại mãi.
+    if (m.reason === KICK_OTHER_TAB) {
+      clearSession();
+      clearEndedRun();
+      this.screens.show(h('div', 'screen center', h('div', 'panel', STR.otherTab)));
+      return;
+    }
+    clearSession();
     this.screens.show(kickedScreen(m.reason, m.until, () => this.showHome()));
   }
 
@@ -310,11 +339,15 @@ class App {
    * nói mình được xếp vào khu nào — xếp khu là việc của server (khu ít người nhất, §8.0),
    * client không đoán được, và đoán sai là tải 3,2 MB vật cản của khu không dùng tới.
    */
-  private join(p: Profile): void {
+  private join(p: Profile, resume = ''): void {
     clearEndedRun();
     // Mạng mới = sổ chống sập mới (§13.8): "tắt hẳn tới hết mạng" là hết VÁN, không phải
     // hết đời tab. Rất nhiều lỗi vẽ chỉ gắn với một khu hoặc một đối thủ cụ thể.
-    sysResetRun();
+    // VÀO LẠI (§7.1) thì KHÔNG xoá: vẫn là ván cũ, và một hệ thống vừa hỏng ở ván này
+    // nhiều khả năng hỏng tiếp ngay sau khi tải lại.
+    if (!resume) {
+      sysResetRun();
+    }
     this.profile = p;
     sound.startMusic();
     this.telemetry?.setPhase('loading');
@@ -344,7 +377,7 @@ class App {
         console.warn('tải gói vào trận lỗi', err);
         this.loading.show();
         this.loading.setRunner(p.char);
-        this.loading.fail(() => this.join(p));
+        this.loading.fail(() => this.join(p, resume));
         return;
       }
       // Nhóm tải nền: VFX Tiên giới, âm thanh — và trên MÁY BÀN thì cả 10 nhân vật còn lại.
@@ -358,8 +391,10 @@ class App {
         bg.unshift(...assets.chars.map((c) => `char_${c}`));
       }
       assets.loadBackground(bg);
-      if (pending) {
-        this.loading.step(STR.loadRoom);
+      if (pending || resume) {
+        // "Đang trở lại trận…" thay cho "Đang tìm phòng…" (§7.1): người chơi vừa F5 giữa
+        // trận cần biết mình đang QUAY LẠI chứ không phải bắt đầu lại.
+        this.loading.step(resume ? STR.rejoining : STR.loadRoom);
       }
       const send = (): void => {
         if (!this.conn.isOpen) {
@@ -373,7 +408,7 @@ class App {
         // Không có phiên admin thì game chạy BÌNH THƯỜNG, không báo lỗi gì — người lạ gõ
         // `?debug=true` không được biết là có chế độ debug tồn tại.
         const wantDebug = new URLSearchParams(location.search).get('debug') === 'true';
-        this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId(), lang: LANG, debug: wantDebug });
+        this.conn.send({ t: 'join', name: p.name, char: p.char, guest_id: guestId(), lang: LANG, debug: wantDebug, rs: resume });
       };
       send();
     })();
@@ -460,6 +495,11 @@ class App {
     // vật (để đổi chỉ số về tên).
     this.conn.snap.myId = w.id;
     this.conn.snap.chars = this.cfg.characters;
+    // Mã phiên MỚI cho lần mất kết nối tiếp theo (§7.1). Lưu ngay, trước cả khi tải art
+    // của khu: F5 đúng lúc màn hình tải cũng phải vào lại được.
+    if (w.sk && this.profile) {
+      saveSession(w.sk, this.profile);
+    }
     // Nhân vật của chính mình không bao giờ bị nhả khỏi bộ nhớ đồ hoạ (Q30).
     this.scene.myChar = this.profile?.char ?? '';
     // Quên entity của khu CŨ.
@@ -595,6 +635,9 @@ class App {
     this.playing = false;
     this.input.enabled = false;
     this.hud.root.remove();
+    // Ván đã kết thúc: mã phiên hết nghĩa. Giữ lại thì một lần F5 sau đó gửi một mã chết
+    // và người chơi thấy màn hình tải chớp một nhịp trước khi về Tổng kết (§7.1).
+    clearSession();
     const p = this.profile;
     if (p) {
       saveEndedRun(d, p);

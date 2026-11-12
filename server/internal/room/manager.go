@@ -35,6 +35,13 @@ type Manager struct {
 	settings *RoomSettings
 	// botMode: chế độ bot toàn server (botmode.go). Guarded by mu.
 	botMode string
+	// resume: mã phiên §7.1 → phòng đang giữ nhân vật đó. Guarded by mu.
+	//
+	// Ở Manager chứ không ở Room vì lúc client nối lại, nó CHƯA thuộc phòng nào — chỉ có
+	// một chuỗi mã trong tay, và phải tìm ra phòng từ chuỗi đó. Quét hết các phòng cũng
+	// ra, nhưng quét phải vào goroutine của từng phòng, tức là chờ tới lượt tick của từng
+	// cái; một bảng tra là O(1) và không đụng vào tick nào.
+	resume map[string]*Room
 }
 
 func NewManager(cfg *config.Config, maps []*world.Map, rec Recorder) *Manager {
@@ -42,6 +49,7 @@ func NewManager(cfg *config.Config, maps []*world.Map, rec Recorder) *Manager {
 		maps = []*world.Map{world.EmptyMap(cfg.Room.MapSize)}
 	}
 	return &Manager{cfg: cfg, maps: maps, recorder: rec, rng: rand.New(rand.NewSource(time.Now().UnixNano())),
+		resume: map[string]*Room{},
 		// Vòng chạy của phòng là một goroutine, nên nó phải có recover của RIÊNG nó (§13.8).
 		// `Step` đã bọc từng phần bên trong; lớp này chỉ còn đỡ những gì nằm ngoài Step
 		// (bản thân vòng lặp, ticker) — và nếu nó bắt được thì phòng được khởi động lại
@@ -52,6 +60,62 @@ func NewManager(cfg *config.Config, maps []*world.Map, rec Recorder) *Manager {
 // Join matches a client into a room: the fullest room below room_max_humans (giá trị admin
 // đang đặt, spec v6.28 §9.2), ties → oldest.
 func (m *Manager) Join(c *Client, j netproto.Join) *Room {
+	// Vào LẠI phiên cũ đi trước ghép phòng mới (§7.1): có mã phiên còn hiệu lực thì người
+	// này không phải người mới, họ đang quay lại giữa ván.
+	if j.Resume != "" {
+		m.mu.Lock()
+		r := m.resume[j.Resume]
+		m.mu.Unlock()
+		if r != nil {
+			// Thử vào lại NGAY TRONG goroutine của phòng, và nếu không được thì vào trận
+			// mới cũng ngay tại đó.
+			//
+			// Không chờ kết quả rồi mới quyết: `Manager.Join` chạy trên goroutine ĐỌC
+			// WEBSOCKET của chính người chơi đó, và chặn nó để đợi một phòng tick là mời
+			// một cú treo — phòng đang kẹt thì người chơi ngồi nhìn màn hình tải.
+			r.Do(func() {
+				if !r.resumeHuman(c, j, j.Resume) {
+					m.joinFresh(c, j)
+				}
+			})
+			return r
+		}
+	}
+	return m.joinFresh(c, j)
+}
+
+// rememberResume / holdResume / forgetResume là sổ tra mã phiên → phòng (§7.1).
+//
+// `rememberResume` ghi mã của một người ĐANG CHƠI: cần nó để tab thứ hai mở bằng cùng mã
+// tìm được phòng mà chiếm nhân vật. `holdResume` ghi mã của người đang mất kết nối.
+// Hai hàm làm cùng một việc nhưng tách tên để chỗ gọi đọc ra ý định.
+func (m *Manager) rememberResume(key string, r *Room) {
+	m.mu.Lock()
+	m.resume[key] = r
+	m.mu.Unlock()
+}
+
+func (m *Manager) holdResume(key string, r *Room, _ uint32) {
+	m.rememberResume(key, r)
+}
+
+func (m *Manager) forgetResume(key string) {
+	if key == "" {
+		return
+	}
+	m.mu.Lock()
+	delete(m.resume, key)
+	m.mu.Unlock()
+}
+
+// ResumeCount là số mã phiên đang nhớ — bài test rò rỉ (§13.9) kiểm nó về 0.
+func (m *Manager) ResumeCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.resume)
+}
+
+func (m *Manager) joinFresh(c *Client, j netproto.Join) *Room {
 	m.mu.Lock()
 	var best *Room
 	limit := m.settingsLocked().MaxHumans

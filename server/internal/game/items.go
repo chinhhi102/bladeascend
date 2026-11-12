@@ -107,6 +107,12 @@ func (g *Game) pickupBase(p *Player) float64 {
 // spec v5.5 nói trúng Phun Trân Châu thì **vật phẩm, Linh khí, Tiên khí và Bí Kíp đều đi
 // xuyên qua** — một cửa thì không thể sót loại nào, rải ra bốn chỗ thì chắc chắn sẽ sót.
 func (g *Game) CanPickUp(p *Player) bool {
+	// Mất kết nối, nhân vật đang chờ chủ nối lại (§7.1): "đứng yên, vẫn có thể bị chém
+	// chết, KHÔNG nhặt đồ". Chặn ở cùng một cửa với Phun Trân Châu, vì cùng một lý do —
+	// rải ra bốn chỗ thì chắc chắn sẽ sót một loại.
+	if p.Offline {
+		return false
+	}
 	if p.IsMinion {
 		// v6.48: đàn em NHẶT ĐỒ HỘ ĐẠI CA — đồ vào thẳng túi đại ca (xem `pickupOwner`).
 		// Chỉ nhặt khi đại ca còn trong khu và còn sống; mất đại ca thì chúng chỉ còn chạy.

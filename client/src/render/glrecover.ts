@@ -1,5 +1,3 @@
-import type { Profile } from '../ui/home';
-
 /**
  * Khôi phục khi mất ngữ cảnh WebGL.
  *
@@ -11,13 +9,12 @@ import type { Profile } from '../ui/home';
  * và chẳng có cách nào ngoài tự tải lại trang.
  *
  * Vì sao TẢI LẠI TRANG chứ không dựng lại renderer: mọi texture, atlas, bộ đệm hình học và
- * shader đều nằm trên GPU và mất sạch theo ngữ cảnh. Dựng lại từng thứ một là hàng trăm
- * dòng mã chỉ chạy đúng trong một tình huống hiếm — tức là loại mã không bao giờ được thử
- * và sẽ hỏng lặng lẽ. Tải lại trang thì chắc chắn đúng, và vì ta nhớ lại tên + nhân vật nên
- * người chơi tự vào lại phòng, chỉ thấy một nhịp gián đoạn.
+ * shader đều nằm trên GPU và mất sạch theo ngữ cảnh. (Lỗi VẼ thường thì §13.8 có dựng lại
+ * renderer — xem render/scene.ts; nhưng mất hẳn ngữ cảnh là chuyện khác, không cứu tại chỗ
+ * được.) Tải lại trang thì chắc chắn đúng, và mã phiên §7.1 đưa người chơi về ĐÚNG NHÂN
+ * VẬT cũ — không chỉ "vào một trận mới cùng tên" như bản `pendingRejoin` trước đây.
  */
 
-const KEY = 'kx.glrecover';
 /**
  * memLast là chốt chống lặp DỰ PHÒNG khi `sessionStorage` không ghi được.
  *
@@ -26,70 +23,14 @@ const KEY = 'kx.glrecover';
  * hỏng là mất sạch chốt, và trang tải lại vòng tròn vô tận.
  */
 let memLast = 0;
-/**
- * Mốc thời gian lần mất ngữ cảnh gần nhất. Phải là khoá RIÊNG, vì `pendingRejoin` xoá KEY
- * ngay khi trang tải lại — dùng chung một khoá thì lần mất thứ hai lại tưởng là lần đầu và
- * trang cứ tải lại vòng tròn trên máy có card hỏng thật.
- */
+/** Mốc thời gian lần mất ngữ cảnh gần nhất, sống qua lần tải lại trang. */
 const LAST_KEY = 'kx.glrecover.last';
-/** Nhớ lâu hơn ngần này thì coi như lần chơi cũ, không tự vào lại nữa. */
-const REMEMBER_SECS = 60;
 /** Hai lần mất ngữ cảnh gần nhau hơn ngần này = máy đang hỏng thật, đừng tải lại vòng lặp. */
 const LOOP_GUARD_SECS = 30;
 
-interface Saved {
-  name: string;
-  char: string;
-  at: number;
-}
-
-function read(): Saved | null {
-  try {
-    const raw = sessionStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Saved) : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * pendingRejoin trả về hồ sơ cần vào lại sau khi tải lại trang vì mất đồ hoạ, rồi XOÁ dấu.
- * Xoá ngay cả khi đã quá hạn, để lần sau mở game không dính lại vết cũ.
- */
-export function pendingRejoin(): Profile | null {
-  const s = read();
-  try {
-    sessionStorage.removeItem(KEY);
-  } catch {
-    /* chế độ ẩn danh chặn sessionStorage thì thôi */
-  }
-  if (!s || Date.now() / 1000 - s.at > REMEMBER_SECS) {
-    return null;
-  }
-  return { name: s.name, char: s.char };
-}
-
-/**
- * markRejoin đánh dấu "tải lại xong thì vào thẳng phòng" — dùng cho MỌI lần tự tải lại, kể
- * cả lần do dựng lại renderer thất bại (§13.8), không chỉ lần mất ngữ cảnh WebGL.
- */
-export function markRejoin(p: Profile): void {
-  try {
-    sessionStorage.setItem(KEY, JSON.stringify({ name: p.name, char: p.char, at: Date.now() / 1000 }));
-  } catch {
-    /* chế độ ẩn danh chặn sessionStorage: vẫn tải lại, chỉ mất phần tự vào lại phòng */
-  }
-}
-
-/**
- * watchContextLoss bắt sự kiện mất ngữ cảnh trên canvas.
- *
- * `profile` là hàm chứ không phải giá trị: lúc gắn sự kiện thì người chơi còn ở trang chủ,
- * chưa chọn nhân vật.
- */
+/** watchContextLoss bắt sự kiện mất ngữ cảnh trên canvas. */
 export function watchContextLoss(
   canvas: HTMLCanvasElement,
-  profile: () => Profile | null,
   onLost: (canRecover: boolean) => void,
   onRestored?: () => void,
 ): void {
@@ -107,11 +48,6 @@ export function watchContextLoss(
    */
   canvas.addEventListener('webglcontextrestored', () => {
     cancelReload();
-    try {
-      sessionStorage.removeItem(KEY);
-    } catch {
-      /* không xoá được thì lần tải sau tự vào lại phòng — không chết ai */
-    }
     onRestored?.();
   });
 
@@ -135,17 +71,8 @@ export function watchContextLoss(
       return; // vừa tải lại xong lại mất tiếp: máy hỏng thật, đừng quay vòng
     }
 
-    // Không có hồ sơ (chưa vào trận, hoặc đã chết — v6.29) thì không đánh dấu tự vào lại.
-    const p = profile();
-    try {
-      if (p) {
-        sessionStorage.setItem(KEY, JSON.stringify({ name: p.name, char: p.char, at: now }));
-      } else {
-        sessionStorage.removeItem(KEY);
-      }
-    } catch {
-      /* không lưu được thì vẫn tải lại, chỉ mất phần tự vào lại phòng */
-    }
+    // Không cần nhớ gì ở đây nữa: mã phiên §7.1 (`net/session.ts`) đã nằm trong
+    // sessionStorage từ lúc vào trận, và nó mang được cả ván chứ không chỉ tên + nhân vật.
 
     /**
      * **KHÔNG BAO GIỜ tải lại trang khi tab đang ẩn** — đây là lỗi làm điện thoại "lúc nào
@@ -154,8 +81,8 @@ export function watchContextLoss(
      * Chuyển sang app khác, khoá màn hình, hay chỉ một thông báo kéo xuống là đủ để trình
      * duyệt di động thu hồi ngữ cảnh WebGL. Bản trước lập tức hẹn `location.reload()` sau
      * 1,2 giây — và nó chạy TRONG LÚC người chơi đang ở app khác. Lúc quay lại thì trang đã
-     * tải lại, `pendingRejoin` tự vào phòng mới, và cả ván vừa chơi biến mất. Nhìn từ phía
-     * người chơi: "bật game lên là nó chơi lại từ đầu".
+     * tải lại và (hồi đó) `pendingRejoin` nhảy vào một phòng MỚI, cả ván vừa chơi biến mất.
+     * Nhìn từ phía người chơi: "bật game lên là nó chơi lại từ đầu".
      *
      * Đúng ra phải CHỜ tới lúc họ quay lại rồi mới quyết: ngữ cảnh đã được cấp lại thì chơi
      * tiếp (nhánh `webglcontextrestored` ở trên đã huỷ lệnh tải lại), còn vẫn mất thì mới

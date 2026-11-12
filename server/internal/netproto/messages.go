@@ -26,6 +26,14 @@ const (
 // TKicked: server → client, người chơi bị mời ra khỏi phòng (ADMIN_SPEC §6.2).
 const TKicked = "kick"
 
+// KickOtherTab: lý do đặc biệt cho gói `kick` — nhân vật vừa bị một TAB KHÁC của chính
+// người này chiếm (GAME_SPEC §7.1 dòng cuối).
+//
+// Là một MÃ, không phải câu chữ: mọi chữ hiện cho người chơi nằm ở `client/src/ui/strings.ts`
+// (quy tắc 5), và lý do cấm thường thì admin tự gõ nên nó đi thẳng từ server. Client phân
+// biệt hai trường hợp bằng chính mã này.
+const KickOtherTab = "__other_tab__"
+
 // Envelope is decoded first to find the message type.
 type Envelope struct {
 	T string `msgpack:"t"`
@@ -42,6 +50,9 @@ type Join struct {
 	// Debug: client mở bằng ?debug=true nên muốn bật bảng phím test. Server chỉ chấp nhận
 	// khi chính nó cũng chạy với -debug, và chỉ người tự thêm tham số mới thấy bảng này.
 	Debug bool `msgpack:"debug,omitempty"`
+	// Resume: mã phiên 32 byte (hex) của ván đang dở, để vào lại đúng nhân vật sau khi
+	// mất kết nối (GAME_SPEC §7.1). Rỗng = người mới / ván mới.
+	Resume string `msgpack:"rs,omitempty"`
 }
 
 // Input carries the movement direction quantised to 256 steps (angle_u8).
@@ -83,7 +94,7 @@ type ObstacleState struct {
 // Thêm hẳn một LOẠI gói mới (như `tm` telemetry) thì không phải đổi hình dạng gói cũ, nên
 // không tăng số: client cũ chỉ là không bao giờ gửi `tm`, còn server cũ gặp `tm` thì rơi vào
 // nhánh `default` và bỏ qua. Cả hai chiều đều an toàn, không ai đọc rác.
-const ProtocolVersion = 6 // v6: snapshot đi nhị phân (Protocol v2), bỏ hẳn msgpack đường nóng
+const ProtocolVersion = 7 // v7: join mang mã phiên, welcome trả mã mới + cờ "vào lại" (§7.1)
 
 // Telemetry chở thông tin phiên, mẫu 10 giây và sự kiện (TELEMETRY_SPEC §2, §3).
 //
@@ -127,6 +138,12 @@ type Welcome struct {
 	// dòng. Hai lớp vì hậu quả của việc lọt là client đọc rác — không lỗi, không thông báo,
 	// chỉ nhân vật nhảy lung tung.
 	SchemaHash string `msgpack:"sh,omitempty"`
+	// Session: mã phiên MỚI cho lần mất kết nối tiếp theo (§7.1). Cấp lại mỗi lần vào trận
+	// và mỗi lần nối lại — mã cũ hết hiệu lực ngay khi mã mới được cấp.
+	Session string `msgpack:"sk,omitempty"`
+	// Resumed: gói này là VÀO LẠI ván cũ, không phải vào trận mới. Client dùng để hiện
+	// "Đang trở lại trận…" thay vì qua trang chủ, và để không xoá trạng thái ván.
+	Resumed bool `msgpack:"rsd,omitempty"`
 }
 
 // Player flags.

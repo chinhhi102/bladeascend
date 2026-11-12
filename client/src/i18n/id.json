@@ -96,6 +96,8 @@
   "versionMismatch": "Ada versi baru — klik untuk memuat ulang.",
   "versionReload": "Muat ulang",
   "disconnected": "Koneksi ke server terputus. Mencoba lagi...",
+  "rejoining": "Kembali ke pertandingan…",
+  "otherTab": "Kamu sedang bermain di tab lain.",
   "badName": "Nama harus 2–16 karakter.",
   "loadUi": "Memuat antarmuka…",
   "loadChar": "Memanggil {name}…",

@@ -76,6 +76,10 @@ type Zone struct {
 	// Cả hai có KHOÁ RIÊNG bên trong (safe.Rate, zoneHealth) chứ không nằm dưới khoá của
 	// khu: khu bị panic giữa tick thì `stepZoneSafe` ghi sổ từ chính goroutine đó, còn
 	// trang quản trị đọc từ goroutine HTTP — hai nơi, hai lúc.
+	// holds: nhân vật đang chờ chủ nối lại sau khi mất kết nối (§7.1, resume.go).
+	// Khoá theo id nhân vật. Chỉ goroutine phòng đụng tới.
+	holds map[uint32]*hold
+
 	panics *safe.Rate
 	health zoneHealth
 	// panicNextTick: lệnh test `dbg panic` đặt cờ này, tick sau của khu ném lỗi giả.
@@ -150,6 +154,7 @@ func newZone(index int, cfg *config.Config, m *world.Map, seed int64) *Zone {
 		clients: map[uint32]*Client{},
 		brains:  map[uint32]*bot.Brain{},
 		rng:     rand.New(rand.NewSource(seed*31 + 17)),
+		holds:   map[uint32]*hold{},
 		panics:  safe.NewRate(zonePanicLimit, zonePanicWindow),
 	}
 }
@@ -165,4 +170,8 @@ func (z *Zone) Game() *game.Game { return z.G }
 func (z *Zone) Humans() int { return len(z.clients) }
 
 // Count là tổng nhân vật (người + bot) trong khu — dùng để rải bot cho đều.
-func (z *Zone) Count() int { return len(z.clients) + len(z.brains) }
+//
+// `holds` tính vào: nhân vật đang chờ chủ nối lại VẪN đứng trong thế giới (§7.1), vẫn
+// chiếm chỗ và vẫn chém chết được. Bỏ qua thì mỗi lần ai đó F5 là phòng sinh thêm một bot
+// rồi 20 giây sau lại rút ra.
+func (z *Zone) Count() int { return len(z.clients) + len(z.brains) + len(z.holds) }

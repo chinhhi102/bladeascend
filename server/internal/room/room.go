@@ -367,6 +367,9 @@ func (r *Room) stepInner(dt float64, stepStart time.Time) {
 	}
 	r.flushFeeds()
 	r.applyTransfers()
+	// Hết 20 giây chờ nối lại (§7.1) thì nhân vật rời phòng như thoát thường. Chạy ở RANH
+	// GIỚI TICK vì nó đụng nhiều khu cùng lúc.
+	r.expireHolds()
 	r.updateBots(dt)
 	r.lbTimer += dt
 	if r.lbTimer >= 1/float64(r.cfg.Net.LeaderboardHz) {
@@ -505,7 +508,12 @@ func (r *Room) addHuman(c *Client, j netproto.Join) {
 	c.resetKnown()
 	z.clients[p.ID] = c
 	c.setRoom(r)
-	c.send(r.welcomeFor(z, p, c))
+	// Mã phiên cấp NGAY lúc vào trận, không đợi tới lúc mất kết nối (§7.1): lúc mất kết
+	// nối thì không còn đường nào gửi gì cho client nữa.
+	r.attachResume(c, newResumeKey())
+	w := r.welcomeFor(z, p, c)
+	w.Session = c.ResumeKey
+	c.send(w)
 }
 
 // welcomeFor dựng gói welcome cho một nhân vật ở một khu. Gọi cả lúc vào trận lẫn lúc
@@ -534,6 +542,12 @@ func (r *Room) RemoveClient(c *Client) {
 		if _, ok := z.clients[c.PlayerID]; !ok {
 			return
 		}
+		// §7.1: mất kết nối mà CHƯA CHẾT thì nhân vật ở lại thế giới 20 giây — đứng yên,
+		// vòng kiếm vẫn quay, vẫn chém chết được. Chỉ khi hết hạn (hoặc chết trong lúc đó)
+		// mới ghi lại mạng chơi và xoá, đúng như thoát thường.
+		if r.beginHold(z, c) {
+			return
+		}
 		if p, ok := z.G.Players[c.PlayerID]; ok && !p.Dead {
 			r.record(z, p)
 		}
@@ -544,6 +558,10 @@ func (r *Room) RemoveClient(c *Client) {
 func (r *Room) detach(z *Zone, c *Client) {
 	z.G.RemovePlayer(c.PlayerID)
 	delete(z.clients, c.PlayerID)
+	// Mã phiên chết theo ván: không xoá thì bảng tra của Manager lớn mãi (§13.9) và một
+	// mã cũ còn tra ra được phòng là một đường vào nhân vật không còn tồn tại.
+	r.mgr.forgetResume(c.ResumeKey)
+	c.ResumeKey = ""
 	c.PlayerID = 0
 	c.setRoom(nil)
 	r.mgr.release(r)
@@ -563,6 +581,17 @@ func (r *Room) handleDeaths(z *Zone) {
 				Score: p.Score, Hits: p.Hits, ScoreBy: p.ScoreBy, BurnedExp: p.BurnedExp,
 				DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs})
 			r.detach(z, c)
+			continue
+		}
+		// Chết TRONG LÚC chủ đang mất kết nối (§7.1): không có chỗ nào gửi màn Tổng kết
+		// bây giờ, nên cất nó lại. Người chơi tải lại trang xong sẽ thấy mình đã chết —
+		// chứ không phải về trang chủ và không hiểu ván biến đi đâu.
+		if _, held := z.holds[p.ID]; held {
+			r.record(z, p)
+			r.noteHeldDeath(z, p, netproto.Dead{T: "dead", KillerName: p.KillerName, KillerChar: p.KillerChar,
+				PeakLevel: p.PeakLevel, PeakExp: p.PeakExp, Kills: p.Kills, SurviveSec: p.DiedAt - p.SpawnedAt,
+				Rank: r.rankOf(p), Score: p.Score, Hits: p.Hits, ScoreBy: p.ScoreBy, BurnedExp: p.BurnedExp,
+				DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs})
 			continue
 		}
 		if b, ok := z.brains[p.ID]; ok && !z.respawnQueued(b.ID) {
@@ -587,9 +616,17 @@ func (r *Room) record(z *Zone, p *game.Player) {
 	if c != nil && c.DebugUsed {
 		return
 	}
+	// Mất kết nối rồi mới hết hạn chờ (§7.1): kết nối đã biến mất, nên vết "đã dùng lệnh
+	// test" phải nằm ở chỗ giữ. Không chép sang đó thì dùng lệnh test xong rút mạng là một
+	// đường đưa điểm nặn ra lên bảng xếp hạng toàn cục.
+	if h, held := z.holds[p.ID]; held && h.debugUsed {
+		return
+	}
 	lang := ""
 	if c != nil {
 		lang = c.Lang
+	} else if h, held := z.holds[p.ID]; held {
+		lang = h.lang
 	}
 	end := p.DiedAt
 	if !p.Dead {
@@ -648,7 +685,10 @@ func (r *Room) rankOf(p *game.Player) int {
 }
 
 func (r *Room) checkEmpty(dt float64) {
-	if r.Humans() > 0 || r.mgr.humansOf(r) > 0 {
+	// `HeldCount()`: người đang mất kết nối vẫn giữ chỗ (§7.1). Không tính thì một phòng
+	// một người, người đó F5, phòng đóng trong lúc họ đang tải lại — và "vào lại đúng
+	// nhân vật" thành vô nghĩa đúng ở trường hợp thường gặp nhất.
+	if r.Humans() > 0 || r.HeldCount() > 0 || r.mgr.humansOf(r) > 0 {
 		r.emptyFor = 0
 		return
 	}

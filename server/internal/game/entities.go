@@ -181,6 +181,12 @@ type Player struct {
 	unstickFrom  Vec
 	unstickTo    Vec
 	unstickUntil float64
+	// Offline: chủ của nhân vật này đang mất kết nối, nhân vật chờ họ nối lại (§7.1).
+	//
+	// Nó KHÔNG phải "bất tử" hay "tạm dừng": vòng kiếm vẫn quay, va kiếm vẫn bể, bị chém
+	// thân vẫn chết. Đúng một việc đổi — không nhặt được gì (xem CanPickUp) — vì để nhặt
+	// thì thoát mạng ở giữa bãi Linh khí thành một cách farm không rủi ro.
+	Offline bool
 	// Đàn em của Đại Ca (§6.3): sống có hạn, không chém thân được.
 	IsMinion    bool
 	MinionOf    uint32

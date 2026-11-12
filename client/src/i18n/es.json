@@ -96,6 +96,8 @@
   "versionMismatch": "Hay una versión nueva — pulsa para recargar.",
   "versionReload": "Recargar",
   "disconnected": "Conexión con el servidor perdida. Reintentando...",
+  "rejoining": "Volviendo a la partida…",
+  "otherTab": "Estás jugando en otra pestaña.",
   "badName": "El nombre debe tener de 2 a 16 caracteres.",
   "loadUi": "Cargando interfaz…",
   "loadChar": "Llamando a {name}…",

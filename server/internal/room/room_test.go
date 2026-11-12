@@ -247,7 +247,14 @@ func TestEmptyRoomCloses(t *testing.T) {
 	r := m.AllRooms()[0]
 	stepSecs(r, 0.1)
 	r.RemoveClient(cs[0])
+	// Từ §7.1: mất kết nối KHÔNG còn là rời phòng ngay — nhân vật ở lại 20 giây chờ chủ
+	// nối lại, và trong 20 giây đó phòng phải còn sống (không thì "vào lại đúng nhân vật"
+	// vô nghĩa với phòng một người, đúng trường hợp thường gặp nhất).
 	stepSecs(r, cfg.Room.EmptyCloseSecs+1)
+	if r.closed {
+		t.Fatal("phòng không được đóng khi còn người đang chờ nối lại (§7.1)")
+	}
+	stepSecs(r, HoldSecs+cfg.Room.EmptyCloseSecs+1)
 	if !r.closed || len(m.AllRooms()) != 0 {
 		t.Fatal("room should close after empty_close_secs with no humans")
 	}

@@ -63,6 +63,11 @@ type Client struct {
 	UA string
 	// JoinedAt là lúc kết nối vào phòng, cho cột "thời gian sống".
 	JoinedAt time.Time
+	// ResumeKey là mã phiên 32 byte của ván đang chơi (GAME_SPEC §7.1, resume.go).
+	//
+	// Thuộc về KẾT NỐI chứ không thuộc `game.Player`: nó là một bí mật của tầng mạng, và
+	// `internal/game` không được biết gì về mạng. Đổi mỗi lần nối lại — mã cũ chết ngay.
+	ResumeKey string
 
 	// pingMu giữ ba số dưới đây: chúng được ghi từ goroutine đọc WebSocket và đọc từ
 	// goroutine gom số liệu cho trang quản trị.

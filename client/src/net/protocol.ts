@@ -147,7 +147,7 @@ export function statusOn(st: number | undefined, name: (typeof STATUS)[number]):
 export const STATUS_EV = [...STATUS, 'push', 'steal', 'minion'] as const;
 export type StatusEv = (typeof STATUS_EV)[number];
 
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 
 export interface Welcome {
   t: 'welcome';
@@ -170,6 +170,10 @@ export interface Welcome {
    * tự động mỗi khi schema đổi một dòng.
    */
   sh?: string;
+  /** sk: mã phiên MỚI để vào lại sau khi mất kết nối (§7.1). */
+  sk?: string;
+  /** rsd: gói này là VÀO LẠI ván cũ, không phải vào trận mới (§7.1). */
+  rsd?: boolean;
 }
 
 export interface LeaderboardMsg {
@@ -261,6 +265,16 @@ export interface ErrorMsg {
 }
 
 /** KickedMsg: bị mời ra khỏi phòng, hoặc bị cấm (ADMIN_SPEC §6.2). */
+/**
+ * KICK_OTHER_TAB: mã lý do đặc biệt — nhân vật vừa bị một TAB KHÁC của chính người này
+ * chiếm (GAME_SPEC §7.1). Phải khớp `netproto.KickOtherTab` bên server.
+ *
+ * Là MÃ chứ không phải câu chữ: lý do cấm thường do admin gõ nên nó đi thẳng từ server và
+ * hiện nguyên văn; còn chữ của trường hợp này là chữ của game, nên nó nằm trong
+ * `ui/strings.ts` như mọi chữ khác (quy tắc 5).
+ */
+export const KICK_OTHER_TAB = '__other_tab__';
+
 export interface KickedMsg {
   t: 'kick';
   reason: string;
