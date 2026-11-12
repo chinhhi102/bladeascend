@@ -513,6 +513,11 @@ mới đổi" và "chết/rời rút ngay" đã có sẵn trong `heldBoard` từ
 
 ## Lỗi / hạn chế đã biết
 
+- **ĐỨNG HÌNH giữa trận (MỞ, nặng nhất đang có)** — 12/11 một người chơi thật trên `:9999`
+  đang 60 FPS thì game chết cứng, Chrome báo "Trang không phản hồi", phải tải lại trang. Lỗi
+  từ hệ thống bộ lọc của PixiJS 8.22; một ngoại lệ trong ticker là vòng vẽ không bao giờ
+  quay lại. Chưa dựng lại được → chưa biết nguyên nhân gốc. Đầy đủ:
+  `docs/LOI_DUNG_HINH.md`; bài dò: `tools/browsertest/filtercrash.mjs`.
 - Thiên Đình với sàn 30: p95 3,2–3,75 ms (S13), biên ~7% — PERF_LOG B21. 1/5 lần đo trượt ở
   Linh Sơn (4,74 ms, máy bận), chạy lại đạt.
 - Lịch sử git còn tên/UUID người chơi + IP từ trước khi mở công khai (commit 0efc19c, 6cc900a,
@@ -673,18 +678,40 @@ thẻ "giờ tệ nhất 24 h", cảnh báo vượt ngưỡng ≥ 5 phút (tự 
 **Còn cần anh duyệt bằng mắt** (checklist §12.4 mục 3): tôi không đăng nhập được trang
 admin nên chưa tự xem được biểu đồ thật.
 
+## Lượt 12/11 (chiều) — lỗi ĐỨNG HÌNH của người chơi · **điều tra xong, CHƯA SỬA**
+
+Không sửa gì, chỉ truy: một người chơi thật trên `:9999` đang 60 FPS thì **game đứng hình
+hẳn**, Chrome báo "Trang không phản hồi". Báo cáo đầy đủ ở **`docs/LOI_DUNG_HINH.md`**.
+
+- Lỗi ném ra từ **hệ thống bộ lọc của PixiJS** (`FilterSystem._setupFilterTextures` →
+  `globalUniforms.push`): thứ Pixi lấy ra từ bể dùng lại của chính nó không phải một
+  `UniformGroup` → trạng thái nội bộ Pixi đã hỏng từ trước khung hình đó.
+- **Một lỗi là chết hẳn**: `Ticker.update()` của Pixi 8.22 không có `try/catch`, và khung kế
+  tiếp chỉ được đặt lịch SAU khi `update()` trả về. Telemetry (chạy theo từng khung) tắt đúng
+  giây đó; không có beacon đóng tab → tab nằm đó chết cứng.
+- Ngay trước lúc chết **mọi số đều đẹp**: 59,9 FPS, khung p95 18,5 ms, 0 long task, texture
+  274 MB (bản vá rò rỉ 11/11 đang chạy đúng). Người chơi còn lại không sao → không phải server.
+- Đã loại: rò rỉ texture, server, lỗi `null.texture` 30/10, texture lọc khổng lồ, sóng xung
+  kích lúc đột phá. **Chưa dựng lại được** — hai bài thử (`tools/browsertest/filtercrash.mjs`)
+  chạy sạch trên đúng pixi 8.22.0.
+- 941 dòng `tick chậm` trong log giờ 09–10 là **nhiễu do máy bận** (4,80 tải/nhân lúc kiểm,
+  luật 16) — không rút kết luận gì từ đó.
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
 > người (hoặc Claude) hỏi lại thứ anh đã trả lời rồi. Ngày 05/11 đã dính đúng vậy với ảnh OG.
 
-1. Xem ảnh **bong bóng mặt** (`docs/review/emote/`, 3 PC + 3 iPhone) — Q44 đã đóng, code đã
+1. **SỬA LỖI ĐỨNG HÌNH** (`docs/LOI_DUNG_HINH.md` §5) — người chơi thật đã dính 12/11, game
+   chết cứng phải tải lại trang. Việc đầu tiên không cần biết nguyên nhân gốc: bọc
+   `try/catch` + đồng hồ canh quanh thân ticker (`client/src/main.ts:155`).
+2. Xem ảnh **bong bóng mặt** (`docs/review/emote/`, 3 PC + 3 iPhone) — Q44 đã đóng, code đã
    chạy, chỉ còn duyệt bằng mắt. Thấy chướng thì chỉnh `R` (cỡ) hoặc `LIFE` (thời gian hiện)
    trong `client/src/render/emote.ts`.
-2. Điền email trong `SECURITY.md`.
-3. Xem ảnh trang admin trên staging (`docs/review/11-admin/`) rồi tự đăng nhập thử.
-4. Tìm người bản ngữ duyệt 5 bản dịch + danh sách tên bot (`client/src/i18n/NOTES.md`).
-5. **Xem trang Hiệu năng mới** (`/admin/#perf`): kiểm checklist ADMIN_SPEC §12.4 mục 3 —
+3. Điền email trong `SECURITY.md`.
+4. Xem ảnh trang admin trên staging (`docs/review/11-admin/`) rồi tự đăng nhập thử.
+5. Tìm người bản ngữ duyệt 5 bản dịch + danh sách tên bot (`client/src/i18n/NOTES.md`).
+6. **Xem trang Hiệu năng mới** (`/admin/#perf`): kiểm checklist ADMIN_SPEC §12.4 mục 3 —
    chồng biểu đồ tick Thiên Đình với load máy, thấy vạch deploy, bấm Xuất CSV.
-6. **Đo FPS/GPU trên điện thoại thật** — cũng là thứ mở khoá mục 4 của bảng hiệu năng
+7. **Đo FPS/GPU trên điện thoại thật** — cũng là thứ mở khoá mục 4 của bảng hiệu năng
    (chất lượng mặc định, đang hoãn chờ số liệu người thật đã lọc).
