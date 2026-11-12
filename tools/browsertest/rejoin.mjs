@@ -49,13 +49,17 @@ const session = () => p.evaluate(() => {
 
 await joinMatch('KiemTraVaoLai');
 
-// Nuôi nhân vật lên cho khác hẳn trạng thái "mới vào": lên cảnh giới + thêm kiếm.
-for (let i = 0; i < 3; i++) {
-  await p.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'realm', n: 0 }));
-  await sleep(400);
-}
-await p.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'sword', n: 12 }));
-await sleep(1500);
+// Nuôi nhân vật lên cho khác hẳn trạng thái "mới vào", VÀ cho bất tử trong lúc đo.
+//
+// `max n=1` = lên Đạo Tổ đủ kiếm và GIỮ bất tử (`debug.go`: n=0 mới tắt bất tử). Bất tử là
+// phần bắt buộc, không phải tiện tay: §7.1 nói rõ nhân vật ở lại thế giới lúc mất kết nối và
+// "vẫn chém chết được". Bài đo cũ nuôi cảnh giới rồi so "giữ nguyên số kiếm" trước/sau F5 —
+// nhưng trong 3 giây tải lại trang, một con bot đi ngang chém vài nhát là số kiếm đổi thật.
+// Ngày 12/11 nó trượt đúng kiểu đó (13 → 7 kiếm) và chặn một lượt deploy, trong khi luật
+// đang chạy ĐÚNG. Bài đo phải tách "nhân vật có được giữ lại không" khỏi "có ai chém nó
+// không"; cái thứ hai đã có bài khác lo.
+await p.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'max', n: 1 }));
+await sleep(2500);
 
 const before = await me();
 const keyBefore = (await session())?.key ?? '';

@@ -112,6 +112,14 @@ async function sample(label) {
     fps.push(await me.evaluate(() => window.kx.scene.fpsNow?.() ?? 0));
   }
   const probe = await me.evaluate(() => window.kx.scene.probe());
+  // `probe()` chỉ đếm phần CẬP NHẬT (JS của từng hệ thống). Thời gian Pixi thật sự VẼ nằm ở
+  // `drawMs` — và đó mới là chỗ hiện ra khi ta đẩy việc xuống GPU: gói lại buffer particle,
+  // dựng lại Graphics, gom batch. Lượt tối ưu nào chỉ nhìn `probe()` sẽ thấy "không đổi gì"
+  // trong khi vừa cắt hoặc vừa thêm vài ms mỗi khung.
+  const draw = await me.evaluate(() => {
+    const s = window.kx.scene.perfStats();
+    return { drawMs: s.drawMs ?? 0, drawCalls: s.drawCalls ?? 0, sprites: s.sprites ?? 0 };
+  });
   if (!Object.values(probe).some((v) => v > 0)) {
     throw new Error(`đồng hồ theo hệ thống trả toàn 0 ở "${label}" — bảng đo bị tắt giữa chừng`);
   }
@@ -120,6 +128,7 @@ async function sample(label) {
     label,
     fps: good.length ? +good[Math.floor(good.length / 2)].toFixed(0) : 0,
     ...probe,
+    ...draw,
   };
 }
 
@@ -141,11 +150,11 @@ const KEYS = ['interp', 'players', 'monsters', 'items', 'beasts', 'map', 'ambien
 // đó là thân, bảng tên, vòng kiếm hay lớp trạng thái (render/probe.ts).
 const SUB = ['p.body', 'p.plate', 'p.ring', 'p.status'];
 console.log('');
-console.log(`| Kịch bản | FPS | ${KEYS.join(' | ')} | heap MB | răng cưa |`);
-console.log(`|---|---:|${KEYS.map(() => '---:').join('|')}|---:|---:|`);
+console.log(`| Kịch bản | FPS | vẽ ms | lô vẽ | sprite | ${KEYS.join(' | ')} | heap MB | răng cưa |`);
+console.log(`|---|---:|---:|---:|---:|${KEYS.map(() => '---:').join('|')}|---:|---:|`);
 for (const r of rows) {
   const cols = KEYS.map((k) => (r[k] ?? 0).toFixed(2));
-  console.log(`| ${r.label} | ${r.fps} | ${cols.join(' | ')} | ${(r.heapMB ?? 0).toFixed(0)} | ${(r.heapRangeMB ?? 0).toFixed(0)} |`);
+  console.log(`| ${r.label} | ${r.fps} | ${(r.drawMs ?? 0).toFixed(2)} | ${r.drawCalls ?? 0} | ${r.sprites ?? 0} | ${cols.join(' | ')} | ${(r.heapMB ?? 0).toFixed(0)} | ${(r.heapRangeMB ?? 0).toFixed(0)} |`);
 }
 console.log('');
 console.log(`| Trong cột "người" | ${SUB.join(' | ')} | tổng |`);

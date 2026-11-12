@@ -20,6 +20,14 @@
 # ghi theo kiểu đổi tên nguyên khối. Build trong lúc làm việc không còn chạm tới người chơi.
 set -euo pipefail
 
+# Dừng giữa chừng phải KÊU. Ngày 12/11 một lệnh `pkill -f` trong chính tệp này giết tiến
+# trình đang chạy deploy: script tắt ngang sau bài rejoin, không in dòng nào, và người gọi
+# (`tools/deploy.sh | tail`) đọc được mã thoát 0 — tin là đã deploy trong khi server vẫn
+# chạy bản cũ. Im lặng là kiểu hỏng tệ nhất của một script deploy.
+DEPLOY_DONE=0
+trap '[ "$DEPLOY_DONE" = 1 ] || echo "LỖI: deploy DỪNG GIỮA CHỪNG — server vẫn đang chạy bản CŨ. Xem dòng cuối ở trên." >&2' EXIT
+trap 'echo "LỖI: deploy bị giết (TERM/INT) — server vẫn đang chạy bản CŨ." >&2; exit 143' TERM INT
+
 cd "$(dirname "$0")/.."
 REPO="$PWD"
 DEPLOY="$REPO/server/data/deploy"
@@ -265,8 +273,20 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   set -e
   tail -4 /tmp/kx-rejoin.out
 
-  kill "$(cat /tmp/kx-smooth.pid)" 2>/dev/null || true
-  pkill -f "127.0.0.1:9997" 2>/dev/null || true
+  # Dọn server dev bằng PID ĐÃ GHI, không bằng `pkill -f`.
+  #
+  # Dòng cũ là `pkill -f "127.0.0.1:9997"` — đúng cái bẫy mà chính tệp này cảnh báo ở đầu
+  # (xem ghi chú `-x` chứ không `-f`): một chuỗi khớp cả dòng lệnh thì sớm muộn cũng khớp
+  # vào một tiến trình không ngờ tới. Nó KHÔNG phải thủ phạm vụ deploy tắt ngang 12/11
+  # (thủ phạm là `grep` trong cổng rò rỉ ở dưới), nhưng cũng không nên giữ.
+  #
+  # `go run` chạy binary đã biên dịch làm tiến trình CON, nên phải giết con trước rồi mới
+  # tới cha; giết mỗi cha thì server vẫn giữ cổng 9997 và lượt deploy sau chết lúc khởi động.
+  smooth_pid="$(cat /tmp/kx-smooth.pid 2>/dev/null || true)"
+  if [ -n "$smooth_pid" ]; then
+    pkill -P "$smooth_pid" 2>/dev/null || true
+    kill "$smooth_pid" 2>/dev/null || true
+  fi
   if [ "$crash_rc" != "0" ]; then
     echo "LỖI: lớp chống sập §13.8 không đạt. Dừng deploy. Xem /tmp/kx-crash.out" >&2
     exit 1
@@ -302,8 +322,18 @@ fi
 # NGƯỜI, không phải một biến môi trường gõ cho qua.
 LEAK_JSON="$REPO/server/data/leak-nightly.json"
 if [ "${SKIP_LEAK:-0}" != "1" ] && [ -f "$LEAK_JSON" ]; then
-  leak_ok="$(grep -o '"ok":[^,]*' "$LEAK_JSON" | head -1 | cut -d: -f2 | tr -d ' ')"
-  leak_ack="$(grep -o '"ack":[^,}]*' "$LEAK_JSON" | head -1 | cut -d: -f2 | tr -d ' ')"
+  # Đọc bằng `sed -n …p`, KHÔNG bằng `grep | cut`.
+  #
+  # `grep` trả mã 1 khi không khớp. Dưới `set -euo pipefail` thì một trường VẮNG MẶT trong
+  # JSON đủ để giết cả script — không một dòng lỗi. Đúng chuyện xảy ra ngày 12/11: tệp kết
+  # quả chưa bao giờ có trường `ack` (chỉ trang quản trị mới ghi nó), nên deploy tắt ngang
+  # ngay sau bài rejoin và người gọi đọc được mã thoát 0. Cổng an toàn mà làm hỏng chính
+  # việc nó đang gác thì tệ hơn là không có cổng.
+  #
+  # `sed -n …p` trả 0 kể cả khi không khớp → trường vắng mặt thành chuỗi rỗng, đúng ý.
+  leak_field() { sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\([^,}]*\).*/\1/p" "$LEAK_JSON" | head -1 | tr -d ' "'; }
+  leak_ok="$(leak_field ok)"
+  leak_ack="$(leak_field ack)"
   if [ "$leak_ok" = "false" ] && [ "$leak_ack" != "true" ]; then
     echo "" >&2
     echo "LỖI: bài kiểm rò rỉ ĐÊM QUA báo đỏ và chưa ai xem lại (§13.9 v6.54)." >&2
@@ -382,3 +412,6 @@ ls -1 "$ARCHIVE" | sort -r | tail -n "+$((KEEP_BUILDS + 1))" | while read -r old
   rm -rf "${ARCHIVE:?}/$old"
 done
 echo "   đã cất vào kho ($(ls -1 "$ARCHIVE" | wc -l) bản lùi được — tools/deploy.sh rollback)"
+
+DEPLOY_DONE=1
+echo "== XONG: đang chạy build $BUILD_ID =="
