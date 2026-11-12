@@ -45,6 +45,15 @@ await p.locator('.home .btn.primary').click();
 await p.waitForSelector('.room-board', { timeout: 60000 });
 await sleep(4000);
 
+// BẤT TỬ suốt bài đo (`dbg max n=1` → `ForceState` đặt InvulnUntil = +1e9).
+//
+// Không có dòng này thì bài đo đỏ ngẫu nhiên theo tải máy: trên máy bận, nhân vật bị bot
+// chém chết giữa một khoảng chờ 6 giây, màn Tổng kết thay chỗ bảng phòng, và phép kiểm
+// "vẫn còn trong trận" đỏ — trong khi thứ đang thử (dựng lại renderer) vẫn chạy đúng.
+// Dính đúng vậy ở lượt deploy 12/11 lúc máy chạy 6,45 lần số nhân.
+await p.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'max', n: 1 }));
+await sleep(1500);
+
 const stats = () => p.evaluate(() => window.__stats());
 const guard = () => p.evaluate(() => window.kx.guard());
 /** frames đếm khung bằng chính FPS của game: game còn vẽ thì con số này còn nhúc nhích. */
@@ -109,6 +118,9 @@ expect('vẫn còn trong trận', await p.evaluate(() => !!document.querySelecto
 expect('game vẫn vẽ sau khi dựng lại', await alive(3), true);
 
 console.log('\n— 4. Panic giả ở SERVER: 1 khu bỏ 1 tick, người khác không bị ngắt —');
+// Dựng lại renderer xong là một `welcome` mới chưa chắc tới; đặt lại bất tử cho chắc.
+await p.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'max', n: 1 }));
+await sleep(800);
 await p.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'panic', n: 0 }));
 await sleep(2500);
 expect('vẫn trong trận sau panic tick', await p.evaluate(() => !!document.querySelector('.room-board')), true);
