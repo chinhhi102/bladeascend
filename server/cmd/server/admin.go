@@ -63,6 +63,8 @@ func (s *server) adminRoutes(mux *http.ServeMux, adminDir string) {
 	// Trang "Dọn dữ liệu" (ADMIN_SPEC §13) — janitor.go.
 	mux.HandleFunc("GET /api/admin/janitor", s.adminGuard(s.handleAdminJanitor))
 	mux.HandleFunc("POST /api/admin/janitor/run", s.adminGuard(s.handleAdminJanitorRun))
+	// Xác nhận đã xem kết quả rò rỉ đỏ (§13.9 v6.54) — leaknightly.go.
+	mux.HandleFunc("POST /api/admin/leak/ack", s.adminGuard(s.handleAdminLeakAck))
 	// CÔNG KHAI: người chơi gửi góp ý (§9). Có rate limit trong `AddFeedback`.
 	mux.HandleFunc("POST /api/feedback", s.handleFeedback)
 	mux.Handle("GET /admin/", s.adminPageGuard(adminDir))

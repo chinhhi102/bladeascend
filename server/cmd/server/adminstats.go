@@ -89,6 +89,10 @@ type adminStats struct {
 	DBWarning string `json:"db_warning,omitempty"`
 	// Degraded: khu đang "suy giảm" vì panic ≥ 3 lần/phút (GAME_SPEC §13.8).
 	Degraded []string `json:"degraded,omitempty"`
+	// Leak: kết quả bài kiểm rò rỉ hằng đêm (§13.9 v6.54). nil = chưa chạy lần nào.
+	Leak *LeakNightly `json:"leak,omitempty"`
+	// LeakWarning: câu cảnh báo dashboard khi kết quả đỏ chưa xem, hoặc cron đã ngừng chạy.
+	LeakWarning string `json:"leak_warning,omitempty"`
 }
 
 func (s *server) handleAdminStats(w http.ResponseWriter, _ *http.Request) {
@@ -112,6 +116,8 @@ func (s *server) collectStats() adminStats {
 	if s.janitor != nil {
 		st.DBWarning = s.janitor.DBWarning()
 	}
+	st.Leak = readLeakNightly(s.dbPath)
+	st.LeakWarning = st.Leak.Warning(time.Now())
 
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)

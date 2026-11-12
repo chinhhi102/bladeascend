@@ -123,6 +123,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 36 | 2026-11-12 | `9ba5e3a` (trước sửa) | **Rò rỉ bộ nhớ SERVER — đo trước** (`cmd/leakcheck`, 25 phút game, đồng hồ giả, 6 người vào/ra liên tục) | LEAK-SRV | – | – | – | – | – | – | – | – | heap **8,2 → 159,0 MB** sau 25 phút: **+6,5 MB/phút tuyến tính**, 31 500 object/phút. Ngoại suy 1 giờ = **420 MB** | B27 mở |
 | 36 | 2026-11-12 | `c947f88` | **Rò rỉ bộ nhớ SERVER — đo sau** hai bản vá con trỏ (`itemGrid.remove`, `Manager.tryClose`) | LEAK-SRV | – | – | – | – | – | – | – | – | 60 phút / **2 703 lượt vào-ra**: heap mỗi phòng **+2,9 %** (+0,01 MB/phút); sau khi mọi người rời heap **8,30 → 0,92 MB**, goroutine ±0 | B27 đóng |
 | 36 | 2026-11-12 | `c947f88` | **Rò rỉ bộ nhớ CLIENT** (`leakcheck.mjs` 30 phút, 50 lượt đổi khu, 9 lượt chết) | LEAK-CLI | – | – | – | 60 / – | – | – | – | – | So phút 5: texMB **−0,0 %** ✅ · display object −7,4 % ✅ · texture +24,5 % ❌ · JS heap +37,3 % ❌. Nhưng phút 20–25 ↔ 25–30: texture **+1,0 %**, heap **−0,5 %** → chạm TRẦN, không dốc | **Q53** — mốc phút 5 của §13.9 quá sớm cho game này |
+| 37 | 2026-11-12 | `9ba5e3a` | **PixiJS 8.22.0 → 8.23.0 — CHƯA ĐO ĐƯỢC** | S1/S4 | – | – | – | – | – | – | – | – | Máy bận cả ngày: load/nhân **2,17 · 2,59 · 3,87** (12 nhân) — luật 16 cấm kết luận. Nâng cấp vẫn deploy vì nó là bản vá lỗi (#12259 mất texture sau khi đổi ngữ cảnh, #12369 rò bộ nhớ `CanvasTextPipe`) | **B29 mở** — nợ một lượt S1+S4 trước/sau lúc máy rảnh |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1143,10 +1144,53 @@ số con trỏ sót ngoài `len`, không đo heap — số xác định, không 
 
 ---
 
+### Lượt 37 — 12/11/2026 · PixiJS 8.22 → 8.23 và cửa sổ đo rò rỉ (spec v6.54)
+
+**Phép đo trước/sau cho bản nâng Pixi: KHÔNG CÓ.** Ghi lại chuyện này thay vì để trống, vì
+một ô trống sau này sẽ được đọc là "chắc không đáng kể".
+
+Luật 16 đòi `load / nhân < 1,5`. Máy này (12 nhân) suốt ngày 12/11 ở **2,17 · 2,59 · 3,87**
+— có lúc chạm 26 và 46 trên 12 nhân. Lượt #26 đã cho thấy cùng một commit đo lúc máy bận ra
+p95 4,01 ms và lúc máy rảnh ra 1,38 ms: chênh gấp ba, lớn hơn mọi hiệu ứng mà một bản vá
+Pixi có thể tạo ra. Đo bây giờ không phải "đo thô", nó là **sinh ra một con số sai rồi ghi
+vào sổ**.
+
+Bản nâng vẫn được deploy mà không chờ phép đo, vì hai thay đổi của nó là **sửa lỗi**, không
+phải đánh đổi hiệu năng: #12259 (texture biến mất sau khi WebGL mất rồi lấy lại ngữ cảnh —
+đúng cái đường mà §13.8 vừa thêm `rebuild()` đi qua) và #12369 (`CanvasTextPipe` giữ lại
+texture chữ đã huỷ). Nợ phép đo được ghi thành **B29**.
+
+**Cửa sổ đo rò rỉ client đổi theo spec v6.54 (Q53).** Lượt #36 báo "rò rỉ" với texture +24,5%
+và heap +37,3% **so với phút 5**, trong khi phút 20–25 ↔ 25–30 chỉ nhúc nhích +1,0% / −0,5%.
+Tức là mốc phút 5 không đo rò rỉ, nó đo **giai đoạn nạp**: 20 phút đầu client còn đang nạp
+atlas nhân vật, khu mới, bộ chữ. Spec v6.54 chốt: bỏ 20 phút đầu, chặn theo **cửa sổ phút
+20–30 tăng > 5%**, cộng một trần cứng là **ngân sách GPU của chính thiết bị đang chạy**
+(`gpuBudgetMB()` — iOS 256 · điện thoại 384 · máy bàn 1024). Mốc phút 5 vẫn in ra, nhưng chỉ
+để đọc, không chặn.
+
+Trần ngân sách là phần quan trọng hơn ngưỡng phần trăm: một chương trình nằm phẳng ở 240 MB
+trên iPhone thì "không rò rỉ" mà vẫn bị Safari giết tab (B13). Phần trăm bắt xu hướng; trần
+bắt mức.
+
+**Bài đo dời khỏi cổng deploy, chạy hằng đêm 03:00** (`tools/leaknightly.sh`, cron đã cài).
+Lý do nằm trong chính đầu tệp đó: bài client chạy 30 phút thật, để trong cổng deploy thì cái
+giá nửa tiếng ấy sẽ không được trả bằng kiên nhẫn mà bằng `SKIP_LEAK=1`. Đêm nào đỏ thì
+dashboard hiện thẻ cảnh báo và `tools/deploy.sh` chặn deploy kế tiếp tới khi có người bấm
+"Đã xem". Bài vẫn gác — chỉ không gác bằng cách bắt người ta chờ. Cổng deploy giữ nguyên
+crashtest, rejoin, gomdon-smooth và test đơn vị (đều dưới một phút).
+
+Chạy thử runner (`--force`, rút bài client còn 2 phút): server 60 phút game ĐẠT (heap
+8,29 → 0,89 MB sau khi mọi người rời, goroutine ±0), client in đúng "KHÔNG KẾT LUẬN — bài chỉ
+2 phút" thay vì phán bừa trên một cửa sổ chưa tồn tại, và `server/data/leak-nightly.json`
+được ghi đúng định dạng dashboard đọc.
+
+---
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
+| B29 | **Nợ phép đo trước/sau cho PixiJS 8.22 → 8.23** | Không biết bản nâng làm FPS tốt lên, xấu đi, hay không đổi — đang deploy mà không có số | #37: máy ở load/nhân 2,17–3,87 suốt ngày 12/11, luật 16 cấm kết luận. #26 vs #27 đã chứng minh máy bận làm lệch p95 gấp ba | **Mở** — cần một lượt S1 + S4 (3 lần mỗi bên, min/max/TB) lúc `load/nhân < 1,5`. So `9ba5e3a^` với `9ba5e3a` | – |
 | B28 | **Rò rỉ bộ nhớ SERVER: 7 MB/phút, 420 MB sau một giờ** | Tiến trình chết trên VPS 1 GB trước khi hết một ca chơi | #36: `cmd/leakcheck` 25 phút → heap 8,2 → 159,0 MB tuyến tính. `pprof -inuse_objects`: `addAmbientOrb` giữ 309 477 object trong khi thế giới chỉ có ~27 000 viên sống | **Đóng (#36)** — hai con trỏ bỏ quên ngoài `len` (`itemGrid.remove`, `Manager.tryClose`). Đo lại 60 phút / 2 703 lượt vào-ra: heap mỗi phòng +2,9 %, hết người thì về 0,92 MB | #36 |
 | B27 | **Server game chạy chung máy với việc nặng của người khác** | Mọi số tick đo trên `:9999` đều có thể là số của CÁI MÁY chứ không của game | #35: server dùng **5% của một nhân** (pprof 1,88 s / 30 s) trong khi máy ở load 47, CPU 89,6%, swap 2 GB cạn — và tick p95 vẫn 17 ms. Mọi hệ thống trong tick đều có `max` 5–20 ms dù TB 0,04–0,17 ms | **Mở** — bộ thu gom §12 nay ghi `load1`/`cpu_pct` máy cạnh tick, và cảnh báo tự nói "có thể do máy bận". Muốn số tick sạch thì phải tách server sang máy riêng, hoặc đo lúc load/nhân < 0,5 | #35 |
 | B26 | **Đường GỬI GÓI là chỗ tốn nhất còn lại khi đông** | Trần người chơi mỗi phòng | #35 pprof sau tối ưu (S13, 110 nhân vật): `snapshotFor` **32% CPU**, trong đó `diffItems` 21%. Trong khu nặng: gửi gói 0,57 ms/tick (31%), va chạm 0,98 ms (54%) | Mở — `diffItems` đã qua hai lượt tối ưu (xem ghi chú trong `broadcast.go`); lượt sau phải nhắm vào SỐ VIÊN gửi đi (4 900 viên/khu) chứ không vi chỉnh vòng lặp | – |

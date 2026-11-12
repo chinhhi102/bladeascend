@@ -290,50 +290,30 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   fi
 fi
 
-# ── Cổng rò rỉ bộ nhớ (GAME_SPEC §13.9) ────────────────────────────────────────────────
+# ── Cổng rò rỉ bộ nhớ: ĐỌC kết quả đêm qua, không tự chạy (GAME_SPEC §13.9 v6.54) ──────
 #
-# Hai bài, hai phía, cả hai đều CHẶN deploy khi đỏ:
+# Bài client chạy 30 phút THẬT. Để nó trong cổng deploy nghĩa là mỗi lần sửa một dòng chữ
+# cũng phải chờ nửa tiếng — và cái giá đó không được trả bằng sự kiên nhẫn, nó được trả
+# bằng `SKIP_LEAK=1`. Một cổng ai cũng bỏ qua là một cổng không tồn tại.
 #
-#   - server: `cmd/leakcheck` chạy 60 phút GAME bằng đồng hồ giả, xong trong vài chục giây,
-#     và không phụ thuộc tải máy (nó đo heap của chính tiến trình, không đo FPS).
-#   - client: `tools/browsertest/leakcheck.mjs` chạy THẬT 30 phút trên Chrome headless —
-#     spec chốt con số đó vì rò rỉ GPU chỉ lộ ra sau nhiều phút (181 lượt đổi khu → 1,4 GB).
-#
-# 30 phút cho mỗi lần deploy là một cái giá thật. Hạ bằng `LEAK_MINUTES=8 tools/deploy.sh`
-# khi đang sửa gấp, hoặc bỏ hẳn bằng `SKIP_LEAK=1` — nhưng đừng để nó thành thói quen: bài
-# này là thứ duy nhất bắt được rò rỉ trước khi người chơi gặp.
-#
-# Lưu ý: hạ xuống dưới ~24 phút thì bài client **không còn gác được gì** — nó in số rồi nói
-# thẳng "KHÔNG KẾT LUẬN", vì bộ làm việc của game chỉ chạm trần quanh phút 20 và một cửa sổ
-# nằm trước mốc đó sẽ đỏ với mọi build, kể cả build sạch (xem Q53).
-if [ "${SKIP_LEAK:-0}" != "1" ]; then
-  echo "== 2d/5 rò rỉ bộ nhớ SERVER (§13.9, 60 phút game, đồng hồ giả) =="
-  set +e
-  ( cd server && go run ./cmd/leakcheck -minutes "${LEAK_SERVER_MINUTES:-60}" ) >/tmp/kx-leak-server.out 2>&1
-  leak_srv=$?
-  set -e
-  tail -6 /tmp/kx-leak-server.out
-  if [ "$leak_srv" != "0" ]; then
-    echo "LỖI: server rò rỉ bộ nhớ (§13.9). Dừng deploy. Xem /tmp/kx-leak-server.out" >&2
+# Nên từ v6.54: `tools/leaknightly.sh` chạy hai bài lúc 03:00 (khi 0 người online và máy
+# rảnh), ghi kết quả vào `server/data/leak-nightly.json`. Chỗ này chỉ ĐỌC tệp đó. Đỏ thì
+# chặn deploy cho tới khi có người xem lại và xác nhận — xác nhận là một hành động của
+# NGƯỜI, không phải một biến môi trường gõ cho qua.
+LEAK_JSON="$REPO/server/data/leak-nightly.json"
+if [ "${SKIP_LEAK:-0}" != "1" ] && [ -f "$LEAK_JSON" ]; then
+  leak_ok="$(grep -o '"ok":[^,]*' "$LEAK_JSON" | head -1 | cut -d: -f2 | tr -d ' ')"
+  leak_ack="$(grep -o '"ack":[^,}]*' "$LEAK_JSON" | head -1 | cut -d: -f2 | tr -d ' ')"
+  if [ "$leak_ok" = "false" ] && [ "$leak_ack" != "true" ]; then
+    echo "" >&2
+    echo "LỖI: bài kiểm rò rỉ ĐÊM QUA báo đỏ và chưa ai xem lại (§13.9 v6.54)." >&2
+    grep -o '"note":"[^"]*"' "$LEAK_JSON" >&2 || true
+    echo "  Nhật ký: server/data/leak-logs/" >&2
+    echo "  Xem xong thì xác nhận ở trang quản trị (Dashboard → thẻ rò rỉ)," >&2
+    echo "  hoặc chạy lại bài: tools/leaknightly.sh --force" >&2
     exit 1
   fi
-
-  if [ -d tools/browsertest/node_modules/playwright ]; then
-    echo "== 2e/5 rò rỉ bộ nhớ CLIENT (§13.9, ${LEAK_MINUTES:-30} phút thật) =="
-    ( cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9996 -debug=true >/tmp/kx-leak.log 2>&1 & echo $! > /tmp/kx-leak.pid )
-    sleep 22
-    set +e
-    MINUTES="${LEAK_MINUTES:-30}" node tools/browsertest/leakcheck.mjs http://127.0.0.1:9996 >/tmp/kx-leak-client.out 2>&1
-    leak_cli=$?
-    set -e
-    tail -8 /tmp/kx-leak-client.out
-    kill "$(cat /tmp/kx-leak.pid)" 2>/dev/null || true
-    pkill -f "127.0.0.1:9996" 2>/dev/null || true
-    if [ "$leak_cli" != "0" ]; then
-      echo "LỖI: client rò rỉ bộ nhớ (§13.9). Dừng deploy. Xem /tmp/kx-leak-client.out" >&2
-      exit 1
-    fi
-  fi
+  echo "   rò rỉ đêm qua: ${leak_ok:-?} (server/data/leak-nightly.json)"
 fi
 
 

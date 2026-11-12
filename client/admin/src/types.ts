@@ -45,6 +45,23 @@ export interface Stats {
   db_warning?: string;
   /** Tên các khu đang "suy giảm" vì panic lặp lại (GAME_SPEC §13.8). */
   degraded?: string[] | null;
+  /** Kết quả bài kiểm rò rỉ hằng đêm (§13.9 v6.54). Thiếu = chưa chạy lần nào. */
+  leak?: LeakNightly;
+  leak_warning?: string;
+}
+
+/** LeakNightly: một đêm chạy `tools/leaknightly.sh` (GAME_SPEC §13.9 v6.54). */
+export interface LeakNightly {
+  at: number;
+  ok: boolean;
+  /** Lý do bỏ qua đêm đó (có người chơi, máy bận). Rỗng = đã chạy thật. */
+  skipped: string;
+  note: string;
+  log: string;
+  ack: boolean;
+  ack_at?: number;
+  client_minutes: number;
+  server_minutes: number;
 }
 
 export interface Me {

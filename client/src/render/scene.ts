@@ -10,7 +10,7 @@ import { statusWork, statusWorkTick } from './statusview';
 import { ringWork, ringWorkTick } from './swordring';
 import { SkillPresenter, type StatusChip } from './skillpresent';
 import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuSites, gpuTextureCount, trackGpuMemory, trackSourceNames, trackTextureFrom } from './gpumem';
-import { rendererResolution } from './device';
+import { gpuBudgetMB, rendererResolution } from './device';
 import { FADE_OUT_SECS, ViewPool } from './viewpool';
 import { BobaOverlay } from './boba';
 
@@ -1082,6 +1082,11 @@ export class GameScene {
       sprites: countNodes(this.app.stage),
       drawCalls: drawCalls.perFrame,
       texMB: gpuMemMB(),
+      // texBudgetMB: ngân sách bộ nhớ đồ hoạ của THIẾT BỊ NÀY (device.ts: iOS 256 · điện
+      // thoại 384 · máy bàn 1024). Bài kiểm rò rỉ §13.9 chặn khi vượt ngân sách, và nó
+      // phải đọc con số của chính máy đang chạy — chép tay một con số vào bài đo là sai
+      // ngay lần đầu chạy trên máy khác.
+      texBudgetMB: gpuBudgetMB(),
       texPeakMB: gpuPeakMB(),
       textures: gpuTextureCount(),
       fixPerSec: this.world?.fixPerSec ?? 0,

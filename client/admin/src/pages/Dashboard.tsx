@@ -1,9 +1,10 @@
 // Dashboard live — ADMIN_SPEC §3: lưới Card + Statistic, màu theo ngưỡng, mũi tên so với
 // ~1 phút trước. Số liệu từ `/api/admin/stats` (2 s, chung cả trang) + chế độ bot toàn server.
-import { Alert, Card, Col, Empty, Row, Space, Statistic, Table, Tag, Typography } from 'antd';
-import type { ReactNode } from 'react';
+import { Alert, App, Button, Card, Col, Empty, Row, Space, Statistic, Table, Tag, Typography } from 'antd';
+import { useState, type ReactNode } from 'react';
 
-import { BOT_LABEL, f1, LEVEL_COLOR, countLevel, realmName, tickLevel, uptime, type Level } from '../format';
+import { errMsg, post } from '../api';
+import { BOT_LABEL, f1, fullTime, LEVEL_COLOR, countLevel, realmName, tickLevel, uptime, type Level } from '../format';
 import { useFetch, useStats } from '../hooks';
 import type { BotsResp, Stats, ZoneStat } from '../types';
 import { go } from '../hooks';
@@ -167,6 +168,7 @@ function HealthAlerts({ s }: { s: Stats }): ReactNode {
   const zones = s.degraded ?? [];
   return (
     <>
+      <LeakAlert s={s} />
       {zones.length ? (
         <Alert
           type="error"
@@ -187,6 +189,45 @@ function HealthAlerts({ s }: { s: Stats }): ReactNode {
         />
       ) : null}
     </>
+  );
+}
+
+/**
+ * LeakAlert — kết quả bài kiểm rò rỉ hằng đêm (§13.9 v6.54).
+ *
+ * Nút "Đã xem" không chỉ để tắt thẻ đỏ: nó là thứ MỞ KHOÁ deploy kế tiếp
+ * (`tools/deploy.sh` đọc cờ `ack` trong `server/data/leak-nightly.json`). Đặt nó ở đây,
+ * cạnh con số, để người bấm là người vừa đọc con số — chứ không phải người đang vội gõ
+ * một biến môi trường trong terminal.
+ */
+function LeakAlert({ s }: { s: Stats }): ReactNode {
+  const l = s.leak;
+  const { message } = App.useApp();
+  const [busy, setBusy] = useState(false);
+  if (!s.leak_warning) {
+    return null;
+  }
+  const red = l && !l.ok && !l.ack;
+  const ack = async (): Promise<void> => {
+    setBusy(true);
+    try {
+      await post('/api/admin/leak/ack', {});
+      message.success('Đã ghi nhận. Deploy kế tiếp đi tiếp được.');
+    } catch (e) {
+      message.error(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Alert
+      type={red ? 'error' : 'warning'}
+      showIcon
+      style={{ marginBottom: 12 }}
+      message={s.leak_warning}
+      description={l ? `Chạy lúc ${fullTime(l.at)} · client ${l.client_minutes} phút · server ${l.server_minutes} phút game · nhật ký: server/data/${l.log}` : undefined}
+      action={red ? <Button size="small" loading={busy} onClick={() => void ack()}>Đã xem</Button> : undefined}
+    />
   );
 }
 

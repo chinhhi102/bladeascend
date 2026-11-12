@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.54:** bài rò rỉ client bỏ 20 phút khởi động, chặn theo cửa sổ phút 20–30 (> 5%) (Q53); bài rò rỉ chạy hằng đêm 03:00 thay vì mỗi deploy; Hoá Khổng Lồ nhân scale toàn phần (Q52) (§13.9, §6.3).
+
 **Thay đổi v6.53:** chống sập (bắt lỗi theo hệ thống, tự dựng lại renderer, recover server) §13.8; F5 khi chưa chết vào lại đúng phiên trong 20 s §7.1; vệ sinh bộ nhớ client/server + bài kiểm rò rỉ §13.9.
 
 **Thay đổi v6.52:** Hút Mì toả tròn 5 U ở mọi chỗ trong spec (Q50); Trân Châu mù 3s cả luật lẫn hiệu ứng màn hình; Cô Ba bỏ vỏ chuối (Q51) (§6.3, §6.5).
@@ -676,7 +678,7 @@ Mỗi nhân vật có **1 kỹ năng riêng**, **tự hồi** theo thời gian, 
 | Bà Tám Loa | **Loa Phường** | (1) **Lấy hơi 0.8s** (đứng yên, ngực phồng): **hút về mình mọi viên Linh khí/Tiên khí, vật phẩm, Bó Kiếm trong bán kính 6 U** (nhặt luôn, theo luật hấp thụ thường; đang bị mù thì không hút được); (2) **Hét**: sóng âm toả tròn 360°, **đẩy văng mọi địch trong 6 U** ra 6 U + đổi chiều vòng kiếm của họ. Bị chém chết trong lúc lấy hơi thì mất chiêu | 25s | 2 |
 | Ông Ba Võng | **Ru Ngủ Trưa — Trộm Kiếm** | Hát ru 1 câu (đứng yên 0.5s; nếu bị chém trúng mà có khiên Kim Cang đỡ thì mất chiêu) rồi nằm võng **4s**: (1) mọi địch trong **4 U** **ngủ gục 2.5s** (không di chuyển/kỹ năng/Thiêu Đốt; kiếm vẫn quay và đánh trả); (2) trong 4s đó, va kiếm **tính bình thường hai chiều — kiếm Ông Ba vẫn bị mẻ** theo độ bền (v6.44), nhưng **mỗi thanh kiếm của đối thủ bị bể khi va với Ông Ba bay về nhập vòng của ông** (tới trần; dư rơi Bó Kiếm). Ông Ba vẫn di chuyển được trên võng | 25s | 2 |
 | Đại Ca Dép Tổ Ong | **Gọi Đàn Em** | Huýt sáo gọi 2 đàn em (nhỏ hơn đại ca 30%, cùng cảnh giới) trong **8s**, mỗi đứa **15% số kiếm hiện tại của đại ca** (tổng 30%, ngang mức lời của Trộm Kiếm). Đàn em bám 3 U, tìm địch trong 8 U, **nhặt Linh khí/Tiên khí/vật phẩm/Bó Kiếm thay đại ca** (bán kính nhặt của đàn em, đồ nhặt được cộng thẳng cho đại ca). Không chém thân, không qua cổng; hết kiếm hoặc hết giờ thì biến mất. Tối đa 2 đàn em cùng lúc (gọi lần 2 khi còn đàn em → làm mới thời gian + kiếm) | 25s | 2 |
-| Thằng Mập Trà Sữa | **Phun Trân Châu + Hoá Khổng Lồ** | Phun trân châu nón 45° × 8 U: người trúng **mù 3s** (màn hình dính trân châu, không nhặt đồ, **kiếm không chém trúng thân ai**) và **bị đảo điều khiển 3s** (trái↔phải, lên↔xuống; chạm/joystick cũng đảo). Đồng thời Thằng Mập **hoá khổng lồ ×2 trong 2s**: thân, bán kính vòng kiếm và **số kiếm ×2** (kiếm tạm màu trà sữa, hết 2s tự tan, bể trước kiếm thật, không rơi khi chết, không bị cướp) | 25s | 2 |
+| Thằng Mập Trà Sữa | **Phun Trân Châu + Hoá Khổng Lồ** | Phun trân châu nón 45° × 8 U: người trúng **mù 3s** (màn hình dính trân châu, không nhặt đồ, **kiếm không chém trúng thân ai**) và **bị đảo điều khiển 3s** (trái↔phải, lên↔xuống; chạm/joystick cũng đảo). Đồng thời Thằng Mập **hoá khổng lồ ×2 trong 2s** (nhân thẳng scale — Q52: bán kính nhặt và tầm kỹ năng cũng to theo trong 2s, camera lùi theo như thường): thân, bán kính vòng kiếm và **số kiếm ×2** (kiếm tạm màu trà sữa, hết 2s tự tan, bể trước kiếm thật, không rơi khi chết, không bị cướp) | 25s | 2 |
 | Cô Ba Gánh Hàng | **Bày Hàng Chặn Lối** | Bày dãy 5 sạp hình vòng cung cách 3 U theo hướng nhắm, dài 6 U, **6s**. Sạp **không thể bị chém** (bất hoại, chỉ Shipper đang Gom Đơn đi xuyên được; Cô Ba đi xuyên sạp của mình). Lúc sạp bật lên, **địch đứng trên đường sạp bị đẩy văng ra ngoài** (theo hướng ra xa Cô Ba). Địch trong 2 U quanh dãy sạp lúc bật **bị "buộc" vào sạp gần nhất 3s**: chỉ đi được trong vòng 2 U quanh sạp đó (bị hàng hoá thu hút), kiếm vẫn quay bình thường | 25s | 2 |
 | Sư Phụ Mì Gói | **Hút Mì Đoạt Kiếm** | Quăng mì ra mọi hướng rồi **húp 0.6s** (đứng yên): mọi địch trong bán kính **5 U** bị sợi mì nối vào, **mỗi người mất 25% số kiếm hiện có**, kiếm bay dọc sợi mì về Sư Phụ — **không giới hạn số cướp**; phần vượt kiếm tối đa của Sư Phụ **rơi thành Bó Kiếm quanh ông** (ai cũng nhặt được). Bị chém chết trong lúc húp thì mất chiêu. Kỹ năng mạnh nhất về cướp kiếm nên hồi lâu, 1 lượt | 35s | 1 |
 | Bé Tí Cơ Bắp | **Gồng Cơ — Bung Cơ** | Gồng **4s**: phồng to 10%, độ bền kiếm **+1.0**, **miễn mọi khống chế**; hết gồng **bung cơ**: sóng đẩy địch trong 2 U ra 3 U và **mỗi địch bị đẩy mất 10% số kiếm hiện có** (kiếm rơi thành Bó Kiếm quanh họ, không về Bé Tí) | 25s | 2 |
@@ -1601,7 +1603,8 @@ Thêm bước CI `npm run assets:budget`: vượt ngân sách → build fail, in
 - Pool có **trần** (vd 2× số dùng đỉnh); cache chữ (bảng tên, số bay) là LRU có trần; atlas nhân vật không ai dùng thì nhả (B23 đã làm) — giữ.
 - Mảng lịch sử đều có trần: kill feed 20, chat 50, lỗi 20, mẫu telemetry chưa gửi 200, vết netcode 2 s.
 - Gỡ event listener khi đóng UI; `setInterval`/`setTimeout` có chỗ huỷ.
-- **Bài kiểm rò rỉ** (trước deploy, tự động): chơi 30 phút giả lập + đổi khu 50 lần + chết/vào lại 10 lần → số Texture, GPU MB, JS heap, số display object **không tăng quá 10%** so với phút thứ 5. Tăng → build fail.
+- **Bài kiểm rò rỉ client** (Q53, v6.54): chơi 30 phút giả lập + đổi khu 50 lần + chết/vào lại 10 lần. **20 phút đầu là khởi động** (atlas nhân vật, art 5 khu, pool giãn tới đỉnh) — không tính. Chặn khi trong **cửa sổ ổn định phút 20–30** bất kỳ chỉ số nào (số Texture, GPU MB, JS heap, display object) **tăng > 5%**, hoặc GPU MB vượt ngân sách thiết bị. Mốc phút 5 chỉ in ra để tham khảo.
+- **Lịch chạy**: bài rò rỉ client 30 phút + server 60 phút chạy **hằng đêm 03:00** (khi 0 người thật online và máy rảnh theo luật 16), không nằm trong cổng deploy. Kết quả lên dashboard admin; đỏ → thẻ cảnh báo + chặn deploy kế tiếp cho tới khi xem lại. Cổng deploy chỉ giữ các bài nhanh (crashtest, rejoin, gomdon-smooth, test đơn vị).
 
 **Server**
 - Mọi map theo người chơi/kết nối (AOI `known*`, cooldown, rate limit, cờ nghi hack, sổ kiếm bể 10 s, buffer gửi) **xoá khi người đó rời** + quét định kỳ mỗi 60 s xoá mục mồ côi.
@@ -1814,7 +1817,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Ném lỗi giả vào từng hệ thống vẽ (VFX, bảng tên, minimap…) → game chạy tiếp, chỉ hệ thống đó tắt; lỗi giả trong renderer 3 lần → tự dựng lại renderer, không tải trang.
 - [ ] Panic giả trong tick 1 khu → khu đó bỏ 1 tick, các khu khác không ảnh hưởng; panic khi xử lý gói 1 người → chỉ người đó bị ngắt.
 - [ ] F5 giữa trận → trong 20 s vào lại đúng nhân vật (cảnh giới, kiếm, Uy Danh, khu); bị chém trong lúc mất kết nối → chết, F5 xong thấy Tổng kết.
-- [ ] Bài kiểm rò rỉ client 30 phút + server 1 giờ: không chỉ số tài nguyên nào tăng > 10%.
+- [ ] Bài kiểm rò rỉ hằng đêm: client cửa sổ phút 20–30 không chỉ số nào tăng > 5%; server 1 giờ có vào/ra → heap/goroutine về mức nền ±10% khi hết người.
 
 - [ ] Cụ Rùa rụt mai giữa 3 địch: 2s không mất kiếm, không chết; địch trong 4 U bị kéo về 2s; kiếm địch bể rơi thành Bó Kiếm, số kiếm của cụ không tăng.
 

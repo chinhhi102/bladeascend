@@ -3,15 +3,22 @@
 //   cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9998 -debug=true
 //   node tools/browsertest/leakcheck.mjs http://127.0.0.1:9998
 //
-// Spec: "chơi 30 phút giả lập + đổi khu 50 lần + chết/vào lại 10 lần → số Texture, GPU MB,
-// JS heap, số display object không tăng quá 10% so với phút thứ 5. Tăng → build fail."
+// Spec v6.54 (Q53): "chơi 30 phút giả lập + đổi khu 50 lần + chết/vào lại 10 lần. **20 phút
+// đầu là khởi động** — không tính. Chặn khi trong **cửa sổ ổn định phút 20–30** bất kỳ chỉ
+// số nào (số Texture, GPU MB, JS heap, display object) **tăng > 5%**, hoặc GPU MB vượt ngân
+// sách thiết bị. Mốc phút 5 chỉ in ra để tham khảo."
 //
-// ── Vì sao mốc là PHÚT THỨ 5, không phải lúc vào trận ────────────────────────────────────
+// ── Vì sao 20 phút đầu không tính ────────────────────────────────────────────────────────
 //
-// Năm phút đầu game vẫn đang lớn lên: atlas nhân vật nạp dần khi gặp người mới, art khu
-// tải nền, pool chữ và pool view giãn tới mức dùng đỉnh. Lấy mốc lúc vào trận thì mọi lần
-// chạy đều "tăng 300%" và con số không nói gì. Từ phút 5 trở đi mọi thứ đã ổn định, nên
-// bất kỳ mức tăng nào cũng là mức tăng thật.
+// Bộ làm việc của game vẫn đang LỚN LÊN tới tận đó: 11 atlas nhân vật nạp dần khi gặp
+// người mới, art của 5 khu nạp dần qua 50 lượt đổi khu, pool chữ và pool view giãn tới mức
+// dùng đỉnh. Đo 12/11 trên build sạch: so với phút 5 thì texture +24,5% và JS heap +37,3%,
+// nhưng `texMB` phẳng tuyệt đối và từ phút 20 trở đi mọi chỉ số đứng yên (phút 20–25 ↔
+// 25–30: texture +1,0%, heap −0,5%). Đó là một TRẦN, không phải một đường dốc.
+//
+// Rò rỉ thật thì KHÔNG có trần — xem lượt #33 trong PERF_LOG: +91 texture/phút, một chiều,
+// cho tới khi tab chết. Nên cửa sổ sau khi chạm trần mới là chỗ nhìn ra rò rỉ, và ở đó
+// ngưỡng siết được xuống 5%.
 //
 // ── Khác gì `texleak.mjs` ────────────────────────────────────────────────────────────────
 //
@@ -23,20 +30,14 @@ import { launch } from './browser.mjs';
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 /** MINUTES: tổng thời gian chơi. Spec chốt 30; hạ xuống khi chỉ muốn thử nhanh bài đo. */
 const MINUTES = Number(process.env.MINUTES ?? 30);
-/** BASE_MIN: mốc so sánh (spec: phút thứ 5). */
+/** BASE_MIN: mốc phút 5 — chỉ IN RA tham khảo, không chặn (v6.54). */
 const BASE_MIN = Number(process.env.BASE_MIN ?? 5);
 /** ZONE_SWITCHES / DEATHS: spec chốt 50 và 10. */
 const ZONE_SWITCHES = Number(process.env.ZONE_SWITCHES ?? 50);
 const DEATHS = Number(process.env.DEATHS ?? 10);
-/** TOL: ngưỡng tăng cho phép, %. */
-const TOL = Number(process.env.TOL ?? 10);
-/**
- * STEADY_MIN: từ phút nào trở đi mới coi là trạng thái ỔN ĐỊNH.
- *
- * Đo 12/11 (bài 30 phút đầy đủ): bộ làm việc của game chạm trần quanh **phút 20** — 11
- * atlas nhân vật nạp dần khi gặp người mới, art của 5 khu nạp dần qua 50 lượt đổi khu,
- * pool giãn tới mức dùng đỉnh. Trước mốc đó mọi phép so đều đang đo giai đoạn LỚN LÊN.
- */
+/** TOL: ngưỡng tăng cho phép trong cửa sổ ổn định, % (v6.54 chốt 5). */
+const TOL = Number(process.env.TOL ?? 5);
+/** STEADY_MIN: đầu cửa sổ ổn định (v6.54 chốt phút 20). */
 const STEADY_MIN = Number(process.env.STEADY_MIN ?? 20);
 /** STEP_SECS: nhịp lấy mẫu. */
 const STEP_SECS = Number(process.env.STEP_SECS ?? 15);
@@ -121,6 +122,7 @@ async function sample() {
     return {
       tex: Number(s.textures ?? 0),
       texMB: Number(s.texMB ?? 0),
+      budgetMB: Number(s.texBudgetMB ?? 0),
       nodes: Number(s.nodes ?? s.sprites ?? 0),
       heapMB: m ? m.usedJSHeapSize / 1048576 : 0,
       fps: Number(s.fps ?? 0),
@@ -197,8 +199,16 @@ if (sites.length) {
 
 /** pctOf: mức tăng theo %, 0 khi mốc đầu bằng 0. */
 const pctOf = (from, to) => (from > 0 ? ((to - from) / from) * 100 : 0);
-/** Nền nhỏ thì phần trăm vô nghĩa; bỏ qua khi mức tăng tuyệt đối còn dưới tiếng ồn. */
-const FLOOR = { texture: 5, texMB: 4, heapMB: 4, 'display object': 200 };
+/**
+ * Sàn tiếng ồn: mức tăng TUYỆT ĐỐI nhỏ hơn ngần này thì bỏ qua, vì phần trăm trên một nền
+ * nhỏ là vô nghĩa.
+ *
+ * Phải nhỏ hơn hẳn ngưỡng 5% của v6.54 trên số đo thật, nếu không chính cái sàn thành
+ * ngưỡng. Số đo 12/11 ở cửa sổ ổn định: texture ~420 (5% = 21), texMB ~245 (12), heap
+ * ~114 MB (5,7), display object ~4 400 (220) — nên sàn 80 cho display object, không phải
+ * 200 như bản 10% trước đó.
+ */
+const FLOOR = { texture: 5, texMB: 4, heapMB: 3, 'display object': 80 };
 
 const METRICS = [
   ['texture', (r) => r.tex, '   '],
@@ -207,45 +217,28 @@ const METRICS = [
   ['display object', (r) => r.nodes, '   '],
 ];
 
-// ── 1. Phép so của spec: mốc phút 5 ↔ mốc cuối ──────────────────────────────────────────
-console.log('\n== §13.9: so với phút ' + base.min + ' ==');
-const specFail = [];
+// ── 1. Mốc phút 5 — CHỈ THAM KHẢO (v6.54) ───────────────────────────────────────────────
+console.log(`\n== tham khảo: so với phút ${base.min} (KHÔNG chặn) ==`);
 for (const [name, get, unit] of METRICS) {
   const from = get(base);
   const to = get(last);
   const pct = pctOf(from, to);
-  const ok = pct <= TOL || to - from <= FLOOR[name];
-  if (!ok) {
-    specFail.push(name);
-  }
-  console.log(`${name.padEnd(16)} ${from.toFixed(1).padStart(9)} → ${to.toFixed(1).padStart(9)} ${unit}  (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)  ${ok ? 'ĐẠT' : 'TRƯỢT'}`);
+  console.log(`${name.padEnd(16)} ${from.toFixed(1).padStart(9)} → ${to.toFixed(1).padStart(9)} ${unit}  (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)`);
 }
 
-// ── 2. Phép so CHẶN DEPLOY: nửa sau ↔ cuối ──────────────────────────────────────────────
+// ── 2. Cửa sổ ổn định phút 20–30 — PHÉP SO CHẶN (v6.54) ─────────────────────────────────
 //
-// Vì sao cần phép so thứ hai, xem `docs/QUESTIONS.md` mục "Mốc phút 5 của §13.9".
-//
-// Tóm tắt: bộ làm việc của game vẫn đang LỚN LÊN ở phút 5 — 11 atlas nhân vật nạp dần khi
-// gặp người mới, art của 5 khu nạp dần qua 50 lượt đổi khu, pool giãn tới mức dùng đỉnh.
-// Đo 12/11: so với phút 5 thì texture +24,5% và heap +37,3%, NHƯNG `texMB` phẳng tuyệt đối
-// (−0,0%) và từ phút 20 trở đi mọi chỉ số đứng yên (phút 20–25 ↔ 25–30: texture +1,0%,
-// heap −0,5%). Đó là một TRẦN, không phải một đường dốc.
-//
-// Rò rỉ thật thì KHÔNG có trần — nó tăng đều tới khi tab chết (xem #33: +91 texture/phút
-// một chiều). Nên phép so nửa-sau là phép so bắt đúng thứ cần bắt, và nó là phép chặn.
-// Bài quá ngắn thì KHÔNG kết luận gì — và nói thẳng ra là không kết luận.
-//
-// Một lượt 8 phút không thể chứng minh "không rò rỉ": nửa sau của nó (phút 4–8) vẫn nằm
-// trọn trong giai đoạn lớn lên, nên nó sẽ đỏ với MỌI build, kể cả build sạch. Một cổng
-// đỏ với mọi build là một cổng sẽ bị tắt.
+// Bài quá ngắn thì KHÔNG kết luận gì, và nói thẳng ra là không kết luận. Một lượt 8 phút
+// không chứng minh được "không rò rỉ": cửa sổ của nó nằm trọn trong giai đoạn khởi động,
+// nên nó đỏ với MỌI build, kể cả build sạch — và một cổng đỏ với mọi build sẽ bị tắt.
 const steady = rows.find((r) => r.min >= STEADY_MIN);
 let bad = false;
 if (!steady || last.min - steady.min < 4) {
-  console.log(`\n== xu hướng: KHÔNG KẾT LUẬN (bài chỉ ${last.min} phút) ==`);
-  console.log(`Cần chạy tới ít nhất ${STEADY_MIN + 4} phút thì mới có cửa sổ ổn định để so.`);
-  console.log('Bài ngắn chỉ dùng để xem bài đo còn chạy được, không dùng để gác deploy.');
+  console.log(`\n== cửa sổ ổn định: KHÔNG KẾT LUẬN (bài chỉ ${last.min} phút) ==`);
+  console.log(`Cần chạy tới ít nhất ${STEADY_MIN + 4} phút thì mới có cửa sổ để so.`);
+  console.log('Bài ngắn chỉ dùng để xem bài đo còn chạy được, không dùng để gác.');
 } else {
-  console.log(`\n== xu hướng khi đã ổn định: phút ${steady.min} → ${last.min} (phép so CHẶN DEPLOY) ==`);
+  console.log(`\n== cửa sổ ổn định phút ${steady.min} → ${last.min} · ngưỡng ${TOL}% (PHÉP SO CHẶN) ==`);
   for (const [name, get, unit] of METRICS) {
     const from = get(steady);
     const to = get(last);
@@ -257,14 +250,26 @@ if (!steady || last.min - steady.min < 4) {
     console.log(`${name.padEnd(16)} ${from.toFixed(1).padStart(9)} → ${to.toFixed(1).padStart(9)} ${unit}  (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)  ${ok ? 'ĐẠT' : 'TRƯỢT'}`);
   }
 }
-if (specFail.length && !bad && steady) {
-  console.log(`\n⚠ Vượt ${TOL}% so với phút ${base.min} ở: ${specFail.join(', ')} — nhưng cửa sổ ổn định`);
-  console.log('  ĐỨNG YÊN, tức là bộ làm việc đã chạm trần chứ không rò rỉ. Xem Q53 trong docs/QUESTIONS.md.');
+
+// ── 3. Ngân sách bộ nhớ đồ hoạ của THIẾT BỊ (v6.54) ─────────────────────────────────────
+//
+// Phép so phần trăm mù với một thứ: một build có thể đứng yên tuyệt đối mà vẫn đứng yên ở
+// mức 300 MB trên iPhone — tức là tab sẽ bị Safari giết, chỉ là không giết thêm. Ngưỡng
+// tuyệt đối này bắt đúng trường hợp đó. Con số lấy từ chính trang đang chạy
+// (`device.gpuBudgetMB`), không chép tay vào bài đo.
+const peakMB = Math.max(...rows.map((r) => r.texMB));
+const budget = last.budgetMB || 0;
+if (budget > 0) {
+  const okBudget = peakMB < budget;
+  if (!okBudget) {
+    bad = true;
+  }
+  console.log(`\nngân sách GPU thiết bị: đỉnh ${peakMB.toFixed(1)} / ${budget} MB  ${okBudget ? 'ĐẠT' : 'TRƯỢT'}`);
 }
 
 await b.close();
 if (bad) {
-  console.log(`\nTRƯỢT: vượt ngưỡng ${TOL}% của §13.9.`);
+  console.log(`\nTRƯỢT: §13.9 v6.54 — cửa sổ ổn định tăng quá ${TOL}%, hoặc GPU MB vượt ngân sách.`);
   process.exit(1);
 }
-console.log(`\nĐẠT: không chỉ số nào tăng quá ${TOL}% (§13.9).`);
+console.log(`\nĐẠT: cửa sổ ổn định không chỉ số nào tăng quá ${TOL}%, GPU MB trong ngân sách (§13.9 v6.54).`);

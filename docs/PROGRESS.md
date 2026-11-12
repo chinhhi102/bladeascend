@@ -1,6 +1,6 @@
 # Tiến độ — BladeAscend (Đạo Hữu Xin Dừng Bước)
 
-_Cập nhật: 2026-11-05 (bong bóng mặt §12.5 v6.38, Q44 đóng) · 2026-11-02 (v6.31–v6.36, mở công khai, logo, hiển thị kỹ năng; trang chủ + bộ đo + telemetry theo build). Nhật ký đầy đủ các phiên trước (22/10 → 01/11, 1 677 dòng):
+_Cập nhật: 2026-11-12 (v6.54 bài rò rỉ hằng đêm 03:00, cửa sổ phút 20–30; Q52+Q53 đóng) · 2026-11-05 (bong bóng mặt §12.5 v6.38, Q44 đóng) · 2026-11-02 (v6.31–v6.36, mở công khai, logo, hiển thị kỹ năng; trang chủ + bộ đo + telemetry theo build). Nhật ký đầy đủ các phiên trước (22/10 → 01/11, 1 677 dòng):
 `docs/history/PROGRESS_den_2026-11-01.md` — chuyển nguyên văn, không xoá._
 
 ## Cách chạy (máy dev)
@@ -790,14 +790,68 @@ nhỏ kia.
 - Cổng deploy có thêm hai bài rò rỉ. Bài client chạy **30 phút thật** theo spec — hạ bằng
   `LEAK_MINUTES=8 tools/deploy.sh`, bỏ bằng `SKIP_LEAK=1`.
 
+## Lượt 12/11 (tối) — spec v6.54: bài rò rỉ đổi cửa sổ đo và dời ra khỏi cổng deploy
+
+Chủ dự án trả lời Q52 + Q53 và sửa thẳng vào `docs/_raw/GAME_SPEC.md`. Phần này chỉ là thi hành.
+
+### 1. Q53 — cửa sổ đo rò rỉ client
+
+Lượt trước bài đo báo đỏ (texture +24,5 %, heap +37,3 % so với **phút 5**) cho một thứ không
+dốc lên: phút 20–25 ↔ 25–30 chỉ nhúc nhích +1,0 % / −0,5 %. Mốc phút 5 đo **giai đoạn nạp**,
+không đo rò rỉ. Spec v6.54 chốt:
+
+- Bỏ **20 phút đầu** (khởi động). Phép so CHẶN là **cửa sổ phút 20–30, ngưỡng 5 %**
+  (`tools/browsertest/leakcheck.mjs`: `TOL` 10 → 5, thêm `STEADY_MIN=20`).
+- Thêm một **trần cứng**: GPU MB vượt **ngân sách của chính thiết bị đang chạy** cũng là đỏ.
+  Bài đo đọc `texBudgetMB` từ client (`gpuBudgetMB()`: iOS 256 · điện thoại 384 · máy bàn
+  1024) chứ không chép tay một con số — chép tay là sai ngay lần chạy trên máy khác. Phần
+  trăm bắt xu hướng, trần bắt mức: nằm phẳng ở 240 MB trên iPhone vẫn bị Safari giết tab.
+- Mốc phút 5 vẫn in, nhưng ghi rõ "KHÔNG chặn".
+- Bài chạy ngắn hơn 24 phút in **"KHÔNG KẾT LUẬN"** thay vì phán trên một cửa sổ chưa tồn tại.
+
+### 2. Bài rò rỉ ra khỏi cổng deploy, vào cron 03:00
+
+`tools/leaknightly.sh` (mới). Hai cổng trước khi chạy: **0 người đang chơi** (đọc
+`/api/rooms`) và **máy rảnh** (`load/nhân < 1,5`, luật 16); không thoả thì bỏ qua đêm đó và
+ghi lý do. Chạy server 60 phút game + client 30 phút thật, kết quả ghi nguyên tử vào
+`server/data/leak-nightly.json`, giữ 30 đêm nhật ký.
+
+Đỏ → dashboard hiện thẻ cảnh báo đỏ kèm nút **"Đã xem"**, và `tools/deploy.sh` **chặn deploy
+kế tiếp** tới khi bấm nút đó (`POST /api/admin/leak/ack`, có ghi nhật ký kiểm toán). Quá 48
+giờ không có kết quả cũng ra cảnh báo — một cổng im lặng ngừng chạy còn tệ hơn một cổng đỏ.
+
+Lý do dời: bài client chạy 30 phút thật, để trong cổng deploy thì cái giá nửa tiếng ấy không
+được trả bằng kiên nhẫn mà bằng `SKIP_LEAK=1`. Cổng ai cũng bỏ qua là cổng không tồn tại.
+Cổng deploy giữ crashtest, rejoin, gomdon-smooth, test đơn vị (đều dưới một phút).
+
+Cron đã cài trên máy này:
+`0 3 * * * cd <repo> && tools/leaknightly.sh >> server/data/leak-logs/cron.log 2>&1`
+(`tools/leaknightly.sh --install / --uninstall / --status / --force`).
+
+Chạy thử `--force` (rút bài client còn 2 phút): server ĐẠT (heap 8,29 → 0,89 MB sau khi mọi
+người rời, goroutine ±0), client in đúng "KHÔNG KẾT LUẬN — bài chỉ 2 phút", JSON ghi đúng.
+
+### 3. Q52 — Hoá Khổng Lồ giữ nhân scale toàn phần
+
+Spec nay ghi rõ: nhân thẳng scale, nên bán kính nhặt và tầm kỹ năng cũng to theo trong 2 giây,
+camera lùi theo như thường. Code đang đúng vậy → không sửa gì.
+
+### 4. PixiJS 8.23 — CHƯA đo được, đã ghi nợ
+
+Máy ở load/nhân **2,17–3,87** (12 nhân) suốt ngày, luật 16 cấm kết luận. Đã ghi thành
+**B29** trong `docs/PERF_LOG.md` §6 + dòng #37 §3 thay vì để ô trống — ô trống sau này sẽ
+bị đọc là "chắc không đáng kể". Bản nâng vẫn deploy vì hai thay đổi của nó là sửa lỗi
+(#12259, #12369), không phải đánh đổi hiệu năng.
+
+Q52, Q53 đã chuyển sang `docs/QUESTIONS_DONE.md`; `docs/QUESTIONS.md` hiện trống.
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
 > người (hoặc Claude) hỏi lại thứ anh đã trả lời rồi. Ngày 05/11 đã dính đúng vậy với ảnh OG.
 
-1. **Xem lại cổng rò rỉ của deploy**: bài client chạy 30 phút THẬT mỗi lần deploy (spec
-   §13.9 ghi "trước deploy, tự động"). Nếu thấy quá dài thì chốt một con số ngắn hơn và tôi
-   sửa mặc định — đừng để nó thành thói quen gõ `SKIP_LEAK=1`.
+1. **Đo PixiJS 8.22 vs 8.23** (B29) — cần một lúc máy rảnh (`load/nhân < 1,5`): S1 + S4, 3
+   lần mỗi bên, ghi min/max/TB. Đây là việc duy nhất của lượt v6.54 còn nợ.
 2. Xem ảnh **bong bóng mặt** (`docs/review/emote/`, 3 PC + 3 iPhone) — Q44 đã đóng, code đã
    chạy, chỉ còn duyệt bằng mắt. Thấy chướng thì chỉnh `R` (cỡ) hoặc `LIFE` (thời gian hiện)
    trong `client/src/render/emote.ts`.
