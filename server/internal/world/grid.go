@@ -87,6 +87,23 @@ func (q *pq) Pop() any          { o := *q; it := o[len(o)-1]; *q = o[:len(o)-1];
 
 var dirs8 = [8][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}
 
+// stepCost: giá đi của từng hướng trong `dirs8` — 1 đi thẳng, √2 đi chéo.
+//
+// Tính sẵn thay vì gọi `math.Hypot(d[0], d[1])` mỗi lần mở một ô: A* mở hàng nghìn ô mỗi
+// lần tìm đường, mà `Hypot` là hàm có xử lý tràn số nên đắt gấp nhiều lần một phép nhân.
+// pprof S13: `math.archHypot` 7,5% CPU server, 40% trong đó đến từ chính vòng này.
+var stepCost = [8]float64{1, 1, 1, 1, math.Sqrt2, math.Sqrt2, math.Sqrt2, math.Sqrt2}
+
+// cellDist: khoảng cách Euclid giữa hai ô lưới, dùng làm hàm ước lượng của A*.
+//
+// `math.Sqrt` thay cho `math.Hypot`: cùng một con số ở mọi toạ độ lưới (chỉ số ô nhỏ hơn
+// 4 096, bình phương lên vẫn cách xa trần float64 hàng trăm bậc độ lớn), nhưng không phải
+// đi qua đường chống tràn của Hypot.
+func cellDist(dx, dy int) float64 {
+	fx, fy := float64(dx), float64(dy)
+	return math.Sqrt(fx*fx + fy*fy)
+}
+
 // FindPath runs A* and returns waypoints (cell centres) from→to, or nil when unreachable
 // within maxExpand node expansions (keeps bot cost bounded).
 func (g *Grid) FindPath(from, to geom.Vec, maxExpand int) []geom.Vec {
@@ -155,7 +172,7 @@ func (g *Grid) expandCutting(cur, goal int, cost map[int]float64, parent map[int
 ) {
 	cx, cy := cur%g.N, cur/g.N
 	gx, gy := goal%g.N, goal/g.N
-	for _, d := range dirs8 {
+	for di, d := range dirs8 {
 		nx, ny := cx+d[0], cy+d[1]
 		if nx < 0 || ny < 0 || nx >= g.N || ny >= g.N {
 			continue
@@ -172,20 +189,20 @@ func (g *Grid) expandCutting(cur, goal int, cost map[int]float64, parent map[int
 		if _, okB := extra(ny*g.N + cx); !okB {
 			continue
 		}
-		nc := cost[cur] + math.Hypot(float64(d[0]), float64(d[1])) + pen
+		nc := cost[cur] + stepCost[di] + pen
 		if old, has := cost[ni]; has && old <= nc {
 			continue
 		}
 		cost[ni] = nc
 		parent[ni] = cur
-		heap.Push(open, pqItem{ni, nc + math.Hypot(float64(gx-nx), float64(gy-ny))})
+		heap.Push(open, pqItem{ni, nc + cellDist(gx-nx, gy-ny)})
 	}
 }
 
 func (g *Grid) expand(cur, goal int, cost map[int]float64, parent map[int]int, open *pq) {
 	cx, cy := cur%g.N, cur/g.N
 	gx, gy := goal%g.N, goal/g.N
-	for _, d := range dirs8 {
+	for di, d := range dirs8 {
 		nx, ny := cx+d[0], cy+d[1]
 		if nx < 0 || ny < 0 || nx >= g.N || ny >= g.N {
 			continue
@@ -195,13 +212,13 @@ func (g *Grid) expand(cur, goal int, cost map[int]float64, parent map[int]int, o
 		if g.blocked[ni] || g.blocked[cy*g.N+nx] || g.blocked[ny*g.N+cx] {
 			continue
 		}
-		nc := cost[cur] + math.Hypot(float64(d[0]), float64(d[1]))
+		nc := cost[cur] + stepCost[di]
 		if old, ok := cost[ni]; ok && old <= nc {
 			continue
 		}
 		cost[ni] = nc
 		parent[ni] = cur
-		heap.Push(open, pqItem{ni, nc + math.Hypot(float64(gx-nx), float64(gy-ny))})
+		heap.Push(open, pqItem{ni, nc + cellDist(gx-nx, gy-ny)})
 	}
 }
 

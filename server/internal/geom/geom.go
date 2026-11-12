@@ -4,12 +4,22 @@ import "math"
 
 type Vec struct{ X, Y float64 }
 
-func (a Vec) Add(b Vec) Vec       { return Vec{a.X + b.X, a.Y + b.Y} }
-func (a Vec) Sub(b Vec) Vec       { return Vec{a.X - b.X, a.Y - b.Y} }
-func (a Vec) Mul(k float64) Vec   { return Vec{a.X * k, a.Y * k} }
-func (a Vec) Dot(b Vec) float64   { return a.X*b.X + a.Y*b.Y }
-func (a Vec) Len() float64        { return math.Hypot(a.X, a.Y) }
-func (a Vec) Dist(b Vec) float64  { return math.Hypot(a.X-b.X, a.Y-b.Y) }
+func (a Vec) Add(b Vec) Vec     { return Vec{a.X + b.X, a.Y + b.Y} }
+func (a Vec) Sub(b Vec) Vec     { return Vec{a.X - b.X, a.Y - b.Y} }
+func (a Vec) Mul(k float64) Vec { return Vec{a.X * k, a.Y * k} }
+func (a Vec) Dot(b Vec) float64 { return a.X*b.X + a.Y*b.Y }
+
+// Len / Dist dùng `Sqrt` chứ không `Hypot`.
+//
+// `math.Hypot` chống tràn số bằng cách chia tỉ lệ trước khi bình phương — thứ chỉ cần khi
+// toạ độ cỡ 1e150. Bản đồ lớn nhất là 16 384 đơn vị, bình phương lên 2,7e8, cách trần
+// float64 (1,8e308) ba trăm bậc độ lớn. Đổi lại: pprof trên S13 đo `math.archHypot` ăn
+// **7,5% CPU server**, một nửa đi qua đúng hai hàm này.
+func (a Vec) Len() float64 { return math.Sqrt(a.X*a.X + a.Y*a.Y) }
+func (a Vec) Dist(b Vec) float64 {
+	dx, dy := a.X-b.X, a.Y-b.Y
+	return math.Sqrt(dx*dx + dy*dy)
+}
 func (a Vec) Dist2(b Vec) float64 { dx, dy := a.X-b.X, a.Y-b.Y; return dx*dx + dy*dy }
 func FromAngle(a float64) Vec     { return Vec{math.Cos(a), math.Sin(a)} }
 func (a Vec) Angle() float64      { return math.Atan2(a.Y, a.X) }

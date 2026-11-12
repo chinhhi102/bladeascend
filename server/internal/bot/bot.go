@@ -493,14 +493,27 @@ func (b *Brain) farm(g *game.Game, me *game.Player) {
 	b.setGoal(target, stop)
 }
 
+// nearestFarmTarget tìm mục tiêu đi farm gần nhất: viên, quái, hoặc vật cản chém được.
+//
+// CHỈ QUÉT TRONG TẦM, không quét cả khu. Bản cũ duyệt `g.Items` (hàng nghìn viên),
+// `g.Monsters` và TOÀN BỘ `g.Map.Obstacles` cho MỖI bot MỖI tick — pprof trên S13 (110 nhân
+// vật) đo được riêng hàm này 8,25% CPU server, cộng `Vec.Dist` gọi từ đây nữa. Với 30 bot ×
+// ~2 000 viên × 30 tick/giây là 1,8 triệu phép đo khoảng cách mỗi giây cho một việc mà
+// 99,9% kết quả bị vứt vì ở quá xa.
+//
+// Kết quả KHÔNG đổi: `bestD` chỉ có giảm, nên mọi thứ xa hơn `bestD*1.2` ban đầu không bao
+// giờ được chọn — lấy đúng bán kính đó làm cửa sổ truy vấn là đủ.
 func (b *Brain) nearestFarmTarget(g *game.Game, me *game.Player) (Vec, float64, bool) {
 	best, stop, bestD := Vec{}, 0.0, farmSearchR*math.Sqrt(me.Scale)
 	found := false
-	for _, it := range g.Items {
+	// Vật cản dùng hệ số 1,2 — rộng nhất trong ba vòng dưới, nên đây là bán kính bao.
+	searchR := bestD * 1.2
+	g.ItemsNear(me.Pos, searchR, searchR, func(it *game.Item) {
 		if d := it.Pos.Dist(me.Pos); d < bestD*0.8 && g.InView(me, it.Pos) {
 			best, stop, bestD, found = it.Pos, 0, d/0.8, true
 		}
-	}
+	})
+	// Quái thì ít (vài chục mỗi khu) và không có lưới riêng: duyệt thẳng vẫn rẻ.
 	for _, m := range g.Monsters {
 		if d := m.Pos.Dist(me.Pos); d < bestD && g.InView(me, m.Pos) {
 			best, stop, bestD, found = m.Pos, me.Geom.Reach*0.8, d, true
@@ -509,16 +522,16 @@ func (b *Brain) nearestFarmTarget(g *game.Game, me *game.Player) (Vec, float64, 
 	// Vật cản bot CHÉM ĐƯỢC là mục tiêu đáng đi tới (spec v6.7 §8.2 mục 5): chém xong là
 	// mở ra một lối đi, và sạp/xe còn rơi item. Bậc cao hơn cảnh giới thì bỏ qua — đi tới
 	// đó chỉ để mài vào một bức tường không suy chuyển.
-	for id, o := range g.Map.Obstacles {
-		st := g.Obstacles[id]
-		if st.Broken || !g.CanCutObstacle(me, o.Tier) {
-			continue
+	g.QueryObstacles(me.Pos, searchR, func(id int) {
+		o := g.Map.Obstacles[id]
+		if g.Obstacles[id].Broken || !g.CanCutObstacle(me, o.Tier) {
+			return
 		}
 		c := o.Shape.Center()
 		if d := c.Dist(me.Pos); d < bestD*1.2 {
 			best, stop, bestD, found = c, me.Geom.Reach*0.9, d/1.2, true
 		}
-	}
+	})
 	return best, stop, found
 }
 
