@@ -72,6 +72,7 @@ const LABEL: Record<string, string> = {
   monsters: 'Quái',
   items: 'Viên trên đất',
   obstacles_broken: 'Vật cản chờ mọc lại',
+  holds: 'Đang chờ nối lại (§7.1)',
   swords: 'Kiếm trong khu',
   skills_per_min: 'Lượt kỹ năng/phút',
   deaths_per_min: 'Lượt chết/phút',

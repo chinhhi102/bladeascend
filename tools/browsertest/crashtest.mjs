@@ -15,7 +15,12 @@ const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Hệ thống đem ra thử. Đủ các loại: nội suy, entity, hiệu ứng, HUD, âm thanh. */
-const SYSTEMS = ['vfx', 'beasts', 'minimap', 'items', 'monsters', 'ambient', 'skills', 'emote', 'audio'];
+// `emote` không nằm đây: ranh giới của nó là `showBubble`, chỉ chạy khi CÓ sự kiện (đột
+// phá, kỹ năng, tâm trạng đổi). Hẹn lỗi giả cho nó rồi đợi là đợi một thứ có thể không
+// tới trong cửa sổ đo — thử riêng ở mục 1b bằng cách bấm kỹ năng.
+// `audio` cũng không nằm đây, cùng lý do: ranh giới của nó là `sound.play`, chỉ chạy khi
+// có tiếng động (va kiếm, nhặt đồ, chết). Thử riêng ở mục 1b.
+const SYSTEMS = ['vfx', 'beasts', 'minimap', 'items', 'monsters', 'ambient', 'skills'];
 
 let fails = 0;
 function expect(name, got, want) {
@@ -59,7 +64,25 @@ for (const key of SYSTEMS) {
   expect(`${key}: đã bắt được lỗi`, !!hit && hit.errors >= 1, true);
   expect(`${key}: CHƯA tắt hẳn (mới 1 lần)`, hit?.dead ?? false, false);
 }
-expect('game vẫn vẽ sau 9 lỗi giả', await alive(2), true);
+expect('game vẫn vẽ sau khi mọi hệ thống dính lỗi giả', await alive(2), true);
+
+console.log('\n— 1b. emote + audio: ranh giới chỉ chạy khi CÓ sự kiện —');
+await p.evaluate(() => {
+  window.kx.fault('emote', 1);
+  window.kx.fault('audio', 1);
+});
+// Hồi đầy lượt rồi bấm kỹ năng: mọi kỹ năng đều kéo theo một câu thoại (STR.skillLines).
+await p.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'skill', n: 1 }));
+await sleep(600);
+for (let i = 0; i < 6; i++) {
+  await p.keyboard.press('Space');
+  await sleep(900);
+}
+const ge = await guard();
+for (const key of ['emote', 'audio']) {
+  const h = (ge.systems ?? []).find((s) => s.key === key);
+  expect(`${key}: đã bắt được lỗi`, !!h && h.errors >= 1, true);
+}
 
 console.log('\n— 2. Lỗi 3 lần/10 s ở cùng hệ thống: tắt HẲN hệ thống đó, các hệ thống khác sống —');
 await p.evaluate(() => window.kx.fault('vfx', 3));

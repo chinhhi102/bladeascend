@@ -37,6 +37,10 @@ type ZoneMetrics struct {
 	NDeaths, NSkills int
 	// Ảnh chụp tại thời điểm vét.
 	Humans, BotCount, Monsters, Items, BrokenObstacles, Swords int
+	// Holds: nhân vật đang chờ chủ nối lại (§7.1). Lên metrics vì nó là một CHỖ GIỮ: nó
+	// chiếm suất phòng và chiếm bộ nhớ, và một con số không bao giờ về 0 ở đây nghĩa là
+	// đường hết hạn 20 giây đang hỏng.
+	Holds int
 	// SentBytes: tổng byte đã gửi cho khu này từ lúc server chạy — CỘNG DỒN.
 	//
 	// Không dùng `ZoneKbpsOut` ở đây: hàm đó VÉT bộ đếm (`sentSince` swap), nên bộ thu gom
@@ -57,6 +61,7 @@ func (r *Room) DrainMetrics() []ZoneMetrics {
 			World: z.m.world.Drain(), Deaths: z.m.deaths.Drain(), Send: z.m.send.Drain(),
 			Humans: z.Humans(), BotCount: z.Count() - z.Humans(),
 			Monsters: len(z.G.Monsters), Items: z.G.ItemCount(),
+			Holds:     len(z.holds),
 			SentBytes: z.sentTotal(),
 		}
 		casts, deaths := z.G.Counters()

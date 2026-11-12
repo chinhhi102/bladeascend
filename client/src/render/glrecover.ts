@@ -28,12 +28,21 @@ const LAST_KEY = 'kx.glrecover.last';
 /** Hai lần mất ngữ cảnh gần nhau hơn ngần này = máy đang hỏng thật, đừng tải lại vòng lặp. */
 const LOOP_GUARD_SECS = 30;
 
-/** watchContextLoss bắt sự kiện mất ngữ cảnh trên canvas. */
+/**
+ * watchContextLoss bắt sự kiện mất ngữ cảnh trên canvas. Trả về hàm GỠ bộ canh.
+ *
+ * `ignore` là cửa thoát cho một trường hợp có thật và rất dễ bỏ sót: khi §13.8 **dựng lại
+ * renderer**, nó huỷ `Application` cũ — và huỷ Application là CỐ Ý vứt ngữ cảnh WebGL.
+ * Canvas cũ bắn `webglcontextlost`, bộ canh này tưởng card màn hình vừa sập và tải lại
+ * trang. Nhìn từ ngoài: "lỗi vẽ lần thứ ba làm trang tải lại", đúng thứ §13.8 cấm. Bắt
+ * được bằng `tools/browsertest/crashtest.mjs` ngày 12/11.
+ */
 export function watchContextLoss(
   canvas: HTMLCanvasElement,
   onLost: (canRecover: boolean) => void,
   onRestored?: () => void,
-): void {
+  ignore?: () => boolean,
+): () => void {
   let reloadTimer = 0;
   const cancelReload = (): void => {
     if (reloadTimer) {
@@ -46,12 +55,17 @@ export function watchContextLoss(
    * Trình duyệt cấp lại ngữ cảnh — đây là chuyện BÌNH THƯỜNG trên điện thoại, không phải
    * sự cố. Huỷ lệnh tải lại đang chờ.
    */
-  canvas.addEventListener('webglcontextrestored', () => {
+  const onRestore = (): void => {
     cancelReload();
     onRestored?.();
-  });
+  };
+  canvas.addEventListener('webglcontextrestored', onRestore);
 
-  canvas.addEventListener('webglcontextlost', (e) => {
+  const onLoss = (e: Event): void => {
+    if (ignore?.()) {
+      // Mình tự vứt ngữ cảnh (đang dựng lại renderer) — không phải sự cố, không làm gì.
+      return;
+    }
     // Bắt buộc: không chặn sự kiện mặc định thì trình duyệt không bao giờ cấp lại ngữ cảnh,
     // và cũng không cho ta kịp làm gì.
     e.preventDefault();
@@ -104,7 +118,13 @@ export function watchContextLoss(
       return;
     }
     reloadNow();
-  });
+  };
+  canvas.addEventListener('webglcontextlost', onLoss);
+  return () => {
+    cancelReload();
+    canvas.removeEventListener('webglcontextrestored', onRestore);
+    canvas.removeEventListener('webglcontextlost', onLoss);
+  };
 }
 
 /** isContextLost: ngữ cảnh WebGL còn mất không. Không lấy được ngữ cảnh thì coi như mất. */

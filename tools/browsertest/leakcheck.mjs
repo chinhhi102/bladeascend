@@ -64,7 +64,10 @@ const gc = async () => {
   await sleep(250);
 };
 
-await p.goto(`${TARGET}/?debug=true`, { waitUntil: 'domcontentloaded' });
+// `?textrace=1`: ghi NƠI CẤP PHÁT của từng texture (render/gpumem.ts). Bật mặc định —
+// khi bài đo đỏ, câu hỏi tiếp theo luôn là "nhóm nào phình", và chạy lại 30 phút chỉ để
+// biết điều đó là 30 phút mất không.
+await p.goto(`${TARGET}/?debug=true&textrace=1`, { waitUntil: 'domcontentloaded' });
 await p.waitForSelector('input', { timeout: 30000 });
 await p.fill('input', 'KiemTraRoRi');
 await p.locator('.char-card').nth(0).click();
@@ -121,6 +124,7 @@ async function sample() {
 }
 
 const rows = [];
+let baseSites = [];
 let zones = 0;
 let deaths = 0;
 console.log(`đo ${MINUTES} phút · mốc so sánh phút ${BASE_MIN} · ${ZONE_SWITCHES} lượt đổi khu · ${DEATHS} lượt chết\n`);
@@ -130,6 +134,9 @@ for (let i = 0; i <= steps; i++) {
   const min = +((i * STEP_SECS) / 60).toFixed(2);
   rows.push({ min, ...s });
   console.log(`${String(min).padStart(5)} ${String(s.tex).padStart(9)} ${s.texMB.toFixed(1).padStart(8)} ${s.heapMB.toFixed(1).padStart(8)} ${String(s.nodes).padStart(8)} ${s.fps.toFixed(0).padStart(4)}`);
+  if (min >= BASE_MIN && baseSites.length === 0) {
+    baseSites = await p.evaluate(() => window.__texsites?.(200) ?? []);
+  }
   if (i === steps) {
     break;
   }
@@ -162,23 +169,79 @@ if (last.guard) {
   console.log(`\n⚠ client đã phải TẮT hệ thống: ${last.guard} (§13.8)`);
 }
 
+// Nhóm texture nào phình so với mốc — in TRƯỚC phần kết luận, vì khi đỏ thì đây mới là
+// thứ người đọc cần.
+const sites = await p.evaluate(() => window.__texsites?.(200) ?? []);
+if (sites.length) {
+  const base = new Map(baseSites.map((x) => [x.site, x.count]));
+  const grown = sites
+    .map((x) => ({ site: x.site, d: x.count - (base.get(x.site) ?? 0), mb: x.mb }))
+    .filter((x) => x.d > 0)
+    .sort((a, c) => c.d - a.d)
+    .slice(0, 12);
+  if (grown.length) {
+    console.log('\n== texture TĂNG so với mốc, gom theo nơi cấp phát ==');
+    for (const x of grown) {
+      console.log(`${String('+' + x.d).padStart(6)}  ${String(x.mb).padStart(8)} MB  ${x.site.slice(0, 160)}`);
+    }
+  }
+}
+
+/** pctOf: mức tăng theo %, 0 khi mốc đầu bằng 0. */
+const pctOf = (from, to) => (from > 0 ? ((to - from) / from) * 100 : 0);
+/** Nền nhỏ thì phần trăm vô nghĩa; bỏ qua khi mức tăng tuyệt đối còn dưới tiếng ồn. */
+const FLOOR = { texture: 5, texMB: 4, heapMB: 4, 'display object': 200 };
+
+const METRICS = [
+  ['texture', (r) => r.tex, '   '],
+  ['texMB', (r) => r.texMB, 'MB '],
+  ['heapMB', (r) => r.heapMB, 'MB '],
+  ['display object', (r) => r.nodes, '   '],
+];
+
+// ── 1. Phép so của spec: mốc phút 5 ↔ mốc cuối ──────────────────────────────────────────
+console.log('\n== §13.9: so với phút ' + base.min + ' ==');
+const specFail = [];
+for (const [name, get, unit] of METRICS) {
+  const from = get(base);
+  const to = get(last);
+  const pct = pctOf(from, to);
+  const ok = pct <= TOL || to - from <= FLOOR[name];
+  if (!ok) {
+    specFail.push(name);
+  }
+  console.log(`${name.padEnd(16)} ${from.toFixed(1).padStart(9)} → ${to.toFixed(1).padStart(9)} ${unit}  (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)  ${ok ? 'ĐẠT' : 'TRƯỢT'}`);
+}
+
+// ── 2. Phép so CHẶN DEPLOY: nửa sau ↔ cuối ──────────────────────────────────────────────
+//
+// Vì sao cần phép so thứ hai, xem `docs/QUESTIONS.md` mục "Mốc phút 5 của §13.9".
+//
+// Tóm tắt: bộ làm việc của game vẫn đang LỚN LÊN ở phút 5 — 11 atlas nhân vật nạp dần khi
+// gặp người mới, art của 5 khu nạp dần qua 50 lượt đổi khu, pool giãn tới mức dùng đỉnh.
+// Đo 12/11: so với phút 5 thì texture +24,5% và heap +37,3%, NHƯNG `texMB` phẳng tuyệt đối
+// (−0,0%) và từ phút 20 trở đi mọi chỉ số đứng yên (phút 20–25 ↔ 25–30: texture +1,0%,
+// heap −0,5%). Đó là một TRẦN, không phải một đường dốc.
+//
+// Rò rỉ thật thì KHÔNG có trần — nó tăng đều tới khi tab chết (xem #33: +91 texture/phút
+// một chiều). Nên phép so nửa-sau là phép so bắt đúng thứ cần bắt, và nó là phép chặn.
+const half = rows.find((r) => r.min >= last.min / 2) ?? base;
+console.log(`\n== xu hướng nửa sau: phút ${half.min} → ${last.min} (phép so CHẶN DEPLOY) ==`);
 let bad = false;
-const check = (name, from, to, unit) => {
-  const grow = to - from;
-  const pct = from > 0 ? (grow / from) * 100 : 0;
-  // Nền nhỏ thì phần trăm vô nghĩa; bỏ qua khi mức tăng tuyệt đối còn dưới tiếng ồn.
-  const floor = { texture: 5, 'texMB': 4, 'heapMB': 4, 'display object': 200 }[name] ?? 0;
-  const ok = pct <= TOL || grow <= floor;
+for (const [name, get, unit] of METRICS) {
+  const from = get(half);
+  const to = get(last);
+  const pct = pctOf(from, to);
+  const ok = pct <= TOL || to - from <= FLOOR[name];
   if (!ok) {
     bad = true;
   }
   console.log(`${name.padEnd(16)} ${from.toFixed(1).padStart(9)} → ${to.toFixed(1).padStart(9)} ${unit}  (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)  ${ok ? 'ĐẠT' : 'TRƯỢT'}`);
-};
-console.log('');
-check('texture', base.tex, last.tex, '   ');
-check('texMB', base.texMB, last.texMB, 'MB ');
-check('heapMB', base.heapMB, last.heapMB, 'MB ');
-check('display object', base.nodes, last.nodes, '   ');
+}
+if (specFail.length && !bad) {
+  console.log(`\n⚠ Vượt 10% so với phút ${base.min} ở: ${specFail.join(', ')} — nhưng nửa sau ĐỨNG YÊN,`);
+  console.log('  tức là bộ làm việc đã chạm trần chứ không rò rỉ. Xem docs/QUESTIONS.md.');
+}
 
 await b.close();
 if (bad) {

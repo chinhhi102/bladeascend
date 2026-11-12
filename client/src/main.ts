@@ -123,6 +123,8 @@ class App {
   private zoneAt = 0;
   /** animInfo: phím J đang bật hay tắt (GAME_SPEC §12.5 C). */
   private animInfo = false;
+  /** detachGl: gỡ bộ canh mất ngữ cảnh WebGL khỏi canvas CŨ khi dựng lại renderer. */
+  private detachGl: (() => void) | null = null;
 
   constructor(
     private readonly cfg: GameConfig,
@@ -248,9 +250,11 @@ class App {
     // Không còn tham số "nhớ hồ sơ": mã phiên đã nằm sẵn trong `sessionStorage` từ lúc vào
     // trận, nên mọi đường tải lại (F5, mất WebGL, dựng lại renderer hỏng) đều đi chung một
     // cơ chế. `pendingRejoin` cũ chỉ nhớ tên + nhân vật và vào một trận MỚI.
-    watchContextLoss(
-      this.scene.app.canvas as HTMLCanvasElement,
-      (canRecover) => {
+    const watchGl = (canvas: HTMLCanvasElement): void => {
+      this.detachGl?.();
+      this.detachGl = watchContextLoss(
+        canvas,
+        (canRecover) => {
         // Gửi về server KÈM BỐI CẢNH: mất ngữ cảnh WebGL trên iPhone gần như luôn là hệ quả
         // của hết bộ nhớ GPU, nên con số `texMB` đi cùng mới nói được nguyên nhân.
         this.telemetry?.event('webgl_context_lost', JSON.stringify({ canRecover, ...(this.telemetry?.errorContext() ?? {}) }));
@@ -263,11 +267,17 @@ class App {
       // trang chủ thay vì nằm mãi ở màn hình "đang khôi phục". Không tự vào lại phòng —
       // phòng cũ đã đá mình ra từ lâu, và tự nhảy vào một trận mới là đúng cái cảm giác
       // "game tự chơi lại từ đầu" mà ta đang sửa.
-      () => {
-        this.telemetry?.event('webgl_context_restored', JSON.stringify(this.telemetry?.errorContext() ?? {}));
-        this.resumeOrHome();
-      },
-    );
+        () => {
+          this.telemetry?.event('webgl_context_restored', JSON.stringify(this.telemetry?.errorContext() ?? {}));
+          this.resumeOrHome();
+        },
+        // Đang DỰNG LẠI renderer thì chính ta vứt ngữ cảnh — không phải sự cố (§13.8).
+        () => this.scene.isRebuilding(),
+      );
+    };
+    watchGl(this.scene.app.canvas as HTMLCanvasElement);
+    // Dựng lại renderer xong thì canvas là thẻ MỚI: gắn lại bộ canh lên thẻ đó.
+    this.scene.onCanvasReplaced = watchGl;
     // Bắt đầu thu số liệu NGAY khi game khởi động xong, không đợi vào trận.
     //
     // Trước đây telemetry chỉ bật trong `onWelcome`, nên **máy nào không vào nổi trận thì

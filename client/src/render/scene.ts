@@ -115,7 +115,19 @@ export class GameScene {
   onGuardEvent: ((kind: string, err: unknown) => void) | null = null;
   /** onRebuildFailed: dựng lại renderer thất bại → `main.ts` tải lại trang + vào lại phiên (§7.1). */
   onRebuildFailed: (() => void) | null = null;
+  /**
+   * onCanvasReplaced: dựng lại renderer xong thì canvas là một thẻ MỚI.
+   *
+   * `main.ts` phải gắn lại bộ canh mất ngữ cảnh WebGL lên thẻ mới — bỏ bước này thì sau
+   * lần dựng lại đầu tiên, một cú mất ngữ cảnh THẬT không còn ai bắt.
+   */
+  onCanvasReplaced: ((canvas: HTMLCanvasElement) => void) | null = null;
   private rebuilding = false;
+
+  /** isRebuilding: đang thay renderer — bộ canh WebGL phải bỏ qua cú mất ngữ cảnh lúc này. */
+  isRebuilding(): boolean {
+    return this.rebuilding;
+  }
   private rebuilds = 0;
   private lastTickAt = 0;
   private watchdogTried = false;
@@ -316,7 +328,14 @@ export class GameScene {
     killFilters();
     this.stripFilters();
     if (act === 'rebuild') {
-      void this.rebuild();
+      // HOÃN sang nhịp sau, KHÔNG dựng lại ngay tại đây.
+      //
+      // `onDrawError` chạy từ bên trong `ticker.update()`. `rebuild()` huỷ cả
+      // `Application`, mà huỷ Application là huỷ chính cái ticker đang chạy dòng này —
+      // Pixi ném lỗi giữa vòng lặp của nó, `rebuild` bắt được rồi rơi xuống đường lùi
+      // "tải lại trang". Nhìn từ ngoài: lỗi vẽ lần thứ ba làm trang tải lại, đúng thứ
+      // §13.8 nói là KHÔNG được làm. Bắt được bằng `tools/browsertest/crashtest.mjs`.
+      window.setTimeout(() => void this.rebuild(), 0);
     }
   }
 
@@ -353,6 +372,9 @@ export class GameScene {
       // mất luôn chỗ để dựng lại. `texture: false` vì texture do `assets` sở hữu.
       old.destroy({ removeView: true }, { children: false, texture: false, textureSource: false, context: false });
       this.app = new Application();
+      // Renderer mới bắt đầu ở độ phân giải mặc định, nên cờ "đang ở bước khẩn" phải về 0 —
+      // không thì `applyEmergencyResolution` tưởng đã áp rồi và không áp lại.
+      this.resEmergency = false;
       await this.buildApp();
       // Dựng lại cây cảnh: `setWorld` tự `clear()` rồi tạo MapView mới và xếp lại các lớp.
       const w = this.world;
@@ -360,6 +382,7 @@ export class GameScene {
         this.setWorld(w);
       }
       this.rebuilds++;
+      this.onCanvasReplaced?.(this.app.canvas as HTMLCanvasElement);
       this.onGuardEvent?.('renderer_rebuilt', null);
       console.warn(`[chống sập] đã dựng lại renderer (lần ${this.rebuilds})`);
     } catch (err) {

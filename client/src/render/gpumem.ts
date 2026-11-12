@@ -56,10 +56,15 @@ let curSource = '';
 const fromStacks = new WeakMap<object, string>();
 
 /** trackTextureFrom bọc `Texture.from` để biết MÃ NÀO của game dựng ra canvas đó. */
+let fromWrapped = false;
+
 export function trackTextureFrom(TextureClass: object): void {
-  if (!TRACE) {
+  if (!TRACE || fromWrapped) {
     return;
   }
+  // Bọc đúng MỘT LẦN: `buildApp` chạy lại khi dựng lại renderer (§13.8), và bọc chồng lên
+  // nhau thì mỗi lần tạo texture đi qua n lớp wrapper — chậm dần và vết gọi sai dần.
+  fromWrapped = true;
   const holder = TextureClass as { from: (...a: unknown[]) => unknown };
   const orig = holder.from.bind(TextureClass);
   holder.from = (...a: unknown[]): unknown => {

@@ -68,6 +68,7 @@ func (s *server) sampleMetrics(now time.Time, cpu *cpuSnap, mach *machSnap, last
 			c.Add("monsters", scope, float64(z.Monsters))
 			c.Add("items", scope, float64(z.Items))
 			c.Add("obstacles_broken", scope, float64(z.BrokenObstacles))
+			c.Add("holds", scope, float64(z.Holds))
 			c.Add("swords", scope, float64(z.Swords))
 			c.Add("skills_per_min", scope, float64(z.NSkills)*60/metricSampleEvery.Seconds())
 			c.Add("deaths_per_min", scope, float64(z.NDeaths)*60/metricSampleEvery.Seconds())

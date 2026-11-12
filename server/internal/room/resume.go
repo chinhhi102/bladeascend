@@ -100,9 +100,17 @@ func (r *Room) beginHold(z *Zone, c *Client) bool {
 		return false
 	}
 	p, ok := z.G.Players[c.PlayerID]
-	if !ok || p.Dead {
+	if !ok {
 		return false
 	}
+	// Giữ chỗ KỂ CẢ khi nhân vật đang chết.
+	//
+	// Nhân vật chết nhưng hoạt ảnh chết chưa chạy xong (§7: 1 giây) thì `handleDeaths`
+	// chưa dựng màn Tổng kết. Nếu ở đây từ chối giữ chỗ, kết nối bị dọn luôn và màn Tổng
+	// kết đi vào hư vô — người chơi tải lại trang và thấy TRANG CHỦ, không hiểu ván vừa
+	// rồi đi đâu. Giữ chỗ thì một giây sau `handleDeaths` thấy `z.holds[id]` và cất màn
+	// Tổng kết vào đó (xem noteHeldDeath). Bắt được bằng `tools/browsertest/rejoin.mjs`:
+	// bấm chết rồi F5 ngay trong 120 ms.
 	// Đứng yên NGAY: input cuối cùng của người chơi có thể là "đang chạy", và một nhân vật
 	// vô chủ chạy thẳng 20 giây vào góc bản đồ thì nối lại cũng chẳng còn gì để cứu.
 	p.Vel = game.Vec{}

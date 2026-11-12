@@ -249,8 +249,32 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   set -e
   tail -6 /tmp/kx-rbstable.out
 
+  # §17 dòng 1 + dòng 3: lớp chống sập và vào lại phiên. Hai bài này CHỈ chạy đúng vào
+  # ngày có lỗi thật — tức là ngày không ai ngồi xem — nên chúng phải nằm ở cổng.
+  echo "== 2c2/5 chống sập bằng lỗi giả (§13.8) =="
+  set +e
+  node tools/browsertest/crashtest.mjs http://127.0.0.1:9997 >/tmp/kx-crash.out 2>&1
+  crash_rc=$?
+  set -e
+  tail -4 /tmp/kx-crash.out
+
+  echo "== 2c3/5 vào lại phiên khi F5 (§7.1) =="
+  set +e
+  node tools/browsertest/rejoin.mjs http://127.0.0.1:9997 >/tmp/kx-rejoin.out 2>&1
+  rejoin_rc=$?
+  set -e
+  tail -4 /tmp/kx-rejoin.out
+
   kill "$(cat /tmp/kx-smooth.pid)" 2>/dev/null || true
   pkill -f "127.0.0.1:9997" 2>/dev/null || true
+  if [ "$crash_rc" != "0" ]; then
+    echo "LỖI: lớp chống sập §13.8 không đạt. Dừng deploy. Xem /tmp/kx-crash.out" >&2
+    exit 1
+  fi
+  if [ "$rejoin_rc" != "0" ]; then
+    echo "LỖI: vào lại phiên §7.1 không đạt. Dừng deploy. Xem /tmp/kx-rejoin.out" >&2
+    exit 1
+  fi
   if [ "$rb_rc" = "1" ]; then
     echo "LỖI: bảng xếp hạng co giãn (§11.5). Dừng deploy." >&2
     exit 1
