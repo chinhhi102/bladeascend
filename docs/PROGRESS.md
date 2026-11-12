@@ -754,6 +754,35 @@ Job 04:30, bảng giữ dữ liệu đúng spec, **gộp trước khi xoá** (ch
 chơi theo ngày giữ mãi), VACUUM tuần và chỉ khi 0 người online, trang "Dọn dữ liệu" có bản
 xem trước chạy sẵn, cảnh báo dashboard khi dữ liệu > 1 GB.
 
+### 6. Nghiệm thu §17 bằng lỗi giả — và hai lỗi THẬT trong chính lớp chống sập
+
+Hai bài mới (`tools/browsertest/crashtest.mjs`, `rejoin.mjs`) đỏ ngay lượt chạy đầu:
+
+- **Dựng lại renderer làm TẢI LẠI TRANG** — đúng thứ §13.8 cấm. Hai nguyên nhân chồng
+  nhau: (1) `rebuild()` gọi từ trong `ticker.update()` nên nó huỷ chính cái ticker đang
+  chạy dòng đó; (2) huỷ `Application` là cố ý vứt ngữ cảnh WebGL, và bộ canh
+  `watchContextLoss` tưởng card màn hình sập nên hẹn `location.reload()`.
+- **Chết đúng lúc F5 thì mất màn Tổng kết**: `beginHold` từ chối giữ chỗ khi nhân vật đã
+  `Dead`, nên kết nối bị dọn trong lúc hoạt ảnh chết 1 giây chưa xong.
+
+Cả hai đã sửa, cả hai bài giờ đạt hết, và cả hai vào cổng deploy.
+
+### 7. Kết quả bài rò rỉ CLIENT 30 phút
+
+50 lượt đổi khu, 9 lượt chết/vào lại. So với **phút 5** như spec: `texMB` **−0,0 %** ✅,
+display object −7,4 % ✅, nhưng texture **+24,5 %** và JS heap **+37,3 %** ❌.
+
+Đọc kỹ hơn thì đó KHÔNG phải rò rỉ: `texMB` phẳng tuyệt đối trong khi SỐ texture tăng 79 —
+79 tấm rất nhỏ (chữ, biểu tượng) — và từ **phút 20 trở đi mọi chỉ số đứng yên**
+(phút 20–25 ↔ 25–30: texture +1,0 %, heap −0,5 %). Bộ làm việc của game chạm TRẦN quanh
+phút 20, chứ không dốc lên. Rò rỉ thật thì không có trần (so lượt #33: +91 texture/phút,
+một chiều, tới khi tab chết).
+
+→ **Q53 trong `docs/QUESTIONS.md`**: mốc phút 5 của spec quá sớm cho game này (11 atlas
+nhân vật + art 5 khu nạp dần). Phương án đang dùng: in cả hai phép so, chặn deploy theo xu
+hướng **nửa sau**. Anh chọn giữ, đổi mốc sang phút 20, hay bắt tôi đi cắt 79 tấm texture
+nhỏ kia.
+
 ### Ghi chú
 
 - `TestBotFillToTarget` đỏ ngẫu nhiên ~1/25 lần từ lâu (hạt giống phòng lấy từ `time.Now()`);
