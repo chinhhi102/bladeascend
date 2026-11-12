@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { BOT_LABEL, f1, LEVEL_COLOR, countLevel, realmName, tickLevel, uptime, type Level } from '../format';
 import { useFetch, useStats } from '../hooks';
 import type { BotsResp, Stats, ZoneStat } from '../types';
+import { go } from '../hooks';
 import { tableBase } from '../ui';
 
 interface Metric {
@@ -154,6 +155,28 @@ function HotZones({ s }: { s: Stats }): ReactNode {
   );
 }
 
+/** PerfAlerts: cảnh báo của bộ thu gom §12 — vượt ngân sách liên tục ≥ 5 phút. */
+function PerfAlerts(): ReactNode {
+  const sum = useFetch<{ alerts: { metric: string; scope: string; message: string }[] | null }>('/api/admin/metrics/summary', 60000);
+  const alerts = sum.data?.alerts ?? [];
+  if (alerts.length === 0) {
+    return null;
+  }
+  return (
+    <Space direction="vertical" style={{ width: '100%', marginBottom: 12 }}>
+      {alerts.map((a) => (
+        <Alert
+          key={`${a.metric}:${a.scope}`}
+          type="warning"
+          showIcon
+          message={a.message}
+          action={<a onClick={() => go('perf')}>Xem trang Hiệu năng</a>}
+        />
+      ))}
+    </Space>
+  );
+}
+
 export function DashboardPage(): ReactNode {
   const { now, ago, error } = useStats();
   const bots = useFetch<BotsResp>('/api/admin/bots', 2000);
@@ -163,6 +186,7 @@ export function DashboardPage(): ReactNode {
   return (
     <div>
       {error ? <Alert type="warning" showIcon message={`Mất kết nối một nhịp: ${error}`} style={{ marginBottom: 12 }} /> : null}
+      <PerfAlerts />
       <HotZones s={now} />
       <Typography.Text type="secondary">{`Cập nhật ${new Date(now.at * 1000).toLocaleTimeString('vi-VN')} · mũi tên so với ~1 phút trước`}</Typography.Text>
       <Group title="Người chơi" items={playerMetrics(now, bots.data?.mode ?? '')} now={now} ago={ago} />

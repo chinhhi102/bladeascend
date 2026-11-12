@@ -1,4 +1,6 @@
-# ADMIN CONSOLE — Spec v1.4
+# ADMIN CONSOLE — Spec v1.5
+
+**v1.5:** bộ thu gom số liệu phút/giờ/ngày (min/max/avg/p95) + trang Hiệu năng (§12).
 
 **v1.4:** cấu hình trần phòng / sàn khu / ngưỡng tự tắt bot ngay trên trang admin (§4).
 
@@ -224,3 +226,43 @@ Cờ hiện ở dashboard và danh sách; mỗi cờ lưu bằng chứng (số l
 - [ ] Gửi góp ý kèm 3 ảnh tải lên từ iPhone (thư viện ảnh) → admin thấy đủ 3 ảnh, ảnh đã mất EXIF/GPS.
 - [ ] Mọi bảng admin: sắp xếp, lọc, phân trang, Drawer chi tiết; dashboard dạng Card/Statistic.
 - [ ] Người bị cấm 1 giờ: vào trang thấy thông báo + giờ hết hạn; sau 1 giờ vào lại được.
+
+---
+
+## 12. Bộ thu gom số liệu hiệu năng (v1.5)
+
+**Mục tiêu**: xem hiệu năng game theo **phút / giờ / ngày**, mỗi khoảng có **min / max / avg / p95** của mọi chỉ số, để thấy xu hướng và gắn được sự cố với bản deploy hay với lúc máy bận.
+
+### 12.1 Thu những gì (mỗi chỉ số kèm "phạm vi": toàn server / phòng / khu / loại thiết bị)
+
+| Nhóm | Chỉ số |
+|---|---|
+| Server | tick ms (theo **khu**), thời gian từng hệ thống trong tick (va chạm, bot AI, kỹ năng, AOI, gửi gói), GC pause ms, heap MB, goroutine, CPU % **của tiến trình server** |
+| Máy chủ | **load average 1 phút, CPU % toàn máy, RAM trống** — để phân biệt "game chậm" với "máy đang bận việc khác" |
+| Phòng / khu | người thật, bot, quái, viên EXP trên đất, vật cản đang chờ mọc, lượt kỹ năng/phút, lượt chết/phút |
+| Mạng | KB/s gửi đi (tổng + TB mỗi client), kích thước snapshot, số client đang nghẽn, ping p50/p95 (từ client) |
+| Client (telemetry) | FPS p50 / p1, ms/khung, ms từng hệ thống vẽ, bộ nhớ GPU ước tính, lỗi JS — tách theo **PC / Android / iPhone** và **mức chất lượng** |
+| Người chơi | vào/ra/phút, thời gian sống, cảnh giới cao nhất mỗi mạng, tỉ lệ chọn nhân vật |
+
+### 12.2 Cách gom
+- Server lấy mẫu mỗi **1 s** (tick thì gom mọi tick), giữ trong bộ nhớ; **hết mỗi phút** ghi 1 dòng/chỉ số/phạm vi: `count, min, max, sum (→ avg), p95` (p95 bằng histogram cố định hoặc t-digest — không lưu từng mẫu).
+- **Chỉ ghi phút có ít nhất 1 người thật online.** Phút không có người thì không ghi (bot chạy một mình không tính hiệu năng).
+- Cuộn lên: **giờ** = gộp các phút (min của min, max của max, avg theo trọng số count, p95 gộp từ histogram); **ngày** = gộp các giờ. Chạy mỗi khi hết giờ / hết ngày.
+- Giữ dữ liệu: phút **14 ngày**, giờ **180 ngày**, ngày **giữ mãi**.
+- Mỗi dòng gắn **build id** đang chạy; deploy → ghi 1 mốc "deploy" để vẽ vạch dọc trên biểu đồ.
+- Chi phí: thu gom không làm tick tăng quá **0,1 ms** (đo bằng bench trước/sau). Ghi SQLite theo lô 1 lần/phút, không ghi mỗi giây.
+- Bảng SQLite: `metrics_minute`, `metrics_hour`, `metrics_day` (`ts, metric, scope, build, count, min, max, sum, p95`) + `deploy_marks`.
+
+### 12.3 Trang "Hiệu năng" trong admin (antd)
+- Chọn **chỉ số**, **phạm vi** (khu / thiết bị…), **độ phân giải** (phút / giờ / ngày) và **khoảng thời gian** (24 giờ, 7 ngày, 30 ngày, tuỳ chọn).
+- Biểu đồ đường: dải min–max tô mờ + đường avg + đường p95 + **đường ngưỡng ngân sách** (vd tick 4 ms) + vạch dọc ở các lần deploy.
+- Đặt **2 chỉ số chồng lên nhau** để so (vd tick Thiên Đình với load máy, hoặc tick với số bot) — trục phải riêng.
+- Bảng dưới biểu đồ: từng khoảng với min / max / avg / p95, sắp xếp được; **xuất CSV**.
+- Thẻ tóm tắt đầu trang: 24 giờ qua — giờ tệ nhất của từng chỉ số chính, kèm số người thật lúc đó.
+- Cảnh báo dashboard (§3) đọc từ đây: ngưỡng vượt liên tục ≥ 5 phút → thẻ cảnh báo, kèm gợi ý (vd "load máy 3,2 — có thể do máy bận, không phải game").
+
+### 12.4 Checklist
+- [ ] 1 người vào chơi 10 phút → có 10 dòng phút cho mọi chỉ số; rời đi 5 phút → không có dòng nào trong 5 phút đó.
+- [ ] Hết giờ → dòng giờ khớp gộp từ các phút (min/max đúng, avg theo trọng số).
+- [ ] Biểu đồ tick Thiên Đình + load máy chồng nhau, có vạch deploy; xuất CSV được.
+- [ ] Bench: thu gom làm tick tăng ≤ 0,1 ms.

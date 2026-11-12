@@ -35,7 +35,9 @@ type Zone struct {
 	// stepMs: thời gian xử lý một tick của riêng khu này, gửi kèm snapshot cho overlay F3.
 	stepMs float32
 	// ticks: cửa sổ 10 giây thời gian tick thô, cho telemetry tính p95 (tickstats.go).
-	ticks   tickStats
+	ticks tickStats
+	// m: sổ tích luỹ cho bộ thu gom số liệu phút/giờ/ngày (metrics.go, ADMIN_SPEC §12).
+	m       zoneCounters
 	tick    uint32
 	snapAcc float64
 

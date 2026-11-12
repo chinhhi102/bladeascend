@@ -27,14 +27,14 @@ type playerRow struct {
 	Device string `json:"device"`
 	IPMask string `json:"ip_mask"`
 
-	Room    string `json:"room"`
-	Zone    string `json:"zone"`
-	Realm   string `json:"realm"`
-	Level   int    `json:"level"`
-	Swords  int    `json:"swords"`
-	Score   float64 `json:"score"`
-	Hits    int    `json:"hits"`
-	Alive   float64 `json:"alive_secs"`
+	Room   string  `json:"room"`
+	Zone   string  `json:"zone"`
+	Realm  string  `json:"realm"`
+	Level  int     `json:"level"`
+	Swords int     `json:"swords"`
+	Score  float64 `json:"score"`
+	Hits   int     `json:"hits"`
+	Alive  float64 `json:"alive_secs"`
 
 	PingMs      float64 `json:"ping_ms"`
 	FPS         float64 `json:"fps"`
@@ -156,7 +156,7 @@ func (s *server) playerRow(r *room.Room, c *room.Client, now time.Time) playerRo
 		PingMs: rtt, FPS: fps, Corrections: corr,
 		Alive:       now.Sub(c.JoinedAt).Seconds(),
 		DebugSource: c.DebugSource, DebugUsed: c.DebugUsed,
-		Flags:       []room.Flag{},
+		Flags: []room.Flag{},
 	}
 	if z := r.ZoneOf(c.PlayerID); z != nil {
 		row.Zone = z.Name

@@ -79,8 +79,12 @@ restart_server() {
     # "line 1: $2: unbound variable". Đã dính đúng vậy lúc 21:25.
     adminhash=$(grep -m1 '^ADMIN_PASSWORD_HASH=' "$adminenv" | cut -d= -f2-)
   fi
+  # `-pprof`: mở /debug/pprof CHO 127.0.0.1 (cmd/server/pprof.go). Đây là server LAN của
+  # đội test; muốn lấy hồ sơ CPU 30 giây lúc tick đang xấu thì phải có sẵn, vì tắt server đi
+  # để bật hồ sơ là mất đúng cái cảnh cần đo.
   ( cd "$REPO/server" && setsid env ADMIN_PASSWORD_HASH="$adminhash" ./bladeascend \
       -build "$build" \
+      -pprof \
       -client "$DEPLOY/client" \
       -assets "$DEPLOY/assets" \
       > data/bladeascend.log 2>&1 < /dev/null & ) >/dev/null 2>&1 </dev/null

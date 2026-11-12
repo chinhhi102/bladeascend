@@ -13,6 +13,7 @@ import { CharsPage } from './pages/Chars';
 import { DashboardPage } from './pages/Dashboard';
 import { ErrorsPage } from './pages/Errors';
 import { FeedbackPage } from './pages/Feedback';
+import { PerfPage } from './pages/Perf';
 import { PlayersPage } from './pages/Players';
 import { RoomsPage } from './pages/Rooms';
 import type { Me } from './types';
@@ -60,6 +61,7 @@ const PAGES: PageDef[] = [
   { key: 'map', label: 'Bản đồ', render: (a) => <MapPage args={a} /> },
   { key: 'players', label: 'Người chơi', render: () => <PlayersPage /> },
   { key: 'errors', label: 'Lỗi người chơi', render: () => <ErrorsPage /> },
+  { key: 'perf', label: 'Hiệu năng', render: () => <PerfPage /> },
   { key: 'bans', label: 'Danh sách cấm', render: () => <BansPage /> },
   { key: 'chars', label: 'Nhân vật', render: () => <CharsPage /> },
   { key: 'board', label: 'Bảng xếp hạng', render: () => <BoardPage /> },

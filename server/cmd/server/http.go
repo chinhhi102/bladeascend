@@ -16,6 +16,7 @@ import (
 
 	"bladeascend/server/internal/admin"
 	"bladeascend/server/internal/config"
+	"bladeascend/server/internal/metrics"
 	"bladeascend/server/internal/room"
 	"bladeascend/server/internal/store"
 	"bladeascend/server/internal/telemetry"
@@ -33,6 +34,10 @@ type server struct {
 	limiter *ipLimiter
 	// telemetry là nil khi chạy với -telemetry=false; mọi chỗ dùng phải kiểm nil.
 	telemetry *telemetry.Store
+	// metricsDB / metrics: bộ thu gom số liệu phút/giờ/ngày (ADMIN_SPEC §12). Cả hai nil khi
+	// tắt thu gom — mọi chỗ dùng phải kiểm nil.
+	metricsDB *metrics.DB
+	metrics   *metrics.Collector
 	// adminAuth không bao giờ nil, nhưng `Enabled()` là false khi chưa đặt
 	// ADMIN_PASSWORD_HASH — lúc đó mọi đường dẫn /admin đều đóng (ADMIN_SPEC §1).
 	adminAuth *admin.Auth
@@ -50,6 +55,12 @@ type server struct {
 }
 
 func (s *server) routes(assetsDir, clientDir string) http.Handler {
+	return gzipMux(s.mux(assetsDir, clientDir))
+}
+
+// mux dựng bảng định tuyến thô (chưa bọc gzip) — tách ra để `main` còn cắm thêm được
+// /debug/pprof khi chạy với cờ `-pprof`.
+func (s *server) mux(assetsDir, clientDir string) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/config", s.handleConfig)
 	mux.HandleFunc("GET /api/leaderboard", s.handleLeaderboard)
@@ -65,7 +76,7 @@ func (s *server) routes(assetsDir, clientDir string) http.Handler {
 	s.adminRoutes(mux, adminDirOf(clientDir))
 	mux.Handle("GET /assets/", http.StripPrefix("/assets/", noListing(assetCache(http.FileServer(http.Dir(assetsDir))))))
 	mux.Handle("GET /", spa(clientDir))
-	return gzipMux(mux)
+	return mux
 }
 
 // hashedName nhận ra tên tệp do `tools/asset-pipeline` sinh ra: `<tên>.<8 chữ hex>.<đuôi>`.

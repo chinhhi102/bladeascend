@@ -18,6 +18,7 @@ import (
 	"bladeascend/server/internal/admin"
 	"bladeascend/server/internal/config"
 	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/metrics"
 	"bladeascend/server/internal/room"
 	"bladeascend/server/internal/store"
 	"bladeascend/server/internal/world"
@@ -48,10 +49,15 @@ func main() {
 	// Hồ sơ CPU cho công cụ đo: cmd/loadtest chạy trong ống nghiệm, còn đây là server thật
 	// với bot, bản đồ thật và client thật — hai nơi cho ra hình ảnh CPU khác hẳn nhau.
 	cpuProf := flag.String("cpuprofile", "", "ghi hồ sơ CPU ra file này cho tới khi tắt server")
+	// Hồ sơ theo yêu cầu, lấy 30 giây bất kỳ của server ĐANG CHẠY (pprof.go). Chỉ mở cho
+	// 127.0.0.1. Bật trên server LAN của đội test; bản phát hành chạy không có cờ này.
+	pprofOn := flag.Bool("pprof", false, "mở /debug/pprof cho 127.0.0.1 (hồ sơ CPU/heap lúc đang chạy)")
 	// Telemetry người chơi thật (TELEMETRY_SPEC). Bật mặc định vì `:9999` là server của đội
 	// test; bản release chạy với `-telemetry=false` và client release không đóng gói module.
 	telemetryOn := flag.Bool("telemetry", true, "thu số liệu hiệu năng của người chơi thật")
 	telemetryDB := flag.String("telemetry-db", "", "SQLite telemetry (mặc định: server/data/telemetry.db)")
+	// Bộ thu gom số liệu hiệu năng (ADMIN_SPEC §12). Mặc định bật cùng telemetry.
+	metricsDBPath := flag.String("metrics-db", "", "SQLite số liệu hiệu năng (mặc định: server/data/metrics.db)")
 	buildID := flag.String("build", "", "mã build ghi kèm mọi số liệu (mặc định: thời điểm khởi động)")
 	flag.Parse()
 
@@ -101,6 +107,7 @@ func main() {
 	// Phân bố ngôn ngữ 7 ngày cho tên bot (spec v6.34 §9.4) — cùng kiểu cắm hàm có cache.
 	mgr.LangShares = func() map[string]float64 { return st.LangShares(time.Now()) }
 	tel := startTelemetry(telemetryPath(*telemetryDB), buildIDOrNow(*buildID), *telemetryOn)
+	mdb := startMetrics(metricsPath(*metricsDBPath), buildIDOrNow(*buildID), *telemetryOn)
 	// Trang quản trị (ADMIN_SPEC §1). Dùng CHUNG file SQLite với bảng xếp hạng, như spec §8
 	// nói — tên bảng đều có tiền tố `admin_` nên không đụng dữ liệu đã có.
 	dbFile := storePath(*dbPath)
@@ -120,7 +127,10 @@ func main() {
 		adminAuth: adminAuth, debugGate: admin.NewDebugGate(adminAuth),
 		buildID: buildIDOrNow(*buildID), startedAt: time.Now(), dbPath: dbFile, mapsDir: *mapsDir,
 		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP),
-		telemetry: tel, env: env, envDefaults: envDefaults}
+		telemetry: tel, env: env, envDefaults: envDefaults, metricsDB: mdb}
+	if mdb != nil {
+		srv.metrics = metrics.New(mdb, srv.buildID)
+	}
 	stopSampler := make(chan struct{})
 	// Dọn dẹp hằng ngày (Q28): xoá ảnh góp ý của thư đã khép quá 90 ngày, giữ chữ mãi.
 	// Chạy kể cả khi tắt telemetry — nó dọn DB quản trị, không liên quan telemetry.
@@ -130,6 +140,9 @@ func main() {
 		go srv.runServerSampler(stopSampler)
 		go srv.runRollupScheduler(stopSampler)
 	}
+	if srv.metrics != nil {
+		go srv.runMetricsCollector(stopSampler)
+	}
 	// Chưa chạy pipeline thì `assets/dist` rỗng và game vào trận với placeholder trắng
 	// trơn. Chuyện đó phải nói ngay ở dòng log đầu tiên: lần trước thiếu hai tệp font,
 	// server vẫn trả HTTP 200 cho mọi thứ, và chủ dự án vào lại 8 lần mới báo.
@@ -138,7 +151,12 @@ func main() {
 			"  Chạy:  node tools/asset-pipeline/index.mjs\n"+
 			"  (hoặc `cd client && npm run build` — nó tự gọi pipeline trước.)", *assetsDir)
 	}
-	mux := srv.routes(*assetsDir, *clientDir)
+	rawMux := srv.mux(*assetsDir, *clientDir)
+	if *pprofOn {
+		registerPprof(rawMux)
+		log.Print("pprof: /debug/pprof mở cho 127.0.0.1")
+	}
+	mux := gzipMux(rawMux)
 	log.Printf("%s server listening on %s (debug=%v)", cfg.Brand.Name, *addr, *debug)
 	httpSrv := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	// Tắt êm khi nhận SIGINT/SIGTERM: cần thế thì hồ sơ CPU mới được ghi xuống đĩa. Bị

@@ -155,6 +155,7 @@ func (g *Game) CastSkill(p *Player) bool {
 	sk := SkillOf(p.Char)
 	p.SkillCharges--
 	p.SkillCasts++
+	g.nCasts++
 	g.armRecharge(p) // đang đầy thì đồng hồ dừng — dùng 1 lượt là nó chạy lại
 	p.SkillReadyAt = g.Time + g.Cfg.Skills.LockSecs
 	// Đang Ẩn Thân mà dùng kỹ năng thì lộ ngay (spec §6.3).

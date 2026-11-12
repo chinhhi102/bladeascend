@@ -388,12 +388,28 @@ func (r *Room) stepZone(z *Zone, dt float64) {
 			float64(tDeaths.Sub(tGame).Microseconds())/1000,
 			float64(tCast.Sub(tDeaths).Microseconds())/1000, len(z.clients))
 	}
+	// Sổ tích luỹ cho bộ thu gom §12 — ghi MỌI tick, không lấy mẫu (metrics.go).
+	gp := z.G.Profile()
+	z.m.input.Add(msSince(stepStart, tIn))
+	z.m.bots.Add(msSince(tIn, tBrains))
+	z.m.move.Add(gp.Move)
+	z.m.skills.Add(gp.Skills)
+	z.m.collide.Add(gp.Collide)
+	z.m.world.Add(gp.World)
+	z.m.deaths.Add(msSince(tGame, tDeaths))
+	z.m.send.Add(msSince(tDeaths, tCast))
 	// Trung bình trượt để con số trên overlay không nhảy loạn (spec §13.6).
 	took := float64(time.Since(stepStart).Microseconds()) / 1000
+	z.m.tick.Add(took)
 	z.stepMs = z.stepMs*0.9 + float32(took)*0.1
 	// Lưu nguyên giá trị thô vào cửa sổ 10 giây để telemetry tính được p95 — trung bình
 	// trượt ở trên đã làm phẳng mất đúng những tick chậm cần tìm (xem tickstats.go).
 	z.ticks.add(took, r.cfg.Admin.TickWarnMs)
+}
+
+// msSince: số mili-giây giữa hai mốc đã đo sẵn (không đọc đồng hồ thêm lần nào).
+func msSince(from, to time.Time) float64 {
+	return float64(to.Sub(from).Nanoseconds()) / 1e6
 }
 
 func (r *Room) drainInbox() {

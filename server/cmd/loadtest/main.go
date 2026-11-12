@@ -23,9 +23,10 @@ import (
 
 	"bladeascend/server/internal/config"
 	"bladeascend/server/internal/game"
+	"bladeascend/server/internal/metrics"
 	"bladeascend/server/internal/netproto"
-	"bladeascend/server/internal/wire"
 	"bladeascend/server/internal/room"
+	"bladeascend/server/internal/wire"
 	"bladeascend/server/internal/world"
 )
 
@@ -350,6 +351,9 @@ func main() {
 
 	ticks := int(*secs / dt)
 	zoneWorst := worstZones{}
+	// Vét sổ hệ thống MỘT LẦN trước khi đo: bỏ phần khởi động đi, để bảng "tick đi đâu"
+	// dưới đây chỉ chứa đúng khoảng đang đo.
+	r.DrainMetrics()
 	durs := make([]float64, 0, ticks)
 	start := time.Now()
 	for k := 0; k < ticks; k++ {
@@ -386,6 +390,30 @@ func main() {
 		fmt.Printf("  %-20s %6.2f ms · %d nhân vật\n", z.Name, z.StepMs(), len(z.Game().Players))
 	}
 	zoneWorst.print()
+	printSystems(r)
+}
+
+// printSystems in bảng "tick đi đâu" của từng khu (ADMIN_SPEC §12.1: thời gian từng hệ
+// thống trong tick). Cột p95 mới là cột đáng nhìn: trung bình nuốt mất đúng những tick xấu.
+func printSystems(r *room.Room) {
+	zs := r.DrainMetrics()
+	fmt.Println("\nTick đi đâu — mili-giây mỗi tick (TB | p95):")
+	fmt.Printf("  %-20s %6s %14s %14s %14s %14s %14s %14s %14s\n",
+		"khu", "n.vật", "TỔNG", "bot AI", "va chạm", "di chuyển", "kỹ năng", "thế giới", "gửi gói")
+	for _, z := range zs {
+		f := func(d metrics.Dist) string { return fmt.Sprintf("%5.2f|%5.2f", d.Avg(), d.P95()) }
+		fmt.Printf("  %-20s %6d %14s %14s %14s %14s %14s %14s %14s\n",
+			z.Name, z.Humans+z.BotCount, f(z.Tick), f(z.Bots), f(z.Collide), f(z.Move), f(z.Skills), f(z.World), f(z.Send))
+	}
+	fmt.Println("  (kiếm trong khu:" + swordLine(zs) + ")")
+}
+
+func swordLine(zs []room.ZoneMetrics) string {
+	out := ""
+	for _, z := range zs {
+		out += fmt.Sprintf(" %s %d", z.Name, z.Swords)
+	}
+	return out
 }
 
 func report(cs []*client, durs []float64, wall, secs float64, n int) {

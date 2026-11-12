@@ -93,6 +93,7 @@ func (g *Game) applyBodyHit(a, b *Player) {
 
 // kill: A chém chết B (spec v6.26 §5.1, §7).
 func (g *Game) kill(a, b *Player) {
+	g.nDeaths++
 	pc := g.Cfg.Player
 	// Chấm Uy Danh TRƯỚC: phần thưởng EXP bên dưới có thể đẩy A lên cảnh giới, làm giảm hệ
 	// số lật kèo của chính lần chém này (spec §11.1).

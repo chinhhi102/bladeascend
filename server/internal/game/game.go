@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"time"
 
 	"bladeascend/server/internal/config"
 	"bladeascend/server/internal/world"
@@ -65,17 +66,21 @@ type Game struct {
 
 	nextID uint32
 	// idBase: bit cao của id, riêng cho từng khu (xem SetIDBase + newID).
-	idBase       uint32
-	order        []uint32 // player ids in join order, for deterministic iteration
-	cooldowns    map[uint64]float64
-	obsIndex     *staticIndex
-	gridDirty    bool
-	chestNextAt  float64
-	chestAt      *Vec
-	poolCount    int
-	itemRespawns []float64
-	orbRespawns  []pendingOrb
-	itemGrid     *itemGrid
+	idBase    uint32
+	order     []uint32 // player ids in join order, for deterministic iteration
+	cooldowns map[uint64]float64
+	obsIndex  *staticIndex
+	gridDirty bool
+	// prof: thời gian từng nhóm việc của tick gần nhất (profile.go).
+	prof TickProfile
+	// nCasts/nDeaths: bộ đếm cộng dồn cho bộ thu gom số liệu (profile.go).
+	nCasts, nDeaths int
+	chestNextAt     float64
+	chestAt         *Vec
+	poolCount       int
+	itemRespawns    []float64
+	orbRespawns     []pendingOrb
+	itemGrid        *itemGrid
 	// stalls: dãy sạp tạm của Cô Ba (spec v6.10 §6.3). Xem `stall.go` để biết vì sao chúng
 	// là một tầng va chạm riêng chứ không nằm trong `Map.Obstacles`.
 	stalls   []tempStall
@@ -333,6 +338,7 @@ func (g *Game) Omega(p *Player) float64 {
 
 // Tick advances the simulation by dt seconds in the order of spec §5.
 func (g *Game) Tick(dt float64) {
+	t0 := time.Now()
 	g.Time += dt
 	g.updateTimers()
 	g.moveMinions(dt)
@@ -343,8 +349,10 @@ func (g *Game) Tick(dt float64) {
 			g.spinRing(p, dt)
 		}
 	}
+	g.prof.Move, t0 = ms(t0)
 	g.updateSkillState(dt)
 	g.rechargeSkills(dt)
+	g.prof.Skills, t0 = ms(t0)
 	g.resolveSwordBody()
 	g.resolveSwordSword()
 	g.resolveSwordWorld()
@@ -352,6 +360,7 @@ func (g *Game) Tick(dt float64) {
 	g.resolvePickups()
 	// Gộp SAU khi nhặt để sự kiện đi ngay trong tick này, không trễ một nhịp.
 	g.flushOrbPickups()
+	g.prof.Collide, t0 = ms(t0)
 	g.maintainSpawns()
 	g.updateAltars()
 	g.expireItems()
@@ -363,6 +372,7 @@ func (g *Game) Tick(dt float64) {
 		g.gridDirty = false
 	}
 	g.pruneCooldowns()
+	g.prof.World, _ = ms(t0)
 }
 
 // spinRing advances the ring and records the arc it swept this tick (spec §4.1b).
