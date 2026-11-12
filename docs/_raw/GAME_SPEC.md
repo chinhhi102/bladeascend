@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.53:** chống sập (bắt lỗi theo hệ thống, tự dựng lại renderer, recover server) §13.8; F5 khi chưa chết vào lại đúng phiên trong 20 s §7.1; vệ sinh bộ nhớ client/server + bài kiểm rò rỉ §13.9.
+
 **Thay đổi v6.52:** Hút Mì toả tròn 5 U ở mọi chỗ trong spec (Q50); Trân Châu mù 3s cả luật lẫn hiệu ứng màn hình; Cô Ba bỏ vỏ chuối (Q51) (§6.3, §6.5).
 
 **Thay đổi v6.51:** Cụ Rùa rụt mai 4s → 2s (trùng thời gian khiêu khích) (§6.3).
@@ -779,6 +781,15 @@ Mỗi nhân vật có **nội tại** chỉnh nhẹ 4 chỉ số gốc. Nội t�
 - Độ bền ở đây cộng vào hệ số độ bền khi va kiếm (§5.2): `D = 1.2^r × (1 + nội_tại_bền + Cương Kiếm + Gồng Cơ)`.
 - Trang chọn nhân vật: dưới khung chi tiết có **4 thanh chỉ số** (Tốc · Nhặt · Quay · Bền) tô xanh nếu dương, đỏ nếu âm, kèm số %, cạnh dòng "Hồi Xs · tích N lượt".
 - Cân bằng như §6.3: theo số liệu người chơi thật; chỉnh nội tại theo bước 5%, giữ tổng = 0.
+
+### 7.1 Tải lại trang (F5) mà chưa chết → vào lại đúng phiên (v6.53)
+
+- Lúc vào trận server cấp **mã phiên** ngẫu nhiên (32 byte) gắn với `guest_id`; client lưu ở `sessionStorage` (+ bản dự phòng trong bộ nhớ nếu trình duyệt chặn ghi).
+- Mất kết nối (F5, mạng rớt, đóng app tạm, mất WebGL rồi tải lại) → nhân vật **ở lại trong thế giới tối đa 20 s**: đứng yên, vòng kiếm vẫn quay, **vẫn có thể bị chém chết** (không được dùng thoát mạng để né chết). Không bất tử, không nhặt đồ, kỹ năng/buff vẫn đếm giờ.
+- Trong 20 s đó client nối lại với mã phiên → server **gắn lại đúng nhân vật** (cảnh giới, kiếm, Uy Danh, lượt kỹ năng, khu, buff), cấp mã phiên mới (mã cũ hết hiệu lực). Màn hình tải hiện "Đang trở lại trận…", không qua trang chủ.
+- Quá 20 s hoặc nhân vật đã chết → nhân vật rời phòng như thoát thường; người chơi thấy **màn Tổng kết** (chết) hoặc trang chủ (hết hạn), không tự vào trận mới (§7).
+- Mở tab thứ hai với cùng mã phiên → tab mới nhận nhân vật, tab cũ hiện "Bạn đang chơi ở tab khác".
+- Áp cho cả cơ chế tải lại do mất WebGL trên điện thoại (thay `pendingRejoin` hiện tại).
 
 ## 7. Chết & màn hình chờ
 
@@ -1565,6 +1576,39 @@ Thêm bước CI `npm run assets:budget`: vượt ngân sách → build fail, in
 - Lỗi mạng: hiện nút "Thử lại", tải tiếp phần còn thiếu (không tải lại từ đầu).
 - Trong trận: icon nhỏ góc dưới hiện % các nhóm tải nền đang chạy; xong thì ẩn.
 
+
+### 13.8 Chống sập (v6.53) — không lỗi nào được làm chết cả game
+
+**Nguyên tắc**: bắt lỗi ở **ranh giới** (mỗi hệ thống, mỗi gói tin, mỗi goroutine, mỗi request), không bọc từng dòng. Bắt được là **ghi lại đủ bối cảnh + tự hồi phục**, không bao giờ nuốt lỗi im lặng.
+
+**Client**
+- Vòng vẽ: thân ticker bọc try/catch; **mỗi hệ thống** (nội suy, vòng kiếm, bảng tên, thần thú, VFX, emote, minimap, HUD, âm thanh) chạy trong khối riêng — một hệ thống lỗi thì **tắt riêng nó 2 s rồi thử lại**, các hệ thống khác vẫn chạy. Lỗi ≥ 3 lần/10 s ở cùng hệ thống → tắt hẳn hệ thống đó tới hết mạng (game vẫn chơi được, thiếu hiệu ứng đó).
+- Lỗi trong khâu vẽ của Pixi (vd `uProjectionMatrix`, filter) → **bỏ khung đó**, tắt bộ lọc đang bật (bloom/shockwave/color matrix), vẽ tiếp. Lỗi vẽ lặp ≥ 3 lần/10 s → **dựng lại renderer + cây cảnh** từ trạng thái hiện có (không tải lại trang). Dựng lại thất bại → tải lại trang và **vào lại phiên** (§7.1).
+- Mỗi gói tin, mỗi sự kiện UI, mỗi callback WebSocket: try/catch riêng; gói lỗi bị bỏ qua (đã có `decodeFrame`).
+- `window.onerror` + `unhandledrejection`: gửi telemetry kèm bối cảnh: build, khu, số giây từ lần đổi khu, cỡ canvas + số lần resize, chất lượng, bộ lọc đang bật, số texture/GPU MB, hệ thống đang chạy.
+- **Watchdog**: không có khung nào trong 3 s khi tab đang hiện → khởi động lại ticker; vẫn chết → dựng lại renderer.
+
+**Server**
+- Mọi goroutine (vòng khu, đọc/ghi WebSocket, job nền) có `recover()`: panic trong **1 tick** → bỏ tick đó, ghi stack + entity liên quan, khu chạy tiếp. Panic ≥ 3 lần/phút ở 1 khu → đánh dấu khu "suy giảm", báo admin.
+- Panic khi xử lý gói của 1 người → **ngắt kết nối người đó** (họ vào lại được qua §7.1), không ảnh hưởng người khác. HTTP handler có middleware recover.
+- Lớp cuối: Docker `restart: unless-stopped`; khởi động lại thì phục hồi phiên từ trạng thái đã lưu không được (chấp nhận mất trận), nhưng bảng xếp hạng/dữ liệu không mất.
+- Admin: trang "Lỗi" gom theo chữ ký (stack rút gọn), đếm số lần, số người dính, build — để thấy lỗi mới ngay.
+
+### 13.9 Vệ sinh bộ nhớ (v6.53) — không gì được tăng mãi
+
+**Client**
+- Mọi thứ tạo ra trên GPU/scene (Sprite, Texture, RenderTexture, Filter, Text, Graphics, ParticleContainer) phải có **chủ sở hữu** và được `destroy()` hoặc trả về **pool** khi entity rời tầm nhìn / chết / đổi khu / rời trận. Một **sổ tài nguyên** đếm số đang sống theo loại; F3 + telemetry hiện các số đó.
+- Pool có **trần** (vd 2× số dùng đỉnh); cache chữ (bảng tên, số bay) là LRU có trần; atlas nhân vật không ai dùng thì nhả (B23 đã làm) — giữ.
+- Mảng lịch sử đều có trần: kill feed 20, chat 50, lỗi 20, mẫu telemetry chưa gửi 200, vết netcode 2 s.
+- Gỡ event listener khi đóng UI; `setInterval`/`setTimeout` có chỗ huỷ.
+- **Bài kiểm rò rỉ** (trước deploy, tự động): chơi 30 phút giả lập + đổi khu 50 lần + chết/vào lại 10 lần → số Texture, GPU MB, JS heap, số display object **không tăng quá 10%** so với phút thứ 5. Tăng → build fail.
+
+**Server**
+- Mọi map theo người chơi/kết nối (AOI `known*`, cooldown, rate limit, cờ nghi hack, sổ kiếm bể 10 s, buffer gửi) **xoá khi người đó rời** + quét định kỳ mỗi 60 s xoá mục mồ côi.
+- Buffer gửi mỗi kết nối có trần; client nghẽn quá trần → bỏ gói cũ (đã có), quá lâu → ngắt.
+- Số goroutine, heap, số entity theo loại ghi vào metrics (§ADMIN 12); **bài kiểm rò rỉ server**: loadtest 1 giờ có người vào/ra liên tục → goroutine và heap về lại mức nền (±10%) sau khi mọi người rời.
+
+
 ## 14. Quái (PvE)
 
 Quái **không gây sát thương**, đi lang thang, chạy khi bị chém, hiện số HP trên người.
@@ -1766,6 +1810,11 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - Việc chủ dự án cần làm: mua tên miền `bladeascend.io` (và nên giữ thêm `bladeascend.com`), kiểm tra trùng tên trên các cổng game .io lớn và cửa hàng ứng dụng, tra nhãn hiệu (WIPO Global Brand Database).
 
 ## 17. Checklist test chấp nhận
+
+- [ ] Ném lỗi giả vào từng hệ thống vẽ (VFX, bảng tên, minimap…) → game chạy tiếp, chỉ hệ thống đó tắt; lỗi giả trong renderer 3 lần → tự dựng lại renderer, không tải trang.
+- [ ] Panic giả trong tick 1 khu → khu đó bỏ 1 tick, các khu khác không ảnh hưởng; panic khi xử lý gói 1 người → chỉ người đó bị ngắt.
+- [ ] F5 giữa trận → trong 20 s vào lại đúng nhân vật (cảnh giới, kiếm, Uy Danh, khu); bị chém trong lúc mất kết nối → chết, F5 xong thấy Tổng kết.
+- [ ] Bài kiểm rò rỉ client 30 phút + server 1 giờ: không chỉ số tài nguyên nào tăng > 10%.
 
 - [ ] Cụ Rùa rụt mai giữa 3 địch: 2s không mất kiếm, không chết; địch trong 4 U bị kéo về 2s; kiếm địch bể rơi thành Bó Kiếm, số kiếm của cụ không tăng.
 

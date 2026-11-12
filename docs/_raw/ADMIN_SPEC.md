@@ -1,4 +1,6 @@
-# ADMIN CONSOLE — Spec v1.5
+# ADMIN CONSOLE — Spec v1.6
+
+**v1.6:** bộ dọn dữ liệu hằng ngày theo chính sách giữ (§13).
 
 **v1.5:** bộ thu gom số liệu phút/giờ/ngày (min/max/avg/p95) + trang Hiệu năng (§12).
 
@@ -266,3 +268,30 @@ Cờ hiện ở dashboard và danh sách; mỗi cờ lưu bằng chứng (số l
 - [ ] Hết giờ → dòng giờ khớp gộp từ các phút (min/max đúng, avg theo trọng số).
 - [ ] Biểu đồ tick Thiên Đình + load máy chồng nhau, có vạch deploy; xuất CSV được.
 - [ ] Bench: thu gom làm tick tăng ≤ 0,1 ms.
+
+---
+
+## 13. Bộ dọn dữ liệu (janitor) (v1.6)
+
+Dữ liệu chỉ được giữ khi còn dùng vào việc gì. Job dọn chạy **mỗi ngày 04:30**, ghi kết quả vào `admin_audit` + trang "Dọn dữ liệu".
+
+| Dữ liệu | Giữ | Sau đó |
+|---|---|---|
+| Mẫu telemetry thô (10 s/lần, client + server) | 14 ngày | đã cuộn vào metrics phút/giờ/ngày (§12) → xoá thô |
+| Metrics phút / giờ / ngày | 14 ngày / 180 ngày / mãi | theo §12 |
+| Mạng chơi (`lives`) | 90 ngày | giữ mãi các mạng đang nằm trên bảng xếp hạng toàn cục (tuần/tháng/mọi thời đại) + thống kê gộp; mạng thường quá 90 ngày → xoá |
+| Lỗi client/server | 30 ngày | gộp theo chữ ký (số lần, build đầu/cuối) giữ mãi |
+| Ảnh góp ý | theo Q28 (thư Xong/Bỏ qua > 90 ngày) | chữ góp ý giữ mãi |
+| Phiên admin hết hạn, lần đăng nhập | 30 ngày | xoá |
+| Cấm đã hết hạn | 30 ngày sau khi hết | xoá |
+| Cờ nghi hack đã xử lý | 90 ngày | xoá |
+| Nhật ký admin (`admin_audit`) | 1 năm | xoá |
+| Mã phiên (§7.1) hết hạn | 1 giờ | xoá |
+| Log file server | xoay vòng 50 MB × 5 tệp | xoá tệp cũ nhất |
+| Image Docker | đã có cron prune 7 ngày | — |
+
+- Sau khi dọn: `VACUUM` SQLite mỗi tuần (giờ vắng nhất); không chạy khi có > 0 người thật online.
+- **Không bao giờ đụng** art / `assets/library` (luật 13), bảng xếp hạng đang hiện, lượt thích, góp ý (chữ).
+- Trang **"Dọn dữ liệu"**: dung lượng từng bảng + tệp DB + thư mục ảnh/log, lần chạy gần nhất (đã xoá bao nhiêu dòng/MB), nút **chạy thử (dry-run)** liệt kê sẽ xoá gì trước khi xoá thật.
+- Cảnh báo dashboard khi DB > 1 GB hoặc tăng > 20%/tuần.
+- Checklist: dry-run in đúng số dòng sẽ xoá; chạy thật xoá đúng số đó; mạng trên bảng xếp hạng toàn cục còn nguyên; DB giảm dung lượng sau VACUUM.
