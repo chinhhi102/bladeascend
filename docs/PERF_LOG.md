@@ -126,6 +126,9 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 37 | 2026-11-12 | `9ba5e3a` | **PixiJS 8.22.0 → 8.23.0 — CHƯA ĐO ĐƯỢC** | S1/S4 | – | – | – | – | – | – | – | – | Máy bận cả ngày: load/nhân **2,17 · 2,59 · 3,87** (12 nhân) — luật 16 cấm kết luận. Nâng cấp vẫn deploy vì nó là bản vá lỗi (#12259 mất texture sau khi đổi ngữ cảnh, #12369 rò bộ nhớ `CanvasTextPipe`) | **B29 mở** — nợ một lượt S1+S4 trước/sau lúc máy rảnh |
 | 38 | 2026-11-12 | `ca3c42f` | **Tối ưu client bước 1 — vòng kiếm xuống GPU** (bể hạt khai TĨNH, bỏ 3 lượt `clear()` mỗi khung) | RINGCOST | – | – | – | – | – | – | – | – | Giá vẽ riêng vòng kiếm (bật/tắt trong cùng lượt, CPU 4×, ~1 050 kiếm, 11–13 người): **+6,87 → +0,19 ms**, FPS −3,1 → ±0,3 | B30 mở — Pixi vẫn vẽ 19,8 ms KHI ĐÃ TẮT HẾT vòng kiếm |
 | 38 | 2026-11-12 | `ca3c42f` | Mốc đầy đủ của bước 1 (bảng `weakperf`, máy rảnh 0,33–0,47/nhân, 3 lượt) | S14 | – | – | – | 60 / 34 / 23 (CPU 1×/4×/6×, trung vị) | – | 325–393 | – | – | **Pixi vẽ 4,00 / 15,89 / 21,72 ms** · toàn bộ JS game 0,99 / 2,18 / 3,63 ms | Mục tiêu CPU 6× p50 ≥ 30 **CHƯA đạt** (23) |
+| 39 | 2026-11-13 | `e756429` | **Cảnh thử cố định `?scene=testbed`** — bàn cân A/B cho mọi lượt tối ưu đồ hoạ | TESTBED | – | – | – | 60 / 60 / 60 (CPU 1×/4×/6×) | – | 23 | – | – | Độ tự lặp so ảnh: **0,002/255 · 32 trên 921 600 pixel**. Đối chứng âm (tắt sạch vòng kiếm): 36/255 · 66% | Thay `weakperf`/`ringcost` ở vai trò SO HAI BUILD |
+| 39 | 2026-11-13 | `26b13cc` → `ca3c42f` | **Đo lại BƯỚC 1 trên cảnh thử** (cùng 23 lô vẽ, cùng 475 nút) | TESTBED | – | – | – | 60/60/54 → 60/60/**60** | – | 23 | – | – | Pixi vẽ **2,52 → 1,27** (1×) · **8,92 → 3,30** (4×) · **14,29 → 5,70 ms** (6×). Hình: lệch 0,001/255, 19 pixel — dưới nhiễu tự lặp | Số cũ "6,87 → 0,19 ms" (#38) **BỎ** — xem §5 #39 |
+| 40 | 2026-11-13 | `e756429` | **B29 — PixiJS 8.22.0 vs 8.23.0** trên cảnh thử, 3 vòng XEN KẼ, máy rảnh 0,37–0,53/nhân | TESTBED | – | – | – | 60 / 60 / 60 ở CẢ HAI bản | – | 23–24 | – | – | Pixi vẽ ms (trung vị 3 vòng) — 8.23: **1,70 / 3,19 / 4,58**; 8.22: **1,62 / 2,87 / 3,95** (CPU 1×/4×/6×). Chênh 0,08–0,63 ms, NHỎ HƠN biên dao động trong cùng một bản (0,96–1,06 ms) | **B29 đóng** — giữ 8.23 |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1259,12 +1262,102 @@ nút), tức là bước 3 của kế hoạch.
 
 ---
 
+### Lượt 39 — 13/11/2026 · Cảnh thử cố định, và vì sao mọi phép so trước nó đều rỗng
+
+**Con số của lượt #38 không chứng minh được gì.** Tôi báo "giá vòng kiếm 6,87 → 0,19 ms".
+Hôm sau chạy LẠI `ringcost.mjs` ba lượt trên ĐÚNG bản build đã tối ưu, máy rảnh:
+
+| lượt | người trong tầm | giá vòng kiếm |
+|---|---:|---:|
+| 1 | 15 | **+19,79 ms** |
+| 2 | 17 | +0,55 ms |
+| 3 | 10 | −0,40 ms |
+
+Tức là "6,87" nằm gọn trong biên nhiễu của chính bài đo. Cùng ngày, `weakperf` trên cùng một
+build, cùng máy rảnh, hai lượt liên tiếp: **185 lô vẽ / 47 FPS** rồi **447 lô vẽ / 23 FPS**.
+
+Nguyên nhân chung một chỗ: **cảnh thật đổi theo bot**. Bao nhiêu người trong tầm, ai đang ở
+cảnh giới nào, vòng kiếm ai đang che ai — mỗi lượt một khác, và biên độ đó lớn hơn thứ đang
+muốn đo. Hai bài ấy vẫn đúng việc của chúng (người chơi thật gặp gì), nhưng **không dùng để
+so hai bản build**.
+
+**Cảnh thử** (`client/src/render/testbed.ts`, `?scene=testbed`, chỉ mở với quyền debug do
+server cấp qua `/api/debug-allowed`): không WebSocket, không bot, giờ đóng băng, camera ghim,
+khung 1280×720 ở `resolution` 1. Bốn hình nộm — Luyện Khí 1 kiếm, Kim Đan 60, Chân Tiên 300
+kèm hào quang Tiên giới, Đạo Tổ 1 050 kiếm — mỗi người một Ô RIÊNG với zoom riêng, vì bán
+kính vòng hai đầu bảng chênh nhau khoảng một trăm lần.
+
+Ba cái bẫy đã sập trong lúc dựng, ghi lại để không ai mất lại hai tiếng:
+
+1. **Đọc pixel bằng `drawImage(canvasWebGL)` cho ảnh RỖNG** (`preserveDrawingBuffer` tắt, và
+   phải tắt). Bài báo "lệch 0,00/255" cho mọi thứ — kể cả khi đối chứng âm tắt sạch vòng
+   kiếm. Phải chụp qua `page.screenshot`.
+2. **So ảnh thô giữa hai phiên** cho 18,8/255 và 37% pixel khác — toàn bộ là NỀN.
+3. **Đồng hồ đóng băng làm nhân vật TÀNG HÌNH.** `PlayerSprite.applyAlpha` đặt
+   `bornAt = now` ở lần gọi đầu rồi mờ dần vào theo `(now − bornAt) / 0,12`; giờ không nhúc
+   nhích thì hiệu đó mãi bằng 0. Ảnh chụp đầu tiên chỉ có vòng kiếm và hào quang, không có
+   người. Cho khung ĐẦU một mốc sớm hơn 1 giây rồi mới đóng băng.
+
+**Độ tự lặp** (hai lần chụp, cùng build): **0,002/255 · 32 trên 921 600 pixel**. Đối chứng âm
+(tắt sạch vòng kiếm): **36/255 · 66%**. Bốn bậc độ lớn giữa nhiễu và tín hiệu — bây giờ mới
+có một bài so ảnh nói được điều gì.
+
+**Đo lại bước 1 trên bàn cân này** (`scenebench.mjs`, cùng cảnh, cùng 23 lô vẽ, 475 nút):
+
+| CPU | Pixi vẽ ms trước | sau | FPS |
+|---|---:|---:|---|
+| 1× | 2,52 | **1,27** | 60 → 60 |
+| 4× | 8,92 | **3,30** | 60 → 60 |
+| 6× | 14,29 | **5,70** | **54 → 60** |
+
+Và hình **không đổi**: 0,001/255, 19 pixel — thấp hơn cả nhiễu tự lặp. Ảnh ở
+`docs/review/13-buoc1-vongkiem/`.
+
+**Còn thiếu:** ba vật cản khai trong bản đồ thử không vẽ ra (art có thật, node có trong cây),
+chưa tìm ra vì sao. Cảnh thử vì thế chưa gác được phần vẽ vật cản.
+
+---
+
+### Lượt 40 — 13/11/2026 · B29: PixiJS 8.22 vs 8.23 (nợ từ 12/11)
+
+Đo trên **cảnh thử cố định**, vì trên cảnh thật phép so này không bao giờ nói được gì
+(xem #39). Mỗi vòng: cài 8.23 → build → đo → cài 8.22 → build → đo; ba vòng.
+
+**Vì sao xen kẽ.** Lần đầu tôi đo tuần tự (ba lượt 8.23 rồi ba lượt 8.22) và kết quả vô
+dụng: tải máy trôi từ 0,22 lên 1,83 trong lúc đo, nên hiệu số đọc ra là hiệu của TẢI MÁY.
+Xen kẽ thì trôi tải rơi đều vào cả hai bên. Cả sáu lượt cuối cùng đều ở 0,37–0,53 tải/nhân.
+
+| CPU | 8.23.0 (trung vị) | 8.22.0 (trung vị) | chênh |
+|---|---:|---:|---:|
+| 1× | 1,70 | 1,62 | +0,08 |
+| 4× | 3,19 | 2,87 | +0,32 |
+| 6× | 4,58 | 3,95 | +0,63 |
+
+FPS **60 ở cả hai bản, ở cả ba mức CPU**. Lô vẽ 23–24, nút cây cảnh 475 — y hệt nhau.
+
+**Kết luận: không có khác biệt đo được.** Chênh lệch 0,08–0,63 ms nhỏ hơn biên dao động
+TRONG CÙNG một bản (8.23: 3,78–4,74 ở CPU 6×, tức 0,96 ms; 8.22: 3,72–4,78, tức 1,06 ms).
+Ba vòng là quá ít để tách một hiệu ứng nhỏ hơn nhiễu, và không có dấu hiệu nào cho thấy
+8.23 "tệ hơn rõ".
+
+**Giữ 8.23.0.** Hai thay đổi của nó là sửa lỗi, không phải đánh đổi hiệu năng: #12259
+(texture mất sau khi WebGL mất rồi lấy lại ngữ cảnh — đúng đường mà `rebuild()` của §13.8 đi
+qua) và #12369 (`CanvasTextPipe` giữ lại texture chữ đã huỷ). Hạ về 8.22 là trả lại hai lỗi
+đó để đổi lấy một con số nằm trong nhiễu.
+
+Ghi chú vận hành: `npm install pixi.js@x` đổi pin chính xác `"8.23.0"` thành dải `"^8.23.0"`.
+Đã trả lại pin — để dải thì một lần `npm install` sau tự nhảy 8.24 và không ai biết bản vừa
+đo là bản nào.
+
+---
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
+| B31 | **Hai bài đo cũ KHÔNG dùng để so hai bản build** | Một lượt tối ưu có thể "chứng minh" được bất cứ điều gì | #39: `ringcost` ba lượt cùng build cho 19,79 · 0,55 · −0,40 ms; `weakperf` hai lượt liên tiếp cho 185 lô vẽ / 47 FPS rồi 447 lô / 23 FPS | **Đóng (#39)** — mọi phép so A/B chuyển sang cảnh thử (`scenebench.mjs`, `scenediff.mjs`). `weakperf`/`ringcost` giữ nguyên vai trò "người chơi thật gặp gì" | #39 |
 | B30 | **Lượt vẽ của Pixi là toàn bộ nút thắt máy yếu, và vòng kiếm KHÔNG còn là phần chính của nó** | Mục tiêu CPU 6× p50 ≥ 30 FPS chưa đạt (đang 23) | #38: ở CPU 4×, tắt SẠCH mọi vòng kiếm thì Pixi vẫn vẽ **19,77 ms** (bật: 19,96). Ở CPU 6×: khung 43,5 ms = Pixi vẽ 21,7 + JS game 3,6 + ~18 ms của trình duyệt. Mọi cột JS cộng lại chưa tới 4 ms | **Mở** — bước kế phải nhắm vào CÂY CẢNH và số lô vẽ (325–393 lô, 2 850–4 800 nút), không nhắm vào mã game. Lớp trạng thái (bước 2 của kế hoạch) đo được 0,07–0,39 ms: không phải chỗ đáng sửa | #38 |
-| B29 | **Nợ phép đo trước/sau cho PixiJS 8.22 → 8.23** | Không biết bản nâng làm FPS tốt lên, xấu đi, hay không đổi — đang deploy mà không có số | #37: máy ở load/nhân 2,17–3,87 suốt ngày 12/11, luật 16 cấm kết luận. #26 vs #27 đã chứng minh máy bận làm lệch p95 gấp ba | **Mở** — cần một lượt S1 + S4 (3 lần mỗi bên, min/max/TB) lúc `load/nhân < 1,5`. So `9ba5e3a^` với `9ba5e3a` | – |
+| B29 | **Nợ phép đo trước/sau cho PixiJS 8.22 → 8.23** | Không biết bản nâng làm FPS tốt lên, xấu đi, hay không đổi — đang deploy mà không có số | #37: máy ở load/nhân 2,17–3,87 suốt ngày 12/11, luật 16 cấm kết luận | **Đóng (#40)** — đo trên cảnh thử, 3 vòng xen kẽ, máy rảnh: FPS 60 ở cả hai bản và cả ba mức CPU; chênh Pixi vẽ 0,08–0,63 ms, nhỏ hơn biên dao động trong cùng một bản (≈1 ms). Giữ 8.23 vì hai thay đổi của nó là sửa lỗi | #40 |
 | B28 | **Rò rỉ bộ nhớ SERVER: 7 MB/phút, 420 MB sau một giờ** | Tiến trình chết trên VPS 1 GB trước khi hết một ca chơi | #36: `cmd/leakcheck` 25 phút → heap 8,2 → 159,0 MB tuyến tính. `pprof -inuse_objects`: `addAmbientOrb` giữ 309 477 object trong khi thế giới chỉ có ~27 000 viên sống | **Đóng (#36)** — hai con trỏ bỏ quên ngoài `len` (`itemGrid.remove`, `Manager.tryClose`). Đo lại 60 phút / 2 703 lượt vào-ra: heap mỗi phòng +2,9 %, hết người thì về 0,92 MB | #36 |
 | B27 | **Server game chạy chung máy với việc nặng của người khác** | Mọi số tick đo trên `:9999` đều có thể là số của CÁI MÁY chứ không của game | #35: server dùng **5% của một nhân** (pprof 1,88 s / 30 s) trong khi máy ở load 47, CPU 89,6%, swap 2 GB cạn — và tick p95 vẫn 17 ms. Mọi hệ thống trong tick đều có `max` 5–20 ms dù TB 0,04–0,17 ms | **Mở** — bộ thu gom §12 nay ghi `load1`/`cpu_pct` máy cạnh tick, và cảnh báo tự nói "có thể do máy bận". Muốn số tick sạch thì phải tách server sang máy riêng, hoặc đo lúc load/nhân < 0,5 | #35 |
 | B26 | **Đường GỬI GÓI là chỗ tốn nhất còn lại khi đông** | Trần người chơi mỗi phòng | #35 pprof sau tối ưu (S13, 110 nhân vật): `snapshotFor` **32% CPU**, trong đó `diffItems` 21%. Trong khu nặng: gửi gói 0,57 ms/tick (31%), va chạm 0,98 ms (54%) | Mở — `diffItems` đã qua hai lượt tối ưu (xem ghi chú trong `broadcast.go`); lượt sau phải nhắm vào SỐ VIÊN gửi đi (4 900 viên/khu) chứ không vi chỉnh vòng lặp | – |
