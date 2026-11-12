@@ -77,3 +77,4 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 0,2026-11-11,,"Người thật 10/11 23:30 → 11/11 12:00",S6,1.81,12.50,19.0,8.1,15.7,1.6,117.0,58.9,4.7,,0,4439,232.2,0,6.11,,,,"ít mẫu, tham khảo (N=3)",3
 33,2026-11-11,ec38aee,"Rò rỉ texture — đo TRƯỚC (5 phút lang thang)",TEXLEAK,,,,,,,,60,,,,5716,202.2,,,,,,,,,,,"118 → 625 texture: +91 texture/phút, +17.9 MB/phút, một chiều",1
 33,2026-11-11,,"Rò rỉ texture — đo SAU (14 phút lang thang)",TEXLEAK,,,,,,,,60,,,,3987,132.9,,,,,,,,,,,"191 → 224 texture (nhấp nhô 168–276, không xu hướng): +2 texture/phút, −0.6 MB/phút",1
+0,2026-11-11,,"Người thật 11/11 12:00 → 11/11 23:30",S6,2.12,12.45,22.0,4.2,20.4,3.9,94.0,45.9,0.3,,111,4448,204.9,0,7.31,,,,"",15
