@@ -640,6 +640,39 @@ khiển. Báo cáo đầy đủ ở **`docs/TICK_NGUOI_THAT.md`**, tóm tắt �
   đã đắt lên từ 06/11 — phải đo lại trên máy rảnh mới dám kết luận) và **B25** (ngưỡng cảnh
   báo 3,5 ms nổ 37,9% thời gian).
 
+## Lượt 12/11 (trưa) — điều tra tick Thiên Đình + bộ thu gom số liệu (ADMIN_SPEC §12)
+
+> Đã deploy `:9999` (build `20261112_1052_286d086`).
+
+**Tick 17,3 ms KHÔNG phải do game.** pprof 30 giây trên chính server đang chạy: không ai
+chơi → 20 ms mẫu CPU (0,067%); 1 client + 110 bot → **1,88 giây, tức 6,26% của MỘT nhân**.
+Cùng lúc đó cái máy ở **load 47 / 12 nhân, CPU 89,6%, swap 2 GB cạn** (một `vitest` của dự
+án khác chiếm 425% CPU suốt buổi). Một tiến trình không tiêu CPU mà tick 17 ms thì nó đang
+**chờ được xếp lịch**, không phải tính lâu. Nút thắt mới **B27**.
+
+**Kỹ năng v6.48 vô can.** Bảng "tick đi đâu" mới (input · bot AI · di chuyển · kỹ năng · va
+chạm · thế giới · chết · gửi gói, đo MỌI tick): cột kỹ năng **0,00–0,01 ms**. Trong kịch bản
+nặng S13 (110 nhân vật, 10 500 kiếm): va chạm 0,98 ms (54%), gửi gói 0,57 (31%), bot AI 0,15.
+B24 đóng.
+
+**Sửa chỗ nóng nhất — bot quét cả khu mỗi tick.** `nearestFarmTarget` duyệt toàn bộ viên
+(**~4 900 viên/khu**), toàn bộ quái và toàn bộ vật cản, cho mỗi bot mỗi tick ≈ 4,4 triệu
+phép đo khoảng cách mỗi giây mỗi khu. Nay chỉ quét trong tầm bằng lưới ô có sẵn (kết quả
+chọn mục tiêu không đổi). Kèm: bỏ `math.Hypot` ở `geom.Vec.Dist`/`Len` và A*.
+**Thời gian CPU cho cùng một trận S13: 25,8 → 19,4 giây (−24,7%)** (đo bằng CPU chứ không
+đồng hồ vì máy đang load 53). Đối chiếu va chạm client↔server sau khi đổi phép căn: lệch
+**0,0000 đơn vị**. Chỗ tốn nhất còn lại là đường gửi gói → **B26**.
+
+**ADMIN_SPEC §12 xong:** bộ thu gom phút/giờ/ngày (`metrics_minute/hour/day` +
+`deploy_marks` trong `server/data/metrics.db`), lấy mẫu 1 giây, **chỉ ghi phút có người
+thật**, p95 gộp được nhờ histogram; kèm load máy / CPU máy / RAM trống / GC / heap /
+goroutine / kiếm trong khu. Chi phí đo được **0,0004 ms mỗi tick, 0 cấp phát** (trần §12 là
+0,1 ms). Trang **Hiệu năng** trong admin: chọn chỉ số/phạm vi/phút-giờ-ngày/khoảng, dải
+min–max + TB + p95 + đường ngân sách + vạch deploy, chồng được 2 chỉ số, bảng + xuất CSV,
+thẻ "giờ tệ nhất 24 h", cảnh báo vượt ngưỡng ≥ 5 phút (tự nói "có thể do máy bận").
+**Còn cần anh duyệt bằng mắt** (checklist §12.4 mục 3): tôi không đăng nhập được trang
+admin nên chưa tự xem được biểu đồ thật.
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
@@ -651,5 +684,7 @@ khiển. Báo cáo đầy đủ ở **`docs/TICK_NGUOI_THAT.md`**, tóm tắt �
 2. Điền email trong `SECURITY.md`.
 3. Xem ảnh trang admin trên staging (`docs/review/11-admin/`) rồi tự đăng nhập thử.
 4. Tìm người bản ngữ duyệt 5 bản dịch + danh sách tên bot (`client/src/i18n/NOTES.md`).
-5. **Đo FPS/GPU trên điện thoại thật** — cũng là thứ mở khoá mục 4 của bảng hiệu năng
+5. **Xem trang Hiệu năng mới** (`/admin/#perf`): kiểm checklist ADMIN_SPEC §12.4 mục 3 —
+   chồng biểu đồ tick Thiên Đình với load máy, thấy vạch deploy, bấm Xuất CSV.
+6. **Đo FPS/GPU trên điện thoại thật** — cũng là thứ mở khoá mục 4 của bảng hiệu năng
    (chất lượng mặc định, đang hoãn chờ số liệu người thật đã lọc).

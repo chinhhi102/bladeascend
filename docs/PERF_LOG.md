@@ -116,6 +116,8 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 29 | 2026-11-02 | `bb1cd96` | v6.36 — WebKit giả lập iPhone, `:9999`, 45 s (load ~6–7) | S9 | – | – | – | 42.4 / – | – | 0 | **107.4** | – | lỗi 0 · 166 texture · 2146 sprite. So #27 (43.2 / 113.1 / 4990 sprite): không tăng | – |
 | 30 | 2026-11-06 | (sau `362258a`) | Máy quay mượt: nhịp khung đều + nội suy nhân vật mình + máy quay đuổi 70 ms (`wallhug.mjs`, headless 60 Hz, 4 lần, dev :9998) | CAM | – | – | – | 60 / – | – | – | – | – | Độ giật máy quay đi thẳng **0,17–0,29 → 0,09–0,15**; khung màn hình đứng im **2–3 % → 0 %**. Nhánh màn tần số cao (vẽ mỗi 2 khung quét): khoảng cách khung p5/p50/p95 32,2 / 33,3 / 34,4 ms | B22 đóng |
 | 33 | 2026-11-11 | `ec38aee` (trước sửa) | **Rò rỉ texture — đo trước**: 1 tab, đi lang thang, `?textrace=1` (dev :9998 / vite :5174) | TEXLEAK | – | – | – | 60 / – | – | – | – | – | 5 phút: **118 → 625 texture**, 82 → 202 MB — **91 texture/phút · +17,9 MB/phút**, một chiều. Nhóm phình: `mapview.noiseMask` 128×128 (387 tấm) | B23 mở |
+| 35 | 2026-11-12 | `286d086` | **Bot chỉ quét mục tiêu TRONG TẦM + bỏ `math.Hypot` ở đường nóng** (đo bằng THỜI GIAN CPU, 2 lượt mỗi bên, cùng seed) | S13 | – | – | – | – | – | – | – | – | **CPU 25,8 → 19,4 giây** cho cùng 120 s trận đấu 110 nhân vật (**−24,7%**) · pprof: `nearestFarmTarget` 8,25% và `math.archHypot` 7,5% **biến mất khỏi top 12** | B26 (đường gửi gói nay là chỗ tốn nhất: `snapshotFor` 32% CPU) |
+| 35 | 2026-11-12 | `286d086` | Như trên — tick đi đâu trong khu nặng nhất (Thiên Đình, 30 nhân vật, 10 500 kiếm) | S13 | 1.83 / 3.40 ✅ | – | – | – | – | – | – | – | va chạm **0,98 ms (54%)** · gửi gói 0,57 (31%) · bot AI 0,15 · **kỹ năng v6.48 0,00** | Kỹ năng KHÔNG phải thủ phạm |
 | 34 | 2026-11-12 | `52adf2e` | **Tick NGƯỜI THẬT 13 ngày** (đọc `server_samples`, 4 963 dòng khu-có-người; `cmd/tickquery`) | S6 | 1.93 / **2.57** ✅ (trung vị p95) | – | – | – | – | – | – | – | Thiên Đình p95 4.80 vs khu khác 1.74–2.97 · 21–30 n.vật p95 5.27 · đông nhất từng gặp **3 người/khu** | B24, B25 mở — và xem §5 #34: cùng build, máy rảnh 2.13 → máy bận 6.03 |
 | 33 | 2026-11-11 | (sau sửa) | **Rò rỉ texture — đo sau**: cùng bài, 14 phút | TEXLEAK | – | – | – | 60 / – | – | – | – | – | 14 phút: **191 → 224 texture** (nhấp nhô 168–276, KHÔNG có xu hướng), 141 → 133 MB (**−0,6 MB/phút**). Mặt nạ nền đứng ở 20 tấm | B23 đóng |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
@@ -1011,12 +1013,90 @@ Mẹo khử nhiễu đã dùng: chia tick khu 0 cho tick **khu đối chứng** 
 lượng việc không đổi) CÙNG BUILD. Tỉ lệ đi từ 1,32–1,91× (trước 06/11) lên 2,37–2,93× (từ
 06/11, ngày lên kỹ năng v6.48 §6.3) — **dấu hiệu, chưa phải kết luận**, xem B24.
 
+### #35 — 12/11/2026 · Điều tra "Thiên Đình p95 17,3 ms" và sửa chỗ nóng nhất (`286d086`)
+
+**Câu hỏi:** tick Thiên Đình p95 17,3 ms / TB 7,9 ms với 2 người + 107 bot, trong khi
+loadtest 110 nhân vật hôm 02/11 chỉ 3,2–3,75 ms. Đi theo đúng thứ tự a → d.
+
+**a) Tải máy.** `tools/cleanup.sh`: KHÔNG có tiến trình mồ côi nào của dự án, nhưng máy chạy
+**load 25–56 trên 12 nhân (2,1–4,7/nhân)** suốt buổi. Thủ phạm là việc NGOÀI dự án:
+`node (vitest)` của một dự án khác chiếm 425% CPU liên tục, cộng VS Code, 4–5 tiến trình
+`claude` và **2 GB swap dùng hết**. Vì vậy mọi số đo ĐỒNG HỒ hôm nay đều phải đọc kèm load,
+và phần so sánh trước/sau ở mục d phải chuyển sang đo **thời gian CPU**.
+
+**b) pprof 30 giây trên chính server `:9999`.** Thêm `/debug/pprof` chỉ mở cho 127.0.0.1
+(`cmd/server/pprof.go`, bật bằng cờ `-pprof`, deploy script đã bật).
+
+| Lần đo | Tổng mẫu CPU trong 30 giây |
+|---|---|
+| Không ai chơi | **20 ms (0,067%)** — phòng đóng, server không tick |
+| 1 client + 110 bot | **1,88 giây (6,26% của MỘT nhân)** |
+
+Top: `bot.wantsGomDon` 5,3% · `bot.nearestFarmTarget.func1` 4,3% · `game.hitMonsters` 4,3% ·
+`game.moveMonsters` 3,2% · `itemGrid.each` 3,2%.
+
+**Đây là câu trả lời cho câu hỏi.** Server dùng **5% của một nhân** (`cpu_pct server` TB
+5,35 · đỉnh 12,05 trong phút 10:55) trong khi cả máy ở **89,6% CPU, load 47**. Một tiến
+trình không tiêu CPU mà tick vẫn 17 ms thì nó không tính toán lâu — nó **chờ được xếp lịch**.
+
+**c) Tick đi đâu (mới).** Mỗi khu nay đếm riêng: input · bot AI · di chuyển · kỹ năng · va
+chạm · thế giới · xử lý chết · AOI+gửi gói. Số liệu thật của Thiên Đình, phút 10:55 trên
+`:9999` (1 người, 30 nhân vật, 64 kiếm):
+
+| | TB (ms) | p95 | max |
+|---|---|---|---|
+| **cả tick** | 0,52 | 1,74 | **19,91** |
+| va chạm | 0,17 | 0,27 | **19,71** |
+| bot AI | 0,16 | 0,52 | 6,67 |
+| di chuyển | 0,14 | 0,18 | 7,30 |
+| thế giới | 0,04 | 0,06 | 5,35 |
+| kỹ năng | 0,00 | 0,01 | 0,66 |
+| gửi gói | 0,00 | 0,00 | 0,00 |
+
+Cột `max` là bằng chứng rõ nhất: một hệ thống TB 0,04 ms không thể đột nhiên làm thật 5,35
+ms. Cú khựng rơi vào hệ thống nào đang chạy lúc đó — và tổng tick max 19,91 ≈ va chạm max
+19,71, tức **một lần dừng duy nhất**, không phải nhiều chỗ cùng chậm.
+
+Trong kịch bản NẶNG (S13, 10 500 kiếm) thì phân bố khác hẳn: va chạm 0,98 ms (54%) và gửi
+gói 0,57 ms (31%) — đó mới là chỗ tốn thật khi đông.
+
+**d) Loadtest 110 nhân vật, so với 02/11.** Kỹ năng v6.48 **không** làm tick tăng: cột kỹ
+năng đo được **0,00–0,01 ms**. Chỗ nóng nhất là `bot.nearestFarmTarget` — mỗi bot, mỗi tick,
+duyệt **toàn bộ** vật phẩm trong khu (`items` đo được **~4 900 viên/khu**), toàn bộ quái và
+**toàn bộ vật cản bản đồ**: 30 bot × 4 900 × 30 tick/giây ≈ **4,4 triệu phép đo khoảng cách
+mỗi giây mỗi khu**, 99,9% kết quả bị vứt vì ở quá xa.
+
+Sửa: dùng lưới ô có sẵn (`ItemsNear`, `QueryObstacles`) với bán kính bao = `bestD*1,2` —
+**kết quả chọn mục tiêu không đổi** vì `bestD` chỉ giảm. Kèm theo: `geom.Vec.Dist`/`Len` và
+A* (`world/grid.go`) bỏ `math.Hypot` (chống tràn số cho toạ độ cỡ 1e150; bản đồ lớn nhất
+16 384 đơn vị) → `math.Sqrt` + bảng giá bước đi sẵn.
+
+Đo trước/sau bằng **thời gian CPU** chứ không đồng hồ — máy đang load 53 nên đồng hồ vô
+nghĩa, còn khối lượng việc của S13 thì cố định (số tick cố định, cùng seed):
+
+| | lượt 1 | lượt 2 | TB |
+|---|---|---|---|
+| trước (`9f73c6e`) | 25,41 s | 26,13 s | 25,77 s |
+| sau (`286d086`) | 18,87 s | 19,94 s | **19,41 s (−24,7%)** |
+
+pprof sau khi sửa: `nearestFarmTarget` và `math.archHypot` **không còn trong top 12**. Chỗ
+tốn nhất bây giờ là đường gửi gói (`snapshotFor` 32% CPU, `diffItems` 21%) → nút thắt B26.
+
+Đối chiếu va chạm client↔server sau khi đổi phép căn: **lệch lớn nhất 0,0000 đơn vị**, 0 bước
+quá ngưỡng. `go test ./...` 468 test xanh.
+
+**Bộ thu gom số liệu (ADMIN_SPEC §12)** đi kèm lượt này: lấy mẫu 1 giây, gom mỗi phút, chỉ
+ghi phút có người thật, kèm load máy + GC + heap + goroutine. Bench chi phí:
+**0,0004 ms/tick, 0 lần cấp phát** — dưới trần 0,1 ms của §12 hai trăm năm mươi lần.
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
+| B27 | **Server game chạy chung máy với việc nặng của người khác** | Mọi số tick đo trên `:9999` đều có thể là số của CÁI MÁY chứ không của game | #35: server dùng **5% của một nhân** (pprof 1,88 s / 30 s) trong khi máy ở load 47, CPU 89,6%, swap 2 GB cạn — và tick p95 vẫn 17 ms. Mọi hệ thống trong tick đều có `max` 5–20 ms dù TB 0,04–0,17 ms | **Mở** — bộ thu gom §12 nay ghi `load1`/`cpu_pct` máy cạnh tick, và cảnh báo tự nói "có thể do máy bận". Muốn số tick sạch thì phải tách server sang máy riêng, hoặc đo lúc load/nhân < 0,5 | #35 |
+| B26 | **Đường GỬI GÓI là chỗ tốn nhất còn lại khi đông** | Trần người chơi mỗi phòng | #35 pprof sau tối ưu (S13, 110 nhân vật): `snapshotFor` **32% CPU**, trong đó `diffItems` 21%. Trong khu nặng: gửi gói 0,57 ms/tick (31%), va chạm 0,98 ms (54%) | Mở — `diffItems` đã qua hai lượt tối ưu (xem ghi chú trong `broadcast.go`); lượt sau phải nhắm vào SỐ VIÊN gửi đi (4 900 viên/khu) chứ không vi chỉnh vòng lặp | – |
 | B25 | **Ngưỡng cảnh báo tick 3,5 ms nổ 37,9% thời gian** | Cảnh báo nổ hơn một phần ba thời gian là cảnh báo không ai đọc nữa | #34: 4 963 dòng khu-có-người, 1 883 dòng vượt 3,5 ms. Thiên Đình riêng nó vượt 61,3% vì sàn bot 30 | Mở — hoặc nâng ngưỡng, hoặc đặt ngưỡng RIÊNG theo khu | – |
-| B24 | **Khu đông có thể đã đắt lên từ 06/11 (v6.48 §6.3)** | Chưa biết là thoái lui thật hay nhiễu của máy | #34: tick khu 0 chia cho khu đối chứng cùng build (khử nhiễu máy) đi từ 1,32–1,91× (02–05/11) lên 2,37–2,93× (từ 06/11). Mẫu nhỏ, máy nhiễu, thành phần bot cũng đổi | Mở — phải chạy S12/S13 trên **máy rảnh** ở `d2f1331` và commit hiện tại, cùng seed, mới kết luận được | – |
+| B24 | ~~**Khu đông có thể đã đắt lên từ 06/11 (v6.48 §6.3)**~~ | – | #34 nghi kỹ năng v6.48; #35 đo thẳng: cột **kỹ năng 0,00–0,01 ms/tick** trong cả S13 lẫn trên `:9999`. Phần đắt là va chạm (54%) và gửi gói (31%), cả hai có từ trước 06/11 | **Đóng (#35)** — không phải kỹ năng. Phần tick tăng còn lại quy về B27 (máy bận) và B26 (gửi gói) | #35 |
 | B23 | **Rò rỉ texture: càng chơi lâu bộ nhớ GPU càng phình, 120 MB → 1,4 GB** | Người chơi lâu bị `gpu_pressure`, tự hạ chất lượng rồi **mất ngữ cảnh WebGL** (màn hình trắng / tab bị thu hồi). Trên iPhone là bị Safari giết tab | Telemetry build `ec38aee`: một phiên 55 phút **1 431 MB / 13 736 texture**; 3 phiên dài khác 812–1 117 MB. `TEXLEAK` tái hiện được: +91 texture/phút, nhóm phình là `mapview.noiseMask` | **Đóng (#33)** — mặt nạ nền huỷ theo ô, `MapView.destroy()` khi đổi khu. Đo lại 14 phút: không còn xu hướng tăng | #33 |
 | B22 | **Trong cột "người", VÒNG KIẾM và LỚP TRẠNG THÁI ăn 2/3 thời gian** | Máy yếu tụt FPS khi đông người | `weakperf.mjs` (bảng mốc CON, 11/11): CPU 4× cột `players` 4,96 ms, chia ra thân 0,46 · bảng tên 0,41 · **vòng kiếm 1,35** · **trạng thái 1,42**. Bảng tên luôn rẻ nhất | **Đóng (11/11)** — xem lượt #28 ngay dưới: vòng kiếm thành container chỉ xoay, lớp trạng thái chỉ vẽ lại khi đổi | #28 |
 | B21 | ~~"Nhìn người chạy nhanh từ tab khác nhảy cóc 3,5%"~~ — **lỗi PHÉP ĐO** | Đã đuổi theo một con số sai suốt hai lượt | Bài cũ lấy vị trí sprite theo nhịp `rAF` của chính nó rồi chia cho giờ máy; nhịp ấy lệch nhịp vẽ của game nên một khung đo "thấy" hai khung vẽ gộp lại. Cùng một lượt: 2 807 đv/s theo nhịp bài, 816 đv/s theo VẾT trong vòng vẽ, trong khi cặp gói đang nội suy chỉ đi 939 đv/s (trần 975) | **Đóng (Q48)** — client ghi vết (thời điểm vẽ, x, y, tốc độ dữ liệu) trong chính vòng vẽ; đo lại 3 lượt máy rảnh: 0 nhảy cóc, 0 đứng hình. Cổng deploy canh 0/0 | Q48 |
