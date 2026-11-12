@@ -39,6 +39,8 @@ type server struct {
 	// tắt thu gom — mọi chỗ dùng phải kiểm nil.
 	metricsDB *metrics.DB
 	metrics   *metrics.Collector
+	// janitor: bộ dọn dữ liệu hằng ngày (ADMIN_SPEC §13). nil khi chưa dựng.
+	janitor *admin.Janitor
 	// adminAuth không bao giờ nil, nhưng `Enabled()` là false khi chưa đặt
 	// ADMIN_PASSWORD_HASH — lúc đó mọi đường dẫn /admin đều đóng (ADMIN_SPEC §1).
 	adminAuth *admin.Auth

@@ -35,6 +35,10 @@ type zoneStat struct {
 	// HotSecs: tick p95 > admin.tick_warn_ms liên tục bao lâu (giây). Dashboard cảnh báo khi
 	// ≥ admin.tick_warn_secs.
 	HotSecs float64 `json:"hot_secs"`
+	// Degraded / Panics: khu đã bắt được panic (GAME_SPEC §13.8). `degraded` bật khi
+	// panic ≥ 3 lần/phút, và tự tắt sau 5 phút im.
+	Degraded bool `json:"degraded,omitempty"`
+	Panics   int  `json:"panics,omitempty"`
 }
 
 type roomStat struct {
@@ -78,6 +82,13 @@ type adminStats struct {
 	// Đếm loại chứ không đếm lần: một lỗi trong vòng vẽ bắn 60 lần/giây, và con số "18 432"
 	// ở thanh bên chỉ nói lên rằng có ai đó đang mở tab, không nói có mấy vấn đề.
 	ErrorsToday int `json:"errors_today"`
+	// DBWarning: câu cảnh báo khi tệp dữ liệu vượt 1 GB (ADMIN_SPEC §13). Rỗng = ổn.
+	//
+	// Nằm ở dashboard chứ không chỉ ở trang "Dọn dữ liệu": trang đó là nơi người ta vào
+	// KHI ĐÃ BIẾT có vấn đề, còn đây là nơi duy nhất họ mở mỗi ngày.
+	DBWarning string `json:"db_warning,omitempty"`
+	// Degraded: khu đang "suy giảm" vì panic ≥ 3 lần/phút (GAME_SPEC §13.8).
+	Degraded []string `json:"degraded,omitempty"`
 }
 
 func (s *server) handleAdminStats(w http.ResponseWriter, _ *http.Request) {
@@ -96,6 +107,10 @@ func (s *server) collectStats() adminStats {
 		if g, err := s.telemetry.RecentErrors(24*time.Hour, time.Now()); err == nil {
 			st.ErrorsToday = len(g)
 		}
+	}
+
+	if s.janitor != nil {
+		st.DBWarning = s.janitor.DBWarning()
 	}
 
 	var ms runtime.MemStats
@@ -145,6 +160,12 @@ func (s *server) zoneStat(r *room.Room, i int, st *adminStats) zoneStat {
 		TickAvg: avg, TickP95: p95, HotSecs: z.TickHotSecs(),
 		Monsters: len(g.Monsters), Items: g.ItemCount(),
 		TopLevel: -1,
+	}
+	if h := z.Health(time.Now()); h.Panics > 0 {
+		zs.Degraded, zs.Panics = h.Degraded, h.Panics
+		if h.Degraded {
+			st.Degraded = append(st.Degraded, z.Name)
+		}
 	}
 	for _, o := range g.Obstacles {
 		if o.Broken {

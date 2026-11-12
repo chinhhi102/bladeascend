@@ -697,14 +697,78 @@ hẳn**, Chrome báo "Trang không phản hồi". Báo cáo đầy đủ ở **`
 - 941 dòng `tick chậm` trong log giờ 09–10 là **nhiễu do máy bận** (4,80 tải/nhân lúc kiểm,
   luật 16) — không rút kết luận gì từ đó.
 
+## Lượt 12/11 (chiều–tối) — spec v6.53: chống sập, vào lại phiên, vệ sinh bộ nhớ, janitor
+
+Làm theo đúng thứ tự chủ dự án giao. Mỗi mục một commit.
+
+### 1. §13.8 chống sập — ĐÃ SỬA lỗi đứng hình của lượt trước
+
+Đây chính là việc số 1 của danh sách "Việc tiếp theo" lượt trước (`docs/LOI_DUNG_HINH.md`).
+
+- **Client** (`client/src/render/guard.ts` mới): mỗi hệ thống vẽ là một ranh giới. Lỗi →
+  tắt riêng nó 2 giây; lỗi ≥ 3 lần/10 giây → tắt hẳn tới hết mạng. 14 ranh giới.
+- Lỗi trong khâu VẼ của Pixi → bỏ khung + tắt mọi bộ lọc; lặp 3 lần/10 giây → **dựng lại
+  renderer + cây cảnh** (không tải lại trang); dựng lại hỏng → tải lại + vào lại phiên §7.1.
+  Phải **giành lại quyền gọi `render()`** từ `TickerPlugin` thì mới đặt được `try/catch`
+  quanh nó — để nguyên thì lỗi ném ra từ trong ticker của Pixi, đúng như lỗi 12/11.
+- Watchdog: 3 giây không có khung (tab đang hiện) → khởi động lại ticker; vẫn chết → dựng lại.
+- Mỗi gói tin (`conn.receive`) và mỗi nút bấm (`ui/dom.button`) có try/catch riêng.
+- **Server** (`server/internal/safe` mới): `recover()` ở bốn ranh giới — tick khu, gói tin
+  một người, goroutine nền, request HTTP. Panic 1 tick → bỏ tick của KHU đó, 4 khu kia chạy
+  tiếp. Panic ≥ 3 lần/phút ở một khu → cờ "suy giảm" lên dashboard. Panic khi xử lý gói →
+  ngắt đúng người đó.
+- Panic server lên trang "Lỗi người chơi" (loại `server_panic`), gom theo chữ ký.
+- **Lỗi giả để nghiệm thu** (§17): `kx.fault('vfx', 3)`, `kx.faultDraw(3)` ở client;
+  lệnh test `panic` n=0/1/2 ở server.
+
+### 2. PixiJS 8.22 → 8.23
+
+Hai bản vá đi thẳng vào phần trên: **#12259** (filter cảnh báo texture đã huỷ sau resize) và
+**#12369** (texture lấy từ pool đúng resolution). Gói tăng 0,3 kB gzip.
+
+### 3. §7.1 vào lại phiên khi F5 (`server/internal/room/resume.go`, `client/src/net/session.ts`)
+
+Mã phiên 32 byte; mất kết nối thì nhân vật **ở lại thế giới 20 giây** — đứng yên, vòng kiếm
+vẫn quay, **vẫn chém chết được**, không nhặt đồ. Nối lại kèm mã → đúng nhân vật cũ, cấp mã
+mới. Tab thứ 2 chiếm nhân vật, tab cũ thấy "Bạn đang chơi ở tab khác". Chết trong lúc mất
+kết nối → quay lại thấy màn Tổng kết. **Thay hẳn `pendingRejoin`**: mọi đường tải lại trang
+giờ đi chung một cơ chế. Giao thức lên v7.
+
+### 4. §13.9 vệ sinh bộ nhớ — tìm ra HAI rò rỉ THẬT
+
+Bài kiểm mới (`server/cmd/leakcheck`) chạy 60 phút game bằng đồng hồ giả và bắt được ngay:
+
+- **`itemGrid.remove` bỏ quên con trỏ ở ô cuối** (`c[:last]` hạ `len` nhưng mảng nền vẫn
+  giữ con trỏ). Mọi viên EXP đã nhặt KHÔNG BAO GIỜ được thu hồi → heap server **+7 MB/phút,
+  420 MB sau một giờ**. Đủ giết tiến trình trên VPS 1 GB.
+- **`Manager.tryClose` bỏ quên con trỏ phòng** — cùng họ lỗi, nhưng một `*Room` là cả một
+  thế giới ≈ 13 MB. Sau khi mọi phòng đóng, heap vẫn còn nguyên một thế giới.
+
+Sau khi sửa, 60 phút / 2 703 lượt vào-ra: heap mỗi phòng **+2,9 %**, mọi thứ về mức nền khi
+hết người. Thêm: sổ tài nguyên client (F3 + telemetry), trần pool chữ nổi, trần vết netcode
+(40 000 → 1 200 số), trần hàng sự kiện telemetry, quét mục mồ côi mỗi 60 giây ở server.
+
+### 5. ADMIN §13 janitor
+
+Job 04:30, bảng giữ dữ liệu đúng spec, **gộp trước khi xoá** (chữ ký lỗi và thống kê mạng
+chơi theo ngày giữ mãi), VACUUM tuần và chỉ khi 0 người online, trang "Dọn dữ liệu" có bản
+xem trước chạy sẵn, cảnh báo dashboard khi dữ liệu > 1 GB.
+
+### Ghi chú
+
+- `TestBotFillToTarget` đỏ ngẫu nhiên ~1/25 lần từ lâu (hạt giống phòng lấy từ `time.Now()`);
+  đã sửa bài test, 120/120 lần chạy đều xanh.
+- Cổng deploy có thêm hai bài rò rỉ. Bài client chạy **30 phút thật** theo spec — hạ bằng
+  `LEAK_MINUTES=8 tools/deploy.sh`, bỏ bằng `SKIP_LEAK=1`.
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
 > người (hoặc Claude) hỏi lại thứ anh đã trả lời rồi. Ngày 05/11 đã dính đúng vậy với ảnh OG.
 
-1. **SỬA LỖI ĐỨNG HÌNH** (`docs/LOI_DUNG_HINH.md` §5) — người chơi thật đã dính 12/11, game
-   chết cứng phải tải lại trang. Việc đầu tiên không cần biết nguyên nhân gốc: bọc
-   `try/catch` + đồng hồ canh quanh thân ticker (`client/src/main.ts:155`).
+1. **Xem lại cổng rò rỉ của deploy**: bài client chạy 30 phút THẬT mỗi lần deploy (spec
+   §13.9 ghi "trước deploy, tự động"). Nếu thấy quá dài thì chốt một con số ngắn hơn và tôi
+   sửa mặc định — đừng để nó thành thói quen gõ `SKIP_LEAK=1`.
 2. Xem ảnh **bong bóng mặt** (`docs/review/emote/`, 3 PC + 3 iPhone) — Q44 đã đóng, code đã
    chạy, chỉ còn duyệt bằng mắt. Thấy chướng thì chỉnh `R` (cỡ) hoặc `LIFE` (thời gian hiện)
    trong `client/src/render/emote.ts`.

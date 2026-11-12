@@ -60,6 +60,11 @@ func main() {
 	// Bộ thu gom số liệu hiệu năng (ADMIN_SPEC §12). Mặc định bật cùng telemetry.
 	metricsDBPath := flag.String("metrics-db", "", "SQLite số liệu hiệu năng (mặc định: server/data/metrics.db)")
 	buildID := flag.String("build", "", "mã build ghi kèm mọi số liệu (mặc định: thời điểm khởi động)")
+	// In danh sách bộ dọn SẼ xoá rồi thoát, không mở cổng, không xoá gì (ADMIN_SPEC §13).
+	//
+	// Có cờ này để xem được danh sách mà KHÔNG phải đăng nhập trang quản trị và KHÔNG phải
+	// chờ tới 04:30 — đúng yêu cầu "chạy dry-run lần đầu, gửi danh sách trước khi chạy thật".
+	janitorDry := flag.Bool("janitor-dryrun", false, "in danh sách bộ dọn sẽ xoá rồi thoát (không xoá gì)")
 	flag.Parse()
 
 	if *cpuProf != "" {
@@ -147,6 +152,13 @@ func main() {
 	}
 	if srv.metrics != nil {
 		safe.Go("nen", nil, func() { srv.runMetricsCollector(stopSampler) })
+	}
+	// Bộ dọn dữ liệu hằng ngày 04:30 (ADMIN_SPEC §13). Chạy kể cả khi tắt telemetry — lúc
+	// đó nó chỉ dọn DB quản trị, và đó vẫn là dữ liệu có hạn giữ.
+	srv.startJanitor(stopSampler)
+	if *janitorDry {
+		srv.printJanitorPlan()
+		return
 	}
 	// Chưa chạy pipeline thì `assets/dist` rỗng và game vào trận với placeholder trắng
 	// trơn. Chuyện đó phải nói ngay ở dòng log đầu tiên: lần trước thiếu hai tệp font,

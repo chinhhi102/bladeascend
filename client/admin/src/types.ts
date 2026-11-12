@@ -16,6 +16,10 @@ export interface ZoneStat {
   broken_obstacles: number;
   /** Tick p95 > ngưỡng cảnh báo liên tục bao lâu (giây). */
   hot_secs?: number;
+  /** Khu "suy giảm": panic ≥ 3 lần/phút (GAME_SPEC §13.8). Tự tắt sau 5 phút im. */
+  degraded?: boolean;
+  /** Tổng số panic đã bắt ở khu này từ lúc khởi động. */
+  panics?: number;
 }
 
 export interface RoomStat {
@@ -37,6 +41,10 @@ export interface Stats {
   feedback_new: number;
   flagged: number;
   errors_today: number;
+  /** Cảnh báo dung lượng dữ liệu > 1 GB (ADMIN_SPEC §13). */
+  db_warning?: string;
+  /** Tên các khu đang "suy giảm" vì panic lặp lại (GAME_SPEC §13.8). */
+  degraded?: string[] | null;
 }
 
 export interface Me {

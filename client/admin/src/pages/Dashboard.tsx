@@ -155,6 +155,41 @@ function HotZones({ s }: { s: Stats }): ReactNode {
   );
 }
 
+/**
+ * HealthAlerts — hai cảnh báo "có gì đó đang hỏng", tách khỏi nhóm cảnh báo hiệu năng:
+ *
+ *  - **Khu suy giảm** (GAME_SPEC §13.8): khu bắt được panic ≥ 3 lần/phút. Game vẫn chạy
+ *    (lớp chống sập bỏ tick hỏng), nên không có gì trong số liệu hiệu năng nói ra điều
+ *    này — đây là chỗ duy nhất thấy được.
+ *  - **Dữ liệu > 1 GB** (ADMIN_SPEC §13): tới ngưỡng này thì VPS 1 GB RAM bắt đầu nguy.
+ */
+function HealthAlerts({ s }: { s: Stats }): ReactNode {
+  const zones = s.degraded ?? [];
+  return (
+    <>
+      {zones.length ? (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message={`Khu suy giảm (panic lặp lại): ${zones.join(' · ')}`}
+          description="Lớp chống sập §13.8 đang bỏ tick hỏng để game chạy tiếp. Xem trang Lỗi người chơi, lọc loại “Panic server”."
+          action={<a onClick={() => go('errors')}>Xem trang Lỗi</a>}
+        />
+      ) : null}
+      {s.db_warning ? (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message={s.db_warning}
+          action={<a onClick={() => go('janitor')}>Mở Dọn dữ liệu</a>}
+        />
+      ) : null}
+    </>
+  );
+}
+
 /** PerfAlerts: cảnh báo của bộ thu gom §12 — vượt ngân sách liên tục ≥ 5 phút. */
 function PerfAlerts(): ReactNode {
   const sum = useFetch<{ alerts: { metric: string; scope: string; message: string }[] | null }>('/api/admin/metrics/summary', 60000);
@@ -186,6 +221,7 @@ export function DashboardPage(): ReactNode {
   return (
     <div>
       {error ? <Alert type="warning" showIcon message={`Mất kết nối một nhịp: ${error}`} style={{ marginBottom: 12 }} /> : null}
+      <HealthAlerts s={now} />
       <PerfAlerts />
       <HotZones s={now} />
       <Typography.Text type="secondary">{`Cập nhật ${new Date(now.at * 1000).toLocaleTimeString('vi-VN')} · mũi tên so với ~1 phút trước`}</Typography.Text>

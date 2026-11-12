@@ -60,6 +60,9 @@ func (s *server) adminRoutes(mux *http.ServeMux, adminDir string) {
 	mux.HandleFunc("GET /api/admin/metrics.csv", s.adminGuard(s.handleAdminMetricsCSV))
 	mux.HandleFunc("GET /api/admin/metrics/catalog", s.adminGuard(s.handleAdminMetricsCatalog))
 	mux.HandleFunc("GET /api/admin/metrics/summary", s.adminGuard(s.handleAdminMetricsSummary))
+	// Trang "Dọn dữ liệu" (ADMIN_SPEC §13) — janitor.go.
+	mux.HandleFunc("GET /api/admin/janitor", s.adminGuard(s.handleAdminJanitor))
+	mux.HandleFunc("POST /api/admin/janitor/run", s.adminGuard(s.handleAdminJanitorRun))
 	// CÔNG KHAI: người chơi gửi góp ý (§9). Có rate limit trong `AddFeedback`.
 	mux.HandleFunc("POST /api/feedback", s.handleFeedback)
 	mux.Handle("GET /admin/", s.adminPageGuard(adminDir))

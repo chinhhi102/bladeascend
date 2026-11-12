@@ -13,6 +13,7 @@ import { CharsPage } from './pages/Chars';
 import { DashboardPage } from './pages/Dashboard';
 import { ErrorsPage } from './pages/Errors';
 import { FeedbackPage } from './pages/Feedback';
+import { JanitorPage } from './pages/Janitor';
 import { PerfPage } from './pages/Perf';
 import { PlayersPage } from './pages/Players';
 import { RoomsPage } from './pages/Rooms';
@@ -65,6 +66,7 @@ const PAGES: PageDef[] = [
   { key: 'bans', label: 'Danh sách cấm', render: () => <BansPage /> },
   { key: 'chars', label: 'Nhân vật', render: () => <CharsPage /> },
   { key: 'board', label: 'Bảng xếp hạng', render: () => <BoardPage /> },
+  { key: 'janitor', label: 'Dọn dữ liệu', render: () => <JanitorPage /> },
   { key: 'audit', label: 'Nhật ký', render: () => <AuditPage /> },
 ];
 

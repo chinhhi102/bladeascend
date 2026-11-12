@@ -60,6 +60,12 @@ type ErrorGroup struct {
 // Bỏ SỐ khỏi chữ ký: tên tệp có hash đổi mỗi lần build (`index-CzSoRTTv.js:896:28935`), nên
 // giữ số lại thì cùng một lỗi ở hai bản build thành hai nhóm, và không bao giờ thấy được
 // "lỗi này đã có từ tuần trước".
+// ErrorSig là bản xuất ra ngoài của `errorSig` — `admin.Janitor` gộp chữ ký lỗi trước khi
+// xoá dòng thô (ADMIN_SPEC §13) và PHẢI dùng đúng hàm này, không viết lại bằng SQL: hai
+// định nghĩa cho cùng một chữ ký thì tới ngày chúng lệch nhau, bảng gộp và trang "Lỗi" nói
+// hai con số khác nhau cho cùng một lỗi.
+func ErrorSig(kind, msg string) string { return errorSig(kind, msg) }
+
 func errorSig(kind, msg string) string {
 	// Sự kiện KHÔNG phải ngoại lệ JavaScript (`gpu_pressure`, `webgl_context_lost`) chở
 	// JSON SỐ LIỆU, không phải thông báo. Gộp cả loại làm MỘT nhóm.
