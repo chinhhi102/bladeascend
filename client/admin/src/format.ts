@@ -60,6 +60,11 @@ export const ERR_LABEL: Record<string, string> = {
   error: 'Lỗi JavaScript',
   webgl_context_lost: 'Mất ngữ cảnh WebGL (màn hình trắng)',
   gpu_pressure: 'Chạm trần bộ nhớ đồ hoạ',
+  // Hai loại dưới đây đến từ lớp chống sập §13.8 — chúng là những lần game ĐÃ TỰ CỨU mình.
+  // Vẫn phải hiện ở đây: người chơi không bao giờ báo mấy lỗi này (với họ game vẫn chạy),
+  // nên đây là chỗ duy nhất biết được chúng có xảy ra hay không.
+  server_panic: 'Panic server (đã bắt được)',
+  client_sys_off: 'Client phải tắt một hệ thống',
 };
 
 /** BAN_SPANS: thời hạn §6.2. 0 = chỉ mời ra, -1 = vĩnh viễn. */

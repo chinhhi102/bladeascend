@@ -2,6 +2,7 @@
 package room
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"sort"
@@ -11,6 +12,7 @@ import (
 	"bladeascend/server/internal/config"
 	"bladeascend/server/internal/game"
 	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/safe"
 	"bladeascend/server/internal/store"
 	"bladeascend/server/internal/wire"
 	"bladeascend/server/internal/world"
@@ -320,8 +322,23 @@ func (r *Room) Clients() []*Client {
 // 4 ms; đặt ngưỡng cao hơn hẳn để chỉ bắt những lần thật sự bất thường.
 const slowStepMs = 25.0
 
+// Step advances one tick.
+//
+// Mọi phần của tick chạy trong `safe.Do` (GAME_SPEC §13.8): một panic chỉ làm **bỏ phần
+// đó của tick này**, phòng chạy tiếp ở tick sau. Chia nhỏ theo ranh giới có sẵn — mỗi khu
+// một lần bọc, phần chung của phòng một lần bọc — nên một khu hỏng không kéo bốn khu kia
+// theo, đúng dòng checklist §17 ("panic giả trong tick 1 khu → các khu khác không ảnh hưởng").
 func (r *Room) Step(dt float64) {
 	stepStart := time.Now()
+	safe.Do("tick", r.detail, func() { r.stepInner(dt, stepStart) })
+}
+
+// detail là bối cảnh gắn kèm panic ở mức phòng. Hàm riêng để `safe.Do` chỉ gọi khi CÓ panic.
+func (r *Room) detail() string {
+	return fmt.Sprintf("phòng %s · %d khu · %d người · %d bot", r.ID, len(r.zones), r.Humans(), r.Bots())
+}
+
+func (r *Room) stepInner(dt float64, stepStart time.Time) {
 	r.drainInbox()
 	r.snapshotRanks()
 	// Chốt cấu hình phòng và công tắc bot một lần, TRƯỚC khi các khu chạy song song:
@@ -333,14 +350,17 @@ func (r *Room) Step(dt float64) {
 	// dữ liệu của khu khác: việc duy nhất đi qua ranh giới là chuyển người, và nó gom vào
 	// hàng chờ riêng của từng khu rồi chạy SAU khi mọi khu đã xong.
 	if len(r.zones) == 1 {
-		r.stepZone(r.zones[0], dt)
+		r.stepZoneSafe(r.zones[0], dt)
 	} else {
 		var wg sync.WaitGroup
 		for _, z := range r.zones {
 			wg.Add(1)
+			// `recover()` PHẢI nằm trong chính goroutine bị panic — một `recover` ở Step
+			// không cứu được goroutine con, cả tiến trình vẫn chết. Đó là lý do lời bọc nằm
+			// ở đây chứ không chỉ ở ngoài.
 			go func(z *Zone) {
 				defer wg.Done()
-				r.stepZone(z, dt)
+				r.stepZoneSafe(z, dt)
 			}(z)
 		}
 		wg.Wait()
@@ -359,8 +379,36 @@ func (r *Room) Step(dt float64) {
 	}
 }
 
+// stepZoneSafe chạy một tick của khu trong lớp bắt panic (§13.8).
+//
+// Panic → bỏ tick đó của khu, ghi stack + bối cảnh, khu chạy tiếp ở tick sau. Panic ≥ 3
+// lần/phút ở cùng một khu → đánh dấu khu "suy giảm" để trang quản trị thấy: lúc đó khu
+// vẫn chạy, nhưng nó đang hỏng đều đặn chứ không phải trục trặc một lần.
+func (r *Room) stepZoneSafe(z *Zone, dt float64) {
+	if safe.Do("tick", func() string { return z.panicDetail(r) }, func() { r.stepZone(z, dt) }) {
+		z.notePanic(time.Now())
+	}
+}
+
+// panicDetail: khu nào, tick thứ mấy, có những ai — những thứ cần để dựng lại tình huống.
+// Spec §13.8 đòi "ghi stack + entity liên quan".
+func (z *Zone) panicDetail(r *Room) string {
+	ids := make([]uint32, 0, 8)
+	for id := range z.clients {
+		ids = append(ids, id)
+		if len(ids) >= 8 {
+			break
+		}
+	}
+	return fmt.Sprintf("phòng %s · khu %s (#%d) · tick %d · %d người %v · %d bot",
+		r.ID, z.Name, z.Index, z.tick, len(z.clients), ids, len(z.brains))
+}
+
 // stepZone chạy một tick cho MỘT khu.
 func (r *Room) stepZone(z *Zone, dt float64) {
+	if z.panicNextTick.Swap(false) {
+		panic("lỗi giả: tick khu " + z.Name + " (lệnh test)")
+	}
 	stepStart := time.Now()
 	r.applyInputs(z)
 	tIn := time.Now()
@@ -416,7 +464,9 @@ func (r *Room) drainInbox() {
 	for {
 		select {
 		case fn := <-r.inbox:
-			fn()
+			// Mỗi việc trong hộp thư là một ranh giới riêng: nó đến từ một request HTTP
+			// hoặc một gói của một người, và một việc hỏng không được kéo theo cả tick.
+			safe.Do("tick", func() string { return "hộp thư phòng " + r.ID }, fn)
 		default:
 			return
 		}

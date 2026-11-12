@@ -70,6 +70,18 @@ export function pendingRejoin(): Profile | null {
 }
 
 /**
+ * markRejoin đánh dấu "tải lại xong thì vào thẳng phòng" — dùng cho MỌI lần tự tải lại, kể
+ * cả lần do dựng lại renderer thất bại (§13.8), không chỉ lần mất ngữ cảnh WebGL.
+ */
+export function markRejoin(p: Profile): void {
+  try {
+    sessionStorage.setItem(KEY, JSON.stringify({ name: p.name, char: p.char, at: Date.now() / 1000 }));
+  } catch {
+    /* chế độ ẩn danh chặn sessionStorage: vẫn tải lại, chỉ mất phần tự vào lại phòng */
+  }
+}
+
+/**
  * watchContextLoss bắt sự kiện mất ngữ cảnh trên canvas.
  *
  * `profile` là hàm chứ không phải giá trị: lúc gắn sự kiện thì người chơi còn ở trang chủ,

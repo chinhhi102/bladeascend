@@ -6,6 +6,7 @@ import (
 
 	"bladeascend/server/internal/game"
 	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/safe"
 )
 
 // Debug applies a test shortcut (M1 requirement); only reachable when the server runs with -debug.
@@ -71,6 +72,21 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			}
 		case "summon":
 			r.debugSummon(z, p, float64(d.N))
+		case "panic":
+			// LỖI GIẢ để nghiệm thu §13.8 (checklist §17). Không có nó thì lớp chống sập chỉ
+			// được thử lần đầu bằng một lỗi thật, giữa trận, trên máy người chơi.
+			//
+			// n = 0 → panic trong tick của khu đang đứng; n = 2 → panic trong một goroutine
+			// nền. (n = 1, panic khi xử lý gói, bắt ở cmd/server/ws.go — chỗ này đã nằm
+			// trong hộp thư phòng rồi nên không thử được đường đó.)
+			switch d.N {
+			case 2:
+				safe.Go("nen", func() string { return "lỗi giả từ lệnh test" }, func() {
+					panic("lỗi giả: goroutine nền (lệnh test)")
+				})
+			default:
+				z.panicNextTick.Store(true)
+			}
 		case "bot":
 			// Thả một bot ngay cạnh mình để thử đánh nhau; d.N = cảnh giới (0 = như mình).
 			realm := d.N

@@ -1,6 +1,7 @@
 import { ShockwaveFilter } from 'pixi-filters';
 import { Container, Graphics, Text } from 'pixi.js';
 
+import { filtersOff } from './guard';
 import { quality } from './quality';
 
 /**
@@ -55,8 +56,11 @@ export class Breakthrough {
     this.textFrom = now;
     this.label.text = realmName;
     this.label.visible = true;
-    if (quality() === 'low') {
-      return; // mức Thấp: giữ chớp + chữ, bỏ filter (spec §3.6)
+    // Mức Thấp: giữ chớp + chữ, bỏ filter (spec §3.6). `filtersOff()`: vừa có lỗi vẽ nên
+    // mọi filter bị tắt tới hết mạng (§13.8) — gắn thêm một filter nữa lúc này là mời lỗi
+    // quay lại đúng vào giây ăn mừng đột phá.
+    if (quality() === 'low' || filtersOff()) {
+      return;
     }
     this.shock = new ShockwaveFilter({ center: { x: at.x, y: at.y }, amplitude: 28, wavelength: 180, speed: 900, radius: -1 });
     camera.filters = [...((camera.filters as unknown[]) ?? []), this.shock] as never;

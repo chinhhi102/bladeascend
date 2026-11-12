@@ -15,7 +15,8 @@ const ZONE_ART_WAIT_MS = 2000;
 
 import { FLAG, PROTOCOL_VERSION } from './net/protocol';
 import { SCHEMA_HASH } from './net/wire.gen';
-import { pendingRejoin, watchContextLoss } from './render/glrecover';
+import { markRejoin, pendingRejoin, watchContextLoss } from './render/glrecover';
+import { drawGuardStats, faultSystem, setSysErrorHook, type SysKey, sysResetRun, sysRun, sysSummary } from './render/guard';
 import type { DeadMsg, GameMap, KickedMsg, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
 import { assets } from './render/assets';
@@ -27,7 +28,7 @@ import { loadJitter } from './render/jitter';
 import { cycleQuality, quality } from './render/quality';
 import { ringGeom } from './render/ringgeom';
 import type { Telemetry, TelemetryContext } from './telemetry';
-import { Screens, button, h } from './ui/dom';
+import { Screens, button, h, setUiErrorHook } from './ui/dom';
 import { LoadingScreen, startBgLoadIndicator } from './ui/loading';
 import { kickedScreen } from './ui/kicked';
 import { guestId, homeScreen, type Profile, savedProfile } from './ui/home';
@@ -117,6 +118,8 @@ class App {
   private telemetry: Telemetry | null = null;
   /** zoneIndex: khu đang đứng, lấy từ Welcome (spec §8.0). Telemetry chia nhóm theo nó. */
   private zoneIndex = 0;
+  /** zoneAt: mốc (performance.now) lần đổi khu gần nhất — mọi báo cáo lỗi cần nó (§13.8). */
+  private zoneAt = 0;
   /** animInfo: phím J đang bật hay tắt (GAME_SPEC §12.5 C). */
   private animInfo = false;
 
@@ -145,6 +148,10 @@ class App {
     this.conn.onDecodeFail = (info) => {
       this.telemetry?.event('decode_fail', JSON.stringify({ info, ...(this.telemetry?.errorContext() ?? {}) }));
     };
+    // Gói hợp lệ nhưng xử lý nó ném lỗi (§13.8): gói đó bị bỏ, phần còn lại chạy tiếp.
+    this.conn.onHandlerError = (err, kind) => {
+      this.telemetry?.errorEvent(`xử lý gói "${kind}": ${err instanceof Error ? err.message : String(err)}`); // i18n-ok: chữ gửi về telemetry, không hiện cho người chơi
+    };
     this.thresholds = levelThresholds(cfg);
     this.setupFeedback();
   }
@@ -152,11 +159,25 @@ class App {
   async start(stage: HTMLElement): Promise<void> {
     await this.scene.init(stage, fpsCap());
     void paceFrames(this.scene);
-    this.scene.app.ticker.add((t) => {
+    // Cắm vào `scene.onFrame` chứ không `app.ticker.add`: dựng lại renderer (§13.8) thay
+    // hẳn `Application`, và một lời đăng ký trên ticker cũ sẽ im lặng ngừng chạy — game vẽ
+    // tiếp nhưng không còn cập nhật gì nữa, đúng kiểu hỏng khó tìm nhất.
+    this.scene.onFrame = (dt) => {
       // FPS trượt mượt để đính kèm vào góp ý — số tức thời nhảy quá, đọc không ra gì.
-      this.lastFps = this.lastFps * 0.9 + (1000 / Math.max(t.deltaMS, 1)) * 0.1;
-      this.frame(t.deltaMS / 1000);
-    });
+      this.lastFps = this.lastFps * 0.9 + (1 / Math.max(dt, 0.001)) * 0.1;
+      this.frame(dt);
+    };
+    this.scene.onGuardEvent = (kind, err) => {
+      this.telemetry?.event(kind, JSON.stringify({ err: err ? String(err).slice(0, 200) : '', ...(this.telemetry?.errorContext() ?? {}) }));
+    };
+    // Dựng lại renderer thất bại → tải lại trang và VÀO LẠI PHIÊN (§13.8 → §7.1). Đây là
+    // đường lùi cuối cùng; tới đây thì cảnh đã hỏng tới mức không vẽ được nữa.
+    this.scene.onRebuildFailed = () => {
+      if (this.playing && this.profile) {
+        markRejoin(this.profile);
+      }
+      window.setTimeout(() => location.reload(), 600);
+    };
     window.setInterval(() => this.sendInput(), 1000 / this.cfg.net.tick_hz);
     window.addEventListener('keydown', (e) => {
       if (this.playing && SKILL_KEYS.includes(e.code) && !e.repeat) {
@@ -291,6 +312,9 @@ class App {
    */
   private join(p: Profile): void {
     clearEndedRun();
+    // Mạng mới = sổ chống sập mới (§13.8): "tắt hẳn tới hết mạng" là hết VÁN, không phải
+    // hết đời tab. Rất nhiều lỗi vẽ chỉ gắn với một khu hoặc một đối thủ cụ thể.
+    sysResetRun();
     this.profile = p;
     sound.startMusic();
     this.telemetry?.setPhase('loading');
@@ -505,7 +529,17 @@ class App {
       // `playing` phải hỏi qua hàm: `world.me()` vẫn trả về dữ liệu CŨ sau khi chết và rời
       // phòng, nên công cụ đo tưởng nhân vật còn sống và không bấm "Chơi tiếp" (mất mấy
       // lượt đo vì chuyện này).
-      g.kx = { scene: this.scene, world: this.world, conn: this.conn, playing: () => this.playing };
+      g.kx = {
+        scene: this.scene, world: this.world, conn: this.conn, playing: () => this.playing,
+        // LỖI GIẢ để nghiệm thu §13.8 (checklist §17). Không có cửa này thì lớp chống sập
+        // chỉ được thử lần đầu bằng một lỗi thật, giữa trận, trên máy người chơi.
+        //   kx.fault('vfx')      → hệ thống VFX ném lỗi ở khung sau
+        //   kx.fault('vfx', 3)   → ném 3 khung liên tiếp (đủ ngưỡng "tắt hẳn")
+        //   kx.faultDraw(3)      → ném trong khâu VẼ 3 lần (đủ ngưỡng "dựng lại renderer")
+        fault: (key: SysKey, n = 1): void => faultSystem(key, n),
+        faultDraw: (n = 1): void => this.scene.faultDraw(n),
+        guard: (): unknown => ({ systems: sysSummary(), draw: drawGuardStats() }),
+      };
     }
     this.screens.show(null);
     this.loading.done();
@@ -519,6 +553,7 @@ class App {
     this.early = [];
     this.input.enabled = true;
     this.zoneIndex = w.zn ?? 0;
+    this.zoneAt = performance.now();
     this.hud.setZone(w.znm ? STR.zoneName(w.zn, w.znm) : '', w.zn ?? 0);
     // Bắt đầu thu số liệu từ lần vào trận đầu tiên; sang khu khác cũng gửi `welcome` nhưng
     // `startTelemetry` tự bỏ qua lần hai, vì một PHIÊN là một lần chơi chứ không phải một khu.
@@ -713,8 +748,12 @@ class App {
     }
     this.scene.render(dt);
     const me = this.world.me();
-    this.hud.update(me, this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
-    this.hud.setStatuses(this.scene.myStatusChips(performance.now() / 1000));
+    // HUD và minimap là hai ranh giới riêng (§13.8): HUD hỏng thì game vẫn chơi được, chỉ
+    // mất thanh Linh khí — dừng cả vòng vẽ vì nó mới là hỏng thật.
+    sysRun('hud', () => {
+      this.hud.update(me, this.conn.rttMs, (L) => ({ from: this.thresholds[L], to: this.thresholds[L + 1] }));
+      this.hud.setStatuses(this.scene.myStatusChips(performance.now() / 1000));
+    });
     // F3 mở được bảng đo ở MỌI trang (spec §13.6), không chỉ khi `?debug=true` — trước đây
     // mở F3 trên trang thường thì bảng hiện ra nhưng số không bao giờ cập nhật.
     // Đồng hồ theo hệ thống chỉ chạy khi có người XEM bảng — tắt thì mỗi mốc chỉ là một
@@ -729,11 +768,13 @@ class App {
       }));
     }
     if (me) {
-      const view = this.scene.viewSize();
-      this.hud.minimap.render(me.x, me.y, me.f, view.w, view.h, performance.now() / 1000);
+      sysRun('minimap', () => {
+        const view = this.scene.viewSize();
+        this.hud.minimap.render(me.x, me.y, me.f, view.w, view.h, performance.now() / 1000);
+      });
     }
     // Telemetry ĐỨNG CUỐI vòng vẽ và chỉ ghi một con số: mọi thứ đắt hơn nó tự dồn về 4 Hz.
-    this.telemetry?.frame();
+    sysRun('telemetry', () => this.telemetry?.frame());
   }
 
   /**
@@ -778,12 +819,20 @@ class App {
           const c = this.scene.app.canvas as HTMLCanvasElement;
           return { w: c.width, h: c.height };
         },
+        guard: () => this.scene.guardStats(),
+        sinceZone: () => (this.zoneAt > 0 ? (performance.now() - this.zoneAt) / 1000 : 0),
       },
       BUILD_ID,
       PROTOCOL_VERSION,
     );
     t.start();
     this.telemetry = t;
+    // Mỗi lần lớp chống sập phải tắt một hệ thống thì server phải BIẾT (§13.8). Người chơi
+    // sẽ không báo: với họ game vẫn chạy, chỉ là "hình như thiếu hiệu ứng gì đó".
+    setSysErrorHook(({ key, msg, dead, errors }) => {
+      t.event('client_sys_off', `${key}: ${msg}\n${JSON.stringify({ dead, errors, ...t.errorContext() })}`);
+    });
+    setUiErrorHook((err, label) => t.errorEvent(`nút UI "${label}": ${err instanceof Error ? err.message : String(err)}`)); // i18n-ok: chữ gửi về telemetry
     // Tự hạ chất lượng vì chạm ngân sách bộ nhớ GPU: ghi lại, vì đó là dấu hiệu sớm nhất
     // của việc tab sắp bị iOS giết — và là thứ duy nhất báo trước.
     this.scene.onMemoryPressure = (mb) => {

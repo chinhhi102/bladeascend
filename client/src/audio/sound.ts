@@ -1,6 +1,7 @@
 import { Howl, Howler } from 'howler';
 
 import { assets } from '../render/assets';
+import { sysRun } from '../render/guard';
 
 // SFX names from docs/ART_PROMPTS.md §12. A sound plays only if assets/audio/sfx/<name>.{ogg,mp3,wav} exists.
 const SFX = [
@@ -50,7 +51,19 @@ class Sound {
     }
   }
 
+  /**
+   * play phát một tiếng động.
+   *
+   * Bọc `sysRun('audio', …)` ở ĐÂY chứ không ở từng chỗ gọi: hơn 20 nơi trong `scene.ts`
+   * gọi hàm này từ giữa vòng xử lý sự kiện, và âm thanh hỏng (Howler mất AudioContext sau
+   * khi máy ngủ dậy, trình duyệt chặn tự phát) không được phép làm mất phần còn lại của
+   * vòng đó — mất một tiếng "keng" thì chẳng sao, mất một cú chết thì sai trận (§13.8).
+   */
   play(name: SfxName, volume = 1): void {
+    sysRun('audio', () => this.playNow(name, volume));
+  }
+
+  private playNow(name: SfxName, volume: number): void {
     const h = this.sfx.get(name);
     if (!h || this.muted) {
       return;

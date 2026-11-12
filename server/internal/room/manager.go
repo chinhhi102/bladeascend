@@ -8,6 +8,7 @@ import (
 
 	"bladeascend/server/internal/config"
 	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/safe"
 	"bladeascend/server/internal/world"
 )
 
@@ -41,7 +42,11 @@ func NewManager(cfg *config.Config, maps []*world.Map, rec Recorder) *Manager {
 		maps = []*world.Map{world.EmptyMap(cfg.Room.MapSize)}
 	}
 	return &Manager{cfg: cfg, maps: maps, recorder: rec, rng: rand.New(rand.NewSource(time.Now().UnixNano())),
-		Start: func(r *Room) { go r.Run() }}
+		// Vòng chạy của phòng là một goroutine, nên nó phải có recover của RIÊNG nó (§13.8).
+		// `Step` đã bọc từng phần bên trong; lớp này chỉ còn đỡ những gì nằm ngoài Step
+		// (bản thân vòng lặp, ticker) — và nếu nó bắt được thì phòng được khởi động lại
+		// chứ không biến mất im lặng khỏi server.
+		Start: func(r *Room) { safe.Go("nen", func() string { return "vòng phòng " + r.ID }, r.Run) }}
 }
 
 // Join matches a client into a room: the fullest room below room_max_humans (giá trị admin

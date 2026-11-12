@@ -1,6 +1,7 @@
 import { AdvancedBloomFilter } from 'pixi-filters';
 import { Container } from 'pixi.js';
 
+import { filtersOff } from './guard';
 import { qualityFor } from './quality';
 
 /**
@@ -24,7 +25,10 @@ export class VfxLayer {
 
   /** apply gắn lại filter theo mức chất lượng hiện tại; gọi mỗi khi người chơi đổi mức. */
   apply(): void {
-    const q = qualityFor('bloom');
+    // Vừa có lỗi vẽ → không gắn filter nữa cho tới hết mạng (§13.8, render/guard.ts).
+    // Kiểm TRƯỚC khi so với `applied`, nếu không thì mức chất lượng không đổi là nhánh này
+    // `return` sớm và bloom cũ vẫn nằm nguyên trên container.
+    const q = filtersOff() ? 'low' : qualityFor('bloom');
     if (q === this.applied) {
       return;
     }

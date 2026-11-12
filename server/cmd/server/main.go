@@ -20,6 +20,7 @@ import (
 	"bladeascend/server/internal/game"
 	"bladeascend/server/internal/metrics"
 	"bladeascend/server/internal/room"
+	"bladeascend/server/internal/safe"
 	"bladeascend/server/internal/store"
 	"bladeascend/server/internal/world"
 )
@@ -131,17 +132,21 @@ func main() {
 	if mdb != nil {
 		srv.metrics = metrics.New(mdb, srv.buildID)
 	}
+	// Mọi panic đã bắt được (§13.8) đi về trang quản trị "Lỗi" cùng một chỗ với lỗi client:
+	// người đọc đang hỏi "có ai gặp chuyện gì không", không hỏi "lỗi ở client hay server".
+	// Cắm TRƯỚC khi chạy goroutine nào — panic trong lúc khởi động cũng phải ghi được.
+	srv.wirePanicReports()
 	stopSampler := make(chan struct{})
 	// Dọn dẹp hằng ngày (Q28): xoá ảnh góp ý của thư đã khép quá 90 ngày, giữ chữ mãi.
 	// Chạy kể cả khi tắt telemetry — nó dọn DB quản trị, không liên quan telemetry.
-	go srv.runHousekeeper(stopSampler)
+	safe.Go("nen", nil, func() { srv.runHousekeeper(stopSampler) })
 	if tel != nil {
 		defer tel.Close()
-		go srv.runServerSampler(stopSampler)
-		go srv.runRollupScheduler(stopSampler)
+		safe.Go("nen", nil, func() { srv.runServerSampler(stopSampler) })
+		safe.Go("nen", nil, func() { srv.runRollupScheduler(stopSampler) })
 	}
 	if srv.metrics != nil {
-		go srv.runMetricsCollector(stopSampler)
+		safe.Go("nen", nil, func() { srv.runMetricsCollector(stopSampler) })
 	}
 	// Chưa chạy pipeline thì `assets/dist` rỗng và game vào trận với placeholder trắng
 	// trơn. Chuyện đó phải nói ngay ở dòng log đầu tiên: lần trước thiếu hai tệp font,
@@ -156,7 +161,8 @@ func main() {
 		registerPprof(rawMux)
 		log.Print("pprof: /debug/pprof mở cho 127.0.0.1")
 	}
-	mux := gzipMux(rawMux)
+	// Middleware recover bọc NGOÀI CÙNG (§13.8): một handler panic chỉ hỏng request đó.
+	mux := safe.HTTP(gzipMux(rawMux))
 	log.Printf("%s server listening on %s (debug=%v)", cfg.Brand.Name, *addr, *debug)
 	httpSrv := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	// Tắt êm khi nhận SIGINT/SIGTERM: cần thế thì hồ sơ CPU mới được ghi xuống đĩa. Bị

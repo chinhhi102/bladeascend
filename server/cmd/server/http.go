@@ -18,6 +18,7 @@ import (
 	"bladeascend/server/internal/config"
 	"bladeascend/server/internal/metrics"
 	"bladeascend/server/internal/room"
+	"bladeascend/server/internal/safe"
 	"bladeascend/server/internal/store"
 	"bladeascend/server/internal/telemetry"
 	"bladeascend/server/internal/world"
@@ -55,7 +56,7 @@ type server struct {
 }
 
 func (s *server) routes(assetsDir, clientDir string) http.Handler {
-	return gzipMux(s.mux(assetsDir, clientDir))
+	return safe.HTTP(gzipMux(s.mux(assetsDir, clientDir)))
 }
 
 // mux dựng bảng định tuyến thô (chưa bọc gzip) — tách ra để `main` còn cắm thêm được

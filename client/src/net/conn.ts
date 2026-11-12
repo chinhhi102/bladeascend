@@ -142,11 +142,31 @@ export class Conn {
     this.ws = ws;
   }
 
+  /**
+   * onHandlerError — báo ra ngoài khi việc XỬ LÝ một gói ném lỗi (gói giải mã được, nhưng
+   * mã xử lý nó hỏng). `App` nối vào telemetry.
+   */
+  onHandlerError: ((err: unknown, kind: string) => void) | null = null;
+
+  /**
+   * receive: mỗi gói là một ranh giới bắt lỗi riêng (GAME_SPEC §13.8).
+   *
+   * `decodeFrame` đã lo gói VỠ. Chỗ này lo trường hợp khác hẳn: gói hợp lệ nhưng mã xử lý
+   * nó ném lỗi (một trường mới chưa có ở client, một id trỏ vào người đã rời phòng…).
+   * Không bắt thì lỗi đi ra `ws.onmessage`, trình duyệt nuốt nó thành một dòng trong
+   * console, và phần còn lại của gói — gồm cả việc cập nhật trạng thái trận — không chạy.
+   * Bỏ MỘT gói thì snapshot kế tiếp tự vá lại; bỏ cả luồng thì nhân vật đứng hình.
+   */
   private receive(msg: ServerMsg): void {
-    if (msg.t === 'pong') {
-      this.rttMs = Math.round(performance.now() - msg.c);
+    try {
+      if (msg.t === 'pong') {
+        this.rttMs = Math.round(performance.now() - msg.c);
+      }
+      this.onMessage(msg);
+    } catch (err) {
+      console.error(`lỗi khi xử lý gói "${msg.t}", bỏ qua gói này:`, err);
+      this.onHandlerError?.(err, String(msg.t));
     }
-    this.onMessage(msg);
   }
 
   private delay(fn: () => void): void {

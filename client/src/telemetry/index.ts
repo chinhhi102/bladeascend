@@ -76,6 +76,13 @@ export interface Host {
   send(msg: Record<string, unknown>): boolean;
   /** canvasSize cho thông tin phiên. */
   canvasSize(): { w: number; h: number };
+  /**
+   * guard: trạng thái lớp chống sập (§13.8) — số lần resize, số lần dựng lại renderer, số
+   * lần watchdog phải ra tay, danh sách hệ thống đã tắt.
+   */
+  guard(): { resizes: number; rebuilds: number; watchdog: number; sysOff: string };
+  /** sinceZone: số giây từ lần đổi khu gần nhất (§13.8 đòi con số này trong mọi báo cáo lỗi). */
+  sinceZone(): number;
 }
 
 function pct(v: number[], p: number): number {
@@ -309,6 +316,8 @@ export class Telemetry {
   /** errorContext là bối cảnh gắn kèm mọi lỗi và mọi sự kiện WebGL. */
   errorContext(): Record<string, unknown> {
     const s = this.host.perfStats();
+    const c = this.host.context();
+    const g = this.host.guard();
     return {
       phase: this.phase,
       texMB: Math.round(Number(s.texMB ?? 0)),
@@ -317,7 +326,16 @@ export class Telemetry {
       canvas: `${this.host.canvasSize().w}x${this.host.canvasSize().h}`,
       chars: Number(s.players ?? 0),
       fps: Math.round(Number(s.fps ?? 0)),
-      q: this.host.context().quality,
+      q: c.quality,
+      // Bổ sung theo §13.8: một lỗi vẽ chỉ chẩn đoán được khi biết nó xảy ra ở khu nào,
+      // bao lâu sau khi đổi khu (lúc art khu mới còn đang tải), canvas đã đổi cỡ mấy lần
+      // (xoay máy / thanh địa chỉ co lại), bộ lọc còn bật không, và hệ thống nào đã tắt.
+      zone: c.zone,
+      zoneSecs: Math.round(this.host.sinceZone()),
+      resizes: g.resizes,
+      rebuilds: g.rebuilds,
+      watchdog: g.watchdog,
+      sysOff: g.sysOff,
     };
   }
 

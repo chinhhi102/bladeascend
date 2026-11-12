@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"slices"
@@ -13,6 +14,7 @@ import (
 	"bladeascend/server/internal/config"
 	"bladeascend/server/internal/netproto"
 	"bladeascend/server/internal/room"
+	"bladeascend/server/internal/safe"
 	"bladeascend/server/internal/telemetry"
 )
 
@@ -71,7 +73,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 	conn := &wsConn{out: make(chan []byte, sendQueue)}
-	go writeLoop(ctx, ws, conn.out, cancel)
+	safe.Go("ws-ghi", func() string { return "ip " + ip }, func() { writeLoop(ctx, ws, conn.out, cancel) })
 	// Quyền debug chốt NGAY LÚC BẮT TAY, từ phiên admin trong cookie (ADMIN_SPEC §1.1).
 	//
 	// `?debug=true` trên URL không còn ý nghĩa gì ở đây — client chỉ được bật phím test khi
@@ -135,7 +137,16 @@ func (s *server) readLoop(ctx context.Context, ws *websocket.Conn, c *room.Clien
 			c.NoteBadPacket(time.Now())
 			continue
 		}
-		s.dispatch(c, env.T, data, ipHash)
+		// Panic khi xử lý gói của MỘT người → ngắt đúng người đó, không ảnh hưởng ai khác
+		// (GAME_SPEC §13.8). Họ vào lại được qua §7.1, nên cái giá là một nhịp gián đoạn —
+		// rẻ hơn hẳn so với việc để nó làm chết cả server.
+		if safe.Do("goi-tin", func() string {
+			// Chỉ `PlayerID` (số trong phòng, mất nghĩa khi hết trận) — không tên, không
+			// `guest_id`: bối cảnh lỗi không phải chỗ để dữ liệu người chơi rò ra (quy tắc 15).
+			return fmt.Sprintf("gói %q (%d byte) · người %d", env.T, len(data), c.PlayerID)
+		}, func() { s.dispatch(c, env.T, data, ipHash) }) {
+			return
+		}
 	}
 }
 
@@ -185,6 +196,13 @@ func (s *server) dispatch(c *room.Client, t string, data []byte, ipHash string) 
 			log.Printf("dbg bỏ qua: gói hỏng (%d byte)", len(data))
 		case rm == nil:
 			log.Printf("dbg bỏ qua: client %d chưa ở trong phòng nào", c.PlayerID)
+		case d.Cmd == "panic" && d.N == 1:
+			// Lỗi giả NGAY TRONG đường xử lý gói (§13.8, checklist §17). Phải ném ở đây chứ
+			// không trong `rm.Debug`: `Debug` xếp việc vào hộp thư phòng và chạy ở goroutine
+			// phòng, tức là đi qua ranh giới "tick" chứ không phải ranh giới "gói tin".
+			c.DebugUsed = true
+			s.auditDebugCmd(c, d)
+			panic("lỗi giả: xử lý gói của một người (lệnh test)")
 		default:
 			// Mỗi lệnh debug ĐƯỢC DÙNG đều vào nhật ký (§1.1), và đánh dấu mạng này đã
 			// "nhiễm debug" để không ghi vào bảng xếp hạng toàn cục.

@@ -5,6 +5,7 @@ import type { GameMap, MapObstacle, Shape } from '../net/protocol';
 import { assets } from './assets';
 import { BIOME_TILES, OBSTACLE_ALIAS } from './catalog';
 import { buildDecals, type DecalLayer, obstacleSkirt } from './decals';
+import { filtersOff } from './guard';
 import { GATE_COLORS } from './palette';
 import { emergency } from './quality';
 
@@ -332,9 +333,11 @@ export class MapView {
       const n: ObstacleNode = { o, node: new Container(), look: '', tierDrawn: true, warnUntil: 0, box: bounds(o.s), drawnWithArt: false, fadeFrom: 0, edge: null };
       this.obstacleNodes.set(o.id, n);
     }
-    const filter = backgroundFilter();
-    this.ground.filters = [filter];
-    this.decor.filters = [filter];
+    // Vừa có lỗi vẽ thì khu mới dựng cũng không gắn filter nữa (§13.8): đổi khu là dựng
+    // lại MapView, nên không chốt ở đây thì công tắc tắt filter bay mất sau cổng đầu tiên.
+    const filter = filtersOff() ? null : backgroundFilter();
+    this.ground.filters = filter ? [filter] : [];
+    this.decor.filters = filter ? [filter] : [];
     // `filterArea` BẮT BUỘC phải đặt — xem clampFilterArea. Đặt tạm một ô nhỏ ở đây để
     // khung hình đầu tiên (trước khi `update` chạy lần nào) cũng không cấp phát cả bản đồ.
     this.ground.filterArea = new Rectangle(0, 0, 1, 1);

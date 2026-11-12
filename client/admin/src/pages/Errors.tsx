@@ -8,6 +8,19 @@ import { useFetch } from '../hooks';
 import type { ErrorGroup, ErrorsResp } from '../types';
 import { clickRow, Pre, RelTime, tableBase } from '../ui';
 
+/**
+ * KIND_COLOR: panic server màu ĐỎ TÍA, không trộn vào đám cam.
+ *
+ * Một panic server và một cú chạm trần bộ nhớ GPU trên điện thoại ai đó là hai mức khẩn
+ * cấp khác hẳn nhau: cái thứ hai xảy ra hằng ngày, cái thứ nhất nghĩa là có mã hỏng đang
+ * chạy trên máy chủ. Cùng màu thì mắt lướt qua cả hai như nhau.
+ */
+const KIND_COLOR: Record<string, string> = {
+  error: 'red',
+  server_panic: 'magenta',
+  client_sys_off: 'gold',
+};
+
 /** shown: `gpu_pressure` chở JSON số liệu — hiện khoá=giá trị; lỗi thường giữ nguyên vết. */
 function shown(e: ErrorGroup): string {
   if (e.kind !== 'gpu_pressure') {
@@ -66,7 +79,7 @@ export function ErrorsPage(): ReactNode {
         onRow={clickRow(setOpen)}
         locale={{ emptyText: <Empty description="Không có lỗi nào. Tốt." /> }}
         columns={[
-          { title: 'Loại', dataIndex: 'kind', filters: kinds.map((k) => ({ text: ERR_LABEL[k] ?? k, value: k })), onFilter: (v, e) => e.kind === v, render: (v: string) => <Tag color={v === 'error' ? 'red' : 'orange'}>{ERR_LABEL[v] ?? v}</Tag> },
+          { title: 'Loại', dataIndex: 'kind', filters: kinds.map((k) => ({ text: ERR_LABEL[k] ?? k, value: k })), onFilter: (v, e) => e.kind === v, render: (v: string) => <Tag color={KIND_COLOR[v] ?? 'orange'}>{ERR_LABEL[v] ?? v}</Tag> },
           { title: 'Người dính', dataIndex: 'sessions', align: 'right', sorter: (a, b) => a.sessions - b.sessions, defaultSortOrder: 'descend' },
           { title: 'Số lần', dataIndex: 'count', align: 'right', sorter: (a, b) => a.count - b.count },
           { title: 'Điện thoại', dataIndex: 'mobile', align: 'right', sorter: (a, b) => a.mobile - b.mobile },

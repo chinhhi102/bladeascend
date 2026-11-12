@@ -1,5 +1,6 @@
-import { Application, Container, Texture } from 'pixi.js';
+import { Application, Container, Texture, type Ticker, UPDATE_PRIORITY } from 'pixi.js';
 import { AnimViewer } from './animviewer';
+import { guardLines, killFilters, noteDrawError, noteSysError, sysOffList, sysRun } from './guard';
 import { setEmoteCharCount } from './emote';
 import { paceTicker } from './framepace';
 import { probeEnabled, probeFrame, probeHeap, probeLines, probeMark, probeStats, probeSubFlush } from './probe';
@@ -46,6 +47,11 @@ const BEAST_FAR_PX = 40;
 
 const SWORD_BUDGET = 1600;
 
+/** Watchdog §13.8: không có khung nào trong ngần này (tab đang hiện) → khởi động lại ticker. */
+const WATCHDOG_MS = 3000;
+/** Nhịp kiểm của watchdog. 1 giây là đủ: ngưỡng là 3 giây, chậm nhất phát hiện sau 4. */
+const WATCHDOG_CHECK_MS = 1000;
+
 /**
  * drawCalls đếm số lệnh vẽ WebGL mỗi khung. Pixi không công bố con số này, mà nó lại là chỉ
  * số quan trọng nhất để biết nghẽn ở GPU hay ở CPU, nên bọc thẳng hàm vẽ của ngữ cảnh WebGL.
@@ -85,7 +91,38 @@ const MOOD_EMOTE_CHANCE = 0.12; // chance per mood change that a character shout
 
 /** GameScene renders the ClientWorld every frame with a camera that zooms out as you grow (spec §4.1). */
 export class GameScene {
-  readonly app = new Application();
+  /**
+   * app KHÔNG còn `readonly`: §13.8 cho phép dựng lại renderer sau lỗi vẽ lặp lại, và dựng
+   * lại nghĩa là thay hẳn `Application`. Mọi nơi đọc `scene.app` phải đọc qua trường này
+   * chứ không được giữ bản sao — giữ bản sao là trỏ vào renderer đã huỷ.
+   */
+  app = new Application();
+  /** parent / maxFps: nhớ lại để `buildApp` dựng lại được renderer mà không cần `init`. */
+  private parent: HTMLElement | null = null;
+  private maxFps = 60;
+  /** pace: nhịp khung hiện tại (framepace.ts); dựng lại renderer phải đặt lại đúng nhịp. */
+  private pace = 1;
+  /**
+   * onFrame: phần CẬP NHẬT của một khung, do `main.ts` cắm vào.
+   *
+   * Trước đây `main.ts` tự gọi `app.ticker.add(...)`. Không dùng được nữa: dựng lại
+   * renderer là thay `Application`, và lời đăng ký kia nằm trên ticker cũ — sau khi dựng
+   * lại thì game vẽ cảnh nhưng không còn cập nhật gì nữa.
+   */
+  onFrame: ((dt: number) => void) | null = null;
+  /** onGuardEvent: báo cho telemetry mỗi lần lớp chống sập phải ra tay (§13.8). */
+  onGuardEvent: ((kind: string, err: unknown) => void) | null = null;
+  /** onRebuildFailed: dựng lại renderer thất bại → `main.ts` tải lại trang + vào lại phiên (§7.1). */
+  onRebuildFailed: (() => void) | null = null;
+  private rebuilding = false;
+  private rebuilds = 0;
+  private lastTickAt = 0;
+  private watchdogTried = false;
+  private watchdogRestarts = 0;
+  /** resizes: số lần canvas đổi cỡ — đi kèm mọi báo cáo lỗi (§13.8 "số lần resize"). */
+  private resizes = 0;
+  /** drawFaults: số khung còn phải ném lỗi giả trong khâu vẽ (`kx.faultDraw`, §17). */
+  private drawFaults = 0;
   private readonly camera = new Container();
   private readonly entities = new Container();
   /** Viên Linh khí vẽ riêng bằng particle: vài trăm viên cùng lúc, xem orblayer.ts. */
@@ -165,6 +202,22 @@ export class GameScene {
   }
 
   async init(parent: HTMLElement, maxFps: number): Promise<void> {
+    this.parent = parent;
+    this.maxFps = maxFps;
+    await this.buildApp();
+    this.startWatchdog();
+  }
+
+  /**
+   * buildApp dựng `Application` và gắn nó vào trang. Chạy lúc khởi động VÀ lúc phải **dựng
+   * lại renderer** sau lỗi vẽ lặp lại (§13.8) — nên mọi thứ gắn với renderer phải nằm ở
+   * đây, không nằm trong `init`.
+   */
+  private async buildApp(): Promise<void> {
+    const parent = this.parent;
+    if (!parent) {
+      throw new Error('buildApp trước init');
+    }
     trackTextureFrom(Texture);
     await this.app.init({
       // Ép WebGL. Pixi 8 vốn xếp WebGL trước, nhưng ghi rõ để một lần nâng Pixi đổi thứ tự
@@ -179,7 +232,7 @@ export class GameScene {
       resolution: rendererResolution(quality() === 'low'),
       autoDensity: true,
     });
-    this.app.ticker.maxFPS = maxFps;
+    this.app.ticker.maxFPS = this.maxFps;
     const gl = (this.app.renderer as unknown as { gl?: WebGL2RenderingContext }).gl;
     if (gl) {
       // Đo bộ nhớ texture LUÔN BẬT, kể cả bản chơi thật: nó là chỉ số quyết định tab có bị
@@ -203,7 +256,151 @@ export class GameScene {
     // hình, không phải thứ nằm trong thế giới (ANSWERS mục 1).
     this.app.stage.addChild(this.camera, this.skill.arrows.root, this.breakthrough.overlay, this.boba.root, this.animViewer.root);
     this.boba.resize(this.app.screen.width, this.app.screen.height);
-    this.app.renderer.on('resize', (w: number, h: number) => this.boba.resize(w, h));
+    this.app.renderer.on('resize', (w: number, h: number) => {
+      this.resizes++;
+      this.boba.resize(w, h);
+    });
+    this.takeOverTicker();
+  }
+
+  /**
+   * takeOverTicker giành lại quyền gọi `render()` từ Pixi.
+   *
+   * `TickerPlugin` tự gắn `app.render` vào ticker ở mức ưu tiên LOW. Để nguyên thì lỗi vẽ
+   * ném ra từ bên trong ticker của Pixi và **không có chỗ nào bắt được** — nó đi thẳng ra
+   * `window.onerror`, và vì ticker vẫn chạy nên nó lặp lại 60 lần mỗi giây. Gỡ ra rồi tự
+   * gọi là cách duy nhất đặt được try/catch quanh khâu vẽ (§13.8).
+   *
+   * Thứ tự trong một khung vẫn y như cũ: cập nhật (onFrame) → vẽ.
+   */
+  private takeOverTicker(): void {
+    this.app.ticker.remove(this.app.render, this.app);
+    this.app.ticker.add(this.tickSafe, this, UPDATE_PRIORITY.LOW);
+  }
+
+  /** tickSafe là THÂN TICKER có bắt lỗi (§13.8 "thân ticker bọc try/catch"). */
+  private tickSafe(t: Ticker): void {
+    this.lastTickAt = performance.now();
+    // Phần cập nhật: `main.ts` cắm vào đây. Bên trong nó mỗi hệ thống đã có ranh giới
+    // riêng (`sysRun`), nên khối này chỉ còn đỡ những gì rơi ra ngoài mọi ranh giới.
+    try {
+      this.onFrame?.(t.deltaMS / 1000);
+    } catch (err) {
+      noteSysError('hud', err);
+    }
+    // Phần vẽ: luật riêng của §13.8 — bỏ khung + tắt bộ lọc, lặp 3 lần/10 s thì dựng lại.
+    try {
+      if (this.drawFaults > 0) {
+        this.drawFaults--;
+        throw new Error('lỗi giả trong khâu vẽ (kx.faultDraw)');
+      }
+      this.app.render();
+    } catch (err) {
+      this.onDrawError(err);
+    }
+  }
+
+  /** faultDraw hẹn khâu vẽ ném lỗi giả `n` khung tiếp theo (checklist §17). */
+  faultDraw(n = 1): void {
+    this.drawFaults = Math.max(0, n);
+  }
+
+  /** onDrawError: bỏ khung này, tắt mọi bộ lọc; lỗi lặp ≥ 3 lần/10 s thì dựng lại renderer. */
+  private onDrawError(err: unknown): void {
+    const act = noteDrawError(err);
+    this.onGuardEvent?.('draw_error', err);
+    killFilters();
+    this.stripFilters();
+    if (act === 'rebuild') {
+      void this.rebuild();
+    }
+  }
+
+  /** stripFilters gỡ filter khỏi mọi container đang đeo (bloom, sóng xung kích, nền). */
+  private stripFilters(): void {
+    for (const c of [this.camera, this.glow.root, this.mapView?.ground, this.mapView?.decor]) {
+      if (c) {
+        c.filters = [];
+      }
+    }
+    this.glow.apply(); // đặt lại cờ bên trong VfxLayer, nếu không nó tưởng bloom vẫn đang gắn
+  }
+
+  /**
+   * rebuild dựng lại renderer + cây cảnh từ trạng thái hiện có, KHÔNG tải lại trang (§13.8).
+   *
+   * Cách làm: gỡ các container gốc khỏi stage cũ (không huỷ chúng — chúng là trạng thái),
+   * huỷ `Application` cũ **không đụng texture** (texture thuộc về `assets`, huỷ là phải tải
+   * lại cả bộ art), dựng Application mới rồi gắn lại cảnh từ `world`.
+   *
+   * Thất bại thì báo ra ngoài để `main.ts` tải lại trang và vào lại phiên (§7.1) — đúng
+   * đường lùi mà spec chỉ định.
+   */
+  async rebuild(): Promise<void> {
+    if (this.rebuilding) {
+      return;
+    }
+    this.rebuilding = true;
+    const old = this.app;
+    try {
+      old.ticker.remove(this.tickSafe, this);
+      old.stage.removeChildren();
+      // `children: false` — mấy container trên là trạng thái sống của cảnh, huỷ chúng là
+      // mất luôn chỗ để dựng lại. `texture: false` vì texture do `assets` sở hữu.
+      old.destroy({ removeView: true }, { children: false, texture: false, textureSource: false, context: false });
+      this.app = new Application();
+      await this.buildApp();
+      // Dựng lại cây cảnh: `setWorld` tự `clear()` rồi tạo MapView mới và xếp lại các lớp.
+      const w = this.world;
+      if (w) {
+        this.setWorld(w);
+      }
+      this.rebuilds++;
+      this.onGuardEvent?.('renderer_rebuilt', null);
+      console.warn(`[chống sập] đã dựng lại renderer (lần ${this.rebuilds})`);
+    } catch (err) {
+      console.error('[chống sập] dựng lại renderer THẤT BẠI', err);
+      this.onGuardEvent?.('renderer_rebuild_failed', err);
+      this.onRebuildFailed?.();
+    } finally {
+      this.rebuilding = false;
+    }
+  }
+
+  /**
+   * startWatchdog: không có khung nào trong 3 giây **khi tab đang hiện** → khởi động lại
+   * ticker; vẫn chết → dựng lại renderer (§13.8).
+   *
+   * Điều kiện "tab đang hiện" là bắt buộc: trình duyệt hạ rAF xuống ~1 Hz hoặc dừng hẳn khi
+   * tab ẩn, nên không kiểm thì mỗi lần người chơi chuyển sang app khác là một lần dựng lại
+   * renderer — tự tạo ra đúng sự cố đang đi chữa.
+   */
+  private startWatchdog(): void {
+    this.lastTickAt = performance.now();
+    window.setInterval(() => {
+      if (document.visibilityState !== 'visible' || this.rebuilding) {
+        return;
+      }
+      const stuck = performance.now() - this.lastTickAt;
+      if (stuck < WATCHDOG_MS) {
+        this.watchdogTried = false;
+        return;
+      }
+      if (!this.watchdogTried) {
+        this.watchdogTried = true;
+        this.watchdogRestarts++;
+        console.warn(`[chống sập] ${(stuck / 1000).toFixed(1)}s không có khung — khởi động lại ticker`);
+        this.onGuardEvent?.('watchdog_restart', null);
+        this.app.ticker.start();
+        paceTicker(this.app.ticker, this.pace);
+        this.lastTickAt = performance.now();
+        return;
+      }
+      console.warn('[chống sập] khởi động lại ticker không ăn thua — dựng lại renderer');
+      this.watchdogTried = false;
+      this.lastTickAt = performance.now();
+      void this.rebuild();
+    }, WATCHDOG_CHECK_MS);
   }
 
   /** resEmergency: bước khẩn đã áp resolution 1.0 chưa — chỉ đổi khi trạng thái đổi. */
@@ -308,7 +505,15 @@ export class GameScene {
       return; // khựng hình: đóng băng cảnh một nhịp rất ngắn cho cú đột phá "nặng" hơn
     }
     probeFrame();
-    const frames = w.playerFrames(dt);
+    // Từ đây xuống, MỖI hệ thống là một ranh giới bắt lỗi riêng (§13.8, render/guard.ts).
+    // Một hệ thống ném lỗi thì nó bị tắt 2 giây, các hệ thống còn lại vẫn vẽ khung này.
+    //
+    // Nội suy hỏng thì giữ nguyên bộ khung hình CŨ thay vì bỏ trống: nhân vật đứng im một
+    // nhịp còn hơn biến mất khỏi màn hình rồi hiện lại.
+    let frames = this.lastFrames;
+    sysRun('interp', () => {
+      frames = w.playerFrames(dt);
+    });
     probeMark('interp');
     this.lastFrames = frames;
     const me = frames.find((f) => f.view.id === w.myId);
@@ -343,40 +548,52 @@ export class GameScene {
       }
     }
     this.glow.apply(); // mức chất lượng vừa đổi thì gắn lại bloom (§3.6)
-    this.syncPlayers(frames, now);
-    probeSubFlush();
+    sysRun('players', () => {
+      this.syncPlayers(frames, now);
+      probeSubFlush();
+    });
     probeMark('players');
-    this.syncMonsters(now);
+    sysRun('monsters', () => this.syncMonsters(now));
     probeMark('monsters');
-    this.syncItems(now, me ? banksTienKhi(me.s.fl ?? 0) : false);
-    this.updateFlyingItems(now);
+    sysRun('items', () => {
+      this.syncItems(now, me ? banksTienKhi(me.s.fl ?? 0) : false);
+      this.updateFlyingItems(now);
+    });
     probeMark('items');
-    this.updateBeasts(frames, now);
+    sysRun('beasts', () => this.updateBeasts(frames, now));
     probeMark('beasts');
     const myBush = me && me.s.fl & 2 ? this.bushAt(me.x, me.y) : -1;
     if (me) {
-      const v = this.viewSize();
-      this.ambient.update(me.x, me.y, v.w / 2, v.h / 2, now);
+      sysRun('ambient', () => {
+        const v = this.viewSize();
+        this.ambient.update(me.x, me.y, v.w / 2, v.h / 2, now);
+      });
     }
     probeMark('ambient');
+    // Bản đồ KHÔNG nằm trong `sysRun`: tắt nó đi thì màn hình chỉ còn nền xám và game không
+    // chơi được nữa — bỏ khung còn tử tế hơn. Lỗi ở đây rơi xuống lớp bắt lỗi của ticker.
     const vs = this.viewSize();
     this.mapView.ghostPass = this.ghostRunners(frames);
     this.mapView.update(w, now, myBush, me ? this.viewer(me.x, me.y, me.s.sc) : null, this.cfg.obstacles.occlusion_alpha,
       me ? { x: me.x, y: me.y, w: vs.w, h: vs.h } : undefined,
       me ? this.myReach : undefined);
     probeMark('map');
-    this.vfx.update(now);
-    this.floatText.update(now);
-    probeMark('vfx');
-    this.stallView.sync(w, {
-      now,
-      secs: this.cfg.skills.ranges_u.bay_sap_secs ?? 0,
-      owner: (id) => {
-        const c = this.casterAt(id);
-        return c ? { x: c.x, y: c.y, peelR: skillRange(this.cfg, c.sc, 'vo_chuoi_w') } : null;
-      },
+    sysRun('vfx', () => {
+      this.vfx.update(now);
+      this.floatText.update(now);
     });
-    this.skill.update(now);
+    probeMark('vfx');
+    sysRun('skills', () => {
+      this.stallView.sync(w, {
+        now,
+        secs: this.cfg.skills.ranges_u.bay_sap_secs ?? 0,
+        owner: (id) => {
+          const c = this.casterAt(id);
+          return c ? { x: c.x, y: c.y, peelR: skillRange(this.cfg, c.sc, 'vo_chuoi_w') } : null;
+        },
+      });
+      this.skill.update(now);
+    });
     probeMark('skills');
     probeHeap(now);
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
@@ -437,6 +654,9 @@ export class GameScene {
 
   /** paceFrames: vẽ đúng mỗi `n` khung quét màn hình (1 = mọi khung) — xem framepace.ts. */
   paceFrames(n: number): void {
+    // Nhớ lại nhịp: watchdog và `rebuild` phải dựng lại đúng nhịp này, không thì máy 144 Hz
+    // vừa dựng lại renderer xong là chạy 144 khung/giây.
+    this.pace = n;
     paceTicker(this.app.ticker, n);
   }
 
@@ -905,7 +1125,15 @@ export class GameScene {
       // nó chạy lên bằng tần số snapshot và người chơi thấy rung khi đi sát vật cản.
       `hiệu chỉnh ${(this.world?.fixPerSec ?? 0).toFixed(1)}/giây · lệch nhất ${(this.world?.fixMax ?? 0).toFixed(1)}`, // i18n-ok: lớp số liệu debug
       ...probeLines(), // i18n-ok: lớp số liệu debug
+      // Lớp chống sập §13.8: hệ thống nào đã phải tắt, đã dựng lại renderer mấy lần. Dòng
+      // này RỖNG khi mọi thứ bình thường — nó chỉ hiện khi có chuyện.
+      ...guardLines(this.rebuilds, this.watchdogRestarts),
     ].join('\n');
+  }
+
+  /** guardStats: số liệu lớp chống sập, gắn kèm mọi báo cáo lỗi (§13.8). */
+  guardStats(): { resizes: number; rebuilds: number; watchdog: number; sysOff: string } {
+    return { resizes: this.resizes, rebuilds: this.rebuilds, watchdog: this.watchdogRestarts, sysOff: sysOffList() };
   }
 
   /** beastCount: số thần thú đang chạy, theo kiểu — dùng để kiểm tra bằng console debug. */

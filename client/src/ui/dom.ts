@@ -16,10 +16,33 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
+/**
+ * button dựng một nút và bọc lời xử lý bấm trong ranh giới bắt lỗi (GAME_SPEC §13.8:
+ * "mỗi sự kiện UI... try/catch riêng").
+ *
+ * Vì sao cần: một lỗi ném ra từ `onClick` không chỉ làm nút đó không chạy — nó dừng cả hàm
+ * đang gọi nó nửa chừng, và với những nút chuyển màn hình ("Chơi tiếp", "Thử lại") thì
+ * người chơi kẹt ở một màn hình không còn nút nào bấm được. Bắt ở đây thì nút hỏng là nút
+ * hỏng, phần còn lại của trang vẫn dùng được.
+ */
 export function button(label: string, cls: string, onClick: () => void): HTMLButtonElement {
   const b = h('button', cls, label);
-  b.addEventListener('click', onClick);
+  b.addEventListener('click', () => {
+    try {
+      onClick();
+    } catch (err) {
+      console.error(`nút "${label}" lỗi:`, err);
+      uiErrorHook?.(err, label);
+    }
+  });
   return b;
+}
+
+/** onUiError nhận mọi lỗi của nút bấm (telemetry). Cắm một lần lúc khởi động. */
+let uiErrorHook: ((err: unknown, label: string) => void) | null = null;
+
+export function setUiErrorHook(fn: ((err: unknown, label: string) => void) | null): void {
+  uiErrorHook = fn;
 }
 
 /** Screen shows exactly one overlay at a time. */

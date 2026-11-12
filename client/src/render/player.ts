@@ -5,6 +5,7 @@ import type { PlayerFrame } from '../net/state';
 import { BUFFS, FLAG } from '../net/protocol';
 import { assets, type AnimSet } from './assets';
 import { AnimController, type AnimOut } from './animctl';
+import { sysRun } from './guard';
 import { animJitter, JITTER_RED } from './jitter';
 import { animShort, initials } from './catalog';
 import { BUFF_COLORS, charColor } from './palette';
@@ -583,7 +584,19 @@ export class PlayerSprite {
 
   // ---- emote bubble --------------------------------------------------------
 
+  /**
+   * showBubble: bong bóng chữ trên đầu nhân vật.
+   *
+   * Ranh giới `emote` của §13.8 đặt ở đây, không ở hơn mười chỗ gọi rải khắp `scene.ts` và
+   * `skillpresent.ts`. Dựng bong bóng là dựng Text + Sprite, tức là đụng atlas và đo chữ —
+   * hai thứ hỏng được khi art chưa về; mà bong bóng hỏng thì không được làm mất cú chém
+   * vừa sinh ra nó.
+   */
   showBubble(text: string, now: number): void {
+    sysRun('emote', () => this.buildBubble(text, now));
+  }
+
+  private buildBubble(text: string, now: number): void {
     this.bubble?.destroy({ children: true });
     const c = new Container();
     const t = new Text({ text, style: { fontFamily: 'system-ui, sans-serif', fontSize: 16, fontWeight: '800', fill: 0x111111, wordWrap: true, wordWrapWidth: BUBBLE_MAX_TEXT_W, align: 'center' } });

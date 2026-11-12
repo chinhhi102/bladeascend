@@ -52,14 +52,28 @@ export function measureRefreshHz(): Promise<number> {
  * gọi `ticker.update` đúng mỗi n khung quét (deltaMS vẫn là thời gian thật, nên chuyển động
  * không đổi tốc độ — chỉ đổi số lần vẽ).
  */
+/**
+ * gen: số thứ tự lần gọi `paceTicker` gần nhất.
+ *
+ * `paceTicker` gọi được NHIỀU LẦN — watchdog §13.8 gọi lại để khởi động lại nhịp, và dựng
+ * lại renderer cũng gọi. Không có mốc này thì mỗi lần gọi để lại một vòng rAF cũ còn sống,
+ * và sau hai lần cứu game chạy gấp đôi số khung — đúng kiểu "sửa xong còn tệ hơn".
+ */
+let gen = 0;
+
 export function paceTicker(ticker: Ticker, n: number): void {
+  const mine = ++gen;
   ticker.maxFPS = 0;
   if (n <= 1) {
+    ticker.start(); // có thể vừa bị một lần gọi trước dừng lại
     return;
   }
   ticker.stop();
   let count = 0;
   const loop = (t: number): void => {
+    if (mine !== gen) {
+      return; // đã có lần gọi mới hơn: vòng này nghỉ
+    }
     count++;
     if (count >= n) {
       count = 0;

@@ -134,3 +134,46 @@ func TestRecentErrorsRespectsWindow(t *testing.T) {
 		t.Fatalf("muốn chỉ lỗi trong 24 giờ, được %d nhóm %+v", len(g), g)
 	}
 }
+
+// Panic server (§13.8) phải lên CÙNG trang "Lỗi" với lỗi client, và gộp nhóm theo chữ ký
+// giống hệt lỗi JavaScript: dòng đầu, bỏ số.
+//
+// Nếu nó rơi vào nhánh "gộp cả loại làm một" (như `gpu_pressure`) thì mọi panic của server
+// — dù ở tick, ở gói tin hay ở HTTP — thành đúng MỘT dòng, và trang này hết tác dụng vào
+// đúng ngày cần nó nhất.
+func TestServerPanicGomTheoChuKy(t *testing.T) {
+	s, err := Open(t.TempDir()+"/t.db", "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	now := time.Now()
+	add := func(data string) {
+		s.AddEvent(&Event{Session: "server", Kind: KindServerPanic, Data: data,
+			TS: float64(now.Add(-time.Minute).UnixMilli())})
+	}
+	// Cùng một lỗi, hai khu khác nhau, hai số tick khác nhau → MỘT nhóm (bối cảnh nằm ở
+	// dòng 2 trở xuống nên không lọt vào chữ ký).
+	add("runtime error: index out of range [3] @ tick\nkhu Thiên Đình · tick 912\ngame.Tick (game.go:88)")
+	add("runtime error: index out of range [7] @ tick\nkhu Phàm Trấn · tick 4471\ngame.Tick (game.go:88)")
+	// Ranh giới khác → nhóm khác: ngắt một người và hỏng cả tick là hai chuyện.
+	add("nil map @ goi-tin\nngười 7")
+	s.Sync()
+
+	g, err := s.RecentErrors(time.Hour, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(g) != 2 {
+		for _, x := range g {
+			t.Logf("  nhóm %q × %d", x.Sig, x.Count)
+		}
+		t.Fatalf("muốn 2 nhóm, được %d", len(g))
+	}
+	if g[0].Count != 2 || g[0].Kind != KindServerPanic {
+		t.Errorf("nhóm đầu: %+v", g[0])
+	}
+	if !strings.Contains(g[0].Sig, "@ tick") || strings.Contains(g[0].Sig, "Thiên Đình") {
+		t.Errorf("chữ ký phải là ranh giới, không phải bối cảnh: %q", g[0].Sig)
+	}
+}

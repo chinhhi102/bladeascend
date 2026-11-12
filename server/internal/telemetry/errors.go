@@ -16,7 +16,24 @@ import (
 // `gpu_pressure` và `webgl_context_lost` không phải ngoại lệ JavaScript, nhưng với người
 // chơi chúng LÀ lỗi — màn hình trắng hoặc tab bị hệ điều hành thu hồi. Gom chung một chỗ
 // vì người xem đang hỏi "có ai gặp chuyện gì không", không hỏi "có exception nào không".
-var ErrorKinds = []string{"error", "webgl_context_lost", "gpu_pressure"}
+var ErrorKinds = []string{"error", "webgl_context_lost", "gpu_pressure", KindServerPanic, KindClientSysOff}
+
+const (
+	// KindServerPanic: panic của SERVER đã bắt được ở một ranh giới (GAME_SPEC §13.8).
+	// Nằm chung bảng với lỗi client vì người trực hỏi "có gì hỏng không", không hỏi "hỏng
+	// ở phía nào".
+	KindServerPanic = "server_panic"
+	// KindClientSysOff: client phải TẮT một hệ thống vẽ vì nó lỗi 3 lần trong 10 giây
+	// (§13.8). Người chơi vẫn chơi được, nên nó không nổi lên như một lỗi — nhưng nó là
+	// bằng chứng duy nhất cho biết ai đó vừa mất hẳn phần hiệu ứng nào.
+	KindClientSysOff = "client_sys_off"
+)
+
+// stackKinds: loại sự kiện mà `data` là THÔNG BÁO + vết gọi, gộp nhóm theo dòng đầu.
+//
+// Loại còn lại (`gpu_pressure`, `webgl_context_lost`) chở JSON số liệu — gộp theo nội dung
+// thì mỗi giá trị khác nhau thành một nhóm, nên chúng gộp cả loại làm một.
+var stackKinds = map[string]bool{"error": true, KindServerPanic: true, KindClientSysOff: true}
 
 // ErrorGroup là một nhóm lỗi GIỐNG NHAU.
 //
@@ -50,7 +67,7 @@ func errorSig(kind, msg string) string {
 	// Nếu gộp theo nội dung thì `"q":"Thấp"` và `"q":"Vừa"` thành hai nhóm riêng, và một
 	// sự kiện có `data` rỗng thành nhóm thứ ba — ba dòng cho đúng một vấn đề. Đo trên dữ
 	// liệu thật ngày 31/10: 2 người chạm trần bộ nhớ hiện thành 2 nhóm + 2 nhóm.
-	if kind != "error" {
+	if !stackKinds[kind] {
 		return kind
 	}
 	line := msg
@@ -87,7 +104,7 @@ func (s *Store) RecentErrors(since time.Duration, now time.Time) ([]ErrorGroup, 
 	rs, err := s.db.Query(`SELECT e.ts, e.kind, e.data, e.session_id,
 			COALESCE(x.browser,''), COALESCE(x.os,''), COALESCE(x.mobile,0), COALESCE(x.build,'')
 		FROM events e LEFT JOIN sessions x ON x.session_id = e.session_id
-		WHERE e.kind IN ('error','webgl_context_lost','gpu_pressure') AND e.ts >= ?
+		WHERE e.kind IN ('error','webgl_context_lost','gpu_pressure','server_panic','client_sys_off') AND e.ts >= ?
 		ORDER BY e.ts DESC LIMIT 5000`, from)
 	if err != nil {
 		return nil, err

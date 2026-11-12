@@ -1,13 +1,24 @@
 package room
 
 import (
+	"log"
 	"math/rand"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"bladeascend/server/internal/bot"
 	"bladeascend/server/internal/config"
 	"bladeascend/server/internal/game"
 	"bladeascend/server/internal/netproto"
+	"bladeascend/server/internal/safe"
 	"bladeascend/server/internal/world"
+)
+
+// zonePanicLimit / zonePanicWindow: ngưỡng "khu suy giảm" của spec §13.8.
+const (
+	zonePanicLimit  = 3
+	zonePanicWindow = time.Minute
 )
 
 // Zone là MỘT khu vực của phòng (spec §8.0): một thế giới 12 000 × 12 000 riêng, mô phỏng
@@ -59,6 +70,60 @@ type Zone struct {
 	// gửi sang client của khu khác ngay trong goroutine của mình là ghi vào kết nối người
 	// khác đúng lúc khu kia đang ghi — đua dữ liệu. Gom lại, gửi sau khi mọi khu xong.
 	feeds []netproto.Feed
+
+	// panics / health: sổ panic đã bắt của khu (GAME_SPEC §13.8).
+	//
+	// Cả hai có KHOÁ RIÊNG bên trong (safe.Rate, zoneHealth) chứ không nằm dưới khoá của
+	// khu: khu bị panic giữa tick thì `stepZoneSafe` ghi sổ từ chính goroutine đó, còn
+	// trang quản trị đọc từ goroutine HTTP — hai nơi, hai lúc.
+	panics *safe.Rate
+	health zoneHealth
+	// panicNextTick: lệnh test `dbg panic` đặt cờ này, tick sau của khu ném lỗi giả.
+	// atomic vì lệnh đến từ goroutine của phòng, còn cờ được đọc trong goroutine của khu.
+	panicNextTick atomic.Bool
+}
+
+// zoneHealth là trạng thái "suy giảm" của một khu: panic ≥ 3 lần/phút (§13.8).
+type zoneHealth struct {
+	mu       sync.Mutex
+	degraded bool
+	total    int
+	lastAt   time.Time
+}
+
+// notePanic ghi một lần panic của khu và bật cờ suy giảm khi chạm ngưỡng.
+func (z *Zone) notePanic(now time.Time) {
+	hit := z.panics.Hit(now)
+	z.health.mu.Lock()
+	defer z.health.mu.Unlock()
+	z.health.total++
+	z.health.lastAt = now
+	if hit && !z.health.degraded {
+		z.health.degraded = true
+		log.Printf("KHU SUY GIẢM: %s panic %d lần trong 1 phút — xem trang Lỗi", z.Name, z.panics.Count(now))
+	}
+}
+
+// ZoneHealth là báo cáo sức khoẻ một khu cho trang quản trị.
+type ZoneHealth struct {
+	Degraded bool  `json:"degraded"`
+	Panics   int   `json:"panics"`
+	LastAt   int64 `json:"last_at"`
+}
+
+// Health đọc trạng thái sức khoẻ của khu. Hồi phục sau 5 phút không panic: cờ "suy giảm"
+// mà không bao giờ tự tắt thì sau một sự cố nó đỏ mãi và không ai còn nhìn nữa.
+func (z *Zone) Health(now time.Time) ZoneHealth {
+	z.health.mu.Lock()
+	defer z.health.mu.Unlock()
+	if z.health.degraded && now.Sub(z.health.lastAt) > 5*time.Minute {
+		z.health.degraded = false
+	}
+	h := ZoneHealth{Degraded: z.health.degraded, Panics: z.health.total}
+	if !z.health.lastAt.IsZero() {
+		h.LastAt = z.health.lastAt.Unix()
+	}
+	return h
 }
 
 // ZoneMapIDs: id bản đồ của từng khu, do `cmd/mapgen` sinh ra (spec §8.0).
@@ -85,6 +150,7 @@ func newZone(index int, cfg *config.Config, m *world.Map, seed int64) *Zone {
 		clients: map[uint32]*Client{},
 		brains:  map[uint32]*bot.Brain{},
 		rng:     rand.New(rand.NewSource(seed*31 + 17)),
+		panics:  safe.NewRate(zonePanicLimit, zonePanicWindow),
 	}
 }
 
