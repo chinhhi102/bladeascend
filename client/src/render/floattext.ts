@@ -29,6 +29,14 @@ export class FloatTextLayer {
   private readonly live: Item[] = [];
   /** Pool: chữ nổi xuất hiện theo chùm rồi hết, dựng lại mỗi lần là rác cho GC. */
   private readonly pool: BitmapText[] = [];
+  /**
+   * POOL_MAX: trần pool (§13.9 "pool có trần, vd 2× số dùng đỉnh").
+   *
+   * Đỉnh thật là một chùm chữ "+EXP" khi người Đạo Tổ quét qua bãi Linh khí — vài chục cái
+   * cùng lúc. 64 là gấp đôi con số đó. Không có trần thì một trận dài đẩy pool lên hàng
+   * nghìn BitmapText đang sống, và đó là rò rỉ bộ nhớ mang tên "tối ưu".
+   */
+  private static readonly POOL_MAX = 64;
 
   constructor() {
     this.layer.eventMode = 'none';
@@ -46,6 +54,11 @@ export class FloatTextLayer {
     this.live.push({ node, x, y, from: now });
   }
 
+  /** poolSize: số chữ rỗi đang giữ — sổ tài nguyên §13.9 đọc. */
+  get poolSize(): number {
+    return this.pool.length;
+  }
+
   update(now: number): void {
     for (let i = this.live.length - 1; i >= 0; i--) {
       const it = this.live[i];
@@ -53,7 +66,11 @@ export class FloatTextLayer {
       if (k >= 1) {
         it.node.visible = false;
         this.layer.removeChild(it.node);
-        this.pool.push(it.node);
+        if (this.pool.length < FloatTextLayer.POOL_MAX) {
+          this.pool.push(it.node);
+        } else {
+          it.node.destroy();
+        }
         this.live.splice(i, 1);
         continue;
       }

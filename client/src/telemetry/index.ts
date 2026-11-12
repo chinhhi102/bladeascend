@@ -10,6 +10,7 @@
 // Module này nằm sau cờ build `TELEMETRY=on` và được nạp bằng `import()` động, nên bản
 // release (`TELEMETRY` không bật) KHÔNG đóng gói một dòng nào của nó.
 
+import { capArray } from '../render/ledger';
 import { collectSession, randomId, type SessionInfo } from './session';
 import { earlyErrors, onErrorShown } from './early';
 
@@ -21,6 +22,14 @@ const POLL_MS = 250;
 const MAX_QUEUE = 30;
 /** MAX_EVENTS_PER_MIN: trần sự kiện (§2.3). */
 const MAX_EVENTS_PER_MIN = 20;
+/**
+ * MAX_EVENTS_QUEUED: trần sự kiện CHƯA GỬI ĐƯỢC (GAME_SPEC §13.9 "mảng lịch sử đều có trần").
+ *
+ * `MAX_EVENTS_PER_MIN` không thay được nó: nó giới hạn tốc độ SINH, còn mảng này phình khi
+ * không gửi được. Mất mạng 30 phút với 20 sự kiện/phút là 600 mục nằm trong RAM — và mỗi
+ * mục chở tới 500 ký tự thông báo lỗi.
+ */
+const MAX_EVENTS_QUEUED = 120;
 
 interface Sample {
   s: string;
@@ -360,6 +369,9 @@ export class Telemetry {
       return;
     }
     this.events.push({ s: this.id, ts: now, k: kind, d: data.slice(0, 500) });
+    // Quá trần thì bỏ mục CŨ NHẤT: sự kiện mới nói về tình trạng hiện tại, giống hệt luật
+    // của hàng mẫu ở `enqueue`.
+    capArray(this.events, MAX_EVENTS_QUEUED);
     this.trySend();
   }
 

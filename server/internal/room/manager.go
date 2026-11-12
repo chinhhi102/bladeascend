@@ -216,11 +216,36 @@ func (m *Manager) tryClose(r *Room) bool {
 	r.closed = true
 	for i, o := range m.rooms {
 		if o == r {
-			m.rooms = append(m.rooms[:i], m.rooms[i+1:]...)
+			// Dồn trái, XOÁ ô cuối, rồi mới hạ `len`.
+			//
+			// `append(m.rooms[:i], m.rooms[i+1:]...)` một mình là **rò rỉ bộ nhớ**: nó dồn
+			// trái và hạ `len`, nhưng ô cuối của mảng nền vẫn giữ con trỏ. Mà một `*Room`
+			// là cả một thế giới — 5 khu, ~28 000 viên EXP, 5 lưới A*, ≈ 13 MB — và bộ dọn
+			// rác nhìn MẢNG NỀN chứ không nhìn `len`, nên phòng đã đóng không bao giờ được
+			// thu hồi.
+			//
+			// Tìm ra ngày 12/11 bằng `cmd/leakcheck` (§13.9): sau khi MỌI phòng đã đóng,
+			// heap vẫn còn nguyên một thế giới. Cùng họ với lỗi `itemGrid.remove`.
+			last := len(m.rooms) - 1
+			copy(m.rooms[i:], m.rooms[i+1:])
+			m.rooms[last] = nil
+			m.rooms = m.rooms[:last]
 			break
 		}
 	}
+	// Mã phiên §7.1 trỏ tới phòng này cũng phải quên: một mã còn sống là một con trỏ
+	// `*Room` còn sống, và nó giữ lại đúng cái thế giới vừa đóng.
+	m.forgetRoomLocked(r)
 	return true
+}
+
+// forgetRoomLocked xoá mọi mã phiên trỏ tới một phòng. Gọi khi đang giữ `m.mu`.
+func (m *Manager) forgetRoomLocked(r *Room) {
+	for k, v := range m.resume {
+		if v == r {
+			delete(m.resume, k)
+		}
+	}
 }
 
 // BroadcastFeed sends one kill-feed line to every room except `from` (spec §11.4: hạ một

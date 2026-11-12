@@ -64,15 +64,30 @@ func TestBotFillToTarget(t *testing.T) {
 	if r.Humans() != 5 || r.Bots() != wantBots {
 		t.Fatalf("có %d người %d bot, muốn 5 và %d (sàn khu %d)", r.Humans(), r.Bots(), wantBots, cfg.Room.ZoneMinChars.For(""))
 	}
-	joinN(m, 3)
-	r.Step(1.0 / 30)
-	for _, p := range r.Zone(0).G.Players {
-		p.InvulnUntil = 1e9 // v3 swords are lethal to Luyện Khí: keep everyone alive for this check
+	// Giữ MỌI nhân vật bất tử SUỐT cửa sổ đo, và chốt mốc sau khi mọi cú chết đang dở đã
+	// xử lý xong.
+	//
+	// Bản cũ đặt bất tử MỘT LẦN rồi `stepSecs(5)` và so với `wantBots`. Nó đỏ khoảng
+	// 1/25 lần, và lỗi đỏ đó KHÔNG phải lỗi của luật: một con bot chết ngay trước mốc 30
+	// giây vẫn nằm trong `brains` cho tới khi hoạt ảnh chết chạy xong, rồi `onBotDeath`
+	// bỏ hẳn nó (§9.3: khu đã đủ sàn thì bot chết không hồi sinh). Tức là bài test đang
+	// hỏi "có đúng 15 bot không", trong khi thứ nó cần hỏi là "NGƯỜI VÀO có xoá bot không".
+	invulnAll := func(secs float64) {
+		dt := 1.0 / 30
+		for t := 0.0; t < secs; t += dt {
+			for _, p := range r.Zone(0).G.Players {
+				p.InvulnUntil = 1e9
+			}
+			r.Step(dt)
+		}
 	}
-	stepSecs(r, 5)
+	invulnAll(2) // xả hết các cú chết đang dở
+	botsBefore := r.Bots()
+	joinN(m, 3)
+	invulnAll(5)
 	// Người vào KHÔNG xoá bot (v6.28 §9.3): bot dư chỉ vơi dần khi chết.
-	if r.Bots() != wantBots {
-		t.Fatalf("thêm người mà bot còn %d, muốn giữ nguyên %d", r.Bots(), wantBots)
+	if r.Bots() != botsBefore {
+		t.Fatalf("thêm người mà bot còn %d, muốn giữ nguyên %d", r.Bots(), botsBefore)
 	}
 	if r.Humans() != 8 {
 		t.Fatalf("có %d người thật, muốn 8", r.Humans())

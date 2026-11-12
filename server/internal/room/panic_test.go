@@ -116,3 +116,26 @@ func TestPanicTrongHopThuKhongLamChetTick(t *testing.T) {
 		t.Fatal("khu phải vẫn tick dù một việc trong hộp thư hỏng")
 	}
 }
+
+// Vệ sinh bộ nhớ §13.9: phòng đã đóng không được nằm lại trong mảng nền của `Manager`.
+//
+// Bài gác cho rò rỉ thật tìm ra ngày 12/11 — `append(rooms[:i], rooms[i+1:]...)` để lại
+// con trỏ ở ô cuối, và một phòng là cả một thế giới ≈ 13 MB.
+func TestPhongDongKhongNamLaiTrongBoNho(t *testing.T) {
+	m, _, cfg := testManager(t)
+	cs := joinN(m, 1)
+	r := m.AllRooms()[0]
+	settle(r, cfg)
+	r.RemoveClient(cs[0])
+	stepSecs(r, HoldSecs+cfg.Room.EmptyCloseSecs+2)
+	if !r.closed {
+		t.Fatal("phòng phải đóng sau khi hết hạn chờ nối lại")
+	}
+	live, stale := m.RoomSlotAudit()
+	if live != 0 || stale != 0 {
+		t.Fatalf("còn %d phòng sống, %d con trỏ sót trong mảng nền", live, stale)
+	}
+	if n := m.ResumeCount(); n != 0 {
+		t.Fatalf("còn %d mã phiên trỏ tới phòng đã đóng", n)
+	}
+}

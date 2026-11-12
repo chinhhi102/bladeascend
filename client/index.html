@@ -191,7 +191,10 @@
           var box = document.getElementById('kxerr');
           if (box && location.search.indexOf('debug=true') >= 0) {
             box.className = 'on';
-            box.innerHTML += '<b>' + new Date().toLocaleTimeString() + '</b> ' + String(msg).slice(0, 500).replace(/</g, '&lt;') + '\n';
+            // Chèn LÊN ĐẦU và cắt trần: `+=` không trần là một mảng lịch sử tăng mãi
+            // (§13.9) — một lỗi lặp trong vòng vẽ bắn 60 lần/giây sẽ phình ô này tới hàng
+            // chục MB DOM, đúng trên cái máy đang hỏng sẵn.
+            box.innerHTML = ('<b>' + new Date().toLocaleTimeString() + '</b> ' + String(msg).slice(0, 500).replace(/</g, '&lt;') + '\n' + box.innerHTML).slice(0, 8000);
           }
         };
         window.addEventListener('error', function (e) {

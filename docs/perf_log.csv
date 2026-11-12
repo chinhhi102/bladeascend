@@ -78,3 +78,6 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 33,2026-11-11,ec38aee,"Rò rỉ texture — đo TRƯỚC (5 phút lang thang)",TEXLEAK,,,,,,,,60,,,,5716,202.2,,,,,,,,,,,"118 → 625 texture: +91 texture/phút, +17.9 MB/phút, một chiều",1
 33,2026-11-11,,"Rò rỉ texture — đo SAU (14 phút lang thang)",TEXLEAK,,,,,,,,60,,,,3987,132.9,,,,,,,,,,,"191 → 224 texture (nhấp nhô 168–276, không xu hướng): +2 texture/phút, −0.6 MB/phút",1
 0,2026-11-11,,"Người thật 11/11 12:00 → 11/11 23:30",S6,2.12,12.45,22.0,4.2,20.4,3.9,94.0,45.9,0.3,,111,4448,204.9,0,7.31,,,,"",15
+0,2026-11-12,,"Người thật 11/11 23:30 → 12/11 12:00",S6,2.24,14.46,27.1,7.6,14.7,2.9,53.0,55.5,0.9,,0,4874,241.3,0,3.60,,,,"ít mẫu, tham khảo (N=2)",2
+36,2026-11-12,9ba5e3a,"Rò rỉ bộ nhớ server — đo TRƯỚC (25 phút game, 6 người vào/ra)",LEAK-SRV,,,,,,,,,,,,,,,,,,,,,,,"heap 8.2 → 159.0 MB = +6.5 MB/phút tuyến tính; ngoại suy 1 giờ = 420 MB",
+36,2026-11-12,,"Rò rỉ bộ nhớ server — đo SAU (60 phút game, 2703 lượt vào/ra)",LEAK-SRV,,,,,,,,,,,,,,,,,,,,,,,"heap/phòng +2.9% (+0.01 MB/phút); hết người: 8.30 → 0.92 MB; goroutine ±0",

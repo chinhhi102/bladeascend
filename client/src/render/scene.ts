@@ -1,6 +1,7 @@
 import { Application, Container, Texture, type Ticker, UPDATE_PRIORITY } from 'pixi.js';
 import { AnimViewer } from './animviewer';
 import { guardLines, killFilters, noteDrawError, noteSysError, sysOffList, sysRun } from './guard';
+import { census, type Census, censusFlat, censusLine, ledgerSet } from './ledger';
 import { setEmoteCharCount } from './emote';
 import { paceTicker } from './framepace';
 import { probeEnabled, probeFrame, probeHeap, probeLines, probeMark, probeStats, probeSubFlush } from './probe';
@@ -123,6 +124,9 @@ export class GameScene {
   private resizes = 0;
   /** drawFaults: số khung còn phải ném lỗi giả trong khâu vẽ (`kx.faultDraw`, §17). */
   private drawFaults = 0;
+  /** lastCensus / censusAt: sổ tài nguyên §13.9, chốt 1 lần/giây. */
+  private lastCensus: Census = census({ children: [] });
+  private censusAt = 0;
   private readonly camera = new Container();
   private readonly entities = new Container();
   /** Viên Linh khí vẽ riêng bằng particle: vài trăm viên cùng lúc, xem orblayer.ts. */
@@ -596,6 +600,7 @@ export class GameScene {
     });
     probeMark('skills');
     probeHeap(now);
+    this.takeCensus(now);
     // Trung bình trượt để số không nhảy loạn; gồm cả lượt vẽ của Pixi ở khung trước.
     this.lastRenderMs = this.lastRenderMs * 0.9 + (performance.now() - t0) * 0.1;
     this.sampleFps(dt);
@@ -1071,7 +1076,31 @@ export class GameScene {
       items: this.items.size,
       aoi: this.players.size + this.monsters.size + this.items.size + this.orbs.ids().length,
       detail: this.detail,
+      // Sổ tài nguyên §13.9: số đối tượng đang sống theo loại. Chốt 1 lần/giây chứ không
+      // đếm lại ở đây — `perfStats()` được gọi 4 lần/giây từ telemetry.
+      ...censusFlat(this.lastCensus),
     };
+  }
+
+  /**
+   * takeCensus chốt sổ tài nguyên (§13.9). Gọi 1 lần/giây từ vòng vẽ.
+   *
+   * Duyệt cả cây cảnh nên KHÔNG chạy mỗi khung — ở chỗ đông cây có vài nghìn nút. Một
+   * giây là đủ dày cho một chỉ số đo bằng phút.
+   */
+  private takeCensus(now: number): void {
+    if (now - this.censusAt < 1) {
+      return;
+    }
+    this.censusAt = now;
+    // Pool là chỗ dễ biến thành rò rỉ nhất: nó giữ tham chiếu CÓ CHỦ Ý nên bộ dọn rác
+    // không bao giờ đụng tới. Khai ra để nó nằm cạnh các con số khác.
+    ledgerSet('pool', this.pool.size);
+    ledgerSet('poolText', this.floatText.poolSize);
+    ledgerSet('beasts', this.beasts.length);
+    ledgerSet('auras', this.auras.size);
+    ledgerSet('flying', this.flying.length);
+    this.lastCensus = census(this.app.stage as unknown as Parameters<typeof census>[0]);
   }
 
   /**
@@ -1128,6 +1157,8 @@ export class GameScene {
       // Lớp chống sập §13.8: hệ thống nào đã phải tắt, đã dựng lại renderer mấy lần. Dòng
       // này RỖNG khi mọi thứ bình thường — nó chỉ hiện khi có chuyện.
       ...guardLines(this.rebuilds, this.watchdogRestarts),
+      // Sổ tài nguyên §13.9 — con số phải ĐỨNG YÊN qua nhiều phút chơi.
+      censusLine(this.lastCensus),
     ].join('\n');
   }
 

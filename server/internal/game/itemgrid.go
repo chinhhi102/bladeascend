@@ -77,6 +77,17 @@ func (ig *itemGrid) remove(it *Item) {
 	}
 	c[it.slot] = c[last]
 	c[it.slot].slot = it.slot
+	// XOÁ Ô CUỐI trước khi cắt. Thiếu dòng này là **rò rỉ bộ nhớ thật**, tìm ra ngày
+	// 12/11 bằng `cmd/leakcheck` (§13.9): heap server tăng đều 7 MB/phút, 420 MB sau một
+	// giờ — đủ để giết tiến trình trên VPS 1 GB.
+	//
+	// Vì sao: `c[:last]` chỉ hạ `len`, mảng nền vẫn giữ con trỏ ở ô `last`. Bộ dọn rác
+	// nhìn cả mảng nền, không nhìn `len`, nên viên vừa bị nhặt KHÔNG BAO GIỜ được thu
+	// hồi. Nặng nhất đúng ở trường hợp thường gặp nhất: ô chỉ có một viên (`it.slot ==
+	// last`), lúc đó dòng hoán đổi ở trên là gán chính nó, và viên vừa xoá nằm lại nguyên
+	// trong mảng nền. Mà bản đồ có hàng nghìn viên EXP môi trường, mỗi viên nhặt xong
+	// mọc lại sau 5 giây — tức là gần như mọi lần xoá đều rơi vào trường hợp đó.
+	c[last] = nil
 	ig.cells[it.cell] = c[:last]
 	it.slot = -1
 }
@@ -98,4 +109,46 @@ func (ig *itemGrid) each(lo, hi Vec, fn func(*Item)) {
 // ItemsNear calls fn for items in cells overlapping the square of half-size r around c.
 func (g *Game) ItemsNear(c Vec, rx, ry float64, fn func(*Item)) {
 	g.itemGrid.each(Vec{X: c.X - rx, Y: c.Y - ry}, Vec{X: c.X + rx, Y: c.Y + ry}, fn)
+}
+
+// GridAudit là số đo trong ruột lưới vật phẩm — bài kiểm rò rỉ §13.9 đọc.
+//
+// `Cap` quan trọng hơn `Len`: mảng nền của một ô không bao giờ co lại, nên `Cap - Len` là
+// số ô nhớ đang giữ chỗ. Chúng phải LUÔN bằng nil (xem `remove`); con số này chỉ để thấy
+// lưới có phình không.
+type GridAudit struct {
+	Cells, Len, Cap, Stale int
+}
+
+// GridAudit duyệt cả lưới. Chỉ dùng trong test và `cmd/leakcheck` — O(số ô).
+func (g *Game) GridAudit() GridAudit {
+	var a GridAudit
+	a.Cells = len(g.itemGrid.cells)
+	for _, c := range g.itemGrid.cells {
+		a.Len += len(c)
+		a.Cap += cap(c)
+		// Con trỏ còn sót ngoài `len`: đúng cái rò rỉ tìm ra ngày 12/11.
+		full := c[:cap(c)]
+		for i := len(c); i < len(full); i++ {
+			if full[i] != nil {
+				a.Stale++
+			}
+		}
+	}
+	return a
+}
+
+// SlotAudit: số slot đã cấp, số đang trống, và số ô còn trỏ vào vật phẩm.
+func (g *Game) SlotAudit() (total, free, used int) {
+	for _, it := range g.itemSlots {
+		if it != nil {
+			used++
+		}
+	}
+	return len(g.itemSlots), len(g.freeSlots), used
+}
+
+// QueueAudit: độ dài các hàng chờ mọc lại. Chúng phải đứng yên quanh một mức.
+func (g *Game) QueueAudit() (orbs, items int) {
+	return len(g.orbRespawns), len(g.itemRespawns)
 }

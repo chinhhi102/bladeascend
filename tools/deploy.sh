@@ -266,6 +266,48 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   fi
 fi
 
+# ── Cổng rò rỉ bộ nhớ (GAME_SPEC §13.9) ────────────────────────────────────────────────
+#
+# Hai bài, hai phía, cả hai đều CHẶN deploy khi đỏ:
+#
+#   - server: `cmd/leakcheck` chạy 60 phút GAME bằng đồng hồ giả, xong trong vài chục giây,
+#     và không phụ thuộc tải máy (nó đo heap của chính tiến trình, không đo FPS).
+#   - client: `tools/browsertest/leakcheck.mjs` chạy THẬT 30 phút trên Chrome headless —
+#     spec chốt con số đó vì rò rỉ GPU chỉ lộ ra sau nhiều phút (181 lượt đổi khu → 1,4 GB).
+#
+# 30 phút cho mỗi lần deploy là một cái giá thật. Hạ bằng `LEAK_MINUTES=8 tools/deploy.sh`
+# khi đang sửa gấp, hoặc bỏ hẳn bằng `SKIP_LEAK=1` — nhưng đừng để nó thành thói quen: bài
+# này là thứ duy nhất bắt được rò rỉ trước khi người chơi gặp.
+if [ "${SKIP_LEAK:-0}" != "1" ]; then
+  echo "== 2d/5 rò rỉ bộ nhớ SERVER (§13.9, 60 phút game, đồng hồ giả) =="
+  set +e
+  ( cd server && go run ./cmd/leakcheck -minutes "${LEAK_SERVER_MINUTES:-60}" ) >/tmp/kx-leak-server.out 2>&1
+  leak_srv=$?
+  set -e
+  tail -6 /tmp/kx-leak-server.out
+  if [ "$leak_srv" != "0" ]; then
+    echo "LỖI: server rò rỉ bộ nhớ (§13.9). Dừng deploy. Xem /tmp/kx-leak-server.out" >&2
+    exit 1
+  fi
+
+  if [ -d tools/browsertest/node_modules/playwright ]; then
+    echo "== 2e/5 rò rỉ bộ nhớ CLIENT (§13.9, ${LEAK_MINUTES:-30} phút thật) =="
+    ( cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9996 -debug=true >/tmp/kx-leak.log 2>&1 & echo $! > /tmp/kx-leak.pid )
+    sleep 22
+    set +e
+    MINUTES="${LEAK_MINUTES:-30}" node tools/browsertest/leakcheck.mjs http://127.0.0.1:9996 >/tmp/kx-leak-client.out 2>&1
+    leak_cli=$?
+    set -e
+    tail -8 /tmp/kx-leak-client.out
+    kill "$(cat /tmp/kx-leak.pid)" 2>/dev/null || true
+    pkill -f "127.0.0.1:9996" 2>/dev/null || true
+    if [ "$leak_cli" != "0" ]; then
+      echo "LỖI: client rò rỉ bộ nhớ (§13.9). Dừng deploy. Xem /tmp/kx-leak-client.out" >&2
+      exit 1
+    fi
+  fi
+fi
+
 
 echo "== 3/5 build server =="
 ( cd server && go build -o bladeascend ./cmd/server )

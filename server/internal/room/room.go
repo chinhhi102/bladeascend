@@ -60,9 +60,11 @@ type Room struct {
 	recentNames map[string]float64
 	lbTimer     float64
 	emptyFor    float64
-	reserved    int // humans counted by the manager (guarded by Manager.mu)
-	closed      bool
-	snapEvery   float64
+	// sweepAcc: đồng hồ cho lượt quét mục mồ côi mỗi 60 s (§13.9, sweep.go).
+	sweepAcc  float64
+	reserved  int // humans counted by the manager (guarded by Manager.mu)
+	closed    bool
+	snapEvery float64
 	// rankAt: hạng của từng người, chụp MỘT LẦN đầu mỗi tick.
 	//
 	// Bảng xếp hạng tính chung cả thế giới, nên tính nó phải đọc người chơi của mọi khu —
@@ -370,6 +372,8 @@ func (r *Room) stepInner(dt float64, stepStart time.Time) {
 	// Hết 20 giây chờ nối lại (§7.1) thì nhân vật rời phòng như thoát thường. Chạy ở RANH
 	// GIỚI TICK vì nó đụng nhiều khu cùng lúc.
 	r.expireHolds()
+	// Lưới an toàn §13.9: quét mục mồ côi mỗi 60 giây (sweep.go).
+	r.sweepTick(dt)
 	r.updateBots(dt)
 	r.lbTimer += dt
 	if r.lbTimer >= 1/float64(r.cfg.Net.LeaderboardHz) {

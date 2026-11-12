@@ -72,6 +72,22 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			}
 		case "summon":
 			r.debugSummon(z, p, float64(d.N))
+		case "zone":
+			// Nhảy sang khu khác NGAY, không cần đi tìm cổng. Chỉ cho lệnh test.
+			//
+			// Bài kiểm rò rỉ §13.9 phải "đổi khu 50 lần"; làm bằng cách lái nhân vật tới
+			// một cổng 50 lần thì bài đo dài gấp mấy lần và hay hỏng vì nhân vật kẹt vật
+			// cản — tức là một bài đo không ai chạy. Đây là cùng một đường chuyển khu với
+			// cổng (`queueTransfer`), nên nó vẫn kiểm đúng thứ cần kiểm.
+			next := d.N
+			if next < 0 || next >= len(r.zones) {
+				next = (z.Index + 1) % len(r.zones)
+			}
+			if next != z.Index {
+				to := r.zones[next]
+				mid := to.G.Map.Size / 2
+				r.queueTransfer(transfer{playerID: p.ID, from: z, to: to, at: game.Vec{X: mid, Y: mid}, destGate: -1})
+			}
 		case "panic":
 			// LỖI GIẢ để nghiệm thu §13.8 (checklist §17). Không có nó thì lớp chống sập chỉ
 			// được thử lần đầu bằng một lỗi thật, giữa trận, trên máy người chơi.

@@ -131,6 +131,14 @@ export class ClientWorld {
   /** traceId/trace: vết của một entity cho bài đo (xem `traceEntity`); 0 = tắt. */
   private traceId = 0;
   private readonly trace: number[] = [];
+  /**
+   * TRACE_MAX: trần mảng vết (§13.9 "vết netcode 2 s").
+   *
+   * 4 số mỗi khung × 144 khung/giây × 2 giây = 1 152; làm tròn lên 1 200. Trần cũ là
+   * 40 000 số, tức là ~70 giây trên màn 144 Hz — và bài đo chỉ đọc 2 giây cuối, nên 68
+   * giây còn lại là bộ nhớ giữ cho vui.
+   */
+  private static readonly TRACE_MAX = 1200;
   /** gaps: khoảng cách giữa các gói snapshot gần đây (ms) — nguồn của `interpTarget`. */
   private readonly gaps: number[] = [];
   private interpMs: number;
@@ -766,7 +774,7 @@ export class ClientWorld {
     for (const v of this.players.values()) {
       out.push(v.id === this.myId ? this.myFrame(v) : interpPlayer(v, this.cfg, rt));
     }
-    if (this.traceId !== 0 && this.trace.length < 40000) {
+    if (this.traceId !== 0 && this.trace.length < ClientWorld.TRACE_MAX) {
       const f = out.find((p) => p.view.id === this.traceId);
       if (f) {
         // Kèm TỐC ĐỘ CỦA DỮ LIỆU ở đúng khung này: cặp gói đang được nội suy đi nhanh bao

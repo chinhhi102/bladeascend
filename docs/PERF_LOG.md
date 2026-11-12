@@ -120,6 +120,8 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 35 | 2026-11-12 | `286d086` | Như trên — tick đi đâu trong khu nặng nhất (Thiên Đình, 30 nhân vật, 10 500 kiếm) | S13 | 1.83 / 3.40 ✅ | – | – | – | – | – | – | – | va chạm **0,98 ms (54%)** · gửi gói 0,57 (31%) · bot AI 0,15 · **kỹ năng v6.48 0,00** | Kỹ năng KHÔNG phải thủ phạm |
 | 34 | 2026-11-12 | `52adf2e` | **Tick NGƯỜI THẬT 13 ngày** (đọc `server_samples`, 4 963 dòng khu-có-người; `cmd/tickquery`) | S6 | 1.93 / **2.57** ✅ (trung vị p95) | – | – | – | – | – | – | – | Thiên Đình p95 4.80 vs khu khác 1.74–2.97 · 21–30 n.vật p95 5.27 · đông nhất từng gặp **3 người/khu** | B24, B25 mở — và xem §5 #34: cùng build, máy rảnh 2.13 → máy bận 6.03 |
 | 33 | 2026-11-11 | (sau sửa) | **Rò rỉ texture — đo sau**: cùng bài, 14 phút | TEXLEAK | – | – | – | 60 / – | – | – | – | – | 14 phút: **191 → 224 texture** (nhấp nhô 168–276, KHÔNG có xu hướng), 141 → 133 MB (**−0,6 MB/phút**). Mặt nạ nền đứng ở 20 tấm | B23 đóng |
+| 36 | 2026-11-12 | `9ba5e3a` (trước sửa) | **Rò rỉ bộ nhớ SERVER — đo trước** (`cmd/leakcheck`, 25 phút game, đồng hồ giả, 6 người vào/ra liên tục) | LEAK-SRV | – | – | – | – | – | – | – | – | heap **8,2 → 159,0 MB** sau 25 phút: **+6,5 MB/phút tuyến tính**, 31 500 object/phút. Ngoại suy 1 giờ = **420 MB** | B27 mở |
+| 36 | 2026-11-12 | `(lượt này)` | **Rò rỉ bộ nhớ SERVER — đo sau** hai bản vá con trỏ (`itemGrid.remove`, `Manager.tryClose`) | LEAK-SRV | – | – | – | – | – | – | – | – | 60 phút / **2 703 lượt vào-ra**: heap mỗi phòng **+2,9 %** (+0,01 MB/phút); sau khi mọi người rời heap **8,30 → 0,92 MB**, goroutine ±0 | B27 đóng |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1089,10 +1091,62 @@ quá ngưỡng. `go test ./...` 468 test xanh.
 ghi phút có người thật, kèm load máy + GC + heap + goroutine. Bench chi phí:
 **0,0004 ms/tick, 0 lần cấp phát** — dưới trần 0,1 ms của §12 hai trăm năm mươi lần.
 
+### #36 — 12/11/2026 · Rò rỉ bộ nhớ SERVER: tìm bằng `cmd/leakcheck` (§13.9)
+
+**Bài đo mới.** `server/cmd/leakcheck` chạy 60 phút GAME bằng **đồng hồ giả** (vòng
+`r.Step(dt)`), nên nó xong trong vài chục giây và **không phụ thuộc tải máy** — khác hẳn mọi
+bài đo FPS phải đợi máy rảnh (luật 16). Nó đo heap của chính tiến trình đang mô phỏng, với
+6 người vào/ra liên tục, rồi so hai mốc: nền (sau khi thế giới ấm) ↔ sau khi mọi người rời.
+
+**Đo trước:** heap **8,2 → 159,0 MB sau 25 phút**, tăng TUYẾN TÍNH 6,5 MB/phút và 31 500
+object/phút. Ngoại suy một giờ là **420 MB** — đủ giết tiến trình trên VPS 1 GB.
+
+**Nguyên nhân 1 — `itemGrid.remove` để lại con trỏ ngoài `len`.**
+
+```go
+c[it.slot] = c[last]
+ig.cells[it.cell] = c[:last]   // ← ô `last` của MẢNG NỀN vẫn giữ con trỏ
+```
+
+`c[:last]` chỉ hạ `len`; bộ dọn rác nhìn mảng nền, không nhìn `len`. Nặng nhất đúng ở trường
+hợp thường gặp nhất: ô chỉ có một viên (`it.slot == last`), lúc đó dòng hoán đổi là gán
+chính nó và viên vừa nhặt nằm lại nguyên. Bản đồ có ~5 600 viên EXP môi trường mỗi khu, mỗi
+viên nhặt xong mọc lại sau 5 giây → gần như **mọi** lần xoá đều rơi vào trường hợp đó.
+Bằng chứng: `pprof -inuse_objects` cho `addAmbientOrb` giữ **309 477 object** trong khi thế
+giới chỉ có ~27 000 viên sống.
+
+**Nguyên nhân 2 — `Manager.tryClose` cùng họ lỗi.** `append(rooms[:i], rooms[i+1:]...)` để
+lại con trỏ `*Room` ở ô cuối. Một `*Room` là cả một thế giới (5 khu, ~28 000 viên, 5 lưới
+A*) ≈ **13 MB**. Triệu chứng: sau khi MỌI phòng đã đóng, heap vẫn còn nguyên một thế giới.
+
+**Đo sau (60 phút, 2 703 lượt vào-ra):**
+
+| | nền | sau khi mọi người rời |
+|---|---|---|
+| heap | 8,30 MB | **0,92 MB** |
+| goroutine | 1 | 1 |
+| object | 35 897 | 3 345 |
+
+Xu hướng khi đang chơi (heap chia cho số phòng đang sống, nửa sau bài đo): phút 30 **8,69
+MB** → phút 59 **8,94 MB** = **+2,9 %** (+0,01 MB/phút). ĐẠT ngưỡng ±10 % của §13.9.
+
+**Hai bài gác** để lỗi này không quay lại: `TestLuoiVatPhamKhongGiuConTroDaXoa` (đếm thẳng
+số con trỏ sót ngoài `len`, không đo heap — số xác định, không phụ thuộc GC) và
+`TestPhongDongKhongNamLaiTrongBoNho`.
+
+**Hai cái bẫy của chính bài đo**, ghi lại để lần sau không mất thì giờ:
+- Bài đo ban đầu chỉ tick phòng ĐẦU TIÊN. Phòng thứ hai (sinh ra khi phòng đầu đầy) đứng im
+  mãi, chỗ giữ §7.1 không hết hạn, phòng không bao giờ đóng → báo "rò rỉ" cho một thứ chỉ
+  tồn tại trong bài đo.
+- Bài đo giữ một con trỏ `*Room` tới phòng đã đóng, tức là tự giữ 8 MB rồi báo rò rỉ 8 MB.
+
+---
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
+| B28 | **Rò rỉ bộ nhớ SERVER: 7 MB/phút, 420 MB sau một giờ** | Tiến trình chết trên VPS 1 GB trước khi hết một ca chơi | #36: `cmd/leakcheck` 25 phút → heap 8,2 → 159,0 MB tuyến tính. `pprof -inuse_objects`: `addAmbientOrb` giữ 309 477 object trong khi thế giới chỉ có ~27 000 viên sống | **Đóng (#36)** — hai con trỏ bỏ quên ngoài `len` (`itemGrid.remove`, `Manager.tryClose`). Đo lại 60 phút / 2 703 lượt vào-ra: heap mỗi phòng +2,9 %, hết người thì về 0,92 MB | #36 |
 | B27 | **Server game chạy chung máy với việc nặng của người khác** | Mọi số tick đo trên `:9999` đều có thể là số của CÁI MÁY chứ không của game | #35: server dùng **5% của một nhân** (pprof 1,88 s / 30 s) trong khi máy ở load 47, CPU 89,6%, swap 2 GB cạn — và tick p95 vẫn 17 ms. Mọi hệ thống trong tick đều có `max` 5–20 ms dù TB 0,04–0,17 ms | **Mở** — bộ thu gom §12 nay ghi `load1`/`cpu_pct` máy cạnh tick, và cảnh báo tự nói "có thể do máy bận". Muốn số tick sạch thì phải tách server sang máy riêng, hoặc đo lúc load/nhân < 0,5 | #35 |
 | B26 | **Đường GỬI GÓI là chỗ tốn nhất còn lại khi đông** | Trần người chơi mỗi phòng | #35 pprof sau tối ưu (S13, 110 nhân vật): `snapshotFor` **32% CPU**, trong đó `diffItems` 21%. Trong khu nặng: gửi gói 0,57 ms/tick (31%), va chạm 0,98 ms (54%) | Mở — `diffItems` đã qua hai lượt tối ưu (xem ghi chú trong `broadcast.go`); lượt sau phải nhắm vào SỐ VIÊN gửi đi (4 900 viên/khu) chứ không vi chỉnh vòng lặp | – |
 | B25 | **Ngưỡng cảnh báo tick 3,5 ms nổ 37,9% thời gian** | Cảnh báo nổ hơn một phần ba thời gian là cảnh báo không ai đọc nữa | #34: 4 963 dòng khu-có-người, 1 883 dòng vượt 3,5 ms. Thiên Đình riêng nó vượt 61,3% vì sàn bot 30 | Mở — hoặc nâng ngưỡng, hoặc đặt ngưỡng RIÊNG theo khu | – |
