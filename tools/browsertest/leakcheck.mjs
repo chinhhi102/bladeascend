@@ -30,6 +30,14 @@ const ZONE_SWITCHES = Number(process.env.ZONE_SWITCHES ?? 50);
 const DEATHS = Number(process.env.DEATHS ?? 10);
 /** TOL: ngưỡng tăng cho phép, %. */
 const TOL = Number(process.env.TOL ?? 10);
+/**
+ * STEADY_MIN: từ phút nào trở đi mới coi là trạng thái ỔN ĐỊNH.
+ *
+ * Đo 12/11 (bài 30 phút đầy đủ): bộ làm việc của game chạm trần quanh **phút 20** — 11
+ * atlas nhân vật nạp dần khi gặp người mới, art của 5 khu nạp dần qua 50 lượt đổi khu,
+ * pool giãn tới mức dùng đỉnh. Trước mốc đó mọi phép so đều đang đo giai đoạn LỚN LÊN.
+ */
+const STEADY_MIN = Number(process.env.STEADY_MIN ?? 20);
 /** STEP_SECS: nhịp lấy mẫu. */
 const STEP_SECS = Number(process.env.STEP_SECS ?? 15);
 
@@ -225,22 +233,33 @@ for (const [name, get, unit] of METRICS) {
 //
 // Rò rỉ thật thì KHÔNG có trần — nó tăng đều tới khi tab chết (xem #33: +91 texture/phút
 // một chiều). Nên phép so nửa-sau là phép so bắt đúng thứ cần bắt, và nó là phép chặn.
-const half = rows.find((r) => r.min >= last.min / 2) ?? base;
-console.log(`\n== xu hướng nửa sau: phút ${half.min} → ${last.min} (phép so CHẶN DEPLOY) ==`);
+// Bài quá ngắn thì KHÔNG kết luận gì — và nói thẳng ra là không kết luận.
+//
+// Một lượt 8 phút không thể chứng minh "không rò rỉ": nửa sau của nó (phút 4–8) vẫn nằm
+// trọn trong giai đoạn lớn lên, nên nó sẽ đỏ với MỌI build, kể cả build sạch. Một cổng
+// đỏ với mọi build là một cổng sẽ bị tắt.
+const steady = rows.find((r) => r.min >= STEADY_MIN);
 let bad = false;
-for (const [name, get, unit] of METRICS) {
-  const from = get(half);
-  const to = get(last);
-  const pct = pctOf(from, to);
-  const ok = pct <= TOL || to - from <= FLOOR[name];
-  if (!ok) {
-    bad = true;
+if (!steady || last.min - steady.min < 4) {
+  console.log(`\n== xu hướng: KHÔNG KẾT LUẬN (bài chỉ ${last.min} phút) ==`);
+  console.log(`Cần chạy tới ít nhất ${STEADY_MIN + 4} phút thì mới có cửa sổ ổn định để so.`);
+  console.log('Bài ngắn chỉ dùng để xem bài đo còn chạy được, không dùng để gác deploy.');
+} else {
+  console.log(`\n== xu hướng khi đã ổn định: phút ${steady.min} → ${last.min} (phép so CHẶN DEPLOY) ==`);
+  for (const [name, get, unit] of METRICS) {
+    const from = get(steady);
+    const to = get(last);
+    const pct = pctOf(from, to);
+    const ok = pct <= TOL || to - from <= FLOOR[name];
+    if (!ok) {
+      bad = true;
+    }
+    console.log(`${name.padEnd(16)} ${from.toFixed(1).padStart(9)} → ${to.toFixed(1).padStart(9)} ${unit}  (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)  ${ok ? 'ĐẠT' : 'TRƯỢT'}`);
   }
-  console.log(`${name.padEnd(16)} ${from.toFixed(1).padStart(9)} → ${to.toFixed(1).padStart(9)} ${unit}  (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)  ${ok ? 'ĐẠT' : 'TRƯỢT'}`);
 }
-if (specFail.length && !bad) {
-  console.log(`\n⚠ Vượt 10% so với phút ${base.min} ở: ${specFail.join(', ')} — nhưng nửa sau ĐỨNG YÊN,`);
-  console.log('  tức là bộ làm việc đã chạm trần chứ không rò rỉ. Xem docs/QUESTIONS.md.');
+if (specFail.length && !bad && steady) {
+  console.log(`\n⚠ Vượt ${TOL}% so với phút ${base.min} ở: ${specFail.join(', ')} — nhưng cửa sổ ổn định`);
+  console.log('  ĐỨNG YÊN, tức là bộ làm việc đã chạm trần chứ không rò rỉ. Xem Q53 trong docs/QUESTIONS.md.');
 }
 
 await b.close();

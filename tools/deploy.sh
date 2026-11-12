@@ -302,6 +302,10 @@ fi
 # 30 phút cho mỗi lần deploy là một cái giá thật. Hạ bằng `LEAK_MINUTES=8 tools/deploy.sh`
 # khi đang sửa gấp, hoặc bỏ hẳn bằng `SKIP_LEAK=1` — nhưng đừng để nó thành thói quen: bài
 # này là thứ duy nhất bắt được rò rỉ trước khi người chơi gặp.
+#
+# Lưu ý: hạ xuống dưới ~24 phút thì bài client **không còn gác được gì** — nó in số rồi nói
+# thẳng "KHÔNG KẾT LUẬN", vì bộ làm việc của game chỉ chạm trần quanh phút 20 và một cửa sổ
+# nằm trước mốc đó sẽ đỏ với mọi build, kể cả build sạch (xem Q53).
 if [ "${SKIP_LEAK:-0}" != "1" ]; then
   echo "== 2d/5 rò rỉ bộ nhớ SERVER (§13.9, 60 phút game, đồng hồ giả) =="
   set +e
