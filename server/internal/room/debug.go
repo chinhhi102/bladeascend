@@ -78,11 +78,22 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			//
 			// Quét cả 5 khu vì người bị chém có thể không ở cùng khu với người gửi lệnh. An
 			// toàn trong `r.Do`: không khu nào đang tick.
+			killed := false
 			for _, tz := range r.zones {
 				if t, ok := tz.G.Players[uint32(d.N)]; ok && !t.Dead {
 					tz.G.DebugKill(t)
+					killed = true
 					break
 				}
+			}
+			// Không có trong phòng này thì tìm ở PHÒNG KHÁC.
+			//
+			// Hai tab của bài đo không chắc vào cùng phòng: người mới được xếp vào phòng
+			// đông nhất, mà phòng đông nhất có thể đã đầy và một phòng thứ hai mở ra. Khi
+			// đó `killid` im lặng không làm gì, bài rejoin báo đỏ, và nguyên nhân trông
+			// hệt như một lỗi của §7.1 — đã mất một lượt deploy đúng vì chuyện này.
+			if !killed {
+				r.mgr.killElsewhere(r, uint32(d.N))
 			}
 		case "buff":
 			if d.N >= 0 && d.N < game.BuffCount {

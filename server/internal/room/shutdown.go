@@ -54,3 +54,29 @@ func (r *Room) ShutdownDrain() int {
 	}
 	return n
 }
+
+// killElsewhere chém một người ở phòng KHÁC phòng `from` — chỉ cho lệnh test `killid`.
+//
+// Mỗi phòng là một goroutine, nên phải đi qua `Do` của CHÍNH phòng đó; gọi thẳng vào
+// `z.G.Players` từ goroutine phòng khác là đọc map song song với tick đang ghi (đúng lỗi
+// B12 đã làm sập server một lần).
+func (m *Manager) killElsewhere(from *Room, id uint32) {
+	for _, rm := range m.AllRooms() {
+		if rm == from {
+			continue
+		}
+		done := false
+		rm.Do(func() {
+			for _, z := range rm.zones {
+				if t, ok := z.G.Players[id]; ok && !t.Dead {
+					z.G.DebugKill(t)
+					done = true
+					return
+				}
+			}
+		})
+		if done {
+			return
+		}
+	}
+}
