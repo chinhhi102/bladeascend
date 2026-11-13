@@ -1,4 +1,4 @@
-import { AnimatedSprite, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
+import { AnimatedSprite, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 
 import type { GameConfig } from '../config';
 import type { PlayerFrame } from '../net/state';
@@ -57,6 +57,32 @@ const FALLBACK: Record<string, string[]> = {
 /** Anim `skill` phát bao lâu khi nhận `SkillCast` (lớp ① spec v6.36 §6.5) — chỉ để vẽ. */
 const SKILL_ANIM_SECS = 0.6;
 
+/**
+ * shadowTexture: một ellipse trắng, dựng một lần, dùng chung cho mọi nhân vật.
+ *
+ * Trắng chứ không đen: `tint` chỉ NHÂN màu, nên muốn tô được bất kỳ màu nào thì nguồn phải
+ * là trắng. Vẽ ở cỡ lớn rồi thu nhỏ bằng `width`/`height` để bóng của Đạo Tổ (bán kính gấp
+ * 5 lần Luyện Khí) không bị răng cưa.
+ */
+let shadowTex: Texture | null = null;
+function shadowTexture(): Texture {
+  if (shadowTex) {
+    return shadowTex;
+  }
+  const w = 256;
+  const h = 128;
+  const cv = document.createElement('canvas');
+  cv.width = w;
+  cv.height = h;
+  const ctx = cv.getContext('2d') as CanvasRenderingContext2D;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.ellipse(w / 2, h / 2, w / 2 - 1, h / 2 - 1, 0, 0, Math.PI * 2);
+  ctx.fill();
+  shadowTex = Texture.from(cv);
+  return shadowTex;
+}
+
 /** PlayerSprite draws one character: body, sword ring, aura, name tag, emote bubble. */
 export class PlayerSprite {
   readonly root = new Container();
@@ -66,7 +92,15 @@ export class PlayerSprite {
    */
   hideRings = false;
   private readonly swordRing: SwordRing;
-  private readonly shadow = new Graphics();
+  /**
+   * Bóng đổ là một SPRITE dùng chung một texture, không phải Graphics.
+   *
+   * Bản cũ gọi `clear().ellipse().fill()` MỖI KHUNG cho MỖI người: vừa dựng lại hình học
+   * mỗi khung, vừa là một vật không gom lô được nên mỗi cái bóng tự ngắt một lô vẽ. Cùng
+   * một hình ellipse, cùng một màu, chỉ khác mỗi cỡ — đúng thứ mà một texture dùng chung
+   * cộng `scale` làm được mà không tốn gì.
+   */
+  readonly shadow = new Sprite({ texture: shadowTexture(), anchor: 0.5, tint: 0x000000, alpha: 0.25 });
   private readonly aura = new Graphics();
   private readonly bodyBox = new Container();
   private body: AnimatedSprite | Container | null = null;
@@ -135,7 +169,11 @@ export class PlayerSprite {
     // kiếm tím. Phía trên đầu là chỗ duy nhất luôn trống.
     this.animInfo.y = -2.6;
     this.animInfo.visible = false;
-    this.root.addChild(this.shadow, this.aura, this.statusView.under, this.bodyBox, this.statusView.over, this.plate.root, this.faceEmote.root, this.animInfo);
+    // `shadow` KHÔNG nằm trong `root`: `Scene` gom mọi cái bóng vào một lớp riêng để chúng
+    // gom chung một lô vẽ (xem `Scene.shadows`). Nằm trong `root` thì mỗi cái bóng kẹp giữa
+    // hai atlas nhân vật và tự ngắt một lô — đo được: đổi Graphics sang sprite mà vẫn để
+    // trong `root` thì số lô vẽ KHÔNG giảm, còn nhích lên một.
+    this.root.addChild(this.aura, this.statusView.under, this.bodyBox, this.statusView.over, this.plate.root, this.faceEmote.root, this.animInfo);
     if (!this.atlas) {
       this.body = this.placeholderBody();
       this.bodyBox.addChild(this.body);
@@ -270,7 +308,7 @@ export class PlayerSprite {
     const r = this.cfg.player.body_r * s.sc;
     this.root.position.set(f.x, f.y);
     this.root.zIndex = f.y + r * FEET_BELOW_CENTER; // y-sort by the feet (spec §8.2)
-    this.drawShadow(r);
+    this.drawShadow(r, f.x, f.y);
     // Tốc độ và tốc độ rẽ lấy từ VỊ TRÍ ĐÃ NỘI SUY (`f.x`, `f.y`), không từ gói tin thô —
     // GAME_SPEC §12.5 C "không giật theo mạng". Lấy từ gói thô thì mỗi lần mạng nấc một cái
     // là nhịp chân và độ nghiêng của nhân vật giật theo.
@@ -340,8 +378,14 @@ export class PlayerSprite {
     return now < this.skillUntil && !urgent ? 'skill' : mood;
   }
 
-  private drawShadow(r: number): void {
-    this.shadow.clear().ellipse(0, r * FEET_BELOW_CENTER, r * 0.9, r * 0.35).fill({ color: 0x000000, alpha: 0.25 });
+  private drawShadow(r: number, wx: number, wy: number): void {
+    // Cùng hình, cùng chỗ, cùng độ mờ như bản Graphics cũ: ellipse bán trục 0,9r × 0,35r,
+    // tâm ở dưới chân. Texture là một ellipse trắng nên `tint` đen + alpha cho ra đúng màu.
+    //
+    // Toạ độ THẾ GIỚI, vì bóng nằm ở lớp riêng chứ không theo `root` nữa.
+    this.shadow.width = r * 1.8;
+    this.shadow.height = r * 0.7;
+    this.shadow.position.set(wx, wy + r * FEET_BELOW_CENTER);
   }
 
   private updateBody(mood: string, r: number, dt: number, speed: number, turn: number, now: number): void {

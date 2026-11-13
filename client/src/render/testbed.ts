@@ -227,14 +227,18 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
     const z = Math.min(CELL_W, CELL_H) / (ringGeom(cfg, d.sc, d.n).reach * 2 + PAD);
     cell.scale.set(z);
     cell.position.set((i % COLS) * CELL_W + CELL_W / 2, Math.floor(i / COLS) * CELL_H + CELL_H / 2);
+    const shadowLayer = new Container();
     const ringLayer = new Container();
     const glowLayer = new Container();
     const bodyLayer = new Container();
     bodyLayer.sortableChildren = true;
-    cell.addChild(ringLayer, glowLayer, bodyLayer);
+    // Thứ tự lớp copy của `Scene`: bóng dưới cùng (lớp riêng, xem `Scene.shadows`), rồi vòng
+    // kiếm, hào quang, cuối cùng là thân người.
+    cell.addChild(shadowLayer, ringLayer, glowLayer, bodyLayer);
     panels.addChild(cell);
 
     const sp = new PlayerSprite(cfg, f.view.id, f.view.name, f.view.char, false);
+    shadowLayer.addChild(sp.shadow);
     bodyLayer.addChild(sp.root);
     ringLayer.addChild(sp.ring);
     sprites.push({ sp, zoom: z });

@@ -129,6 +129,14 @@ export class GameScene {
   private readonly skill: SkillPresenter;
   private mapView: MapView | null = null;
   private readonly players = new Map<number, PlayerSprite>();
+  /**
+   * shadows: MỌI cái bóng đổ nằm chung một lớp, ngay trên mặt đất.
+   *
+   * Gom lại vì tất cả dùng CHUNG một texture: nằm chung một lớp thì Pixi gom hết vào một lô
+   * vẽ, còn nằm rải trong `root` của từng nhân vật thì mỗi cái bóng kẹp giữa hai atlas và
+   * tự ngắt một lô. Bóng vốn nằm dưới mọi nhân vật nên gom lại không đổi thứ tự nhìn thấy.
+   */
+  private readonly shadows = new Container();
   /** ringsMode: chế độ vòng kiếm của bài đo (xem `setRings`). Luôn 'all' khi chơi thật. */
   private ringsMode: 'all' | 'mine' | 'none' = 'all';
   /** Chữ nổi trong thế giới: "Cần {cảnh giới}" khi chém vật cản quá bậc (§8.2). */
@@ -458,7 +466,7 @@ export class GameScene {
     // hàng trăm thanh kiếm không che mất hào quang.
     // Cổng nằm NGAY TRÊN vòng kiếm, dưới nhân vật: vòng kiếm không che được cổng.
     this.entities.addChild(this.stallView.layer);
-    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.orbs.root, this.rings, this.mapView.gateLayer, this.glow.root, this.entities, this.mapView.over, this.ambient.root, ...this.skill.layers, this.vfx.layer, this.floatText.layer);
+    this.camera.addChild(this.mapView.ground, this.mapView.decor, this.mapView.under, this.shadows, this.orbs.root, this.rings, this.mapView.gateLayer, this.glow.root, this.entities, this.mapView.over, this.ambient.root, ...this.skill.layers, this.vfx.layer, this.floatText.layer);
     this.ambient.setBiome(w.map.id);
   }
 
@@ -694,6 +702,7 @@ export class GameScene {
       // phải chữ cho người chơi — cùng lý do `probe.ts` đặt khoá ASCII (quy tắc 5 chặn đúng
       // khi tôi viết tên tiếng Việt ở đây, và nó chặn đúng).
       ...(mv ? [{ name: 'ground', c: mv.ground }, { name: 'decor', c: mv.decor }, { name: 'zone-under', c: mv.under }] : []),
+      { name: 'shadows', c: this.shadows },
       { name: 'orbs', c: this.orbs.root },
       { name: 'rings', c: this.rings },
       ...(mv ? [{ name: 'gates', c: mv.gateLayer }] : []),
@@ -826,6 +835,7 @@ export class GameScene {
           || (this.ringsMode === 'mine' && f.view.id !== this.world?.myId);
         this.players.set(f.view.id, sp);
         this.entities.addChild(sp.root);
+        this.shadows.addChild(sp.shadow);
         this.rings.addChild(sp.ring);
         // Nhân vật vừa xuất hiện cũng phải bật sẵn lớp debug nếu phím J đang bật — không thì
         // đúng những con mới vào khung (chỗ hay giật nhất) lại là chỗ không có số.
@@ -860,6 +870,7 @@ export class GameScene {
       }
       this.leaving.delete(id);
       this.players.delete(id);
+      this.shadows.removeChild(sp.shadow);
       this.pool.put(sp);
     }
     for (const [id, a] of this.auras) {
