@@ -401,6 +401,31 @@ export function gpuUnclassified(n = 6): { site: string; mb: number }[] {
     .map(([site, bytes]) => ({ site, mb: +(bytes / 1024 / 1024).toFixed(2) }));
 }
 
+/**
+ * gpuListCat liệt kê texture của MỘT hạng mục, gom theo cỡ.
+ *
+ * Cần cho mục 6 của §13.10: "Bộ đệm khung · bộ lọc" đo ra 68,9 MB trong khi một khung 1080p
+ * chỉ 8,3 MB — tức là có khoảng tám đích vẽ toàn màn hình đang sống cùng lúc, và câu hỏi
+ * duy nhất đáng hỏi là CÁI NÀO.
+ */
+export function gpuListCat(cat: BudgetCat, n = 10): { size: string; count: number; mb: number; site: string }[] {
+  const by = new Map<string, { count: number; bytes: number; site: string }>();
+  for (const a of alloc.values()) {
+    if (a.cat !== cat) {
+      continue;
+    }
+    const key = `${a.w}x${a.h}`;
+    const cur = by.get(key) ?? { count: 0, bytes: 0, site: (a.site ?? '?').slice(0, 60) };
+    cur.count++;
+    cur.bytes += a.bytes;
+    by.set(key, cur);
+  }
+  return [...by.entries()]
+    .sort((x, y) => y[1].bytes - x[1].bytes)
+    .slice(0, n)
+    .map(([size, v]) => ({ size, count: v.count, mb: +(v.bytes / 1024 / 1024).toFixed(2), site: v.site }));
+}
+
 /** gpuBiggest liệt kê vài texture to nhất — để biết cắt chỗ nào trước. */
 export function gpuBiggest(n = 8): { w: number; h: number; mb: number }[] {
   return [...alloc.values()]

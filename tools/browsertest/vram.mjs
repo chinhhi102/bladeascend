@@ -94,6 +94,13 @@ if (led.unclassified.length) {
     console.log(`  ${u.mb.toFixed(2)} MB  ${u.site}`);
   }
 }
+if (led.framebuffers?.length) {
+  console.log('');
+  console.log('Bộ đệm khung / đích vẽ của bộ lọc đang sống:');
+  for (const f of led.framebuffers) {
+    console.log(`  ${f.mb.toFixed(2)} MB  ${f.count}× ${f.size}  ${f.site}`);
+  }
+}
 console.log('');
 console.log(`${label} · 1920×1080 @ tỉ lệ điểm ảnh 1`);
 console.log('Đối chiếu tay: Chrome Shift+Esc → cột "GPU Memory" của tab game (spec đòi khớp ±10%).');

@@ -132,6 +132,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 41 | 2026-11-13 | `9136599` | **Mục 5 bước đo — lô vẽ theo TỪNG LỚP** (`drawbreak.mjs`), cảnh thật 3 người, Đạo Tổ 1 050 kiếm | S15 | – | – | – | – | – | **243** | – | – | `entities` **120 lô** (86 nguồn texture, 218 Graphics) · `ground` **100 lô** (48 MASK) · 12 lớp còn lại cộng lại 23 | Mục tiêu < 120 lô · B30 |
 | 42 | 2026-11-13 | `9d55f89` | **§13.10 — SỔ VRAM theo hạng mục, hiện trạng TRƯỚC khi sửa** | VRAM | – | – | – | – | – | – | – | – | Cảnh đông 1080p@1, chất lượng Vừa: **281–301 MB / trần 50**. Cảnh thử cố định: **63,3 MB / 50**. Vượt ở 5 trên 6 hạng mục | §13.10 mục 1 xong |
 | 43 | 2026-11-13 | `d9bfcf0`+ | **§13.10 mục 2 — nền bằng SHADER TRỘN** (bỏ bake RenderTexture, bỏ mask) | VRAM | – | – | – | – | – | 34 (ground) | – | – | Cảnh thử: `Nền` **43,1 → 6,5 MB**, tổng **63,3 → 25,5 MB (ĐẠT trần 50)**. Cảnh đông: tổng **280,9 → 225,3 MB**. Lô vẽ ground 4 → 34 | Hình: 1,13/255 · 0,60% pixel |
+| 44 | 2026-11-13 | `938ec34`+ | **§13.10 mục 6 — bloom nửa độ phân giải + chỉ tồn tại khi có hiệu ứng** | VRAM | – | – | – | – | – | – | – | – | "Bộ đệm khung · bộ lọc" **79,5 → 30,4 MB** · tổng cảnh đông **213,6 → 185,2 MB**. Hình: 0,003/255 | Trần hạng mục 12 MB — còn nợ ColorMatrix nền |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1474,6 +1475,41 @@ shader. Mắt không thấy; bảng lệch theo ô cho thấy nó rải đều 0
 Ngưỡng `scenediff` mặc định (0,3/255) đặt cho những thay đổi PHẢI giống từng byte. Lượt này
 viết lại cách hợp ảnh của cả lớp nền, nên nó không thể giống từng byte — ảnh mốc được chụp
 lại sau bước này, và các bước sau so với mốc mới.
+
+---
+
+### Lượt 44 — 13/11/2026 · §13.10 mục 6: bộ lọc
+
+Sổ VRAM liệt kê được từng đích vẽ đang sống, và nó nói thẳng vấn đề: **bốn bản của MỖI cỡ**.
+
+```
+42,19 MB  4× 1920x1080     40,00 MB  4× 1920x1024
+21,33 MB  4× 1024x1024      5,33 MB  4× 512x512
+```
+
+Đó là `TexturePool` của Pixi giữ lại đích vẽ để dùng lại — hợp lý khi filter chạy liên tục,
+nhưng bloom gắn **thường trực** trên lớp phát sáng, kể cả những khung KHÔNG có gì phát sáng,
+và phần lớn thời gian chơi là như vậy.
+
+Hai việc:
+- **Tháo bloom khi lớp VFX rỗng**, gắn lại khi có gì sáng; chờ 30 khung rồi mới tháo (hiệu
+  ứng hay có một hai khung trống xen giữa, gắn/tháo mỗi khung thì Pixi dựng lại đường ống).
+  Tháo xong gọi `TexturePool.clear()` — không gọi thì Pixi giữ cả bốn bản mỗi cỡ cho tới khi
+  có ai cần đúng cỡ ấy, tức là giữ mãi.
+- **Bloom ở nửa độ phân giải**. Bloom chỉ lấy trung bình vùng lân cận; nửa độ phân giải gần
+  như không thấy mà đích vẽ còn một phần tư byte.
+
+| | Bộ đệm khung · bộ lọc | Tổng (cảnh đông) |
+|---|---:|---:|
+| trước | 79,5 MB | 213,6 MB |
+| sau | **30,4 MB** | **185,2 MB** |
+
+Hình: **0,003/255 · 59 pixel** — dưới cả nhiễu tự lặp của bài so ảnh.
+
+Còn lại 30,4 so với trần 12: 10,6 MB là bộ đệm khung chính (1920×1080, không bỏ được),
+10,6 MB là bốn đích 960×540 của bloom nửa độ phân giải, 9,3 MB là pool 512²/512×256/256².
+Bước kế: bỏ `ColorMatrixFilter` trên `ground`/`decor` — đưa phép chỉnh màu vào thẳng shader
+nền (chính xác tuyệt đối, miễn phí) và xử lý decal/decor riêng.
 
 ---
 

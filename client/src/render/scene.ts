@@ -10,7 +10,7 @@ import { assets } from './assets';
 import { statusWork, statusWorkTick } from './statusview';
 import { ringWork, ringWorkTick } from './swordring';
 import { SkillPresenter, type StatusChip } from './skillpresent';
-import { type BudgetCat, gpuBiggest, gpuBudget, gpuMemMB, gpuPeakMB, gpuSites, gpuTextureCount, gpuUnclassified, vramLine, trackGpuMemory, trackSourceNames, trackTextureFrom } from './gpumem';
+import { type BudgetCat, gpuBiggest, gpuBudget, gpuMemMB, gpuPeakMB, gpuSites, gpuListCat, gpuTextureCount, gpuUnclassified, vramLine, trackGpuMemory, trackSourceNames, trackTextureFrom } from './gpumem';
 import { gpuBudgetMB, isMobile, rendererResolution } from './device';
 import { FADE_OUT_SECS, ViewPool } from './viewpool';
 import { BobaOverlay } from './boba';
@@ -603,6 +603,8 @@ export class GameScene {
     probeMark('map');
     sysRun('vfx', () => {
       this.vfx.update(now);
+      // Tháo bloom khi lớp phát sáng rỗng (§13.10 mục 6) — xem `VfxLayer.tick`.
+      this.glow.tick();
       this.floatText.update(now);
     });
     probeMark('vfx');
@@ -1139,7 +1141,7 @@ export class GameScene {
    * Trả cả dòng `other` kể cả khi nó bằng 0: một bảng chỉ hiện hạng mục có số thì ngày nào
    * đó `other` xuất hiện rồi biến mất mà không ai kịp thấy.
    */
-  vramLedger(): { rows: { cat: BudgetCat; label: string; mb: number; count: number; limitMB: number; over: boolean }[]; totalMB: number; limitMB: number; unclassified: { site: string; mb: number }[] } {
+  vramLedger(): { rows: { cat: BudgetCat; label: string; mb: number; count: number; limitMB: number; over: boolean }[]; totalMB: number; limitMB: number; unclassified: { site: string; mb: number }[]; framebuffers: { size: string; count: number; mb: number; site: string }[] } {
     const phone = isMobile();
     const rows = gpuBudget(phone);
     return {
@@ -1147,6 +1149,7 @@ export class GameScene {
       totalMB: +rows.reduce((a, r) => a + r.mb, 0).toFixed(2),
       limitMB: phone ? 32 : 50,
       unclassified: gpuUnclassified(),
+      framebuffers: gpuListCat('framebuffer'),
     };
   }
 
