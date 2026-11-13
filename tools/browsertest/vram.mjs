@@ -101,6 +101,13 @@ if (led.world?.length) {
     console.log(`  ${f.mb.toFixed(2)} MB  ${f.count}× ${f.size}  ${f.site}`);
   }
 }
+if (led.fx?.length) {
+  console.log('');
+  console.log('VFX · hào quang · UI — gom theo cỡ:');
+  for (const f of led.fx) {
+    console.log(`  ${f.mb.toFixed(2)} MB  ${f.count}× ${f.size}  ${f.site}`);
+  }
+}
 if (led.framebuffers?.length) {
   console.log('');
   console.log('Bộ đệm khung / đích vẽ của bộ lọc đang sống:');

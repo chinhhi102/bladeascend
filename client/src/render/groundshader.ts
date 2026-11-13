@@ -136,7 +136,19 @@ export function groundColorMatrix(): number[] {
  * Lần đầu tôi gieo một hạt chung rồi lệch pha cho lớp thứ hai — hoa văn ra khác hẳn, và
  * `scenediff` báo 21/255 với 47% pixel đổi. Lượt này chỉ đổi CÁCH VẼ, không đổi hình.
  */
-const MASK_PX_GEN = 128;
+/**
+ * MASK_PX_GEN: độ phân giải mặt nạ trộn của MỘT ô — 64, không phải 128.
+ *
+ * Atlas mặt nạ là một texture cố định; ở ô 128² nó là 1024² = 4 MB, chiếm hơn nửa hạng mục
+ * "Nền" (trần 4 MB). Ở 64² thì atlas còn 512² = 1 MB.
+ *
+ * Tần số sóng nhân đôi để BÙ: nhiễu tính theo toạ độ texel, nên hạ nửa độ phân giải mà giữ
+ * nguyên tần số là mảng loang to gấp đôi trong toạ độ thế giới — đổi hình cả bản đồ. Nhân
+ * đôi tần số thì hoa văn giữ nguyên cỡ, chỉ mép mềm hơn một chút.
+ */
+const MASK_PX_GEN = 64;
+/** Hệ số bù tần số cho `MASK_PX_GEN` (128 là mốc gốc của hoa văn đã duyệt). */
+const WAVE_SCALE = 128 / MASK_PX_GEN;
 export function maskPlanes(seeds: number[], covers: number[]): Uint8ClampedArray {
   const n = MASK_PX_GEN;
   const wave = (x: number, y: number, f: number, p: number): number =>
@@ -164,7 +176,7 @@ export function maskPlanes(seeds: number[], covers: number[]): Uint8ClampedArray
     const sd = (seed % 1000) * 0.013;
     for (let y = 0; y < n; y++) {
       for (let x = 0; x < n; x++) {
-        const v = wave(x, y, 0.055, sd) * 0.65 + wave(x, y, 0.17, sd * 1.9) * 0.35;
+        const v = wave(x, y, 0.055 * WAVE_SCALE, sd) * 0.65 + wave(x, y, 0.17 * WAVE_SCALE, sd * 1.9) * 0.35;
         const k = (y * n + x) * 4;
         img.data[k] = img.data[k + 1] = img.data[k + 2] = 255;
         img.data[k + 3] = v > (0.5 - cover) * 2 ? 255 : 0;
@@ -181,8 +193,8 @@ export function maskPlanes(seeds: number[], covers: number[]): Uint8ClampedArray
   return out;
 }
 
-const ATLAS_PX = 1024;
-const MASK_PX = 128;
+const ATLAS_PX = 512;
+const MASK_PX = 64;
 /** Số ô atlas (8×8). Mỗi ô atlas chứa HAI ô nền, nên sức chứa thật là gấp đôi. */
 const ATLAS_TILES = (ATLAS_PX / MASK_PX) ** 2;
 const ATLAS_SLOTS = ATLAS_TILES * 2;

@@ -174,7 +174,13 @@ export function plan(rel, ctx) {
     const kind = seg[1];
     const zones = ctx.zoneKinds.filter((z) => z.kinds.includes(kind)).map((z) => z.id);
     // Vật cản to nhất trong game ~500 đơn vị ≈ 500 px trên màn hình ở scale 1.
-    const img = { kind: 'image', maxPx: 512, quality: 80 };
+    // 384, không phải 512.
+    //
+    // Vật cản là hạng mục ngốn VRAM thứ hai (§13.10): ~35 tấm trong tầm, mỗi tấm 512² nén
+    // khối là 0,33 MB → 11,7 MB, trần của cả hạng mục là 6 MB. Hạ xuống 384 là bớt 44% số
+    // điểm ảnh. Vật cản cao nhất hiện trên màn hình khoảng 300 px ở zoom gần nhất, nên 384
+    // vẫn còn dư — và `scenediff` là chỗ nói cuối cùng.
+    const img = { kind: 'image', maxPx: 384, quality: 80 };
     if (zones.length === ctx.zoneKinds.length) {
       return { groups: ['boot'], ...img };
     }
@@ -281,11 +287,17 @@ export function ktxFor(rel, w, h) {
   // 23,67 MB VRAM** — một mình chúng là 84% của hạng mục "vật cản · decal · vật phẩm"
   // (trần 6 MB). Đó không phải việc của gom atlas: gom atlas giảm LÔ VẼ chứ không giảm số
   // điểm ảnh, mà số điểm ảnh mới là thứ chiếm VRAM.
-  if (KTX_UASTC.has(top)) {
-    return px >= 512 ? 'uastc' : null;
+  if (!KTX_UASTC.has(top) && !KTX_ETC1S.has(top)) {
+    return null;
   }
-  if (KTX_ETC1S.has(top)) {
-    return px >= 128 ? 'etc1s' : null;
+  if (px < 128) {
+    return null; // icon nhỏ: nén khối vừa không tiết kiệm vừa làm mờ nét
   }
-  return null;
+  // Dưới 512 px thì LUÔN là ETC1S, kể cả với nhóm vốn dùng UASTC.
+  //
+  // Luật này tổng quát hoá hai lần đã phải sửa riêng lẻ: 71 decal 256² và **40 texture
+  // kiếm/VFX 256² (13,3 MB)** đều nằm nguyên ở WebP chỉ vì ngưỡng UASTC là 512. Mà lý do
+  // ngưỡng 512 tồn tại là DUNG LƯỢNG TẢI VỀ của UASTC ở ảnh nhỏ — không phải vì ảnh nhỏ
+  // không đáng nén. ETC1S ở cỡ nhỏ thì nhẹ cả hai đầu, nên nó mới là lựa chọn đúng.
+  return px >= 512 && KTX_UASTC.has(top) ? 'uastc' : 'etc1s';
 }

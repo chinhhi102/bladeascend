@@ -143,8 +143,21 @@ export function budgetCategory(site: string | undefined, w: number, h: number): 
   // Nhận ra bằng chữ `none` chứ không bằng tên lớp: bản build thật minify tên lớp thành
   // `fe`, `it`, `b` — lượt đo đầu 42 MB bộ đệm 1920×1080 rơi vào "chưa khai hạng mục" vì
   // tôi cố đoán theo tên lớp.
-  if (s.endsWith('/none') || s.includes('rendertarget') || s.includes('canvaspool')) {
+  if (s.endsWith('/none') || s.includes('rendertarget')) {
     return 'framebuffer';
+  }
+  // `CanvasPool` của Pixi KHÔNG phải bộ đệm khung — đó là canvas VẼ CHỮ.
+  //
+  // Tôi xếp nó vào "bộ đệm khung" suốt bốn lượt tối ưu vì nó không có tệp nguồn, và nó biến
+  // 8 MB canvas chữ thành một dòng không ai soi. Ngày 13/11 móc ngăn xếp vào
+  // `document.createElement` mới ra mặt: 6 tấm 512×512 đều do `CanvasPool` cấp cho `Text`.
+  // Pixi làm tròn cỡ canvas chữ lên luỹ thừa 2, nên một dòng tên 300×40 ăn trọn 512×512.
+  //
+  // Nhận cả hai đường: có `?textrace=1` thì ngăn xếp ghi `CanvasPool`; không có thì nhãn chỉ
+  // còn `<lớp đã minify>/CANVAS` — và trong game này, texture canvas nào không khai hạng mục
+  // cũng là chữ.
+  if (s.includes('canvaspool') || s.endsWith('/canvas')) {
+    return 'dynamic';
   }
   // Tên thư mục lấy từ `assets/src` THẬT (characters, tiles, obstacles, decals, decor,
   // items, monsters, vfx, ui, swords, beasts, buffs, gates, ambient, zones, brand, fonts).
@@ -198,6 +211,7 @@ export function trackTextureFrom(TextureClass: object): void {
   if (!TRACE || fromWrapped) {
     return;
   }
+  trackCanvasCreation();
   // Bọc đúng MỘT LẦN: `buildApp` chạy lại khi dựng lại renderer (§13.8), và bọc chồng lên
   // nhau thì mỗi lần tạo texture đi qua n lớp wrapper — chậm dần và vết gọi sai dần.
   fromWrapped = true;
@@ -217,6 +231,44 @@ export function trackTextureFrom(TextureClass: object): void {
     }
     return tex;
   };
+}
+
+/**
+ * trackCanvasCreation ghi ngăn xếp lên CHÍNH thẻ `<canvas>` lúc nó ra đời.
+ *
+ * `trackTextureFrom` chỉ bắt được canvas đi qua `Texture.from`. Thứ KHÔNG đi qua đó —
+ * `new CanvasSource({ resource: cv })` — về tới sổ VRAM chỉ còn cái nhãn `CanvasSource/CANVAS`
+ * (bị rút gọn thành `b/CANVAS`), và 8 MB canvas 512² nằm trong hạng mục KHÁC suốt bốn lượt
+ * tối ưu mà không ai chỉ được chỗ tạo. Móc vào `document.createElement` thì mọi đường đều bị
+ * bắt, vì canvas nào cũng phải qua đây.
+ *
+ * Chỉ chạy sau `?textrace=1`: `new Error().stack` đắt, mà game tạo canvas cả trong vòng vẽ.
+ */
+function trackCanvasCreation(): void {
+  const doc = globalThis.document as
+    | (Document & { __kxCanvasTraced?: boolean })
+    | undefined;
+  if (!doc || doc.__kxCanvasTraced) {
+    return;
+  }
+  doc.__kxCanvasTraced = true;
+  const orig = doc.createElement.bind(doc);
+  doc.createElement = ((tag: string, ...rest: unknown[]): HTMLElement => {
+    const el = orig(tag as 'canvas', ...(rest as []));
+    if (tag === 'canvas') {
+      (el as HTMLElement & { __kxStack?: string }).__kxStack = shortStack(3, 7);
+    }
+    return el;
+  }) as typeof doc.createElement;
+}
+
+/** shortStack: vài khung gọi đầu, bỏ phần đường dẫn, đủ để chỉ ra tệp:dòng. */
+function shortStack(from: number, to: number): string {
+  return (new Error().stack ?? '')
+    .split('\n')
+    .slice(from, to)
+    .map((l) => l.trim().replace(/^at /, '').replace(/\?[^ )]*/g, '').split('/').slice(-1)[0])
+    .join(' ← ');
 }
 
 export function trackSourceNames(texSystem: Record<string, unknown>): void {
@@ -245,8 +297,9 @@ function wrapSourceFn(texSystem: Record<string, unknown>, name: string): void {
     const kind = (s as { constructor?: { name?: string } } | null)?.constructor?.name ?? '?';
     const res = s?.resource;
     const resKind = res ? ((res as { nodeName?: string }).nodeName ?? res.constructor?.name ?? '?') : 'none';
+    const canvasStack = (res as { __kxStack?: string } | undefined)?.__kxStack;
     curSource =
-      (s ? fromStacks.get(s) : undefined) || s?.label || res?.src || `${kind}/${resKind}`;
+      (s ? fromStacks.get(s) : undefined) || s?.label || res?.src || canvasStack || `${kind}/${resKind}`;
     curSourceObj = (s as object | null) ?? null;
     try {
       return orig(src);

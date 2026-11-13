@@ -45,8 +45,10 @@ const CACHE = join(DIST, '.pipeline-cache.json');
  *   4 — `ui` chuyển UASTC → ETC1S (nền trang chủ 244 KB → 2,4 MB là không chấp nhận được)
  *   5 — ngưỡng cỡ TÁCH theo chế độ: UASTC ≥ 512 px, ETC1S ≥ 128 px (71 decal 256² đang
  *       chiếm 23,7 MB VRAM vì bị ngưỡng 512 loại ra)
+ *   6 — dưới 512 px thì LUÔN ETC1S, kể cả nhóm UASTC (40 texture kiếm/VFX 256² = 13,3 MB)
+ *   7 — vật cản maxPx 512 → 384 (hạng mục ngốn VRAM thứ hai)
  */
-const PIPELINE_VERSION = 5;
+const PIPELINE_VERSION = 7;
 
 /**
  * Thư mục được áp ma trận chỉnh màu nền lúc build (§13.10).

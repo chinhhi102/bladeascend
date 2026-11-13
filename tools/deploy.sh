@@ -282,6 +282,18 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   #
   # `go run` chạy binary đã biên dịch làm tiến trình CON, nên phải giết con trước rồi mới
   # tới cha; giết mỗi cha thì server vẫn giữ cổng 9997 và lượt deploy sau chết lúc khởi động.
+  # §13.10: cổng kiểm đồ hoạ — 0 placeholder · đúng định dạng nén · hình không đổi · VRAM.
+  #
+  # Từ 13/11/2026 CẢ BỐN điều đều chặn: cảnh đông đã xuống 46,3/50 MB nên `--warn-vram` bỏ đi.
+  # Ba điều kia chặn từ trước, vì chúng bắt đúng kiểu hỏng đã xảy ra: bật KTX2 mà quên đăng ký
+  # bộ đọc làm art hỏng hết, trong khi bảng VRAM báo con số đẹp nhất từ trước tới giờ.
+  echo "== 2c4/5 cổng kiểm đồ hoạ (§13.10) =="
+  set +e
+  node tools/browsertest/vramgate.mjs http://127.0.0.1:9997 >/tmp/kx-vramgate.out 2>&1
+  vram_rc=$?
+  set -e
+  tail -8 /tmp/kx-vramgate.out
+
   smooth_pid="$(cat /tmp/kx-smooth.pid 2>/dev/null || true)"
   if [ -n "$smooth_pid" ]; then
     pkill -P "$smooth_pid" 2>/dev/null || true
@@ -289,6 +301,10 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   fi
   if [ "$crash_rc" != "0" ]; then
     echo "LỖI: lớp chống sập §13.8 không đạt. Dừng deploy. Xem /tmp/kx-crash.out" >&2
+    exit 1
+  fi
+  if [ "$vram_rc" != "0" ]; then
+    echo "LỖI: cổng kiểm đồ hoạ §13.10 không đạt. Dừng deploy. Xem /tmp/kx-vramgate.out" >&2
     exit 1
   fi
   if [ "$rejoin_rc" != "0" ]; then

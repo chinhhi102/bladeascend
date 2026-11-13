@@ -42,3 +42,36 @@ Trước khi có nó, mọi phép so đều vô nghĩa vì cảnh thật đổi 
 - `ringcost` trên cảnh thật, cùng build, ba lượt: giá vòng kiếm **19,79 · 0,55 · −0,40 ms**.
 
 Chi tiết ba cách so ảnh đã thất bại trước đó nằm ở đầu `client/src/render/testbed.ts`.
+
+---
+
+## Đổi ảnh mốc — 13/11/2026 (mặt nạ nền 64²/ô)
+
+`testbed-ref.png` được chụp LẠI sau hai thay đổi của §13.10:
+
+| | |
+|---|---|
+| vật cản `maxPx` 512 → 384 | `tools/asset-pipeline/groups.mjs`, hạng mục ngốn VRAM thứ hai |
+| mặt nạ trộn nền 128² → 64² mỗi ô | `client/src/render/groundshader.ts`, atlas mặt nạ 4 MB → 1 MB |
+
+Ảnh mốc CŨ giữ lại ở `testbed-ref-truoc-nen64.png` để đối chiếu.
+
+```
+lệch trung bình : 1.822/255   (ngưỡng 0.3)
+lệch lớn nhất   : 109/255
+pixel lệch > 16 : 10 946 trên 921 600 (1,188%)
+```
+
+**Vì sao chấp nhận lệch này mà không coi là hỏng hình.** Bản đồ lệch 16×9 cho thấy chênh
+lệch rải ĐỀU trên nền (2–5/255 mỗi ô), không dồn vào vật cản hay nhân vật — tức thủ phạm là
+mặt nạ nền, không phải ảnh bị nén hỏng. Mặt nạ trộn là nhiễu thủ tục sinh theo toạ độ texel:
+hạ nửa độ phân giải thì hoa văn được *lấy mẫu lại*, mép mềm hơn vài phần trăm. Tần số sóng
+đã nhân đôi để mảng loang giữ NGUYÊN cỡ trong toạ độ thế giới — thiếu bước bù đó thì hoa văn
+to gấp đôi và cả bản đồ đổi mặt. Đã xem ảnh tận mắt: cỏ, đá, vệt đất, bốn vòng kiếm và lớp
+hào quang Tiên đều y nguyên.
+
+Đổi được gì: hạng mục **Nền 7,33 → 3,00 MB**, và tổng cảnh đông **51,16 → 46,32 MB**, tức
+lần đầu lọt trần 50 MB của §13.10.
+
+Đây là lần đổi ảnh mốc có chủ ý; luật vẫn là **không đổi ảnh mốc để bài đo xanh**, chỉ đổi
+khi thay đổi hình là cố ý, đã soi mắt thường, và lý do ghi ngay tại đây.

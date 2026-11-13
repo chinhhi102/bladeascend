@@ -1159,7 +1159,7 @@ export class GameScene {
    * Trả cả dòng `other` kể cả khi nó bằng 0: một bảng chỉ hiện hạng mục có số thì ngày nào
    * đó `other` xuất hiện rồi biến mất mà không ai kịp thấy.
    */
-  vramLedger(): { rows: { cat: BudgetCat; label: string; mb: number; count: number; limitMB: number; over: boolean }[]; totalMB: number; limitMB: number; unclassified: { site: string; mb: number }[]; framebuffers: { size: string; count: number; mb: number; site: string }[]; world: { size: string; count: number; mb: number; site: string }[] } {
+  vramLedger(): { rows: { cat: BudgetCat; label: string; mb: number; count: number; limitMB: number; over: boolean }[]; totalMB: number; limitMB: number; unclassified: { site: string; mb: number }[]; framebuffers: { size: string; count: number; mb: number; site: string }[]; world: { size: string; count: number; mb: number; site: string }[]; fx: { size: string; count: number; mb: number; site: string }[] } {
     const phone = isMobile();
     const rows = gpuBudget(phone);
     return {
@@ -1169,6 +1169,7 @@ export class GameScene {
       unclassified: gpuUnclassified(),
       framebuffers: gpuListCat('framebuffer'),
       world: gpuListCat('world', 14),
+      fx: gpuListCat('fx', 14),
     };
   }
 

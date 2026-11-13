@@ -1750,11 +1750,76 @@ Hình: 0,13/255 (bloom 1/4 độ phân giải làm mềm viền hào quang).
 
 ---
 
+### Lượt 51 — 13/11/2026 · Lọt trần 50 MB, và 8 MB "bộ đệm khung" hoá ra là canvas CHỮ
+
+Ba đòn bẩy cuối của mục 1(a), đo trên cảnh ĐÔNG 1920×1080 @ tỉ lệ điểm ảnh 1, chất lượng
+`medium` (máy ở load 4,72 / 12 nhân = 0,39 — trong luật 16):
+
+| Hạng mục | #50 | ảnh nhỏ luôn ETC1S | vật cản 384 + mặt nạ 64² | trần |
+|---|---:|---:|---:|---:|
+| Atlas nhân vật | 14,6 | 14,78 | 14,85 | 24 ✅ |
+| Nền | 6,0 | 7,33 | **3,00** | 4 ✅ |
+| Vật cản · decal · vật phẩm | 16,1 | 15,56 | **11,71** | 6 ❌ |
+| VFX · hào quang · UI | 13,9 | **3,85** | 3,68 | 4 ✅ |
+| Chữ/số bay | 0 | 0 | 0 | 2 ✅ |
+| Bộ đệm khung · bộ lọc | 4,97 | 4,30 | 4,30 | 12 ✅ |
+| chưa khai hạng mục | 8,5 | 8,58 | 8,78 | 0 ❌ |
+| **TỔNG** | **67,4** | 51,16 | **46,32** | **50 ✅** |
+
+Ba thay đổi:
+
+1. **Dưới 512 px thì LUÔN ETC1S**, kể cả thư mục thuộc nhóm UASTC (`PIPELINE_VERSION` 6).
+   40 texture kiếm/VFX 256² đang kẹt ở WebP vì ngưỡng UASTC là 512. VFX **15,66 → 3,85 MB**.
+2. **Vật cản `maxPx` 512 → 384** (`PIPELINE_VERSION` 7). 24–31 tấm viền trong tầm, mỗi tấm
+   bớt 44% điểm ảnh: **4,50 MB thay vì 8,00**. Đây cũng chính là cách cắt tải về mà B8 đề ra.
+3. **Mặt nạ trộn nền 128² → 64² mỗi ô** → atlas mặt nạ 1024² (4 MB) còn 512² (1 MB).
+   Tần số sóng nhân đôi để bù: nhiễu sinh theo toạ độ texel, hạ nửa độ phân giải mà giữ
+   nguyên tần số là mảng loang to gấp đôi trong toạ độ THẾ GIỚI, tức đổi mặt cả bản đồ.
+
+Hình: 1,822/255 · 1,188% pixel so ảnh mốc. **Trên ngưỡng, và vẫn nhận.** Bản đồ lệch 16×9
+cho thấy chênh rải ĐỀU trên nền (2–5/255 mỗi ô), không dồn vào vật cản hay nhân vật — thủ
+phạm là mặt nạ nền lấy mẫu lại, không phải ảnh nén hỏng. Đã soi mắt thường. Ảnh mốc chụp
+lại, bản cũ giữ ở `docs/review/13-buoc1-vongkiem/testbed-ref-truoc-nen64.png`, lý do ghi
+trong README cùng thư mục.
+
+#### 8 MB "chưa khai hạng mục" là canvas CHỮ, không phải bộ đệm khung
+
+Suốt bốn lượt tối ưu, 8 canvas 512² nằm lì trong hạng mục KHÁC với cái nhãn `b/CANVAS` —
+tên lớp đã minify, không chỉ được chỗ tạo. `trackTextureFrom` không bắt được vì chúng không
+đi qua `Texture.from`.
+
+Cách bắt: móc ngăn xếp vào **`document.createElement`** và ghi thẳng lên thẻ `<canvas>` lúc
+nó ra đời (sau `?textrace=1`). Canvas nào cũng phải qua đó, nên không đường nào lọt. Kết quả:
+
+```
+8,00 MB  6× 512x512  CanvasPool-CDvr-ucy.js:4:34956 ← CanvasPool-CDvr-ucy.js:23:
+0,40 MB  19× 64x64   CanvasPool…
+0,21 MB  20× 32x64   CanvasPool…
+```
+
+`CanvasPool` là bể canvas Pixi cấp cho **`Text`**. Pixi làm tròn cỡ canvas chữ lên luỹ thừa
+2, nên một dòng tên cỡ 300×40 ăn trọn một tấm 512×512 = 1 MB. Sáu tấm = 6,71 MB, trong khi
+trần của hạng mục "Chữ/số bay" là **2 MB**.
+
+Sổ đã xếp lại cho đúng: `CanvasPool` và mọi texture nền canvas chưa khai → hạng mục **chữ**,
+không còn chui vào "bộ đệm khung". Bảng sau khi xếp lại (lượt đo 3 người trong tầm, TỔNG
+28,35 MB): chữ **6,71 / 2 ❌**, bộ đệm khung 2,00 / 12 ✅, KHÁC **0,00** ✅.
+
+Đây là đòn bẩy VRAM lớn nhất còn lại và là đúng mục 5 của §13.10 (gom chữ vào một atlas động
+trần 2 MB). Chưa làm trong lượt này: mục tiêu ≤ 50 MB đã đạt, và việc kế tiếp theo thứ tự
+chủ dự án chốt là giảm lô vẽ.
+
+#### Cổng kiểm chuyển sang chặn cả bốn điều
+
+`tools/deploy.sh` bỏ `--warn-vram`: cảnh đông 46,3/50 nên điều 4 (VRAM) chặn như ba điều kia.
+
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
-| B32 | **Bộ nhớ GPU 281–301 MB, trần §13.10 là 50 MB** | Vượt 5,6× — đúng họ lỗi đã giết tab Safari ở B13 | #42: sổ VRAM theo hạng mục. Nền 69 MB (trần 4) · bộ đệm khung 69 (trần 12) · atlas nhân vật 70 (trần 24) · vật cản/decal 49 (trần 6) | **Mở** — thứ tự xử lý theo spec: shader trộn nền → KTX2 → trần 6 atlas → atlas động cho chữ → bộ lọc nửa độ phân giải → cổng kiểm build | #42 |
+| B32 | **Bộ nhớ GPU 281–301 MB, trần §13.10 là 50 MB** | Vượt 5,6× — đúng họ lỗi đã giết tab Safari ở B13 | #42: sổ VRAM theo hạng mục. Nền 69 MB (trần 4) · bộ đệm khung 69 (trần 12) · atlas nhân vật 70 (trần 24) · vật cản/decal 49 (trần 6) | **Đóng cho MÁY TÍNH (#51)** — 281 → **46,3 / 50 MB**, và cổng deploy nay chặn bằng chính con số này. Còn mở cho ĐIỆN THOẠI (trần 32 MB) | #42→#51 |
+| B33 | **Chữ tốn 6,71 MB VRAM / trần 2 MB** | Đòn bẩy VRAM lớn nhất còn lại; cũng là phần tốn nhất khi hạ trần xuống 32 MB cho điện thoại | #51: móc ngăn xếp vào `document.createElement` → 6 tấm 512² đều do `CanvasPool` cấp cho `Text`; Pixi làm tròn cỡ canvas chữ lên luỹ thừa 2 nên một dòng tên 300×40 ăn trọn 512² | **Mở** — cách sửa là mục 5 của §13.10: gom chữ/số bay/emote vào MỘT atlas động trần 2 MB (hoặc `BitmapText` dùng chung một font atlas) | – |
 | B31 | **Hai bài đo cũ KHÔNG dùng để so hai bản build** | Một lượt tối ưu có thể "chứng minh" được bất cứ điều gì | #39: `ringcost` ba lượt cùng build cho 19,79 · 0,55 · −0,40 ms; `weakperf` hai lượt liên tiếp cho 185 lô vẽ / 47 FPS rồi 447 lô / 23 FPS | **Đóng (#39)** — mọi phép so A/B chuyển sang cảnh thử (`scenebench.mjs`, `scenediff.mjs`). `weakperf`/`ringcost` giữ nguyên vai trò "người chơi thật gặp gì" | #39 |
 | B30 | **Lượt vẽ của Pixi là toàn bộ nút thắt máy yếu, và vòng kiếm KHÔNG còn là phần chính của nó** | Mục tiêu CPU 6× p50 ≥ 30 FPS chưa đạt (đang 23) | #38: ở CPU 4×, tắt SẠCH mọi vòng kiếm thì Pixi vẫn vẽ **19,77 ms** (bật: 19,96). Ở CPU 6×: khung 43,5 ms = Pixi vẽ 21,7 + JS game 3,6 + ~18 ms của trình duyệt. Mọi cột JS cộng lại chưa tới 4 ms | **Mở** — bước kế phải nhắm vào CÂY CẢNH và số lô vẽ (325–393 lô, 2 850–4 800 nút), không nhắm vào mã game. Lớp trạng thái (bước 2 của kế hoạch) đo được 0,07–0,39 ms: không phải chỗ đáng sửa | #38 |
 | B29 | **Nợ phép đo trước/sau cho PixiJS 8.22 → 8.23** | Không biết bản nâng làm FPS tốt lên, xấu đi, hay không đổi — đang deploy mà không có số | #37: máy ở load/nhân 2,17–3,87 suốt ngày 12/11, luật 16 cấm kết luận | **Đóng (#40)** — đo trên cảnh thử, 3 vòng xen kẽ, máy rảnh: FPS 60 ở cả hai bản và cả ba mức CPU; chênh Pixi vẽ 0,08–0,63 ms, nhỏ hơn biên dao động trong cùng một bản (≈1 ms). Giữ 8.23 vì hai thay đổi của nó là sửa lỗi | #40 |
