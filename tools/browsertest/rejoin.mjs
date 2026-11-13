@@ -11,12 +11,13 @@ const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let fails = 0;
-function expect(name, got, want) {
+function expect(name, got, want, detail) {
   const ok = got === want;
   if (!ok) {
     fails++;
   }
-  console.log(`${ok ? 'đạt ' : 'TRƯỢT'}  ${name}: ${String(got)}${ok ? '' : ` (mong ${String(want)})`}`);
+  const shown = detail ?? String(got);
+  console.log(`${ok ? 'đạt ' : 'TRƯỢT'}  ${name}: ${shown}${ok ? '' : ` (mong ${String(want)})`}`);
 }
 
 const b = await launch({ headless: true, args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'] });
@@ -77,7 +78,17 @@ const keyAfter = (await session())?.key ?? '';
 console.log(`sau  F5: id ${after?.id} · cảnh giới ${after?.level} · ${after?.swords} kiếm`);
 expect('vào lại ĐÚNG nhân vật (cùng id)', after?.id, before?.id);
 expect('giữ nguyên cảnh giới', after?.level, before?.level);
-expect('giữ nguyên số kiếm', after?.swords, before?.swords);
+// Số kiếm so theo BIÊN 2%, không so bằng nhau tuyệt đối.
+//
+// Bất tử chặn được "bị chém", nhưng KHÔNG chặn được luật bể kiếm: kiếm vỡ khi quệt vật cản
+// rồi mọc lại dần (§4). Ở Đạo Tổ 1 050 kiếm, ba giây tải lại trang đủ để con số nhúc nhích
+// vài đơn vị — 13/11 một lượt deploy trượt vì 1 040 → 1 038 trong khi §7.1 chạy đúng.
+// Thứ bài này phải bắt là "F5 xong tiến độ bị dựng lại từ đầu", và cái đó rơi về vài chục
+// kiếm chứ không phải hai.
+const swordTol = Math.max(2, Math.ceil((before?.swords ?? 0) * 0.02));
+expect(`giữ nguyên số kiếm (biên ±${swordTol})`,
+  Math.abs((after?.swords ?? 0) - (before?.swords ?? 0)) <= swordTol, true,
+  `${after?.swords} so với ${before?.swords}`);
 expect('không qua trang chủ', await p.evaluate(() => !!document.querySelector('.room-board')), true);
 expect('đã cấp mã phiên MỚI', keyAfter.length === 64 && keyAfter !== keyBefore, true);
 
@@ -106,8 +117,19 @@ const victimID = after?.id;
 await p.evaluate(() => location.reload());
 // Chờ cho tab 1 rụng hẳn kết nối rồi mới chém: chém sớm quá thì nó chết lúc CÒN kết nối,
 // tức là lại kiểm một đường khác.
+// Chém HAI NHỊP, 1,5 s và 3,0 s sau khi bấm tải lại.
+//
+// Cửa sổ "đang mất kết nối" co giãn theo tải máy: lúc `tools/deploy.sh` chạy, máy vừa build
+// vừa chạy server nên tab 1 có khi đã vào lại trước nhịp đầu, có khi socket còn chưa rụng.
+// Một nhịp duy nhất đặt ở 1,5 s là đoán mò giữa hai đầu đó, và 13/11 nó trượt một lượt
+// deploy trong khi chạy riêng thì xanh 3/3. `killid` bỏ qua người đã chết (`!t.Dead` trong
+// `debug.go`) nên nhịp thứ hai không bao giờ chém nhầm hai lần.
+const strike = () =>
+  p2.evaluate((id) => window.kx.conn.send({ t: 'dbg', cmd: 'killid', n: id }), victimID);
 await sleep(1500);
-await p2.evaluate((id) => window.kx.conn.send({ t: 'dbg', cmd: 'killid', n: id }), victimID);
+await strike();
+await sleep(1500);
+await strike();
 // Chờ tới khi trang dựng xong HẲN một trong ba màn, đừng chờ cứng theo đồng hồ: lúc
 // `tools/deploy.sh` chạy bài này thì máy đang vừa build vừa chạy server, và 12/11 một lượt
 // deploy đã TRƯỢT chỉ vì sau 9 giây trang còn đang nạp — không màn nào tồn tại, nên bài đọc
