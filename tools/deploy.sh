@@ -238,8 +238,26 @@ echo "   có telemetry ✓"
 # Đặt SKIP_SMOOTH=1 để bỏ qua (máy không có Playwright).
 if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwright ]; then
   echo "== 2b/5 nhìn Shipper Gom Đơn từ tab khác (bản VỪA dựng) =="
+  # Cổng 9997 phải TRỐNG trước đã.
+  #
+  # `go run` thất bại khi bind không làm gì sập cả: nó chỉ in "address already in use" vào
+  # /tmp/kx-smooth.log rồi chết, và BỐN bài đo phía dưới quay sang chạy vào cái server CŨ
+  # đang giữ cổng — tức là nghiệm thu một bản build không phải bản vừa dựng. Ngày 13/11 nó
+  # làm hai lượt deploy trượt §7.1 liên tiếp bằng một server cũ còn sót, trong khi bản mới
+  # chạy đúng. Thà dừng ngay với một câu rõ ràng.
+  if ss -ltn 2>/dev/null | grep -q '127.0.0.1:9997'; then
+    echo "LỖI: cổng 9997 đang có tiến trình khác giữ. Bài đo sẽ chạy nhầm vào server CŨ." >&2
+    ss -ltnp 2>/dev/null | grep '127.0.0.1:9997' >&2
+    echo "Dọn bằng: tools/cleanup.sh (hoặc giết TIẾN TRÌNH CON trước, rồi mới tới cha)." >&2
+    exit 1
+  fi
   ( cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9997 -debug=true >/tmp/kx-smooth.log 2>&1 & echo $! > /tmp/kx-smooth.pid )
   sleep 22
+  if ! curl -s -o /dev/null --max-time 5 http://127.0.0.1:9997/healthz; then
+    echo "LỖI: server dev :9997 không lên. 20 dòng cuối /tmp/kx-smooth.log:" >&2
+    tail -20 /tmp/kx-smooth.log >&2
+    exit 1
+  fi
   # Lấy mã thoát của BÀI ĐO, không phải của `tail`: `cmd | tail` trả mã của `tail` nên
   # cổng này lúc đầu luôn xanh dù bài đo đỏ.
   set +e

@@ -93,8 +93,16 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// đó `killid` im lặng không làm gì, bài rejoin báo đỏ, và nguyên nhân trông
 			// hệt như một lỗi của §7.1 — đã mất một lượt deploy đúng vì chuyện này.
 			if !killed {
-				r.mgr.killElsewhere(r, uint32(d.N))
+				killed = r.mgr.killElsewhere(r, uint32(d.N))
 			}
+			// Nói ra KẾT QUẢ, không chỉ im lặng làm.
+			//
+			// Bài `rejoin.mjs` trượt hai lượt deploy liền ngày 13/11 với đúng một dòng "không
+			// thấy màn Tổng kết" — không phân biệt được "chém hụt" (lỗi bài đo) với "chém
+			// trúng mà client vẫn vào thẳng trận" (lỗi §7.1 thật). Một dòng log ở đây tách
+			// hẳn hai khả năng đó.
+			log.Printf("dbg killid %d: %s", d.N,
+				map[bool]string{true: "đã chém chết", false: "KHÔNG tìm thấy (không còn trong phòng nào, hoặc đã chết sẵn)"}[killed])
 		case "buff":
 			if d.N >= 0 && d.N < game.BuffCount {
 				z.G.ApplyBuff(p, game.BuffNames[d.N])

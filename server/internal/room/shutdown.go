@@ -60,7 +60,7 @@ func (r *Room) ShutdownDrain() int {
 // Mỗi phòng là một goroutine, nên phải đi qua `Do` của CHÍNH phòng đó; gọi thẳng vào
 // `z.G.Players` từ goroutine phòng khác là đọc map song song với tick đang ghi (đúng lỗi
 // B12 đã làm sập server một lần).
-func (m *Manager) killElsewhere(from *Room, id uint32) {
+func (m *Manager) killElsewhere(from *Room, id uint32) bool {
 	for _, rm := range m.AllRooms() {
 		if rm == from {
 			continue
@@ -76,7 +76,8 @@ func (m *Manager) killElsewhere(from *Room, id uint32) {
 			}
 		})
 		if done {
-			return
+			return true
 		}
 	}
+	return false
 }
