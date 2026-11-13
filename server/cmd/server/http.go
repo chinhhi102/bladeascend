@@ -25,6 +25,11 @@ import (
 )
 
 type server struct {
+	// health: trạng thái vòng đời cho `/healthz` và `/readyz` (DEPLOY_K8S_SPEC §1.2).
+	health health
+	// prom: mẫu mới nhất của bộ thu gom §12, soi gương sang cho `/metrics` (§1.5).
+	prom *promStore
+
 	cfg     *config.Config
 	rawCfg  []byte
 	mgr     *room.Manager
@@ -65,6 +70,11 @@ func (s *server) routes(assetsDir, clientDir string) http.Handler {
 // /debug/pprof khi chạy với cờ `-pprof`.
 func (s *server) mux(assetsDir, clientDir string) *http.ServeMux {
 	mux := http.NewServeMux()
+	// Vòng đời cho bộ điều phối (DEPLOY_K8S_SPEC §1.2, §1.5). Không khoá sau quyền admin:
+	// kubelet gọi `/healthz` và `/readyz` không mang cookie, và Prometheus cũng vậy.
+	mux.HandleFunc("GET /healthz", s.handleHealthz)
+	mux.HandleFunc("GET /readyz", s.handleReadyz)
+	mux.HandleFunc("GET /metrics", s.handleMetrics)
 	mux.HandleFunc("GET /api/config", s.handleConfig)
 	mux.HandleFunc("GET /api/debug-allowed", s.handleDebugAllowed)
 	mux.HandleFunc("GET /api/leaderboard", s.handleLeaderboard)

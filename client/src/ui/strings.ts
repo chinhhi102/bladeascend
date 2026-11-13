@@ -51,6 +51,8 @@ export const STR = {
   skillCooldown: (secs: number, n: number): string => fmt(d.skillCooldown, { secs, n }),
   skillWait: (secs: number): string => fmt(d.skillWait, { secs }),
   zoneEntered: (name: string): string => fmt(d.zoneEntered, { name }),
+  /** Server đang tắt êm để cập nhật (DEPLOY_K8S_SPEC §1.3). */
+  serverUpdating: d.serverUpdating as string,
   loadChar: (name: string): string => fmt(d.loadChar, { name }),
   loadZone: (zone: string): string => fmt(d.loadZone, { zone }),
   loadMB: (done: number, total: number): string => fmt(d.loadMB, { done: done.toFixed(1), total: total.toFixed(1) }),

@@ -98,6 +98,7 @@
   "disconnected": "Koneksi ke server terputus. Mencoba lagi...",
   "rejoining": "Kembali ke pertandingan…",
   "otherTab": "Kamu sedang bermain di tab lain.",
+  "serverUpdating": "Server sedang diperbarui, masuk lagi beberapa detik lagi.",
   "badName": "Nama harus 2–16 karakter.",
   "loadUi": "Memuat antarmuka…",
   "loadChar": "Memanggil {name}…",

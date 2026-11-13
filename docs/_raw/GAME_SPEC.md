@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.55:** ngân sách bộ nhớ GPU ≤ 50 MB máy tính / ≤ 32 MB điện thoại: KTX2, tối đa 6 atlas nhân vật, nền vẽ bằng shader trộn (bỏ bake + mask), bộ lọc nửa độ phân giải, cổng kiểm VRAM (§13.10).
+
 **Thay đổi v6.54:** bài rò rỉ client bỏ 20 phút khởi động, chặn theo cửa sổ phút 20–30 (> 5%) (Q53); bài rò rỉ chạy hằng đêm 03:00 thay vì mỗi deploy; Hoá Khổng Lồ nhân scale toàn phần (Q52) (§13.9, §6.3).
 
 **Thay đổi v6.53:** chống sập (bắt lỗi theo hệ thống, tự dựng lại renderer, recover server) §13.8; F5 khi chưa chết vào lại đúng phiên trong 20 s §7.1; vệ sinh bộ nhớ client/server + bài kiểm rò rỉ §13.9.
@@ -1612,6 +1614,28 @@ Thêm bước CI `npm run assets:budget`: vượt ngân sách → build fail, in
 - Số goroutine, heap, số entity theo loại ghi vào metrics (§ADMIN 12); **bài kiểm rò rỉ server**: loadtest 1 giờ có người vào/ra liên tục → goroutine và heap về lại mức nền (±10%) sau khi mọi người rời.
 
 
+
+### 13.10 Ngân sách bộ nhớ GPU ≤ 50 MB (v6.55)
+
+**Mục tiêu**: bộ nhớ GPU của tab game (cột "GPU Memory" trong Task Manager của Chrome, Shift+Esc) **≤ 50 MB trên máy tính, ≤ 32 MB trên điện thoại**, ở cảnh đông (phòng đầy, 6 loại nhân vật trên màn hình, có người Tiên giới), chất lượng Vừa, độ phân giải 1080p tỉ lệ điểm ảnh 1. JS heap mục tiêu ≤ 80 MB (đo riêng).
+
+**Bảng ngân sách** (sổ VRAM trong F3/admin phải cộng đúng các dòng này):
+
+| Hạng mục | Máy tính | Điện thoại | Cách đạt |
+|---|---|---|---|
+| Atlas nhân vật | ≤ 24 MB | ≤ 6 MB | KTX2 UASTC (ASTC/BC7, 1 byte/px): 2048² = 4 MB; điện thoại atlas 1024² = 1 MB. Chỉ giữ **tối đa 6 atlas** — loại nhân vật ở gần/khung nhìn; nạp trước theo khoảng cách, nhả khi không ai dùng 10 s (B23) |
+| Nền | ≤ 4 MB | ≤ 2 MB | **Bỏ bake RenderTexture + bỏ mask**: vẽ nền bằng **1 shader trộn** 2–3 tile nén ETC1S (512², ~0,25 MB/tile) theo **mặt nạ trộn độ phân giải thấp** (256² 1 kênh/chunk, ~64 KB). Hết 48 lượt vẽ mask và hết RT 4 MB/chunk |
+| Vật cản, decal, vật phẩm, viên EXP | ≤ 6 MB | ≤ 3 MB | Gom 1–2 atlas KTX2 (ETC1S cho decal/vật cản, UASTC cho vật phẩm) |
+| VFX, hào quang, thần thú, UI trong canvas | ≤ 4 MB | ≤ 2 MB | 1 atlas KTX2; hiệu ứng vẽ bằng shader thay vì ảnh lớn khi được |
+| Bộ đệm khung (canvas) + bộ lọc | ≤ 12 MB | ≤ 8 MB | Không MSAA (`antialias:false`); bloom/shockwave render ở **nửa độ phân giải**, tắt ở Thấp; độ phân giải động (§13.6) |
+| **Tổng** | **≤ 50 MB** | **≤ 32 MB** | |
+
+- Texture tạo lúc chạy (chữ bảng tên, số bay, emote) vào **1 atlas động** có trần (≤ 2 MB), không mỗi chữ một texture.
+- Mọi texture mới phải khai **hạng mục ngân sách** khi tạo; sổ VRAM báo vượt hạng mục → cảnh báo trong F3, telemetry ghi lại.
+- **Cổng kiểm**: cảnh thử cố định (`?scene=testbed`) + cảnh đông giả lập → tổng VRAM ước tính vượt ngân sách → build fail. Chất lượng nhìn được giữ bằng `scenediff` (ngưỡng như §13.7).
+- Đánh đổi chấp nhận: điện thoại dùng atlas 1024 (hơi mềm hơn); nhân vật mới vào khung nhìn có thể hiện bản 1024 trong ≤ 0,5 s trước khi bản 2048 nạp xong (máy tính).
+
+
 ## 14. Quái (PvE)
 
 Quái **không gây sát thương**, đi lang thang, chạy khi bị chém, hiện số HP trên người.
@@ -1813,6 +1837,8 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - Việc chủ dự án cần làm: mua tên miền `bladeascend.io` (và nên giữ thêm `bladeascend.com`), kiểm tra trùng tên trên các cổng game .io lớn và cửa hàng ứng dụng, tra nhãn hiệu (WIPO Global Brand Database).
 
 ## 17. Checklist test chấp nhận
+
+- [ ] Chrome Task Manager, cảnh đông 1080p chất lượng Vừa: GPU Memory tab game ≤ 50 MB (máy tính), ≤ 32 MB (WebKit/iPhone ước tính); sổ VRAM khớp ±10% với Task Manager.
 
 - [ ] Ném lỗi giả vào từng hệ thống vẽ (VFX, bảng tên, minimap…) → game chạy tiếp, chỉ hệ thống đó tắt; lỗi giả trong renderer 3 lần → tự dựng lại renderer, không tải trang.
 - [ ] Panic giả trong tick 1 khu → khu đó bỏ 1 tick, các khu khác không ảnh hưởng; panic khi xử lý gói 1 người → chỉ người đó bị ngắt.

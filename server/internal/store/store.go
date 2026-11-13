@@ -129,6 +129,20 @@ func Open(path string, cacheTTL time.Duration) (*Store, error) {
 
 func (s *Store) Close() error { return s.db.Close() }
 
+// Checkpoint gộp nhật ký WAL vào tệp chính (DEPLOY_K8S_SPEC §1.3).
+//
+// SQLite ở chế độ WAL ghi vào tệp `-wal` rồi mới gộp dần. Tắt tiến trình mà chưa gộp thì dữ
+// liệu vẫn an toàn — lần mở sau sẽ gộp — nhưng lần mở sau là một POD KHÁC trên cùng một
+// PVC, và bản sao lưu đêm chép tệp chính thì sẽ thiếu phần còn nằm trong WAL. Gộp trước khi
+// thoát để bản sao lưu luôn đầy đủ.
+//
+// `TRUNCATE` chứ không `PASSIVE`: passive bỏ cuộc lặng lẽ khi còn ai đang đọc, và "bỏ cuộc
+// lặng lẽ" là thứ sẽ không ai phát hiện cho tới lúc cần khôi phục.
+func (s *Store) Checkpoint() error {
+	_, err := s.db.Exec(`PRAGMA wal_checkpoint(TRUNCATE)`)
+	return err
+}
+
 // Record saves a finished life. Callers must never pass bots (spec §9.3).
 func (s *Store) Record(l Life) error {
 	_, err := s.db.Exec(`INSERT INTO lives

@@ -274,6 +274,13 @@ export interface ErrorMsg {
  * `ui/strings.ts` như mọi chữ khác (quy tắc 5).
  */
 export const KICK_OTHER_TAB = '__other_tab__';
+/**
+ * Server đang tắt êm để cập nhật (DEPLOY_K8S_SPEC §1.3).
+ *
+ * Gói `kick` sẵn có, không phải loại gói mới — spec nói rõ "không đổi giao thức". Client
+ * nhận nó NGAY SAU màn Tổng kết, nên người chơi thấy đủ điểm của ván rồi mới thấy lý do.
+ */
+export const KICK_SERVER_UPDATE = '__server_update__';
 
 export interface KickedMsg {
   t: 'kick';

@@ -13,7 +13,7 @@ const ZONE_BANNER_SECS = 1.5;
  */
 const ZONE_ART_WAIT_MS = 2000;
 
-import { FLAG, KICK_OTHER_TAB, PROTOCOL_VERSION } from './net/protocol';
+import { FLAG, KICK_OTHER_TAB, KICK_SERVER_UPDATE, PROTOCOL_VERSION } from './net/protocol';
 import { SCHEMA_HASH } from './net/wire.gen';
 import { watchContextLoss } from './render/glrecover';
 import { drawGuardStats, faultSystem, setSysErrorHook, type SysKey, sysResetRun, sysRun, sysSummary } from './render/guard';
@@ -322,6 +322,15 @@ class App {
     this.telemetry?.setPhase('home');
     // Nhân vật vừa bị TAB KHÁC của chính người này chiếm (§7.1): tab cũ phải quên mã phiên
     // ngay, nếu không nó nối lại và giành ngược nhân vật về — hai tab đá qua đá lại mãi.
+    // Server đang cập nhật: khác hẳn bị admin mời ra — không ai làm gì sai, và vào lại
+    // được sau vài giây. Màn Tổng kết đã hiện trước đó (server gửi `dead` ngay trước gói
+    // này), nên ở đây chỉ cần nói vì sao và mời vào lại.
+    if (m.reason === KICK_SERVER_UPDATE) {
+      clearSession();
+      clearEndedRun();
+      this.screens.show(h('div', 'screen center', h('div', 'panel', STR.serverUpdating)));
+      return;
+    }
     if (m.reason === KICK_OTHER_TAB) {
       clearSession();
       clearEndedRun();

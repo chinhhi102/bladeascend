@@ -19,6 +19,14 @@ type Collector struct {
 	humans  bool  // phút này đã thấy người thật chưa
 	lastHr  int64
 	dropped int
+
+	// Mirror: nếu khác nil, MỌI mẫu đi qua đây một lần nữa.
+	//
+	// Có để `/metrics` (Prometheus, DEPLOY_K8S_SPEC §1.5) dùng lại ĐÚNG những con số này
+	// thay vì đo lần thứ hai. Đo hai lần không chỉ tốn: số liệu khu lấy bằng `DrainMetrics`,
+	// tức là ai đọc trước thì người sau mất phần — hai bộ đo song song sẽ cùng thấy một nửa
+	// sự thật, và không ai nhận ra vì cả hai vẫn ra số đẹp.
+	Mirror func(metric, scope string, d Dist)
 }
 
 type key struct{ metric, scope string }
@@ -32,6 +40,11 @@ func New(db *DB, build string) *Collector {
 func (c *Collector) Add(metric, scope string, v float64) {
 	d := c.at(metric, scope)
 	d.Add(v)
+	if c.Mirror != nil {
+		var one Dist
+		one.Add(v)
+		c.Mirror(metric, scope, one)
+	}
 }
 
 // AddDist gộp cả một phân phối đã gom sẵn (tick: mọi tick trong 1 giây).
@@ -40,6 +53,9 @@ func (c *Collector) AddDist(metric, scope string, src Dist) {
 		return
 	}
 	c.at(metric, scope).Merge(src)
+	if c.Mirror != nil {
+		c.Mirror(metric, scope, src)
+	}
 }
 
 func (c *Collector) at(metric, scope string) *Dist {

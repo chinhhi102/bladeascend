@@ -34,6 +34,14 @@ const TKicked = "kick"
 // biệt hai trường hợp bằng chính mã này.
 const KickOtherTab = "__other_tab__"
 
+// KickServerUpdate: lý do đặc biệt cho gói `kick` — server đang tắt êm để cập nhật
+// (DEPLOY_K8S_SPEC §1.3).
+//
+// Cùng kiểu MÃ như `KickOtherTab`, và cùng lý do: chữ cho người chơi nằm ở
+// `client/src/ui/strings.ts` (quy tắc 5). Dùng lại gói `kick` sẵn có thay vì thêm một loại
+// gói mới — spec nói rõ "không đổi giao thức".
+const KickServerUpdate = "__server_update__"
+
 // Envelope is decoded first to find the message type.
 type Envelope struct {
 	T string `msgpack:"t"`

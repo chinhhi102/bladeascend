@@ -98,6 +98,7 @@
   "disconnected": "Conexão com o servidor perdida. Tentando de novo...",
   "rejoining": "Voltando à partida…",
   "otherTab": "Você está jogando em outra aba.",
+  "serverUpdating": "O servidor está atualizando, volte em alguns segundos.",
   "badName": "O nome deve ter de 2 a 16 caracteres.",
   "loadUi": "Carregando interface…",
   "loadChar": "Chamando {name}…",

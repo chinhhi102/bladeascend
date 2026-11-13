@@ -134,8 +134,12 @@ func main() {
 		buildID: buildIDOrNow(*buildID), startedAt: time.Now(), dbPath: dbFile, mapsDir: *mapsDir,
 		names: room.LoadNameFilter(cfg, filepath.Join(filepath.Dir(*cfgPath), "bad_words")), limiter: newIPLimiter(cfg.Net.MaxConnsPerIP),
 		telemetry: tel, env: env, envDefaults: envDefaults, metricsDB: mdb}
+	srv.prom = newPromStore()
 	if mdb != nil {
 		srv.metrics = metrics.New(mdb, srv.buildID)
+		// `/metrics` dùng LẠI số của bộ thu gom §12, không đo lần thứ hai: số liệu khu lấy
+		// bằng `DrainMetrics`, ai đọc trước thì người sau mất phần (DEPLOY_K8S_SPEC §1.5).
+		srv.metrics.Mirror = srv.prom.note
 	}
 	// Mọi panic đã bắt được (§13.8) đi về trang quản trị "Lỗi" cùng một chỗ với lỗi client:
 	// người đọc đang hỏi "có ai gặp chuyện gì không", không hỏi "lỗi ở client hay server".
@@ -183,6 +187,10 @@ func main() {
 		ch := make(chan os.Signal, 1)
 		signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
 		<-ch
+		// Tắt êm (DEPLOY_K8S_SPEC §1.3): ngừng nhận người mới, tiễn người đang chơi tử tế,
+		// ghi xong SQLite. Có hạn chót cứng — Kubernetes chờ `terminationGracePeriodSeconds`
+		// rồi SIGKILL, và bị SIGKILL giữa lúc ghi SQLite là cách làm hỏng tệp dữ liệu.
+		srv.gracefulShutdown()
 		if *cpuProf != "" {
 			pprof.StopCPUProfile()
 			log.Printf("đã ghi hồ sơ CPU vào %s", *cpuProf)
