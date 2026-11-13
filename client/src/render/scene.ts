@@ -448,7 +448,7 @@ export class GameScene {
     if (!w.map) {
       return;
     }
-    this.mapView = new MapView(w.map, this.cfg.gates.radius);
+    this.mapView = new MapView(w.map, this.cfg.gates.radius, this.app.renderer);
     for (const node of this.mapView.obstacleLayer()) {
       this.entities.addChild(node);
     }

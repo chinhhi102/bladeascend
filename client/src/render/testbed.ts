@@ -77,7 +77,10 @@ function mkMap(): GameMap {
     id: 'testbed',
     name: 'Cảnh thử',
     size,
-    biome: 'forest',
+    // `biome` phải là KHOÁ THẬT trong `BIOME_TILES` (catalog.ts) — bản đồ thật chỉ sinh ra
+    // `grass` `dirt` `concrete` `snow`. Gõ một tên không có trong bảng thì `blendNames` rỗng
+    // và `MapView` bỏ qua cả phần nền trộn: cảnh thử sẽ im lặng không gác lớp `ground`.
+    biome: 'grass',
     play_margin: 100,
     // Vật cản đặt tay quanh tâm cảnh: một cụm đá, một bụi, một cây. `s` là hình THẤY được
     // (kiếm chém vào), `f` là chân đế (chặn thân) — đúng hai hình của §8.2.
@@ -91,8 +94,8 @@ function mkMap(): GameMap {
       { id: 2, k: 'bamboo_thin', s: { x: 3000, y: 2280, r: 60 }, f: { x: 3000, y: 2310, r: 38 }, t: 0 },
       { id: 3, k: 'cart', s: { x: 3240, y: 2040, r: 80 }, f: { x: 3240, y: 2070, r: 52 }, t: 2 },
     ],
-    zones: [{ id: 0, k: 'forest', s: { c: true, x: CX, y: CY, r: 1400 } }],
-    gates: [{ id: 0, x: CX + 560, y: CY - 380, n: 'Cổng thử', c: 'forest' }],
+    zones: [{ id: 0, k: 'grass', s: { c: true, x: CX, y: CY, r: 1400 } }],
+    gates: [{ id: 0, x: CX + 560, y: CY - 380, n: 'Cổng thử', c: 'grass' }],
     decor: [
       { sp: 'decor/grass_1.png', x: CX - 120, y: CY + 150 },
       { sp: 'decor/grass_1.png', x: CX + 180, y: CY - 220 },
@@ -166,7 +169,7 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
 
   const map = mkMap();
   const world = new Container();
-  const mapView = new MapView(map, cfg.gates.radius);
+  const mapView = new MapView(map, cfg.gates.radius, app.renderer);
   const entities = new Container();
   const rings = new Container();
   const glow = new Container();
@@ -274,7 +277,11 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
   app.ticker.add((t) => {
     const now = warm ? NOW : NOW - 1;
     warm = true;
-    mapView.update(fakeWorld, now, 0, null, cfg.obstacles.occlusion_alpha);
+    // Truyền KHUNG NHÌN: không có nó thì `MapView` bỏ qua cả ô nền trộn lẫn decal theo tầm
+    // (xem `updateGroundChunks`), và cảnh thử sẽ không gác được đúng phần nền — lớp tốn
+    // nhiều lô vẽ thứ hai của game.
+    mapView.update(fakeWorld, now, 0, null, cfg.obstacles.occlusion_alpha,
+      { x: CX, y: CY, w: W / BG_ZOOM, h: H / BG_ZOOM });
     for (let i = 0; i < sprites.length; i++) {
       const f = dummies[i];
       const { sp, zoom } = sprites[i];
@@ -324,6 +331,11 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
       app.render();
       return got;
     },
+    tiles: (): Record<string, boolean> => ({
+      grass: assets.texture('tiles/grass.png') !== null,
+      soft_grass: assets.texture('tiles/soft_grass.png') !== null,
+      bamboo_litter: assets.texture('tiles/bamboo_litter.png') !== null,
+    }),
     stats: (): Record<string, number> => ({
       pixiMs: +pixiMs.toFixed(3),
       fps: +fps.toFixed(1),

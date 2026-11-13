@@ -1,10 +1,11 @@
-import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
+import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Rectangle, RenderTexture, type Renderer, Sprite, Texture, TilingSprite } from 'pixi.js';
 
 import type { ClientWorld } from '../net/state';
 import type { GameMap, MapObstacle, Shape } from '../net/protocol';
 import { assets } from './assets';
 import { BIOME_TILES, OBSTACLE_ALIAS } from './catalog';
 import { buildDecals, type DecalLayer, obstacleSkirt } from './decals';
+import { gpuBudgetMB } from './device';
 import { filtersOff } from './guard';
 import { GATE_COLORS } from './palette';
 import { emergency } from './quality';
@@ -43,6 +44,26 @@ const TILE_WORLD = 400; // one 512px ground tile covers 400 world units
  * Nhỏ hơn nữa thì số ô (và số lệnh vẽ) tăng nhanh hơn phần bộ nhớ tiết kiệm được.
  */
 const GROUND_CHUNK = 1024;
+/**
+ * bakeRes: độ phân giải nướng ô nền — THEO NGÂN SÁCH GPU CỦA THIẾT BỊ.
+ *
+ * Nền là hoa văn tần số thấp cộng một mảng loang mờ, nên hạ độ phân giải ít thấy bằng mắt
+ * nhưng chia bình phương bộ nhớ. Đo được cả hai đầu, trên cảnh thật (đi lòng vòng ở Đạo Tổ,
+ * camera lùi xa nhất) và trên cảnh thử:
+ *
+ * | nướng ở | `texMB` cảnh thật | lệch ảnh cảnh thử |
+ * |---|---|---|
+ * | 0,5  | 216 → **306 MB** | 0,036/255 · 0,006% pixel — y như cũ |
+ * | 0,25 | 216 → **204 MB** | 3,15/255 · 6,3% pixel — mờ thấy được |
+ *
+ * Máy bàn (ngân sách 1 024 MB) nuốt được 306 MB nên lấy bản nét. iPhone trần 256 MB thì
+ * không: B13 đã một lần làm Safari giết tab vì đúng con số đó, nên ở đó lấy bản 0,25 và chịu
+ * mờ. Một con số duy nhất cho mọi máy là hoặc phí nửa chất lượng của máy bàn, hoặc giết tab
+ * của điện thoại.
+ */
+function bakeRes(): number {
+  return gpuBudgetMB() >= 1024 ? 0.5 : 0.25;
+}
 /** GROUND_PAD: giữ thêm một vành ô quanh khung nhìn để lúc camera chạy không thấy ô hiện ra. */
 const GROUND_PAD = 1;
 const ART_FILL = 0.9; // object art fills ~90% of its canvas
@@ -213,6 +234,27 @@ function obstacleTexture(kind: string, vertical: boolean): Texture | null {
     ?? (vertical ? null : assets.texture(`obstacles/${kind}/intact.png`));
 }
 
+/** Một ô nền đã nướng sẵn: một sprite, một texture, không mask. */
+interface BlendChunk {
+  node: Sprite;
+  tex: RenderTexture;
+  /** Bộ nhớ GPU của ô này (MB) — cộng dồn để biết khi nào phải đuổi bớt. */
+  mb: number;
+  /** Lần cuối ô này còn trong tầm; số càng nhỏ càng lâu không dùng (LRU). */
+  used: number;
+}
+
+/**
+ * bakedBudgetMB: trần bộ nhớ cho ô nền đã nướng — một phần tư ngân sách GPU của THIẾT BỊ.
+ *
+ * Một phần tư vì nền chỉ là một trong bốn chỗ ngốn texture (nền, atlas nhân vật, vật cản,
+ * hiệu ứng). Đọc ngân sách của chính máy đang chạy chứ không gõ tay một con số: iPhone 256 MB
+ * và máy bàn 1 024 MB không thể dùng chung một trần.
+ */
+function bakedBudgetMB(): number {
+  return gpuBudgetMB() / 4;
+}
+
 /** grownShape: nở hình ra quanh TÂM theo hệ số `k`. */
 function grownShape(s: Shape, k: number): Shape {
   if (s.c) {
@@ -299,7 +341,15 @@ export class MapView {
    * Không huỷ bằng `destroy({ texture: true })` cho cả ô được: `TilingSprite` trong ô dùng
    * CHUNG texture tile của art, huỷ nó là xoá nền của mọi ô còn lại.
    */
-  private readonly blendChunks = new Map<string, { node: Container; masks: Texture[] }>();
+  private readonly blendChunks = new Map<string, BlendChunk>();
+  /**
+   * seq: đồng hồ đếm lượt dùng cho LRU. Không dùng `Date.now()` — một ô vừa dựng xong và một
+   * ô dựng cách đó 0 ms có cùng mốc thời gian, và khi đó thứ tự đuổi là thứ tự `Map` chứ
+   * không phải thứ tự dùng.
+   */
+  private seq = 0;
+  /** Tổng MB của các texture ô nền đã nướng (xem `bakedBudgetMB`). */
+  private bakedMB = 0;
   readonly decor = new Container();
   readonly under = new Container(); // zones under entities (mud, wind)
   /**
@@ -321,6 +371,8 @@ export class MapView {
   constructor(
     private readonly map: GameMap,
     private readonly gateR: number,
+    /** renderer: cần để NƯỚNG ô nền ra texture một lần (xem `buildBlendChunk`). */
+    private readonly renderer: Renderer,
   ) {
     this.buildGround();
     // Decal rải khắp mặt đất (spec §8.6 mục 3): nằm trên nền, dưới mọi vùng và vật cản.
@@ -392,16 +444,22 @@ export class MapView {
         this.dropBlendChunk(key, chunk);
       }
     }
+    const want = new Set<string>();
     for (let cy = cy0; cy <= cy1; cy++) {
       for (let cx = cx0; cx <= cx1; cx++) {
         const key = `${cx},${cy}`;
-        if (!this.blendChunks.has(key)) {
+        const have = this.blendChunks.get(key);
+        if (have) {
+          have.used = ++this.seq;
+        } else {
           const chunk = this.buildBlendChunk(cx, cy);
           this.blendChunks.set(key, chunk);
           this.blendRoot.addChild(chunk.node);
         }
+        want.add(key);
       }
     }
+    this.evictBaked(want);
   }
 
   /**
@@ -411,18 +469,54 @@ export class MapView {
    * cho ô này, không ai dùng chung, và bỏ lại nguồn ảnh thì con số `texMB` không nhúc nhích
    * — đúng cái bẫy đã mắc một lần ở `assets.releaseChar`.
    */
-  private dropBlendChunk(key: string, chunk: { node: Container; masks: Texture[] }): void {
+  private dropBlendChunk(key: string, chunk: BlendChunk): void {
     chunk.node.destroy({ children: true });
-    for (const t of chunk.masks) {
-      t.destroy(true);
-    }
+    chunk.tex.destroy(true);
+    this.bakedMB -= chunk.mb;
     this.blendChunks.delete(key);
   }
 
-  /** buildBlendChunk dựng một ô: mỗi lớp trộn là một TilingSprite che bởi mặt nạ cỡ ô. */
-  private buildBlendChunk(cx: number, cy: number): { node: Container; masks: Texture[] } {
-    const node = new Container();
-    const masks: Texture[] = [];
+  /**
+   * evictBaked đuổi ô ÍT DÙNG NHẤT cho tới khi tổng bộ nhớ ô nướng về dưới trần.
+   *
+   * Trần là một phần ngân sách GPU của chính thiết bị (`gpuBudgetMB`), không phải một con số
+   * gõ tay: iPhone 256 MB và máy bàn 1 024 MB không thể dùng chung một trần, và chép tay một
+   * con số vào đây là sai ngay lần chạy trên máy khác (đúng bài học của §13.9).
+   *
+   * Không bao giờ đuổi ô đang trong tầm nhìn: đuổi xong khung sau nó lại được dựng lại, và
+   * ta có một vòng dựng–huỷ mỗi khung, tốn hơn hẳn việc giữ nó.
+   */
+  private evictBaked(keep: Set<string>): void {
+    if (this.bakedMB <= bakedBudgetMB()) {
+      return;
+    }
+    const byAge = [...this.blendChunks.entries()]
+      .filter(([k]) => !keep.has(k))
+      .sort((a, b) => a[1].used - b[1].used);
+    for (const [k, c] of byAge) {
+      if (this.bakedMB <= bakedBudgetMB()) {
+        return;
+      }
+      this.dropBlendChunk(k, c);
+    }
+  }
+
+  /**
+   * buildBlendChunk dựng một ô nền — NƯỚNG SẴN thành MỘT texture.
+   *
+   * Trước 13/11 mỗi lớp trộn là một `TilingSprite` che bởi một mặt nạ, và cả hai nằm luôn
+   * trong cây cảnh. Mặt nạ sprite trong Pixi v8 là một lượt vẽ ra texture riêng cho MỖI vật
+   * bị che, MỖI khung — đo được (`drawbreak.mjs`, cảnh thật 3 người): lớp `ground` tốn
+   * **100 lô vẽ với 48 mask**, tức là 41% toàn bộ lô vẽ của cả cảnh, cho một thứ KHÔNG HỀ
+   * ĐỔI sau khi dựng xong.
+   *
+   * Nướng: dựng đúng mấy lớp ấy trong một container tạm, vẽ MỘT LẦN ra `RenderTexture`, rồi
+   * vứt cả container lẫn mặt nạ. Còn lại một `Sprite` phẳng — gom lô được với các ô khác,
+   * không mask, không filter.
+   */
+  private buildBlendChunk(cx: number, cy: number): BlendChunk {
+    const tmp = new Container();
+    const maskTex: Texture[] = [];
     const x = cx * GROUND_CHUNK;
     const y = cy * GROUND_CHUNK;
     const w = Math.min(GROUND_CHUNK, this.map.size - x);
@@ -435,20 +529,40 @@ export class MapView {
       const layer = new TilingSprite({ texture: t2, width: w, height: h });
       layer.tileScale.set(TILE_WORLD / t2.width);
       // Gốc lát bám TOẠ ĐỘ THẾ GIỚI, không bám góc ô: không có dòng này thì hoa văn nhảy
-      // lại từ đầu ở mỗi mép ô và cả bản đồ hiện ra một lưới ô vuông.
+      // lại từ đầu ở mỗi mép ô và cả bản đồ hiện ra một lưới ô vuông. Trong container tạm
+      // thì ô nằm ở gốc (0,0), nên trừ đi `x`/`y` — nhưng gốc LÁT vẫn tính theo toạ độ thế
+      // giới, nếu không mỗi ô lại bắt đầu hoa văn từ đầu và lưới ô hiện ra y như cũ.
       layer.tilePosition.set(-x * layer.tileScale.x, -y * layer.tileScale.y);
-      layer.position.set(x, y);
       // Mặt nạ gieo theo Ô: cùng một ô luôn ra cùng mảng loang, dù dựng lại bao nhiêu lần
       // khi người chơi đi qua đi lại. Gieo theo thời gian thì nền "đổi kiểu" sau lưng họ.
       const mask = noiseMask(Math.max(w, h), hashSeed(`${this.map.id}:${cx}:${cy}:${i}`), 0.42 - i * 0.12);
-      mask.position.set(x, y);
       mask.width = w;
       mask.height = h;
       layer.mask = mask;
-      masks.push(mask.texture);
-      node.addChild(layer, mask);
+      maskTex.push(mask.texture);
+      tmp.addChild(layer, mask);
     });
-    return { node, masks };
+    const res = bakeRes();
+    const tex = RenderTexture.create({ width: w, height: h, resolution: res, antialias: false });
+    this.renderer.render({ container: tmp, target: tex, clear: true });
+    // Huỷ container tạm, rồi huỷ RIÊNG texture của mặt nạ.
+    //
+    // KHÔNG dùng `destroy({ textureSource: true })` cho cả cây: `TilingSprite` trong đó xài
+    // texture TILE DÙNG CHUNG của kho asset, và huỷ nguồn của chúng là xoá nền của cả game —
+    // thử rồi, cảnh ra một màu xám trơn, 96% pixel đổi và mọi lớp khác hỏng theo. Chỉ mặt nạ
+    // mới là canvas dựng riêng cho ô này, và nó thì phải huỷ cả nguồn, nếu không `texMB`
+    // không nhúc nhích (đúng cái bẫy đã mắc ở `assets.releaseChar`).
+    tmp.destroy({ children: true });
+    for (const t of maskTex) {
+      t.destroy(true);
+    }
+    const node = new Sprite(tex);
+    node.position.set(x, y);
+    node.width = w;
+    node.height = h;
+    const mb = (w * res * h * res * 4) / 1048576;
+    this.bakedMB += mb;
+    return { node, tex, mb, used: ++this.seq };
   }
 
   /**
