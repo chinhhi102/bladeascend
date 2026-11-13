@@ -19,7 +19,7 @@
 // ô trong một atlas. Hiện `assets/dist` để `tiles/*.png` riêng từng tệp — nếu sau này gom
 // tile vào atlas thì shader này hỏng im lặng (hoa văn kéo giãn thay vì lặp), nên có
 // `check:tiles` canh.
-import { Mesh, MeshGeometry, Shader, Texture } from 'pixi.js';
+import { ColorMatrixFilter, Mesh, MeshGeometry, Shader, Texture } from 'pixi.js';
 
 import { declareTexture } from './gpumem';
 
@@ -65,6 +65,10 @@ uniform vec4 uGround;
 uniform vec2 uChunk;
 uniform vec2 uLayers;
 uniform vec2 uOffset;
+uniform vec4 uCM0;
+uniform vec4 uCM1;
+uniform vec4 uCM2;
+uniform vec4 uCMOff;
 
 void main() {
   vec2 tuvBase = (uGround.xy + vLocal) / uGround.z;
@@ -75,9 +79,35 @@ void main() {
   vec4 t2 = texture(uTile2, tuvBlend);
   c.rgb = mix(c.rgb, t1.rgb, m.r * t1.a * uLayers.x);
   c.rgb = mix(c.rgb, t2.rgb, m.g * t2.a * uLayers.y);
+  vec3 g = c.rgb;
+  c.r = dot(g, uCM0.rgb) + uCM0.a * c.a + uCMOff.r;
+  c.g = dot(g, uCM1.rgb) + uCM1.a * c.a + uCMOff.g;
+  c.b = dot(g, uCM2.rgb) + uCM2.a * c.a + uCMOff.b;
   finalColor = c;
 }
 `;
+
+/**
+ * groundColorMatrix: ĐÚNG phép chỉnh màu mà `ColorMatrixFilter` của lớp nền vẫn làm
+ * (ART_PROMPTS §9.0: nền dịu, tương phản thấp để vật thể gameplay nổi lên).
+ *
+ * Lấy ma trận từ CHÍNH `ColorMatrixFilter` rồi truyền vào shader, thay vì tự nhân ba phép
+ * `saturate`/`brightness`/`contrast` bằng tay: nhân tay là một cơ hội sai số mà `scenediff`
+ * sẽ bắt được nhưng không nói được sai ở đâu, và nếu một ngày ai đó đổi tham số ở
+ * `backgroundFilter()` thì bản chép tay im lặng trôi khỏi bản thật.
+ */
+let cmCache: number[] | null = null;
+export function groundColorMatrix(): number[] {
+  if (cmCache) {
+    return cmCache;
+  }
+  const f = new ColorMatrixFilter();
+  f.saturate(-0.5);
+  f.brightness(0.9, true);
+  f.contrast(-0.2, true);
+  cmCache = [...f.matrix];
+  return cmCache;
+}
 
 /**
  * groundMask dựng mặt nạ trộn cho MỘT ô: kênh R cho lớp 2, kênh G cho lớp 3.
@@ -164,6 +194,7 @@ export function groundChunkMesh(
     indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
   });
   const mask = groundMask(seeds, covers);
+  const cm = groundColorMatrix();
   // Tile phải LẶP. Không đặt thì mép ô kéo giãn một hàng điểm ảnh ra khắp ô — nhìn ra ngay,
   // nhưng chỉ ở rìa bản đồ nơi ít ai đi qua, nên dễ lọt.
   for (const t of tiles) {
@@ -199,6 +230,14 @@ export function groundChunkMesh(
         // thế giới, nên trong shader nó cũng phải căn theo thế giới. Cho cả ba lớp dùng
         // chung một gốc lát làm `scenediff` dừng ở 1,48/255 thay vì 0,06.
         uOffset: { value: new Float32Array([x / t0.source.width, y / t0.source.height]), type: 'vec2<f32>' },
+        // Ma trận màu 4×5 của `ColorMatrixFilter`, đưa thẳng vào shader. Lớp nền không còn
+        // filter nào nữa (§13.10 mục 6): một container có filter là một đích vẽ toàn màn
+        // hình, mà phép này chỉ đổi màu TỪNG ĐIỂM ẢNH — không cần biết điểm bên cạnh, nên
+        // nó thuộc về shader chứ không thuộc về một lượt vẽ riêng.
+        uCM0: { value: new Float32Array([cm[0], cm[1], cm[2], cm[3]]), type: 'vec4<f32>' },
+        uCM1: { value: new Float32Array([cm[5], cm[6], cm[7], cm[8]]), type: 'vec4<f32>' },
+        uCM2: { value: new Float32Array([cm[10], cm[11], cm[12], cm[13]]), type: 'vec4<f32>' },
+        uCMOff: { value: new Float32Array([cm[4], cm[9], cm[14], 0]), type: 'vec4<f32>' },
       },
     },
   });

@@ -321,8 +321,12 @@ export class MapView {
   ) {
     this.buildGround();
     // Decal rải khắp mặt đất (spec §8.6 mục 3): nằm trên nền, dưới mọi vùng và vật cản.
+    //
+    // Nằm trong `decor` chứ không `ground`: `ground` đã bỏ filter, mà decal là sprite art
+    // thật nên vẫn cần phép chỉnh màu. `decor` vẽ ngay trên `ground` nên thứ tự nhìn thấy
+    // không đổi.
     this.decals = buildDecals(map.id, map.size, hashSeed(map.id));
-    this.ground.addChild(this.decals.root);
+    this.decor.addChildAt(this.decals.root, 0);
     this.buildZones();
     this.buildGates();
     this.buildDecor();
@@ -332,8 +336,14 @@ export class MapView {
     }
     // Vừa có lỗi vẽ thì khu mới dựng cũng không gắn filter nữa (§13.8): đổi khu là dựng
     // lại MapView, nên không chốt ở đây thì công tắc tắt filter bay mất sau cổng đầu tiên.
+    // `ground` KHÔNG còn filter: phép chỉnh màu nằm trong shader trộn (§13.10 mục 6). Một
+    // container có filter là một đích vẽ toàn màn hình mỗi khung, mà phép này chỉ đổi màu
+    // từng điểm ảnh — nó thuộc về shader, không thuộc về một lượt vẽ riêng.
+    //
+    // `decor` còn filter: trong đó là sprite art thật (trang trí + decal mặt đất), chưa
+    // chỉnh màu được bằng shader. Bước sau đưa phép màu vào chính ảnh lúc build.
     const filter = filtersOff() ? null : backgroundFilter();
-    this.ground.filters = filter ? [filter] : [];
+    this.ground.filters = [];
     this.decor.filters = filter ? [filter] : [];
     // `filterArea` BẮT BUỘC phải đặt — xem clampFilterArea. Đặt tạm một ô nhỏ ở đây để
     // khung hình đầu tiên (trước khi `update` chạy lần nào) cũng không cấp phát cả bản đồ.
@@ -374,7 +384,9 @@ export class MapView {
    * mồ côi là ~300 MB nằm im trên card.
    */
   private updateGroundChunks(view: { x: number; y: number; w: number; h: number }): void {
-    if (this.blendNames.length === 0) {
+    // KHÔNG còn thoát sớm khi không có lớp trộn: ô shader nay vẽ CẢ lớp nền, nên thiếu nó
+    // là mặt đất trống trơn. Trước đây thoát sớm được vì lớp nền là một TilingSprite riêng.
+    if (!this.baseName) {
       return;
     }
     const last = Math.floor(this.map.size / GROUND_CHUNK);
@@ -535,11 +547,13 @@ export class MapView {
     const names = (BIOME_TILES[this.map.biome] ?? ['grass']).filter((n) => assets.texture(`tiles/${n}.png`));
     const tex = names.length ? assets.texture(`tiles/${names[0]}.png`) : null;
     if (tex) {
-      // Lớp nền: MỘT TilingSprite phủ cả bản đồ. Không có mặt nạ nên không cấp phát gì —
-      // `TilingSprite` chỉ lặp lại một texture 512², không phụ thuộc kích thước phủ.
-      const t = new TilingSprite({ texture: tex, width: size, height: size });
-      t.tileScale.set(TILE_WORLD / tex.width);
-      this.ground.addChild(t);
+      // KHÔNG còn `TilingSprite` phủ cả bản đồ.
+      //
+      // Lớp nền nay do chính ô shader vẽ (`groundChunkMesh` lấy mẫu `tiles[0]`), và ô shader
+      // luôn phủ kín khung nhìn cộng một vành ô. Giữ thêm một TilingSprite phủ 12 000×12 000
+      // bên dưới là vẽ hai lần cùng một thứ — và quan trọng hơn: nó KHÔNG đi qua phép chỉnh
+      // màu trong shader, nên nếu bỏ `ColorMatrixFilter` mà vẫn giữ nó thì mép bản đồ hiện
+      // ra một mảng sáng hơn phần còn lại.
       this.baseName = names[0];
       this.blendNames = names.slice(1).filter((n) => assets.texture(`tiles/${n}.png`));
       this.ground.addChild(this.blendRoot);

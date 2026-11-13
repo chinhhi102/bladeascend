@@ -133,6 +133,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 42 | 2026-11-13 | `9d55f89` | **§13.10 — SỔ VRAM theo hạng mục, hiện trạng TRƯỚC khi sửa** | VRAM | – | – | – | – | – | – | – | – | Cảnh đông 1080p@1, chất lượng Vừa: **281–301 MB / trần 50**. Cảnh thử cố định: **63,3 MB / 50**. Vượt ở 5 trên 6 hạng mục | §13.10 mục 1 xong |
 | 43 | 2026-11-13 | `d9bfcf0`+ | **§13.10 mục 2 — nền bằng SHADER TRỘN** (bỏ bake RenderTexture, bỏ mask) | VRAM | – | – | – | – | – | 34 (ground) | – | – | Cảnh thử: `Nền` **43,1 → 6,5 MB**, tổng **63,3 → 25,5 MB (ĐẠT trần 50)**. Cảnh đông: tổng **280,9 → 225,3 MB**. Lô vẽ ground 4 → 34 | Hình: 1,13/255 · 0,60% pixel |
 | 44 | 2026-11-13 | `938ec34`+ | **§13.10 mục 6 — bloom nửa độ phân giải + chỉ tồn tại khi có hiệu ứng** | VRAM | – | – | – | – | – | – | – | – | "Bộ đệm khung · bộ lọc" **79,5 → 30,4 MB** · tổng cảnh đông **213,6 → 185,2 MB**. Hình: 0,003/255 | Trần hạng mục 12 MB — còn nợ ColorMatrix nền |
+| 45 | 2026-11-13 | `d89625a`+ | **§13.10 mục 1 — bỏ `ColorMatrixFilter` trên lớp nền** (đưa ma trận màu vào shader trộn) | VRAM | – | – | – | 60/60/60 (CPU 1×/4×/6×) | – | 54 (thử) · 424 (đông) | – | – | Bộ đệm khung **30,4 → 27,8 MB** · tổng cảnh đông **185,2 → 180,8 MB**. Hình: **0,075/255 · 22 pixel** | Lô vẽ ground 5 → 74 ở cảnh đông — xem §5 |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1510,6 +1511,52 @@ Còn lại 30,4 so với trần 12: 10,6 MB là bộ đệm khung chính (1920×
 10,6 MB là bốn đích 960×540 của bloom nửa độ phân giải, 9,3 MB là pool 512²/512×256/256².
 Bước kế: bỏ `ColorMatrixFilter` trên `ground`/`decor` — đưa phép chỉnh màu vào thẳng shader
 nền (chính xác tuyệt đối, miễn phí) và xử lý decal/decor riêng.
+
+---
+
+### Lượt 45 — 13/11/2026 · §13.10 mục 1: bỏ ColorMatrixFilter trên lớp nền
+
+Phép chỉnh màu nền (ART_PROMPTS §9.0: dịu, tương phản thấp) chỉ đổi màu **từng điểm ảnh** —
+không cần biết điểm bên cạnh. Một phép như vậy không đáng một container có filter, tức là
+một đích vẽ toàn màn hình mỗi khung. Nay nó nằm trong chính shader trộn nền.
+
+Ma trận lấy từ **chính `ColorMatrixFilter`** (dựng một cái, đọc `.matrix`, truyền vào
+shader) chứ không nhân ba phép `saturate`/`brightness`/`contrast` bằng tay: nhân tay là một
+cơ hội sai số mà `scenediff` bắt được nhưng không nói được sai ở đâu, và nếu ai đó đổi tham
+số ở `backgroundFilter()` thì bản chép tay sẽ im lặng trôi khỏi bản thật.
+
+Hai thứ phải dọn kèm, nếu không bỏ filter là hỏng hình:
+- **`TilingSprite` phủ cả bản đồ bị bỏ hẳn.** Ô shader vốn đã phủ kín khung nhìn cộng một
+  vành ô, nên nó là một lớp vẽ thừa — và quan trọng hơn, nó KHÔNG đi qua phép chỉnh màu
+  trong shader, nên giữ lại là mép bản đồ hiện ra một mảng sáng hơn phần còn lại.
+- **Decal chuyển từ `ground` sang `decor`.** Decal là sprite art thật, chưa chỉnh màu bằng
+  shader được, nên nó phải ở lại dưới cái filter còn lại. `decor` vẽ ngay trên `ground` nên
+  thứ tự nhìn thấy không đổi.
+
+| | Bộ đệm khung · bộ lọc | Tổng VRAM (cảnh đông) |
+|---|---:|---:|
+| trước | 30,4 MB | 185,2 MB |
+| sau | **27,8 MB** | **180,8 MB** |
+
+Hình: **0,075/255 · 22 trên 921 600 pixel** — ĐẠT.
+
+**Cái giá: lô vẽ.** Ô nền là một mesh một lô, và ở cảnh đông (camera Đạo Tổ lùi xa nhất) có
+**72 ô trong tầm** → `ground` đi từ 5 lên 74 lô vẽ, tổng cảnh 424.
+
+Đo giá thật của 31 lô vẽ thêm trên cảnh thử (`scenebench`, máy rảnh 0,51/nhân):
+
+| CPU | Pixi vẽ ms | FPS | lô vẽ |
+|---|---:|---:|---:|
+| 1× | 1,66 | 60 | 54 |
+| 4× | 3,50 | 60 | 54 |
+| 6× | 4,84 | 60 | 54 |
+
+So mốc #40 cùng cảnh (23 lô): 1,70 / 3,19 / 4,58 ms. Tức **+0,3 ms ở CPU 4×, FPS vẫn 60**.
+Rẻ trên máy bàn, nhưng 424 lô ở cảnh đông vẫn vượt xa trần 120 của lượt trước.
+
+**Cách chữa đã rõ, để lượt sau**: một geometry duy nhất cho cả lưới ô (mỗi ô một quad, thuộc
+tính đỉnh trỏ vào ô mặt nạ) + **atlas mặt nạ** 1024² chứa 64 ô 128². Khi đó cả lớp nền là
+**1 lô vẽ** và bộ nhớ mặt nạ cố định 4 MB thay vì tăng theo số ô.
 
 ---
 
