@@ -20,6 +20,8 @@ interface Alloc {
   w: number;
   h: number;
   site?: string;
+  /** Hạng mục ngân sách (§13.10). Xem `budgetCategory`. */
+  cat: BudgetCat;
 }
 
 const alloc = new Map<WebGLTexture, Alloc>();
@@ -43,14 +45,148 @@ function siteOf(): string | undefined {
 }
 
 /**
+ * ── SỔ VRAM THEO HẠNG MỤC NGÂN SÁCH — GAME_SPEC §13.10 ─────────────────────────────────
+ *
+ * Spec đòi "mọi texture mới phải khai hạng mục ngân sách khi tạo". Khai bằng cách sửa từng
+ * chỗ `new Texture(...)` thì sẽ có chỗ quên, và chỗ quên im lặng không tính vào đâu cả —
+ * đúng kiểu sổ sách nói ít hơn sự thật. Nên ở đây xếp loại từ NHÃN NGUỒN mà Pixi đã có sẵn
+ * (đường dẫn tệp, `text:…`, `renderTexture`), cộng một thùng `khác` mà sổ KÊU LÊN khi có
+ * gì rơi vào. Thêm một loại texture mới mà quên khai thì nó hiện ngay ở dòng `khác`, không
+ * biến mất.
+ */
+export type BudgetCat = 'chars' | 'ground' | 'world' | 'fx' | 'dynamic' | 'framebuffer' | 'other';
+
+/** Nhãn tiếng Việt cho bảng F3/admin. */
+export const BUDGET_LABELS: Record<BudgetCat, string> = {
+  chars: 'Atlas nhân vật', // i18n-ok: lớp số liệu debug
+  ground: 'Nền', // i18n-ok: lớp số liệu debug
+  world: 'Vật cản · decal · vật phẩm', // i18n-ok: lớp số liệu debug
+  fx: 'VFX · hào quang · UI', // i18n-ok: lớp số liệu debug
+  dynamic: 'Chữ/số bay (atlas động)', // i18n-ok: lớp số liệu debug
+  framebuffer: 'Bộ đệm khung · bộ lọc', // i18n-ok: lớp số liệu debug
+  other: 'KHÁC (chưa khai hạng mục)', // i18n-ok: lớp số liệu debug
+};
+
+/**
+ * Trần ngân sách MB theo §13.10. `phone` là cột điện thoại.
+ *
+ * `other` có trần 0: mọi byte rơi vào đây là một texture chưa ai khai hạng mục, và spec đòi
+ * sổ phải báo vượt. Trần 0 làm nó đỏ ngay byte đầu tiên.
+ */
+export const BUDGET_MB: Record<BudgetCat, { pc: number; phone: number }> = {
+  chars: { pc: 24, phone: 6 },
+  ground: { pc: 4, phone: 2 },
+  world: { pc: 6, phone: 3 },
+  fx: { pc: 4, phone: 2 },
+  dynamic: { pc: 2, phone: 2 },
+  framebuffer: { pc: 12, phone: 8 },
+  other: { pc: 0, phone: 0 },
+};
+
+/**
+ * declared: hạng mục do MÃ GAME khai tường minh, theo `TextureSource`.
+ *
+ * Phân loại bằng nhãn nguồn chỉ đúng với texture tải từ tệp — chúng mang đường dẫn. Texture
+ * dựng tại chỗ (canvas của mặt nạ nền, bóng đổ, lưỡi kiếm dự phòng, render texture) thì
+ * nhãn của Pixi là tên lớp, mà **bản build thật đã minify tên lớp**: đo lần đầu ra
+ * `fe/none`, `it/CANVAS`, `b/CANVAS` — 231 trên 290 MB rơi vào "chưa khai hạng mục" và sổ
+ * không nói được gì. Nên mọi chỗ dựng texture tại chỗ phải gọi `declareTexture`.
+ */
+const declared = new WeakMap<object, BudgetCat>();
+
+/**
+ * declareTexture khai hạng mục ngân sách cho một texture (§13.10).
+ *
+ * Gọi NGAY sau khi tạo, trước khi nó được vẽ lần đầu. Nhận cả `Texture` lẫn `TextureSource`
+ * cho gọn chỗ gọi.
+ */
+export function declareTexture(tex: unknown, cat: BudgetCat): void {
+  const t = tex as { source?: object } | null;
+  const src = (t?.source ?? t) as (object & { label?: string }) | null;
+  if (!src) {
+    return;
+  }
+  declared.set(src, cat);
+  // Ghi LUÔN vào `label` chứ không chỉ WeakMap.
+  //
+  // WeakMap khoá theo đúng một object; Pixi có những đường dựng lại `TextureSource` (đổi
+  // kích thước, lấy từ pool) và khi đó khoá cũ không còn khớp — texture lặng lẽ rơi về
+  // "chưa khai hạng mục". Nhãn thì đi theo nguồn qua mọi đường đó.
+  if (!src.label || !src.label.startsWith('kx:')) {
+    src.label = `kx:${cat}${src.label ? ' ' + src.label : ''}`;
+  }
+}
+
+/** declaredCat: hạng mục đã khai cho nguồn đang tải lên, nếu có. */
+function declaredCat(): BudgetCat | undefined {
+  return curSourceObj ? declared.get(curSourceObj) : undefined;
+}
+
+/**
+ * budgetCategory xếp một texture vào hạng mục ngân sách.
+ *
+ * Thứ tự: khai tường minh → đường dẫn tệp → cỡ texture. Rơi hết thì vào `other`, và `other`
+ * có trần 0 nên sổ kêu ngay.
+ */
+export function budgetCategory(site: string | undefined, w: number, h: number): BudgetCat {
+  const explicit = declaredCat();
+  if (explicit) {
+    return explicit;
+  }
+  const s = (site ?? '').toLowerCase();
+  if (s.startsWith('kx:')) {
+    return s.slice(3).split(/[ /]/)[0] as BudgetCat;
+  }
+  // Nguồn KHÔNG có tài nguyên phía CPU (`.../none`) là bộ đệm chỉ sống trên GPU: bộ đệm
+  // khung, đích vẽ của bộ lọc, pool canvas của Pixi. Đó đúng là hạng mục "bộ đệm khung".
+  //
+  // Nhận ra bằng chữ `none` chứ không bằng tên lớp: bản build thật minify tên lớp thành
+  // `fe`, `it`, `b` — lượt đo đầu 42 MB bộ đệm 1920×1080 rơi vào "chưa khai hạng mục" vì
+  // tôi cố đoán theo tên lớp.
+  if (s.endsWith('/none') || s.includes('rendertarget') || s.includes('canvaspool')) {
+    return 'framebuffer';
+  }
+  // Tên thư mục lấy từ `assets/src` THẬT (characters, tiles, obstacles, decals, decor,
+  // items, monsters, vfx, ui, swords, beasts, buffs, gates, ambient, zones, brand, fonts).
+  // Lượt đo đầu tôi gõ `/chars/` và cột "Atlas nhân vật" ra 0,00 MB trong khi atlas nhân
+  // vật nằm chình ình ở dòng "chưa khai hạng mục".
+  if (s.includes('/characters/') || s.includes('characters/')) {
+    return 'chars';
+  }
+  if (s.includes('/tiles/') || s.includes('tiles/') || s.includes('/zones/') || s.includes('zones/')) {
+    return 'ground';
+  }
+  if (s.includes('/obstacles/') || s.includes('obstacles/') || s.includes('/decals/') || s.includes('decals/')
+    || s.includes('/decor/') || s.includes('decor/') || s.includes('/items/') || s.includes('items/')
+    || s.includes('/monsters/') || s.includes('monsters/') || s.includes('/gates/') || s.includes('gates/')) {
+    return 'world';
+  }
+  if (s.includes('/vfx/') || s.includes('vfx/') || s.includes('/ui/') || s.includes('ui/')
+    || s.includes('/beasts/') || s.includes('beasts/') || s.includes('/swords/') || s.includes('swords/')
+    || s.includes('/buffs/') || s.includes('buffs/') || s.includes('/ambient/') || s.includes('ambient/')
+    || s.includes('/brand/') || s.includes('brand/')) {
+    return 'fx';
+  }
+  if (s.startsWith('text:') || s.includes('/fonts/') || s.includes('fonts/') || s.includes('bitmapfont')) {
+    return 'dynamic';
+  }
+  // Texture 1×1/2×2 là của Pixi (trắng, trống) — không đáng một dòng cảnh báo.
+  if (w <= 2 && h <= 2) {
+    return 'fx';
+  }
+  return 'other';
+}
+
+/**
  * trackSourceNames gắn TÊN NGUỒN ẢNH vào mỗi texture — thứ duy nhất chỉ đúng thủ phạm.
  *
  * Vết ngăn xếp ở `texImage2D` chỉ thấy ruột PixiJS (`uploadImageWebGL2`…): lúc tải lên thì
  * đang ở giữa vòng vẽ, không còn dấu gì của chỗ tạo. Nhưng Pixi tải lên THEO `TextureSource`
- * và mỗi nguồn có `label` (đường dẫn tệp, `text:…`, `renderTexture`…). Bọc đúng một hàm
- * `GlTextureSystem.onSourceUpdate` là biết texture vừa tải lên thuộc nguồn nào.
+ * và mỗi nguồn có `label` (đường dẫn tệp, `text:…`, `renderTexture`…).
  */
 let curSource = '';
+/** curSourceObj: chính `TextureSource` đang tải lên — để tra hạng mục đã khai. */
+let curSourceObj: object | null = null;
 
 /** fromStacks: nguồn ảnh dựng bằng `Texture.from(canvas)` → ngăn xếp của chỗ gọi. */
 const fromStacks = new WeakMap<object, string>();
@@ -84,7 +220,12 @@ export function trackTextureFrom(TextureClass: object): void {
 }
 
 export function trackSourceNames(texSystem: Record<string, unknown>): void {
-  if (!TRACE || typeof texSystem.onSourceUpdate !== 'function') {
+  // KHÔNG còn khoá sau `?textrace=1`.
+  //
+  // Nhãn nguồn là thứ sổ VRAM theo hạng mục (§13.10) đọc để xếp loại, nên nó phải luôn có.
+  // Giá phải trả chỉ là gán một chuỗi đã tồn tại sẵn (`source.label`) — phần ĐẮT là
+  // `new Error().stack` trong `trackTextureFrom`, và phần đó vẫn nằm sau cờ.
+  if (typeof texSystem.onSourceUpdate !== 'function') {
     return;
   }
   const orig = (texSystem.onSourceUpdate as (s: unknown) => unknown).bind(texSystem);
@@ -97,10 +238,12 @@ export function trackSourceNames(texSystem: Record<string, unknown>): void {
     const resKind = res ? ((res as { nodeName?: string }).nodeName ?? res.constructor?.name ?? '?') : 'none';
     curSource =
       (s ? fromStacks.get(s) : undefined) || s?.label || res?.src || `${kind}/${resKind}`;
+    curSourceObj = (s as object | null) ?? null;
     try {
       return orig(src);
     } finally {
       curSource = '';
+      curSourceObj = null;
     }
   };
 }
@@ -120,7 +263,8 @@ function note(gl: WebGLRenderingContext | WebGL2RenderingContext, w: number, h: 
   if (old) {
     totalBytes -= old.bytes;
   }
-  alloc.set(tex, { bytes, w, h, site: old?.site ?? siteOf() });
+  const site = old?.site ?? curSource ?? siteOf();
+  alloc.set(tex, { bytes, w, h, site, cat: budgetCategory(site, w, h) });
   totalBytes += bytes;
   peakBytes = Math.max(peakBytes, totalBytes);
 }
@@ -215,10 +359,68 @@ export function gpuSites(n = 12): { site: string; count: number; mb: number }[] 
     .map(([site, v]) => ({ site, count: v.count, mb: +(v.bytes / 1024 / 1024).toFixed(2) }));
 }
 
+/**
+ * gpuBudget: sổ VRAM theo hạng mục — bảng chính của §13.10.
+ *
+ * `phone` quyết định đọc cột trần nào. Trả cả `over` để F3 tô đỏ mà không phải tính lại.
+ */
+export function gpuBudget(phone: boolean): { cat: BudgetCat; label: string; mb: number; count: number; limitMB: number; over: boolean }[] {
+  const by = new Map<BudgetCat, { bytes: number; count: number }>();
+  for (const a of alloc.values()) {
+    const cur = by.get(a.cat) ?? { bytes: 0, count: 0 };
+    cur.bytes += a.bytes;
+    cur.count++;
+    by.set(a.cat, cur);
+  }
+  const cats: BudgetCat[] = ['chars', 'ground', 'world', 'fx', 'dynamic', 'framebuffer', 'other'];
+  return cats.map((cat) => {
+    const v = by.get(cat) ?? { bytes: 0, count: 0 };
+    const mb = +(v.bytes / 1024 / 1024).toFixed(2);
+    const limitMB = phone ? BUDGET_MB[cat].phone : BUDGET_MB[cat].pc;
+    return { cat, label: BUDGET_LABELS[cat], mb, count: v.count, limitMB, over: mb > limitMB };
+  });
+}
+
+/**
+ * gpuUnclassified: vài nhãn nguồn đang rơi vào hạng mục `other`.
+ *
+ * Để câu cảnh báo nói được PHẢI SỬA CHỖ NÀO, chứ không chỉ "có 3 MB chưa khai".
+ */
+export function gpuUnclassified(n = 6): { site: string; mb: number }[] {
+  const by = new Map<string, number>();
+  for (const a of alloc.values()) {
+    if (a.cat !== 'other') {
+      continue;
+    }
+    const key = `${a.w}x${a.h} ${(a.site ?? '?').replace(/\d+/g, '#')}`;
+    by.set(key, (by.get(key) ?? 0) + a.bytes);
+  }
+  return [...by.entries()]
+    .sort((x, y) => y[1] - x[1])
+    .slice(0, n)
+    .map(([site, bytes]) => ({ site, mb: +(bytes / 1024 / 1024).toFixed(2) }));
+}
+
 /** gpuBiggest liệt kê vài texture to nhất — để biết cắt chỗ nào trước. */
 export function gpuBiggest(n = 8): { w: number; h: number; mb: number }[] {
   return [...alloc.values()]
     .sort((a, b) => b.bytes - a.bytes)
     .slice(0, n)
     .map((a) => ({ w: a.w, h: a.h, mb: +(a.bytes / 1024 / 1024).toFixed(2) }));
+}
+
+/**
+ * vramLine: một dòng F3 cho sổ ngân sách §13.10.
+ *
+ * Rỗng khi mọi hạng mục trong trần — bảng F3 đã dài, và một dòng luôn hiện là một dòng
+ * không ai còn đọc. Vượt thì nó nêu ĐÍCH DANH hạng mục nào, vì "VRAM 290 MB" không nói
+ * được phải sửa ở đâu.
+ */
+export function vramLine(led: { rows: { label: string; mb: number; limitMB: number; over: boolean }[]; totalMB: number; limitMB: number }): string {
+  const bad = led.rows.filter((r) => r.over);
+  if (!bad.length && led.totalMB <= led.limitMB) {
+    return '';
+  }
+  const parts = bad.map((r) => `${r.label} ${r.mb.toFixed(1)}/${r.limitMB}`);
+  return `⚠ VRAM ${led.totalMB.toFixed(1)}/${led.limitMB} MB — ${parts.join(' · ')}`; // i18n-ok: lớp số liệu debug
 }

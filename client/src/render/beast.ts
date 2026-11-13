@@ -4,6 +4,7 @@ import { assets } from './assets';
 import { hslToHex } from './palette';
 import { particle } from './particles';
 import { BEAST_SEGMENTS, qualityFor, TRAIL_RATE } from './quality';
+import { declareTexture } from './gpumem';
 
 /**
  * Thần thú Tiên giới (spec §3.5): mỗi cảnh giới Tiên một con, dựng bằng **chuỗi đốt** chứ
@@ -78,7 +79,9 @@ function placeholderParts(): { head: Texture; body: Texture; tail: Texture } {
     paint(ctx);
     ctx.fill();
     ctx.stroke();
-    return Texture.from(cv);
+    const t = Texture.from(cv);
+    declareTexture(t, 'fx'); // §13.10
+    return t;
   };
   const tri = (pts: number[]) => (ctx: CanvasRenderingContext2D): void => {
     ctx.beginPath();

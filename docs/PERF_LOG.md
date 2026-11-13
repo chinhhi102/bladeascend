@@ -130,6 +130,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 39 | 2026-11-13 | `26b13cc` → `ca3c42f` | **Đo lại BƯỚC 1 trên cảnh thử** (cùng 23 lô vẽ, cùng 475 nút) | TESTBED | – | – | – | 60/60/54 → 60/60/**60** | – | 23 | – | – | Pixi vẽ **2,52 → 1,27** (1×) · **8,92 → 3,30** (4×) · **14,29 → 5,70 ms** (6×). Hình: lệch 0,001/255, 19 pixel — dưới nhiễu tự lặp | Số cũ "6,87 → 0,19 ms" (#38) **BỎ** — xem §5 #39 |
 | 40 | 2026-11-13 | `e756429` | **B29 — PixiJS 8.22.0 vs 8.23.0** trên cảnh thử, 3 vòng XEN KẼ, máy rảnh 0,37–0,53/nhân | TESTBED | – | – | – | 60 / 60 / 60 ở CẢ HAI bản | – | 23–24 | – | – | Pixi vẽ ms (trung vị 3 vòng) — 8.23: **1,70 / 3,19 / 4,58**; 8.22: **1,62 / 2,87 / 3,95** (CPU 1×/4×/6×). Chênh 0,08–0,63 ms, NHỎ HƠN biên dao động trong cùng một bản (0,96–1,06 ms) | **B29 đóng** — giữ 8.23 |
 | 41 | 2026-11-13 | `9136599` | **Mục 5 bước đo — lô vẽ theo TỪNG LỚP** (`drawbreak.mjs`), cảnh thật 3 người, Đạo Tổ 1 050 kiếm | S15 | – | – | – | – | – | **243** | – | – | `entities` **120 lô** (86 nguồn texture, 218 Graphics) · `ground` **100 lô** (48 MASK) · 12 lớp còn lại cộng lại 23 | Mục tiêu < 120 lô · B30 |
+| 42 | 2026-11-13 | `9d55f89` | **§13.10 — SỔ VRAM theo hạng mục, hiện trạng TRƯỚC khi sửa** | VRAM | – | – | – | – | – | – | – | – | Cảnh đông 1080p@1, chất lượng Vừa: **281–301 MB / trần 50**. Cảnh thử cố định: **63,3 MB / 50**. Vượt ở 5 trên 6 hạng mục | §13.10 mục 1 xong |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1391,10 +1392,55 @@ Vòng tối ưu kế tiếp nhắm đúng hai lớp đó, không nhắm chỗ kh
 
 ---
 
+### Lượt 42 — 13/11/2026 · §13.10 mục 1: sổ VRAM theo hạng mục (hiện trạng)
+
+**Cảnh ĐÔNG** (phòng có 6–11 người, mình Đạo Tổ 1 050 kiếm + hào quang Tiên giới, 1920×1080
+tỉ lệ điểm ảnh 1, chất lượng Vừa) — `tools/browsertest/vram.mjs`:
+
+| Hạng mục | MB đo được | Trần §13.10 | |
+|---|---:|---:|---|
+| Atlas nhân vật | **70,0** | 24 | vượt 2,9× |
+| Nền | **69,2** | 4 | vượt **17×** |
+| Vật cản · decal · vật phẩm | **49,3** | 6 | vượt 8,2× |
+| Bộ đệm khung · bộ lọc | **68,9** | 12 | vượt 5,7× |
+| VFX · hào quang · UI | **14,8** | 4 | vượt 3,7× |
+| Chữ/số bay | 0,0 | 2 | đạt |
+| chưa khai hạng mục | 8,8 | 0 | — |
+| **TỔNG** | **280,9** | **50** | **vượt 5,6×** |
+
+Ba lượt đo cho 280,9 · 290,5 · 301,3 MB — cảnh thật đổi theo bot như mọi lần, nên con số để
+so trước/sau là **cảnh thử cố định: 63,3 MB**, trong đó riêng `Nền` đã 43,1 MB.
+
+**Ba lần bộ phân loại nói dối, và vì sao** — ghi lại vì cả ba đều là cùng một bài học:
+
+1. Lượt đầu: **231 trên 290 MB rơi vào "chưa khai hạng mục"**, nhãn đọc ra `fe/none`,
+   `it/CANVAS`, `b/CANVAS`. Bản build thật **minify tên lớp**, nên mọi cách đoán theo
+   `constructor.name` đều chết trong production và chỉ sống trên máy dev.
+2. Cột "Atlas nhân vật" ra **0,00 MB** trong khi atlas nhân vật nằm chình ình ở dòng chưa
+   phân loại: tôi gõ `/chars/` còn thư mục thật là `assets/characters/`.
+3. 42 MB bộ đệm 1920×1080 cũng rơi vào "chưa phân loại" — nhận ra bằng cách khác: nguồn
+   **không có tài nguyên phía CPU** (`…/none`) thì đó là bộ đệm chỉ sống trên GPU.
+
+Nên sổ xếp loại theo ba tầng: **khai tường minh** (`declareTexture`, ghi luôn vào
+`source.label` chứ không chỉ WeakMap — Pixi có đường dựng lại `TextureSource` và khi đó khoá
+WeakMap không còn khớp) → **đường dẫn tệp thật** → **cỡ và loại tài nguyên**. Rơi hết thì vào
+`KHÁC`, và `KHÁC` có **trần 0 MB** nên sổ đỏ ngay byte đầu tiên. Còn 8,8 MB (3%) chưa truy ra,
+trong đó 8 MB là tám canvas 512² chưa tìm được chỗ tạo — để nguyên trong `KHÁC` cho nó kêu.
+
+F3 có thêm một dòng, **chỉ hiện khi vượt**, nêu đích danh hạng mục.
+
+**Đọc ra việc phải làm**, đúng thứ tự spec đã xếp: `Nền` 69 MB (bake RenderTexture của lượt
+#39 chính là một phần — 1 MB mỗi ô × hơn ba chục ô) → thay bằng shader trộn; `Bộ đệm khung`
+69 MB → bloom nửa độ phân giải + `antialias:false`; `Atlas nhân vật` 70 MB → KTX2 + trần 6
+atlas; `Vật cản/decal` 49 MB → gom atlas KTX2.
+
+---
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
+| B32 | **Bộ nhớ GPU 281–301 MB, trần §13.10 là 50 MB** | Vượt 5,6× — đúng họ lỗi đã giết tab Safari ở B13 | #42: sổ VRAM theo hạng mục. Nền 69 MB (trần 4) · bộ đệm khung 69 (trần 12) · atlas nhân vật 70 (trần 24) · vật cản/decal 49 (trần 6) | **Mở** — thứ tự xử lý theo spec: shader trộn nền → KTX2 → trần 6 atlas → atlas động cho chữ → bộ lọc nửa độ phân giải → cổng kiểm build | #42 |
 | B31 | **Hai bài đo cũ KHÔNG dùng để so hai bản build** | Một lượt tối ưu có thể "chứng minh" được bất cứ điều gì | #39: `ringcost` ba lượt cùng build cho 19,79 · 0,55 · −0,40 ms; `weakperf` hai lượt liên tiếp cho 185 lô vẽ / 47 FPS rồi 447 lô / 23 FPS | **Đóng (#39)** — mọi phép so A/B chuyển sang cảnh thử (`scenebench.mjs`, `scenediff.mjs`). `weakperf`/`ringcost` giữ nguyên vai trò "người chơi thật gặp gì" | #39 |
 | B30 | **Lượt vẽ của Pixi là toàn bộ nút thắt máy yếu, và vòng kiếm KHÔNG còn là phần chính của nó** | Mục tiêu CPU 6× p50 ≥ 30 FPS chưa đạt (đang 23) | #38: ở CPU 4×, tắt SẠCH mọi vòng kiếm thì Pixi vẫn vẽ **19,77 ms** (bật: 19,96). Ở CPU 6×: khung 43,5 ms = Pixi vẽ 21,7 + JS game 3,6 + ~18 ms của trình duyệt. Mọi cột JS cộng lại chưa tới 4 ms | **Mở** — bước kế phải nhắm vào CÂY CẢNH và số lô vẽ (325–393 lô, 2 850–4 800 nút), không nhắm vào mã game. Lớp trạng thái (bước 2 của kế hoạch) đo được 0,07–0,39 ms: không phải chỗ đáng sửa | #38 |
 | B29 | **Nợ phép đo trước/sau cho PixiJS 8.22 → 8.23** | Không biết bản nâng làm FPS tốt lên, xấu đi, hay không đổi — đang deploy mà không có số | #37: máy ở load/nhân 2,17–3,87 suốt ngày 12/11, luật 16 cấm kết luận | **Đóng (#40)** — đo trên cảnh thử, 3 vòng xen kẽ, máy rảnh: FPS 60 ở cả hai bản và cả ba mức CPU; chênh Pixi vẽ 0,08–0,63 ms, nhỏ hơn biên dao động trong cùng một bản (≈1 ms). Giữ 8.23 vì hai thay đổi của nó là sửa lỗi | #40 |

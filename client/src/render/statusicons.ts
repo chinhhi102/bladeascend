@@ -2,6 +2,7 @@ import { Texture } from 'pixi.js';
 
 import type { StatusEv } from '../net/protocol';
 import { assets } from './assets';
+import { declareTexture } from './gpumem';
 
 /**
  * Icon trạng thái dùng chung 64 px (spec v6.36 §6.5): 💤 ngủ · 🧋 mù · 💫 choáng · 📢 bị đẩy ·
@@ -123,7 +124,9 @@ export function statusIconTexture(k: StatusIconKey): Texture | null {
       cv.width = TEX_PX;
       cv.height = TEX_PX;
       cv.getContext('2d')?.drawImage(img, 0, 0, TEX_PX, TEX_PX);
-      textures.set(k, Texture.from(cv));
+      const t = Texture.from(cv);
+      declareTexture(t, 'fx'); // §13.10
+      textures.set(k, t);
     };
     img.onerror = () => textures.delete(k);
     img.src = statusIconUrl(k);

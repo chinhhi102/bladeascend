@@ -1,6 +1,7 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 
 import { qualityFor } from './quality';
+import { declareTexture } from './gpumem';
 
 /**
  * Trân châu dính màn hình — kỹ năng Phun Trân Châu của Thằng Mập (spec §6.3).
@@ -54,7 +55,9 @@ function bobaTexture(): Texture {
   c.beginPath();
   c.ellipse(n * 0.36, n * 0.3, n * 0.1, n * 0.07, -0.6, 0, Math.PI * 2);
   c.fill();
-  return Texture.from(cv);
+  const t = Texture.from(cv);
+  declareTexture(t, 'fx'); // §13.10
+  return t;
 }
 
 let tex: Texture | null = null;

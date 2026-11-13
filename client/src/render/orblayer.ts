@@ -3,6 +3,7 @@ import { Particle, ParticleContainer, Texture } from 'pixi.js';
 import type { ItemState } from '../net/protocol';
 import { assets } from './assets';
 import { ORB_COLORS, orbSize } from './entities';
+import { declareTexture } from './gpumem';
 
 /**
  * OrbLayer vẽ toàn bộ viên Linh khí bằng một ParticleContainer.
@@ -48,6 +49,7 @@ function orbTexture(size: 'small' | 'medium' | 'large'): Texture {
   ctx.globalAlpha = 0.85;
   ctx.fill();
   const tex = Texture.from(cv);
+  declareTexture(tex, 'world'); // §13.10: viên EXP
   baked.set(size, tex);
   return tex;
 }

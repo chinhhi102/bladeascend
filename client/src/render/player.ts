@@ -16,6 +16,7 @@ import { Nameplate, PLATE_FAR_PX } from './nameplate';
 import { StatusView } from './statusview';
 import { SwordRing } from './swordring';
 import { probeSub, probeSubMark } from './probe';
+import { declareTexture } from './gpumem';
 
 // Visual proportions relative to the body hitbox radius (not balance numbers).
 const CHAR_HEIGHT_PER_R = 2.6; // drawn character height = 2.6 × body radius
@@ -80,6 +81,7 @@ function shadowTexture(): Texture {
   ctx.ellipse(w / 2, h / 2, w / 2 - 1, h / 2 - 1, 0, 0, Math.PI * 2);
   ctx.fill();
   shadowTex = Texture.from(cv);
+  declareTexture(shadowTex, 'fx'); // §13.10: bóng đổ dùng chung
   return shadowTex;
 }
 

@@ -2,6 +2,7 @@ import { Container, Sprite, Texture } from 'pixi.js';
 
 import { assets } from './assets';
 import { qualityFor } from './quality';
+import { declareTexture } from './gpumem';
 
 /**
  * Decal mặt đất (spec §8.6 mục 3): vết nứt, khóm cỏ, lá rụng, sỏi, vũng nước nhỏ, rễ cây,
@@ -95,6 +96,7 @@ function placeholderTex(kind: string, variant: number): Texture {
   ctx.globalAlpha = 0.75;
   ctx.fill();
   const tex = Texture.from(cv);
+  declareTexture(tex, 'world'); // §13.10: decal mặt đất
   baked.set(key, tex);
   return tex;
 }
@@ -240,6 +242,7 @@ function skirtTex(kind: string, variant: number): Texture {
     c.fill();
   }
   const tex = Texture.from(cv);
+  declareTexture(tex, 'world'); // §13.10: decal mặt đất
   baked.set(key, tex);
   return tex;
 }

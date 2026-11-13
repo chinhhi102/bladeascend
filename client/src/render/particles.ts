@@ -1,6 +1,7 @@
 import { Texture } from 'pixi.js';
 
 import { assets } from './assets';
+import { declareTexture } from './gpumem';
 
 /**
  * Texture hạt dùng chung cho hào quang, thần thú và sự sống bản đồ (spec §3.6).
@@ -74,7 +75,9 @@ function bake(kind: ParticleKind): Texture {
       c.fillRect(0, 0, n, n);
       break;
   }
-  return Texture.from(cv);
+  const t = Texture.from(cv);
+  declareTexture(t, 'fx'); // §13.10
+  return t;
 }
 
 /** particle trả texture hạt: ảnh thật nếu đã thả vào assets/vfx/particles, không thì tự vẽ. */

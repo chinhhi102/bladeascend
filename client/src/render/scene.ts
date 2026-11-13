@@ -10,8 +10,8 @@ import { assets } from './assets';
 import { statusWork, statusWorkTick } from './statusview';
 import { ringWork, ringWorkTick } from './swordring';
 import { SkillPresenter, type StatusChip } from './skillpresent';
-import { gpuBiggest, gpuMemMB, gpuPeakMB, gpuSites, gpuTextureCount, trackGpuMemory, trackSourceNames, trackTextureFrom } from './gpumem';
-import { gpuBudgetMB, rendererResolution } from './device';
+import { type BudgetCat, gpuBiggest, gpuBudget, gpuMemMB, gpuPeakMB, gpuSites, gpuTextureCount, gpuUnclassified, vramLine, trackGpuMemory, trackSourceNames, trackTextureFrom } from './gpumem';
+import { gpuBudgetMB, isMobile, rendererResolution } from './device';
 import { FADE_OUT_SECS, ViewPool } from './viewpool';
 import { BobaOverlay } from './boba';
 
@@ -721,6 +721,11 @@ export class GameScene {
     return { layers: got, total: got.reduce((a, c) => a + c.calls, 0) };
   }
 
+  /** qualityName: mức chất lượng đang chạy — bài đo VRAM phải ghi nó vào báo cáo (§13.10). */
+  qualityName(): string {
+    return quality();
+  }
+
   /** setProbe bật/tắt đồng hồ theo hệ thống; `main` gọi theo trạng thái bảng F3. */
   setProbe(on: boolean): void {
     probeEnabled(on);
@@ -1128,6 +1133,23 @@ export class GameScene {
     return gpuSites(n);
   }
 
+  /**
+   * vramLedger: sổ VRAM theo hạng mục ngân sách (GAME_SPEC §13.10).
+   *
+   * Trả cả dòng `other` kể cả khi nó bằng 0: một bảng chỉ hiện hạng mục có số thì ngày nào
+   * đó `other` xuất hiện rồi biến mất mà không ai kịp thấy.
+   */
+  vramLedger(): { rows: { cat: BudgetCat; label: string; mb: number; count: number; limitMB: number; over: boolean }[]; totalMB: number; limitMB: number; unclassified: { site: string; mb: number }[] } {
+    const phone = isMobile();
+    const rows = gpuBudget(phone);
+    return {
+      rows,
+      totalMB: +rows.reduce((a, r) => a + r.mb, 0).toFixed(2),
+      limitMB: phone ? 32 : 50,
+      unclassified: gpuUnclassified(),
+    };
+  }
+
   /** perfStats là cùng bộ số của overlay F3 nhưng ở dạng object (tools/browsertest đọc). */
   perfStats(): Record<string, number> {
     let swords = 0;
@@ -1251,6 +1273,10 @@ export class GameScene {
       ...guardLines(this.rebuilds, this.watchdogRestarts),
       // Sổ tài nguyên §13.9 — con số phải ĐỨNG YÊN qua nhiều phút chơi.
       censusLine(this.lastCensus),
+      // Sổ VRAM theo hạng mục ngân sách §13.10 — chỉ in hạng mục ĐANG VƯỢT, kèm tổng.
+      // In đủ bảy dòng mọi lúc thì bảng F3 dài thêm một màn hình và không ai đọc nữa;
+      // in khi vượt thì dòng này im lặng lúc mọi thứ ổn và kêu đúng lúc cần.
+      vramLine(this.vramLedger()),
     ].join('\n');
   }
 

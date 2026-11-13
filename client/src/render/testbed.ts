@@ -50,7 +50,9 @@ import { type GameConfig, realmOf, tienIndex } from '../config';
 import type { GameMap, PlayerState } from '../net/protocol';
 import type { PlayerFrame, PlayerView } from '../net/state';
 import { assets } from './assets';
+import { isMobile } from './device';
 import { countDrawCalls, countNodes, drawCalls, measureLayers } from './drawstats';
+import { gpuBudget, gpuUnclassified, trackGpuMemory, trackSourceNames } from './gpumem';
 import { loadFonts } from './fonts';
 import { MapView } from './mapview';
 import { PlayerSprite } from './player';
@@ -157,7 +159,11 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
   const gl = (app.renderer as unknown as { gl?: WebGL2RenderingContext }).gl;
   if (gl) {
     countDrawCalls(gl);
+    // Sổ VRAM phải bọc ngữ cảnh WebGL TRƯỚC khi nạp art, nếu không mọi texture tải lên
+    // trước đó không được tính và bảng hiện trạng sẽ nói ít hơn sự thật.
+    trackGpuMemory(gl);
   }
+  trackSourceNames((app.renderer as unknown as { texture: Record<string, unknown> }).texture);
 
   const chars = cfg.characters.map((c) => (typeof c === 'string' ? c : (c as { id: string }).id));
   const char = chars[0] ?? 'runner';
@@ -334,6 +340,17 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
       ]);
       app.render();
       return got;
+    },
+    // Sổ VRAM theo hạng mục (§13.10) — cảnh thử là chỗ con số này so được giữa hai build.
+    vram: () => {
+      const phone = isMobile();
+      const rows = gpuBudget(phone);
+      return {
+        rows,
+        totalMB: +rows.reduce((a, r) => a + r.mb, 0).toFixed(2),
+        limitMB: phone ? 32 : 50,
+        unclassified: gpuUnclassified(),
+      };
     },
     tiles: (): Record<string, boolean> => ({
       grass: assets.texture('tiles/grass.png') !== null,

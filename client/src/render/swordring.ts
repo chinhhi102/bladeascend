@@ -6,6 +6,7 @@ import { omega, type PlayerFrame } from '../net/state';
 import { assets } from './assets';
 import { REALM_COLORS } from './palette';
 import { bladeLen, hiltR, ringCap, type RingGeom, ringGeom, ringOf, ringStart, slotAngle, tipDist } from './ringgeom';
+import { declareTexture } from './gpumem';
 
 // Drawing proportions (visual only, not balance numbers).
 const HILT_ANCHOR = 0.95; // blade art: hilt sits at 95% of the canvas height, tip at the top
@@ -69,6 +70,7 @@ function placeholderBlade(): Texture {
   ctx.fillRect(1, h - 26, w - 2, 6); // guard
   ctx.fillRect(w / 2 - 3, h - 20, 6, 16); // grip
   bladeTex = Texture.from(cv);
+  declareTexture(bladeTex, 'fx'); // §13.10: lưỡi kiếm dự phòng
   return bladeTex;
 }
 

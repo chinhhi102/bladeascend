@@ -2,6 +2,7 @@ import { Container, Sprite, Texture } from 'pixi.js';
 
 import { particle } from './particles';
 import { emergency, qualityFor } from './quality';
+import { declareTexture } from './gpumem';
 
 /**
  * Sự sống của bản đồ (spec §8.6 mục 5): bóng mây trôi, lá tre rơi, đom đóm, sương mù, bướm,
@@ -107,6 +108,7 @@ function textureFor(kind: Kind): Texture {
       break;
   }
   const t = Texture.from(cv);
+  declareTexture(t, 'fx'); // §13.10
   tex.set(kind, t);
   return t;
 }

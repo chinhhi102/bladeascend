@@ -9,6 +9,7 @@ import { gpuBudgetMB } from './device';
 import { filtersOff } from './guard';
 import { GATE_COLORS } from './palette';
 import { emergency } from './quality';
+import { declareTexture } from './gpumem';
 
 /**
  * Mỗi biome 2–3 texture nền, trộn bằng mặt nạ nhiễu (spec §8.6 mục 1). Lớp đầu phủ kín, các
@@ -111,7 +112,9 @@ function noiseMask(size: number, seed: number, cover: number): Sprite {
   // Làm nhoè mép để hai texture hoà vào nhau thay vì cắt ngọt.
   ctx.filter = 'blur(2px)';
   ctx.drawImage(cv, 0, 0);
-  const sp = new Sprite(Texture.from(cv));
+  const t = Texture.from(cv);
+  declareTexture(t, 'ground'); // §13.10: mặt nạ trộn nền
+  const sp = new Sprite(t);
   sp.width = size;
   sp.height = size;
   return sp;
@@ -544,6 +547,7 @@ export class MapView {
     });
     const res = bakeRes();
     const tex = RenderTexture.create({ width: w, height: h, resolution: res, antialias: false });
+    declareTexture(tex, 'ground'); // §13.10: ô nền đã nướng
     this.renderer.render({ container: tmp, target: tex, clear: true });
     // Huỷ container tạm, rồi huỷ RIÊNG texture của mặt nạ.
     //
