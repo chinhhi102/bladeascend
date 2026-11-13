@@ -262,22 +262,30 @@ const KTX_UASTC = new Set(['characters', 'items', 'vfx', 'swords', 'beasts', 'bu
 const KTX_ETC1S = new Set(['obstacles', 'decals', 'tiles', 'decor', 'gates', 'zones', 'monsters', 'ambient', 'ui']);
 
 export function ktxFor(rel, w, h) {
-  // Ngưỡng 512, không phải 256.
-  //
-  // Đo thật: để ngưỡng 256 thì nhóm `home` (10 ảnh chân dung 256² + icon giao diện) đi từ
-  // **0,90 MB lên 4,24 MB** tải về. UASTC tốn ~1 byte/điểm ảnh BẤT KỂ ảnh đơn giản đến đâu,
-  // trong khi WebP nén một bức chân dung phẳng xuống còn vài chục KB. Lợi VRAM của một ảnh
-  // 256² là 0,2 MB — không đáng đổi lấy gấp bốn lần dung lượng tải về ở đúng nhóm CHẶN
-  // trang chủ.
-  if (Math.max(w, h) < 512 || w % 4 !== 0 || h % 4 !== 0) {
+  // Cạnh phải chia hết cho 4 — điều kiện của chính định dạng nén khối.
+  if (w % 4 !== 0 || h % 4 !== 0) {
     return null;
   }
   const top = rel.split('/')[0];
+  const px = Math.max(w, h);
+  // NGƯỠNG CỠ KHÁC NHAU theo chế độ, vì hai chế độ đi ngược nhau về dung lượng tải về:
+  //
+  //   UASTC ~1 byte/điểm ảnh BẤT KỂ ảnh đơn giản đến đâu → với ảnh nhỏ nó TO HƠN WebP
+  //     nhiều lần. Để ngưỡng 256 thì nhóm `home` (10 chân dung 256² + icon) đi từ 0,90 lên
+  //     **4,24 MB** — ở đúng nhóm chặn trang chủ. Nên UASTC chỉ từ 512 px.
+  //
+  //   ETC1S thì ngược: nó NHẸ HƠN WebP (tile 512² là 11 KB so với 64 KB). Nên hạ ngưỡng
+  //     xuống 128 px là lợi cả hai đầu.
+  //
+  // Đo thật 13/11: để ETC1S ở ngưỡng 512 thì **71 decal 256² nằm nguyên ở WebP và chiếm
+  // 23,67 MB VRAM** — một mình chúng là 84% của hạng mục "vật cản · decal · vật phẩm"
+  // (trần 6 MB). Đó không phải việc của gom atlas: gom atlas giảm LÔ VẼ chứ không giảm số
+  // điểm ảnh, mà số điểm ảnh mới là thứ chiếm VRAM.
   if (KTX_UASTC.has(top)) {
-    return 'uastc';
+    return px >= 512 ? 'uastc' : null;
   }
   if (KTX_ETC1S.has(top)) {
-    return 'etc1s';
+    return px >= 128 ? 'etc1s' : null;
   }
   return null;
 }

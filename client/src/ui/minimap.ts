@@ -207,7 +207,10 @@ export class Minimap {
 
   /** drawTerrain renders the static layer once: it never changes during a match. */
   private drawTerrain(map: GameMap): HTMLCanvasElement {
-    const px = 512; // fixed resolution, scaled down when blitted
+    // 256, không phải 512: bản đồ nhỏ hiện ở góc màn hình cỡ 150–200 px, nên 512² là bốn
+    // lần số điểm ảnh không ai nhìn thấy. Đo được: 4 tấm 512² = 5,33 MB VRAM, và chúng nằm
+    // trong hạng mục "chưa khai" của sổ §13.10 suốt mấy lượt đo.
+    const px = 256; // fixed resolution, scaled down when blitted
     const c = document.createElement('canvas');
     c.width = c.height = px;
     const g = c.getContext('2d');

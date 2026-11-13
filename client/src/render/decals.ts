@@ -216,7 +216,19 @@ function skirtTex(kind: string, variant: number): Texture {
   if (hit) {
     return hit;
   }
-  const n = 256;
+  // 128, không phải 256.
+  //
+  // Mỗi (loại, biến thể) là một canvas RGBA riêng, và có khoảng 16 loại × 4 biến thể trong
+  // một khu. Ở 256² đó là **62 texture, 20,7 MB** — một mình nó là 72% của hạng mục "vật
+  // cản · decal · vật phẩm" (trần 6 MB), và nhiều hơn toàn bộ atlas nhân vật.
+  //
+  // Thứ vẽ ra ở đây là một vệt bóng mềm cộng mấy chấm vụn, phóng to lên bằng chân vật cản.
+  // Nó không có chi tiết tần số cao để mà mất: hạ nửa cạnh là chia tư bộ nhớ.
+  //
+  // Đây cũng là lời nhắc: hạng mục này phình vì texture DO MÃ GAME DỰNG, không phải vì tệp
+  // art. Gom atlas (việc đang định làm) giảm LÔ VẼ chứ không giảm số điểm ảnh — mà số điểm
+  // ảnh mới là thứ chiếm VRAM.
+  const n = 128;
   const cv = document.createElement('canvas');
   cv.width = n;
   cv.height = n;

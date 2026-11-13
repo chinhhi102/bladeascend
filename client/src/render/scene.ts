@@ -1138,6 +1138,11 @@ export class GameScene {
     return { charsInView: this.players.size, swordsDrawn, placeholder };
   }
 
+  /** loadReport: định dạng asset đã nạp — bằng chứng cho cổng kiểm §13.10. */
+  loadReport(): { ktxOn: boolean; ktx2: number; webp: number; webpWhenKtx: string[] } {
+    return assets.loadReport();
+  }
+
   /** gpuBiggest: vài texture to nhất đang giữ — để biết cắt chỗ nào trước (debug). */
   gpuBiggest(n = 10): { w: number; h: number; mb: number }[] {
     return gpuBiggest(n);
@@ -1154,7 +1159,7 @@ export class GameScene {
    * Trả cả dòng `other` kể cả khi nó bằng 0: một bảng chỉ hiện hạng mục có số thì ngày nào
    * đó `other` xuất hiện rồi biến mất mà không ai kịp thấy.
    */
-  vramLedger(): { rows: { cat: BudgetCat; label: string; mb: number; count: number; limitMB: number; over: boolean }[]; totalMB: number; limitMB: number; unclassified: { site: string; mb: number }[]; framebuffers: { size: string; count: number; mb: number; site: string }[] } {
+  vramLedger(): { rows: { cat: BudgetCat; label: string; mb: number; count: number; limitMB: number; over: boolean }[]; totalMB: number; limitMB: number; unclassified: { site: string; mb: number }[]; framebuffers: { size: string; count: number; mb: number; site: string }[]; world: { size: string; count: number; mb: number; site: string }[] } {
     const phone = isMobile();
     const rows = gpuBudget(phone);
     return {
@@ -1163,6 +1168,7 @@ export class GameScene {
       limitMB: phone ? 32 : 50,
       unclassified: gpuUnclassified(),
       framebuffers: gpuListCat('framebuffer'),
+      world: gpuListCat('world', 14),
     };
   }
 

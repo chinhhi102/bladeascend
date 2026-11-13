@@ -92,7 +92,13 @@ export class VfxLayer {
     // NỬA ĐỘ PHÂN GIẢI (§13.10 mục 6). Bloom là một vệt sáng nhoè — thứ duy nhất nó làm là
     // lấy trung bình vùng lân cận, nên nửa độ phân giải gần như không thấy bằng mắt mà đích
     // vẽ chỉ còn một phần tư byte.
-    this.bloom.resolution = 0.5;
+    // MỘT PHẦN TƯ độ phân giải, không phải một nửa.
+    //
+    // Đo được ở cảnh đông 1080p: chuỗi đích vẽ của bloom (4 bản mỗi cỡ: 960×540, 960×512,
+    // 512², 256²) chiếm **27 MB** — nhiều hơn cả atlas nhân vật, và trần của cả hạng mục
+    // "bộ đệm khung · bộ lọc" là 12 MB. Bloom chỉ lấy trung bình vùng lân cận rồi cộng
+    // sáng; chia tư độ phân giải là chia mười sáu số byte của chuỗi đích vẽ đó.
+    this.bloom.resolution = 0.25;
     this.on = true;
     this.root.filters = [this.bloom];
   }

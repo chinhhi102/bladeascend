@@ -43,8 +43,10 @@ const CACHE = join(DIST, '.pipeline-cache.json');
  *   2 — chỉnh màu nền cho decal/trang trí (§13.10), xuất thêm KTX2
  *   3 — ngưỡng KTX2 nâng 256 → 512 px (ảnh nhỏ nén khối tốn tải về hơn WebP)
  *   4 — `ui` chuyển UASTC → ETC1S (nền trang chủ 244 KB → 2,4 MB là không chấp nhận được)
+ *   5 — ngưỡng cỡ TÁCH theo chế độ: UASTC ≥ 512 px, ETC1S ≥ 128 px (71 decal 256² đang
+ *       chiếm 23,7 MB VRAM vì bị ngưỡng 512 loại ra)
  */
-const PIPELINE_VERSION = 4;
+const PIPELINE_VERSION = 5;
 
 /**
  * Thư mục được áp ma trận chỉnh màu nền lúc build (§13.10).

@@ -467,7 +467,42 @@ class AssetStore {
     if (!f) {
       return '';
     }
-    return f.ktx && ktxSupported() ? `/assets/${f.ktx.url}` : `/assets/${f.url}`;
+    const useKtx = !!f.ktx && ktxSupported();
+    // Ghi lại ĐỊNH DẠNG đã chọn cho từng tệp.
+    //
+    // Cổng kiểm §13.10 phải trả lời được "mọi atlas mong đợi đã nạp đúng định dạng chưa".
+    // Không có sổ này thì một lượt tối ưu làm hỏng đường KTX2 vẫn qua cổng với bảng VRAM
+    // đẹp hơn bao giờ hết — đúng cái đã xảy ra khi thiếu `import 'pixi.js/ktx2'`.
+    this.fmt.set(rel, useKtx ? 'ktx2' : 'webp');
+    return useKtx ? `/assets/${f.ktx?.url ?? ''}` : `/assets/${f.url}`;
+  }
+
+  /** fmt: tệp logic → định dạng đã CHỌN để nạp (xem `texUrl`). */
+  private readonly fmt = new Map<string, 'ktx2' | 'webp'>();
+
+  /**
+   * loadReport: bằng chứng cho cổng kiểm §13.10.
+   *
+   * `ktxOn` là câu trả lời của thiết bị, `ktx2`/`webp` là thực tế đã nạp, `webpWhenKtx` là
+   * danh sách tệp CÓ bản nén mà vẫn phải lấy WebP — nếu thiết bị hỗ trợ mà danh sách này
+   * không rỗng thì đường KTX2 đang hỏng ở đâu đó.
+   */
+  loadReport(): { ktxOn: boolean; ktx2: number; webp: number; webpWhenKtx: string[] } {
+    const on = ktxSupported();
+    let ktx2 = 0;
+    let webp = 0;
+    const webpWhenKtx: string[] = [];
+    for (const [rel, f] of this.fmt) {
+      if (f === 'ktx2') {
+        ktx2++;
+        continue;
+      }
+      webp++;
+      if (on && this.man?.files[rel]?.ktx) {
+        webpWhenKtx.push(rel);
+      }
+    }
+    return { ktxOn: on, ktx2, webp, webpWhenKtx };
   }
 
   private async loadTexture(rel: string): Promise<Texture | null> {

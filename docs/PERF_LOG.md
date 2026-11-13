@@ -138,6 +138,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 47 | 2026-11-13 | `9f300ff`+ | **Bỏ HẲN `ColorMatrixFilter`** — decal/trang trí chỉnh màu lúc build trong asset-pipeline | VRAM | – | – | – | 60/60/60 | – | 24 (thử) | – | – | "Bộ đệm khung · bộ lọc" **→ 0,00 MB** (không còn filter nào). Cảnh thử tổng **25,45 → 23,59 MB**. Gói chặn vào trận 4,47 MB (ngân sách 8) | Hình: **0,030/255 · 63 pixel — ĐẠT** |
 | 48 | 2026-11-13 | `9f42ddc`+ | **§13.10 mục 3 — KTX2** (UASTC nhân vật/vật phẩm/VFX · ETC1S nền/vật cản/decal/UI) | VRAM | – | – | – | 60/60/60 | – | 28 (thử) | – | – | Cảnh thử **23,59 → 15,53 MB**; atlas nhân vật **6,75 → 1,69 MB**. Tải về `home` 0,90 → 1,07 · `boot` 2,69 → 3,13 · toàn bộ 8,51 → 11,69 MB | Hình: 2,30/255 (nén khối) |
 | 49 | 2026-11-13 | `e49be2f`+ | **§13.10 mục 4 — trần 6 atlas nhân vật** | VRAM | – | – | – | – | – | – | – | – | `Atlas nhân vật` cảnh đông **16,44 → 14,56 MB** (đạt trần 24). Tổng cảnh đông **71,0 MB** / trần 50 — CHƯA ĐẠT | Hình: 0,003/255 |
+| 50 | 2026-11-13 | `d429f20`+ | **Cổng kiểm 4 điều + ba chỗ ngốn VRAM do MÃ GAME dựng** | VRAM | – | – | – | – | – | – | – | – | Cảnh đông **95,5 → 67,4 MB**: váy chân vật cản 256→128 (−12,5), bloom 1/4 độ phân giải (−12,2), nền minimap 512→256, decal vào ETC1S | Hình: 0,13/255 |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1704,6 +1705,48 @@ xuất thêm một biến thể cỡ và manifest mang hai bản — một lư�
 | chưa khai hạng mục | 8,5 | 0 | |
 | Nền | 6,0 | 4 | |
 | **TỔNG** | **71,0** | **50** | |
+
+---
+
+### Lượt 50 — 13/11/2026 · Cổng kiểm 4 điều, và ba chỗ ngốn VRAM không nằm ở art
+
+**Cổng kiểm** (`tools/browsertest/vramgate.mjs`) — bốn điều, phải đạt cả bốn:
+0 placeholder · đúng định dạng nén · hình không đổi so ảnh mốc trong repo · VRAM trong ngân
+sách. Lý do phải có bốn nằm ở lượt #48: bật KTX2 mà quên `import 'pixi.js/ktx2'` làm art
+hỏng hết, **và bảng VRAM báo 6,93 MB — con số đẹp nhất từ trước tới giờ**. Một cổng chỉ nhìn
+VRAM sẽ cho qua, và còn khen, một lượt tối ưu vừa xoá sạch art.
+
+**Kế hoạch "gom atlas để giảm VRAM" dựa trên một giả định SAI.** Gom atlas giảm LÔ VẼ chứ
+không giảm số điểm ảnh, mà số điểm ảnh mới là thứ chiếm VRAM. Đo ra thủ phạm thật của hạng
+mục "vật cản · decal · vật phẩm" (28,8 MB / trần 6):
+
+| | |
+|---|---|
+| 20,67 MB | **62 texture 256² do MÃ GAME dựng** (`kx:world`) |
+| 0,08 MB | một decal art thật (`decals/pebbles.ktx2`) — đã nén đúng |
+
+Tức là **không phải tệp art**, mà là `skirtTex` trong `decals.ts`: một canvas RGBA 256² cho
+MỖI (loại vật cản, biến thể) — khoảng 16 × 4 trong một khu. Thứ nó vẽ ra là một vệt bóng
+mềm cộng mấy chấm vụn, phóng to bằng chân vật cản; không có chi tiết tần số cao để mất. Hạ
+còn 128²: **20,7 → 3,8 MB**.
+
+Hai chỗ cùng họ:
+- **Nền minimap 512²** (4 tấm, 5,3 MB) — bản đồ nhỏ hiện ở góc màn hình cỡ 150–200 px. Hạ 256².
+- **Chuỗi đích vẽ của bloom** 4 bản mỗi cỡ (960×540, 960×512, 512², 256²) = **27 MB**, nhiều
+  hơn cả atlas nhân vật. Bloom chỉ lấy trung bình vùng lân cận rồi cộng sáng, nên hạ từ nửa
+  xuống **một phần tư** độ phân giải: **17,2 → 4,97 MB**, đạt trần 12.
+
+Và một chỗ ở art: **ngưỡng cỡ phải TÁCH theo chế độ nén**. UASTC tốn ~1 byte/điểm ảnh bất kể
+ảnh đơn giản đến đâu nên chỉ dùng từ 512 px; ETC1S thì NHẸ HƠN WebP nên hạ xuống 128 px là
+lợi cả VRAM lẫn tải về. Để chung một ngưỡng 512 thì 71 decal 256² nằm nguyên ở WebP.
+
+| | trước lượt này | sau |
+|---|---:|---:|
+| Vật cản · decal · vật phẩm | 28,8 | **16,1** |
+| Bộ đệm khung · bộ lọc | 17,2 | **4,97** ✅ |
+| **TỔNG cảnh đông** | **95,5** | **67,4** |
+
+Hình: 0,13/255 (bloom 1/4 độ phân giải làm mềm viền hào quang).
 
 ---
 
