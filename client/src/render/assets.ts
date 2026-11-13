@@ -307,6 +307,14 @@ class AssetStore {
   // mà bộ nhớ chẳng giảm.
 
   /** CHAR_RELEASE_DELAY_MS: chờ ngần này sau khi không còn ai dùng mới nhả. */
+  /**
+   * MAX_CHAR_ATLASES: trần số atlas nhân vật giữ cùng lúc (§13.10).
+   *
+   * Sáu là con số spec chốt: đủ cho số loại nhân vật thường thấy cùng lúc trên màn hình,
+   * và 6 × ~1,7 MB (UASTC) ≈ 10 MB, nằm trong trần 24 MB của hạng mục.
+   */
+  private static readonly MAX_CHAR_ATLASES = 6;
+
   private static readonly CHAR_RELEASE_DELAY_MS = 10_000;
 
   /** charIdleSince: nhân vật → thời điểm bắt đầu không còn ai dùng. */
@@ -341,6 +349,40 @@ class AssetStore {
       if (now - since >= AssetStore.CHAR_RELEASE_DELAY_MS) {
         this.releaseChar(char);
       }
+    }
+    this.capCharAtlases(live, mine);
+  }
+
+  /**
+   * capCharAtlases giữ tối đa `MAX_CHAR_ATLASES` atlas nhân vật trong bộ nhớ (§13.10).
+   *
+   * Vì sao cần dù đã có cơ chế nhả sau 10 giây: 10 giây là để tránh nạp lại liên tục khi
+   * một người đi ra đi vào khung nhìn. Nhưng trong một phòng 20 người với 10 loại nhân vật,
+   * ai cũng "vừa mới rảnh" nên không ai bị nhả, và cả mười atlas nằm đó cùng lúc — đo được
+   * **16,4 MB** ở cảnh đông, trần hạng mục là 24 MB và đó là chưa tính lúc đông hơn.
+   *
+   * Trần là một lưới an toàn, không thay cơ chế kia: nó chỉ ra tay khi đã quá số, và luôn
+   * nhả con RẢNH LÂU NHẤT trước. Nhân vật đang hiện trên màn hình và nhân vật của chính
+   * mình không bao giờ bị nhả — nhả chúng là người chơi thấy placeholder, đúng thứ §13.7 cấm.
+   */
+  private capCharAtlases(live: Set<string>, mine: string): void {
+    const loaded = [...this.atlases.keys()]
+      .map((rel) => /^characters\/(.+)$/.exec(rel)?.[1])
+      .filter((c): c is string => !!c);
+    if (loaded.length <= AssetStore.MAX_CHAR_ATLASES) {
+      return;
+    }
+    // Chỉ xét con đang RẢNH; con đang hiện thì dù quá trần cũng không đụng tới.
+    const idle = loaded
+      .filter((c) => !live.has(c) && c !== mine)
+      .sort((a, b) => (this.charIdleSince.get(a) ?? 0) - (this.charIdleSince.get(b) ?? 0));
+    let over = loaded.length - AssetStore.MAX_CHAR_ATLASES;
+    for (const char of idle) {
+      if (over <= 0) {
+        return;
+      }
+      this.releaseChar(char);
+      over--;
     }
   }
 

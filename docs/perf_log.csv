@@ -104,3 +104,4 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 0,2026-11-13,,"Người thật 12/11 23:30 → 13/11 12:00",S6,0.92,8.24,12.2,4.0,4.4,0.4,47.0,56.0,0.0,,0,4071,148.5,0,0.00,,,,"ít mẫu, tham khảo (N=1)",1
 0,2026-11-13,,"Người thật 12/11 23:30 → 13/11 12:00",S6,0.92,8.24,12.2,4.0,4.4,0.4,47.0,56.0,0.0,,0,4071,148.5,0,0.00,,,,"ít mẫu, tham khảo (N=1)",1
 48,2026-11-13,9f42ddc,"KTX2 (UASTC nhan vat/vat pham/VFX, ETC1S nen/vat can/decal/UI)",VRAM,,,,,,,,60,,,28,,15.53,,,,,,,,,"canh thu 23.59 -> 15.53 MB; atlas nhan vat 6.75 -> 1.69; tai ve home 0.90->1.07, boot 2.69->3.13, toan bo 8.51->11.69 MB; anh lech 2.30/255",
+49,2026-11-13,e49be2f,"Tran 6 atlas nhan vat",VRAM,,,,,,,,,,,,,71.02,,,,,,,,,"atlas nhan vat 16.44 -> 14.56 MB; tong canh dong 71.0 / tran 50 CHUA DAT; anh lech 0.003/255",

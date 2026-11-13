@@ -137,6 +137,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 46 | 2026-11-13 | `8b43e64`+ | **Lớp nền gộp thành MỘT geometry + atlas mặt nạ 1024²** | VRAM | – | – | – | 60/60/60 | – | **3** (ground) · 162 (đông) | – | – | Tổng VRAM cảnh đông **180,8 → 140,6 MB** · `Nền` **cố định 8,00 MB** (3 texture). Cảnh thử: 54 → **26** lô vẽ, Pixi vẽ 1,42/2,88/4,14 ms | Hình: 0,100/255 |
 | 47 | 2026-11-13 | `9f300ff`+ | **Bỏ HẲN `ColorMatrixFilter`** — decal/trang trí chỉnh màu lúc build trong asset-pipeline | VRAM | – | – | – | 60/60/60 | – | 24 (thử) | – | – | "Bộ đệm khung · bộ lọc" **→ 0,00 MB** (không còn filter nào). Cảnh thử tổng **25,45 → 23,59 MB**. Gói chặn vào trận 4,47 MB (ngân sách 8) | Hình: **0,030/255 · 63 pixel — ĐẠT** |
 | 48 | 2026-11-13 | `9f42ddc`+ | **§13.10 mục 3 — KTX2** (UASTC nhân vật/vật phẩm/VFX · ETC1S nền/vật cản/decal/UI) | VRAM | – | – | – | 60/60/60 | – | 28 (thử) | – | – | Cảnh thử **23,59 → 15,53 MB**; atlas nhân vật **6,75 → 1,69 MB**. Tải về `home` 0,90 → 1,07 · `boot` 2,69 → 3,13 · toàn bộ 8,51 → 11,69 MB | Hình: 2,30/255 (nén khối) |
+| 49 | 2026-11-13 | `e49be2f`+ | **§13.10 mục 4 — trần 6 atlas nhân vật** | VRAM | – | – | – | – | – | – | – | – | `Atlas nhân vật` cảnh đông **16,44 → 14,56 MB** (đạt trần 24). Tổng cảnh đông **71,0 MB** / trần 50 — CHƯA ĐẠT | Hình: 0,003/255 |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1675,6 +1676,34 @@ bằng `texStorage2D` rồi nạp từng mức), và cỡ thật là **số byte
   ảnh chân dung 256². UASTC tốn ~1 byte/điểm ảnh bất kể ảnh đơn giản đến đâu.
 - **`ui` dùng ETC1S** dù spec xếp nó cùng nhóm VFX (UASTC): `ui/home_bg.png` đi từ 244 KB
   lên **2 456 KB**. ETC1S giữ nguyên cái lợi VRAM mà tải về còn nhẹ hơn WebP.
+
+---
+
+### Lượt 49 — 13/11/2026 · §13.10 mục 4: trần 6 atlas nhân vật
+
+Cơ chế nhả sau 10 giây đã có từ Q30. Thiếu là **trần cứng**: 10 giây là để tránh nạp lại
+liên tục khi một người đi ra đi vào khung nhìn, nhưng trong phòng 20 người với 10 loại nhân
+vật thì ai cũng "vừa mới rảnh" nên không ai bị nhả, và cả mười atlas nằm đó cùng lúc.
+
+Trần là lưới an toàn, không thay cơ chế kia: chỉ ra tay khi đã quá số, luôn nhả con rảnh lâu
+nhất trước, và **không bao giờ đụng** nhân vật đang hiện hay nhân vật của chính mình — nhả
+chúng là người chơi thấy placeholder, đúng thứ §13.7 cấm.
+
+`Atlas nhân vật` cảnh đông: **16,44 → 14,56 MB** (trần hạng mục 24 — đạt). Hình: 0,003/255.
+
+**Phần CHƯA làm của mục 4**: atlas 1024 cho điện thoại / chất lượng Thấp. Nó cần pipeline
+xuất thêm một biến thể cỡ và manifest mang hai bản — một lượt riêng.
+
+### Hiện trạng sau mục 4 — còn vượt
+
+| Hạng mục | cảnh đông | trần | |
+|---|---:|---:|---|
+| Vật cản · decal · vật phẩm | **28,1** | 6 | 87 texture |
+| VFX · hào quang · UI | **13,9** | 4 | 49 texture |
+| Atlas nhân vật | 14,6 | 24 | đạt |
+| chưa khai hạng mục | 8,5 | 0 | |
+| Nền | 6,0 | 4 | |
+| **TỔNG** | **71,0** | **50** | |
 
 ---
 
