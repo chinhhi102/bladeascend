@@ -41,6 +41,20 @@ if [ -x "$GOROOT/bin/go" ]; then
   export PATH="$GOROOT/bin:$PATH"
 fi
 
+# Node: cron chạy với PATH trần, tức là `node` của hệ thống.
+#
+# Đêm 13/11 bài rò rỉ báo ĐỎ với đúng một dòng: "You are running Node.js 18.19.1. Playwright
+# requires Node.js 20 or higher." Không có rò rỉ nào cả — cron lấy Node 18 của hệ thống
+# trong khi máy này chạy Node 24 qua nvm. Một cổng gác báo đỏ vì lý do môi trường thì sớm
+# muộn cũng bị bỏ qua cho xong, và khi nó đỏ THẬT thì không ai tin nữa.
+#
+# Tìm bản Node mới nhất trong nvm; không có thì dùng `node` trên PATH và để Playwright tự
+# báo lỗi (có log rõ còn hơn chạy sai âm thầm).
+NVM_LATEST="$(ls -d "$HOME/.nvm/versions/node"/v* 2>/dev/null | sort -V | tail -1)"
+if [ -n "$NVM_LATEST" ] && [ -x "$NVM_LATEST/bin/node" ]; then
+  export PATH="$NVM_LATEST/bin:$PATH"
+fi
+
 CRON_TAG="# bladeascend-leaknightly"
 CRON_LINE="0 3 * * * cd $REPO && tools/leaknightly.sh >> $LOGDIR/cron.log 2>&1 $CRON_TAG"
 
