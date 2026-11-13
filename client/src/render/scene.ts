@@ -90,6 +90,14 @@ export class GameScene {
   onFrame: ((dt: number) => void) | null = null;
   /** onGuardEvent: báo cho telemetry mỗi lần lớp chống sập phải ra tay (§13.8). */
   onGuardEvent: ((kind: string, err: unknown) => void) | null = null;
+  /**
+   * onBreadcrumb: ghi một VIỆC vào vòng 30 của telemetry — không gửi gói riêng.
+   *
+   * Khác `onGuardEvent` ở chỗ đó: sự kiện telemetry bị chặn 20 cái/phút, còn breadcrumb chỉ
+   * nằm trong bộ nhớ và đi kèm khi CÓ lỗi. Nên chỗ nào đổi trạng thái cũng ghi được mà không
+   * tốn gì.
+   */
+  onBreadcrumb: ((code: string, detail?: string | number) => void) | null = null;
   /** onRebuildFailed: dựng lại renderer thất bại → `main.ts` tải lại trang + vào lại phiên (§7.1). */
   onRebuildFailed: (() => void) | null = null;
   /**
@@ -281,6 +289,7 @@ export class GameScene {
     this.boba.resize(this.app.screen.width, this.app.screen.height);
     this.app.renderer.on('resize', (w: number, h: number) => {
       this.resizes++;
+      this.onBreadcrumb?.('doi-co', `${Math.round(w)}x${Math.round(h)}`);
       this.boba.resize(w, h);
     });
     this.takeOverTicker();

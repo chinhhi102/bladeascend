@@ -20,7 +20,7 @@ import { drawGuardStats, faultSystem, setSysErrorHook, type SysKey, sysResetRun,
 import { clearSession, loadSession, saveSession } from './net/session';
 import type { DeadMsg, GameMap, KickedMsg, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
-import { assets } from './render/assets';
+import { assets, setAssetTroubleHook } from './render/assets';
 import { isMobile } from './render/device';
 import { loadFonts } from './render/fonts';
 import { frameDivider, measureRefreshHz } from './render/framepace';
@@ -170,7 +170,10 @@ class App {
       this.lastFps = this.lastFps * 0.9 + (1 / Math.max(dt, 0.001)) * 0.1;
       this.frame(dt);
     };
+    this.scene.onBreadcrumb = (code, detail) => this.telemetry?.breadcrumb(code, detail);
+    setAssetTroubleHook((code, detail) => this.telemetry?.breadcrumb(code, detail));
     this.scene.onGuardEvent = (kind, err) => {
+      this.telemetry?.breadcrumb(kind === 'draw_error' ? 'loi-ve' : kind);
       this.telemetry?.event(kind, JSON.stringify({ err: err ? String(err).slice(0, 200) : '', ...(this.telemetry?.errorContext() ?? {}) }));
     };
     // Dựng lại renderer thất bại → tải lại trang và VÀO LẠI PHIÊN (§13.8 → §7.1). Đây là
@@ -257,7 +260,8 @@ class App {
         (canRecover) => {
         // Gửi về server KÈM BỐI CẢNH: mất ngữ cảnh WebGL trên iPhone gần như luôn là hệ quả
         // của hết bộ nhớ GPU, nên con số `texMB` đi cùng mới nói được nguyên nhân.
-        this.telemetry?.event('webgl_context_lost', JSON.stringify({ canRecover, ...(this.telemetry?.errorContext() ?? {}) }));
+        this.telemetry?.breadcrumb('mat-gl', canRecover ? 'cuu-duoc' : 'mat-han');
+      this.telemetry?.event('webgl_context_lost', JSON.stringify({ canRecover, ...(this.telemetry?.errorContext() ?? {}) }));
         this.playing = false;
         this.input.enabled = false;
         this.hud.root.remove();
@@ -619,6 +623,7 @@ class App {
     void this.startTelemetry();
     if (this.telemetry && changedZone) {
       this.telemetry.event('zone_switch', String(w.zn ?? 0));
+      this.telemetry.breadcrumb('khu', w.zn ?? 0);
     }
     if (changedZone) {
       // Chữ lớn mờ dần giữa màn hình khi vào khu mới (spec §8.0).
@@ -757,6 +762,9 @@ class App {
     const { angle, moving, burn } = this.input.read();
     // Nút kỹ năng gom lại từ lúc gửi gói trước: bấm giữa hai nhịp mạng cũng không mất.
     const skill = this.skillPressed;
+    if (skill) {
+      this.telemetry?.breadcrumb('ky-nang');
+    }
     this.skillPressed = false;
     this.conn.send(this.world.makeInput(angle, moving, burn, skill));
     this.askMissingDesc();

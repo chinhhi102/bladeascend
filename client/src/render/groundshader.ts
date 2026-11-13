@@ -193,6 +193,23 @@ export function maskPlanes(seeds: number[], covers: number[]): Uint8ClampedArray
   return out;
 }
 
+/**
+ * emptyGeometry: geometry rỗng nhưng ĐỦ thuộc tính của shader trộn.
+ *
+ * Pixi so chữ ký shader↔geometry theo TÊN thuộc tính, không theo số đỉnh. Một geometry 0
+ * đỉnh mà có đủ tên thì hợp lệ; thiếu một tên là ném lỗi ngay cả khi không vẽ đỉnh nào.
+ */
+function emptyGeometry(): MeshGeometry {
+  const g = new MeshGeometry({
+    positions: new Float32Array(0), uvs: new Float32Array(0), indices: new Uint32Array(0),
+  });
+  g.addAttribute('aLocal', { buffer: new Float32Array(0), format: 'float32x2' });
+  g.addAttribute('aOffset', { buffer: new Float32Array(0), format: 'float32x2' });
+  g.addAttribute('aMaskUV', { buffer: new Float32Array(0), format: 'float32x2' });
+  g.addAttribute('aMaskSel', { buffer: new Float32Array(0), format: 'float32' });
+  return g;
+}
+
 const ATLAS_PX = 512;
 const MASK_PX = 64;
 /** Số ô atlas (8×8). Mỗi ô atlas chứa HAI ô nền, nên sức chứa thật là gấp đôi. */
@@ -243,7 +260,14 @@ export class GroundField {
   private readonly slotUsed: number[] = [];
   private seq = 0;
   /** chữ ký lưới ô đang vẽ — geometry chỉ dựng lại khi tập ô đổi. */
-  private gridKey = '';
+  /**
+   * gridKey: khoá của lưới ô đang vẽ, để `setChunks` bỏ qua khi không có gì đổi.
+   *
+   * Khởi tạo là `null` chứ KHÔNG phải `''`: danh sách ô RỖNG cũng cho khoá `''`, nên với giá
+   * trị khởi tạo `''` thì `setChunks([])` bị coi là "không đổi" và thoát sớm — geometry không
+   * bao giờ được nâng cấp lên đủ thuộc tính.
+   */
+  private gridKey: string | null = null;
 
   constructor(tiles: Texture[], tileWorld: number) {
     this.atlasBuf = new Uint8Array(ATLAS_PX * ATLAS_PX * 4);
@@ -295,7 +319,24 @@ export class GroundField {
     });
     this.texW = t0.source.width;
     this.texH = t0.source.height;
-    this.mesh = new Mesh({ geometry: new MeshGeometry({ positions: new Float32Array(0), uvs: new Float32Array(0), indices: new Uint32Array(0) }), shader });
+    // Geometry khởi tạo phải có ĐỦ BỐN thuộc tính riêng, dù rỗng.
+    //
+    // `MeshGeometry` chỉ cho sẵn `aPosition`/`aUV`. Trước đây bốn thuộc tính của shader trộn
+    // (`aLocal`, `aOffset`, `aMaskUV`, `aMaskSel`) chỉ xuất hiện sau `setChunks` đầu tiên —
+    // nên mọi khung vẽ ở GIỮA hai thời điểm đó đều ném:
+    //
+    //   Error: shader and geometry incompatible, geometry missing the "aLocal" attribute
+    //
+    // Và giữa hai thời điểm đó LUÔN có khung được vẽ khi đổi khu: `MapView` mới dựng xong
+    // nhưng art ô nền của khu mới chưa tải, nên `updateGroundChunks` thoát sớm ở
+    // `if (!this.baseName)` và không bao giờ gọi `setChunks`. Lỗi lặp mỗi khung → lớp chống
+    // sập §13.8 đếm 3 lỗi/10 giây → dựng lại renderer → vẫn lỗi → tải lại trang. Ba người
+    // chơi thật dính đúng chuỗi đó ngày 13/11 (95 lần trong telemetry): đứng hình rồi văng
+    // ra khỏi trận.
+    this.mesh = new Mesh({ geometry: emptyGeometry(), shader });
+    // Chưa có ô nào thì KHÔNG VẼ. Một mesh rỗng không vẽ ra gì, nhưng nó vẫn đi qua khâu
+    // kiểm shader/geometry — tức vẫn là một chỗ để ném lỗi mà không đổi lấy một điểm ảnh nào.
+    this.mesh.visible = false;
   }
 
   private texW = 512;
@@ -399,6 +440,7 @@ export class GroundField {
     g.addAttribute('aMaskSel', { buffer: sel, format: 'float32' });
     const old = this.mesh.geometry;
     this.mesh.geometry = g;
+    this.mesh.visible = n > 0;
     old.destroy();
   }
 

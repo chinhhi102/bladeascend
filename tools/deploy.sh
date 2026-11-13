@@ -90,12 +90,25 @@ restart_server() {
   # `-pprof`: mở /debug/pprof CHO 127.0.0.1 (cmd/server/pprof.go). Đây là server LAN của
   # đội test; muốn lấy hồ sơ CPU 30 giây lúc tick đang xấu thì phải có sẵn, vì tắt server đi
   # để bật hồ sơ là mất đúng cái cảnh cần đo.
+  # Log NỐI THÊM (`>>`), không ghi đè.
+  #
+  # Dòng cũ là `>` — mỗi lượt deploy xoá sạch log của bản đang chạy. Ngày 13/11 ba người chơi
+  # thật bị đứng hình lúc 17:18–17:46; tới lúc điều tra thì log server của đúng quãng đó đã bị
+  # ba lượt deploy trong ngày xoá mất, và cả cuộc điều tra phải dựa hết vào telemetry.db.
+  # Một thứ chỉ có ích khi có sự cố mà lại bị xoá đúng lúc sửa lỗi thì bằng không có.
+  #
+  # Giữ 20 MB gần nhất để nó không phình vô hạn.
+  if [ -f "$REPO/server/data/bladeascend.log" ] \
+     && [ "$(stat -c%s "$REPO/server/data/bladeascend.log")" -gt 20000000 ]; then
+    tail -c 10000000 "$REPO/server/data/bladeascend.log" > "$REPO/server/data/bladeascend.log.tmp"
+    mv "$REPO/server/data/bladeascend.log.tmp" "$REPO/server/data/bladeascend.log"
+  fi
   ( cd "$REPO/server" && setsid env ADMIN_PASSWORD_HASH="$adminhash" ./bladeascend \
       -build "$build" \
       -pprof \
       -client "$DEPLOY/client" \
       -assets "$DEPLOY/assets" \
-      > data/bladeascend.log 2>&1 < /dev/null & ) >/dev/null 2>&1 </dev/null
+      >> data/bladeascend.log 2>&1 < /dev/null & ) >/dev/null 2>&1 </dev/null
   # Ba lần chuyển hướng trên subshell là CẦN, không thừa.
   #
   # Tiến trình server chạy nền kế thừa fd của subshell. Khi gọi deploy qua ống
@@ -103,7 +116,9 @@ restart_server() {
   # suốt đời nó — `grep` ngồi chờ EOF không bao giờ tới, nên lệnh deploy "treo" dù đã xong
   # từ lâu. Chuyển hướng ở chính `./bladeascend` là chưa đủ: subshell vẫn cầm bản sao.
   sleep 4
-  if ! grep -q "trang quản trị: BẬT" "$REPO/server/data/bladeascend.log" 2>/dev/null; then
+  # `tail -40` chứ không phải cả tệp: log nay NỐI THÊM thay vì ghi đè (xem ghi chú ở dưới),
+  # nên soi cả tệp là soi trúng dòng của lượt deploy TRƯỚC và luôn báo "đã lên".
+  if ! tail -40 "$REPO/server/data/bladeascend.log" 2>/dev/null | grep -q "trang quản trị: BẬT"; then
     echo "   ⚠ trang quản trị TẮT — chưa có docs/private/admin.env." >&2
     echo "     Tạo bằng:  cd server && go run ./cmd/adminpass > ../docs/private/admin.env" >&2
   fi
@@ -305,6 +320,28 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   # Từ 13/11/2026 CẢ BỐN điều đều chặn: cảnh đông đã xuống 46,3/50 MB nên `--warn-vram` bỏ đi.
   # Ba điều kia chặn từ trước, vì chúng bắt đúng kiểu hỏng đã xảy ra: bật KTX2 mà quên đăng ký
   # bộ đọc làm art hỏng hết, trong khi bảng VRAM báo con số đẹp nhất từ trước tới giờ.
+  # §8.6 + §13.8: đổi khu không được sinh lỗi vẽ.
+  #
+  # Cổng này ra đời sau sự cố 13/11: ba người chơi thật đứng hình rồi văng ra, telemetry cho
+  # 95 lần cùng một lỗi "geometry missing the aLocal attribute", và MỌI bài đo đang có đều
+  # xanh — vì không bài nào ĐỔI KHU. `crashtest` chỉ thử lớp bắt lỗi bằng lỗi giả; nó không
+  # bao giờ hỏi "lúc chơi bình thường có lỗi thật nào không".
+  echo "== 2c3b/5 đổi khu không sinh lỗi vẽ (§8.6) =="
+  set +e
+  node tools/browsertest/drawguard.mjs http://127.0.0.1:9997 >/tmp/kx-drawguard.out 2>&1
+  draw_rc=$?
+  set -e
+  tail -4 /tmp/kx-drawguard.out
+
+  # §13.10: máy KHÔNG hỗ trợ nén khối vẫn phải chơi được. Đường lùi WebP không có bài nào
+  # đi qua kể từ khi bật KTX2, mà một đường lùi chưa ai thử thì không phải đường lùi.
+  echo "== 2c3c/5 đường lùi WebP (máy không hỗ trợ nén khối) =="
+  set +e
+  node tools/browsertest/nocompress.mjs http://127.0.0.1:9997 >/tmp/kx-nocompress.out 2>&1
+  nokx_rc=$?
+  set -e
+  tail -3 /tmp/kx-nocompress.out
+
   echo "== 2c4/5 cổng kiểm đồ hoạ (§13.10) =="
   set +e
   node tools/browsertest/vramgate.mjs http://127.0.0.1:9997 >/tmp/kx-vramgate.out 2>&1
@@ -316,6 +353,14 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   if [ -n "$smooth_pid" ]; then
     pkill -P "$smooth_pid" 2>/dev/null || true
     kill "$smooth_pid" 2>/dev/null || true
+  fi
+  if [ "$nokx_rc" != "0" ]; then
+    echo "LỖI: đường lùi WebP hỏng — máy không hỗ trợ nén khối sẽ không chơi được. Xem /tmp/kx-nocompress.out" >&2
+    exit 1
+  fi
+  if [ "$draw_rc" != "0" ]; then
+    echo "LỖI: đổi khu sinh lỗi vẽ. Người chơi sẽ đứng hình rồi văng ra. Xem /tmp/kx-drawguard.out" >&2
+    exit 1
   fi
   if [ "$crash_rc" != "0" ]; then
     echo "LỖI: lớp chống sập §13.8 không đạt. Dừng deploy. Xem /tmp/kx-crash.out" >&2

@@ -533,6 +533,7 @@ class AssetStore {
       return sub;
     } catch (err) {
       console.warn('texture failed', rel, err);
+      onAssetTrouble?.('nap-loi', rel.split('/').slice(-2).join('/'));
       return null;
     }
   }
@@ -585,6 +586,7 @@ class AssetStore {
       this.atlases.set(dir, set);
     } catch (err) {
       console.warn('atlas failed', jsonRel, err);
+      onAssetTrouble?.('atlas-loi', jsonRel.split('/').slice(-2).join('/'));
     }
   }
 
@@ -625,6 +627,19 @@ function markPremultiplied(tex: Texture, url: string): void {
   if (url.endsWith('.ktx2')) {
     (tex.source as { alphaMode?: string }).alphaMode = 'premultiplied-alpha';
   }
+}
+
+/**
+ * onAssetTrouble: bộ nạp báo ra ngoài khi một tệp không tải được.
+ *
+ * Để `assets.ts` không phải biết tới telemetry (nó là lớp dưới), `main.ts` cắm hàm vào đây.
+ * Mục đích là breadcrumb: một lỗi vẽ xảy ra 2 giây sau khi atlas nhân vật tải hỏng là một
+ * câu chuyện hoàn toàn khác với cùng lỗi đó lúc mọi thứ tải xong.
+ */
+export let onAssetTrouble: ((code: string, detail: string) => void) | null = null;
+
+export function setAssetTroubleHook(f: (code: string, detail: string) => void): void {
+  onAssetTrouble = f;
 }
 
 export const assets = new AssetStore();

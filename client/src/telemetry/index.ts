@@ -322,6 +322,28 @@ export class Telemetry {
     onErrorShown?.(msg);
   }
 
+  /**
+   * crumbs: 30 việc gần nhất, mỗi việc một chuỗi ngắn `<giây>:<mã>[:<chi tiết>]`.
+   *
+   * Vì sao cần — ngày 13/11 có ba mẫu ĐỨNG HÌNH thật (khung 8–29 giây) mà quanh đó không có
+   * lỗi nào, không đổi khu, không đổi cỡ cửa sổ. Bảng số liệu nói "lúc đó máy treo" nhưng
+   * không nói **vừa làm gì trước đó**, nên không lần ra được. Một vòng 30 việc gần nhất là
+   * thứ rẻ nhất biến "không giải thích được" thành "có manh mối".
+   *
+   * Chỉ ghi VIỆC, không ghi nội dung người chơi gõ (luật 15).
+   */
+  private readonly crumbs: string[] = [];
+  private readonly crumbT0 = Date.now();
+
+  /** breadcrumb ghi một việc vào vòng 30. Gọi từ những chỗ ĐỔI TRẠNG THÁI, không gọi mỗi khung. */
+  breadcrumb(code: string, detail?: string | number): void {
+    const t = ((Date.now() - this.crumbT0) / 1000).toFixed(1);
+    this.crumbs.push(detail === undefined ? `${t}:${code}` : `${t}:${code}:${detail}`);
+    if (this.crumbs.length > 30) {
+      this.crumbs.shift();
+    }
+  }
+
   /** errorContext là bối cảnh gắn kèm mọi lỗi và mọi sự kiện WebGL. */
   errorContext(): Record<string, unknown> {
     const s = this.host.perfStats();
@@ -345,6 +367,8 @@ export class Telemetry {
       rebuilds: g.rebuilds,
       watchdog: g.watchdog,
       sysOff: g.sysOff,
+      // 30 việc vừa xảy ra, mới nhất trước. Xem `breadcrumb()`.
+      bc: this.crumbs.slice().reverse().join(' '),
     };
   }
 
