@@ -99,3 +99,4 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 43,2026-11-13,d9bfcf0,"Nen bang shader tron - canh DONG",VRAM,,,,,,,,,,,,,225.33,,,,,,,,,"tong 280.9 -> 225.3 MB; Nen 8.83 MB",
 44,2026-11-13,938ec34,"Bloom nua do phan giai + chi ton tai khi co hieu ung",VRAM,,,,,,,,,,,,,185.24,,,,,,,,,"bo dem khung 79.5 -> 30.4 MB; anh lech 0.003/255",
 45,2026-11-13,d89625a,"Bo ColorMatrixFilter tren lop nen (ma tran vao shader tron)",VRAM,,,,,,,,60,,,54,,180.84,,,,,,,,,"bo dem khung 30.4 -> 27.8 MB; anh lech 0.075/255; lo ve ground 5 -> 74 o canh dong",
+46,2026-11-13,8b43e64,"Lop nen gop mot geometry + atlas mat na 1024",VRAM,,,,,,,,60,,,26,,140.55,,,,,,,,,"lo ve ground 74 -> 3; tong canh dong 424 -> 162; Nen co dinh 8.00 MB; anh lech 0.100/255",

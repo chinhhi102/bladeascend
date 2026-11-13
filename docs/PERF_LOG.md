@@ -134,6 +134,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 43 | 2026-11-13 | `d9bfcf0`+ | **§13.10 mục 2 — nền bằng SHADER TRỘN** (bỏ bake RenderTexture, bỏ mask) | VRAM | – | – | – | – | – | 34 (ground) | – | – | Cảnh thử: `Nền` **43,1 → 6,5 MB**, tổng **63,3 → 25,5 MB (ĐẠT trần 50)**. Cảnh đông: tổng **280,9 → 225,3 MB**. Lô vẽ ground 4 → 34 | Hình: 1,13/255 · 0,60% pixel |
 | 44 | 2026-11-13 | `938ec34`+ | **§13.10 mục 6 — bloom nửa độ phân giải + chỉ tồn tại khi có hiệu ứng** | VRAM | – | – | – | – | – | – | – | – | "Bộ đệm khung · bộ lọc" **79,5 → 30,4 MB** · tổng cảnh đông **213,6 → 185,2 MB**. Hình: 0,003/255 | Trần hạng mục 12 MB — còn nợ ColorMatrix nền |
 | 45 | 2026-11-13 | `d89625a`+ | **§13.10 mục 1 — bỏ `ColorMatrixFilter` trên lớp nền** (đưa ma trận màu vào shader trộn) | VRAM | – | – | – | 60/60/60 (CPU 1×/4×/6×) | – | 54 (thử) · 424 (đông) | – | – | Bộ đệm khung **30,4 → 27,8 MB** · tổng cảnh đông **185,2 → 180,8 MB**. Hình: **0,075/255 · 22 pixel** | Lô vẽ ground 5 → 74 ở cảnh đông — xem §5 |
+| 46 | 2026-11-13 | `8b43e64`+ | **Lớp nền gộp thành MỘT geometry + atlas mặt nạ 1024²** | VRAM | – | – | – | 60/60/60 | – | **3** (ground) · 162 (đông) | – | – | Tổng VRAM cảnh đông **180,8 → 140,6 MB** · `Nền` **cố định 8,00 MB** (3 texture). Cảnh thử: 54 → **26** lô vẽ, Pixi vẽ 1,42/2,88/4,14 ms | Hình: 0,100/255 |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1557,6 +1558,44 @@ Rẻ trên máy bàn, nhưng 424 lô ở cảnh đông vẫn vượt xa trần 1
 **Cách chữa đã rõ, để lượt sau**: một geometry duy nhất cho cả lưới ô (mỗi ô một quad, thuộc
 tính đỉnh trỏ vào ô mặt nạ) + **atlas mặt nạ** 1024² chứa 64 ô 128². Khi đó cả lớp nền là
 **1 lô vẽ** và bộ nhớ mặt nạ cố định 4 MB thay vì tăng theo số ô.
+
+---
+
+### Lượt 46 — 13/11/2026 · Lớp nền: một geometry, một atlas mặt nạ
+
+Lượt #45 để lại một món nợ: mỗi ô nền là một mesh, và cảnh đông có 72 ô → lớp nền ngốn 74
+lô vẽ. Lý do mỗi ô phải là một mesh là **mặt nạ của nó là một uniform riêng**. Đưa mặt nạ
+vào một ATLAS và chỉ số ô vào một **thuộc tính đỉnh** thì cả lưới gom được vào một lô.
+
+| | lô vẽ ground | tổng cảnh đông | `Nền` | tổng VRAM |
+|---|---:|---:|---:|---:|
+| #45 (mỗi ô một mesh) | 74 | 424 | 8,25 MB | 180,8 MB |
+| #46 (một geometry) | **3** | **162** | **8,00 MB** | **140,6 MB** |
+
+Và `Nền` nay **cố định**: atlas 1024² (4 MB) + 3 tile, không tăng theo số ô dù người chơi đi
+bao xa. Trước đây mỗi ô một mặt nạ 64 KB, nên con số bò theo quãng đường.
+
+Cảnh thử (`scenebench`, máy rảnh 0,46/nhân): **26 lô vẽ**, Pixi vẽ **1,42 / 2,88 / 4,14 ms**
+ở CPU 1×/4×/6× — nhanh hơn cả mốc #40 trước khi có shader nền (1,70 / 3,19 / 4,58 với 23 lô).
+
+Hình: **0,100/255**, bản đồ lệch 16×9 gần như toàn số 0; phần `> 16` là các điểm ảnh lẻ ở
+mép lưỡi kiếm (cảnh có 1 050 lưỡi mảnh, lệch dưới một điểm ảnh là đủ lật một mép tương phản).
+
+**Hai cái bẫy đã sập trong lượt này**, cả hai đều thuộc loại "sai mà không ném lỗi":
+
+1. **Thiếu chỗ trong atlas là vẽ SAI, không phải chậm.** Cảnh đông cần 72 ô, atlas 1024² chỉ
+   có 64 ô 128². Khi hết chỗ, `slotFor` đuổi chính những ô vừa cấp trong cùng một lượt, và
+   geometry trỏ vào mặt nạ của ô KHÁC — mặt đất hiện ra hoa văn sai mà không có lỗi nào được
+   ném. Chữa bằng cách gói **hai ô nền vào một ô atlas** (ô chẵn ở kênh R,G — ô lẻ ở B,A),
+   sức chứa 128 ô trong đúng 4 MB.
+2. **Canvas 2D không dùng làm atlas dữ liệu được.** Canvas lưu màu ĐÃ NHÂN ALPHA, nên
+   `getImageData` ở chỗ alpha = 0 trả về RGB = 0: ghi ô chẵn vào R,G rồi quay lại ghi ô lẻ
+   vào B,A sẽ **xoá sạch ô chẵn**. Ở đây alpha là dữ liệu chứ không phải độ trong suốt, nên
+   atlas phải là một `Uint8Array` qua `BufferImageSource` với `alphaMode: no-premultiply`.
+
+Nửa texel cũng đáng một dòng: lùi nửa texel vào trong ô atlas (để lấy mẫu tuyến tính không
+hút sang ô bên) làm `scenediff` **0,47/255**; dùng trọn ô thì còn **0,10/255**. Mặt nạ là một
+trường mờ nhoè nên phần hút sang ô bên nhỏ hơn hẳn sai số do co mặt nạ lại 127/128.
 
 ---
 
