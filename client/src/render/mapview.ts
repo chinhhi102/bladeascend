@@ -1,4 +1,4 @@
-import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
+import { AnimatedSprite, Container, Graphics, Rectangle, Sprite, Texture, TilingSprite } from 'pixi.js';
 
 import type { ClientWorld } from '../net/state';
 import type { GameMap, MapObstacle, Shape } from '../net/protocol';
@@ -6,7 +6,6 @@ import { assets } from './assets';
 import { BIOME_TILES, OBSTACLE_ALIAS } from './catalog';
 import { buildDecals, type DecalLayer, obstacleSkirt } from './decals';
 import { type ChunkSpec, GroundField } from './groundshader';
-import { filtersOff } from './guard';
 import { GATE_COLORS } from './palette';
 import { emergency } from './quality';
 
@@ -163,14 +162,6 @@ export interface Viewer {
   halfW: number;
 }
 
-// ART_PROMPTS §9.0: calm, low-contrast ground so gameplay objects stand out.
-function backgroundFilter(): ColorMatrixFilter {
-  const f = new ColorMatrixFilter();
-  f.saturate(-0.5);
-  f.brightness(0.9, true);
-  f.contrast(-0.2, true);
-  return f;
-}
 
 /** obstacleTexture: art THẬT của một loại vật cản, null nếu chưa có. */
 function obstacleTexture(kind: string, vertical: boolean): Texture | null {
@@ -301,15 +292,15 @@ export class MapView {
     }
     // Vừa có lỗi vẽ thì khu mới dựng cũng không gắn filter nữa (§13.8): đổi khu là dựng
     // lại MapView, nên không chốt ở đây thì công tắc tắt filter bay mất sau cổng đầu tiên.
-    // `ground` KHÔNG còn filter: phép chỉnh màu nằm trong shader trộn (§13.10 mục 6). Một
-    // container có filter là một đích vẽ toàn màn hình mỗi khung, mà phép này chỉ đổi màu
-    // từng điểm ảnh — nó thuộc về shader, không thuộc về một lượt vẽ riêng.
+    // KHÔNG còn `ColorMatrixFilter` nào (§13.10).
     //
-    // `decor` còn filter: trong đó là sprite art thật (trang trí + decal mặt đất), chưa
-    // chỉnh màu được bằng shader. Bước sau đưa phép màu vào chính ảnh lúc build.
-    const filter = filtersOff() ? null : backgroundFilter();
+    // Một container có filter là một đích vẽ toàn màn hình MỖI KHUNG. Phép chỉnh màu nền
+    // chỉ đổi màu từng điểm ảnh — không cần biết điểm bên cạnh — nên nó không đáng một lượt
+    // vẽ riêng. Nay nó nằm ở hai chỗ, cùng một ma trận (`tools/colorgrade.mjs`):
+    //   - lớp nền: tính trong shader trộn (`groundshader.ts`);
+    //   - decal và trang trí: áp vào CHÍNH ẢNH lúc build (`tools/asset-pipeline`).
     this.ground.filters = [];
-    this.decor.filters = filter ? [filter] : [];
+    this.decor.filters = [];
     // `filterArea` BẮT BUỘC phải đặt — xem clampFilterArea. Đặt tạm một ô nhỏ ở đây để
     // khung hình đầu tiên (trước khi `update` chạy lần nào) cũng không cấp phát cả bản đồ.
     this.ground.filterArea = new Rectangle(0, 0, 1, 1);

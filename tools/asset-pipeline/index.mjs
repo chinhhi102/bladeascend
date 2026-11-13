@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, wri
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { sharpGrade } from '../colorgrade.mjs';
 import { charIds, neverShip, plan, zoneObstacleKinds, ZONE_MAP_IDS } from './groups.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -24,6 +25,14 @@ const SRC = join(REPO, 'assets', 'src');
 const DIST = join(REPO, 'assets', 'dist');
 const MAPS = join(REPO, 'maps');
 const CACHE = join(DIST, '.pipeline-cache.json');
+
+/**
+ * Thư mục được áp ma trận chỉnh màu nền lúc build (§13.10).
+ *
+ * CHỈ decal và trang trí. Tile nền KHÔNG nằm đây: shader trộn đã tự áp ma trận, áp thêm lần
+ * nữa vào ảnh là chỉnh màu hai lần.
+ */
+const GRADED_DIRS = ['decals/', 'decor/'];
 
 const FORCE = process.argv.includes('--force');
 const QUIET = process.argv.includes('--quiet');
@@ -102,6 +111,19 @@ async function buildImage(rel, p, srcBuf) {
       fit: 'fill',
       kernel: 'lanczos3',
     });
+  }
+  // Chỉnh màu nền áp NGAY LÚC BUILD cho decal và trang trí (GAME_SPEC §13.10).
+  //
+  // Hai thứ đó nằm trên mặt đất và vốn được `ColorMatrixFilter` trên container làm dịu lại
+  // cùng với nền. Bỏ filter đi (vì nó là một đích vẽ toàn màn hình mỗi khung) thì phép màu
+  // phải đi đâu đó: nền tính trong shader, còn decal/trang trí là ảnh nên áp thẳng vào ảnh.
+  //
+  // `recomb` rồi `linear`: `sharp.recomb` chỉ làm phần 3×3, không có phần cộng, mà ma trận
+  // của ta có phần cộng (do `contrast` sinh ra). Offset của Pixi tính trên thang 0–1 nên
+  // phải nhân 255.
+  if (GRADED_DIRS.some((d) => rel.startsWith(d))) {
+    const g = sharpGrade();
+    img = img.recomb(g.recomb).linear([1, 1, 1], g.offset255);
   }
   const buf = await img.webp({ quality: p.quality, alphaQuality: 100, effort: 5 }).toBuffer();
   return { buf, ext: 'webp', scale, w: Math.round(meta.width * scale), h: Math.round(meta.height * scale) };

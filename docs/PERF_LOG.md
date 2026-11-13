@@ -135,6 +135,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 44 | 2026-11-13 | `938ec34`+ | **§13.10 mục 6 — bloom nửa độ phân giải + chỉ tồn tại khi có hiệu ứng** | VRAM | – | – | – | – | – | – | – | – | "Bộ đệm khung · bộ lọc" **79,5 → 30,4 MB** · tổng cảnh đông **213,6 → 185,2 MB**. Hình: 0,003/255 | Trần hạng mục 12 MB — còn nợ ColorMatrix nền |
 | 45 | 2026-11-13 | `d89625a`+ | **§13.10 mục 1 — bỏ `ColorMatrixFilter` trên lớp nền** (đưa ma trận màu vào shader trộn) | VRAM | – | – | – | 60/60/60 (CPU 1×/4×/6×) | – | 54 (thử) · 424 (đông) | – | – | Bộ đệm khung **30,4 → 27,8 MB** · tổng cảnh đông **185,2 → 180,8 MB**. Hình: **0,075/255 · 22 pixel** | Lô vẽ ground 5 → 74 ở cảnh đông — xem §5 |
 | 46 | 2026-11-13 | `8b43e64`+ | **Lớp nền gộp thành MỘT geometry + atlas mặt nạ 1024²** | VRAM | – | – | – | 60/60/60 | – | **3** (ground) · 162 (đông) | – | – | Tổng VRAM cảnh đông **180,8 → 140,6 MB** · `Nền` **cố định 8,00 MB** (3 texture). Cảnh thử: 54 → **26** lô vẽ, Pixi vẽ 1,42/2,88/4,14 ms | Hình: 0,100/255 |
+| 47 | 2026-11-13 | `9f300ff`+ | **Bỏ HẲN `ColorMatrixFilter`** — decal/trang trí chỉnh màu lúc build trong asset-pipeline | VRAM | – | – | – | 60/60/60 | – | 24 (thử) | – | – | "Bộ đệm khung · bộ lọc" **→ 0,00 MB** (không còn filter nào). Cảnh thử tổng **25,45 → 23,59 MB**. Gói chặn vào trận 4,47 MB (ngân sách 8) | Hình: **0,030/255 · 63 pixel — ĐẠT** |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1596,6 +1597,42 @@ mép lưỡi kiếm (cảnh có 1 050 lưỡi mảnh, lệch dưới một đi�
 Nửa texel cũng đáng một dòng: lùi nửa texel vào trong ô atlas (để lấy mẫu tuyến tính không
 hút sang ô bên) làm `scenediff` **0,47/255**; dùng trọn ô thì còn **0,10/255**. Mặt nạ là một
 trường mờ nhoè nên phần hút sang ô bên nhỏ hơn hẳn sai số do co mặt nạ lại 127/128.
+
+---
+
+### Lượt 47 — 13/11/2026 · Bỏ hẳn ColorMatrixFilter
+
+Phép chỉnh màu nền (ART_PROMPTS §9.0) nay nằm ở hai chỗ, **cùng một ma trận**:
+- **lớp nền** — tính trong shader trộn (#45);
+- **decal và trang trí** — áp vào CHÍNH ẢNH lúc build, trong `tools/asset-pipeline`.
+
+`assets/src` không đổi một byte (luật 13); chỉ `assets/dist` từ nay là ảnh đã chỉnh màu.
+
+| | Bộ đệm khung · bộ lọc | Tổng (cảnh thử) |
+|---|---:|---:|
+| trước | 27,8 MB | 25,45 MB |
+| sau | **0,00 MB** | **23,59 MB** |
+
+Hình: **0,030/255 · 63 trên 921 600 pixel** — đạt cả hai ngưỡng. Gói chặn vào trận
+**4,47 MB** (ngân sách §13.7 là 8 MB), toàn bộ game 8,58 MB.
+
+**Một nguồn sự thật, và một bài canh.** Ma trận phải giống nhau ở cả hai chỗ, nhưng
+asset-pipeline chạy trong Node và không có PixiJS. Nên phép toán nằm ở `tools/colorgrade.mjs`
+(JS thuần, chép từ `ColorMatrixFilter`), và `client/scripts/colorgrade-check.ts` so nó với
+Pixi **trong mỗi lần build**.
+
+Bài canh đó bắt lỗi ngay lần chạy đầu: tôi nhân ma trận ngược thứ tự
+(`multiply(mới, cũ)` thay vì `multiply(cũ, mới)` như `_loadMatrix` của Pixi), và offset ra
+**0,10 thay vì 0,09** — thiếu đúng một lần nhân với brightness 0,9. Phép nhân ma trận không
+giao hoán, và chỗ sai này nếu lọt thì chỉ hiện ra thành "màu hơi lệch" giữa mặt đất và mấy
+cụm cỏ trên nó — thứ không ai gọi tên được và sẽ sống rất lâu.
+
+Bài canh cũng là lưới an toàn cho ngày PixiJS đổi công thức `saturate`/`contrast`: build đỏ
+ngay, thay vì màu nền âm thầm trôi sau một lần nâng cấp. (Chạy Pixi trong Node cần một
+`document` giả — nó dựng canvas ngay lúc nạp module để dò độ chính xác shader.)
+
+Còn lại trên cảnh thử: `Nền` 9,33 MB (atlas mặt nạ 4 MB + 3 tile chưa nén) và 4 MB chưa khai
+hạng mục. Cả hai là việc của bước KTX2.
 
 ---
 
