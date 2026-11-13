@@ -66,6 +66,8 @@ export interface LayerStat {
   kinds: Record<string, number>;
   /** Số NGUỒN texture khác nhau: mỗi lần đổi nguồn giữa hai vật liền nhau là một lần ngắt lô. */
   textures: number;
+  /** Tên 40 nguồn ảnh hay gặp nhất trong lớp — để biết gom atlas nào thì bớt được lô vẽ. */
+  texList?: { name: string; n: number }[];
   /** Số blend mode khác nhau. Đổi blend là ngắt lô, không có cách nào gom. */
   blends: number;
   filters: number;
@@ -78,11 +80,12 @@ interface Walkable {
   blendMode?: string;
   filters?: unknown;
   mask?: unknown;
-  texture?: { source?: { uid?: number } };
+  texture?: { source?: { uid?: number; label?: string; width?: number; height?: number } };
   children?: Walkable[];
 }
 
-function tally(c: Walkable, st: LayerStat, tex: Set<number>, bl: Set<string>): void {
+function tally(c: Walkable, st: LayerStat, tex: Set<number>, bl: Set<string>,
+  names?: Map<number, { name: string; n: number }>): void {
   st.nodes++;
   const id = c.renderPipeId;
   if (id) {
@@ -91,9 +94,21 @@ function tally(c: Walkable, st: LayerStat, tex: Set<number>, bl: Set<string>): v
   if (c.blendMode) {
     bl.add(c.blendMode);
   }
-  const uid = c.texture?.source?.uid;
+  const src = c.texture?.source;
+  const uid = src?.uid;
   if (uid !== undefined) {
     tex.add(uid);
+    if (names) {
+      // Tên nguồn + CỠ: hai thứ đủ để biết nên gom atlas nào. Một lớp 92 texture nghĩa là
+      // ít nhất 92 lần đổi texture trong một khung, và mỗi lần đổi là một lô vẽ mới.
+      const e = names.get(uid);
+      if (e) {
+        e.n++;
+      } else {
+        const lbl = src?.label ?? '?';
+        names.set(uid, { name: `${lbl.split('/').slice(-2).join('/')} ${src?.width}x${src?.height}`, n: 1 });
+      }
+    }
   }
   if (Array.isArray(c.filters) ? c.filters.length > 0 : Boolean(c.filters)) {
     st.filters++;
@@ -102,7 +117,7 @@ function tally(c: Walkable, st: LayerStat, tex: Set<number>, bl: Set<string>): v
     st.masks++;
   }
   for (const k of c.children ?? []) {
-    tally(k, st, tex, bl);
+    tally(k, st, tex, bl, names);
   }
 }
 
@@ -128,8 +143,10 @@ export function measureLayers(render: () => void, layers: { name: string; c: Wal
       };
       const tex = new Set<number>();
       const bl = new Set<string>();
-      tally(layers[i].c, st, tex, bl);
+      const names = new Map<number, { name: string; n: number }>();
+      tally(layers[i].c, st, tex, bl, names);
       st.textures = tex.size;
+      st.texList = [...names.values()].sort((a, b) => b.n - a.n).slice(0, 40);
       st.blends = bl.size;
       out.push(st);
     }

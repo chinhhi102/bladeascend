@@ -407,6 +407,19 @@ export class MapView {
     }
   }
 
+  /**
+   * debugObstacles: mỗi vật cản vẽ bằng gì. Chỉ cho cảnh thử và bài đo.
+   *
+   * Có nó thì câu hỏi "cái đĩa xanh giữa cảnh là cái gì" trả lời được bằng một lời gọi, thay
+   * vì suy ngược từ toạ độ màn hình.
+   */
+  debugObstacles(): unknown[] {
+    return [...this.obstacleNodes.values()].map((n) => ({
+      id: n.o.id, kind: n.o.k, art: n.drawnWithArt, look: n.look,
+      kinds: n.node.children.map((c) => (c as unknown as { renderPipeId?: string }).renderPipeId ?? 'container'),
+    }));
+  }
+
   /** obstacleLayer returns every obstacle node, to be added to the y-sorted entity layer. */
   obstacleLayer(): Container[] {
     return [...this.obstacleNodes.values()].map((n) => n.node);

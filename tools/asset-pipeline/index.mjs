@@ -47,8 +47,10 @@ const CACHE = join(DIST, '.pipeline-cache.json');
  *       chiếm 23,7 MB VRAM vì bị ngưỡng 512 loại ra)
  *   6 — dưới 512 px thì LUÔN ETC1S, kể cả nhóm UASTC (40 texture kiếm/VFX 256² = 13,3 MB)
  *   7 — vật cản maxPx 512 → 384 (hạng mục ngốn VRAM thứ hai)
+ *   8 — KTX2 nhân sẵn alpha + gom atlas vật cản (lô vẽ, xem PERF_LOG #52)
+ *   9 — dọn bộ đệm hỏng của lượt build 8 (mọi mục mất KTX2)
  */
-const PIPELINE_VERSION = 7;
+const PIPELINE_VERSION = 9;
 
 /**
  * Thư mục được áp ma trận chỉnh màu nền lúc build (§13.10).
@@ -171,6 +173,9 @@ async function buildImage(rel, p, srcBuf) {
  * Trả `null` khi không áp dụng; mọi lỗi mã hoá cũng trả `null` kèm cảnh báo — một tệp không
  * nén được không được phép làm sập cả bản build (cùng luật với `buildAudio`).
  */
+/** ktxFails: tệp nào không nén được — đếm để CHẶN khi hỏng hàng loạt (xem cuối tệp). */
+const ktxFails = [];
+
 async function buildKtx(rel, img, w, h) {
   const mode = ktxFor(rel, w, h);
   if (!mode) {
@@ -191,13 +196,39 @@ async function buildKtx(rel, img, w, h) {
     return { buf: Buffer.from(out), mode };
   } catch (err) {
     console.error(`  ⚠ ${rel}: không nén KTX2 được (${String(err).split('\n')[0]}) → chỉ có WebP`);
+    ktxFails.push(rel);
     return null;
   }
 }
 
 /** rawDecoder: bộ mã hoá KTX2 cần điểm ảnh thô RGBA; `sharp` đã có sẵn trong pipeline. */
 async function rawDecoder(buf) {
+  // `.premultiply()`: RGB nhân sẵn với alpha TRƯỚC khi nén.
+  //
+  // Vì sao — đo ngày 13/11 trên cảnh thử đông: lớp `entities` tốn 128 lô vẽ cho 64 vật cản,
+  // tức ĐÚNG hai lô mỗi cái, dù cả cảnh chỉ còn hai nguồn ảnh. Nguyên nhân không phải số
+  // texture: ép mọi sprite dùng chung một texture thì lô vẽ sụp từ 184 xuống 72.
+  //
+  // Nguyên nhân là CHẾ ĐỘ ALPHA. Pixi nạp canvas với `premultiply-alpha-on-upload`, còn bộ
+  // đọc KTX2 khai `no-premultiply-alpha`. Hai chế độ cần hai phép trộn khác nhau, nên mỗi
+  // lần xen kẽ là một lần đổi trạng thái trộn — và đổi trạng thái trộn thì cắt lô vẽ, dù
+  // còn thừa chỗ texture (máy đo có 32 đơn vị texture).
+  //
+  // Tức là KTX2 đang ĐÁNH ĐỔI VRAM LẤY LÔ VẼ. Nhân sẵn alpha ở đây rồi khai
+  // `premultiplied-alpha` ở client (`assets.ts`) thì hết đổi phép trộn, và giữ nguyên cả
+  // phần VRAM đã hạ được.
   const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  // Nhân tay, KHÔNG dùng `sharp.premultiply()`: bản sharp trong repo không có hàm đó, và
+  // `buildKtx` nuốt mọi lỗi nên gọi nhầm thì **mất sạch 401 tệp KTX2 trong im lặng** — lô vẽ
+  // tụt đẹp đúng như mong đợi (184 → 61) vì cả cảnh rơi về WebP. Đã dính đúng một lần.
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3];
+    if (a !== 255) {
+      data[i] = (data[i] * a + 127) / 255 | 0;
+      data[i + 1] = (data[i + 1] * a + 127) / 255 | 0;
+      data[i + 2] = (data[i + 2] * a + 127) / 255 | 0;
+    }
+  }
   return { data, width: info.width, height: info.height };
 }
 
@@ -244,8 +275,123 @@ function buildAudio(rel, p, srcBuf) {
   }
 }
 
+// ——— GOM ATLAS VẬT CẢN (GAME_SPEC §13.10 · nút thắt B30) ———
+//
+// Đo ngày 13/11 trên cảnh thật: lớp `entities` có **97 nguồn ảnh khác nhau** và 615 lô vẽ,
+// trong đó phần đông nhất là vật cản — MỖI loại × MỖI hướng là một tệp 384² riêng
+// (`border/intact`, `border/intact_vertical`, `cliff/intact`, `bamboo_wall/intact`…).
+// Pixi gom được nhiều sprite vào một lô vẽ, nhưng mỗi lô chỉ buộc được 16 texture; 25 texture
+// vật cản nằm xen kẽ nhau theo thứ tự y là 25 lần cắt lô.
+//
+// Gom chúng vào MỘT trang 2048² cho mỗi nhóm tải thì 20 texture thành 1.
+//
+// Gom THEO NHÓM TẢI, không gom tất: `boot` tải trước khi vào trận, còn `zone_*` chỉ tải khi
+// vào khu đó. Trộn chung là bắt người chơi tải vật cản của bốn khu chưa tới — gói chặn đang
+// còn đúng 0,98 MB dư (B8).
+const PACK_PX = 2048;
+/** Lề 4 điểm ảnh: ETC1S/UASTC nén theo khối 4×4, nên mọi khung phải nằm đúng mốc 4. */
+const PACK_PAD = 4;
+
+/**
+ * planPacks xếp chỗ TRƯỚC khi dựng, để vòng lặp chính bỏ qua tệp đã được gom.
+ *
+ * Xếp kiểu "kệ": sắp theo chiều cao giảm dần rồi đặt từng hàng. Với vật cản (gần như đều
+ * 384²) cách này không phí chỗ đáng kể, và nó ngắn hơn một bộ xếp hình thật sự vài chục lần.
+ */
+async function planPacks(rels, ctx) {
+  const byGroup = new Map();
+  for (const rel of rels) {
+    if (!rel.startsWith('obstacles/') || !/\.png$/.test(rel)) {
+      continue;
+    }
+    const p = plan(rel, ctx);
+    if (p.kind !== 'image') {
+      continue;
+    }
+    const key = p.groups.join('+');
+    if (!byGroup.has(key)) {
+      byGroup.set(key, { groups: p.groups, items: [] });
+    }
+    const meta = await sharp(readFileSync(join(SRC, rel)), { limitInputPixels: false }).metadata();
+    const sc = p.maxPx > 0 && Math.max(meta.width, meta.height) > p.maxPx
+      ? p.maxPx / Math.max(meta.width, meta.height) : 1;
+    const w = Math.ceil(Math.round(meta.width * sc) / 4) * 4;
+    const h = Math.ceil(Math.round(meta.height * sc) / 4) * 4;
+    byGroup.get(key).items.push({ rel, p, w, h, sw: Math.round(meta.width * sc), sh: Math.round(meta.height * sc) });
+  }
+
+  const byRel = new Map();
+  const pages = [];
+  for (const [key, g] of byGroup) {
+    if (g.items.length < 2) {
+      continue; // một mình thì gom chẳng để làm gì
+    }
+    g.items.sort((a, b) => b.h - a.h || b.w - a.w);
+    let page = null;
+    let x = 0, y = 0, rowH = 0;
+    const flush = () => {
+      if (page) {
+        page.h = Math.ceil((y + rowH) / 4) * 4;
+        pages.push(page);
+      }
+    };
+    const open = () => {
+      page = { rel: `obstacles/_pack_${pages.length}_${key.replace(/[^a-z0-9_]+/gi, '-')}.png`,
+        groups: g.groups, items: [], w: PACK_PX, h: PACK_PX };
+      x = 0; y = 0; rowH = 0;
+    };
+    open();
+    for (const it of g.items) {
+      if (x + it.w + PACK_PAD > PACK_PX) {
+        x = 0;
+        y += rowH + PACK_PAD;
+        rowH = 0;
+      }
+      if (y + it.h > PACK_PX) {
+        flush();
+        open();
+      }
+      page.items.push({ ...it, x, y });
+      byRel.set(it.rel, { page, x, y });
+      x += it.w + PACK_PAD;
+      rowH = Math.max(rowH, it.h);
+    }
+    flush();
+  }
+  return { byRel, pages };
+}
+
+/** buildPack dựng một trang: ghép ảnh nguồn (đã thu nhỏ đúng plan) rồi nén như ảnh thường. */
+async function buildPack(page) {
+  const layers = [];
+  for (const it of page.items) {
+    let img = sharp(readFileSync(join(SRC, it.rel)), { limitInputPixels: false });
+    if (it.sw !== undefined) {
+      img = img.resize({ width: it.sw, height: it.sh, fit: 'fill', kernel: 'lanczos3' });
+    }
+    layers.push({ input: await img.png().toBuffer(), left: it.x, top: it.y });
+  }
+  const sheet = sharp({
+    create: { width: page.w, height: page.h, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  }).composite(layers);
+  const png = await sheet.png().toBuffer();
+  const img = sharp(png, { limitInputPixels: false });
+  const buf = await img.clone().webp({ quality: 80, alphaQuality: 100, effort: 5 }).toBuffer();
+  const ktx = await buildKtx(page.rel, img, page.w, page.h);
+  return { buf, ktx };
+}
+
+// `KX_NO_PACK=1`: dựng KHÔNG gom, để đo được trước/sau cùng một bản mã.
+const packs = process.env.KX_NO_PACK === '1' ? { byRel: new Map(), pages: [] } : await planPacks(shipped, ctx);
+if (packs.pages.length > 0) {
+  log(`   gom atlas vật cản: ${packs.byRel.size} tệp → ${packs.pages.length} trang`);
+}
+
 for (const rel of shipped) {
   const p = plan(rel, ctx);
+  if (packs.byRel.has(rel)) {
+    continue; // đã nằm trong một trang gom — xuất riêng nữa là tải về hai lần
+  }
   const srcPath = join(SRC, rel);
   const srcBuf = readFileSync(srcPath);
   stats.srcBytes += srcBuf.length;
@@ -261,7 +407,16 @@ for (const rel of shipped) {
   }
 
   const hit = cache.entries[rel];
-  if (hit && hit.fingerprint === fingerprint && existsSync(join(DIST, hit.url))) {
+  // Bộ đệm phải TỰ CHỮA khi thiếu bản nén.
+  //
+  // `PIPELINE_VERSION` chỉ bắt được "pipeline đã đổi", không bắt được "lượt build trước
+  // chạy hỏng". Ngày 13/11 một lượt build lỗi ghi vào bộ đệm 401 mục version-8 KHÔNG có
+  // KTX2; lượt sau sửa đúng mã nhưng dùng lại y nguyên bộ đệm đó, và VRAM nhảy 46 → 90 MB
+  // trong khi bản build vẫn xanh. Một mục nói "không có bản nén" trong khi `ktxFor` nói
+  // "phải có" là mục HỎNG, không phải mục dùng lại được.
+  const wantKtx = hit && hit.w ? ktxFor(rel, hit.w, hit.h) !== null : false;
+  const stale = wantKtx && !hit.ktx;
+  if (hit && !stale && hit.fingerprint === fingerprint && existsSync(join(DIST, hit.url))) {
     out.set(rel, { ...hit, groups: p.groups });
     nextCache.entries[rel] = hit;
     stats.reused++;
@@ -295,6 +450,37 @@ for (const rel of shipped) {
   stats.outBytes += built.buf.length;
   if (stats.built % 100 === 0) {
     log(`   … ${stats.built} tệp đã dựng`);
+  }
+}
+
+// ——— dựng các trang gom vật cản ———
+//
+// Dựng SAU vòng chính để dùng lại `buildKtx`, và vì trang gom không có tệp nguồn nên nó
+// không đi qua bộ đệm theo `fingerprint` được; mỗi lượt build lại vài trang 2048² tốn
+// khoảng một giây.
+for (const page of packs.pages) {
+  const built = await buildPack(page);
+  const url = outName(page.rel, 'webp', sha(built.buf));
+  write(url, built.buf);
+  const entry = { url, bytes: built.buf.length, fingerprint: 'pack', scale: 1, w: page.w, h: page.h };
+  if (built.ktx) {
+    const ktxUrl = outName(page.rel, 'ktx2', sha(built.ktx.buf));
+    write(ktxUrl, built.ktx.buf);
+    entry.ktx = { url: ktxUrl, bytes: built.ktx.buf.length, mode: built.ktx.mode };
+  }
+  out.set(page.rel, { ...entry, groups: page.groups });
+  stats.built++;
+  stats.outBytes += built.buf.length;
+  // Mỗi tệp thành viên vẫn có một dòng manifest — mã game gọi `assets.texture('obstacles/
+  // border/intact.png')` và không được biết gì về chuyện gom. `bytes: 0` để bài đo ngân sách
+  // không đếm cùng một điểm ảnh hai lần; `pack` cho bộ nạp biết lấy khung nào trên trang nào.
+  for (const it of page.items) {
+    out.set(it.rel, {
+      url, bytes: 0, fingerprint: 'pack', scale: 1, w: it.sw, h: it.sh,
+      groups: page.groups,
+      ...(built.ktx ? { ktx: { url: entry.ktx.url, bytes: 0, mode: built.ktx.mode } } : {}),
+      pack: { page: page.rel, x: it.x, y: it.y, w: it.sw, h: it.sh },
+    });
   }
 }
 
@@ -338,7 +524,7 @@ for (const { rel, p, srcBuf, fingerprint } of atlasJsons) {
 const groups = {};
 const files = {};
 for (const [rel, e] of [...out.entries()].sort()) {
-  files[rel] = { url: e.url, bytes: e.bytes, groups: e.groups, ...(e.ktx ? { ktx: e.ktx } : {}) };
+  files[rel] = { url: e.url, bytes: e.bytes, groups: e.groups, ...(e.ktx ? { ktx: e.ktx } : {}), ...(e.pack ? { pack: e.pack } : {}) };
   for (const g of e.groups) {
     (groups[g] ??= { bytes: 0, files: [] }).files.push(rel);
     groups[g].bytes += e.bytes;
@@ -409,3 +595,24 @@ console.log(
     `   (ngân sách §13.7: 8 MB — ${blocking <= 8e6 ? 'ĐẠT' : `VƯỢT ${(blocking / 8e6).toFixed(2)}×`})`,
 );
 console.log(`Toàn bộ game = ${mb(stats.outBytes)} MB   (ngân sách 80 MB — ${stats.outBytes <= 80e6 ? 'ĐẠT' : 'VƯỢT'})`);
+
+// ——— KTX2 hỏng hàng loạt thì DỪNG, không in một dòng cảnh báo rồi đi tiếp ———
+//
+// `buildKtx` nuốt lỗi từng tệp để một ảnh hỏng không làm sập cả bản build. Đúng với MỘT tệp,
+// sai hoàn toàn với 401 tệp: ngày 13/11 một hàm sharp gọi nhầm làm mọi tệp KTX2 biến mất,
+// bản build vẫn xanh, và bài đo lô vẽ cho một con số đẹp bất thường (184 → 61) vì cả cảnh
+// rơi về WebP. VRAM thì tăng gấp ba, nhưng bài đo lô vẽ không nhìn VRAM.
+//
+// Ngưỡng là 5: một vài ảnh cạnh lẻ không nén được là chuyện thường, hàng chục thì là lỗi mã.
+const ktxWant = [...out.values()].filter((e) => e.w && ktxFor('x.png', e.w, e.h) !== null).length;
+if (ktxFails.length > 5) {
+  console.error(`\n✗ ${ktxFails.length} tệp không nén KTX2 được (${ktxFails.slice(0, 3).join(', ')}…).`);
+  console.error('  Một vài tệp hỏng là chuyện thường; hàng chục tệp là lỗi mã, không phải lỗi ảnh.');
+  process.exit(1);
+}
+const ktxHave = [...out.values()].filter((e) => e.ktx).length;
+if (ktxWant > 20 && ktxHave === 0) {
+  console.error('\n✗ KHÔNG có tệp KTX2 nào trong khi lẽ ra phải có. Dừng build.');
+  process.exit(1);
+}
+console.log(`KTX2: ${ktxHave} tệp nén khối${ktxFails.length ? ` · ${ktxFails.length} tệp trượt` : ''}`);

@@ -30,6 +30,13 @@ interface ManifestFile {
   groups: string[];
   /** Bản nén khối KTX2 (§13.10) — chỉ có với ảnh đủ lớn và cạnh chia hết cho 4. */
   ktx?: { url: string; bytes: number; mode: 'uastc' | 'etc1s' };
+  /**
+   * Tệp này nằm trong một TRANG GOM (`tools/asset-pipeline`, §13.10 · B30).
+   *
+   * `url`/`ktx.url` đã trỏ sẵn sang trang, còn đây là khung cần cắt ra. Mã game không biết
+   * gì về chuyện gom: nó vẫn gọi `assets.texture('obstacles/border/intact.png')`.
+   */
+  pack?: { page: string; x: number; y: number; w: number; h: number };
 }
 
 interface Manifest {
@@ -512,8 +519,18 @@ class AssetStore {
     }
     try {
       const tex = (await Assets.load(url)) as Texture;
-      this.textures.set(rel, tex);
-      return tex;
+      markPremultiplied(tex, url);
+      // Trang gom: cắt khung ra, dùng CHUNG một `TextureSource` với mọi tệp khác cùng trang.
+      //
+      // Đây chính là chỗ bớt lô vẽ: 20 vật cản vốn là 20 nguồn ảnh, mỗi lần Pixi đổi nguồn
+      // giữa chừng là một lô vẽ mới. `Assets.load` gộp lời gọi theo URL nên trang chỉ tải và
+      // tải lên GPU đúng một lần dù 20 tệp cùng hỏi.
+      const pk = this.man?.files[rel]?.pack;
+      const sub = pk
+        ? new Texture({ source: tex.source, frame: new Rectangle(pk.x, pk.y, pk.w, pk.h) })
+        : tex;
+      this.textures.set(rel, sub);
+      return sub;
     } catch (err) {
       console.warn('texture failed', rel, err);
       return null;
@@ -540,11 +557,13 @@ class AssetStore {
         return;
       }
       let base = (await Assets.load(imgUrl)) as Texture;
+      markPremultiplied(base, imgUrl);
       // Chốt chặn: bộ đệm còn giữ ảnh đã huỷ (nạp lại trước khi `Assets.unload` kịp xong)
       // thì bỏ nó ra rồi nạp lại — dựng atlas trên nguồn đã huỷ là đơ game (xem releaseChar).
       if (base.destroyed || base.source.destroyed) {
         await Assets.unload(imgUrl);
         base = (await Assets.load(imgUrl)) as Texture;
+        markPremultiplied(base, imgUrl);
       }
       this.atlasImg.set(dir, imgUrl);
       this.textures.set(imgRel, base);
@@ -588,6 +607,23 @@ class AssetStore {
 
   atlas(dir: string): AnimSet | null {
     return this.atlases.get(dir) ?? null;
+  }
+}
+
+/**
+ * markPremultiplied khai với Pixi rằng ảnh KTX2 ĐÃ nhân sẵn alpha.
+ *
+ * Bộ đọc KTX2 của Pixi mặc định khai `no-premultiply-alpha`, còn mọi canvas và mọi ảnh
+ * thường đều là `premultiply-alpha-on-upload`. Hai chế độ cần hai phép trộn, nên một cảnh
+ * trộn lẫn hai loại bị cắt lô vẽ ở MỖI sprite: cảnh thử đông 64 vật cản tốn 128 lô.
+ *
+ * `tools/asset-pipeline` đã nhân alpha vào điểm ảnh trước khi nén (`rawDecoder`), nên ở đây
+ * chỉ cần nói đúng sự thật cho Pixi. Hai bên phải đi cùng nhau — đổi một bên mà quên bên kia
+ * là viền mọi ảnh nén sẽ tối đi (nhân alpha hai lần) hoặc sáng lên (không nhân lần nào).
+ */
+function markPremultiplied(tex: Texture, url: string): void {
+  if (url.endsWith('.ktx2')) {
+    (tex.source as { alphaMode?: string }).alphaMode = 'premultiplied-alpha';
   }
 }
 

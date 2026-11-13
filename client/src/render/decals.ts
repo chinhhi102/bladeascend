@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture } from 'pixi.js';
+import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
 
 import { assets } from './assets';
 import { qualityFor } from './quality';
@@ -190,73 +190,93 @@ export function buildDecals(mapId: string, size: number, seed: number): DecalLay
 }
 
 /** Màu vụn dưới chân theo loại vật cản: gạch vỡ, sỏi, rác... */
-function debrisColor(kind: string): string {
+/**
+ * DEBRIS: bốn màu vụn, theo vật liệu. Chỉ số này là KHOÁ của atlas vệt bóng bên dưới —
+ * vệt bóng không phụ thuộc LOẠI vật cản, chỉ phụ thuộc màu vụn.
+ */
+const DEBRIS = ['#9b4a3a', '#7f7a72', '#8a7a55', '#6f7a52'];
+
+function debrisIndex(kind: string): number {
   if (kind === 'brick') {
-    return '#9b4a3a';
+    return 0;
   }
   if (kind === 'boulder' || kind === 'stone_wall') {
-    return '#7f7a72';
+    return 1;
   }
   if (kind === 'stall' || kind === 'cart') {
-    return '#8a7a55';
+    return 2;
   }
-  return '#6f7a52';
+  return 3;
 }
 
+/** SKIRT_CELL / SKIRT_COLS: atlas 4 màu × 4 biến thể = 16 ô 128² trong một tấm 512². */
+const SKIRT_CELL = 128;
+const SKIRT_COLS = 4;
+let skirtAtlas: Texture[] | null = null;
+
 /**
- * skirtTex nướng sẵn bóng đổ + vụn thành texture, mỗi (loại, biến thể) một cái.
+ * skirtSheet nướng MỘT tấm 512² chứa cả 16 vệt bóng, rồi cắt thành 16 khung dùng chung
+ * một `TextureSource`.
  *
- * Phải nướng chứ không vẽ bằng `Graphics` từng vật cản: 286 vật cản là 286 hình riêng, tức
- * 286 lượt vẽ. Đo thật, lúc còn dùng Graphics thì draw call nhảy lên 611 trong khi màn hình
- * gần như trống. Dùng chung 4 texture mỗi loại thì Pixi gộp hết vào vài lô.
+ * Vì sao một tấm thay vì 16 tấm rời — đo ngày 13/11 trên cảnh thử đông (64 vật cản, 16 loại):
+ * lớp `entities` tốn **128 lô vẽ, tức đúng 2 lô cho MỖI vật cản**. Pixi buộc được tối đa 16
+ * texture vào một lô; 16 vệt bóng rời cộng trang art vật cản là 17, nên cứ vài sprite là nó
+ * phải xả lô. Gom lại thì cả cảnh chỉ còn hai nguồn ảnh (một trang vật cản + một tấm vệt
+ * bóng) và mọi thứ lọt chung một lô.
+ *
+ * Bộ nhớ không đổi: 16 ô 128² gom lại vẫn đúng 512² = 1 MB, y như 16 tấm 128² rời.
  */
-function skirtTex(kind: string, variant: number): Texture {
-  const key = `skirt:${kind}:${variant}`;
-  const hit = baked.get(key);
-  if (hit) {
-    return hit;
+function skirtSheet(): Texture[] {
+  if (skirtAtlas) {
+    return skirtAtlas;
   }
-  // 128, không phải 256.
-  //
-  // Mỗi (loại, biến thể) là một canvas RGBA riêng, và có khoảng 16 loại × 4 biến thể trong
-  // một khu. Ở 256² đó là **62 texture, 20,7 MB** — một mình nó là 72% của hạng mục "vật
-  // cản · decal · vật phẩm" (trần 6 MB), và nhiều hơn toàn bộ atlas nhân vật.
-  //
-  // Thứ vẽ ra ở đây là một vệt bóng mềm cộng mấy chấm vụn, phóng to lên bằng chân vật cản.
-  // Nó không có chi tiết tần số cao để mà mất: hạ nửa cạnh là chia tư bộ nhớ.
-  //
-  // Đây cũng là lời nhắc: hạng mục này phình vì texture DO MÃ GAME DỰNG, không phải vì tệp
-  // art. Gom atlas (việc đang định làm) giảm LÔ VẼ chứ không giảm số điểm ảnh — mà số điểm
-  // ảnh mới là thứ chiếm VRAM.
-  const n = 128;
+  const n = SKIRT_CELL;
   const cv = document.createElement('canvas');
-  cv.width = n;
-  cv.height = n;
+  cv.width = SKIRT_CELL * SKIRT_COLS;
+  cv.height = SKIRT_CELL * SKIRT_COLS;
   const c = cv.getContext('2d') as CanvasRenderingContext2D;
-  const rand = rng(variant * 104729 + kind.length * 37);
-  // Bóng: hình méo, mềm, hơi lệch sang một bên như có nắng xiên.
-  const grad = c.createRadialGradient(n / 2, n * 0.56, n * 0.05, n / 2, n * 0.56, n * 0.48);
-  grad.addColorStop(0, 'rgba(0,0,0,0.34)');
-  grad.addColorStop(0.65, 'rgba(0,0,0,0.16)');
-  grad.addColorStop(1, 'rgba(0,0,0,0)');
-  c.fillStyle = grad;
-  c.beginPath();
-  c.ellipse(n / 2 + n * 0.03, n * 0.56, n * 0.46, n * 0.2, 0, 0, Math.PI * 2);
-  c.fill();
-  // Vụn quanh chân.
-  c.fillStyle = debrisColor(kind);
-  c.globalAlpha = 0.55;
-  for (let i = 0; i < 8; i++) {
-    const a = rand() * Math.PI * 2;
-    const d = n * (0.2 + rand() * 0.22);
-    c.beginPath();
-    c.arc(n / 2 + Math.cos(a) * d, n * 0.56 + Math.sin(a) * d * 0.4, 2 + rand() * 5, 0, Math.PI * 2);
-    c.fill();
+  for (let ci = 0; ci < DEBRIS.length; ci++) {
+    for (let variant = 0; variant < SKIRT_COLS; variant++) {
+      const ox = variant * SKIRT_CELL;
+      const oy = ci * SKIRT_CELL;
+      c.save();
+      c.translate(ox, oy);
+      const rand = rng(variant * 104729 + ci * 37 + 11);
+      // Bóng: hình méo, mềm, hơi lệch sang một bên như có nắng xiên.
+      const grad = c.createRadialGradient(n / 2, n * 0.56, n * 0.05, n / 2, n * 0.56, n * 0.48);
+      grad.addColorStop(0, 'rgba(0,0,0,0.34)');
+      grad.addColorStop(0.65, 'rgba(0,0,0,0.16)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = grad;
+      c.beginPath();
+      c.ellipse(n / 2 + n * 0.03, n * 0.56, n * 0.46, n * 0.2, 0, 0, Math.PI * 2);
+      c.fill();
+      // Vụn quanh chân.
+      c.fillStyle = DEBRIS[ci];
+      c.globalAlpha = 0.55;
+      for (let i = 0; i < 8; i++) {
+        const a = rand() * Math.PI * 2;
+        const d = n * (0.2 + rand() * 0.22);
+        c.beginPath();
+        c.arc(n / 2 + Math.cos(a) * d, n * 0.56 + Math.sin(a) * d * 0.4, 2 + rand() * 5, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.restore();
+      c.globalAlpha = 1;
+    }
   }
-  const tex = Texture.from(cv);
-  declareTexture(tex, 'world'); // §13.10: decal mặt đất
-  baked.set(key, tex);
-  return tex;
+  const base = Texture.from(cv);
+  declareTexture(base, 'world'); // §13.10: decal mặt đất
+  skirtAtlas = [];
+  for (let ci = 0; ci < DEBRIS.length; ci++) {
+    for (let variant = 0; variant < SKIRT_COLS; variant++) {
+      skirtAtlas.push(new Texture({
+        source: base.source,
+        frame: new Rectangle(variant * SKIRT_CELL, ci * SKIRT_CELL, SKIRT_CELL, SKIRT_CELL),
+      }));
+    }
+  }
+  return skirtAtlas;
 }
 
 /**
@@ -264,7 +284,7 @@ function skirtTex(kind: string, variant: number): Texture {
  * vào đất thay vì nổi lên như dán.
  */
 export function obstacleSkirt(w: number, h: number, kind: string, seed: number): Sprite {
-  const sp = new Sprite(skirtTex(kind, seed % 4));
+  const sp = new Sprite(skirtSheet()[debrisIndex(kind) * SKIRT_COLS + (seed % SKIRT_COLS)]);
   sp.anchor.set(0.5);
   sp.width = w * 1.25;
   sp.height = h * 0.85;

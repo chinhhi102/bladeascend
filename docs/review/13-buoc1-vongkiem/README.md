@@ -75,3 +75,25 @@ lần đầu lọt trần 50 MB của §13.10.
 
 Đây là lần đổi ảnh mốc có chủ ý; luật vẫn là **không đổi ảnh mốc để bài đo xanh**, chỉ đổi
 khi thay đổi hình là cố ý, đã soi mắt thường, và lý do ghi ngay tại đây.
+
+---
+
+## Đổi ảnh mốc lần 2 — 13/11/2026 (vật cản hiện ra)
+
+Ảnh mốc cũ ở `testbed-ref-truoc-vatcan.png`. Ba thay đổi:
+
+1. **Vật cản trong cảnh thử giờ mới VẼ RA.** Chúng khai từ đầu nhưng không bao giờ hiện, và
+   lý do đáng ghi: hình tròn trong `GameMap` phải có cờ `c: true`. Thiếu nó thì `obstacleArt`
+   coi là hình chữ nhật, đi đường xếp gạch và vẽ ra đúng con số không — chỉ còn vệt bóng dưới
+   chân, không một lời cảnh báo. Ảnh mốc cũ vì vậy chưa gác phần vẽ vật cản.
+2. `bamboo_thin` đổi thành `brick`: chỉ 10 trong 16 loại vật cản nằm trong nhóm `boot`, mà
+   cảnh thử chỉ tải `home` + `boot` + một nhân vật. Để một loại thuộc `zone_*` trong cảnh là
+   ảnh mốc có hình TẠM — và bài so ảnh sẽ canh hình tạm thay vì canh art.
+3. KTX2 nhân sẵn alpha (xem PERF_LOG lượt 52) — đổi chút ít ở viền mọi ảnh nén.
+
+Khối tròn xám xanh bên trái là **art thật của `boulder`** (tảng đá nhìn từ trên), không phải
+hình tạm; tôi đã nhầm nó một lượt nên ghi lại đây.
+
+Cảnh thử nay có thêm chế độ **ĐÔNG**: `?scene=testbed&crowd=1` — 12 nhân vật và 64 vật cản
+đủ 10 loại, xếp lưới cố định. Dùng để đếm lô vẽ (`drawbreak.mjs --testbed --crowd`), KHÔNG
+dùng cho `scenediff`.

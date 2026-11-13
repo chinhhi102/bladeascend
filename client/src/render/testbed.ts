@@ -40,10 +40,11 @@
 // thân, bảng tên, huy hiệu cảnh giới và vòng kiếm. Nền là `MapView` thật: mặt đất, decal rải
 // theo hạt giống cố định, vùng và cổng.
 //
-// CÒN THIẾU — vật cản. Bản đồ thử có khai ba vật cản (`boulder`, `bamboo_thin`, `cart`) với
-// art có thật trong nhóm `boot`, nodes được `obstacleLayer()` trả về và đã add vào lớp
-// entity, nhưng chúng KHÔNG vẽ ra và tôi chưa tìm ra vì sao (13/11). Ghi ra đây thay vì im
-// lặng: ai đọc cảnh này phải biết nó chưa gác được phần vẽ vật cản.
+// Vật cản: ba cái trong cảnh thường, 64 cái đủ 16 loại trong cảnh ĐÔNG (`&crowd=1`).
+//
+// Chúng từng KHÔNG vẽ ra, và lý do đáng ghi lại: hình tròn trong `GameMap` phải có cờ
+// `c: true`, thiếu nó thì `obstacleArt` coi là hình chữ nhật, đi đường xếp gạch và vẽ ra
+// đúng con số không — chỉ còn vệt bóng dưới chân. Không có thông báo nào cả.
 import { Application, Container } from 'pixi.js';
 
 import { type GameConfig, realmOf, tienIndex } from '../config';
@@ -73,7 +74,42 @@ const CY = 2400;
 const PAD = 240;
 
 /** mkMap: bản đồ thử bé, hạt giống cố định. */
-function mkMap(): GameMap {
+/**
+ * KINDS: mọi loại vật cản có art, theo đúng tên thư mục trong `assets/src/obstacles/`.
+ *
+ * Dùng cho cảnh ĐÔNG (`&crowd=1`): mỗi loại là một tệp ảnh riêng, và chính chỗ đó là nút
+ * thắt B30 — 25 texture vật cản xen kẽ nhau theo thứ tự y là 25 lần cắt lô vẽ. Muốn đo được
+ * một lượt gom atlas thì cảnh phải có đủ các loại, cố định, không ngẫu nhiên.
+ *
+ * CHỈ 10 loại nằm trong nhóm `boot` — cảnh thử chỉ tải `home` + `boot` + một nhân vật. Sáu
+ * loại còn lại (`bamboo_thin`, `cliff`, `jade_pillar`, `seal_stele`, `boulder_huge`,
+ * `bamboo_wall`) thuộc nhóm `zone_*`, nên đưa vào đây là vẽ ra hình TẠM — và một ảnh mốc có
+ * hình tạm thì bài so ảnh đang canh placeholder chứ không canh art.
+ */
+const KINDS = ['bamboo_ancient', 'border', 'boulder', 'brick', 'cart', 'fence',
+  'ice_eternal', 'sect_wall', 'stall', 'stone_wall'];
+
+/** crowdObstacles: 64 vật cản xếp lưới cố định quanh tâm cảnh, loại chạy vòng qua `KINDS`. */
+function crowdObstacles(): GameMap['obstacles'] {
+  const out = [];
+  const COLS = 8;
+  for (let i = 0; i < 64; i++) {
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    // Lệch nửa ô theo hàng lẻ: vật cản không xếp thẳng cột thì chúng CHE NHAU như trong
+    // trận, tức thứ tự y thật sự trộn lẫn — đúng thứ sinh ra chuyện cắt lô vẽ.
+    const x = CX - 1120 + col * 300 + (row % 2) * 150;
+    const y = CY - 640 + row * 170;
+    // `c: true` = HÌNH TRÒN. Thiếu cờ này thì `obstacleArt` coi nó là hình chữ nhật và đi
+    // đường xếp gạch, vẽ ra con số 0 — đúng lý do "cảnh thử khai ba vật cản mà không cái nào
+    // hiện" ghi ở đầu tệp từ 13/11. Vật cản chỉ còn mỗi vệt bóng dưới chân.
+    out.push({ id: 100 + i, k: KINDS[i % KINDS.length], s: { c: true, x, y, r: 70 },
+      f: { c: true, x, y: y + 30, r: 46 }, t: i % 3 });
+  }
+  return out;
+}
+
+function mkMap(crowd: boolean): GameMap {
   const size = 6000;
   return {
     id: 'testbed',
@@ -86,15 +122,15 @@ function mkMap(): GameMap {
     play_margin: 100,
     // Vật cản đặt tay quanh tâm cảnh: một cụm đá, một bụi, một cây. `s` là hình THẤY được
     // (kiếm chém vào), `f` là chân đế (chặn thân) — đúng hai hình của §8.2.
-    obstacles: [
+    obstacles: crowd ? crowdObstacles() : [
       // Tên loại phải có thật trong `assets/src/obstacles/` — `MapView` tìm
       // `obstacles/<k>/intact.png`. Gõ một cái tên không tồn tại thì vật cản im lặng không
       // hiện, và cảnh thử mất một phần hình mà không ai báo.
       // Đặt vào khoảng TRỐNG giữa bốn ô hình nộm (ô vẽ đè lên nền), nếu không vật cản nằm
       // ngay dưới bảng tên hoặc dưới vòng kiếm và ảnh chụp trông như thiếu nó.
-      { id: 1, k: 'boulder', s: { x: 2760, y: 2040, r: 70 }, f: { x: 2760, y: 2070, r: 46 }, t: 0 },
-      { id: 2, k: 'bamboo_thin', s: { x: 3000, y: 2280, r: 60 }, f: { x: 3000, y: 2310, r: 38 }, t: 0 },
-      { id: 3, k: 'cart', s: { x: 3240, y: 2040, r: 80 }, f: { x: 3240, y: 2070, r: 52 }, t: 2 },
+      { id: 1, k: 'boulder', s: { c: true, x: 2760, y: 2040, r: 70 }, f: { c: true, x: 2760, y: 2070, r: 46 }, t: 0 },
+      { id: 2, k: 'brick', s: { c: true, x: 3000, y: 2280, r: 60 }, f: { c: true, x: 3000, y: 2310, r: 38 }, t: 0 },
+      { id: 3, k: 'cart', s: { c: true, x: 3240, y: 2040, r: 80 }, f: { c: true, x: 3240, y: 2070, r: 52 }, t: 2 },
     ],
     zones: [{ id: 0, k: 'grass', s: { c: true, x: CX, y: CY, r: 1400 } }],
     gates: [{ id: 0, x: CX + 560, y: CY - 380, n: 'Cổng thử', c: 'grass' }],
@@ -173,7 +209,8 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
   await assets.load(['home', 'boot', `char_${char}`]);
   await loadFonts();
 
-  const map = mkMap();
+  const crowd = new URLSearchParams(location.search).get('crowd') === '1';
+  const map = mkMap(crowd);
   const world = new Container();
   const mapView = new MapView(map, cfg.gates.radius);
   const entities = new Container();
@@ -200,14 +237,34 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
   // Bốn hình nộm: cảnh giới, số kiếm, cỡ người. Vòng Đạo Tổ (1 050 kiếm, scale 5) có bán
   // kính hàng nghìn đơn vị thế giới, nên CHỖ ĐỨNG và ZOOM phải tính TỪ bán kính thật chứ
   // không đặt tay — đặt tay thì vòng to tràn hết khung và cảnh thử không nhìn ra gì.
-  const spec = [
-    { id: 101, name: 'LuyenKhi', realm: 0, tier: 0, n: 1, sc: 1 },
-    { id: 102, name: 'KimDan', realm: 2, tier: 4, n: 60, sc: 2 },
-    // Chân Tiên: cảnh giới Tiên đầu tiên → có hào quang Tiên giới (§3.4).
-    { id: 104, name: 'ChanTien', realm: cfg.cultivation.realms.length, tier: 2, n: 300, sc: 3 },
-    { id: 103, name: 'DaoTo', realm: top, tier: cfg.cultivation.tiers_per_realm - 1,
-      n: maxSw[maxSw.length - 1] ?? 1050, sc: 5 },
-  ];
+  // `?scene=testbed&crowd=1` — CẢNH ĐÔNG CỐ ĐỊNH, 12 người.
+  //
+  // Cảnh thử 4 ô chứng minh "hình có đổi không" rất tốt, nhưng nó chỉ còn 30 lô vẽ, nên
+  // không đo được thứ đang là nút thắt (B30): lô vẽ khi ĐÔNG người. Mà cảnh thật thì không
+  // so A/B được — cùng một build cho 185 rồi 447 lô vẽ (xem đầu tệp).
+  //
+  // Nên cảnh đông cũng phải cố định: 12 hình nộm, cảnh giới trải đều, số kiếm và chỗ đứng
+  // tính từ chỉ số ô chứ không ngẫu nhiên. Nó KHÔNG dùng cho `scenediff` (ảnh mốc vẫn là
+  // cảnh 4 ô); nó chỉ để đếm lô vẽ và đo ms vẽ.
+  const CROWD_N = 12;
+  const spec = crowd
+    ? Array.from({ length: CROWD_N }, (_, i) => {
+        // Trải cảnh giới: 2 người Luyện Khí, 6 người giữa, 3 Chân Tiên (có hào quang Tiên),
+        // 1 Đạo Tổ — đúng hình dạng một phòng đang chơi, chứ không phải 12 Đạo Tổ (cảnh đó
+        // không ai gặp, và nó chỉ đo mỗi vòng kiếm).
+        const r = i < 2 ? 0 : i < 8 ? 1 + (i % 4) : i < 11 ? cfg.cultivation.realms.length : top;
+        const sc = i < 2 ? 1 : i < 8 ? 2 : i < 11 ? 3 : 5;
+        const n = i < 2 ? 1 + i : i < 8 ? 20 + i * 12 : i < 11 ? 240 + i * 10 : maxSw[maxSw.length - 1] ?? 1050;
+        return { id: 200 + i, name: `Nguoi${i}`, realm: r, tier: i % 4, n, sc };
+      })
+    : [
+        { id: 101, name: 'LuyenKhi', realm: 0, tier: 0, n: 1, sc: 1 },
+        { id: 102, name: 'KimDan', realm: 2, tier: 4, n: 60, sc: 2 },
+        // Chân Tiên: cảnh giới Tiên đầu tiên → có hào quang Tiên giới (§3.4).
+        { id: 104, name: 'ChanTien', realm: cfg.cultivation.realms.length, tier: 2, n: 300, sc: 3 },
+        { id: 103, name: 'DaoTo', realm: top, tier: cfg.cultivation.tiers_per_realm - 1,
+          n: maxSw[maxSw.length - 1] ?? 1050, sc: 5 },
+      ];
   // BỐN Ô, MỖI Ô MỘT ZOOM RIÊNG.
   //
   // Vòng Luyện Khí (1 kiếm, scale 1) và vòng Đạo Tổ (1 050 kiếm, scale 5) chênh nhau khoảng
@@ -220,9 +277,10 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
   // đó rõ hơn hẳn một ván game thu nhỏ.
   const panels = new Container();
   app.stage.addChild(panels);
-  const COLS = 2;
+  const COLS = crowd ? 4 : 2;
+  const ROWS = crowd ? 3 : 2;
   const CELL_W = W / COLS;
-  const CELL_H = H / 2;
+  const CELL_H = H / ROWS;
   const sprites: { sp: PlayerSprite; zoom: number }[] = [];
   const auras: (TienAura | null)[] = [];
   const dummies: PlayerFrame[] = [];
@@ -324,6 +382,85 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
     ready: true,
     w: W,
     h: H,
+    /**
+     * probe: thử ẩn từng NHÓM renderable trong lớp entity rồi đếm lại lô vẽ.
+     *
+     * Dùng để trả lời "cái gì đang cắt lô vẽ" bằng số đo thay vì suy đoán: gom atlas đã hạ
+     * số nguồn ảnh của lớp này từ 26 xuống 2 mà lô vẽ vẫn đúng 128 (2 lô mỗi vật cản), nên
+     * thủ phạm không phải chuyện đổi texture.
+     */
+    probe: (): Record<string, number> => {
+      const walk = (c: Container, f: (x: Container) => void): void => {
+        f(c);
+        for (const k of c.children) {
+          walk(k as Container, f);
+        }
+      };
+      const out: Record<string, number> = {};
+      // Nhóm theo NGUỒN ẢNH, không chỉ theo loại ống vẽ: muốn biết "ẩn vệt bóng đi thì còn
+      // mấy lô" thì phải chia theo texture.
+      const groups = new Map<string, Container[]>();
+      walk(entities, (x) => {
+        const r = x as unknown as { renderPipeId?: string; texture?: { source?: { label?: string; uid?: number } } };
+        if (!r.renderPipeId) {
+          return;
+        }
+        const src = r.texture?.source;
+        const key = r.renderPipeId === 'sprite'
+          ? `sprite:${(src?.label ?? '?').split('/').slice(-1)[0]}:${src?.uid ?? 0}`
+          : r.renderPipeId;
+        (groups.get(key) ?? groups.set(key, []).get(key))?.push(x);
+      });
+      // Chế độ alpha của từng nguồn ảnh: nguồn "chưa nhân alpha" bắt Pixi đổi phép trộn,
+      // và đổi phép trộn giữa chừng là cắt lô vẽ — kể cả khi còn thừa chỗ texture.
+      walk(entities, (x) => {
+        const r = x as unknown as { renderPipeId?: string; texture?: { source?: { label?: string; alphaMode?: string; uid?: number } } };
+        if (r.renderPipeId === 'sprite' && r.texture?.source) {
+          const s2 = r.texture.source;
+          out[`alpha ${(s2.label ?? '?').split('/').slice(-1)[0]}=${s2.alphaMode ?? '?'}`] = s2.uid ?? 0;
+        }
+      });
+      out.tatCa = measureLayers(() => app.render(), [{ name: 'e', c: entities }])[0].calls;
+      // Thử CHO CHUNG MỘT TEXTURE: nếu lô vẽ sụp xuống thì thủ phạm là chuyện xen kẽ hai
+      // nguồn ảnh (tức Pixi không buộc nhiều texture vào một lô như nó khai); nếu vẫn thế
+      // thì thủ phạm nằm ở CẤU TRÚC cây cảnh, không phải ở texture.
+      {
+        const saved: { sp: { texture: unknown }; t: unknown }[] = [];
+        let one: unknown = null;
+        walk(entities, (x) => {
+          const r = x as unknown as { renderPipeId?: string; texture?: unknown };
+          if (r.renderPipeId !== 'sprite') {
+            return;
+          }
+          if (!one) {
+            one = r.texture;
+            return;
+          }
+          saved.push({ sp: r as { texture: unknown }, t: r.texture });
+          (r as { texture: unknown }).texture = one;
+        });
+        out.chungMotTexture = measureLayers(() => app.render(), [{ name: 'e', c: entities }])[0].calls;
+        for (const s of saved) {
+          s.sp.texture = s.t;
+        }
+      }
+      for (const [key, list] of groups) {
+        for (const x of list) {
+          x.visible = false;
+        }
+        out[`an ${key} (${list.length})`] = measureLayers(() => app.render(), [{ name: 'e', c: entities }])[0].calls;
+        for (const x of list) {
+          x.visible = true;
+        }
+      }
+      return out;
+    },
+    /** Liệt kê vật cản: loại, có dùng art thật không — để bài đo chỉ đích danh cái nào hỏng. */
+    obstacles: (): unknown[] => mapView.debugObstacles(),
+    /** Bộ vẽ Pixi — để bài đo đọc được `limits.maxBatchableTextures` (xem PERF_LOG #52). */
+    renderer: app.renderer,
+    /** Tra một đường dẫn asset có nạp được không — để bài đo nói rõ "thiếu art" thay vì đoán. */
+    hasTex: (rel: string): boolean => assets.texture(rel) !== null,
     // Lô vẽ theo lớp trên CẢNH CỐ ĐỊNH: con số này so được giữa hai bản build, khác với
     // cảnh thật nơi nó đi từ 156 tới 460 tuỳ bot đứng đâu.
     layers: () => {

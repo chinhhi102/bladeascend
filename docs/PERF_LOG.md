@@ -1814,6 +1814,72 @@ chủ dự án chốt là giảm lô vẽ.
 `tools/deploy.sh` bỏ `--warn-vram`: cảnh đông 46,3/50 nên điều 4 (VRAM) chặn như ba điều kia.
 
 
+### Lượt 52 — 13/11/2026 · KTX2 đang ĐÁNH ĐỔI VRAM LẤY LÔ VẼ (B30)
+
+Cảnh thử ĐÔNG mới (`?scene=testbed&crowd=1`: 12 người + 64 vật cản đủ 10 loại, xếp lưới cố
+định — cảnh thật cho 185 rồi 447 lô vẽ trên cùng một build nên không so được):
+
+| | lô vẽ `entities` | lô vẽ cả cảnh | nguồn ảnh của `entities` |
+|---|---:|---:|---:|
+| trước | 128 | 184 | 26 |
+| gom atlas vật cản | 128 | 184 | **17** |
+| + gom vệt bóng vào 1 atlas | 128 | 184 | **2** |
+| + KTX2 nhân sẵn alpha | **17** | **61** | 2 |
+
+Cảnh THẬT: **704 → 150** lô vẽ.
+
+#### Chuyện gì đã xảy ra
+
+Bắt đầu từ một con số: lớp `entities` tốn **đúng 2 lô vẽ cho MỖI vật cản**. Giả thuyết đầu
+là "quá nhiều texture" — 97 nguồn ảnh trong một lớp, mỗi loại vật cản × mỗi hướng một tệp
+384² riêng. Nên gom: 32 tệp vật cản → 6 trang 2048² (gom THEO NHÓM TẢI, không gom tất, vì
+`boot` tải trước khi vào trận còn `zone_*` chỉ tải khi vào khu đó).
+
+Gom xong: **26 → 17 → 2 nguồn ảnh, và lô vẽ KHÔNG nhúc nhích.** Giả thuyết sai.
+
+Phép thử quyết định: ép MỌI sprite trong lớp dùng chung một texture → 184 tụt xuống 72. Vậy
+vẫn là chuyện texture, nhưng không phải số lượng. Đọc chế độ alpha của hai nguồn:
+
+```
+kx:world (vệt bóng, canvas)      → premultiply-alpha-on-upload
+_pack_0_boot.ktx2 (vật cản, nén) → no-premultiply-alpha
+```
+
+Hai chế độ cần hai PHÉP TRỘN khác nhau. Đổi phép trộn giữa chừng là cắt lô vẽ — kể cả khi
+còn thừa chỗ texture (máy đo có 32 đơn vị). Vật cản và vệt bóng nằm xen kẽ nhau theo thứ tự
+y, nên mỗi cặp là một lần đổi.
+
+Tức là **lượt bật KTX2 (#48) vừa hạ VRAM ba lần vừa nhân lô vẽ lên gấp bốn**, và không ai
+thấy vì hai thứ đó đo bằng hai bài khác nhau. Sửa: pipeline nhân alpha vào điểm ảnh trước
+khi nén, client khai `premultiplied-alpha`. Hai bên phải đi cùng nhau — lệch một bên là viền
+mọi ảnh nén tối đi (nhân hai lần) hoặc sáng lên (không nhân lần nào).
+
+#### Hai "thành công giả" trong cùng một lượt
+
+1. `sharp.premultiply()` **không tồn tại** ở bản sharp trong repo. `buildKtx` nuốt lỗi từng
+   tệp, nên **401 tệp KTX2 biến mất trong im lặng** — và bài đo lô vẽ cho đúng con số đẹp
+   mong đợi (184 → 61), vì cả cảnh rơi về WebP. Nếu lúc đó tôi chỉ nhìn lô vẽ thì đã commit.
+   Bắt được vì bảng VRAM ngay sau đó nhảy lên 90,63 MB. Nay pipeline **dừng hẳn** khi quá 5
+   tệp không nén được, và in `KTX2: <n> tệp nén khối` mỗi lượt build.
+2. Sửa đúng hàm rồi build lại: VRAM **vẫn** 90 MB. Bộ đệm pipeline còn giữ 401 mục
+   `version 8` KHÔNG có KTX2 do lượt hỏng ghi vào, và `PIPELINE_VERSION` không bắt được
+   "lượt trước chạy hỏng". Nay bộ đệm tự chữa: mục nào nói "không có bản nén" trong khi
+   `ktxFor` nói "phải có" thì coi như hỏng, dựng lại.
+
+#### Số cuối, cổng kiểm đạt cả bốn
+
+```
+cảnh ĐÔNG · 11 người · medium · 1920×1080 @ 1
+  12,12 / 24  Atlas nhân vật          3,33 / 4   Nền
+  12,43 /  6  Vật cản · decal ← VƯỢT  3,99 / 4   VFX · hào quang · UI
+   8,78 /  2  Chữ/số bay ← VƯỢT       4,30 / 12  Bộ đệm khung
+  44,95 / 50  TỔNG — đạt
+0 placeholder · ktx2 325 tệp / webp 12 · hình cảnh thử không đổi
+```
+
+Tải về không đổi: toàn bộ game 8,28 MB, chặn vào trận 4,19 / 8 MB.
+
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
@@ -1821,7 +1887,8 @@ chủ dự án chốt là giảm lô vẽ.
 | B32 | **Bộ nhớ GPU 281–301 MB, trần §13.10 là 50 MB** | Vượt 5,6× — đúng họ lỗi đã giết tab Safari ở B13 | #42: sổ VRAM theo hạng mục. Nền 69 MB (trần 4) · bộ đệm khung 69 (trần 12) · atlas nhân vật 70 (trần 24) · vật cản/decal 49 (trần 6) | **Đóng cho MÁY TÍNH (#51)** — 281 → **46,3 / 50 MB**, và cổng deploy nay chặn bằng chính con số này. Còn mở cho ĐIỆN THOẠI (trần 32 MB) | #42→#51 |
 | B33 | **Chữ tốn 6,71 MB VRAM / trần 2 MB** | Đòn bẩy VRAM lớn nhất còn lại; cũng là phần tốn nhất khi hạ trần xuống 32 MB cho điện thoại | #51: móc ngăn xếp vào `document.createElement` → 6 tấm 512² đều do `CanvasPool` cấp cho `Text`; Pixi làm tròn cỡ canvas chữ lên luỹ thừa 2 nên một dòng tên 300×40 ăn trọn 512² | **Mở** — cách sửa là mục 5 của §13.10: gom chữ/số bay/emote vào MỘT atlas động trần 2 MB (hoặc `BitmapText` dùng chung một font atlas) | – |
 | B31 | **Hai bài đo cũ KHÔNG dùng để so hai bản build** | Một lượt tối ưu có thể "chứng minh" được bất cứ điều gì | #39: `ringcost` ba lượt cùng build cho 19,79 · 0,55 · −0,40 ms; `weakperf` hai lượt liên tiếp cho 185 lô vẽ / 47 FPS rồi 447 lô / 23 FPS | **Đóng (#39)** — mọi phép so A/B chuyển sang cảnh thử (`scenebench.mjs`, `scenediff.mjs`). `weakperf`/`ringcost` giữ nguyên vai trò "người chơi thật gặp gì" | #39 |
-| B30 | **Lượt vẽ của Pixi là toàn bộ nút thắt máy yếu, và vòng kiếm KHÔNG còn là phần chính của nó** | Mục tiêu CPU 6× p50 ≥ 30 FPS chưa đạt (đang 23) | #38: ở CPU 4×, tắt SẠCH mọi vòng kiếm thì Pixi vẫn vẽ **19,77 ms** (bật: 19,96). Ở CPU 6×: khung 43,5 ms = Pixi vẽ 21,7 + JS game 3,6 + ~18 ms của trình duyệt. Mọi cột JS cộng lại chưa tới 4 ms | **Mở** — bước kế phải nhắm vào CÂY CẢNH và số lô vẽ (325–393 lô, 2 850–4 800 nút), không nhắm vào mã game. Lớp trạng thái (bước 2 của kế hoạch) đo được 0,07–0,39 ms: không phải chỗ đáng sửa | #38 |
+| B34 | **Chữ tốn 8,78 MB VRAM và vẫn là hạng mục vượt trần nặng nhất** | Trần 2 MB; cũng là chỗ chặn đường xuống 32 MB cho điện thoại | #51: `CanvasPool` của Pixi làm tròn cỡ canvas chữ lên luỹ thừa 2, một dòng tên 300×40 ăn trọn 512² | **Mở** — gom chữ/số bay/emote vào MỘT atlas động trần 2 MB (§13.10 mục 5), hoặc `BitmapText` dùng chung font atlas | – |
+| B30 | **Lượt vẽ của Pixi là toàn bộ nút thắt máy yếu, và vòng kiếm KHÔNG còn là phần chính của nó** | Mục tiêu CPU 6× p50 ≥ 30 FPS chưa đạt (đang 23) | #38: ở CPU 4×, tắt SẠCH mọi vòng kiếm thì Pixi vẫn vẽ **19,77 ms** (bật: 19,96). Ở CPU 6×: khung 43,5 ms = Pixi vẽ 21,7 + JS game 3,6 + ~18 ms của trình duyệt. Mọi cột JS cộng lại chưa tới 4 ms | **Phần lô vẽ đóng (#52)** — cảnh thật **704 → 150** lô, cảnh thử đông **184 → 61**. Thủ phạm không phải cây cảnh mà là chế độ alpha: KTX2 khai "chưa nhân alpha" còn canvas khai "đã nhân", nên mỗi lần xen kẽ là một lần đổi phép trộn. Còn mở phần FPS máy yếu: chưa đo lại CPU 6× sau lượt này | #38, #52 |
 | B29 | **Nợ phép đo trước/sau cho PixiJS 8.22 → 8.23** | Không biết bản nâng làm FPS tốt lên, xấu đi, hay không đổi — đang deploy mà không có số | #37: máy ở load/nhân 2,17–3,87 suốt ngày 12/11, luật 16 cấm kết luận | **Đóng (#40)** — đo trên cảnh thử, 3 vòng xen kẽ, máy rảnh: FPS 60 ở cả hai bản và cả ba mức CPU; chênh Pixi vẽ 0,08–0,63 ms, nhỏ hơn biên dao động trong cùng một bản (≈1 ms). Giữ 8.23 vì hai thay đổi của nó là sửa lỗi | #40 |
 | B28 | **Rò rỉ bộ nhớ SERVER: 7 MB/phút, 420 MB sau một giờ** | Tiến trình chết trên VPS 1 GB trước khi hết một ca chơi | #36: `cmd/leakcheck` 25 phút → heap 8,2 → 159,0 MB tuyến tính. `pprof -inuse_objects`: `addAmbientOrb` giữ 309 477 object trong khi thế giới chỉ có ~27 000 viên sống | **Đóng (#36)** — hai con trỏ bỏ quên ngoài `len` (`itemGrid.remove`, `Manager.tryClose`). Đo lại 60 phút / 2 703 lượt vào-ra: heap mỗi phòng +2,9 %, hết người thì về 0,92 MB | #36 |
 | B27 | **Server game chạy chung máy với việc nặng của người khác** | Mọi số tick đo trên `:9999` đều có thể là số của CÁI MÁY chứ không của game | #35: server dùng **5% của một nhân** (pprof 1,88 s / 30 s) trong khi máy ở load 47, CPU 89,6%, swap 2 GB cạn — và tick p95 vẫn 17 ms. Mọi hệ thống trong tick đều có `max` 5–20 ms dù TB 0,04–0,17 ms | **Mở** — bộ thu gom §12 nay ghi `load1`/`cpu_pct` máy cạnh tick, và cảnh báo tự nói "có thể do máy bận". Muốn số tick sạch thì phải tách server sang máy riêng, hoặc đo lúc load/nhân < 0,5 | #35 |
