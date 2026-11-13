@@ -175,7 +175,7 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
 
   const map = mkMap();
   const world = new Container();
-  const mapView = new MapView(map, cfg.gates.radius, app.renderer);
+  const mapView = new MapView(map, cfg.gates.radius);
   const entities = new Container();
   const rings = new Container();
   const glow = new Container();

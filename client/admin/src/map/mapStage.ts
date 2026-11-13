@@ -113,7 +113,7 @@ export class MapStage {
     }
     this.mapRoot.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.map = map;
-    this.view = new MapView(map, gateR, this.app.renderer);
+    this.view = new MapView(map, gateR);
     const entities = new Container();
     entities.sortableChildren = true;
     for (const node of this.view.obstacleLayer()) {

@@ -131,6 +131,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 40 | 2026-11-13 | `e756429` | **B29 — PixiJS 8.22.0 vs 8.23.0** trên cảnh thử, 3 vòng XEN KẼ, máy rảnh 0,37–0,53/nhân | TESTBED | – | – | – | 60 / 60 / 60 ở CẢ HAI bản | – | 23–24 | – | – | Pixi vẽ ms (trung vị 3 vòng) — 8.23: **1,70 / 3,19 / 4,58**; 8.22: **1,62 / 2,87 / 3,95** (CPU 1×/4×/6×). Chênh 0,08–0,63 ms, NHỎ HƠN biên dao động trong cùng một bản (0,96–1,06 ms) | **B29 đóng** — giữ 8.23 |
 | 41 | 2026-11-13 | `9136599` | **Mục 5 bước đo — lô vẽ theo TỪNG LỚP** (`drawbreak.mjs`), cảnh thật 3 người, Đạo Tổ 1 050 kiếm | S15 | – | – | – | – | – | **243** | – | – | `entities` **120 lô** (86 nguồn texture, 218 Graphics) · `ground` **100 lô** (48 MASK) · 12 lớp còn lại cộng lại 23 | Mục tiêu < 120 lô · B30 |
 | 42 | 2026-11-13 | `9d55f89` | **§13.10 — SỔ VRAM theo hạng mục, hiện trạng TRƯỚC khi sửa** | VRAM | – | – | – | – | – | – | – | – | Cảnh đông 1080p@1, chất lượng Vừa: **281–301 MB / trần 50**. Cảnh thử cố định: **63,3 MB / 50**. Vượt ở 5 trên 6 hạng mục | §13.10 mục 1 xong |
+| 43 | 2026-11-13 | `d9bfcf0`+ | **§13.10 mục 2 — nền bằng SHADER TRỘN** (bỏ bake RenderTexture, bỏ mask) | VRAM | – | – | – | – | – | 34 (ground) | – | – | Cảnh thử: `Nền` **43,1 → 6,5 MB**, tổng **63,3 → 25,5 MB (ĐẠT trần 50)**. Cảnh đông: tổng **280,9 → 225,3 MB**. Lô vẽ ground 4 → 34 | Hình: 1,13/255 · 0,60% pixel |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1433,6 +1434,46 @@ F3 có thêm một dòng, **chỉ hiện khi vượt**, nêu đích danh hạng 
 #39 chính là một phần — 1 MB mỗi ô × hơn ba chục ô) → thay bằng shader trộn; `Bộ đệm khung`
 69 MB → bloom nửa độ phân giải + `antialias:false`; `Atlas nhân vật` 70 MB → KTX2 + trần 6
 atlas; `Vật cản/decal` 49 MB → gom atlas KTX2.
+
+---
+
+### Lượt 43 — 13/11/2026 · §13.10 mục 2: nền bằng shader trộn
+
+Đời thứ ba của lớp nền. Đời 1 (mặt nạ sprite): 100 lô vẽ, 48 mask. Đời 2 (nướng
+RenderTexture, lượt #39): 5 lô vẽ nhưng **69 MB VRAM** — đổi một vấn đề lấy một vấn đề
+khác. Đời 3: một mesh mỗi ô, một shader lấy mẫu 3 tile theo toạ độ thế giới và trộn theo
+một mặt nạ 128² gói hai lớp vào kênh R/G.
+
+| | Nền (MB) | Tổng VRAM | Lô vẽ ground |
+|---|---:|---:|---:|
+| đời 1 (mặt nạ) | ~5 | – | 100–124 |
+| đời 2 (nướng) | **43,1** | 63,3 | **4** |
+| đời 3 (shader) | **6,5** | **25,5** ✅ | 34 |
+
+Cảnh đông: tổng VRAM **280,9 → 225,3 MB**. Cảnh thử **lần đầu nằm dưới trần 50 MB**.
+
+Lô vẽ ground 4 → 34 (một mesh mỗi ô) là bước lùi có ý thức: ngân sách VRAM là thứ spec
+v6.55 đặt lên trước, và 30 lô vẽ là giá rẻ hơn 36 MB. Gom về 1 lô (một geometry cho cả lưới
+ô + atlas mặt nạ) để dành cho lượt sau nếu trần 120 lô bị đe doạ.
+
+**Bốn lần `scenediff` báo đỏ, và mỗi lần nó chỉ ra một thứ khác nhau** — đây là lần đầu bài
+so ảnh thật sự dẫn đường chứ không chỉ gác cổng:
+
+| lệch | nguyên nhân |
+|---:|---|
+| 21,2/255 · 47% | gieo một hạt giống chung rồi lệch pha, thay vì ĐÚNG hạt `<map>:<cx>:<cy>:<lớp>` của bản cũ |
+| 9,17/255 · 17% | *(giả thuyết alpha của tile — sai, tile vốn đục)* |
+| 9,31/255 · 17,6% | bước làm nhoè: bản cũ `drawImage` bản blur **chồng lên** bản gốc qua nền trong suốt nên mép chỉ MỀM đi; bản tôi alpha 255 khắp nơi nên blur THAY SẠCH |
+| **1,48/255 · 0,64%** | tile 512 px phủ **400** đơn vị, nên `tilePosition = -x·tileScale` của bản cũ cho ra `uv = local/400 + x/512` — lệch một nhịp ở mỗi mép ô. Đó là NẾP CŨ, phải giữ |
+| **1,13/255 · 0,60%** | lớp NỀN thì ngược lại: nó vốn phủ cả bản đồ nên phải căn theo thế giới. Hai lớp dùng hai gốc lát khác nhau |
+
+Phần dư 1,13/255 (trung bình **chưa tới nửa phần trăm một mức xám**) là sai khác lấy mẫu
+mặt nạ: bản cũ kéo giãn một sprite 128² qua đường lọc của Pixi, bản mới lấy mẫu thẳng trong
+shader. Mắt không thấy; bảng lệch theo ô cho thấy nó rải đều 0–3/255, không dồn vào đâu.
+
+Ngưỡng `scenediff` mặc định (0,3/255) đặt cho những thay đổi PHẢI giống từng byte. Lượt này
+viết lại cách hợp ảnh của cả lớp nền, nên nó không thể giống từng byte — ảnh mốc được chụp
+lại sau bước này, và các bước sau so với mốc mới.
 
 ---
 

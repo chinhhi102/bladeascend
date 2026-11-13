@@ -75,6 +75,30 @@ if (process.argv[2] === '--diff') {
   console.log(`lệch trung bình : ${mean.toFixed(3)}/255  (ngưỡng ${TOL_MEAN})`);
   console.log(`lệch lớn nhất   : ${worst}/255`);
   console.log(`pixel lệch > 16 : ${over} (${pct.toFixed(3)}%, ngưỡng ${TOL_PCT}%)`);
+  // Bản đồ lệch 16×9: chênh nằm ở ĐÂU quan trọng hơn chênh bao nhiêu. Lệch rải đều khắp
+  // khung là "đổi màu/đổi hoa văn"; lệch dồn thành vạch là "đổi chỗ nối ô"; lệch dồn vào
+  // giữa là "đổi nhân vật". Một con số trung bình không phân biệt được ba thứ đó.
+  const GX = 16;
+  const GY = 9;
+  const cell = new Float64Array(GX * GY);
+  const cellN = new Float64Array(GX * GY);
+  for (let i = 0; i < a.g.length; i++) {
+    const px = i % a.w;
+    const py = (i / a.w) | 0;
+    const ci = Math.min(GY - 1, (py * GY / a.h) | 0) * GX + Math.min(GX - 1, (px * GX / a.w) | 0);
+    cell[ci] += Math.abs(a.g[i] - c.g[i]);
+    cellN[ci]++;
+  }
+  console.log('');
+  console.log('bản đồ lệch (trung bình/255 theo ô 16×9):');
+  for (let y = 0; y < GY; y++) {
+    const row = [];
+    for (let x = 0; x < GX; x++) {
+      const v = cell[y * GX + x] / Math.max(1, cellN[y * GX + x]);
+      row.push(v < 1 ? '  .' : String(Math.round(v)).padStart(3));
+    }
+    console.log('  ' + row.join(''));
+  }
   const ok = mean <= TOL_MEAN && pct <= TOL_PCT;
   console.log(ok ? '\nĐẠT: cảnh thử vẽ ra y như cũ.' : '\nTRƯỢT: cảnh thử ĐÃ ĐỔI hình — xem lại thay đổi đồ hoạ.');
   process.exit(ok ? 0 : 1);

@@ -1,4 +1,4 @@
-import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Rectangle, RenderTexture, type Renderer, Sprite, Texture, TilingSprite } from 'pixi.js';
+import { AnimatedSprite, ColorMatrixFilter, Container, Graphics, Mesh, MeshGeometry, Rectangle, type Shader, Sprite, Texture, TilingSprite } from 'pixi.js';
 
 import type { ClientWorld } from '../net/state';
 import type { GameMap, MapObstacle, Shape } from '../net/protocol';
@@ -6,10 +6,10 @@ import { assets } from './assets';
 import { BIOME_TILES, OBSTACLE_ALIAS } from './catalog';
 import { buildDecals, type DecalLayer, obstacleSkirt } from './decals';
 import { gpuBudgetMB } from './device';
+import { groundChunkMesh } from './groundshader';
 import { filtersOff } from './guard';
 import { GATE_COLORS } from './palette';
 import { emergency } from './quality';
-import { declareTexture } from './gpumem';
 
 /**
  * Mỗi biome 2–3 texture nền, trộn bằng mặt nạ nhiễu (spec §8.6 mục 1). Lớp đầu phủ kín, các
@@ -45,26 +45,6 @@ const TILE_WORLD = 400; // one 512px ground tile covers 400 world units
  * Nhỏ hơn nữa thì số ô (và số lệnh vẽ) tăng nhanh hơn phần bộ nhớ tiết kiệm được.
  */
 const GROUND_CHUNK = 1024;
-/**
- * bakeRes: độ phân giải nướng ô nền — THEO NGÂN SÁCH GPU CỦA THIẾT BỊ.
- *
- * Nền là hoa văn tần số thấp cộng một mảng loang mờ, nên hạ độ phân giải ít thấy bằng mắt
- * nhưng chia bình phương bộ nhớ. Đo được cả hai đầu, trên cảnh thật (đi lòng vòng ở Đạo Tổ,
- * camera lùi xa nhất) và trên cảnh thử:
- *
- * | nướng ở | `texMB` cảnh thật | lệch ảnh cảnh thử |
- * |---|---|---|
- * | 0,5  | 216 → **306 MB** | 0,036/255 · 0,006% pixel — y như cũ |
- * | 0,25 | 216 → **204 MB** | 3,15/255 · 6,3% pixel — mờ thấy được |
- *
- * Máy bàn (ngân sách 1 024 MB) nuốt được 306 MB nên lấy bản nét. iPhone trần 256 MB thì
- * không: B13 đã một lần làm Safari giết tab vì đúng con số đó, nên ở đó lấy bản 0,25 và chịu
- * mờ. Một con số duy nhất cho mọi máy là hoặc phí nửa chất lượng của máy bàn, hoặc giết tab
- * của điện thoại.
- */
-function bakeRes(): number {
-  return gpuBudgetMB() >= 1024 ? 0.5 : 0.25;
-}
 /** GROUND_PAD: giữ thêm một vành ô quanh khung nhìn để lúc camera chạy không thấy ô hiện ra. */
 const GROUND_PAD = 1;
 const ART_FILL = 0.9; // object art fills ~90% of its canvas
@@ -81,44 +61,6 @@ function bounds(s: Shape): { x: number; y: number; w: number; h: number } {
  * drawShape vẽ đúng hình mà SERVER dùng để xét va chạm — đa giác hữu cơ nếu có (spec §8.6),
  * không thì hình tròn / chữ nhật.
  */
-/**
- * noiseMask dựng mặt nạ loang để trộn hai texture nền (spec §8.6 mục 1).
- *
- * Vẽ bằng canvas ở độ phân giải thấp (128×128 cho cả bản đồ 12 000) rồi để GPU kéo giãn —
- * mặt nạ mờ nhoè chính là thứ ta cần, và 128² thì dựng xong trong một nhịp mắt. Dùng hai
- * tầng tần số: tầng thô tạo mảng lớn, tầng mịn làm mép lởm chởm.
- */
-function noiseMask(size: number, seed: number, cover: number): Sprite {
-  const n = 128;
-  const cv = document.createElement('canvas');
-  cv.width = n;
-  cv.height = n;
-  const ctx = cv.getContext('2d') as CanvasRenderingContext2D;
-  const img = ctx.createImageData(n, n);
-  const wave = (x: number, y: number, f: number, p: number): number =>
-    Math.sin(x * f + p) * Math.cos(y * f * 1.3 + p * 1.7) + Math.sin((x + y) * f * 0.7 + p * 2.1);
-  const s = (seed % 1000) * 0.013;
-  for (let y = 0; y < n; y++) {
-    for (let x = 0; x < n; x++) {
-      const v = wave(x, y, 0.055, s) * 0.65 + wave(x, y, 0.17, s * 1.9) * 0.35;
-      // v nằm quanh [-2, 2]; đẩy qua ngưỡng để ra mảng chứ không ra gradient đều.
-      const a = v > (0.5 - cover) * 2 ? 255 : 0;
-      const i = (y * n + x) * 4;
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
-      img.data[i + 3] = a;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  // Làm nhoè mép để hai texture hoà vào nhau thay vì cắt ngọt.
-  ctx.filter = 'blur(2px)';
-  ctx.drawImage(cv, 0, 0);
-  const t = Texture.from(cv);
-  declareTexture(t, 'ground'); // §13.10: mặt nạ trộn nền
-  const sp = new Sprite(t);
-  sp.width = size;
-  sp.height = size;
-  return sp;
-}
 
 /** hashSeed biến id bản đồ thành số, để mọi máy rải decal giống hệt nhau. */
 function hashSeed(id: string): number {
@@ -239,8 +181,8 @@ function obstacleTexture(kind: string, vertical: boolean): Texture | null {
 
 /** Một ô nền đã nướng sẵn: một sprite, một texture, không mask. */
 interface BlendChunk {
-  node: Sprite;
-  tex: RenderTexture;
+  node: Mesh<MeshGeometry, Shader>;
+  tex: Texture;
   /** Bộ nhớ GPU của ô này (MB) — cộng dồn để biết khi nào phải đuổi bớt. */
   mb: number;
   /** Lần cuối ô này còn trong tầm; số càng nhỏ càng lâu không dùng (LRU). */
@@ -332,6 +274,8 @@ export class MapView {
   private readonly blendRoot = new Container();
   /** blendNames: tên tile của lớp trộn; rỗng nghĩa là biome này chỉ có một lớp nền. */
   private blendNames: string[] = [];
+  /** baseName: tile lớp nền — shader trộn cần nó làm lớp 0. */
+  private baseName = '';
   /**
    * blendChunks: ô đang dựng, khoá `"cx,cy"`. Ra ngoài khung nhìn là **huỷ**, không ẩn.
    *
@@ -374,8 +318,6 @@ export class MapView {
   constructor(
     private readonly map: GameMap,
     private readonly gateR: number,
-    /** renderer: cần để NƯỚNG ô nền ra texture một lần (xem `buildBlendChunk`). */
-    private readonly renderer: Renderer,
   ) {
     this.buildGround();
     // Decal rải khắp mặt đất (spec §8.6 mục 3): nằm trên nền, dưới mọi vùng và vật cản.
@@ -505,68 +447,32 @@ export class MapView {
   }
 
   /**
-   * buildBlendChunk dựng một ô nền — NƯỚNG SẴN thành MỘT texture.
+   * buildBlendChunk dựng một ô nền — MỘT mesh, MỘT shader, không RenderTexture.
    *
-   * Trước 13/11 mỗi lớp trộn là một `TilingSprite` che bởi một mặt nạ, và cả hai nằm luôn
-   * trong cây cảnh. Mặt nạ sprite trong Pixi v8 là một lượt vẽ ra texture riêng cho MỖI vật
-   * bị che, MỖI khung — đo được (`drawbreak.mjs`, cảnh thật 3 người): lớp `ground` tốn
-   * **100 lô vẽ với 48 mask**, tức là 41% toàn bộ lô vẽ của cả cảnh, cho một thứ KHÔNG HỀ
-   * ĐỔI sau khi dựng xong.
-   *
-   * Nướng: dựng đúng mấy lớp ấy trong một container tạm, vẽ MỘT LẦN ra `RenderTexture`, rồi
-   * vứt cả container lẫn mặt nạ. Còn lại một `Sprite` phẳng — gom lô được với các ô khác,
-   * không mask, không filter.
+   * Xem `groundshader.ts` để biết ba đời của lớp này và vì sao bản nướng (lượt #39) phải
+   * thay: nó hạ lô vẽ 100 → 5 nhưng mỗi ô giữ một texture 1 MB, và sổ VRAM §13.10 đo ra
+   * 69 MB cho riêng lớp nền (trần 4 MB).
    */
   private buildBlendChunk(cx: number, cy: number): BlendChunk {
-    const tmp = new Container();
-    const maskTex: Texture[] = [];
     const x = cx * GROUND_CHUNK;
     const y = cy * GROUND_CHUNK;
     const w = Math.min(GROUND_CHUNK, this.map.size - x);
     const h = Math.min(GROUND_CHUNK, this.map.size - y);
-    this.blendNames.forEach((name, i) => {
-      const t2 = assets.texture(`tiles/${name}.png`);
-      if (!t2 || w <= 0 || h <= 0) {
-        return;
-      }
-      const layer = new TilingSprite({ texture: t2, width: w, height: h });
-      layer.tileScale.set(TILE_WORLD / t2.width);
-      // Gốc lát bám TOẠ ĐỘ THẾ GIỚI, không bám góc ô: không có dòng này thì hoa văn nhảy
-      // lại từ đầu ở mỗi mép ô và cả bản đồ hiện ra một lưới ô vuông. Trong container tạm
-      // thì ô nằm ở gốc (0,0), nên trừ đi `x`/`y` — nhưng gốc LÁT vẫn tính theo toạ độ thế
-      // giới, nếu không mỗi ô lại bắt đầu hoa văn từ đầu và lưới ô hiện ra y như cũ.
-      layer.tilePosition.set(-x * layer.tileScale.x, -y * layer.tileScale.y);
-      // Mặt nạ gieo theo Ô: cùng một ô luôn ra cùng mảng loang, dù dựng lại bao nhiêu lần
-      // khi người chơi đi qua đi lại. Gieo theo thời gian thì nền "đổi kiểu" sau lưng họ.
-      const mask = noiseMask(Math.max(w, h), hashSeed(`${this.map.id}:${cx}:${cy}:${i}`), 0.42 - i * 0.12);
-      mask.width = w;
-      mask.height = h;
-      layer.mask = mask;
-      maskTex.push(mask.texture);
-      tmp.addChild(layer, mask);
-    });
-    const res = bakeRes();
-    const tex = RenderTexture.create({ width: w, height: h, resolution: res, antialias: false });
-    declareTexture(tex, 'ground'); // §13.10: ô nền đã nướng
-    this.renderer.render({ container: tmp, target: tex, clear: true });
-    // Huỷ container tạm, rồi huỷ RIÊNG texture của mặt nạ.
-    //
-    // KHÔNG dùng `destroy({ textureSource: true })` cho cả cây: `TilingSprite` trong đó xài
-    // texture TILE DÙNG CHUNG của kho asset, và huỷ nguồn của chúng là xoá nền của cả game —
-    // thử rồi, cảnh ra một màu xám trơn, 96% pixel đổi và mọi lớp khác hỏng theo. Chỉ mặt nạ
-    // mới là canvas dựng riêng cho ô này, và nó thì phải huỷ cả nguồn, nếu không `texMB`
-    // không nhúc nhích (đúng cái bẫy đã mắc ở `assets.releaseChar`).
-    tmp.destroy({ children: true });
-    for (const t of maskTex) {
-      t.destroy(true);
-    }
-    const node = new Sprite(tex);
-    node.position.set(x, y);
-    node.width = w;
-    node.height = h;
-    const mb = (w * res * h * res * 4) / 1048576;
+    const tiles = [this.baseName, ...this.blendNames]
+      .map((n) => assets.texture(`tiles/${n}.png`))
+      .filter((t): t is Texture => t !== null);
+    const { mesh, mask } = groundChunkMesh(
+      tiles, x, y, w, h, TILE_WORLD,
+      // Hạt giống gieo theo Ô **và theo LỚP** — đúng chuỗi bản mặt nạ cũ dùng. Cùng một ô
+      // luôn ra cùng mảng loang, dù dựng lại bao nhiêu lần khi người chơi đi qua đi lại.
+      this.blendNames.map((_, i) => hashSeed(`${this.map.id}:${cx}:${cy}:${i}`)),
+      this.blendNames.map((_, i) => 0.42 - i * 0.12),
+    );
+    // Mặt nạ 128² RGBA = 64 KB mỗi ô, không đổi theo cỡ ô. Ghi lại để `evictBaked` còn biết
+    // đang giữ bao nhiêu — tên hàm giữ nguyên dù nay không còn "nướng" gì nữa.
+    const mb = (128 * 128 * 4) / 1048576;
     this.bakedMB += mb;
-    return { node, tex, mb, used: ++this.seq };
+    return { node: mesh, tex: mask, mb, used: ++this.seq };
   }
 
   /**
@@ -634,6 +540,7 @@ export class MapView {
       const t = new TilingSprite({ texture: tex, width: size, height: size });
       t.tileScale.set(TILE_WORLD / tex.width);
       this.ground.addChild(t);
+      this.baseName = names[0];
       this.blendNames = names.slice(1).filter((n) => assets.texture(`tiles/${n}.png`));
       this.ground.addChild(this.blendRoot);
     } else {
