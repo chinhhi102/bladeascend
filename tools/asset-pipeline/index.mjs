@@ -16,8 +16,10 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, wri
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { encodeToKTX2 } from 'ktx2-encoder';
+
 import { sharpGrade } from '../colorgrade.mjs';
-import { charIds, neverShip, plan, zoneObstacleKinds, ZONE_MAP_IDS } from './groups.mjs';
+import { charIds, ktxFor, neverShip, plan, zoneObstacleKinds, ZONE_MAP_IDS } from './groups.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..', '..');
@@ -25,6 +27,24 @@ const SRC = join(REPO, 'assets', 'src');
 const DIST = join(REPO, 'assets', 'dist');
 const MAPS = join(REPO, 'maps');
 const CACHE = join(DIST, '.pipeline-cache.json');
+
+/**
+ * PIPELINE_VERSION — tăng MỖI KHI cách dựng ảnh đổi.
+ *
+ * Bộ đệm khoá theo `sha(kế hoạch + byte nguồn)`. Nó bắt được "art đổi" và "kế hoạch đổi",
+ * nhưng KHÔNG bắt được "pipeline đổi" — và đó đúng là chỗ vừa sập: tôi thêm phép chỉnh màu
+ * cho decal/trang trí, chạy build, thấy "ĐẠT" và commit — trong khi mọi tệp decal vẫn là
+ * bản dựng từ 30/10. Ảnh không đổi, nên hash không đổi, nên bộ đệm trả lại bản cũ, và cả
+ * `scenediff` lẫn bảng ngân sách đều không có gì để kêu.
+ *
+ * Số này nằm trong fingerprint, nên tăng nó là dựng lại toàn bộ.
+ *
+ *   1 — ban đầu
+ *   2 — chỉnh màu nền cho decal/trang trí (§13.10), xuất thêm KTX2
+ *   3 — ngưỡng KTX2 nâng 256 → 512 px (ảnh nhỏ nén khối tốn tải về hơn WebP)
+ *   4 — `ui` chuyển UASTC → ETC1S (nền trang chủ 244 KB → 2,4 MB là không chấp nhận được)
+ */
+const PIPELINE_VERSION = 4;
 
 /**
  * Thư mục được áp ma trận chỉnh màu nền lúc build (§13.10).
@@ -126,7 +146,55 @@ async function buildImage(rel, p, srcBuf) {
     img = img.recomb(g.recomb).linear([1, 1, 1], g.offset255);
   }
   const buf = await img.webp({ quality: p.quality, alphaQuality: 100, effort: 5 }).toBuffer();
-  return { buf, ext: 'webp', scale, w: Math.round(meta.width * scale), h: Math.round(meta.height * scale) };
+  const w = Math.round(meta.width * scale);
+  const h = Math.round(meta.height * scale);
+  // Bản KTX2 (§13.10) đi KÈM bản WebP, không thay nó: thiết bị không hỗ trợ nén khối vẫn
+  // phải chơi được, và `assets.ts` chọn bản nào lúc chạy.
+  const ktx = await buildKtx(rel, img, w, h);
+  return { buf, ext: 'webp', scale, w, h, ktx };
+}
+
+/**
+ * buildKtx xuất bản nén khối KTX2 — GAME_SPEC §13.10.
+ *
+ * UASTC cho thứ nhìn gần (nhân vật, vật phẩm, VFX), ETC1S cho thứ trải rộng (nền, vật cản,
+ * decal). Khác nhau ở chỗ: UASTC giữ nét gần như WebP và tốn 1 byte/điểm ảnh trên GPU;
+ * ETC1S mờ hơn một chút nhưng chỉ 0,5 byte, và tệp tải về nhẹ hơn WebP nhiều lần.
+ *
+ * Đo thật (lượt 13/11): atlas nhân vật 1152² — WebP 250 KB tải về, 5,3 MB trên GPU; UASTC
+ * 457 KB tải về, **1,3 MB** trên GPU. Tile nền 512² — ETC1S **11 KB** tải về, 128 KB GPU.
+ *
+ * Trả `null` khi không áp dụng; mọi lỗi mã hoá cũng trả `null` kèm cảnh báo — một tệp không
+ * nén được không được phép làm sập cả bản build (cùng luật với `buildAudio`).
+ */
+async function buildKtx(rel, img, w, h) {
+  const mode = ktxFor(rel, w, h);
+  if (!mode) {
+    return null;
+  }
+  try {
+    const png = await img.clone().png().toBuffer();
+    const opt = mode === 'uastc'
+      ? { isUASTC: true, uastcLDRQualityLevel: 2, needSupercompression: true }
+      : { isUASTC: false, qualityLevel: 160 };
+    const out = await encodeToKTX2(png, {
+      ...opt,
+      isKTX: true,
+      isSetKTX: true,
+      generateMipmap: true,
+      imageDecoder: rawDecoder,
+    });
+    return { buf: Buffer.from(out), mode };
+  } catch (err) {
+    console.error(`  ⚠ ${rel}: không nén KTX2 được (${String(err).split('\n')[0]}) → chỉ có WebP`);
+    return null;
+  }
+}
+
+/** rawDecoder: bộ mã hoá KTX2 cần điểm ảnh thô RGBA; `sharp` đã có sẵn trong pipeline. */
+async function rawDecoder(buf) {
+  const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  return { data, width: info.width, height: info.height };
 }
 
 /**
@@ -177,7 +245,7 @@ for (const rel of shipped) {
   const srcPath = join(SRC, rel);
   const srcBuf = readFileSync(srcPath);
   stats.srcBytes += srcBuf.length;
-  const fingerprint = sha(Buffer.concat([Buffer.from(JSON.stringify(p)), srcBuf]));
+  const fingerprint = sha(Buffer.concat([Buffer.from(`v${PIPELINE_VERSION}:${JSON.stringify(p)}`), srcBuf]));
 
   if (p.kind === 'atlas-json') {
     // Phải chờ biết atlas.png thu nhỏ bao nhiêu mới rescale được toạ độ → xử lý sau.
@@ -212,6 +280,11 @@ for (const rel of shipped) {
   const url = outName(rel, built.ext, sha(built.buf));
   write(url, built.buf);
   const entry = { url, bytes: built.buf.length, fingerprint, scale: built.scale ?? 1, w: built.w, h: built.h };
+  if (built.ktx) {
+    const ktxUrl = outName(rel, 'ktx2', sha(built.ktx.buf));
+    write(ktxUrl, built.ktx.buf);
+    entry.ktx = { url: ktxUrl, bytes: built.ktx.buf.length, mode: built.ktx.mode };
+  }
   out.set(rel, { ...entry, groups: p.groups });
   nextCache.entries[rel] = entry;
   stats.built++;
@@ -261,7 +334,7 @@ for (const { rel, p, srcBuf, fingerprint } of atlasJsons) {
 const groups = {};
 const files = {};
 for (const [rel, e] of [...out.entries()].sort()) {
-  files[rel] = { url: e.url, bytes: e.bytes, groups: e.groups };
+  files[rel] = { url: e.url, bytes: e.bytes, groups: e.groups, ...(e.ktx ? { ktx: e.ktx } : {}) };
   for (const g of e.groups) {
     (groups[g] ??= { bytes: 0, files: [] }).files.push(rel);
     groups[g].bytes += e.bytes;
@@ -281,7 +354,16 @@ writeFileSync(join(DIST, 'manifest.json'), JSON.stringify(manifest));
 writeFileSync(CACHE, JSON.stringify(nextCache));
 
 // ——— Dọn tệp mồ côi: hash đổi thì bản cũ còn nằm đó và `assets:budget` sẽ đếm nó ———
-const keep = new Set([...out.values()].map((e) => e.url).concat(['manifest.json', '.pipeline-cache.json']));
+// Giữ CẢ bản KTX2, không chỉ `url`.
+//
+// Bước dọn này xoá mọi tệp không nằm trong danh sách giữ — và vì danh sách chỉ lấy `e.url`,
+// nó lặng lẽ xoá sạch mọi `.ktx2` vừa ghi ra. Triệu chứng: pipeline báo "ghi xong", log có
+// đủ số byte, mà `find assets/dist -name '*.ktx2'` trả về 0. Mất gần một tiếng mới tìm ra,
+// vì mọi bước TRƯỚC bước này đều báo thành công.
+const keep = new Set(
+  [...out.values()].flatMap((e) => (e.ktx ? [e.url, e.ktx.url] : [e.url]))
+    .concat(['manifest.json', '.pipeline-cache.json']),
+);
 let removed = 0;
 for (const rel of walk(DIST)) {
   if (!keep.has(rel)) {

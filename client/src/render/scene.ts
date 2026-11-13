@@ -1,4 +1,11 @@
-import { Application, Container, Texture, type Ticker, UPDATE_PRIORITY } from 'pixi.js';
+// Bộ đọc KTX2 KHÔNG tự đăng ký khi `import 'pixi.js'` — phải nạp riêng đường phụ này.
+//
+// Thiếu nó thì mọi tệp `.ktx2` tải về xong rồi bị bỏ, với đúng một dòng cảnh báo trong
+// console: "could not be loaded as we don't know how to parse it". Hậu quả nhìn thấy là
+// nhân vật về placeholder và mặt đất thành một mảng xanh trơn — tức là ART HỎNG HẾT, nhưng
+// không có lỗi nào được ném và bài đo VRAM lại báo con số ĐẸP HƠN vì chẳng còn texture nào.
+import 'pixi.js/ktx2';
+import { Application, Container, setKTXTranscoderPath, Texture, type Ticker, UPDATE_PRIORITY } from 'pixi.js';
 import { AnimViewer } from './animviewer';
 import { guardLines, killFilters, noteDrawError, noteSysError, sysOffList, sysRun } from './guard';
 import { census, type Census, censusFlat, censusLine, ledgerSet } from './ledger';
@@ -229,6 +236,12 @@ export class GameScene {
       throw new Error('buildApp trước init');
     }
     trackTextureFrom(Texture);
+    // Bộ giải mã KTX2 phục vụ TẠI CHỖ, không lấy từ CDN.
+    //
+    // Mặc định Pixi trỏ `cdn.jsdelivr.net`. Game này chạy trên máy chủ LAN của đội test và
+    // sẽ chạy trên k8s sau — một phụ thuộc mạng ngoài ngay trong đường vào trận là thứ hỏng
+    // đúng lúc không ai gỡ được. Tệp nằm ở `client/public/transcoders/ktx`.
+    setKTXTranscoderPath({ jsUrl: '/transcoders/ktx/libktx.js', wasmUrl: '/transcoders/ktx/libktx.wasm' });
     await this.app.init({
       // Ép WebGL. Pixi 8 vốn xếp WebGL trước, nhưng ghi rõ để một lần nâng Pixi đổi thứ tự
       // mặc định không lặng lẽ chuyển người chơi sang WebGPU — đường đó chưa từng được đo

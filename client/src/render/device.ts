@@ -95,3 +95,43 @@ export function isIntegratedGpu(gpu: string): boolean {
     g.includes('swiftshader') || g.includes('llvmpipe')
   );
 }
+
+/**
+ * ktxSupported: thiết bị này giải nén được texture nén khối không — GAME_SPEC §13.10.
+ *
+ * KTX2 không phải một định dạng ảnh mà là một CÁI HỘP: bên trong là UASTC/ETC1S, và bộ giải
+ * mã của Pixi chuyển nó sang định dạng mà card đang có (BC7/BC1 trên máy bàn, ASTC/ETC trên
+ * điện thoại). Không card nào nhận thì nó vẫn chạy được, nhưng phải bung ra RGBA đầy đủ —
+ * tức là mất sạch cái lợi về bộ nhớ, trong khi tệp tải về lại nặng hơn WebP. Khi đó thà
+ * dùng WebP.
+ *
+ * Hỏi bằng một ngữ cảnh WebGL dùng một lần rồi vứt: câu trả lời không đổi trong cả phiên,
+ * và hỏi sớm (trước khi renderer dựng xong) thì bộ nạp asset đã biết phải lấy bản nào.
+ */
+let ktxOk: boolean | null = null;
+export function ktxSupported(): boolean {
+  if (ktxOk !== null) {
+    return ktxOk;
+  }
+  try {
+    const cv = document.createElement('canvas');
+    const gl = cv.getContext('webgl2') ?? cv.getContext('webgl');
+    if (!gl) {
+      ktxOk = false;
+      return ktxOk;
+    }
+    const want = [
+      'EXT_texture_compression_bptc', // BC7 — máy bàn, đúng đích của UASTC
+      'WEBGL_compressed_texture_s3tc', // BC1/BC3 — máy bàn cũ, đích của ETC1S
+      'WEBGL_compressed_texture_astc', // điện thoại mới
+      'WEBGL_compressed_texture_etc', // điện thoại Android
+    ];
+    ktxOk = want.some((n) => gl.getExtension(n) !== null);
+    // Trả ngữ cảnh lại ngay: giữ một WebGL context sống chỉ để trả lời một câu hỏi là một
+    // trong 8–16 context mà trình duyệt cho phép, và cái bị thu hồi sẽ là context của game.
+    (gl.getExtension('WEBGL_lose_context') as { loseContext?: () => void } | null)?.loseContext?.();
+  } catch {
+    ktxOk = false;
+  }
+  return ktxOk;
+}

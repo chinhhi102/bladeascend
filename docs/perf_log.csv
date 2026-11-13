@@ -101,3 +101,6 @@ run,date,commit,label,scenario,tick_avg_ms,tick_p95_ms,cpu_pct,kbps_avg,kbps_pea
 45,2026-11-13,d89625a,"Bo ColorMatrixFilter tren lop nen (ma tran vao shader tron)",VRAM,,,,,,,,60,,,54,,180.84,,,,,,,,,"bo dem khung 30.4 -> 27.8 MB; anh lech 0.075/255; lo ve ground 5 -> 74 o canh dong",
 46,2026-11-13,8b43e64,"Lop nen gop mot geometry + atlas mat na 1024",VRAM,,,,,,,,60,,,26,,140.55,,,,,,,,,"lo ve ground 74 -> 3; tong canh dong 424 -> 162; Nen co dinh 8.00 MB; anh lech 0.100/255",
 47,2026-11-13,9f300ff,"Bo han ColorMatrixFilter (decal/decor chinh mau luc build)",VRAM,,,,,,,,60,,,24,,23.59,,,,,,,,,"bo dem khung 27.8 -> 0.00 MB; canh thu 25.45 -> 23.59 MB; anh lech 0.030/255; goi chan vao tran 4.47 MB",
+0,2026-11-13,,"Người thật 12/11 23:30 → 13/11 12:00",S6,0.92,8.24,12.2,4.0,4.4,0.4,47.0,56.0,0.0,,0,4071,148.5,0,0.00,,,,"ít mẫu, tham khảo (N=1)",1
+0,2026-11-13,,"Người thật 12/11 23:30 → 13/11 12:00",S6,0.92,8.24,12.2,4.0,4.4,0.4,47.0,56.0,0.0,,0,4071,148.5,0,0.00,,,,"ít mẫu, tham khảo (N=1)",1
+48,2026-11-13,9f42ddc,"KTX2 (UASTC nhan vat/vat pham/VFX, ETC1S nen/vat can/decal/UI)",VRAM,,,,,,,,60,,,28,,15.53,,,,,,,,,"canh thu 23.59 -> 15.53 MB; atlas nhan vat 6.75 -> 1.69; tai ve home 0.90->1.07, boot 2.69->3.13, toan bo 8.51->11.69 MB; anh lech 2.30/255",

@@ -136,6 +136,7 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 45 | 2026-11-13 | `d89625a`+ | **§13.10 mục 1 — bỏ `ColorMatrixFilter` trên lớp nền** (đưa ma trận màu vào shader trộn) | VRAM | – | – | – | 60/60/60 (CPU 1×/4×/6×) | – | 54 (thử) · 424 (đông) | – | – | Bộ đệm khung **30,4 → 27,8 MB** · tổng cảnh đông **185,2 → 180,8 MB**. Hình: **0,075/255 · 22 pixel** | Lô vẽ ground 5 → 74 ở cảnh đông — xem §5 |
 | 46 | 2026-11-13 | `8b43e64`+ | **Lớp nền gộp thành MỘT geometry + atlas mặt nạ 1024²** | VRAM | – | – | – | 60/60/60 | – | **3** (ground) · 162 (đông) | – | – | Tổng VRAM cảnh đông **180,8 → 140,6 MB** · `Nền` **cố định 8,00 MB** (3 texture). Cảnh thử: 54 → **26** lô vẽ, Pixi vẽ 1,42/2,88/4,14 ms | Hình: 0,100/255 |
 | 47 | 2026-11-13 | `9f300ff`+ | **Bỏ HẲN `ColorMatrixFilter`** — decal/trang trí chỉnh màu lúc build trong asset-pipeline | VRAM | – | – | – | 60/60/60 | – | 24 (thử) | – | – | "Bộ đệm khung · bộ lọc" **→ 0,00 MB** (không còn filter nào). Cảnh thử tổng **25,45 → 23,59 MB**. Gói chặn vào trận 4,47 MB (ngân sách 8) | Hình: **0,030/255 · 63 pixel — ĐẠT** |
+| 48 | 2026-11-13 | `9f42ddc`+ | **§13.10 mục 3 — KTX2** (UASTC nhân vật/vật phẩm/VFX · ETC1S nền/vật cản/decal/UI) | VRAM | – | – | – | 60/60/60 | – | 28 (thử) | – | – | Cảnh thử **23,59 → 15,53 MB**; atlas nhân vật **6,75 → 1,69 MB**. Tải về `home` 0,90 → 1,07 · `boot` 2,69 → 3,13 · toàn bộ 8,51 → 11,69 MB | Hình: 2,30/255 (nén khối) |
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
@@ -1633,6 +1634,47 @@ ngay, thay vì màu nền âm thầm trôi sau một lần nâng cấp. (Chạy 
 
 Còn lại trên cảnh thử: `Nền` 9,33 MB (atlas mặt nạ 4 MB + 3 tile chưa nén) và 4 MB chưa khai
 hạng mục. Cả hai là việc của bước KTX2.
+
+---
+
+### Lượt 48 — 13/11/2026 · §13.10 mục 3: KTX2
+
+| | cảnh thử | atlas nhân vật | vật cản/decal |
+|---|---:|---:|---:|
+| WebP | 23,59 MB | 6,75 | 2,33 |
+| KTX2 | **15,53 MB** | **1,69** | **1,33** |
+
+Tải về: `home` 0,90 → **1,07 MB** · `boot` 2,69 → **3,13 MB** · toàn bộ 8,51 → **11,69 MB**
+(ngân sách chặn vào trận 8 MB vẫn đạt). Ảnh lệch 2,30/255 — đó là giá của nén khối, không
+phải lỗi.
+
+**Bốn lần phải sửa, và mỗi lần là một kiểu "thành công giả":**
+
+1. **Bước dọn tệp mồ côi xoá sạch `.ktx2` vừa ghi.** Danh sách giữ chỉ lấy `entry.url`, mà
+   KTX2 nằm ở `entry.ktx.url`. Pipeline báo ghi xong, log đủ số byte, `find` trả về 0. Mọi
+   bước TRƯỚC bước dọn đều báo thành công.
+2. **Bộ đệm pipeline không biết chính pipeline đã đổi.** Fingerprint là `sha(kế hoạch + byte
+   nguồn)` — nó bắt "art đổi" và "kế hoạch đổi", không bắt "cách dựng đổi". Nên lượt #47
+   (chỉnh màu decal) **chưa bao giờ được áp**: tôi chạy build, thấy ĐẠT, commit — trong khi
+   mọi tệp decal vẫn là bản dựng từ 30/10. Nay có `PIPELINE_VERSION` nằm trong fingerprint.
+3. **Manifest rơi mất trường `ktx`.** 296 tệp có trên đĩa, 0 tệp trong manifest, client vẫn
+   tải WebP. Bảng VRAM không đổi một con số nào — và nếu không hỏi "sao không đổi gì" thì
+   đây là một lượt tối ưu "xong" mà chẳng làm gì.
+4. **Bộ đọc KTX2 không tự đăng ký.** `import 'pixi.js'` không kéo theo nó; phải
+   `import 'pixi.js/ktx2'`. Thiếu nó thì mọi tệp tải về xong rồi bị bỏ với đúng một dòng
+   cảnh báo trong console — nhân vật về placeholder, mặt đất thành mảng xanh trơn, **và bảng
+   VRAM báo 6,93 MB, đẹp hơn bao giờ hết**. Một cái sổ chỉ đếm thứ nạp được sẽ luôn khen
+   một lượt tối ưu làm hỏng hết art.
+
+Sổ VRAM cũng phải sửa theo: texture nén đi qua `compressedTexSubImage2D` (WebGL2 cấp phát
+bằng `texStorage2D` rồi nạp từng mức), và cỡ thật là **số byte đã truyền**, không phải
+`w·h·4` — tính theo RGBA là báo gấp 4–8 lần cho đúng thứ vừa được nén.
+
+**Hai chỗ phải lùi khỏi spec, vì dung lượng TẢI VỀ:**
+- Ngưỡng cỡ **512 px**, không phải 256: nhóm `home` đi từ 0,90 lên **4,24 MB** khi nén cả
+  ảnh chân dung 256². UASTC tốn ~1 byte/điểm ảnh bất kể ảnh đơn giản đến đâu.
+- **`ui` dùng ETC1S** dù spec xếp nó cùng nhóm VFX (UASTC): `ui/home_bg.png` đi từ 244 KB
+  lên **2 456 KB**. ETC1S giữ nguyên cái lợi VRAM mà tải về còn nhẹ hơn WebP.
 
 ---
 

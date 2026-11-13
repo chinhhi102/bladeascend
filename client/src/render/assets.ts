@@ -1,6 +1,7 @@
 import { Assets, Rectangle, Texture } from 'pixi.js';
 
 import { CHARACTER_ANIMS } from './catalog';
+import { ktxSupported } from './device';
 
 // Bộ nạp asset theo NHÓM (GAME_SPEC §13.7 mục 3).
 //
@@ -27,6 +28,8 @@ interface ManifestFile {
   url: string;
   bytes: number;
   groups: string[];
+  /** Bản nén khối KTX2 (§13.10) — chỉ có với ảnh đủ lớn và cạnh chia hết cho 4. */
+  ktx?: { url: string; bytes: number; mode: 'uastc' | 'etc1s' };
 }
 
 interface Manifest {
@@ -411,8 +414,22 @@ class AssetStore {
     this.fallbackChars = chars;
   }
 
+  /**
+   * texUrl: địa chỉ để NẠP LÀM TEXTURE — ưu tiên bản KTX2 nén khối (§13.10).
+   *
+   * Khác `url()`, vốn dùng cho thẻ `<img>` của DOM: trình duyệt không hiển thị được KTX2,
+   * nó chỉ là dữ liệu cho GPU. Lẫn hai đường này là trang chủ hiện ra ô ảnh vỡ.
+   */
+  private texUrl(rel: string): string {
+    const f = this.man?.files[rel];
+    if (!f) {
+      return '';
+    }
+    return f.ktx && ktxSupported() ? `/assets/${f.ktx.url}` : `/assets/${f.url}`;
+  }
+
   private async loadTexture(rel: string): Promise<Texture | null> {
-    const url = this.url(rel);
+    const url = this.texUrl(rel);
     if (!url) {
       return null;
     }
@@ -438,7 +455,10 @@ class AssetStore {
       // Tên ảnh lấy từ chính atlas (`image`, có hash) — không suy ra từ đường dẫn, vì hash
       // của ảnh không liên quan gì tới hash của JSON.
       const imgRel = `${dir}/atlas.png`;
-      const imgUrl = atlas.image ? `/assets/${dir}/${atlas.image}` : this.url(imgRel);
+      // `texUrl` TRƯỚC `atlas.image`: trường `image` trong atlas.json trỏ bản WebP, còn ảnh
+      // nén khối là một tệp khác. Lấy `atlas.image` trước thì atlas nhân vật — đúng hạng
+      // mục ngốn VRAM nhất — là thứ DUY NHẤT không bao giờ được nén.
+      const imgUrl = this.texUrl(imgRel) || (atlas.image ? `/assets/${dir}/${atlas.image}` : '');
       if (!imgUrl) {
         return;
       }

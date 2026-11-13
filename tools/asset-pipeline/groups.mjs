@@ -235,3 +235,49 @@ export function plan(rel, ctx) {
   // quên khai báo thì nó làm game thiếu ảnh một lúc, không làm người chơi chờ thêm.
   return { groups: ['fx_high'], kind: rel.endsWith('.json') ? 'data' : 'image', maxPx: 512, quality: 80 };
 }
+
+/**
+ * ktxFor: ảnh này xuất thêm bản KTX2 nào — GAME_SPEC §13.10.
+ *
+ *   'uastc'  nhân vật, vật phẩm, VFX, UI — chất lượng cao, GPU 1 byte/điểm ảnh
+ *   'etc1s'  nền, decal, vật cản, trang trí — GPU 0,5 byte/điểm ảnh, tải về rất nhẹ
+ *   null     không nén khối: ảnh nhỏ, hoặc cạnh không chia hết cho 4
+ *
+ * Vì sao có ngưỡng cỡ: nén khối chia ảnh thành ô 4×4 và mỗi ô ăn một lượng byte cố định,
+ * nên với icon 32–64 px nó vừa không tiết kiệm được gì vừa làm mờ nét — mà icon là thứ
+ * người chơi nhìn gần nhất. Dưới 256 px thì giữ WebP.
+ *
+ * Vì sao đòi cạnh chia hết cho 4: đó là điều kiện của chính định dạng. Ảnh lẻ cạnh mà ép
+ * nén thì bộ mã hoá tự đệm thêm, và với ATLAS thì phần đệm làm lệch toạ độ mọi ô — nhân vật
+ * sẽ bị cắt mất chân. Thà giữ WebP cho vài tệp còn hơn.
+ */
+// `ui` KHÔNG dùng UASTC dù spec xếp nó cùng nhóm với VFX.
+//
+// Lý do là dung lượng TẢI VỀ, không phải chất lượng: `ui/home_bg.png` đi từ 244 KB (WebP)
+// lên **2 456 KB** (UASTC) — một mình nó làm nhóm `home`, tức nhóm CHẶN trang chủ, phình
+// gấp ba. UASTC tốn ~1 byte/điểm ảnh bất kể ảnh đơn giản đến đâu, và nền trang chủ là một
+// bức phẳng mà WebP nén rất tốt. ETC1S giữ nguyên cái lợi VRAM (0,5 byte/điểm ảnh) mà tải
+// về còn nhẹ hơn WebP.
+const KTX_UASTC = new Set(['characters', 'items', 'vfx', 'swords', 'beasts', 'buffs']);
+const KTX_ETC1S = new Set(['obstacles', 'decals', 'tiles', 'decor', 'gates', 'zones', 'monsters', 'ambient', 'ui']);
+
+export function ktxFor(rel, w, h) {
+  // Ngưỡng 512, không phải 256.
+  //
+  // Đo thật: để ngưỡng 256 thì nhóm `home` (10 ảnh chân dung 256² + icon giao diện) đi từ
+  // **0,90 MB lên 4,24 MB** tải về. UASTC tốn ~1 byte/điểm ảnh BẤT KỂ ảnh đơn giản đến đâu,
+  // trong khi WebP nén một bức chân dung phẳng xuống còn vài chục KB. Lợi VRAM của một ảnh
+  // 256² là 0,2 MB — không đáng đổi lấy gấp bốn lần dung lượng tải về ở đúng nhóm CHẶN
+  // trang chủ.
+  if (Math.max(w, h) < 512 || w % 4 !== 0 || h % 4 !== 0) {
+    return null;
+  }
+  const top = rel.split('/')[0];
+  if (KTX_UASTC.has(top)) {
+    return 'uastc';
+  }
+  if (KTX_ETC1S.has(top)) {
+    return 'etc1s';
+  }
+  return null;
+}

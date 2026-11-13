@@ -220,16 +220,25 @@ export function trackTextureFrom(TextureClass: object): void {
 }
 
 export function trackSourceNames(texSystem: Record<string, unknown>): void {
-  // KHÔNG còn khoá sau `?textrace=1`.
+  // Bọc CẢ `initSource`, không chỉ `onSourceUpdate`.
   //
-  // Nhãn nguồn là thứ sổ VRAM theo hạng mục (§13.10) đọc để xếp loại, nên nó phải luôn có.
-  // Giá phải trả chỉ là gán một chuỗi đã tồn tại sẵn (`source.label`) — phần ĐẮT là
-  // `new Error().stack` trong `trackTextureFrom`, và phần đó vẫn nằm sau cờ.
-  if (typeof texSystem.onSourceUpdate !== 'function') {
+  // Texture nén khối (KTX2) đi lên GPU qua `initSource` — `onSourceUpdate` không chạy cho
+  // chúng. Thiếu chỗ này thì mọi atlas nén rơi vào hạng mục "chưa khai", và bảng ngân sách
+  // §13.10 mất đúng hai dòng quan trọng nhất (atlas nhân vật, nền). Đã sập một lần: sau khi
+  // bật KTX2, hai dòng đó về 0,00 MB còn dòng KHÁC phình lên.
+  wrapSourceFn(texSystem, 'initSource');
+  wrapSourceFn(texSystem, 'onSourceUpdate');
+}
+
+/** wrapSourceFn bọc một hàm nhận `TextureSource` để ghi nhãn nguồn đang tải lên. */
+function wrapSourceFn(texSystem: Record<string, unknown>, name: string): void {
+  // KHÔNG khoá sau `?textrace=1`: nhãn nguồn là thứ sổ VRAM đọc để xếp loại nên phải luôn
+  // có. Phần ĐẮT là `new Error().stack` trong `trackTextureFrom`, và nó vẫn nằm sau cờ.
+  if (typeof texSystem[name] !== 'function') {
     return;
   }
-  const orig = (texSystem.onSourceUpdate as (s: unknown) => unknown).bind(texSystem);
-  texSystem.onSourceUpdate = (src: unknown): unknown => {
+  const orig = (texSystem[name] as (s: unknown) => unknown).bind(texSystem);
+  texSystem[name] = (src: unknown): unknown => {
     const s = src as
       | { label?: string; uid?: number; resource?: { src?: string; nodeName?: string } }
       | null;
@@ -250,15 +259,28 @@ export function trackSourceNames(texSystem: Record<string, unknown>): void {
 
 /** BYTES_PER_PIXEL: giả định RGBA8. Phần lớn texture của game là PNG/WebP có alpha. */
 const BYTES_PER_PIXEL = 4;
+/**
+ * Mã định dạng nén khối hay gặp (BC1–BC7, ETC2, ASTC 4×4…).
+ *
+ * Dùng để biết `texStorage2D` đang cấp phát một texture NÉN — lúc đó cỡ thật không phải
+ * `w·h·4`, và con số thật sẽ do `compressedTexSubImage2D` ghi.
+ */
+const COMPRESSED_FORMATS = new Set([
+  0x83f0, 0x83f1, 0x83f2, 0x83f3, // S3TC / BC1-BC3
+  0x8e8c, 0x8e8d, 0x8e8e, 0x8e8f, // BPTC / BC7
+  0x9274, 0x9275, 0x9276, 0x9277, 0x9278, 0x9279, // ETC2
+  0x93b0, 0x93b1, 0x93b2, 0x93b3, 0x93b4, 0x93b5, 0x93b6, 0x93b7, // ASTC
+  0x93b8, 0x93b9, 0x93ba, 0x93bb, 0x93bc, 0x93bd,
+]);
 /** MIP_FACTOR: có mipmap thì tốn thêm ~1/3. Pixi bật mipmap cho phần lớn texture. */
 const MIP_FACTOR = 4 / 3;
 
-function note(gl: WebGLRenderingContext | WebGL2RenderingContext, w: number, h: number, mip: boolean): void {
+function note(gl: WebGLRenderingContext | WebGL2RenderingContext, w: number, h: number, mip: boolean, exactBytes?: number): void {
   const tex = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
   if (!tex || !(w > 0) || !(h > 0)) {
     return;
   }
-  const bytes = Math.round(w * h * BYTES_PER_PIXEL * (mip ? MIP_FACTOR : 1));
+  const bytes = exactBytes ?? Math.round(w * h * BYTES_PER_PIXEL * (mip ? MIP_FACTOR : 1));
   const old = alloc.get(tex);
   if (old) {
     totalBytes -= old.bytes;
@@ -295,7 +317,11 @@ export function trackGpuMemory(gl: WebGLRenderingContext | WebGL2RenderingContex
   const texStorage2D = g.texStorage2D?.bind(gl);
   if (texStorage2D) {
     g.texStorage2D = (...a: unknown[]): unknown => {
-      note(gl, Number(a[3]), Number(a[4]), Number(a[1]) > 1);
+      // Bỏ qua khi định dạng là NÉN: cỡ thật sẽ do `compressedTexSubImage2D` ghi. Tính
+      // `w·h·4` ở đây là báo gấp 4–8 lần sự thật cho đúng thứ vừa được nén lại.
+      if (!COMPRESSED_FORMATS.has(Number(a[2]))) {
+        note(gl, Number(a[3]), Number(a[4]), Number(a[1]) > 1);
+      }
       return texStorage2D(...a);
     };
   }
@@ -303,8 +329,37 @@ export function trackGpuMemory(gl: WebGLRenderingContext | WebGL2RenderingContex
   const compressed = g.compressedTexImage2D?.bind(gl);
   if (compressed) {
     g.compressedTexImage2D = (...a: unknown[]): unknown => {
-      note(gl, Number(a[3]), Number(a[4]), Number(a[1]) === 0);
+      // Texture NÉN KHỐI: kích thước thật là số byte đã truyền vào, KHÔNG phải `w·h·4`.
+      //
+      // Đây là cả điểm của §13.10: BC7 tốn 1 byte/điểm ảnh, BC1 tốn 0,5 — tính theo RGBA là
+      // báo gấp 4–8 lần sự thật, và khi đó bảng ngân sách sẽ nói lượt tối ưu KTX2 chẳng được
+      // gì. Đúng cái bẫy đã sập một lần: đo xong thấy số không đổi, suýt kết luận sai.
+      //
+      // Chỉ ghi mức 0 rồi nhân 4/3 cho cả chuỗi mipmap: mỗi mức là một lời gọi riêng, mà
+      // `note` khoá theo texture nên mức sau sẽ ĐÈ mức trước — kết quả là chỉ còn mức nhỏ
+      // nhất, tức gần bằng 0.
+      if (Number(a[1]) === 0) {
+        const data = a[6] as { byteLength?: number } | number | undefined;
+        const n = typeof data === 'number' ? data : data?.byteLength;
+        note(gl, Number(a[3]), Number(a[4]), true, n ? Math.round(n * MIP_FACTOR) : undefined);
+      }
       return compressed(...a);
+    };
+  }
+
+  // WebGL2 thường cấp phát bằng `texStorage2D` rồi nạp từng mức bằng `compressedTexSubImage2D`
+  // — `compressedTexImage2D` không được gọi lần nào. Thiếu chỗ này thì toàn bộ texture nén
+  // biến mất khỏi sổ: hai dòng "Atlas nhân vật" và "Nền" về 0,00 MB với 0 texture, trong khi
+  // chúng đang chiếm chỗ thật trên GPU. Một cái sổ báo THIẾU còn nguy hơn báo thừa.
+  const compressedSub = g.compressedTexSubImage2D?.bind(gl);
+  if (compressedSub) {
+    g.compressedTexSubImage2D = (...a: unknown[]): unknown => {
+      if (Number(a[1]) === 0) {
+        const data = a[7] as { byteLength?: number } | number | undefined;
+        const n = typeof data === 'number' ? data : data?.byteLength;
+        note(gl, Number(a[4]), Number(a[5]), true, n ? Math.round(n * MIP_FACTOR) : undefined);
+      }
+      return compressedSub(...a);
     };
   }
 
