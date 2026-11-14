@@ -571,6 +571,21 @@ func (r *Room) detach(z *Zone, c *Client) {
 	r.mgr.release(r)
 }
 
+// deadMsg dựng màn Tổng kết của một nhân vật vừa chết.
+//
+// Một chỗ dựng duy nhất, vì cùng một màn hình đi ra ba đường khác nhau: gửi thẳng cho người
+// đang online, cất vào `hold` cho người đang mất kết nối, và — từ 14/11 — gửi ngay lúc họ
+// nối lại nếu họ chết khi hoạt ảnh chết còn chưa chạy xong. Ba bản chép tay thì sớm muộn
+// cũng có một bản thiếu trường, và trường thiếu ở đây là điểm của cả một ván.
+func (r *Room) deadMsg(z *Zone, p *game.Player) netproto.Dead {
+	return netproto.Dead{
+		T: "dead", KillerName: p.KillerName, KillerChar: p.KillerChar, PeakLevel: p.PeakLevel,
+		PeakExp: p.PeakExp, Kills: p.Kills, SurviveSec: p.DiedAt - p.SpawnedAt, Rank: r.rankOf(p),
+		Score: p.Score, Hits: p.Hits, ScoreBy: p.ScoreBy, BurnedExp: p.BurnedExp,
+		DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs,
+	}
+}
+
 // handleDeaths sends the Tổng kết screen after the death animation and records the life.
 func (r *Room) handleDeaths(z *Zone) {
 	for _, p := range z.G.PlayerList() {
@@ -578,12 +593,8 @@ func (r *Room) handleDeaths(z *Zone) {
 			continue
 		}
 		if c, ok := z.clients[p.ID]; ok {
-			rank := r.rankOf(p)
 			r.record(z, p)
-			c.send(netproto.Dead{T: "dead", KillerName: p.KillerName, KillerChar: p.KillerChar, PeakLevel: p.PeakLevel,
-				PeakExp: p.PeakExp, Kills: p.Kills, SurviveSec: p.DiedAt - p.SpawnedAt, Rank: rank,
-				Score: p.Score, Hits: p.Hits, ScoreBy: p.ScoreBy, BurnedExp: p.BurnedExp,
-				DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs})
+			c.send(r.deadMsg(z, p))
 			r.detach(z, c)
 			continue
 		}
@@ -592,10 +603,7 @@ func (r *Room) handleDeaths(z *Zone) {
 		// chứ không phải về trang chủ và không hiểu ván biến đi đâu.
 		if _, held := z.holds[p.ID]; held {
 			r.record(z, p)
-			r.noteHeldDeath(z, p, netproto.Dead{T: "dead", KillerName: p.KillerName, KillerChar: p.KillerChar,
-				PeakLevel: p.PeakLevel, PeakExp: p.PeakExp, Kills: p.Kills, SurviveSec: p.DiedAt - p.SpawnedAt,
-				Rank: r.rankOf(p), Score: p.Score, Hits: p.Hits, ScoreBy: p.ScoreBy, BurnedExp: p.BurnedExp,
-				DaiThuaSecs: p.DaiThuaSecs, Top1Secs: p.Top1Secs})
+			r.noteHeldDeath(z, p, r.deadMsg(z, p))
 			continue
 		}
 		if b, ok := z.brains[p.ID]; ok && !z.respawnQueued(b.ID) {

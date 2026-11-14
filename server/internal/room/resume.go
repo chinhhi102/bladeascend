@@ -209,7 +209,26 @@ func (r *Room) resumeHuman(c *Client, j netproto.Join, key string) bool {
 		return true
 	}
 	p, ok := z.G.Players[h.playerID]
-	if !ok || p.Dead {
+	// Chết nhưng `handleDeaths` CHƯA kịp cất màn Tổng kết.
+	//
+	// `handleDeaths` chỉ xử lý sau khi hết hoạt ảnh chết (`death_anim_secs`, đang là 1 giây),
+	// nên có một khe: bị chém lúc 0,0 giây, nối lại lúc 0,5 giây thì `h.dead` còn `nil` và
+	// nhánh dưới bỏ luôn cái hold — người chơi rơi vào một TRẬN MỚI, mất cả ván mà không
+	// hiểu vì sao. Đúng điều §7.1 cấm. Ngày 14/11 bài `rejoin.mjs` trượt một lượt deploy ở
+	// đúng khe này, và chỉ phân biệt được với "chém hụt" nhờ dòng log của `killid`.
+	//
+	// Ở đây làm đúng việc `handleDeaths` sẽ làm: ghi sổ ván, gửi màn Tổng kết, bỏ hold.
+	if ok && p.Dead {
+		d := r.deadMsg(z, p)
+		r.record(z, p)
+		r.noteHeldDeath(z, p, d) // cũng gỡ nhân vật khỏi thế giới
+		c.send(d)
+		delete(z.holds, h.playerID)
+		r.mgr.forgetResume(h.key)
+		r.mgr.release(r)
+		return true
+	}
+	if !ok {
 		r.dropHold(z, h.playerID, h)
 		return false
 	}
