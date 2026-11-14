@@ -1,4 +1,4 @@
-import { AnimatedSprite, Container, Graphics, Text } from 'pixi.js';
+import { AnimatedSprite, Container, Graphics } from 'pixi.js';
 
 import { assets } from './assets';
 
@@ -71,23 +71,6 @@ export class Vfx {
     });
   }
 
-  /** floatText shows "+20" style numbers rising and fading; size is screen px via 1/zoom. */
-  floatText(text: string, x: number, y: number, color: number, zoom: number, now: number): void {
-    const t = new Text({ text, style: { fontFamily: 'system-ui', fontSize: 20, fontWeight: '900', fill: color, stroke: { color: 0, width: 4 } } });
-    t.anchor.set(0.5);
-    t.scale.set(1 / zoom);
-    t.position.set(x, y);
-    const start = now;
-    this.add({
-      node: t,
-      until: now + 1,
-      update: (tt) => {
-        const k = tt - start;
-        t.y = y - k * 60 / zoom;
-        t.alpha = 1 - k;
-      },
-    });
-  }
 
   shake(amp: number, secs: number, now: number): void {
     this.shakeAmp = Math.max(this.shakeAmp, amp);

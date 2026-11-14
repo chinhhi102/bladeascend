@@ -1,7 +1,8 @@
-import { AnimatedSprite, Container, Graphics, GraphicsContext, Sprite, Text, type Texture } from 'pixi.js';
+import { AnimatedSprite, BitmapText, Container, Graphics, GraphicsContext, Sprite, type Texture } from 'pixi.js';
 
 import type { ItemState, MonsterState } from '../net/protocol';
 import { assets } from './assets';
+import { FONT_NAME } from './fonts';
 import { BUFF_COLORS, MONSTER_COLORS, MONSTER_VARIANTS } from './palette';
 
 const MONSTER_HEIGHT_PER_R = 2.4;
@@ -175,12 +176,25 @@ export function orbSize(v: number): 'small' | 'medium' | 'large' {
  * bằng `width`/`height`, mà PixiJS cài hai thứ đó bằng cách đổi `scale` — nên chữ nằm trong
  * nó bị nhân tỉ lệ LẦN THỨ HAI. Lần đầu tôi làm vậy và con số ra cao đúng 1 pixel.
  */
-function bundleCount(n: number, r: number): Text {
-  const t = new Text({
-    text: String(n),
-    style: { fontSize: 44, fontWeight: '900', fill: 0xffffff, stroke: { color: 0x000000, width: 7 } },
-  });
-  t.anchor.set(0.5);
+function bundleCount(n: number, r: number): Container {
+  // `BitmapText` dùng CHUNG atlas font của cả game, không `Text`.
+  //
+  // Mỗi `Text` xin `CanvasPool` một canvas riêng, làm tròn lên luỹ thừa 2 — một con số hai
+  // chữ số ăn trọn một tấm 64². Trên sân có vài chục Bó Kiếm thì đó là 29 texture rời,
+  // 0,60 MB, trong hạng mục "Chữ/số bay" có trần 2 MB (§13.10). Dùng font chung thì mọi Bó
+  // Kiếm, mọi bảng tên và mọi số bay nằm chung MỘT trang 512².
+  //
+  // Viền đen: font chung không có nét viền, nên vẽ một bản ĐEN to hơn 12% nằm sau. Kết quả
+  // gần bằng `stroke` của `Text` — và không tốn thêm điểm ảnh texture nào.
+  const t = new Container();
+  const mk = (tint: number, scale: number): BitmapText => {
+    const b = new BitmapText({ text: String(n), style: { fontFamily: FONT_NAME, fontSize: 44 } });
+    b.anchor.set(0.5);
+    b.tint = tint;
+    b.scale.set(scale);
+    return b;
+  };
+  t.addChild(mk(0x000000, 1.12), mk(0xffffff, 1));
   // Tỉ lệ thật do `update()` đặt lại mỗi khung theo thu phóng; đây chỉ là giá trị khởi đầu
   // để khung hình đầu tiên không nhảy cỡ.
   t.scale.set(COUNT_PX / 44);
@@ -193,7 +207,7 @@ export class ItemSprite {
   readonly root = new Container();
   private readonly phase = Math.random() * Math.PI * 2;
   /** count: nhãn số kiếm của Bó Kiếm (null với mọi loại khác). */
-  private count: Text | null = null;
+  private count: Container | null = null;
 
   constructor(readonly it: ItemState, itemR: number) {
     const r = it.k === 'orb' ? orbRadius(it.v ?? 0)

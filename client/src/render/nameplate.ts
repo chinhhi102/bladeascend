@@ -2,7 +2,7 @@ import { BitmapText, Container, Graphics } from 'pixi.js';
 
 import { type GameConfig, realmName, realmOf, tienIndex, tierOf } from '../config';
 import { STR } from '../ui/strings';
-import { FONT_NAME, FONT_REALM, FONT_TITLE } from './fonts';
+import { FONT_NAME, FONT_REALM, FONT_TITLE, TITLE_SKEW } from './fonts';
 import { hslToHex, REALM_BADGE } from './palette';
 import { quality } from './quality';
 
@@ -112,6 +112,9 @@ export class Nameplate {
       return t;
     };
     this.titleText = mk(FONT_TITLE);
+    // Nghiêng giả thay cho một atlas font italic riêng (xem `fonts.ts`): cùng hình dáng,
+    // 0 điểm ảnh thêm.
+    this.titleText.skew.x = TITLE_SKEW;
     this.realmText = mk(FONT_REALM);
     this.dangerText = mk(FONT_REALM);
     this.nameText = mk(FONT_NAME);

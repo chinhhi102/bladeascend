@@ -13,6 +13,7 @@ import { setEmoteCharCount } from './emote';
 import { paceTicker } from './framepace';
 import { countDrawCalls, countNodes, drawCalls, type LayerStat, measureLayers } from './drawstats';
 import { probeEnabled, probeFrame, probeHeap, probeLines, probeMark, probeStats, probeSubFlush } from './probe';
+import { fontAtlasInfo } from './fonts';
 import { assets } from './assets';
 import { statusWork, statusWorkTick } from './statusview';
 import { ringWork, ringWorkTick } from './swordring';
@@ -1154,6 +1155,11 @@ export class GameScene {
     return assets.loadReport();
   }
 
+  /** fontAtlases: mỗi BitmapFont chiếm mấy trang, cỡ nào (§13.10 "Chữ/số bay"). */
+  fontAtlases(): { name: string; pages: string[]; mb: number }[] {
+    return fontAtlasInfo();
+  }
+
   /** gpuBiggest: vài texture to nhất đang giữ — để biết cắt chỗ nào trước (debug). */
   gpuBiggest(n = 10): { w: number; h: number; mb: number }[] {
     return gpuBiggest(n);
@@ -1170,7 +1176,7 @@ export class GameScene {
    * Trả cả dòng `other` kể cả khi nó bằng 0: một bảng chỉ hiện hạng mục có số thì ngày nào
    * đó `other` xuất hiện rồi biến mất mà không ai kịp thấy.
    */
-  vramLedger(): { rows: { cat: BudgetCat; label: string; mb: number; count: number; limitMB: number; over: boolean }[]; totalMB: number; limitMB: number; unclassified: { site: string; mb: number }[]; framebuffers: { size: string; count: number; mb: number; site: string }[]; world: { size: string; count: number; mb: number; site: string }[]; fx: { size: string; count: number; mb: number; site: string }[] } {
+  vramLedger(): { rows: { cat: BudgetCat; label: string; mb: number; count: number; limitMB: number; over: boolean }[]; totalMB: number; limitMB: number; unclassified: { site: string; mb: number }[]; framebuffers: { size: string; count: number; mb: number; site: string }[]; world: { size: string; count: number; mb: number; site: string }[]; fx: { size: string; count: number; mb: number; site: string }[]; dynamic: { size: string; count: number; mb: number; site: string }[] } {
     const phone = isMobile();
     const rows = gpuBudget(phone);
     return {
@@ -1181,6 +1187,7 @@ export class GameScene {
       framebuffers: gpuListCat('framebuffer'),
       world: gpuListCat('world', 14),
       fx: gpuListCat('fx', 14),
+      dynamic: gpuListCat('dynamic', 14),
     };
   }
 

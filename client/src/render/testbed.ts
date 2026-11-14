@@ -54,7 +54,7 @@ import { assets } from './assets';
 import { isMobile } from './device';
 import { countDrawCalls, countNodes, drawCalls, measureLayers } from './drawstats';
 import { gpuBudget, gpuUnclassified, trackGpuMemory, trackSourceNames } from './gpumem';
-import { loadFonts } from './fonts';
+import { fontAtlasInfo, loadFonts } from './fonts';
 import { MapView } from './mapview';
 import { PlayerSprite } from './player';
 import { ringGeom } from './ringgeom';
@@ -457,6 +457,8 @@ export async function runTestbed(stage: HTMLElement, cfg: GameConfig): Promise<v
     },
     /** Liệt kê vật cản: loại, có dùng art thật không — để bài đo chỉ đích danh cái nào hỏng. */
     obstacles: (): unknown[] => mapView.debugObstacles(),
+    /** Atlas font: mấy trang, cỡ nào (§13.10 hạng mục "Chữ/số bay"). */
+    fonts: (): unknown => fontAtlasInfo(),
     /** Bộ vẽ Pixi — để bài đo đọc được `limits.maxBatchableTextures` (xem PERF_LOG #52). */
     renderer: app.renderer,
     /** Tra một đường dẫn asset có nạp được không — để bài đo nói rõ "thiếu art" thay vì đoán. */

@@ -97,3 +97,19 @@ hình tạm; tôi đã nhầm nó một lượt nên ghi lại đây.
 Cảnh thử nay có thêm chế độ **ĐÔNG**: `?scene=testbed&crowd=1` — 12 nhân vật và 64 vật cản
 đủ 10 loại, xếp lưới cố định. Dùng để đếm lô vẽ (`drawbreak.mjs --testbed --crowd`), KHÔNG
 dùng cho `scenediff`.
+
+---
+
+## Đổi ảnh mốc lần 3 — 14/11/2026 (một font bitmap cho cả game)
+
+Ba font bitmap (`kx-name` 36/800, `kx-realm` 26/700, `kx-title` 26/700 nghiêng) gộp thành
+MỘT (`kx-text` 28/800), và nhãn số kiếm của Bó Kiếm đổi từ `Text` sang `BitmapText`.
+
+```
+lệch trung bình : 0.155/255   (ngưỡng 0.3 — ĐẠT)
+pixel lệch > 16 : 3 256 (0,353%, ngưỡng 0,1%)
+```
+
+Bản đồ lệch 16×9 cho thấy chênh lệch **chỉ nằm ở bốn ô bảng tên**, mọi ô khác bằng 0. Đã cắt
+vùng bảng tên phóng 2× để so tận mắt: nét chữ, độ đậm và vị trí y như cũ. Hạng mục "Chữ/số
+bay" đi từ **8,78 xuống 1,70 MB** (trần 2).

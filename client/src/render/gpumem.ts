@@ -100,7 +100,7 @@ const declared = new WeakMap<object, BudgetCat>();
  * Gọi NGAY sau khi tạo, trước khi nó được vẽ lần đầu. Nhận cả `Texture` lẫn `TextureSource`
  * cho gọn chỗ gọi.
  */
-export function declareTexture(tex: unknown, cat: BudgetCat): void {
+export function declareTexture(tex: unknown, cat: BudgetCat, note?: string): void {
   const t = tex as { source?: object } | null;
   const src = (t?.source ?? t) as (object & { label?: string }) | null;
   if (!src) {
@@ -113,7 +113,7 @@ export function declareTexture(tex: unknown, cat: BudgetCat): void {
   // kích thước, lấy từ pool) và khi đó khoá cũ không còn khớp — texture lặng lẽ rơi về
   // "chưa khai hạng mục". Nhãn thì đi theo nguồn qua mọi đường đó.
   if (!src.label || !src.label.startsWith('kx:')) {
-    src.label = `kx:${cat}${src.label ? ' ' + src.label : ''}`;
+    src.label = `kx:${cat}${note ? ' ' + note : ''}${src.label ? ' ' + src.label : ''}`;
   }
 }
 

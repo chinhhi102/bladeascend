@@ -108,6 +108,13 @@ if (led.fx?.length) {
     console.log(`  ${f.mb.toFixed(2)} MB  ${f.count}× ${f.size}  ${f.site}`);
   }
 }
+if (led.dynamic?.length) {
+  console.log('');
+  console.log('Chữ/số bay — gom theo cỡ:');
+  for (const f of led.dynamic) {
+    console.log(`  ${f.mb.toFixed(2)} MB  ${f.count}× ${f.size}  ${f.site}`);
+  }
+}
 if (led.framebuffers?.length) {
   console.log('');
   console.log('Bộ đệm khung / đích vẽ của bộ lọc đang sống:');
