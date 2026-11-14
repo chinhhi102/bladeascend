@@ -1,7 +1,8 @@
 import { Assets, Rectangle, Texture } from 'pixi.js';
 
 import { CHARACTER_ANIMS } from './catalog';
-import { ktxSupported } from './device';
+import { ktxSupported, isMobile } from './device';
+import { quality } from './quality';
 
 // Bộ nạp asset theo NHÓM (GAME_SPEC §13.7 mục 3).
 //
@@ -37,6 +38,13 @@ interface ManifestFile {
    * gì về chuyện gom: nó vẫn gọi `assets.texture('obstacles/border/intact.png')`.
    */
   pack?: { page: string; x: number; y: number; w: number; h: number };
+  /**
+   * Bản NHỎ của atlas (1 024 px) cho điện thoại và mức chất lượng Thấp — §13.10 trần 32 MB.
+   *
+   * `k` là hệ số đổi toạ độ khung từ bản đầy đủ sang bản nhỏ: `atlas.json` chỉ có một bản,
+   * client nhân toạ độ thay vì tải một tệp json thứ hai.
+   */
+  small?: { url: string; bytes: number; k: number; ktx?: { url: string; bytes: number; mode: 'uastc' | 'etc1s' } };
 }
 
 interface Manifest {
@@ -484,6 +492,16 @@ class AssetStore {
     return useKtx ? `/assets/${f.ktx?.url ?? ''}` : `/assets/${f.url}`;
   }
 
+  /** smallUrl: địa chỉ bản atlas nhỏ, cùng luật chọn nén khối như `texUrl`. */
+  private smallUrl(rel: string, sm: ManifestFile['small']): string {
+    if (!sm) {
+      return '';
+    }
+    const useKtx = !!sm.ktx && ktxSupported();
+    this.fmt.set(rel, useKtx ? 'ktx2' : 'webp');
+    return `/assets/${useKtx ? (sm.ktx?.url ?? '') : sm.url}`;
+  }
+
   /** fmt: tệp logic → định dạng đã CHỌN để nạp (xem `texUrl`). */
   private readonly fmt = new Map<string, 'ktx2' | 'webp'>();
 
@@ -553,7 +571,15 @@ class AssetStore {
       // `texUrl` TRƯỚC `atlas.image`: trường `image` trong atlas.json trỏ bản WebP, còn ảnh
       // nén khối là một tệp khác. Lấy `atlas.image` trước thì atlas nhân vật — đúng hạng
       // mục ngốn VRAM nhất — là thứ DUY NHẤT không bao giờ được nén.
-      const imgUrl = this.texUrl(imgRel) || (atlas.image ? `/assets/${dir}/${atlas.image}` : '');
+      // Điện thoại / chất lượng Thấp: lấy bản atlas 1 024 nếu có.
+      //
+      // Sprite nhân vật co theo CHIỀU CAO THẾ GIỚI (`k = h / texture.height` trong
+      // `player.ts`), nên bản nhỏ không đổi bố cục một chút nào — chỉ đổi độ nét. Trên màn
+      // 6 inch một nhân vật cao khoảng 90 điểm ảnh, atlas 1 152 là chi tiết không ai thấy.
+      const sm = wantSmallAtlas() ? this.man?.files[imgRel]?.small : undefined;
+      const frameK = sm?.k ?? 1;
+      const imgUrl = this.smallUrl(imgRel, sm)
+        || this.texUrl(imgRel) || (atlas.image ? `/assets/${dir}/${atlas.image}` : '');
       if (!imgUrl) {
         return;
       }
@@ -579,7 +605,15 @@ class AssetStore {
         }
         const textures = a.frames.map((f) => {
           const r = atlas.frames[f];
-          return new Texture({ source: base.source, frame: new Rectangle(r.x, r.y, r.w, r.h) });
+          // Làm tròn, không để số lẻ: một khung lệch nửa điểm ảnh thì lọc tuyến tính hút
+          // sang khung bên cạnh và nhân vật có viền của khung kế bên.
+          return new Texture({
+            source: base.source,
+            frame: frameK === 1
+              ? new Rectangle(r.x, r.y, r.w, r.h)
+              : new Rectangle(Math.round(r.x * frameK), Math.round(r.y * frameK),
+                Math.round(r.w * frameK), Math.round(r.h * frameK)),
+          });
         });
         set.anims.set(name, { textures, fps: a.fps, loop: a.loop });
       }
@@ -640,6 +674,25 @@ export let onAssetTrouble: ((code: string, detail: string) => void) | null = nul
 
 export function setAssetTroubleHook(f: (code: string, detail: string) => void): void {
   onAssetTrouble = f;
+}
+
+/**
+ * wantSmallAtlas: có dùng atlas nhân vật bản 1 024 không.
+ *
+ * Điện thoại (trần VRAM 32 MB thay vì 50) hoặc mức chất lượng Thấp — mức Thấp là chỗ người
+ * chơi máy yếu tự chọn, và cũng là chỗ bộ canh bộ nhớ GPU tự hạ xuống khi chạm trần.
+ *
+ * `?atlas=full` ép dùng bản đầy đủ: bài đo cần so hai bản trên CÙNG một máy.
+ */
+export function wantSmallAtlas(): boolean {
+  const q = new URLSearchParams(location.search).get('atlas');
+  if (q === 'full') {
+    return false;
+  }
+  if (q === 'small') {
+    return true;
+  }
+  return isMobile() || quality() === 'low';
 }
 
 export const assets = new AssetStore();

@@ -5,11 +5,13 @@
 //
 // Bốn điều kiện, PHẢI đạt cả bốn:
 //
-//   1. **0 placeholder** — không nhân vật nào đang vẽ bằng hình tạm.
+//   1. **0 placeholder** — không nhân vật nào đang vẽ bằng hình tạm (máy tính VÀ điện thoại).
 //   2. **Đúng định dạng** — thiết bị hỗ trợ nén khối thì mọi tệp CÓ bản KTX2 phải nạp bản
 //      KTX2, không được rơi về WebP.
 //   3. **Hình không đổi** — `scenediff` so với ảnh mốc trong repo.
-//   4. **VRAM trong ngân sách** — theo bảng hạng mục §13.10.
+//   4. **VRAM trong ngân sách** — 50 MB trên máy tính, **32 MB trên điện thoại**. Hai lượt
+//      đo riêng: `isMobile()` quyết định cả cột trần lẫn việc lấy atlas nhân vật bản 1 024,
+//      nên đo bằng cửa sổ máy tính rồi chia nhẩm là đoán.
 //
 // ── Vì sao bốn, không phải một ──────────────────────────────────────────────────────────
 //
@@ -108,6 +110,60 @@ if (WARN_VRAM && !vramOk) {
   check('VRAM cảnh đông trong ngân sách', vramOk, `${live.led.totalMB.toFixed(1)} / ${live.led.limitMB} MB`);
 }
 await b.close();
+
+// ── Lượt hai: ĐIỆN THOẠI (trần 32 MB) ───────────────────────────────────────────────────
+//
+// Trần điện thoại là 32 MB, không phải 50, và đường đi cũng khác: `isMobile()` quyết định
+// cả cột trần LẪN việc lấy atlas nhân vật bản 1 024. Đo bằng cửa sổ máy tính rồi chia nhẩm
+// là đoán. Đây cũng là ngân sách gác đúng chuyện đã xảy ra ở B13: iPhone chạm 216/256 MB
+// rồi bị Safari thu hồi tab, và người chơi chỉ thấy "lúc nào cũng lỗi".
+const pb = await launch({
+  headless: true,
+  args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
+});
+const pctx = await pb.newContext({
+  viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
+  userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  locale: 'vi-VN',
+});
+const pp = await pctx.newPage();
+pp.on('pageerror', (e) => console.log('  pageerror (điện thoại)', String(e).slice(0, 160)));
+await pp.goto(`${TARGET}/?debug=true`, { waitUntil: 'domcontentloaded' });
+await pp.waitForSelector('input', { timeout: 30000 });
+await pp.fill('input', 'CongKiemDienThoai');
+await pp.locator('.char-card').nth(0).click();
+await pp.locator('.home .btn.primary').click();
+await pp.waitForSelector('.room-board', { timeout: 60000 });
+await requireDebug(pp, 'vramgate.mjs (điện thoại)');
+await sleep(6000);
+await pp.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'max', n: 1 }));
+await sleep(2000);
+for (let i = 0; i < 8; i++) {
+  await pp.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'bot', n: 0 }));
+  await sleep(400);
+}
+await sleep(9000);
+const ph = await pp.evaluate(() => ({
+  led: window.kx.scene.vramLedger(),
+  draw: window.kx.scene.drawStats(),
+  players: window.kx.world.players.size,
+}));
+await pb.close();
+
+console.log('');
+console.log(`cảnh ĐÔNG trên ĐIỆN THOẠI · ${ph.players} người · 390×844 @ 3`);
+for (const r of ph.led.rows) {
+  console.log(`  ${r.mb.toFixed(2).padStart(7)} / ${String(r.limitMB).padStart(2)} MB  ${r.label}${r.over ? '  ← VƯỢT' : ''}`);
+}
+console.log(`  ${ph.led.totalMB.toFixed(2).padStart(7)} / ${ph.led.limitMB} MB  TỔNG`);
+console.log('');
+check('điện thoại: 0 placeholder', ph.draw.placeholder === false, `${ph.draw.charsInView} nhân vật`);
+const phoneOk = ph.led.totalMB <= ph.led.limitMB;
+if (WARN_VRAM && !phoneOk) {
+  console.log(`⚠ CẢNH BÁO  VRAM điện thoại: ${ph.led.totalMB.toFixed(1)} / ${ph.led.limitMB} MB`);
+} else {
+  check('VRAM điện thoại trong ngân sách', phoneOk, `${ph.led.totalMB.toFixed(1)} / ${ph.led.limitMB} MB`);
+}
 
 // ── Hình: cảnh thử so với ảnh mốc trong repo ────────────────────────────────────────────
 if (!existsSync(REF)) {

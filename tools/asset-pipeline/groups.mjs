@@ -116,7 +116,12 @@ export function plan(rel, ctx) {
     const group = top === 'characters' ? `char_${seg[1]}` : 'boot';
     return seg.at(-1) === 'atlas.json'
       ? { groups: [group], kind: 'atlas-json' }
-      : { groups: [group], kind: 'image', maxPx: 0, quality: 82 };
+      // `smallPx`: bản THỨ HAI, nhỏ hơn, cho điện thoại và mức chất lượng Thấp (§13.10
+      // trần 32 MB). Atlas nhân vật là hạng mục ngốn VRAM lớn nhất, và trên màn 6 inch thì
+      // một nhân vật cao khoảng 90 điểm ảnh — atlas 1 152 là vẽ chi tiết không ai thấy.
+      // Sprite co theo CHIỀU CAO THẾ GIỚI (`k = h / texture.height` trong `player.ts`), nên
+      // bản nhỏ không đổi bố cục, chỉ đổi độ nét.
+      : { groups: [group], kind: 'image', maxPx: 0, quality: 82, smallPx: 1024 };
   }
 
   if (top === 'brand') {

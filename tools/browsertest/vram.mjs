@@ -3,6 +3,7 @@
 //   cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9998 -debug=true
 //   node tools/browsertest/vram.mjs http://127.0.0.1:9998            # cảnh ĐÔNG (mặc định)
 //   node tools/browsertest/vram.mjs http://127.0.0.1:9998 --testbed  # cảnh thử cố định
+//   node tools/browsertest/vram.mjs http://127.0.0.1:9998 --phone    # ĐIỆN THOẠI (trần 32 MB)
 //
 // Cảnh đo theo đúng §13.10: phòng đầy, nhiều loại nhân vật trên màn hình, có người Tiên
 // giới, chất lượng **Vừa**, **1080p tỉ lệ điểm ảnh 1**.
@@ -27,6 +28,19 @@ const TESTBED = process.argv.includes('--testbed');
 // `--trace` bật `?textrace=1`: ghi cả VẾT GỌI của chỗ dựng texture. Đắt (mỗi lần tạo
 // texture là một `new Error().stack`), nên chỉ bật khi đang đi tìm "cái 8 MB kia ở đâu".
 const TRACE = process.argv.includes('--trace');
+/**
+ * `--phone`: đo theo đường ĐIỆN THOẠI — màn 390×844 @ dpr 3, cảm ứng, UA iPhone.
+ *
+ * Không phải để "giả vờ là iPhone" cho vui: `isMobile()` quyết định cả cột trần nào được
+ * dùng (6 MB atlas nhân vật thay vì 24) LẪN việc có lấy bản atlas 1 024 hay không. Đo bằng
+ * cửa sổ máy tính rồi chia nhẩm là đoán, không phải đo.
+ *
+ * Giới hạn phải nói rõ: Chromium ở đây vẫn chạy trên GPU máy bàn, nên định dạng nén khối là
+ * BC7/BC1 chứ không phải ASTC/ETC2 của máy thật. Số byte mỗi điểm ảnh thì BẰNG NHAU
+ * (UASTC→BC7 và →ASTC đều 1 byte; ETC1S→BC1 và →ETC2 đều 0,5), nên con số VRAM dùng được —
+ * thứ bài này KHÔNG thay được là một lượt chơi thật trên máy thật.
+ */
+const PHONE = process.argv.includes('--phone');
 const q = TRACE ? '&textrace=1' : '';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -35,7 +49,13 @@ const b = await launch({
   args: ['--use-gl=angle', '--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'],
 });
 // 1080p, tỉ lệ điểm ảnh 1 — xem ghi chú đầu tệp.
-const ctx = await b.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1, locale: 'vi-VN' });
+const ctx = await b.newContext(PHONE
+  ? {
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    locale: 'vi-VN',
+  }
+  : { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1, locale: 'vi-VN' });
 const p = await ctx.newPage();
 p.on('pageerror', (e) => console.log('  pageerror', String(e).slice(0, 160)));
 
@@ -123,6 +143,6 @@ if (led.framebuffers?.length) {
   }
 }
 console.log('');
-console.log(`${label} · 1920×1080 @ tỉ lệ điểm ảnh 1`);
+console.log(`${label} · ${PHONE ? 'ĐIỆN THOẠI 390×844 @ 3 (trần 32 MB)' : '1920×1080 @ tỉ lệ điểm ảnh 1'}`);
 console.log('Đối chiếu tay: Chrome Shift+Esc → cột "GPU Memory" của tab game (spec đòi khớp ±10%).');
 await b.close();

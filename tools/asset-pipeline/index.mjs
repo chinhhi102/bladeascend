@@ -49,8 +49,10 @@ const CACHE = join(DIST, '.pipeline-cache.json');
  *   7 — vật cản maxPx 512 → 384 (hạng mục ngốn VRAM thứ hai)
  *   8 — KTX2 nhân sẵn alpha + gom atlas vật cản (lô vẽ, xem PERF_LOG #52)
  *   9 — dọn bộ đệm hỏng của lượt build 8 (mọi mục mất KTX2)
+ *  10 — trang gom cắt theo phần thật dùng (bỏ ~2,5 MB khoảng trống)
+ *  11 — atlas nhân vật có thêm bản 1024 cho điện thoại / chất lượng Thấp
  */
-const PIPELINE_VERSION = 9;
+const PIPELINE_VERSION = 11;
 
 /**
  * Thư mục được áp ma trận chỉnh màu nền lúc build (§13.10).
@@ -157,7 +159,19 @@ async function buildImage(rel, p, srcBuf) {
   // Bản KTX2 (§13.10) đi KÈM bản WebP, không thay nó: thiết bị không hỗ trợ nén khối vẫn
   // phải chơi được, và `assets.ts` chọn bản nào lúc chạy.
   const ktx = await buildKtx(rel, img, w, h);
-  return { buf, ext: 'webp', scale, w, h, ktx };
+  // Bản NHỎ cho điện thoại / chất lượng Thấp. Chỉ dựng khi plan có `smallPx` và ảnh gốc
+  // thật sự lớn hơn — nếu không thì hai bản y hệt nhau và chỉ tổ tải về hai lần.
+  let small = null;
+  if (p.smallPx > 0 && Math.max(w, h) > p.smallPx) {
+    const sk = p.smallPx / Math.max(w, h);
+    const sw = Math.round(w * sk / 4) * 4;
+    const sh = Math.round(h * sk / 4) * 4;
+    const simg = sharp(srcBuf, { limitInputPixels: false })
+      .resize({ width: sw, height: sh, fit: 'fill', kernel: 'lanczos3' });
+    const sbuf = await simg.clone().webp({ quality: p.quality, alphaQuality: 100, effort: 5 }).toBuffer();
+    small = { buf: sbuf, w: sw, h: sh, ktx: await buildKtx(rel, simg, sw, sh) };
+  }
+  return { buf, ext: 'webp', scale, w, h, ktx, small };
 }
 
 /**
@@ -331,7 +345,15 @@ async function planPacks(rels, ctx) {
     let x = 0, y = 0, rowH = 0;
     const flush = () => {
       if (page) {
+        // Cắt trang theo phần THẬT dùng, cả chiều cao lẫn chiều rộng.
+        //
+        // Để cứng 2048 thì một nhóm 2 ảnh 384² vẫn chiếm một trang 2048×384 — 75% số điểm
+        // ảnh là khoảng trống trong suốt, mà trên GPU khoảng trống cũng tốn đúng bằng ảnh.
+        // Năm nhóm khu nhỏ như vậy là ~2,5 MB không vẽ gì.
+        //
+        // Làm tròn lên bội số 4 vì nén khối (ETC1S/UASTC) chạy theo khối 4×4.
         page.h = Math.ceil((y + rowH) / 4) * 4;
+        page.w = Math.ceil(Math.max(...page.items.map((it) => it.x + it.w)) / 4) * 4;
         pages.push(page);
       }
     };
@@ -444,6 +466,18 @@ for (const rel of shipped) {
     write(ktxUrl, built.ktx.buf);
     entry.ktx = { url: ktxUrl, bytes: built.ktx.buf.length, mode: built.ktx.mode };
   }
+  if (built.small) {
+    const sUrl = outName(`${rel.slice(0, rel.lastIndexOf('.'))}.small.png`, 'webp', sha(built.small.buf));
+    write(sUrl, built.small.buf);
+    // `k`: hệ số đổi toạ độ khung từ bản đầy đủ sang bản nhỏ. Client nhân vào `atlas.json`
+    // thay vì phải có một tệp json thứ hai.
+    entry.small = { url: sUrl, bytes: built.small.buf.length, k: +(built.small.w / built.w).toFixed(6) };
+    if (built.small.ktx) {
+      const sk = outName(`${rel.slice(0, rel.lastIndexOf('.'))}.small.png`, 'ktx2', sha(built.small.ktx.buf));
+      write(sk, built.small.ktx.buf);
+      entry.small.ktx = { url: sk, bytes: built.small.ktx.buf.length, mode: built.small.ktx.mode };
+    }
+  }
   out.set(rel, { ...entry, groups: p.groups });
   nextCache.entries[rel] = entry;
   stats.built++;
@@ -524,7 +558,7 @@ for (const { rel, p, srcBuf, fingerprint } of atlasJsons) {
 const groups = {};
 const files = {};
 for (const [rel, e] of [...out.entries()].sort()) {
-  files[rel] = { url: e.url, bytes: e.bytes, groups: e.groups, ...(e.ktx ? { ktx: e.ktx } : {}), ...(e.pack ? { pack: e.pack } : {}) };
+  files[rel] = { url: e.url, bytes: e.bytes, groups: e.groups, ...(e.ktx ? { ktx: e.ktx } : {}), ...(e.pack ? { pack: e.pack } : {}), ...(e.small ? { small: e.small } : {}) };
   for (const g of e.groups) {
     (groups[g] ??= { bytes: 0, files: [] }).files.push(rel);
     groups[g].bytes += e.bytes;
@@ -550,9 +584,16 @@ writeFileSync(CACHE, JSON.stringify(nextCache));
 // nó lặng lẽ xoá sạch mọi `.ktx2` vừa ghi ra. Triệu chứng: pipeline báo "ghi xong", log có
 // đủ số byte, mà `find assets/dist -name '*.ktx2'` trả về 0. Mất gần một tiếng mới tìm ra,
 // vì mọi bước TRƯỚC bước này đều báo thành công.
+// Giữ MỌI tệp mà manifest trỏ tới: bản thường, bản nén khối, và bản nhỏ của cả hai.
+//
+// Thiếu một nhánh ở đây là xoá đúng tệp vừa dựng xong — ngày 13/11 bước dọn này đã xoá sạch
+// các tệp `.ktx2` vì danh sách giữ chỉ có `e.url`, và bản build vẫn xanh.
 const keep = new Set(
-  [...out.values()].flatMap((e) => (e.ktx ? [e.url, e.ktx.url] : [e.url]))
-    .concat(['manifest.json', '.pipeline-cache.json']),
+  [...out.values()].flatMap((e) => [
+    e.url,
+    ...(e.ktx ? [e.ktx.url] : []),
+    ...(e.small ? [e.small.url, ...(e.small.ktx ? [e.small.ktx.url] : [])] : []),
+  ]).concat(['manifest.json', '.pipeline-cache.json']),
 );
 let removed = 0;
 for (const rel of walk(DIST)) {
