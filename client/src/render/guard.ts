@@ -120,7 +120,7 @@ export function sysRun(key: SysKey, fn: () => void): boolean {
     const left = faults.get(key) ?? 0;
     if (left > 0) {
       faults.set(key, left - 1);
-      throw new Error(`lỗi giả ở hệ thống "${key}" (kx.fault)`);
+      throw markFake(new Error(`lỗi giả ở hệ thống "${key}" (kx.fault)`));
     }
     fn();
     return true;
@@ -137,6 +137,24 @@ export function sysRun(key: SysKey, fn: () => void): boolean {
  * đường thử chỉ tồn tại ở bản dev là một đường thử chưa bao giờ chạy trên bản thật.
  */
 const faults = new Map<SysKey, number>();
+
+/**
+ * markFake đóng dấu "đây là LỖI GIẢ do bài kiểm bắn ra" lên một Error.
+ *
+ * Vì sao cần: ngày 13/11, bảng lỗi 24 giờ có 57 dòng `lỗi giả trong khâu vẽ (kx.faultDraw)`
+ * nằm lẫn với 95 dòng lỗi THẬT. Mỗi lượt deploy chạy `crashtest.mjs` là thêm vài dòng giả
+ * nữa. Lọc bằng cách so chuỗi "lỗi giả" thì hỏng ngay khi ai đó sửa câu chữ, nên dấu phải
+ * đi theo chính đối tượng lỗi.
+ */
+export function markFake<T>(err: T): T {
+  (err as { kxFake?: boolean }).kxFake = true;
+  return err;
+}
+
+/** isFake: lỗi này có phải do bài kiểm bắn ra không. */
+export function isFake(err: unknown): boolean {
+  return Boolean((err as { kxFake?: boolean } | null)?.kxFake);
+}
 
 /** faultSystem hẹn hệ thống `key` ném lỗi ở `n` khung tiếp theo. */
 export function faultSystem(key: SysKey, n = 1): void {

@@ -7,7 +7,7 @@
 import 'pixi.js/ktx2';
 import { Application, Container, setKTXTranscoderPath, Texture, type Ticker, UPDATE_PRIORITY } from 'pixi.js';
 import { AnimViewer } from './animviewer';
-import { guardLines, killFilters, noteDrawError, noteSysError, sysOffList, sysRun } from './guard';
+import { guardLines, isFake, killFilters, markFake, noteDrawError, noteSysError, sysOffList, sysRun } from './guard';
 import { census, type Census, censusFlat, censusLine, ledgerSet } from './ledger';
 import { setEmoteCharCount } from './emote';
 import { paceTicker } from './framepace';
@@ -324,7 +324,7 @@ export class GameScene {
     try {
       if (this.drawFaults > 0) {
         this.drawFaults--;
-        throw new Error('lỗi giả trong khâu vẽ (kx.faultDraw)');
+        throw markFake(new Error('lỗi giả trong khâu vẽ (kx.faultDraw)'));
       }
       const t = performance.now();
       this.app.render();
@@ -342,7 +342,9 @@ export class GameScene {
   /** onDrawError: bỏ khung này, tắt mọi bộ lọc; lỗi lặp ≥ 3 lần/10 s thì dựng lại renderer. */
   private onDrawError(err: unknown): void {
     const act = noteDrawError(err);
-    this.onGuardEvent?.('draw_error', err);
+    // Lỗi GIẢ đi bằng tên khác, để nó không lẫn vào thống kê và cảnh báo lỗi thật (§13.8).
+    // Vẫn gửi về, vì `crashtest.mjs` nghiệm thu đúng bằng sự có mặt của nó.
+    this.onGuardEvent?.(isFake(err) ? 'draw_error_gia' : 'draw_error', err);
     killFilters();
     this.stripFilters();
     if (act === 'rebuild') {

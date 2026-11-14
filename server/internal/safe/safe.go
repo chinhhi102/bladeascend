@@ -40,6 +40,19 @@ type Info struct {
 }
 
 // Text là dạng chữ gửi lên trang quản trị: dòng đầu là chữ ký, phần sau là bối cảnh.
+// FakePrefix: tiền tố của mọi panic GIẢ do lệnh test `dbg panic` bắn ra (checklist §17).
+//
+// Vì sao cần một hằng số thay vì so chuỗi rải rác: bảng lỗi 24 giờ ngày 13/11 có 18 dòng
+// `server_panic` mà cả 18 đều là lỗi giả của `crashtest.mjs` — mỗi lượt deploy lại thêm vài
+// dòng nữa. Lẫn vào thống kê thì người trực không phân biệt được "hôm nay server có sập
+// không" với "hôm nay đã deploy mấy lượt".
+const FakePrefix = "lỗi giả"
+
+// IsFake: panic này do lệnh test bắn ra, không phải sự cố thật.
+func IsFake(i Info) bool {
+	return strings.HasPrefix(i.Value, FakePrefix)
+}
+
 func (i Info) Text() string {
 	var b strings.Builder
 	b.WriteString(i.Value)

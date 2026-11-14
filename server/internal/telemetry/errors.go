@@ -16,13 +16,27 @@ import (
 // `gpu_pressure` và `webgl_context_lost` không phải ngoại lệ JavaScript, nhưng với người
 // chơi chúng LÀ lỗi — màn hình trắng hoặc tab bị hệ điều hành thu hồi. Gom chung một chỗ
 // vì người xem đang hỏi "có ai gặp chuyện gì không", không hỏi "có exception nào không".
-var ErrorKinds = []string{"error", "webgl_context_lost", "gpu_pressure", KindServerPanic, KindClientSysOff}
+//
+// `draw_error` thêm vào ngày 14/11 và đó là một lỗ hổng đáng ghi: ngày 13/11 lớp chống sập
+// bắt 95 lỗi vẽ THẬT của người chơi thật, mà trang "Lỗi" không hiện lấy một dòng — vì loại
+// `draw_error` chưa bao giờ nằm trong danh sách này. Lỗi duy nhất làm người chơi đứng hình
+// rồi văng khỏi trận, và nó vô hình với đúng cái trang dựng ra để nhìn thấy lỗi.
+//
+// Các loại `*_gia` (lỗi do `crashtest.mjs` bắn ra để nghiệm thu §13.8) KHÔNG nằm ở đây: mỗi
+// lượt deploy lại sinh thêm vài dòng, và lẫn vào thì người trực không phân biệt được "hôm
+// nay có sập không" với "hôm nay deploy mấy lượt".
+var ErrorKinds = []string{"error", "draw_error", "webgl_context_lost", "gpu_pressure", KindServerPanic, KindClientSysOff}
 
 const (
 	// KindServerPanic: panic của SERVER đã bắt được ở một ranh giới (GAME_SPEC §13.8).
 	// Nằm chung bảng với lỗi client vì người trực hỏi "có gì hỏng không", không hỏi "hỏng
 	// ở phía nào".
 	KindServerPanic = "server_panic"
+	// KindServerPanicFake: panic GIẢ do lệnh test `dbg panic` bắn ra (checklist §17).
+	//
+	// KHÔNG nằm trong `ErrorKinds`: nó không phải sự cố, và mỗi lượt deploy lại sinh ra vài
+	// dòng. Vẫn ghi xuống DB để `crashtest.mjs` nghiệm thu được lớp chống sập.
+	KindServerPanicFake = "server_panic_gia"
 	// KindClientSysOff: client phải TẮT một hệ thống vẽ vì nó lỗi 3 lần trong 10 giây
 	// (§13.8). Người chơi vẫn chơi được, nên nó không nổi lên như một lỗi — nhưng nó là
 	// bằng chứng duy nhất cho biết ai đó vừa mất hẳn phần hiệu ứng nào.
@@ -66,6 +80,50 @@ type ErrorGroup struct {
 // hai con số khác nhau cho cùng một lỗi.
 func ErrorSig(kind, msg string) string { return errorSig(kind, msg) }
 
+// innerErr moi trường `err` ra khỏi JSON của `draw_error`, không cần parse cả gói.
+//
+// Dùng cắt chuỗi thay vì `encoding/json`: dữ liệu này do client gửi và có thể cụt giữa
+// chừng (trường `data` cắt ở 500 ký tự). Một bộ parse nghiêm ngặt sẽ trả lỗi cho đúng những
+// dòng cần đọc nhất.
+func innerErr(msg string) string {
+	const key = `"err":"`
+	i := strings.Index(msg, key)
+	if i < 0 {
+		return msg
+	}
+	rest := msg[i+len(key):]
+	out := make([]rune, 0, 120)
+	for j := 0; j < len(rest) && len(out) < 120; j++ {
+		if rest[j] == '\\' && j+1 < len(rest) {
+			j++
+			continue
+		}
+		if rest[j] == '"' {
+			break
+		}
+		out = append(out, rune(rest[j]))
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// squash thay mọi chuỗi chữ số bằng "#", để hai lần cùng một lỗi không thành hai nhóm.
+func squash(line string) string {
+	var b strings.Builder
+	lastDigit := false
+	for _, r := range line {
+		if r >= '0' && r <= '9' {
+			if !lastDigit {
+				b.WriteByte('#')
+			}
+			lastDigit = true
+			continue
+		}
+		lastDigit = false
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
 func errorSig(kind, msg string) string {
 	// Sự kiện KHÔNG phải ngoại lệ JavaScript (`gpu_pressure`, `webgl_context_lost`) chở
 	// JSON SỐ LIỆU, không phải thông báo. Gộp cả loại làm MỘT nhóm.
@@ -73,6 +131,13 @@ func errorSig(kind, msg string) string {
 	// Nếu gộp theo nội dung thì `"q":"Thấp"` và `"q":"Vừa"` thành hai nhóm riêng, và một
 	// sự kiện có `data` rỗng thành nhóm thứ ba — ba dòng cho đúng một vấn đề. Đo trên dữ
 	// liệu thật ngày 31/10: 2 người chạm trần bộ nhớ hiện thành 2 nhóm + 2 nhóm.
+	// `draw_error` chở JSON, nhưng khác `gpu_pressure` ở chỗ trường `err` BÊN TRONG mới là
+	// thứ phân nhóm. Gộp cả loại làm một thì mọi lỗi vẽ nằm chung một dòng (95 lỗi "aLocal"
+	// che mất một lỗi khác hẳn); gộp theo nguyên văn JSON thì mỗi khung một nhóm, vì `texMB`
+	// và `fps` đổi liên tục.
+	if kind == "draw_error" {
+		return kind + ": " + squash(innerErr(msg))
+	}
 	if !stackKinds[kind] {
 		return kind
 	}
@@ -110,7 +175,7 @@ func (s *Store) RecentErrors(since time.Duration, now time.Time) ([]ErrorGroup, 
 	rs, err := s.db.Query(`SELECT e.ts, e.kind, e.data, e.session_id,
 			COALESCE(x.browser,''), COALESCE(x.os,''), COALESCE(x.mobile,0), COALESCE(x.build,'')
 		FROM events e LEFT JOIN sessions x ON x.session_id = e.session_id
-		WHERE e.kind IN ('error','webgl_context_lost','gpu_pressure','server_panic','client_sys_off') AND e.ts >= ?
+		WHERE e.kind IN ('error','draw_error','webgl_context_lost','gpu_pressure','server_panic','client_sys_off') AND e.ts >= ?
 		ORDER BY e.ts DESC LIMIT 5000`, from)
 	if err != nil {
 		return nil, err

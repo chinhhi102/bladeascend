@@ -16,7 +16,7 @@ const ZONE_ART_WAIT_MS = 2000;
 import { FLAG, KICK_OTHER_TAB, KICK_SERVER_UPDATE, PROTOCOL_VERSION } from './net/protocol';
 import { SCHEMA_HASH } from './net/wire.gen';
 import { watchContextLoss } from './render/glrecover';
-import { drawGuardStats, faultSystem, setSysErrorHook, type SysKey, sysResetRun, sysRun, sysSummary } from './render/guard';
+import { drawGuardStats, faultSystem, setSysErrorHook, type SysKey, sysResetRun, sysRun, sysSummary, isFake } from './render/guard';
 import { clearSession, loadSession, saveSession } from './net/session';
 import type { DeadMsg, GameMap, KickedMsg, ServerMsg, Snapshot, Welcome } from './net/protocol';
 import { ClientWorld } from './net/state';
@@ -899,8 +899,11 @@ class App {
     this.telemetry = t;
     // Mỗi lần lớp chống sập phải tắt một hệ thống thì server phải BIẾT (§13.8). Người chơi
     // sẽ không báo: với họ game vẫn chạy, chỉ là "hình như thiếu hiệu ứng gì đó".
-    setSysErrorHook(({ key, msg, dead, errors }) => {
-      t.event('client_sys_off', `${key}: ${msg}\n${JSON.stringify({ dead, errors, ...t.errorContext() })}`);
+    setSysErrorHook(({ key, msg, err, dead, errors }) => {
+      // Lỗi do bài kiểm bắn ra đi bằng tên khác (`..._gia`): §13.8 vẫn được nghiệm thu đủ,
+      // mà bảng lỗi và cảnh báo thì chỉ còn chuyện THẬT.
+      t.event(isFake(err) ? 'client_sys_off_gia' : 'client_sys_off',
+        `${key}: ${msg}\n${JSON.stringify({ dead, errors, ...t.errorContext() })}`);
     });
     setUiErrorHook((err, label) => t.errorEvent(`nút UI "${label}": ${err instanceof Error ? err.message : String(err)}`)); // i18n-ok: chữ gửi về telemetry
     // Tự hạ chất lượng vì chạm ngân sách bộ nhớ GPU: ghi lại, vì đó là dấu hiệu sớm nhất

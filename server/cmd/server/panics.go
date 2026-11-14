@@ -26,6 +26,17 @@ const panicSession = "server"
 // cái sự cố mà ta muốn đọc gọn trong một dòng.
 const panicFlood = 60
 
+// kindFor tách panic GIẢ của lệnh test khỏi panic THẬT.
+//
+// Cả hai vẫn ghi xuống DB — `crashtest.mjs` nghiệm thu §13.8 bằng đúng sự có mặt của dòng
+// giả. Nhưng chúng mang tên khác nhau, nên bảng "Lỗi" và cảnh báo chỉ đếm chuyện thật.
+func kindFor(i safe.Info) string {
+	if safe.IsFake(i) {
+		return telemetry.KindServerPanicFake
+	}
+	return telemetry.KindServerPanic
+}
+
 func (s *server) wirePanicReports() {
 	limit := safe.NewRate(panicFlood, time.Minute)
 	safe.OnPanic(func(i safe.Info) {
@@ -38,7 +49,7 @@ func (s *server) wirePanicReports() {
 		s.telemetry.AddEvent(&telemetry.Event{
 			Session: panicSession,
 			TS:      float64(time.Now().UnixMilli()),
-			Kind:    telemetry.KindServerPanic,
+			Kind:    kindFor(i),
 			Data:    i.Text(),
 		})
 	})
