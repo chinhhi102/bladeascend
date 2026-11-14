@@ -169,6 +169,7 @@ export class Telemetry {
     const ms = now - this.lastFrameAt;
     this.lastFrameAt = now;
     this.frames.push(ms);
+    this.noteLongFrame(ms, now);
     if (now - this.lastPollAt >= POLL_MS) {
       this.lastPollAt = now;
       this.poll();
@@ -176,6 +177,34 @@ export class Telemetry {
     if (now - this.windowStart >= SAMPLE_MS) {
       this.flushSample(now);
     }
+  }
+
+  /**
+   * LONG_FRAME_MS: khung dài hơn mức này là ĐỨNG HÌNH, không phải "hơi giật".
+   *
+   * 2 giây: trên 60 FPS một khung là 16,7 ms, nên 2 000 ms là chậm hơn 120 lần. Không có
+   * cách nào gọi đó là giật.
+   */
+  private lastVisChange = 0;
+
+  /**
+   * noteLongFrame gửi một SỰ KIỆN khi game đứng hình, kèm 30 việc vừa làm.
+   *
+   * Vì sao cần, trong khi `samples` đã có `frame_max`: số liệu mẫu nói "lúc đó có một khung
+   * 87 giây" và dừng ở đó — không nói vừa làm gì trước đó, và breadcrumb chỉ đi kèm SỰ KIỆN
+   * chứ không đi kèm mẫu. Ngày 13/11 có ba lần đứng hình 8–29 giây không giải thích được
+   * đúng vì thiếu chỗ này.
+   *
+   * Bỏ qua khi tab vừa ẩn/hiện trong 3 giây: trình duyệt dừng `requestAnimationFrame` khi
+   * tab chạy nền, nên khung đầu tiên lúc quay lại luôn dài bằng cả quãng vắng mặt. Có mẫu
+   * `frame_max = 56 844 164 ms` (15,8 giờ) đúng vì chuyện đó — một tab để qua đêm, không
+   * phải một lần đứng hình.
+   */
+  private noteLongFrame(ms: number, now: number): void {
+    if (ms < 2000 || now - this.lastVisChange < 3000 || document.visibilityState !== 'visible') {
+      return;
+    }
+    this.event('long_frame', JSON.stringify({ ms: Math.round(ms), ...this.errorContext() }));
   }
 
   /** poll đọc những số đắt tiền ở 4 Hz. */
@@ -418,6 +447,10 @@ export class Telemetry {
     // tab_hidden/visible để báo cáo loại các đoạn chạy nền khỏi thống kê FPS: trình duyệt
     // hạ vòng vẽ xuống ~1 Hz khi tab bị ẩn, không lọc ra thì mọi phiên đều "tụt FPS".
     document.addEventListener('visibilitychange', () => {
+      // Ghi mốc cho `noteLongFrame`: khung đầu tiên sau khi tab hiện lại luôn dài bằng cả
+      // quãng tab chạy nền, và đó không phải một lần đứng hình.
+      this.lastVisChange = performance.now();
+      this.breadcrumb(document.hidden ? 'tab-an' : 'tab-hien');
       this.event(document.hidden ? 'tab_hidden' : 'tab_visible');
     });
     window.addEventListener('error', (e) => {

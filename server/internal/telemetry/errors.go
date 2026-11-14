@@ -25,7 +25,7 @@ import (
 // Các loại `*_gia` (lỗi do `crashtest.mjs` bắn ra để nghiệm thu §13.8) KHÔNG nằm ở đây: mỗi
 // lượt deploy lại sinh thêm vài dòng, và lẫn vào thì người trực không phân biệt được "hôm
 // nay có sập không" với "hôm nay deploy mấy lượt".
-var ErrorKinds = []string{"error", "draw_error", "webgl_context_lost", "gpu_pressure", KindServerPanic, KindClientSysOff}
+var ErrorKinds = []string{"error", "draw_error", "long_frame", "webgl_context_lost", "gpu_pressure", KindServerPanic, KindClientSysOff}
 
 const (
 	// KindServerPanic: panic của SERVER đã bắt được ở một ranh giới (GAME_SPEC §13.8).
@@ -135,6 +135,11 @@ func errorSig(kind, msg string) string {
 	// thứ phân nhóm. Gộp cả loại làm một thì mọi lỗi vẽ nằm chung một dòng (95 lỗi "aLocal"
 	// che mất một lỗi khác hẳn); gộp theo nguyên văn JSON thì mỗi khung một nhóm, vì `texMB`
 	// và `fps` đổi liên tục.
+	// `long_frame` chở JSON số liệu như `gpu_pressure`, nhưng mỗi lần đứng hình có `ms`
+	// khác nhau nên gộp theo nội dung là mỗi lần một nhóm. Gộp cả loại làm một.
+	if kind == "long_frame" {
+		return kind
+	}
 	if kind == "draw_error" {
 		return kind + ": " + squash(innerErr(msg))
 	}

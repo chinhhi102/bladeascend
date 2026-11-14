@@ -333,6 +333,16 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   set -e
   tail -4 /tmp/kx-drawguard.out
 
+  # §17: một buổi chơi BÌNH THƯỜNG — kỹ năng, đổi chất lượng, đổi cỡ cửa sổ, chuyển tab,
+  # mạng chập chờn, chết rồi Chơi tiếp, F5 giữa trận. Sau mỗi bước canh 0 lỗi vẽ, 0 hình
+  # tạm, còn ở trong trận. Có đối chứng âm chạy mỗi lượt nên nó không thể xanh vì móc rụng.
+  echo "== 2c3d/5 một buổi chơi bình thường =="
+  set +e
+  node tools/browsertest/daily.mjs http://127.0.0.1:9997 >/tmp/kx-daily.out 2>&1
+  daily_rc=$?
+  set -e
+  tail -4 /tmp/kx-daily.out
+
   # §13.10: máy KHÔNG hỗ trợ nén khối vẫn phải chơi được. Đường lùi WebP không có bài nào
   # đi qua kể từ khi bật KTX2, mà một đường lùi chưa ai thử thì không phải đường lùi.
   echo "== 2c3c/5 đường lùi WebP (máy không hỗ trợ nén khối) =="
@@ -353,6 +363,10 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   if [ -n "$smooth_pid" ]; then
     pkill -P "$smooth_pid" 2>/dev/null || true
     kill "$smooth_pid" 2>/dev/null || true
+  fi
+  if [ "$daily_rc" != "0" ]; then
+    echo "LỖI: một buổi chơi bình thường có bước TRƯỢT. Xem /tmp/kx-daily.out" >&2
+    exit 1
   fi
   if [ "$nokx_rc" != "0" ]; then
     echo "LỖI: đường lùi WebP hỏng — máy không hỗ trợ nén khối sẽ không chơi được. Xem /tmp/kx-nocompress.out" >&2

@@ -1880,14 +1880,106 @@ cảnh ĐÔNG · 11 người · medium · 1920×1080 @ 1
 Tải về không đổi: toàn bộ game 8,28 MB, chặn vào trận 4,19 / 8 MB.
 
 
+### Lượt 53 — 14/11/2026 · Chữ 8,78 → 1,70 MB, và điện thoại lần đầu lọt trần 32 MB
+
+| Hạng mục | 13/11 | nay (máy tính) | nay (điện thoại) | trần PC / ĐT |
+|---|---:|---:|---:|---|
+| Atlas nhân vật | 12,12 | 13,06 | **7,74** | 24 / 6 |
+| Nền | 3,33 | 2,67 | 2,00 | 4 / 2 |
+| Vật cản · decal · vật phẩm | 12,43 | **9,51** | 8,97 | 6 / 3 |
+| VFX · hào quang · UI | 3,99 | 3,74 | 3,62 | 4 / 2 |
+| Chữ/số bay | 8,78 | **1,66** | 2,52 | 2 / 2 |
+| Bộ đệm khung · bộ lọc | 4,30 | 4,30 | 0,00 | 12 / 8 |
+| **TỔNG** | **44,95** | **29,6–34,9** | **25,9–29,8** | **50 / 32** |
+
+(Khoảng là vì cảnh thật đổi theo số người trong tầm; cổng kiểm đo lại mỗi lượt deploy.)
+
+#### Chữ: ba thủ phạm, không cái nào đoán được từ mã nguồn
+
+Hạng mục "Chữ/số bay" vượt trần hơn bốn lần, và `CanvasPool` của Pixi chỉ để lại cái nhãn
+"canvas 512×512". Phải khai hạng mục cho từng trang atlas font mới thấy:
+
+1. **Ba `BitmapFont` riêng** (tên 36/800, cảnh giới 26/700, tiêu đề 26/700 nghiêng). Mỗi font
+   một atlas; bộ ký tự tiếng Việt ~230 glyph cần **hai trang 512² mỗi font** = 8,5 MB. Gộp
+   về một font, chữ nghiêng làm bằng `skew.x` — một phép biến hình, 0 điểm ảnh thêm.
+2. **Pixi sinh glyph ở `resolution` 2** → diện tích gấp bốn. Chữ trong game nằm trong THẾ
+   GIỚI rồi còn bị camera thu nhỏ: một cái tên cỡ 36 chỉ cao 16–20 điểm ảnh trên màn hình.
+   Raster 2× là vẽ chi tiết cho thứ không ai thấy.
+3. **`padding` mặc định 4 điểm ảnh quanh MỖI glyph** làm bộ ký tự tràn sang trang thứ hai
+   một cách sít sao — trang thứ hai tốn nguyên 1 MB cho vài chục glyph cuối. Hạ xuống 2 thì
+   vừa đúng một trang.
+
+Cộng thêm: nhãn số kiếm của Bó Kiếm dùng `Text`, mỗi cái xin `CanvasPool` một canvas riêng
+làm tròn lên luỹ thừa 2 → **29 texture 64² rời, 0,60 MB**. Đổi sang `BitmapText` dùng chung
+atlas; viền đen giả bằng một bản đen to hơn 12% nằm sau.
+
+Hình: 0,155/255 (ngưỡng 0,3 — đạt). Bản đồ lệch cho thấy chênh lệch **chỉ ở bốn ô bảng tên**,
+mọi ô khác bằng 0; đã cắt vùng bảng tên phóng 2× soi tận mắt, nét chữ và độ đậm y như cũ.
+
+#### Điện thoại: đo thật, không chia nhẩm
+
+Atlas nhân vật có thêm bản 1024 cho điện thoại / chất lượng Thấp. Sprite co theo CHIỀU CAO
+THẾ GIỚI (`k = h / texture.height`) nên bản nhỏ **không đổi bố cục**, chỉ đổi độ nét — và
+trên màn 6 inch một nhân vật cao khoảng 90 điểm ảnh. Atlas nhân vật trên điện thoại
+**13,1 → 7,7 MB**.
+
+Trang gom vật cản trước để cứng rộng 2048, nên một nhóm 2 ảnh 384² vẫn chiếm trang 2048×384
+— 75% là khoảng trống trong suốt, mà trên GPU khoảng trống tốn đúng bằng ảnh. Cắt sát:
+vật cản **12,4 → 9,5 MB**.
+
+Cổng kiểm nay đo **hai lượt**: máy tính 1920×1080 @1 (trần 50) và điện thoại 390×844 @3
+(trần 32). `isMobile()` quyết định cả cột trần LẪN việc lấy atlas bản nhỏ, nên đo bằng cửa
+sổ máy tính rồi chia nhẩm là đoán. Giới hạn nói rõ: Chromium giả lập iPhone vẫn chạy trên
+GPU máy bàn (BC7/BC1 thay vì ASTC/ETC2). Số byte mỗi điểm ảnh bằng nhau nên con số dùng
+được, nhưng nó **không thay được** một lượt chơi thật trên máy thật — B13b vẫn mở.
+
+---
+
+### Lượt 54 — 14/11/2026 · Rà "bài đo đứng yên một chỗ"
+
+Sau vụ 13/11 (một lỗi vẽ làm ba người chơi văng khỏi trận trong khi mọi cổng đều xanh, vì
+không bài nào ĐỔI KHU), rà lại toàn bộ bài đo theo việc người chơi làm hằng ngày:
+
+| việc | trước 14/11 | nay |
+|---|---|---|
+| đổi khu | không bài nào | `drawguard.mjs` — 5 khu, 0 lỗi vẽ |
+| máy không hỗ trợ nén khối | không bài nào | `nocompress.mjs` |
+| dùng kỹ năng nhiều lượt | chỉ `skillshots` (chụp ảnh) | `daily.mjs` |
+| đổi mức chất lượng | chỉ `qualitycost` (đo ms) | `daily.mjs` |
+| đổi cỡ cửa sổ | chỉ `filtercrash` | `daily.mjs` |
+| chuyển tab đi/về | **không bài nào** | `daily.mjs` |
+| mạng rớt rồi có lại | **không bài nào** | `daily.mjs` |
+| chết rồi "Chơi tiếp" | **không bài nào** | `daily.mjs` |
+| F5 giữa trận | `rejoin.mjs` (luật §7.1) | + `daily.mjs` (lỗi vẽ) |
+
+`daily.mjs` đi hết 15 bước trong MỘT phiên và sau mỗi bước hỏi ba câu: có lỗi vẽ thật không,
+có ai đang vẽ bằng hình tạm không, còn ở trong trận không.
+
+Nó mở đầu bằng **đối chứng âm chạy mỗi lượt**: ném một lỗi vẽ thật vào vòng vẽ và đòi thấy
+nó. Một bài kiểm chưa bao giờ đỏ thì chưa chứng minh được gì — nó có thể đang canh một cái
+móc đã rụng từ lâu.
+
+#### Lỗi §7.1 bắt được nhờ đúng dòng log thêm hôm trước
+
+Lượt deploy sáng 14/11 trượt `rejoin.mjs`, và dòng log `killid` trả lời dứt khoát: **"đã chém
+chết"** — tức chém TRÚNG mà client vẫn vào thẳng trận. Lỗi thật, không phải bài đo chém hụt.
+
+Gốc: `handleDeaths` chỉ cất màn Tổng kết vào `hold` SAU khi hết hoạt ảnh chết (1 giây). Bị
+chém ngay lúc đang F5 rồi quay lại sau nửa giây là rơi vào khe đó: `resumeHuman` thấy
+`p.Dead` với `h.dead` còn `nil` nên bỏ luôn hold → người chơi vào một TRẬN MỚI, mất cả ván.
+Bài test cũ không bao giờ chạm khe này vì nó tick qua hết hoạt ảnh chết rồi mới vào lại.
+
+
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
 | # | Nút thắt | Ảnh hưởng | Bằng chứng | Trạng thái | Lượt xử lý |
 |---|---|---|---|---|---|
-| B32 | **Bộ nhớ GPU 281–301 MB, trần §13.10 là 50 MB** | Vượt 5,6× — đúng họ lỗi đã giết tab Safari ở B13 | #42: sổ VRAM theo hạng mục. Nền 69 MB (trần 4) · bộ đệm khung 69 (trần 12) · atlas nhân vật 70 (trần 24) · vật cản/decal 49 (trần 6) | **Đóng cho MÁY TÍNH (#51)** — 281 → **46,3 / 50 MB**, và cổng deploy nay chặn bằng chính con số này. Còn mở cho ĐIỆN THOẠI (trần 32 MB) | #42→#51 |
+| B32 | ~~**Bộ nhớ GPU 281–301 MB, trần §13.10 là 50 MB**~~ | Vượt 5,6× — đúng họ lỗi đã giết tab Safari ở B13 | #42: sổ VRAM theo hạng mục. Nền 69 MB (trần 4) · bộ đệm khung 69 (trần 12) · atlas nhân vật 70 (trần 24) · vật cản/decal 49 (trần 6) | **Đóng (#53)** — máy tính **29,6–34,9 / 50**, điện thoại **25,9–29,8 / 32**. Cổng deploy chặn bằng cả hai con số, đo hai lượt riêng | #42→#53 |
 | B33 | **Chữ tốn 6,71 MB VRAM / trần 2 MB** | Đòn bẩy VRAM lớn nhất còn lại; cũng là phần tốn nhất khi hạ trần xuống 32 MB cho điện thoại | #51: móc ngăn xếp vào `document.createElement` → 6 tấm 512² đều do `CanvasPool` cấp cho `Text`; Pixi làm tròn cỡ canvas chữ lên luỹ thừa 2 nên một dòng tên 300×40 ăn trọn 512² | **Mở** — cách sửa là mục 5 của §13.10: gom chữ/số bay/emote vào MỘT atlas động trần 2 MB (hoặc `BitmapText` dùng chung một font atlas) | – |
 | B31 | **Hai bài đo cũ KHÔNG dùng để so hai bản build** | Một lượt tối ưu có thể "chứng minh" được bất cứ điều gì | #39: `ringcost` ba lượt cùng build cho 19,79 · 0,55 · −0,40 ms; `weakperf` hai lượt liên tiếp cho 185 lô vẽ / 47 FPS rồi 447 lô / 23 FPS | **Đóng (#39)** — mọi phép so A/B chuyển sang cảnh thử (`scenebench.mjs`, `scenediff.mjs`). `weakperf`/`ringcost` giữ nguyên vai trò "người chơi thật gặp gì" | #39 |
-| B34 | **Chữ tốn 8,78 MB VRAM và vẫn là hạng mục vượt trần nặng nhất** | Trần 2 MB; cũng là chỗ chặn đường xuống 32 MB cho điện thoại | #51: `CanvasPool` của Pixi làm tròn cỡ canvas chữ lên luỹ thừa 2, một dòng tên 300×40 ăn trọn 512² | **Mở** — gom chữ/số bay/emote vào MỘT atlas động trần 2 MB (§13.10 mục 5), hoặc `BitmapText` dùng chung font atlas | – |
+| B36 | **Khựng 8–87 giây, không lỗi, không đổi khu, VRAM bình thường** | Người chơi đứng hình giữa trận; chưa biết vì sao nên chưa sửa được gì | 13/11: 3 mẫu trong một phiên (29 139 / 7 942 / 1 618 ms `frame_p95`). 14/11: 1 mẫu nữa (87 679 ms), 30 giây sau một `watchdog_restart` cùng phiên | **Mở** — 14/11 thêm sự kiện `long_frame` (khung > 2 giây, bỏ qua quanh lúc tab ẩn/hiện) kèm breadcrumb 30 việc gần nhất, vì số liệu mẫu nói "lúc đó có một khung 87 giây" rồi dừng ở đó. **Không đoán thêm cho tới khi bắt được một lần tái diễn có breadcrumb.** | – |
+| B35 | **`frame_max` một mình là chỉ số VÔ DỤNG** | Đã suýt kết luận sai về "đứng hình" hai lần | Có mẫu `frame_max = 56 844 164 ms` = 15,8 giờ — một tab để qua đêm. Trình duyệt dừng `requestAnimationFrame` khi tab chạy nền, nên khung đầu tiên lúc quay lại dài bằng cả quãng vắng mặt | **Đóng (#54)** — mọi phép lọc "đứng hình" phải dùng `frame_p95`, bỏ 30 giây đầu phiên và bỏ mẫu cách `tab_hidden`/`tab_visible` dưới 25 giây. `long_frame` áp đúng luật đó ngay trong client | #54 |
+| B34 | ~~**Chữ tốn 8,78 MB VRAM**~~ — **đóng (#53)**: 8,78 → 1,70 MB | Trần 2 MB; cũng là chỗ chặn đường xuống 32 MB cho điện thoại | #51: `CanvasPool` của Pixi làm tròn cỡ canvas chữ lên luỹ thừa 2, một dòng tên 300×40 ăn trọn 512² | **Đóng (#53)** — một `BitmapFont` cho cả game, `resolution` 1, `padding` 2; nhãn Bó Kiếm đổi từ `Text` sang `BitmapText` | #53 |
 | B30 | **Lượt vẽ của Pixi là toàn bộ nút thắt máy yếu, và vòng kiếm KHÔNG còn là phần chính của nó** | Mục tiêu CPU 6× p50 ≥ 30 FPS chưa đạt (đang 23) | #38: ở CPU 4×, tắt SẠCH mọi vòng kiếm thì Pixi vẫn vẽ **19,77 ms** (bật: 19,96). Ở CPU 6×: khung 43,5 ms = Pixi vẽ 21,7 + JS game 3,6 + ~18 ms của trình duyệt. Mọi cột JS cộng lại chưa tới 4 ms | **Phần lô vẽ đóng (#52)** — cảnh thật **704 → 150** lô, cảnh thử đông **184 → 61**. Thủ phạm không phải cây cảnh mà là chế độ alpha: KTX2 khai "chưa nhân alpha" còn canvas khai "đã nhân", nên mỗi lần xen kẽ là một lần đổi phép trộn. Còn mở phần FPS máy yếu: chưa đo lại CPU 6× sau lượt này | #38, #52 |
 | B29 | **Nợ phép đo trước/sau cho PixiJS 8.22 → 8.23** | Không biết bản nâng làm FPS tốt lên, xấu đi, hay không đổi — đang deploy mà không có số | #37: máy ở load/nhân 2,17–3,87 suốt ngày 12/11, luật 16 cấm kết luận | **Đóng (#40)** — đo trên cảnh thử, 3 vòng xen kẽ, máy rảnh: FPS 60 ở cả hai bản và cả ba mức CPU; chênh Pixi vẽ 0,08–0,63 ms, nhỏ hơn biên dao động trong cùng một bản (≈1 ms). Giữ 8.23 vì hai thay đổi của nó là sửa lỗi | #40 |
 | B28 | **Rò rỉ bộ nhớ SERVER: 7 MB/phút, 420 MB sau một giờ** | Tiến trình chết trên VPS 1 GB trước khi hết một ca chơi | #36: `cmd/leakcheck` 25 phút → heap 8,2 → 159,0 MB tuyến tính. `pprof -inuse_objects`: `addAmbientOrb` giữ 309 477 object trong khi thế giới chỉ có ~27 000 viên sống | **Đóng (#36)** — hai con trỏ bỏ quên ngoài `len` (`itemGrid.remove`, `Manager.tryClose`). Đo lại 60 phút / 2 703 lượt vào-ra: heap mỗi phòng +2,9 %, hết người thì về 0,92 MB | #36 |

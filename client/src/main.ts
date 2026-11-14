@@ -26,7 +26,7 @@ import { loadFonts } from './render/fonts';
 import { frameDivider, measureRefreshHz } from './render/framepace';
 import { GameScene } from './render/scene';
 import { loadJitter } from './render/jitter';
-import { cycleQuality, quality } from './render/quality';
+import { cycleQuality, quality, setQuality } from './render/quality';
 import { ringGeom } from './render/ringgeom';
 import type { Telemetry, TelemetryContext } from './telemetry';
 import { Screens, button, h, setUiErrorHook } from './ui/dom';
@@ -602,6 +602,10 @@ class App {
         fault: (key: SysKey, n = 1): void => faultSystem(key, n),
         faultDraw: (n = 1): void => this.scene.faultDraw(n),
         guard: (): unknown => ({ systems: sysSummary(), draw: drawGuardStats() }),
+        // Đổi mức chất lượng NGAY trong phiên, cho bài đo `daily.mjs`. Người chơi đổi bằng
+        // bảng Cài đặt; bài đo cần một cửa không phụ thuộc bố cục giao diện, vì một lần đổi
+        // tên nút không được phép làm mất cả một nhánh nghiệm thu.
+        quality: (q: 'high' | 'medium' | 'low'): void => setQuality(q),
       };
     }
     this.screens.show(null);
