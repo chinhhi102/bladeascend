@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"bladeascend/server/internal/config"
@@ -17,7 +18,17 @@ import (
 // Tổng hợp tự động 2 lần/ngày và trang xem nhanh (TELEMETRY_SPEC §4.0, §4.2).
 
 // runRollupScheduler chạy tổng hợp đúng 12:00 và 23:30 giờ Việt Nam.
+//
+// KHÔNG chạy khi `APP_ENV=dev`. Bản tổng hợp ghi THẲNG vào `docs/perf/real/` và nối dòng
+// vào `docs/perf_log.csv` — tức là vào repo. Máy dev thường có mấy server chạy cùng lúc
+// (bài đo dựng server riêng cho từng cổng), và tới 12:00 thì MỖI tiến trình nối một dòng:
+// ngày 14/11 bốn dòng S6 giống hệt nhau vào CSV cho mỗi khoảng, và `npm run perf:report`
+// vẽ biểu đồ từ chính tệp đó. Số liệu người chơi thật là việc của server THẬT.
 func (s *server) runRollupScheduler(stop <-chan struct{}) {
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "dev") {
+		log.Printf("telemetry: APP_ENV=dev → KHÔNG tự tổng hợp vào docs/ (tránh nhiều server dev cùng ghi)")
+		return
+	}
 	for {
 		next := telemetry.NextRollup(time.Now())
 		t := time.NewTimer(time.Until(next))
