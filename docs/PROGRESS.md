@@ -845,6 +845,86 @@ bị đọc là "chắc không đáng kể". Bản nâng vẫn deploy vì hai th
 
 Q52, Q53 đã chuyển sang `docs/QUESTIONS_DONE.md`; `docs/QUESTIONS.md` hiện trống.
 
+## Lượt 13–14/11 — VRAM về trong ngân sách, và một lỗi làm người chơi văng khỏi trận
+
+### 1. Bộ nhớ GPU: 281 → 30 MB (máy tính), 28 MB (điện thoại)
+
+§13.10 đặt trần **50 MB máy tính / 32 MB điện thoại**. Mốc đầu là **281 MB**. Đường đi:
+
+| bước | cảnh đông |
+|---|---:|
+| mốc đầu | 281 MB |
+| shader trộn nền (bỏ bake RenderTexture + mặt nạ) | 225 |
+| bỏ hẳn `ColorMatrixFilter` | 181 |
+| lưới ô nền gộp một geometry | 141 |
+| KTX2 (UASTC nhân vật/vật phẩm · ETC1S nền/vật cản) | 94 |
+| trần 6 atlas nhân vật | 71 |
+| váy chân vật cản 128² · minimap 256² · bloom 1/4 | 67 |
+| ảnh < 512 px luôn ETC1S · vật cản 384 · mặt nạ nền 64²/ô | **46** |
+| chữ gộp một atlas font · atlas 1024 cho điện thoại | **30 (máy tính) · 28 (điện thoại)** |
+
+Ba điều đáng nhớ hơn con số:
+
+- **Thủ phạm lớn nhất không phải tệp art mà là texture DO MÃ GAME DỰNG.** Váy chân vật cản
+  20,7 MB, bloom 27 MB, nền minimap 5,3 MB, canvas chữ 8,8 MB. Sổ VRAM theo hạng mục
+  (`client/src/render/gpumem.ts`) là thứ chỉ ra được; trước nó mọi thứ nằm chung một dòng
+  "chưa khai hạng mục".
+- **Gom atlas giảm LÔ VẼ chứ không giảm VRAM.** Kế hoạch ban đầu dựa trên giả định ngược
+  lại. Số điểm ảnh mới là thứ chiếm bộ nhớ.
+- **KTX2 vừa hạ VRAM ba lần vừa nhân lô vẽ lên gấp bốn**, và không ai thấy vì hai thứ đó đo
+  bằng hai bài khác nhau. Canvas khai "đã nhân alpha", KTX2 khai "chưa" — hai phép trộn
+  khác nhau, nên mỗi lần xen kẽ là một lần cắt lô. Sửa xong: cảnh thật **704 → 150 lô vẽ**.
+
+Tải về không đổi: toàn bộ game 8,28 MB, gói chặn vào trận 4,19 / 8 MB.
+
+### 2. Người chơi đứng hình rồi văng khỏi trận — đã sửa
+
+Ba người chơi thật trên `:9999` ngày 13/11. Telemetry 24 giờ cho đúng MỘT chữ ký, 95 lần:
+`geometry missing the "aLocal" attribute` — shader trộn nền. Nó bám **1:1 vào việc đổi khu**.
+
+Gốc: `GroundField` dựng mesh bằng geometry thiếu bốn thuộc tính riêng; chúng chỉ được thêm
+trong `setChunks()`, mà lúc đổi khu thì art ô nền khu mới chưa tải nên `setChunks` không bao
+giờ chạy. Lỗi lặp mỗi khung → lớp chống sập đếm 3 lỗi/10 giây → dựng lại renderer → đường
+lùi cuối là tải lại trang. Một nguyên nhân, hai triệu chứng.
+
+**Vì sao mọi cổng đều xanh: không bài đo nào đổi khu.** Tất cả đứng yên một chỗ trong một
+khu, còn `crashtest` chỉ bắn lỗi GIẢ để thử lớp bắt lỗi — nó chưa bao giờ hỏi "lúc chơi bình
+thường có lỗi THẬT nào không".
+
+### 3. Bốn lỗ hổng khác lòi ra trong lúc điều tra
+
+- **`draw_error` chưa bao giờ nằm trong `ErrorKinds`** → 95 lỗi vẽ thật vô hình với đúng cái
+  trang quản trị dựng ra để nhìn thấy lỗi. Nếu nó hiện, vụ này đã thấy từ 14:45 thay vì chờ
+  người chơi báo.
+- **Lỗi GIẢ của `crashtest` lẫn vào bảng lỗi thật** — 57 dòng. Nay đóng dấu tại chỗ ném và
+  đi bằng tên riêng `*_gia`.
+- **`tools/deploy.sh` xoá sạch log server mỗi lượt** (`>` thay vì `>>`), nên ba lượt deploy
+  trong ngày đã xoá đúng quãng cần soi. Cả cuộc điều tra phải dựa hết vào `telemetry.db`.
+- **Lỗi §7.1 thật**: chết lúc mất kết nối rồi vào lại TRONG 1 giây hoạt ảnh chết thì bị ném
+  vào trận mới, mất cả ván. Bắt được nhờ dòng log `killid` thêm hôm trước — nó phân biệt
+  "chém hụt" (lỗi bài đo) với "chém trúng mà client vẫn vào thẳng trận" (lỗi thật).
+
+### 4. Cổng deploy nay có bốn bài mới
+
+| bài | canh gì |
+|---|---|
+| `drawguard.mjs` | đổi đủ 5 khu, **0 lỗi vẽ** |
+| `daily.mjs` | 15 bước một buổi chơi bình thường (kỹ năng, đổi chất lượng, đổi cỡ cửa sổ, chuyển tab, mạng rớt, chết + Chơi tiếp, F5) — sau mỗi bước canh 0 lỗi vẽ, 0 hình tạm, còn trong trận. Có **đối chứng âm chạy mỗi lượt** |
+| `nocompress.mjs` | máy KHÔNG hỗ trợ nén khối vẫn chơi được, không tải tệp `.ktx2` nào |
+| `vramgate.mjs` | bốn điều, **đo hai lượt**: máy tính (trần 50) và điện thoại (trần 32) |
+
+Kèm chốt chặn: deploy DỪNG nếu cổng 9997 đã có tiến trình khác giữ — nếu không, bốn bài đo
+lặng lẽ chạy vào server CŨ và nghiệm thu một bản build không phải bản vừa dựng (đã xảy ra).
+
+### 5. Còn mở
+
+- **B36 — khựng 8–87 giây**, không lỗi, không đổi khu, VRAM bình thường. Đã thêm sự kiện
+  `long_frame` kèm breadcrumb 30 việc gần nhất. **Không đoán thêm cho tới khi bắt được một
+  lần tái diễn có breadcrumb.**
+- **B13b — chưa đo trên điện thoại THẬT.** Con số 28 MB là Chromium giả lập iPhone trên GPU
+  máy bàn; số byte mỗi điểm ảnh bằng nhau nên dùng được, nhưng nó không thay được một lượt
+  chơi thật.
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
@@ -861,4 +941,8 @@ Q52, Q53 đã chuyển sang `docs/QUESTIONS_DONE.md`; `docs/QUESTIONS.md` hiện
 6. **Xem trang Hiệu năng mới** (`/admin/#perf`): kiểm checklist ADMIN_SPEC §12.4 mục 3 —
    chồng biểu đồ tick Thiên Đình với load máy, thấy vạch deploy, bấm Xuất CSV.
 7. **Đo FPS/GPU trên điện thoại thật** — cũng là thứ mở khoá mục 4 của bảng hiệu năng
-   (chất lượng mặc định, đang hoãn chờ số liệu người thật đã lọc).
+   (chất lượng mặc định, đang hoãn chờ số liệu người thật đã lọc). Nay còn thêm một lý do:
+   ngân sách VRAM điện thoại (28 / 32 MB) đang đo bằng Chromium giả lập iPhone trên GPU máy
+   bàn — B13b.
+8. **K8s §3/§4** (Kustomize base + overlays, GitHub Actions + Argo CD, `docs/K8S_RUNBOOK.md`,
+   `docs/K8S_SETUP.md`) — §1 đã xong, phần còn lại hoãn sau đợt VRAM và chưa bắt đầu.

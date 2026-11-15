@@ -139,6 +139,11 @@ Mỗi lượt 1 dòng **cho mỗi kịch bản đã chạy**. Ô đạt ngân s�
 | 48 | 2026-11-13 | `9f42ddc`+ | **§13.10 mục 3 — KTX2** (UASTC nhân vật/vật phẩm/VFX · ETC1S nền/vật cản/decal/UI) | VRAM | – | – | – | 60/60/60 | – | 28 (thử) | – | – | Cảnh thử **23,59 → 15,53 MB**; atlas nhân vật **6,75 → 1,69 MB**. Tải về `home` 0,90 → 1,07 · `boot` 2,69 → 3,13 · toàn bộ 8,51 → 11,69 MB | Hình: 2,30/255 (nén khối) |
 | 49 | 2026-11-13 | `e49be2f`+ | **§13.10 mục 4 — trần 6 atlas nhân vật** | VRAM | – | – | – | – | – | – | – | – | `Atlas nhân vật` cảnh đông **16,44 → 14,56 MB** (đạt trần 24). Tổng cảnh đông **71,0 MB** / trần 50 — CHƯA ĐẠT | Hình: 0,003/255 |
 | 50 | 2026-11-13 | `d429f20`+ | **Cổng kiểm 4 điều + ba chỗ ngốn VRAM do MÃ GAME dựng** | VRAM | – | – | – | – | – | – | – | – | Cảnh đông **95,5 → 67,4 MB**: váy chân vật cản 256→128 (−12,5), bloom 1/4 độ phân giải (−12,2), nền minimap 512→256, decal vào ETC1S | Hình: 0,13/255 |
+| 51 | 2026-11-13 | `703b807`+ | **Lọt trần 50 MB**: ảnh < 512 px luôn ETC1S · vật cản `maxPx` 384 · mặt nạ nền 64²/ô | VRAM | – | – | – | – | – | – | 0 | – | Cảnh đông **67,4 → 46,3 MB** ✅. 8 MB "chưa khai" hoá ra là canvas CHỮ của `CanvasPool` | Chữ 8,78 / trần 2 (B34) |
+| 52 | 2026-11-13 | `2b1c592` | **KTX2 đang đánh đổi VRAM lấy LÔ VẼ** — nhân sẵn alpha lúc nén | VRAM | – | – | – | – | – | **704 → 150** (đông) · 184 → 61 (thử đông) | 0 | – | Chế độ alpha lệch nhau giữa canvas và KTX2 cắt lô vẽ ở MỖI sprite | Chữ; vật cản/decal |
+| 53 | 2026-11-14 | `df58405` | **Chữ gộp một atlas font + atlas 1024 cho điện thoại** | VRAM | – | – | – | – | – | – | 0 | – | Chữ **8,78 → 1,70 MB** ✅ · máy tính **29,6–34,9 / 50** ✅ · **điện thoại 25,9–29,8 / 32** ✅ | Vật cản/decal 9,5 / trần 6 |
+| 54 | 2026-11-14 | `de6315d` | **Rà bài đo + sửa §7.1** (chết lúc mất kết nối, vào lại ngay) | – | – | – | – | – | – | – | 0 | – | Thêm `daily.mjs` (15 bước, có đối chứng âm) vào cổng deploy; thêm sự kiện `long_frame` kèm breadcrumb | B36 khựng 8–87 s chưa rõ |
+
 \* Dòng có dấu `*`: đo trước khi chuẩn hóa kịch bản, chỉ để tham khảo, **không dùng làm mốc so sánh**. Lượt tối ưu kế tiếp phải chạy lại đủ S1–S4 để tạo **mốc chuẩn mới (#4)**.
 
 \*\* Dòng #6 đo bằng **một tab headless** (`--use-gl=angle --use-angle=gl`), không phải S4 đúng
