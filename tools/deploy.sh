@@ -25,7 +25,31 @@ set -euo pipefail
 # (`tools/deploy.sh | tail`) đọc được mã thoát 0 — tin là đã deploy trong khi server vẫn
 # chạy bản cũ. Im lặng là kiểu hỏng tệ nhất của một script deploy.
 DEPLOY_DONE=0
-trap '[ "$DEPLOY_DONE" = 1 ] || echo "LỖI: deploy DỪNG GIỮA CHỪNG — server vẫn đang chạy bản CŨ. Xem dòng cuối ở trên." >&2' EXIT
+
+# Dọn server ĐO (cổng 9997) dù script kết thúc kiểu gì.
+#
+# Khối dọn giữa script chỉ chạy khi mọi bài đo đã xong; một bài TRƯỢT sớm thì script thoát
+# trước đó và bỏ lại một server dev đang giữ cổng. Lượt deploy sau gặp cổng bận, `go run`
+# chết lặng lẽ, và bốn bài đo quay sang chạy vào server CŨ — nghiệm thu một bản build không
+# phải bản vừa dựng. Đã xảy ra ngày 13/11; chốt chặn "cổng phải trống" bắt được nó, nhưng
+# bắt được không bằng không để xảy ra.
+#
+# Giết theo CỔNG chứ không chỉ theo PID đã ghi: `go run` chạy binary làm tiến trình con, và
+# nếu tiến trình cha đã thoát thì con được init nhận nuôi — lúc đó `pkill -P` không còn tìm
+# thấy ai, mà cổng thì vẫn bị giữ.
+kill_test_server() {
+  local pid
+  pid="$(cat /tmp/kx-smooth.pid 2>/dev/null || true)"
+  if [ -n "$pid" ]; then
+    pkill -P "$pid" 2>/dev/null || true
+    kill "$pid" 2>/dev/null || true
+  fi
+  for p in $(ss -ltnp 2>/dev/null | grep '127.0.0.1:9997' | grep -oP 'pid=\K[0-9]+' || true); do
+    kill "$p" 2>/dev/null || true
+  done
+}
+
+trap '[ "$DEPLOY_DONE" = 1 ] || echo "LỖI: deploy DỪNG GIỮA CHỪNG — server vẫn đang chạy bản CŨ. Xem dòng cuối ở trên." >&2; kill_test_server' EXIT
 trap 'echo "LỖI: deploy bị giết (TERM/INT) — server vẫn đang chạy bản CŨ." >&2; exit 143' TERM INT
 
 cd "$(dirname "$0")/.."
@@ -359,11 +383,7 @@ if [ "${SKIP_SMOOTH:-0}" != "1" ] && [ -d tools/browsertest/node_modules/playwri
   set -e
   tail -8 /tmp/kx-vramgate.out
 
-  smooth_pid="$(cat /tmp/kx-smooth.pid 2>/dev/null || true)"
-  if [ -n "$smooth_pid" ]; then
-    pkill -P "$smooth_pid" 2>/dev/null || true
-    kill "$smooth_pid" 2>/dev/null || true
-  fi
+  kill_test_server
   if [ "$daily_rc" != "0" ]; then
     echo "LỖI: một buổi chơi bình thường có bước TRƯỢT. Xem /tmp/kx-daily.out" >&2
     exit 1
