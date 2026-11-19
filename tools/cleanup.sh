@@ -61,7 +61,12 @@ while read -r pid etime cmd; do
 done < <(ps -eo pid,etimes,args --no-headers 2>/dev/null | grep -F "ms-playwright" | grep -v grep | awk '{print $1, $2, $3}')
 
 # 2. Server dev của bài đo: mọi cổng của dự án TRỪ cổng thật.
-for port in 9998 9997 9996 9995; do
+# Quét CẢ DẢI 9990–9998, không chỉ bốn cổng.
+#
+# Ngày 16/11 còn sót server dev trên 9990, 9991, 9993 và 9994 — bài đo nào cũng tự dựng một
+# cổng riêng, và dải cũ bỏ quên đúng những cổng hay dùng nhất. Mỗi server sót là một nhân
+# CPU chạy 110 bot, tức là mọi phép đo sau đó đều sai theo luật 16.
+for port in 9990 9991 9992 9993 9994 9995 9996 9997 9998; do
   case " $KEEP_PORTS " in *" $port "*) continue ;; esac
   for pid in $(ss -ltnp 2>/dev/null | grep ":$port " | grep -oP 'pid=\K[0-9]+' | sort -u); do
     is_mine "$pid" && continue
