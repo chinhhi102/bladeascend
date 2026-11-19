@@ -241,12 +241,42 @@ do_rollback() {
 }
 
 # ── Điều hướng lệnh ─────────────────────────────────────────────────────────────────────
+
+# `start`: chỉ KHỞI ĐỘNG LẠI bản đang deploy, không build, không chạy cổng kiểm.
+#
+# Dùng cho `@reboot` trong crontab, và cho lúc cần dựng server dậy ngay.
+#
+# Vì sao phải có: ngày 17/11 máy khởi động lại lúc 17:33. Server nhận SIGTERM của trình tắt
+# máy và tắt êm đúng bài (/readyz 503 → tiễn người → checkpoint SQLite → xong sau 0,5 s),
+# rồi **nằm im 44 tiếng** vì không có gì dựng nó dậy. Không ai báo, không cảnh báo nào kêu:
+# game chỉ đơn giản là không vào được, và chuyện đó lộ ra vì tình cờ có người đi tìm lỗi
+# khác. Một server thật mà chỉ sống tới lần mất điện đầu tiên thì không phải server thật.
+if [ "${1:-}" = "start" ]; then
+  if [ ! -f "$DEPLOY/BUILD_ID" ]; then
+    echo "LỖI: chưa có bản nào trong $DEPLOY — chạy tools/deploy.sh trước." >&2
+    exit 1
+  fi
+  started="$(cat "$DEPLOY/BUILD_ID")"
+  echo "== khởi động bản đang deploy: $started =="
+  restart_server "$started"
+  if ! self_check; then
+    echo "LỖI: server lên nhưng tự kiểm KHÔNG đạt. Xem server/data/bladeascend.log" >&2
+    exit 1
+  fi
+  DEPLOY_DONE=1
+  echo "== XONG: đang chạy build $started =="
+  exit 0
+fi
+
 if [ "${1:-}" = "rollback" ]; then
   if [ -n "${2:-}" ]; then
     do_rollback "$2"
   else
     list_builds
   fi
+  # Lùi bản XONG cũng là một kết thúc bình thường: không để trap EXIT in "deploy DỪNG GIỮA
+  # CHỪNG" sau một lượt lùi thành công — một dòng lỗi sai chỗ làm người đọc tưởng hỏng.
+  DEPLOY_DONE=1
   exit 0
 fi
 
