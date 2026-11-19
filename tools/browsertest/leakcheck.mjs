@@ -8,6 +8,9 @@
 // số nào (số Texture, GPU MB, JS heap, display object) **tăng > 5%**, hoặc GPU MB vượt ngân
 // sách thiết bị. Mốc phút 5 chỉ in ra để tham khảo."
 //
+// 16/11: mức tăng trong cửa sổ tính bằng ĐƯỜNG DỐC trên toàn bộ mẫu, không bằng hiệu hai
+// mẫu đầu–cuối. Lý do ở ghi chú hàm `trend`.
+//
 // ── Vì sao 20 phút đầu không tính ────────────────────────────────────────────────────────
 //
 // Bộ làm việc của game vẫn đang LỚN LÊN tới tận đó: 11 atlas nhân vật nạp dần khi gặp
@@ -210,6 +213,37 @@ const pctOf = (from, to) => (from > 0 ? ((to - from) / from) * 100 : 0);
  */
 const FLOOR = { texture: 5, texMB: 4, heapMB: 3, 'display object': 80 };
 
+/**
+ * trend: dốc bình phương tối thiểu của một chỉ số trong cửa sổ, kèm trung bình và biên độ.
+ *
+ * ── Vì sao không so hai mẫu đầu–cuối nữa ────────────────────────────────────────────────
+ *
+ * JS heap là tín hiệu RĂNG CƯA: nó lớn dần tới khi GC chạy rồi tụt, nên hai mẫu tức thời
+ * cách nhau 10 phút có thể rơi vào bất kỳ chỗ nào của răng cưa. Ba đêm liên tiếp cho thấy
+ * rõ điều đó — heap CUỐI gần như không đổi (132,6 · 131,4 · 138,4 MB, tức không phình qua
+ * từng đêm), nhưng mẫu ở phút 20 nhảy 139,2 · 116,8 · 127,8, lệch nhau 22 MB. Phán quyết
+ * đi theo: ĐẠT (−4,7%) · TRƯỢT (+12,6%) · TRƯỢT (+8,3%). Tức là cổng đang đo chỗ rơi của
+ * MỘT mẫu, không đo xu hướng.
+ *
+ * Dốc trên toàn cửa sổ dùng cả 41 mẫu: nhiễu lấy mẫu triệt tiêu, còn một đà tăng thật thì
+ * hiện nguyên vẹn. Đây là phép đo CHẶT HƠN, không phải nới lỏng — một build rò rỉ đều đặn
+ * vẫn trượt, chỉ là một build sạch không còn trượt vì GC chạy sai nhịp.
+ */
+function trend(win, get) {
+  const pts = win.map((r) => [r.min, get(r)]);
+  const n = pts.length;
+  const mx = pts.reduce((a, [t]) => a + t, 0) / n;
+  const my = pts.reduce((a, [, v]) => a + v, 0) / n;
+  const den = pts.reduce((a, [t]) => a + (t - mx) ** 2, 0);
+  const slope = den > 0 ? pts.reduce((a, [t, v]) => a + (t - mx) * (v - my), 0) / den : 0;
+  return {
+    slope,
+    mean: my,
+    lo: Math.min(...pts.map(([, v]) => v)),
+    hi: Math.max(...pts.map(([, v]) => v)),
+  };
+}
+
 const METRICS = [
   ['texture', (r) => r.tex, '   '],
   ['texMB', (r) => r.texMB, 'MB '],
@@ -239,15 +273,19 @@ if (!steady || last.min - steady.min < 4) {
   console.log('Bài ngắn chỉ dùng để xem bài đo còn chạy được, không dùng để gác.');
 } else {
   console.log(`\n== cửa sổ ổn định phút ${steady.min} → ${last.min} · ngưỡng ${TOL}% (PHÉP SO CHẶN) ==`);
+  const win = rows.filter((r) => r.min >= steady.min);
+  const span = last.min - steady.min;
   for (const [name, get, unit] of METRICS) {
-    const from = get(steady);
-    const to = get(last);
-    const pct = pctOf(from, to);
-    const ok = pct <= TOL || to - from <= FLOOR[name];
+    const { slope, mean, lo, hi } = trend(win, get);
+    // Mức tăng của CẢ CỬA SỔ theo đường dốc, không phải hiệu hai mẫu đầu–cuối.
+    const rise = slope * span;
+    const pct = mean > 0 ? (rise / mean) * 100 : 0;
+    const ok = pct <= TOL || rise <= FLOOR[name];
     if (!ok) {
       bad = true;
     }
-    console.log(`${name.padEnd(16)} ${from.toFixed(1).padStart(9)} → ${to.toFixed(1).padStart(9)} ${unit}  (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)  ${ok ? 'ĐẠT' : 'TRƯỢT'}`);
+    console.log(`${name.padEnd(16)} dốc ${(slope >= 0 ? '+' : '') + slope.toFixed(2)}/phút → ${(rise >= 0 ? '+' : '') + rise.toFixed(1)} ${unit} trên ${span} phút `
+      + `(${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% của TB ${mean.toFixed(1)}) · nhiễu ±${((hi - lo) / 2).toFixed(1)}  ${ok ? 'ĐẠT' : 'TRƯỢT'}`);
   }
 }
 
