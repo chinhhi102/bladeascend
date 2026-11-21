@@ -301,17 +301,26 @@ if (!steady || last.min - steady.min < 4) {
 // §13.9 đòi "sổ tài nguyên đếm số đang sống theo loại"; đây là chỗ đọc nó. Một dòng
 // "display object +19,8%" không sửa được gì — "n_graphics +1 200" thì sửa được.
 if (steady && steady.kinds && last.kinds) {
-  const keys = [...new Set([...Object.keys(steady.kinds), ...Object.keys(last.kinds)])].sort();
+  // Dốc trên cả cửa sổ, KHÔNG phải hiệu hai mẫu đầu–cuối.
+  //
+  // Cùng bài học với heapMB: `n_sprite` đếm cây cảnh ĐANG SỐNG, mà số sprite trên màn phụ
+  // thuộc lúc đó có mấy người trong tầm. Lượt 21/11 11:49 cho `n_sprite +1 094 (+31%)` theo
+  // hai mẫu — nghe như rò rỉ, nhưng cùng lượt đó `display object` chỉ +3,7% so với mốc phút
+  // 5. Hai mẫu tức thời đang đo "kết thúc ở khu đông hay khu vắng", không đo tích luỹ.
+  const winRows = rows.filter((r) => r.min >= steady.min && r.kinds);
+  const keys = [...new Set(winRows.flatMap((r) => Object.keys(r.kinds)))].sort();
   const diffs = keys
-    .map((k) => ({ k, from: steady.kinds[k] ?? 0, to: last.kinds[k] ?? 0 }))
-    .map((d) => ({ ...d, d: d.to - d.from }))
+    .map((k) => {
+      const { slope, mean } = trend(winRows, (r) => r.kinds[k] ?? 0);
+      return { k, from: Math.round(mean), to: Math.round(mean + slope * span), d: Math.round(slope * span) };
+    })
     .filter((d) => Math.abs(d.d) >= 5)
     .sort((a, b) => b.d - a.d);
   if (diffs.length) {
-    console.log('\n== loại nào phình trong cửa sổ ổn định ==');
+    console.log('\n== loại nào phình trong cửa sổ ổn định (theo DỐC, không phải hai mẫu) ==');
     for (const d of diffs) {
       const pct = d.from > 0 ? ((d.d / d.from) * 100).toFixed(0) : '—';
-      console.log(`  ${d.k.padEnd(16)} ${String(d.from).padStart(7)} → ${String(d.to).padStart(7)}  (${d.d >= 0 ? '+' : ''}${d.d}, ${pct}%)`);
+      console.log(`  ${d.k.padEnd(16)} TB ${String(d.from).padStart(6)} · dốc cả cửa sổ ${d.d >= 0 ? '+' : ''}${d.d} (${pct}%)`);
     }
   }
 }
