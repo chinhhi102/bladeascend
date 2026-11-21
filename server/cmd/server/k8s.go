@@ -353,11 +353,32 @@ func (s *server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 // là `NetworkPolicy` (§3); chỗ này chỉ là lớp thứ hai cho ngày ai đó cắm nhầm một Service
 // kiểu LoadBalancer vào cổng metrics.
 func isLocalRequest(r *http.Request) bool {
+	// Mở ra Internet qua tunnel thì "đến từ localhost" KHÔNG còn nghĩa là gì.
+	//
+	// Port forwarding của VS Code (và mọi tunnel khác: ngrok, cloudflared) nối từ dịch vụ
+	// của họ vào `127.0.0.1` của máy này. Nhìn từ server, MỌI người trên Internet đều có
+	// địa chỉ 127.0.0.1 — tức mọi cửa đang khoá bằng "chỉ localhost" bỗng mở toang: hồ sơ
+	// CPU/heap (`/debug/pprof`), số liệu vận hành (`/metrics`).
+	//
+	// `clientIP` có đọc `X-Forwarded-For`, nhưng chỉ khi tunnel chịu gửi header đó — và đặt
+	// an toàn của cả server lên một giả định về bên thứ ba là đặt sai chỗ. Nên có công tắc
+	// rõ ràng: `EXPOSED=true` thì không tin loopback nữa, chấm hết.
+	if exposed() {
+		return false
+	}
 	ip := net.ParseIP(clientIP(r))
 	if ip == nil {
 		return false
 	}
 	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast()
+}
+
+// exposed: server đang mở ra Internet qua tunnel/proxy (`EXPOSED=true`).
+//
+// Đọc mỗi lần gọi chứ không cache: nó chỉ là một phép so chuỗi, và một công tắc an toàn mà
+// phải khởi động lại mới có tác dụng là một công tắc người ta quên bật.
+func exposed() bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("EXPOSED")), "true")
 }
 
 func boolToInt(b bool) int {

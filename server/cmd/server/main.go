@@ -173,9 +173,20 @@ func main() {
 			"  (hoặc `cd client && npm run build` — nó tự gọi pipeline trước.)", *assetsDir)
 	}
 	rawMux := srv.mux(*assetsDir, *clientDir)
-	if *pprofOn {
+	if *pprofOn && exposed() {
+		// Mở ra Internet thì KHÔNG đăng ký pprof, dù có cờ.
+		//
+		// Cửa của pprof là "địa chỉ gọi phải là 127.0.0.1", mà qua tunnel thì cả Internet
+		// đều có địa chỉ đó (xem `isLocalRequest`). Hồ sơ heap chứa nguyên trạng bộ nhớ
+		// tiến trình — tên người chơi, nội dung gói tin. Thà mất một công cụ gỡ lỗi.
+		log.Print("pprof: TẮT vì EXPOSED=true (qua tunnel thì cả Internet trông như localhost)")
+	} else if *pprofOn {
 		registerPprof(rawMux)
 		log.Print("pprof: /debug/pprof mở cho 127.0.0.1")
+	}
+	if exposed() {
+		log.Print("EXPOSED=true: server coi như đang mở ra Internet — không tin localhost, " +
+			"/metrics và /debug/pprof đóng. Trang quản trị vẫn mở và CHỈ có mật khẩu che.")
 	}
 	// Middleware recover bọc NGOÀI CÙNG (§13.8): một handler panic chỉ hỏng request đó.
 	mux := safe.HTTP(gzipMux(rawMux))
