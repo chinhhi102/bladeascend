@@ -132,6 +132,13 @@ async function sample() {
       // `__stats()` chỉ chở SỐ (nó là bảng số liệu), nên danh sách hệ thống đã tắt phải
       // lấy qua cửa debug `kx` — cùng chỗ với `kx.fault` của §13.8.
       guard: (window.kx?.guard?.()?.systems ?? []).filter((x) => x.dead).map((x) => x.key).join(','),
+      // Sổ tài nguyên theo LOẠI (§13.9 "một sổ tài nguyên đếm số đang sống theo loại").
+      //
+      // Không có nó thì bài đo chỉ nói được "display object tăng 19,8%" rồi dừng — mà câu
+      // cần trả lời là tăng Ở LOẠI NÀO. Mọi khoá bắt đầu bằng `n_` (sprite, graphics,
+      // text…) và các khoá pool/cache do từng lớp tự khai.
+      kinds: Object.fromEntries(Object.entries(s).filter(([k]) =>
+        k.startsWith('n_') || ['pool', 'poolText', 'beasts', 'auras', 'flying', 'filters'].includes(k))),
     };
   });
 }
@@ -289,12 +296,53 @@ if (!steady || last.min - steady.min < 4) {
   }
 }
 
+// ── 2b. Loại nào phình: so sổ tài nguyên đầu và cuối cửa sổ ─────────────────────────────
+//
+// §13.9 đòi "sổ tài nguyên đếm số đang sống theo loại"; đây là chỗ đọc nó. Một dòng
+// "display object +19,8%" không sửa được gì — "n_graphics +1 200" thì sửa được.
+if (steady && steady.kinds && last.kinds) {
+  const keys = [...new Set([...Object.keys(steady.kinds), ...Object.keys(last.kinds)])].sort();
+  const diffs = keys
+    .map((k) => ({ k, from: steady.kinds[k] ?? 0, to: last.kinds[k] ?? 0 }))
+    .map((d) => ({ ...d, d: d.to - d.from }))
+    .filter((d) => Math.abs(d.d) >= 5)
+    .sort((a, b) => b.d - a.d);
+  if (diffs.length) {
+    console.log('\n== loại nào phình trong cửa sổ ổn định ==');
+    for (const d of diffs) {
+      const pct = d.from > 0 ? ((d.d / d.from) * 100).toFixed(0) : '—';
+      console.log(`  ${d.k.padEnd(16)} ${String(d.from).padStart(7)} → ${String(d.to).padStart(7)}  (${d.d >= 0 ? '+' : ''}${d.d}, ${pct}%)`);
+    }
+  }
+}
+
 // ── 3. Ngân sách bộ nhớ đồ hoạ của THIẾT BỊ (v6.54) ─────────────────────────────────────
 //
 // Phép so phần trăm mù với một thứ: một build có thể đứng yên tuyệt đối mà vẫn đứng yên ở
 // mức 300 MB trên iPhone — tức là tab sẽ bị Safari giết, chỉ là không giết thêm. Ngưỡng
 // tuyệt đối này bắt đúng trường hợp đó. Con số lấy từ chính trang đang chạy
 // (`device.gpuBudgetMB`), không chép tay vào bài đo.
+// ── 2c. JS heap ≤ 80 MB — mục tiêu §13.10, trước nay KHÔNG bài nào canh ────────────────
+//
+// §13.10 ghi rõ: "JS heap mục tiêu ≤ 80 MB (đo riêng)". Cổng rò rỉ cũ chỉ hỏi "có TĂNG
+// không", nên một build đứng yên ở 190 MB vẫn qua — đứng yên ở mức gấp đôi mục tiêu thì
+// vẫn là hỏng, chỉ là hỏng mà không nhúc nhích. Đo trên cửa sổ ổn định (20 phút đầu là
+// khởi động, không tính).
+const HEAP_TARGET = Number(process.env.HEAP_TARGET ?? 80);
+if (steady) {
+  const win = rows.filter((r) => r.min >= steady.min);
+  const avg = win.reduce((a, r) => a + r.heapMB, 0) / win.length;
+  const peak = Math.max(...win.map((r) => r.heapMB));
+  const okHeap = avg <= HEAP_TARGET;
+  // CẢNH BÁO, KHÔNG CHẶN.
+  //
+  // §13.10 gọi 80 MB là "mục tiêu", còn §13.9 liệt kê đích danh những gì CHẶN: cửa sổ ổn
+  // định tăng > 5%, hoặc GPU MB vượt ngân sách thiết bị. Thêm một điều kiện chặn mới là tự
+  // sửa luật trong spec (luật 4) — việc của tôi là làm con số hiện ra, việc đặt nó thành
+  // cổng là của chủ dự án. Đã ghi câu hỏi vào docs/QUESTIONS.md.
+  console.log(`\nJS heap cửa sổ ổn định: TB ${avg.toFixed(1)} · đỉnh ${peak.toFixed(1)} / mục tiêu ${HEAP_TARGET} MB  ${okHeap ? 'ĐẠT' : '⚠ VƯỢT MỤC TIÊU (cảnh báo, không chặn)'}`);
+}
+
 const peakMB = Math.max(...rows.map((r) => r.texMB));
 const budget = last.budgetMB || 0;
 if (budget > 0) {
