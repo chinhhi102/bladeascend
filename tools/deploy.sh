@@ -127,9 +127,20 @@ restart_server() {
     tail -c 10000000 "$REPO/server/data/bladeascend.log" > "$REPO/server/data/bladeascend.log.tmp"
     mv "$REPO/server/data/bladeascend.log.tmp" "$REPO/server/data/bladeascend.log"
   fi
-  ( cd "$REPO/server" && setsid env ADMIN_PASSWORD_HASH="$adminhash" ./bladeascend \
+  # `-pprof` CHỈ khi không mở ra Internet.
+  #
+  # Cửa của pprof là "địa chỉ gọi phải là 127.0.0.1", mà qua tunnel thì cả Internet đều có
+  # địa chỉ đó. Hồ sơ heap chứa nguyên trạng bộ nhớ tiến trình: tên người chơi, nội dung gói
+  # tin. Chặn ở ĐÂY (không truyền cờ) chứ không chỉ trong mã Go, để công tắc có tác dụng
+  # ngay với bản binary đang chạy — không phải chờ một lượt deploy mới.
+  pprof_flag=(-pprof)
+  if [ "${EXPOSED:-}" = "true" ]; then
+    pprof_flag=()
+    echo "   EXPOSED=true → KHÔNG bật -pprof"
+  fi
+  ( cd "$REPO/server" && setsid env ADMIN_PASSWORD_HASH="$adminhash" EXPOSED="${EXPOSED:-}" ./bladeascend \
       -build "$build" \
-      -pprof \
+      "${pprof_flag[@]}" \
       -client "$DEPLOY/client" \
       -assets "$DEPLOY/assets" \
       >> data/bladeascend.log 2>&1 < /dev/null & ) >/dev/null 2>&1 </dev/null
