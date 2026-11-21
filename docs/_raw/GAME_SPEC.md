@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.56:** mọi cổng đều hai chiều, đích ngẫu nhiên toàn mạng — bỏ luật Thiên Môn một chiều và 4 bến cố định ở Thiên Đình (§8.4a); Sư Phụ Mì tích 2 lượt (§6.3).
+
 **Thay đổi v6.55:** ngân sách bộ nhớ GPU ≤ 50 MB máy tính / ≤ 32 MB điện thoại: KTX2, tối đa 6 atlas nhân vật, nền vẽ bằng shader trộn (bỏ bake + mask), bộ lọc nửa độ phân giải, cổng kiểm VRAM (§13.10).
 
 **Thay đổi v6.54:** bài rò rỉ client bỏ 20 phút khởi động, chặn theo cửa sổ phút 20–30 (> 5%) (Q53); bài rò rỉ chạy hằng đêm 03:00 thay vì mỗi deploy; Hoá Khổng Lồ nhân scale toàn phần (Q52) (§13.9, §6.3).
@@ -130,7 +132,7 @@
 
 **Thay đổi v5.3:** Tiên khí dư của Đạo Tổ đổi Uy Danh 10:1; va kiếm giữ nhịp đúng sau khi sửa lỗi SegSegDist2 (§3.4, §5.2).
 
-**Thay đổi v5.2:** thêm Thiên Môn ở tâm mỗi khu (trừ Thiên Đình) — cổng một chiều đích cố định tới Thiên Đình (§8.4a).
+**Thay đổi v5.2:** thêm Thiên Môn ở tâm mỗi khu (trừ Thiên Đình) (§8.4a). *(Luật một chiều đích cố định của bản này đã bị bỏ ở v6.56.)*
 
 **Thay đổi v5.1:** giữ 20 người/phòng (bot lấp theo phòng, sinh vào khu ít người nhất); kỹ năng chỉ dùng được khi nhặt vật phẩm Bí Kíp (tối đa 2 lượt); Thằng Mập đổi thành Phun Trân Châu bịt mắt (§6.3, §9).
 
@@ -667,7 +669,7 @@ Mỗi nhân vật có **1 kỹ năng riêng**, **tự hồi** theo thời gian, 
   Đẩy lùi diễn ra trong 0.3s, trượt dọc vật cản (§8.2a), không xuyên vật cản.
   Thời gian hiệu ứng không đổi theo cảnh giới.
 - Vì sao chọn U (vòng hút EXP) thay vì tầm chém: vòng hút chỉ phụ thuộc cảnh giới (scale), không đổi khi mất/thêm kiếm, nên kỹ năng ổn định và dễ đoán. Tham khảo: tầm chém full kiếm ≈ 1.8 U (Luyện Khí) → 2.7 U (Đại Thừa); hệ số kỹ năng chọn 3–8 U để kỹ năng vươn xa hơn vòng kiếm 1.5–3 lần.
-- **Chuẩn sức mạnh (v6.48)**: lấy **Ông Ba Võng** làm mốc — 1 hiệu ứng khống chế/vùng + 1 nguồn lợi kiếm/tài nguyên trong ~4s, hồi 25s × 2 lượt. Kỹ năng mạnh hơn mốc → hồi lâu hơn hoặc ít lượt hơn (Sư Phụ 35s × 1); yếu hơn → hồi nhanh hơn (Shipper 20s).
+- **Chuẩn sức mạnh (v6.48)**: lấy **Ông Ba Võng** làm mốc — 1 hiệu ứng khống chế/vùng + 1 nguồn lợi kiếm/tài nguyên trong ~4s, hồi 25s × 2 lượt. Kỹ năng mạnh hơn mốc → hồi lâu hơn (Sư Phụ 35s × 2); yếu hơn → hồi nhanh hơn (Shipper 20s).
 - **Cân bằng** (v6.30): **không dùng tỉ lệ thắng đấu tay đôi** để cân bằng. Kỹ năng có giá trị theo nhiều cách (tranh tài nguyên, lên cấp nhanh, thoát thân, đánh đông người), tay đôi không đo được. `cmd/sim --duel` chỉ còn là **số tham khảo** trong báo cáo, không phải hàng rào CI.
   - Cân bằng dựa trên **số liệu người chơi thật** (≥ 2 ngày telemetry): tỉ lệ chọn nhân vật, Uy Danh/phút, thời gian sống, cảnh giới cao nhất mỗi mạng, số lần dùng kỹ năng. Nhân vật có tỉ lệ chọn quá thấp kéo dài → chủ dự án quyết chỉnh.
 - **Không kỹ năng khống chế nào được vô hiệu hoá vòng kiếm** (v6.27): choáng, ngủ, trói, trượt chỉ được khoá **di chuyển / kỹ năng / Thiêu Đốt / tầm nhìn**; vòng kiếm của người bị khống chế **luôn quay và đánh trả bình thường** (vì chém trúng là chết — khoá kiếm = giết chắc). Ngoại lệ duy nhất: bị mù (Thằng Mập) thì kiếm không chém trúng **thân** người khác, nhưng vẫn va kiếm bình thường.
@@ -682,7 +684,7 @@ Mỗi nhân vật có **1 kỹ năng riêng**, **tự hồi** theo thời gian, 
 | Đại Ca Dép Tổ Ong | **Gọi Đàn Em** | Huýt sáo gọi 2 đàn em (nhỏ hơn đại ca 30%, cùng cảnh giới) trong **8s**, mỗi đứa **15% số kiếm hiện tại của đại ca** (tổng 30%, ngang mức lời của Trộm Kiếm). Đàn em bám 3 U, tìm địch trong 8 U, **nhặt Linh khí/Tiên khí/vật phẩm/Bó Kiếm thay đại ca** (bán kính nhặt của đàn em, đồ nhặt được cộng thẳng cho đại ca). Không chém thân, không qua cổng; hết kiếm hoặc hết giờ thì biến mất. Tối đa 2 đàn em cùng lúc (gọi lần 2 khi còn đàn em → làm mới thời gian + kiếm) | 25s | 2 |
 | Thằng Mập Trà Sữa | **Phun Trân Châu + Hoá Khổng Lồ** | Phun trân châu nón 45° × 8 U: người trúng **mù 3s** (màn hình dính trân châu, không nhặt đồ, **kiếm không chém trúng thân ai**) và **bị đảo điều khiển 3s** (trái↔phải, lên↔xuống; chạm/joystick cũng đảo). Đồng thời Thằng Mập **hoá khổng lồ ×2 trong 2s** (nhân thẳng scale — Q52: bán kính nhặt và tầm kỹ năng cũng to theo trong 2s, camera lùi theo như thường): thân, bán kính vòng kiếm và **số kiếm ×2** (kiếm tạm màu trà sữa, hết 2s tự tan, bể trước kiếm thật, không rơi khi chết, không bị cướp) | 25s | 2 |
 | Cô Ba Gánh Hàng | **Bày Hàng Chặn Lối** | Bày dãy 5 sạp hình vòng cung cách 3 U theo hướng nhắm, dài 6 U, **6s**. Sạp **không thể bị chém** (bất hoại, chỉ Shipper đang Gom Đơn đi xuyên được; Cô Ba đi xuyên sạp của mình). Lúc sạp bật lên, **địch đứng trên đường sạp bị đẩy văng ra ngoài** (theo hướng ra xa Cô Ba). Địch trong 2 U quanh dãy sạp lúc bật **bị "buộc" vào sạp gần nhất 3s**: chỉ đi được trong vòng 2 U quanh sạp đó (bị hàng hoá thu hút), kiếm vẫn quay bình thường | 25s | 2 |
-| Sư Phụ Mì Gói | **Hút Mì Đoạt Kiếm** | Quăng mì ra mọi hướng rồi **húp 0.6s** (đứng yên): mọi địch trong bán kính **5 U** bị sợi mì nối vào, **mỗi người mất 25% số kiếm hiện có**, kiếm bay dọc sợi mì về Sư Phụ — **không giới hạn số cướp**; phần vượt kiếm tối đa của Sư Phụ **rơi thành Bó Kiếm quanh ông** (ai cũng nhặt được). Bị chém chết trong lúc húp thì mất chiêu. Kỹ năng mạnh nhất về cướp kiếm nên hồi lâu, 1 lượt | 35s | 1 |
+| Sư Phụ Mì Gói | **Hút Mì Đoạt Kiếm** | Quăng mì ra mọi hướng rồi **húp 0.6s** (đứng yên): mọi địch trong bán kính **5 U** bị sợi mì nối vào, **mỗi người mất 25% số kiếm hiện có**, kiếm bay dọc sợi mì về Sư Phụ — **không giới hạn số cướp**; phần vượt kiếm tối đa của Sư Phụ **rơi thành Bó Kiếm quanh ông** (ai cũng nhặt được). Bị chém chết trong lúc húp thì mất chiêu. Kỹ năng mạnh nhất về cướp kiếm nên hồi lâu nhất | 35s | 2 |
 | Bé Tí Cơ Bắp | **Gồng Cơ — Bung Cơ** | Gồng **4s**: phồng to 10%, độ bền kiếm **+1.0**, **miễn mọi khống chế**; hết gồng **bung cơ**: sóng đẩy địch trong 2 U ra 3 U và **mỗi địch bị đẩy mất 10% số kiếm hiện có** (kiếm rơi thành Bó Kiếm quanh họ, không về Bé Tí) | 25s | 2 |
 | Anh Shipper Tia Chớp | **Gom Đơn Hỏa Tốc** | 4s: tốc chạy **+4.0 base** (= **×5**, trần ×5, §4.1), **đi xuyên mọi vật cản** (trừ biên), **miễn mọi khống chế** (chậm, trói, choáng, ngủ, đẩy lùi), và **bán kính nhặt đồ +10% base** (` +0.1 base, **cộng dồn** với cảnh giới và Nam Châm theo §4.0). Hết giờ mà kẹt trong vật cản → đẩy mượt ra chỗ trống gần nhất 0.3s. Điểm mạnh: chạy nhanh nhất game + xuyên vật cản + miễn khống chế để tới Đài / xác vừa nổ đồ trước người khác | 20s | 2 |
 | Cụ Rùa Thiền | **Rụt Cổ Khiêu Khích** | Rụt vào mai **2s** (v6.51): đứng yên, **thân bất tử** và **kiếm không bị mẻ** khi va (mai rùa che cả vòng kiếm — v6.50). Ngay lúc rụt **khiêu khích mọi địch trong 4 U trong 2s**: họ bị kéo bước về phía cụ (không tự chọn hướng, không dùng kỹ năng/Thiêu Đốt; kiếm vẫn quay). Kiếm địch bể khi va với cụ **rơi thành Bó Kiếm** quanh chỗ va (cụ **không** nhận kiếm — khác Ông Ba). Ra mai: sóng đẩy 2 U ra 3 U. Điểm yếu: đứng yên 2s, không lời kiếm, hết mai mà còn bị vây thì dễ bị dồn | 25s | 2 |
@@ -987,10 +989,10 @@ Bắt buộc:
 
 ### 8.4a Thiên Môn — cổng thẳng tới Thiên Đình
 
-Mỗi khu **trừ Thiên Đình** có thêm **1 Thiên Môn ở chính giữa khu** (tổng 4). Đây là lối đi **chắc chắn** tới Thiên Đình cho người muốn leo cao (Thiên Tiên Đài, 4 Đài Tiên Khí nhỏ), khác với 4 cổng thường đi ngẫu nhiên.
+Mỗi khu **trừ Thiên Đình** có thêm **1 Thiên Môn ở chính giữa khu** (tổng 4). Đây là **cổng thứ 5** của khu, đặt ở chỗ dễ thấy nhất (tâm khu) để ai cũng tìm ra lối đi. Về luật dịch chuyển nó **giống hệt 4 cổng thường**: đích ngẫu nhiên toàn mạng, đi được cả hai chiều (v6.56 — bỏ luật một chiều).
 
-- **Một chiều, đích cố định**: bước vào Thiên Môn → luôn ra ở Thiên Đình. Từ Thiên Đình muốn rời đi thì dùng cổng thường (ngẫu nhiên).
-- **Điểm ra ở Thiên Đình**: 4 **Bến Thiên Môn** nằm ngoài rìa quảng trường Thiên Tiên Đài (cách tâm ~1 400, mỗi bến ở đầu 1 con đường chính). Mỗi khu nối cố định với 1 bến (Linh Sơn Cốc → bến Bắc, Trúc Lâm → Đông, Phàm Trấn → Nam, Băng Nguyệt Hồ → Tây). Bến là bục đá nhỏ có cột sáng, không vật cản trong bán kính 400.
+- **Hai chiều, đích ngẫu nhiên (v6.56)**: Thiên Môn nay là **cổng thường** — bước vào ra một cổng ngẫu nhiên bất kỳ trong toàn mạng (`exit_pool: "all"`), như 4 cổng còn lại của khu.
+- **4 cổng ở Thiên Đình cũng vậy**: không còn "bến một chiều", cả 4 đều là cổng hai chiều đích ngẫu nhiên — vào được, ra được, tới được mọi khu. Giữ nguyên vị trí (cách tâm ~1 400, đầu 4 con đường chính) và vùng trống quanh bến.
 - Cùng luật cổng thường: kích hoạt khi tâm nhân vật vào bán kính (200), dịch chuyển 0.8s không chém/không bị chém, **không bất tử khi ra**, bến đích lóe sáng 0.5s trước. Cooldown chung với cổng thường (8s).
 - **Vị trí trong từng khu** (mapgen phải chừa quảng trường bán kính 500 ở tâm khu, có ít nhất 2 đường dẫn tới, kiểm tra liên thông):
   - Linh Sơn Cốc: trên một bình nguyên giữa các hẻm núi, 2–3 đèo dẫn vào.
@@ -999,6 +1001,7 @@ Mỗi khu **trừ Thiên Đình** có thêm **1 Thiên Môn ở chính giữa kh
   - Băng Nguyệt Hồ: đảo băng giữa hồ (phải trượt băng mới tới).
 - **Nhận diện**: to gấp đôi cổng thường, cổng đá trắng – mái vàng, cột sáng vàng bắn lên trời (thấy từ xa), biển "Thiên Đình ↑". Minimap: icon vàng riêng, luôn hiện. Khi đứng trong khu, góc minimap có mũi tên nhỏ chỉ hướng tới Thiên Môn.
 - Bot: dùng Thiên Môn khi đã ở Đại Thừa trở lên hoặc khi Thiên Tiên Đài sắp phun (xác suất cao), còn lại hiếm khi dùng.
+- Giữ phần nhận diện (to gấp đôi, cột sáng vàng, icon minimap riêng, mũi tên chỉ hướng) vì nó vẫn là mốc dễ nhìn giữa khu.
 - Kill feed khi người trong Top 3 bước qua Thiên Môn: `"{A} ({danh hiệu}) vừa bước qua Thiên Môn — Thiên Đình dậy sóng!"`.
 
 ### 8.5 Đài Tiên Khí
@@ -1731,7 +1734,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   },
   "zones": { "mud_mult": 0.6, "wind_with": 1.5, "wind_against": 0.8, "wind_with_max_deg": 60, "wind_against_min_deg": 120, "bush_reveal_r": 150, "bush_reveal_on_hit_secs": 2 },
   "gates": { "radius": 150, "transit_secs": 0.8, "exit_warn_secs": 0.5, "cooldown_secs": 8, "per_zone": 4, "random_exit": true, "exit_pool": "all",
-    "heaven_gate": { "enabled": true, "radius": 200, "landing_r_from_center": 1400, "landing_clear_r": 400, "zone_center_plaza_r": 500, "map": { "linh_son_coc": "north", "truc_lam_me_cung": "east", "pham_tran": "south", "bang_nguyet_ho": "west" } } },
+    "heaven_gate": { "enabled": true, "radius": 200, "one_way": false, "exit_pool": "all", "landing_r_from_center": 1400, "landing_clear_r": 400, "zone_center_plaza_r": 500 } },
   "titles": ["Bần tăng chưa ngán ai bao giờ", "Ngon thì nhào vô", "Chỗ này nhiều máu nè"],
   "title_hold_secs": 3,
   "minimap": { "size_pc": 180, "size_mobile": 96, "show_top1": true, "show_chest": true, "show_others": false },
@@ -1754,7 +1757,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
   "zones_def": ["thien_dinh", "linh_son_coc", "truc_lam_me_cung", "pham_tran", "bang_nguyet_ho"],
   "ice": { "friction": 0.92, "accel": 0.25, "snow_mult": 0.8 },
   "skills": { "key": "Space", "source": "cooldown", "start_charges": 1, "tien_extra_charges": 1, "lockout_secs": 3,
-    "cooldowns": { "a_hon": [25, 2], "ba_tam_loa": [25, 2], "ong_ba_vong": [25, 2], "dai_ca_dep": [25, 2], "map_tra_sua": [25, 2], "co_ba_ganh": [25, 2], "su_phu_mi": [35, 1], "be_ti": [25, 2], "shipper": [20, 2], "cu_rua": [25, 2] },
+    "cooldowns": { "a_hon": [25, 2], "ba_tam_loa": [25, 2], "ong_ba_vong": [25, 2], "dai_ca_dep": [25, 2], "map_tra_sua": [25, 2], "co_ba_ganh": [25, 2], "su_phu_mi": [35, 2], "be_ti": [25, 2], "shipper": [20, 2], "cu_rua": [25, 2] },
     "ranges_u": { "loa_radius": 6, "loa_shape": "circle", "loa_inhale_secs": 0.8, "loa_vacuum_r": 6, "loa_push": 6, "ru_ngu_r": 4, "ru_ngu_steal_secs": 4, "ru_ngu_secs": 2.5, "ru_ngu_channel": 0.5, "dan_em_follow": 3, "dan_em_share": 0.15, "dan_em_secs": 8, "dan_em_collect_for_owner": true, "gong_co_secs": 4, "bung_co_r": 2, "bung_co_push": 3, "bung_co_sword_loss": 0.1, "banh_bao_instant": 0.1, "banh_bao_regen": 0.2, "banh_bao_regen_secs": 4, "tran_chau_blind_secs": 3, "tran_chau_invert_secs": 3, "map_giant_mult": 2, "map_giant_secs": 2, "sap_indestructible": true, "sap_tether_r": 2, "sap_tether_secs": 3, "rut_co_secs": 2, "rut_co_swords_unbreakable": true, "khieu_khich_r": 4, "khieu_khich_secs": 2, "dan_em_seek": 8, "tran_chau_cone": 8, "bay_sap_dist": 3, "bay_sap_len": 6, "bay_sap_count": 5, "bay_sap_secs": 6, "bay_sap_tier_bonus": 1, "bay_sap_owner_passes": true, "hut_mi_radius": 5, "hut_mi_steal": 0.25, "hut_mi_channel": 0.6, "hut_mi_overflow": "drop_bundles", "gom_don_pickup_bonus": 0.1, "gom_don_secs": 4, "rut_co_wave": 2, "rut_co_push": 3 },
     "push_secs": 0.3, "lockout_secs": 3, "overcap_exp": 20, "overcap_tien_khi": 2, "blind": { "secs": 5, "no_pickup": true, "pearls": [25, 40], "cover": [0.55, 0.65], "bot_vision_mult": 0.4 } },
   "movement": { "slide_iterations": 3, "smooth_correct_max": 30, "smooth_correct_ms": 100 },
@@ -1914,7 +1917,7 @@ Sau mỗi milestone: chạy `go run ./cmd/sim` để xem cân bằng (thời gia
 - [ ] Thế giới 5 khu, mỗi khu 12 000²; không đi bộ sang khu khác được; 200 lượt qua cổng: ra đều các cổng còn lại, không bao giờ ra lại cổng vừa vào, ~80% sang khu khác.
 - [ ] Người mới vào spawn ở khu ít người nhất; tổng người + bot mỗi phòng vẫn 20, bot sinh vào khu ít nhân vật nhất.
 - [ ] Băng Nguyệt Hồ: trên băng trượt có quán tính.
-- [ ] 4 khu (trừ Thiên Đình) có Thiên Môn ở tâm, đường tới thông; bước vào luôn ra ở đúng Bến Thiên Môn của khu đó ở Thiên Đình; minimap có icon + mũi tên chỉ hướng.
+- [ ] 4 khu (trừ Thiên Đình) có Thiên Môn ở tâm, đường tới thông; **mọi cổng (gồm Thiên Môn và 4 cổng Thiên Đình) đều hai chiều, đích ngẫu nhiên toàn mạng** — 100 lượt qua cổng tới được cả 5 khu; minimap có icon + mũi tên chỉ hướng.
 - [ ] Đi sát/đi dọc tường, rào, đá tảng: không giật, không rung; F3 'hiệu chỉnh/giây' ≈ 0 khi chỉ đi sát vật cản.
 - [ ] Trúng Phun Trân Châu: màn hình bị che ~60% trong 3s, không nhặt được gì, đảo điều khiển 3s; HUD và minimap không bị che.
 - [ ] Shipper dùng Giao Hỏa Tốc đi xuyên vách đá được nhưng không ra khỏi biên khu; hết giờ trong vật cản thì được đẩy ra chỗ trống.
