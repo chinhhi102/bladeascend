@@ -31,9 +31,19 @@ for (const name of NAMES) {
     console.log(`  lượt ${i + 1}: dốc ${(m ? (m.mean >= 0 ? '+' : '') + m.mean.toFixed(3) : '—').padStart(8)}/phút`
       + (m ? ` · KTC [${m.ci_lo.toFixed(2)}; ${m.ci_hi.toFixed(2)}] · nền ${m.baseline.toFixed(1)} · 60 phút ${m.rise_pct >= 0 ? '+' : ''}${m.rise_pct.toFixed(1)}% nền` : ''));
   });
-  // Chênh tính trên ĐỘ LỚN của dốc. Dốc gần 0 thì tỉ lệ vô nghĩa (chia cho số rất nhỏ),
-  // nên bỏ qua những lượt dưới sàn — một dốc 0,01 MB/phút là phẳng, không phải "nhỏ hơn
-  // 100 lần".
+  // Chỉ so tỉ lệ khi CÓ TÍN HIỆU.
+  //
+  // Phép "chênh ≤ 3 lần" là để biết kịch bản có cố định hay không, và nó chỉ có nghĩa với
+  // một chỉ số đang dốc thật. Nếu KTC của mọi lượt đều ôm qua 0 thì cả ba con số là nhiễu
+  // quanh 0, và tỉ lệ giữa hai con nhiễu thì muốn bao nhiêu cũng được — đo 23/11: texture
+  // 0,107 / 0,261 / 0,393 (cả ba KTC ôm 0) ra "chênh 3,7 lần", rồi báo oan là kịch bản chưa
+  // cố định, trong khi heap — chỉ số DUY NHẤT có tín hiệu — chỉ chênh 2,2 lần.
+  const hasSignal = got.some((m) => m.ci_lo > 0 || m.ci_hi < 0);
+  if (!hasSignal) {
+    console.log('  mọi lượt đều KHÔNG kết luận được là dốc lên (KTC ôm qua 0) — tỉ lệ chênh vô nghĩa, bỏ qua');
+    continue;
+  }
+  // Dốc gần 0 thì tỉ lệ vẫn vô nghĩa (chia cho số rất nhỏ), nên bỏ qua những lượt dưới sàn.
   const abs = got.map((m) => Math.abs(m.mean)).filter((v) => v > 0.05);
   if (abs.length >= 2) {
     const ratio = Math.max(...abs) / Math.min(...abs);

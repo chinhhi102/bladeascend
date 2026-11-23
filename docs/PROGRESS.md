@@ -1053,9 +1053,27 @@ trăm viên Linh khí cùng hình. Bản đúng là `destroyDeep(node)`: huỷ c
 `glBuffers`, `gfxContexts`, `poolTotal`, `poolFree`; `leakcheck` in ba cột đó ra từng dòng
 mẫu và ghi nguyên mẫu thô vào JSON.
 
-Hai bài 16 phút (tham khảo, bài ngắn): heap **+2,97 → +1,49 MB/phút**, `glBuffers`
-**+7,2 → +2,8/phút**. **Đang chạy 3 lượt 60 phút** trên máy rảnh để có số kết luận được, so
-với 3 lượt trước khi sửa (+1,565 · +1,317 · +1,424).
+**Số kết luận — 3 lượt × 60 phút mỗi bên, máy rảnh cả sáu (0% mẫu bận):**
+
+| | dốc heap | mức nền |
+|---|---|---|
+| trước | +1,565 · +1,317 · +1,424 (TB **1,435**) | 88,0 · 112,2 · 115,1 (TB **105,1**) |
+| sau | +0,739 · +0,342 · +0,757 (TB **0,613**) | 79,6 · 96,6 · 90,9 (TB **89,0**) |
+| | **−57%** | **−15%** |
+
+Mức nền thấp nhất (79,6) lần đầu xuống dưới đích 80 MB của §13.10 — nhưng spec đòi 3 đêm
+< 88 MB mới chuyển nó thành cổng cứng, nên chưa đổi gì.
+
+**Vẫn ĐỎ cả ba lượt** (KTC còn dương, một giờ +21…+56% mức nền) → **deploy vẫn bị chặn**,
+không chạy lại để mong ra xanh.
+
+Còn lại, theo sổ tài nguyên: **`n_sprite` +5,5/phút** [0,5; 10,5] và **vật mượn từ bể Pixi
+mà không trả ≈ +9/phút**; `glBuffers` đã **hết tín hiệu** (+1,0 [−0,2; 2,3]) — bằng chứng
+hai bản sửa đóng đúng đường Buffer. Cả hai thứ còn lại trỏ về code của mình.
+
+Kèm một lỗi của chính công cụ so, đã sửa: `leakcompare` chấm "chênh 3,7 lần → kịch bản chưa
+cố định" cho `texture`, trong khi cả ba lượt texture đều có KTC ôm qua 0 — tỉ lệ giữa hai con
+nhiễu thì muốn bao nhiêu cũng được. Nay chỉ so tỉ lệ cho chỉ số CÓ tín hiệu.
 
 ## Việc tiếp theo
 
@@ -1078,10 +1096,10 @@ với 3 lượt trước khi sửa (+1,565 · +1,317 · +1,424).
    bàn — B13b.
 8. **K8s §3/§4** (Kustomize base + overlays, GitHub Actions + Argo CD, `docs/K8S_RUNBOOK.md`,
    `docs/K8S_SETUP.md`) — §1 đã xong, phần còn lại hoãn sau đợt VRAM và chưa bắt đầu.
-9. **Tìm nguyên nhân rò rỉ heap** (B38) — nay đã có con số chắc chắn để truy: **+1,32…+1,57
-   MB/phút** và **`n_sprite` +5,8…+8,8/phút**, cả hai tái lập qua 3 lượt. Hai bước, theo
-   thứ tự: (a) `heapgrow.mjs` chụp hai ảnh heap rồi so theo LỚP → đọc retainer của lớp phình
-   nhất trong DevTools; (b) phép so `ZONE_MODE=none` ≥ 3 lượt mỗi bên để chốt hay bỏ giả
-   thuyết "tăng theo số lượt đổi khu". Cả hai cần máy rảnh (mỗi lượt 30–60 phút).
+9. **Rò rỉ heap còn một nửa** (B38) — đã sửa hai nguyên nhân, dốc 1,435 → 0,613 MB/phút,
+   nhưng cổng vẫn ĐỎ. Thứ còn lại đã khoanh được: `n_sprite` +5,5/phút và vật mượn từ bể
+   Pixi không trả +9/phút. Bước kế tiếp: **quy số sprite về TỪNG LỚP của cảnh**
+   (`entities` · `rings` · `vfx` · `ambient` · …) để biết lớp nào phình thay vì đoán giữa
+   14 lớp; rồi mới tới phép so `ZONE_MODE=none` cho giả thuyết "theo lượt đổi khu".
 10. **Sửa một dòng spec** (Q55): §13.9 mục "Lịch chạy" còn ghi "bài rò rỉ client 30 phút",
     v6.57 đã đổi thành 60. Code đang chạy theo 60.

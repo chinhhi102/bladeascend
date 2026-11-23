@@ -2225,8 +2225,46 @@ một lượt có 12% mẫu máy bận:
 | `gfxContexts` | (chưa đếm) | +1,5 |
 | `heapMB` | +2,97 MB/phút | **+1,49** |
 
-Số dùng để kết luận phải là **3 lượt 60 phút trên máy rảnh**, so với 3 lượt trước khi sửa
-(+1,565 · +1,317 · +1,424 MB/phút) — đang chạy, ghi bổ sung khi xong.
+#### Số kết luận: 3 lượt trước × 3 lượt sau, 60 phút, máy rảnh cả sáu
+
+Cả ba lượt sau đều là phép đo sạch: **0% mẫu máy bận**, 50/50 lượt đổi khu thật, 12/12 lượt
+chết, 0 lượt chết ngoài kế hoạch, kết thúc khu 0.
+
+| | dốc heap (MB/phút) | mức nền (MB) |
+|---|---|---|
+| trước (`01c9408`) | +1,565 · +1,317 · +1,424 — **TB 1,435** | 88,0 · 112,2 · 115,1 — **TB 105,1** |
+| sau (`ec1780e`) | +0,739 · +0,342 · +0,757 — **TB 0,613** | 79,6 · 96,6 · 90,9 — **TB 89,0** |
+| | **−57%** | **−15%** |
+
+Và mức nền thấp nhất đo được (79,6 MB) lần đầu **xuống dưới đích 80 MB của §13.10** — nhưng
+một lượt không đủ để chuyển 80 MB thành cổng cứng (spec đòi 3 đêm < 88 MB).
+
+**Vẫn ĐỎ cả ba lượt.** Dốc còn dương chắc chắn (KTC [0,03; 1,44] · [0,03; 0,66] · [0,53;
+0,98]) và một giờ vẫn +21…+56% mức nền, trên ngưỡng 10%. Deploy vẫn bị chặn — đúng như chủ
+dự án dặn: không chạy lại để mong ra xanh.
+
+Chênh dốc giữa ba lượt sau là **2,2 lần** (vẫn ≤ 3). Đáng chú ý: tín hiệu càng nhỏ thì biên
+tương đối càng rộng — 1,2 lần khi dốc ~1,4 MB/phút, 2,2 lần khi dốc ~0,6.
+
+**Một lỗi của chính công cụ so, sửa luôn:** `leakcompare` chấm "chênh 3,7 lần → kịch bản chưa
+cố định" cho `texture` — trong khi cả ba lượt texture đều có KTC ôm qua 0, tức cả ba là nhiễu
+quanh 0 và tỉ lệ giữa hai con nhiễu thì muốn bao nhiêu cũng được. Nay phép so tỉ lệ chỉ chạy
+cho chỉ số CÓ tín hiệu (ít nhất một lượt có KTC không ôm 0).
+
+**Còn lại gì (sổ tài nguyên lượt 3, dốc tại cùng điểm chu kỳ):**
+
+| dòng | dốc/phút | KTC 95% |
+|---|---:|---|
+| `n_poolTotal` | +31,3 | [18,5; 44,1] |
+| `n_poolFree` | +22,4 | [8,0; 36,7] |
+| **đang mượn** (`total − free`) | **≈ +9** | — |
+| `n_sprite` | +5,5 | [0,5; 10,5] |
+| `n_glBuffers` | +1,0 | [−0,2; 2,3] — **đã hết tín hiệu** |
+
+`glBuffers` hết dốc là bằng chứng hai bản sửa đã đóng đúng đường Buffer. Thứ còn lại là
+**sprite trong cây cảnh (+5,5/phút) và vật mượn từ bể Pixi mà không trả (+9/phút)** — cả hai
+trỏ về code của mình, không phải thư viện. Bước sau: quy số sprite về TỪNG LỚP của cảnh
+(`entities` · `rings` · `vfx` · `ambient` · …) để biết lớp nào phình, thay vì đoán giữa 14 lớp.
 
 
 ## 6. Nút thắt đang mở (cập nhật liên tục)
@@ -2238,7 +2276,7 @@ Số dùng để kết luận phải là **3 lượt 60 phút trên máy rảnh*
 | B31 | **Hai bài đo cũ KHÔNG dùng để so hai bản build** | Một lượt tối ưu có thể "chứng minh" được bất cứ điều gì | #39: `ringcost` ba lượt cùng build cho 19,79 · 0,55 · −0,40 ms; `weakperf` hai lượt liên tiếp cho 185 lô vẽ / 47 FPS rồi 447 lô / 23 FPS | **Đóng (#39)** — mọi phép so A/B chuyển sang cảnh thử (`scenebench.mjs`, `scenediff.mjs`). `weakperf`/`ringcost` giữ nguyên vai trò "người chơi thật gặp gì" | #39 |
 | B39 | **JS heap nền ~137 MB — mục tiêu §13.10 là ≤ 80 MB** | Vượt gần gấp đôi NGAY TỪ LÚC MỚI ỔN ĐỊNH, không cần rò rỉ gì thêm | Lượt 30 phút chuẩn, máy rảnh (0,4/nhân): heap cửa sổ ổn định **TB 136,9 · đỉnh 153,5**. Trước 21/11 **không bài đo nào canh con số này** — cổng §13.9 chỉ hỏi "có tăng không", nên một build đứng yên ở 190 MB vẫn qua | **Mở** — chủ dự án chốt (v6.57, Q54): 80 MB là **đích**, KHÔNG phải cổng; cổng chặn cho mức nền là **mốc kỷ lục ±10%** (`server/data/leak-ratchet.json`, chỉ đi xuống, hạ mốc cần 2 đêm). Bật 80 MB thành cổng lúc nền đang 137–152 MB thì mọi build đều đỏ và cổng hết tác dụng báo hiệu. Chuyển thành cổng cứng khi nền < 88 MB ba đêm liền | #55 |
 | B40 | **Cửa sổ 10 phút quá ngắn để kết luận về heap — cổng sẽ chập chờn** | Cùng một build, cùng kịch bản, lúc ĐẠT lúc TRƯỢT | Sáu lượt cùng kịch bản 30 phút/50 lượt đổi khu: dốc heap **0,19 · 0,25 · 0,61 · 0,92 · 1,17 · 2,00 MB/phút**, trong khi nhiễu trong cửa sổ luôn ±13–15 MB. Tức tín hiệu 10–20 MB nằm gọn trong biên nhiễu 30 MB | **ĐÓNG (#55)** — nguyên nhân chính KHÔNG phải cửa sổ ngắn mà là **kịch bản trôi nổi**; cố định kịch bản + cửa sổ 60 phút + dốc 5 khối với KTC. Nghiệm thu 3 lượt cùng commit: dốc heap **+1,565 · +1,317 · +1,424 MB/phút, chênh 1,2 lần** (kiểu cũ: 0,19–2,00, chênh 10,5 lần). Cổng nay phân biệt được tín hiệu với nhiễu — `texture` đỏ ở lượt 1 nhưng dốc XUỐNG ở lượt 2, tức nó chưa bao giờ là rò rỉ. **Còn một phần chưa tái lập: MỨC NỀN chênh 31% giữa ba lượt → đụng cổng mốc kỷ lục, xem Q56** | #55 |
-| B38 | **Heap JS tăng theo SỐ LƯỢT ĐỔI KHU, không phải theo thời gian** | Phiên đổi khu nhiều thì phình; phiên bình thường gần như phẳng | Hai lượt cùng build, máy rảnh: **50 lượt đổi khu / 30 phút → +0,19 MB/phút** (nhiễu ±13,9 — tức gần như phẳng, ĐẠT); **100 lượt / 52 phút → +1,17 MB/phút** (+37,4 MB). Chia ra ≈ **0,6 MB mỗi lượt đổi khu**. Texture và GPU MB sạch ở cả hai lượt | **Mở — đã tìm ra MỘT nguyên nhân thật và sửa, đang đo lại** (chủ dự án chốt v6.57/58). Kịch bản cố định, 3 lượt 60 phút cùng commit, máy rảnh: dốc heap **+1,32…+1,57 MB/phút, KTC của cả ba đều > 0** → một ca chơi 2 tiếng là +170 MB. Đầu dây duy nhất tái lập qua cả ba lượt: **`n_sprite` +5,8…+8,8/phút** (KTC > 0 cả ba), tức ~300 sprite sống thêm sau 50 phút tại CÙNG một điểm kịch bản; `n_graphics` chỉ dương ở lượt 1 nên không phải tín hiệu. Ảnh heap + đường giữ từ GC roots: **416 Buffer treo trong `BufferSystem._managedBuffers`, 21,4 MB sau 20 phút** = 58% phần ArrayBuffer tăng thêm. Gốc: `Geometry.destroy()` mặc định KHÔNG huỷ Buffer, mà `GroundField.setChunks` dựng lại lưới ô nền vài giây một lần khi đang đi → rò rỉ theo THỜI GIAN CHƠI, không cần đổi khu. Đã sửa (`old.destroy(true)` + huỷ geometry lúc đổi khu) và khai `glBuffers` vào sổ tài nguyên. **Đang đo lại** mức giảm; phép so `ZONE_MODE=none` để sau | #55 |
+| B38 | **Heap JS tăng theo SỐ LƯỢT ĐỔI KHU, không phải theo thời gian** | Phiên đổi khu nhiều thì phình; phiên bình thường gần như phẳng | Hai lượt cùng build, máy rảnh: **50 lượt đổi khu / 30 phút → +0,19 MB/phút** (nhiễu ±13,9 — tức gần như phẳng, ĐẠT); **100 lượt / 52 phút → +1,17 MB/phút** (+37,4 MB). Chia ra ≈ **0,6 MB mỗi lượt đổi khu**. Texture và GPU MB sạch ở cả hai lượt | **Mở — đã tìm ra MỘT nguyên nhân thật và sửa, đang đo lại** (chủ dự án chốt v6.57/58). Kịch bản cố định, 3 lượt 60 phút cùng commit, máy rảnh: dốc heap **+1,32…+1,57 MB/phút, KTC của cả ba đều > 0** → một ca chơi 2 tiếng là +170 MB. Đầu dây duy nhất tái lập qua cả ba lượt: **`n_sprite` +5,8…+8,8/phút** (KTC > 0 cả ba), tức ~300 sprite sống thêm sau 50 phút tại CÙNG một điểm kịch bản; `n_graphics` chỉ dương ở lượt 1 nên không phải tín hiệu. Ảnh heap + đường giữ từ GC roots: **416 Buffer treo trong `BufferSystem._managedBuffers`, 21,4 MB sau 20 phút** = 58% phần ArrayBuffer tăng thêm. Gốc: `Geometry.destroy()` mặc định KHÔNG huỷ Buffer, mà `GroundField.setChunks` dựng lại lưới ô nền vài giây một lần khi đang đi → rò rỉ theo THỜI GIAN CHƠI, không cần đổi khu. **Đã sửa HAI nguyên nhân** — (1) `Geometry.destroy()` không huỷ Buffer (`old.destroy(true)`); (2) `destroy({children:true})` không bao giờ huỷ `GraphicsContext` → 717 context mồ côi, nay dùng `destroyDeep` (huỷ context RIÊNG, giữ context DÙNG CHUNG) + cổng `check:destroy`. Đo 3 lượt × 60 phút mỗi bên, máy rảnh cả sáu: dốc heap **1,435 → 0,613 MB/phút (−57%)**, mức nền **105,1 → 89,0 MB (−15%)**. **Vẫn ĐỎ** (KTC còn dương, một giờ +21…+56% nền). Còn lại: `n_sprite` +5,5/phút và vật mượn từ bể Pixi +9/phút; `glBuffers` đã hết tín hiệu. Bước sau: quy sprite về từng LỚP của cảnh | #55 |
 | B37 | **`gomdon-smooth` thỉnh thoảng thấy 1 khung đứng hình trên 300** | Chặn một lượt deploy dù mã client không đổi | 16/11: lượt deploy của `7c1a3e0` (chỉ sửa tài liệu + một chốt chỉ chạy ở dev) trượt với "1 đứng hình", máy ở 0,35/nhân. Chạy lại cùng build, máy rảnh: 0/300 và 0/138 | **Mở** — KHÔNG nới ngưỡng 0/0: một khung đứng giữa lúc chạy nhanh là thứ người chơi thấy. Cần tìm xem nó có cùng họ với B36 không (cùng là "vòng vẽ mất một khung mà không có lỗi nào"). Trước mắt: trượt thì chạy lại, và ghi lại mỗi lần gặp | – |
 | B36 | **Khựng 8–87 giây, không lỗi, không đổi khu, VRAM bình thường** | Người chơi đứng hình giữa trận; chưa biết vì sao nên chưa sửa được gì | 13/11: 3 mẫu trong một phiên (29 139 / 7 942 / 1 618 ms `frame_p95`). 14/11: 1 mẫu nữa (87 679 ms), 30 giây sau một `watchdog_restart` cùng phiên | **Mở** — 14/11 thêm sự kiện `long_frame` (khung > 2 giây, bỏ qua quanh lúc tab ẩn/hiện) kèm breadcrumb 30 việc gần nhất, vì số liệu mẫu nói "lúc đó có một khung 87 giây" rồi dừng ở đó. **Không đoán thêm cho tới khi bắt được một lần tái diễn có breadcrumb.** | – |
 | B35 | **`frame_max` một mình là chỉ số VÔ DỤNG** | Đã suýt kết luận sai về "đứng hình" hai lần | Có mẫu `frame_max = 56 844 164 ms` = 15,8 giờ — một tab để qua đêm. Trình duyệt dừng `requestAnimationFrame` khi tab chạy nền, nên khung đầu tiên lúc quay lại dài bằng cả quãng vắng mặt | **Đóng (#54)** — mọi phép lọc "đứng hình" phải dùng `frame_p95`, bỏ 30 giây đầu phiên và bỏ mẫu cách `tab_hidden`/`tab_visible` dưới 25 giây. `long_frame` áp đúng luật đó ngay trong client | #54 |
