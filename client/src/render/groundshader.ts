@@ -441,10 +441,29 @@ export class GroundField {
     const old = this.mesh.geometry;
     this.mesh.geometry = g;
     this.mesh.visible = n > 0;
-    old.destroy();
+    // `destroy(true)` — THAM SỐ NÀY LÀ CẢ MỘT RÒ RỈ.
+    //
+    // `Geometry.destroy()` của Pixi mặc định `destroyBuffers = false`: nó bỏ geometry
+    // nhưng GIỮ các Buffer. Mà Buffer nào đã nạp lên GPU đều nằm trong
+    // `BufferSystem._managedBuffers` của renderer, và chỉ rời sổ đó khi chính nó bị
+    // `destroy()`. Nên mỗi lần dựng lại lưới ô nền là bỏ lại 6 Buffer đỉnh + 1 Buffer chỉ
+    // số, mỗi cái giữ nguyên TypedArray của nó — tức là rò rỉ cả trên GPU lẫn trong heap JS.
+    //
+    // Đo được (ảnh heap, 20 phút kịch bản cố định, §13.9): **416 Buffer mới bị treo trong
+    // `_managedBuffers`, 21,4 MB** — 58% toàn bộ phần ArrayBuffer tăng thêm của cửa sổ đo.
+    // Đây là chỗ `setChunks` chạy mỗi lần camera vượt mép ô, tức vài giây một lần khi đang
+    // đi, nên nó rò rỉ theo THỜI GIAN CHƠI chứ không chỉ theo lượt đổi khu.
+    //
+    // An toàn: mọi TypedArray ở đây là mảng mới cấp phát trong chính hàm này, không chia sẻ
+    // với geometry nào khác.
+    old.destroy(true);
   }
 
   destroy(): void {
+    // Mesh.destroy KHÔNG huỷ geometry (nó chỉ gán `_geometry = null`), nên phải huỷ tay —
+    // và huỷ kèm buffer, cùng lý do với `old.destroy(true)` ở trên. Đây là đường đi lúc
+    // ĐỔI KHU: không có dòng này thì cả lưới ô của khu cũ ở lại trong `_managedBuffers`.
+    this.mesh.geometry?.destroy(true);
     this.mesh.destroy({ children: true });
     this.atlasTex.destroy(true);
   }

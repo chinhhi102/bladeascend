@@ -360,7 +360,7 @@ async function sample() {
       guard: (window.kx?.guard?.()?.systems ?? []).filter((x) => x.dead).map((x) => x.key).join(','),
       // Sổ tài nguyên theo LOẠI (§13.9 "một sổ tài nguyên đếm số đang sống theo loại").
       kinds: Object.fromEntries(Object.entries(s).filter(([k]) =>
-        k.startsWith('n_') || ['pool', 'poolText', 'beasts', 'auras', 'flying', 'filters'].includes(k))),
+        k.startsWith('n_') || ['pool', 'poolText', 'beasts', 'auras', 'flying', 'filters', 'glBuffers'].includes(k))),
     };
   }));
 }

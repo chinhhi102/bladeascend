@@ -60,6 +60,152 @@ function census(path) {
   return { by, total: snap.snapshot.node_count };
 }
 
+/**
+ * retainers: AI ĐANG GIỮ những đối tượng mới sinh ra của một lớp.
+ *
+ * Bảng "lớp nào phình" chỉ nói ra cái gì ở lại; nó không nói ai giữ, mà không biết ai giữ
+ * thì không sửa được. DevTools có cột "Retainers" nhưng đó là việc tay trong một cửa sổ đồ
+ * hoạ — không chạy được trong cron, không dán được vào báo cáo, và không ai làm lại được
+ * sau ba tháng. Đường đi của retainer nằm sẵn trong chính tệp ảnh heap, nên tính ở đây.
+ *
+ * Cách làm: `edges` là mảng phẳng, các cung của nút i nằm liên tiếp nhau; cộng dồn
+ * `edge_count` ra được chỗ bắt đầu của từng nút. Quét một lượt là có CHA của mọi nút (giữ
+ * một cha đầu tiên cho mỗi nút — đủ để đi ngược lên, và rẻ hơn hẳn việc giữ mọi cha).
+ *
+ * Chỉ xét nút MỚI: id của V8 giữ nguyên qua các ảnh heap cho cùng một đối tượng, nên những
+ * id không có trong ảnh đầu chính là những đối tượng sinh ra trong cửa sổ đo. Đó là thứ
+ * đang cần tìm; 3 200 ArrayBuffer có từ trước không nói gì về rò rỉ.
+ */
+function retainers(bPath, { cls, aPath, limit = Number(process.env.LIMIT ?? 400), depth = 14 } = {}) {
+  console.log(`đọc ${bPath} …`);
+  const snap = JSON.parse(readFileSync(bPath, 'utf8'));
+  const meta = snap.snapshot.meta;
+  const NF = meta.node_fields.length;
+  const iType = meta.node_fields.indexOf('type');
+  const iName = meta.node_fields.indexOf('name');
+  const iId = meta.node_fields.indexOf('id');
+  const iSize = meta.node_fields.indexOf('self_size');
+  const iEdges = meta.node_fields.indexOf('edge_count');
+  const nodeTypes = meta.node_types[iType];
+  const EF = meta.edge_fields.length;
+  const eType = meta.edge_fields.indexOf('type');
+  const eName = meta.edge_fields.indexOf('name_or_index');
+  const eTo = meta.edge_fields.indexOf('to_node');
+  const edgeTypes = meta.edge_types[eType];
+  const nodes = snap.nodes;
+  const edges = snap.edges;
+  const strings = snap.strings;
+  const count = nodes.length / NF;
+
+  const label = (i) => {
+    const t = nodeTypes[nodes[i * NF + iType]];
+    const n = strings[nodes[i * NF + iName]];
+    return t === 'string' || t === 'number' ? `(${t})` : `${t}:${n}`;
+  };
+
+  // Đường giữ NGẮN NHẤT TỪ GỐC, không phải "cha đầu tiên gặp".
+  //
+  // Bản đầu tôi viết lấy cha đầu tiên trong lượt quét tuần tự, và nó ra những chuỗi vô
+  // nghĩa kiểu "ArrayBuffer ← ArrayBuffer ← ArrayBuffer [4] ← …": nút nào cũng có thể nằm
+  // trong một mảng cùng loại, và lượt quét tuần tự gặp cái mảng đó trước. Thứ cần biết là
+  // đường từ GỐC xuống — đúng cái DevTools gọi là "distance" và hiện trong cột Retainers.
+  // BFS từ nút 0 cho đường ngắn nhất, và đường ngắn nhất gần như luôn là đường đọc ra được
+  // tên của chủ sở hữu.
+  //
+  // Cần chỗ bắt đầu cung của TỪNG nút trước (cộng dồn `edge_count`), vì BFS không đi tuần tự.
+  const firstEdge = new Int32Array(count + 1);
+  for (let i = 0; i < count; i++) {
+    firstEdge[i + 1] = firstEdge[i] + nodes[i * NF + iEdges];
+  }
+  const parent = new Int32Array(count).fill(-1);
+  const viaEdge = new Int32Array(count).fill(-1);
+  const queue = new Int32Array(count);
+  let head = 0;
+  let tail = 0;
+  queue[tail++] = 0;
+  const seen = new Uint8Array(count);
+  seen[0] = 1;
+  while (head < tail) {
+    const i = queue[head++];
+    for (let e2 = firstEdge[i]; e2 < firstEdge[i + 1]; e2++) {
+      const to = edges[e2 * EF + eTo] / NF;
+      if (!seen[to]) {
+        seen[to] = 1;
+        parent[to] = i;
+        viaEdge[to] = e2;
+        queue[tail++] = to;
+      }
+    }
+  }
+  const edgeLabel = (ei) => {
+    if (ei < 0) {
+      return '?';
+    }
+    const t = edgeTypes[edges[ei * EF + eType]];
+    const v = edges[ei * EF + eName];
+    return t === 'element' || t === 'hidden' ? `[${v}]` : String(strings[v] ?? v);
+  };
+
+  // id của ảnh ĐẦU, để biết nút nào là mới.
+  let oldIds = null;
+  if (aPath) {
+    const a = JSON.parse(readFileSync(aPath, 'utf8'));
+    const aNF = a.snapshot.meta.node_fields.length;
+    const aIId = a.snapshot.meta.node_fields.indexOf('id');
+    oldIds = new Set();
+    for (let i = 0; i < a.nodes.length; i += aNF) {
+      oldIds.add(a.nodes[i + aIId]);
+    }
+  }
+
+  const paths = new Map();
+  let hit = 0;
+  let bytes = 0;
+  for (let i = 0; i < count && hit < limit; i++) {
+    if (label(i) !== cls) {
+      continue;
+    }
+    if (oldIds && oldIds.has(nodes[i * NF + iId])) {
+      continue;
+    }
+    hit++;
+    bytes += nodes[i * NF + iSize];
+    const chain = [];
+    let cur = i;
+    for (let d = 0; d < depth && cur > 0; d++) {
+      chain.push(`${edgeLabel(viaEdge[cur])} ← ${label(parent[cur] >= 0 ? parent[cur] : 0)}`);
+      cur = parent[cur];
+      if (cur < 0) {
+        break;
+      }
+    }
+    // Gom theo đường đã CHUẨN HOÁ: bỏ số trong `[123]` và tên cung thuần số.
+    //
+    // Không chuẩn hoá thì 300 đối tượng cùng một đường sẽ thành 300 nhóm một-phần-tử, vì
+    // mỗi cái nằm ở một ô khác nhau của cùng cái mảng — và bảng kết quả không chỉ ra được
+    // chủ sở hữu nào đang giữ nhiều nhất.
+    const key = chain.join('  ·  ').replace(/\[\d+\]/g, '[i]').replace(/(^|·  )\d+ /g, '$1# ');
+    const got = paths.get(key) ?? { n: 0, bytes: 0 };
+    got.n++;
+    got.bytes += nodes[i * NF + iSize];
+    paths.set(key, got);
+  }
+
+  console.log(`
+== ${hit} đối tượng ${oldIds ? 'MỚI ' : ''}thuộc lớp "${cls}" · ${(bytes / 1048576).toFixed(1)} MB ==`);
+  const rows = [...paths.entries()].sort((x, y) => y[1].bytes - x[1].bytes).slice(0, 10);
+  for (const [path, v] of rows) {
+    console.log(`
+${v.n} đối tượng · ${(v.bytes / 1048576).toFixed(1)} MB`);
+    for (const [d, step] of path.split('  ·  ').entries()) {
+      console.log(`  ${'  '.repeat(d)}${step}`);
+    }
+  }
+  if (rows.length === 0) {
+    console.log('(không có đối tượng nào mới thuộc lớp này — thử bỏ --of, hoặc đổi --class)');
+  }
+}
+
 /** compare in bảng lớp nào phình giữa hai ảnh. */
 function compare(aPath, bPath) {
   console.log(`đọc ${aPath} (${(statSync(aPath).size / 1048576).toFixed(0)} MB) …`);
@@ -88,6 +234,15 @@ function compare(aPath, bPath) {
 
 if (args[0] === '--analyze') {
   compare(args[1], args[2]);
+  process.exit(0);
+}
+// --retainers <b.heapsnapshot> --class "<lớp>" [--of <a.heapsnapshot>]
+if (args[0] === '--retainers') {
+  const flag = (name, dflt) => {
+    const i = args.indexOf(name);
+    return i >= 0 ? args[i + 1] : dflt;
+  };
+  retainers(args[1], { cls: flag('--class', 'native:system / JSArrayBufferData'), aPath: flag('--of', '') });
   process.exit(0);
 }
 

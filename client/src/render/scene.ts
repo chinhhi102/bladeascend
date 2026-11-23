@@ -1255,6 +1255,27 @@ export class GameScene {
     ledgerSet('beasts', this.beasts.length);
     ledgerSet('auras', this.auras.size);
     ledgerSet('flying', this.flying.length);
+    // Số Buffer GPU mà renderer ĐANG GIỮ (`BufferSystem._managedBuffers`).
+    //
+    // Khai con số này vì nó vừa là nơi một rò rỉ THẬT trốn được suốt nhiều lượt đo: mỗi
+    // `Geometry.destroy()` thiếu `true` để lại Buffer trong sổ ấy kèm nguyên TypedArray
+    // của nó. Ảnh heap 20 phút (23/11) đếm được **416 Buffer treo, 21,4 MB** — mà không
+    // một chỉ số nào trong F3 nhúc nhích, vì cây cảnh không chứa chúng.
+    //
+    // `items` là object thưa (khoá bị xoá chỉ được gán `null`), nên phải đếm giá trị khác
+    // null chứ không đếm khoá. Quét mỗi giây một lần, cỡ vài nghìn phần tử.
+    const bufs = (this.app.renderer as unknown as {
+      buffer?: { _managedBuffers?: { items?: Record<string, unknown> } };
+    }).buffer?._managedBuffers?.items;
+    if (bufs) {
+      let live = 0;
+      for (const k in bufs) {
+        if (bufs[k]) {
+          live++;
+        }
+      }
+      ledgerSet('glBuffers', live);
+    }
     this.lastCensus = census(this.app.stage as unknown as Parameters<typeof census>[0]);
   }
 
