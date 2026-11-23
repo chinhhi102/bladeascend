@@ -50,10 +50,12 @@ export interface Stats {
   leak_warning?: string;
 }
 
-/** LeakNightly: một đêm chạy `tools/leaknightly.sh` (GAME_SPEC §13.9 v6.54). */
+/** LeakNightly: một đêm chạy `tools/leaknightly.sh` (GAME_SPEC §13.9 v6.57). */
 export interface LeakNightly {
   at: number;
   ok: boolean;
+  /** "xanh" · "vang" (cảnh báo, không chặn) · "do" (chặn deploy) · "chua_ket_luan". */
+  verdict?: string;
   /** Lý do bỏ qua đêm đó (có người chơi, máy bận). Rỗng = đã chạy thật. */
   skipped: string;
   note: string;
@@ -62,6 +64,47 @@ export interface LeakNightly {
   ack_at?: number;
   client_minutes: number;
   server_minutes: number;
+  /** Số liệu chi tiết của bài client (`leak-client.json`). */
+  client?: LeakClient;
+}
+
+/** LeakMetric: một chỉ số đo theo dốc 5 khối + KTC 95% (§13.9 v6.57). */
+export interface LeakMetric {
+  blocks: number[];
+  mean: number;
+  ci_lo: number;
+  ci_hi: number;
+  baseline: number;
+  rise60: number;
+  rise_pct: number;
+  red: boolean;
+}
+
+/** LeakClient: kết quả bài rò rỉ phía client, phép xét theo dốc của v6.57. */
+export interface LeakClient {
+  at: number;
+  build: string;
+  verdict: string;
+  reasons?: string[] | null;
+  minutes: number;
+  warmup_min: number;
+  blocks: number;
+  note?: string;
+  scenario?: {
+    zone_switches: number;
+    zone_switches_window: number;
+    deaths: number;
+    deaths_window: number;
+    end_zone: number;
+    cycles: number;
+  };
+  metrics?: Record<string, LeakMetric>;
+  /** Mốc kỷ lục cho mức nền; `gate` = mốc này có chặn deploy không. */
+  ratchet?: Record<string, { record: number; value: number; exceeded_pct: number; gate: boolean; lowered: boolean; first: boolean }>;
+  /** Chuỗi dấu dốc 7 đêm gần nhất + số đêm dương liên tiếp. */
+  signs?: Record<string, { signs: string[]; streak: number }>;
+  ledger?: { key: string; slope: number; ci_lo: number; ci_hi: number; mean: number; rising: boolean }[] | null;
+  gpu?: { peak_mb: number; budget_mb: number };
 }
 
 export interface Me {

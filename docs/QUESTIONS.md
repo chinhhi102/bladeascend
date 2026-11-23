@@ -6,33 +6,17 @@
 Bối cảnh chung: lượt cuối 01/11/2026; cập nhật 02/11: Q37–Q42 đã xong (spec v6.35). Chi tiết từng dòng: `docs/SPEC_AUDIT_v630.md`.
 Mỗi câu ghi **phương án đang dùng** (an toàn, không đổi luật) — anh chỉ cần trả lời nếu muốn khác.
 
-> Hiện KHÔNG có câu nào đang chờ. Mọi câu đã trả lời nằm ở `docs/QUESTIONS_DONE.md`.
+## Q55 — §13.9 còn một dòng ghi "client 30 phút", v6.57 đã đổi thành 60
 
-## JS heap đang gấp đôi mục tiêu của spec — có nâng thành điều kiện chặn không?
+Không phải câu hỏi về luật chơi, chỉ là một dòng spec sót lại. Khối **"Bài kiểm rò rỉ
+client"** của §13.9 (v6.57) nói rõ: 60 phút, phút 0–10 khởi động, cửa sổ đo 10–60. Nhưng
+dòng **"Lịch chạy"** ngay dưới đó vẫn ghi *"bài rò rỉ client 30 phút + server 60 phút chạy
+hằng đêm 03:00"*.
 
-**Bối cảnh.** §13.10 ghi: *"JS heap mục tiêu ≤ 80 MB (đo riêng)"*. Từ trước tới nay **không
-bài đo nào canh con số này** — cổng rò rỉ §13.9 chỉ hỏi "có TĂNG quá 5% không", nên một
-build đứng yên ở 190 MB vẫn qua cổng.
+**Phương án đang dùng:** làm theo khối v6.57 — `tools/leaknightly.sh` chạy client **60
+phút** (`LEAK_CLIENT_MINUTES` mặc định đổi 30 → 60), server giữ 60 phút game. Claude không
+sửa `docs/_raw/`, nên nhờ anh sửa con số 30 ở dòng "Lịch chạy" khi tiện.
 
-**Số đo (21/11, lượt 52 phút, 100 lượt đổi khu, máy rảnh):**
-
-| | |
-|---|---|
-| JS heap ở phút 20 | ~136 MB |
-| JS heap ở phút 50 | ~185 MB |
-| mục tiêu §13.10 | **≤ 80 MB** |
-
-Tức là vượt mục tiêu **ngay từ lúc mới ổn định**, rồi còn tăng tiếp ~1 MB/phút (nút thắt
-B38). Texture và GPU MB thì sạch — đây là chuyện của JS, không phải của GPU.
-
-**Đã làm:** `tools/browsertest/leakcheck.mjs` nay in con số này mỗi lượt, kèm sổ tài nguyên
-theo loại để biết loại nào phình.
-
-**Câu hỏi.** §13.9 liệt kê đích danh những gì CHẶN deploy (cửa sổ ổn định tăng > 5%, GPU MB
-vượt ngân sách thiết bị); 80 MB nằm ở §13.10 và được gọi là "mục tiêu". Tôi để nó ở mức
-**cảnh báo**, không tự thêm điều kiện chặn (luật 4). Chủ dự án chốt giúp:
-
-1. Giữ cảnh báo, sửa dần — hay
-2. Nâng thành điều kiện chặn như GPU MB. Nếu chọn cách này thì cần chốt mốc: chặn ngay ở
-   80 MB (hiện đang trượt, tức là chặn mọi lượt deploy cho tới khi sửa xong), hay đặt một
-   mốc tạm (vd 140 MB) rồi siết dần?
+**Hệ quả cần biết:** đêm nào cũng chiếm thêm nửa tiếng máy (bài client xong lúc ~04:10, còn
+job janitor 04:30 thì không đụng nhau). Nếu anh muốn giữ 30 phút để đỡ tốn máy thì nói —
+nhưng cửa sổ 20 phút sẽ không đủ cho 5 khối × 10 phút của chính v6.57.

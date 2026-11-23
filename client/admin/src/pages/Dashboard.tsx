@@ -6,7 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { errMsg, post } from '../api';
 import { BOT_LABEL, f1, fullTime, LEVEL_COLOR, countLevel, realmName, tickLevel, uptime, type Level } from '../format';
 import { useFetch, useStats } from '../hooks';
-import type { BotsResp, Stats, ZoneStat } from '../types';
+import type { BotsResp, LeakClient, Stats, ZoneStat } from '../types';
 import { go } from '../hooks';
 import { tableBase } from '../ui';
 
@@ -193,19 +193,92 @@ function HealthAlerts({ s }: { s: Stats }): ReactNode {
 }
 
 /**
- * LeakAlert — kết quả bài kiểm rò rỉ hằng đêm (§13.9 v6.54).
+ * LeakNumbers — bảng số của bài rò rỉ client (§13.9 v6.57).
+ *
+ * Spec đòi hiện đủ năm thứ: **5 dốc khối · dốc trung bình · KTC · mốc kỷ lục · chuỗi dấu
+ * 7 đêm**. Lý do đòi đủ: một dòng "ĐỎ" không trả lời được câu hỏi đầu tiên của mỗi lần
+ * cổng đỏ — đỏ vì lượt này dốc lên thật, hay vì mức nền của build này vốn đã cao hơn mốc?
+ * Hai thứ đó sửa bằng hai việc khác hẳn nhau.
+ */
+function LeakNumbers({ c }: { c: LeakClient }): ReactNode {
+  const metrics = Object.entries(c.metrics ?? {});
+  if (metrics.length === 0) {
+    return <Typography.Text type="secondary">{c.note ?? 'Chưa có số liệu chi tiết.'}</Typography.Text>;
+  }
+  const sc = c.scenario;
+  return (
+    <Space direction="vertical" size={4} style={{ width: '100%', marginTop: 8 }}>
+      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        {`Kịch bản cố định: ${sc?.zone_switches_window ?? 0} lượt đổi khu + ${sc?.deaths_window ?? 0} lượt chết trong cửa sổ `}
+        {`phút ${c.warmup_min}–${c.minutes}, kết thúc ở khu ${sc?.end_zone ?? '?'} · build ${c.build || '?'}`}
+      </Typography.Text>
+      <table style={{ fontSize: 12, borderSpacing: '10px 2px' }}>
+        <thead>
+          <tr style={{ textAlign: 'left', opacity: 0.7 }}>
+            <th>Chỉ số</th><th>Mức nền</th><th>5 dốc khối (/phút)</th><th>Dốc TB</th><th>KTC 95%</th><th>60 phút</th>
+          </tr>
+        </thead>
+        <tbody>
+          {metrics.map(([name, m]) => (
+            <tr key={name} style={m.red ? { color: '#cf1322' } : undefined}>
+              <td>{name}</td>
+              <td>{f1(m.baseline)}</td>
+              <td style={{ fontVariantNumeric: 'tabular-nums' }}>{m.blocks.map((b) => b.toFixed(2)).join('  ')}</td>
+              <td>{m.mean >= 0 ? '+' : ''}{m.mean.toFixed(3)}</td>
+              <td>[{m.ci_lo.toFixed(3)}; {m.ci_hi.toFixed(3)}]</td>
+              <td>{m.rise_pct >= 0 ? '+' : ''}{m.rise_pct.toFixed(1)}% nền</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <Space wrap size={12} style={{ fontSize: 12 }}>
+        {Object.entries(c.ratchet ?? {}).map(([k, r]) => (
+          <span key={k}>
+            {`mốc kỷ lục ${k}: ${f1(r.value)} / ${f1(r.record)} (${r.exceeded_pct >= 0 ? '+' : ''}${r.exceeded_pct.toFixed(1)}%)`}
+            {r.gate ? '' : ' — ghi sổ, không chặn'}
+            {r.lowered ? ' — vừa HẠ MỐC' : ''}
+          </span>
+        ))}
+      </Space>
+      <Space wrap size={12} style={{ fontSize: 12 }}>
+        {Object.entries(c.signs ?? {}).map(([k, s]) => (
+          <span key={k}>{`dấu dốc 7 đêm ${k}: ${s.signs.join(' ')}`}{s.streak >= 3 ? ` (dương ${s.streak} đêm liên tiếp)` : ''}</span>
+        ))}
+      </Space>
+      {(c.ledger ?? []).filter((d) => d.rising).length ? (
+        <Typography.Text style={{ fontSize: 12 }}>
+          {`Sổ tài nguyên đang tăng chắc chắn: ${(c.ledger ?? []).filter((d) => d.rising).map((d) => `${d.key} ${d.slope >= 0 ? '+' : ''}${d.slope.toFixed(2)}/phút`).join(' · ')}`}
+        </Typography.Text>
+      ) : null}
+    </Space>
+  );
+}
+
+/**
+ * LeakAlert — kết quả bài kiểm rò rỉ hằng đêm (§13.9 v6.57).
  *
  * Nút "Đã xem" không chỉ để tắt thẻ đỏ: nó là thứ MỞ KHOÁ deploy kế tiếp
  * (`tools/deploy.sh` đọc cờ `ack` trong `server/data/leak-nightly.json`). Đặt nó ở đây,
  * cạnh con số, để người bấm là người vừa đọc con số — chứ không phải người đang vội gõ
  * một biến môi trường trong terminal.
+ *
+ * Thẻ VÀNG (v6.57) không có nút đó: nó không chặn gì, nó chỉ mở một việc điều tra.
  */
 function LeakAlert({ s }: { s: Stats }): ReactNode {
   const l = s.leak;
   const { message } = App.useApp();
   const [busy, setBusy] = useState(false);
   if (!s.leak_warning) {
-    return null;
+    // Xanh thì vẫn hiện SỐ, chỉ không hiện cảnh báo.
+    //
+    // Spec v6.57 bắt dashboard hiện 5 dốc khối, KTC, mốc kỷ lục và chuỗi dấu 7 đêm —
+    // những thứ đó dùng để thấy một đà tăng chậm TRƯỚC khi nó thành đỏ. Giấu đi lúc xanh
+    // thì chúng chỉ xuất hiện đúng lúc đã muộn.
+    return l?.client ? (
+      <Card size="small" style={{ marginBottom: 12 }} title={`Rò rỉ bộ nhớ đêm qua: ${l.verdict === 'chua_ket_luan' ? 'chưa kết luận' : 'ĐẠT'} (${fullTime(l.at)})`}>
+        <LeakNumbers c={l.client} />
+      </Card>
+    ) : null;
   }
   const red = l && !l.ok && !l.ack;
   const ack = async (): Promise<void> => {
@@ -225,7 +298,12 @@ function LeakAlert({ s }: { s: Stats }): ReactNode {
       showIcon
       style={{ marginBottom: 12 }}
       message={s.leak_warning}
-      description={l ? `Chạy lúc ${fullTime(l.at)} · client ${l.client_minutes} phút · server ${l.server_minutes} phút game · nhật ký: server/data/${l.log}` : undefined}
+      description={l ? (
+        <>
+          {`Chạy lúc ${fullTime(l.at)} · client ${l.client_minutes} phút · server ${l.server_minutes} phút game · nhật ký: server/data/${l.log}`}
+          {l.client ? <LeakNumbers c={l.client} /> : null}
+        </>
+      ) : undefined}
       action={red ? <Button size="small" loading={busy} onClick={() => void ack()}>Đã xem</Button> : undefined}
     />
   );
