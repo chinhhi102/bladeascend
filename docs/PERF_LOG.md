@@ -2173,6 +2173,61 @@ texture nên `texMB` không thấy, và sổ tài nguyên §13.9 chưa có dòng
 khai thêm **`glBuffers`** = số Buffer renderer đang giữ, và bài hằng đêm xét nó bằng dốc như
 mọi dòng khác.
 
+#### Sửa xong vẫn rò rỉ — và nguồn thứ hai lớn hơn: 717 GraphicsContext mồ côi
+
+Đo lại bằng đúng bài ảnh heap trên bản đã sửa: ArrayBuffer **không giảm** (+57,3 MB / 414
+cái, so với +31,9 MB / 342 trước đó). Kiểm bundle thật mà trình duyệt nạp —
+`visible=s>0,d.destroy(!0)` có trong đó — nên không phải "sửa chưa ăn", mà là **nguồn thứ
+nhất đang che nguồn thứ hai**.
+
+Thêm chế độ `--owners` (đếm MỌI cung trỏ tới, không chỉ một đường) rồi lần theo chuỗi:
+
+```
+Pt (Buffer, Float32 ~143 KB) ← St (geometry) ← L (Batcher) ← rs (GraphicsContextRenderData)
+  ← is (GpuGraphicsContext) ← E (GraphicsContext) ← _managedContexts của renderer
+```
+
+Và đây là con số quyết định: **717 trong 1 024 context mới chỉ còn ĐÚNG MỘT thứ trỏ tới —
+cái sổ `_managedContexts`**. Không gì trong cảnh giữ chúng nữa, tức là code đã bỏ chúng
+đúng; chúng chỉ không bao giờ được HUỶ, mà sổ chỉ nhả khi context bị huỷ (`unload()` phát sự
+kiện `unload`). 157 context khác thì sống hợp pháp dưới `mapView.under`.
+
+Gốc: `Container.destroy(options)` truyền nguyên options xuống con, còn
+`Graphics.destroy(options)` chỉ huỷ context của chính nó khi **options VẮNG** hoặc có
+`context: true`:
+
+```js
+if (this._ownedContext && !options)                      // huỷ
+else if (options === true || options?.context === true)  // huỷ
+```
+
+`destroy({ children: true })` — đọc như "huỷ sâu, huỷ hết" — rơi đúng vào nhánh KHÔNG huỷ.
+24 chỗ trong client gọi kiểu đó.
+
+**Một hướng sai đã thử và phải bỏ:** thêm `context: true` vào cả 24 chỗ. Hình vỡ trong 15
+giây đầu — texture về **0**, FPS **16**. `entities.ts` CỐ Ý dùng context dùng chung
+(`new Graphics(shared('orb:…'))`) để hàng trăm viên Linh khí cùng hình chỉ tốn một context;
+`context: true` huỷ luôn cái context người khác đang dùng. Context dùng chung có cache theo
+khoá nên nó **không** rò rỉ — thứ rò rỉ là context của riêng từng Graphics.
+
+Nên bản sửa là `destroyDeep(node)` (`client/src/render/destroydeep.ts`): đi từ dưới lên, huỷ
+context **khi và chỉ khi** `_ownedContext` có giá trị. 26 chỗ chuyển sang dùng nó, và
+`npm run check:destroy` vào chuỗi build để `destroy({children:true})` không quay lại — hai
+chữ đó đọc như đã đủ, nên nó sẽ quay lại nếu chỉ sửa rồi đi tiếp.
+
+**Hai bài 16 phút (cùng kịch bản, cửa sổ từ phút 2) — số CHỈ ĐỂ THAM KHẢO**, vì bài ngắn và
+một lượt có 12% mẫu máy bận:
+
+| | trước `destroyDeep` | sau |
+|---|---:|---:|
+| `glBuffers` | +7,2/phút | **+2,8** |
+| bể Pixi đang mượn (`poolTotal − poolFree`) | +43,2/phút | **+22,7** |
+| `gfxContexts` | (chưa đếm) | +1,5 |
+| `heapMB` | +2,97 MB/phút | **+1,49** |
+
+Số dùng để kết luận phải là **3 lượt 60 phút trên máy rảnh**, so với 3 lượt trước khi sửa
+(+1,565 · +1,317 · +1,424 MB/phút) — đang chạy, ghi bổ sung khi xong.
+
 
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 

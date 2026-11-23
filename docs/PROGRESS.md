@@ -1024,6 +1024,39 @@ Và đúng như anh dặn trước: **dốc cao hơn sáu lượt cũ là bình 
 đổi khu thật — không phải tụt lùi của commit nào. Deploy vẫn bị chặn; không chạy lại để mong
 ra xanh.
 
+### 23/11 (đêm) — tìm ra HAI nguyên nhân rò rỉ heap, cả hai đều là một tham số
+
+Công cụ mới `heapgrow.mjs`: chụp hai ảnh heap (phút 10 và 30) của kịch bản cố định, so theo
+LỚP, rồi tính **đường giữ từ GC roots** ngay trong tệp ảnh heap (chế độ `--retainers`,
+`--owners`). Trước đây việc này là mở DevTools bằng tay — không chạy được trong cron, không
+dán được vào báo cáo, và ba tháng sau không ai làm lại được.
+
+**Nguyên nhân 1 — `Geometry.destroy()` mặc định KHÔNG huỷ Buffer.** 416 Buffer treo trong
+`BufferSystem._managedBuffers`, 21,4 MB sau 20 phút. `GroundField.setChunks` dựng lại lưới ô
+nền mỗi lần camera vượt mép ô (vài giây một lần khi đang đi) rồi gọi `old.destroy()` — tức
+bỏ lại 6 Buffer đỉnh + 1 Buffer chỉ số mỗi lần. **Nó rò rỉ theo THỜI GIAN CHƠI**, không cần
+đổi khu — một mảnh câu trả lời cho B38. Sửa: `old.destroy(true)`.
+
+**Nguyên nhân 2 — `destroy({children:true})` không bao giờ huỷ `GraphicsContext`.** Sửa xong
+nguyên nhân 1 mà đo lại vẫn không giảm, vì nguyên nhân 1 đang che nguyên nhân 2: **717 trong
+1 024 context mới chỉ còn đúng một thứ trỏ tới — cái sổ `_managedContexts` của renderer**.
+Mỗi context kéo theo một Batcher với bộ đệm đỉnh ~143 KB. `Container.destroy(options)`
+truyền nguyên options xuống con, mà `Graphics.destroy(options)` chỉ huỷ context khi options
+VẮNG hoặc có `context: true` — nên `{children: true}` rơi đúng vào nhánh không huỷ.
+
+**Một hướng sai đã lọt tới lúc chạy thật:** thêm `context: true` vào cả 24 chỗ → hình vỡ
+trong 15 giây, texture về 0, FPS 16. `entities.ts` cố ý dùng context DÙNG CHUNG cho hàng
+trăm viên Linh khí cùng hình. Bản đúng là `destroyDeep(node)`: huỷ context khi và chỉ khi
+`_ownedContext` có giá trị.
+
+**Phòng tái diễn:** `npm run check:destroy` vào chuỗi build; sổ tài nguyên khai thêm
+`glBuffers`, `gfxContexts`, `poolTotal`, `poolFree`; `leakcheck` in ba cột đó ra từng dòng
+mẫu và ghi nguyên mẫu thô vào JSON.
+
+Hai bài 16 phút (tham khảo, bài ngắn): heap **+2,97 → +1,49 MB/phút**, `glBuffers`
+**+7,2 → +2,8/phút**. **Đang chạy 3 lượt 60 phút** trên máy rảnh để có số kết luận được, so
+với 3 lượt trước khi sửa (+1,565 · +1,317 · +1,424).
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
