@@ -122,9 +122,33 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			}
 			if next != z.Index {
 				to := r.zones[next]
-				mid := to.G.Map.Size / 2
-				r.queueTransfer(transfer{playerID: p.ID, from: z, to: to, at: game.Vec{X: mid, Y: mid}, destGate: -1})
+				// Đặt chân XA CỔNG, và nghỉ cổng đúng như vừa đi qua một cổng thật.
+				//
+				// Trước đây thả vào giữa bản đồ: từ v6.56 cổng bắn đi ngẫu nhiên khắp mạng
+				// (§8.4a) nên nhân vật đặt chân cạnh cổng là bị hút đi ngay — "xin sang khu
+				// 1" đo lại thành đang ở khu 0, 2/4 lần thử. Bài rò rỉ v6.57 phải kết thúc
+				// ở CÙNG MỘT KHU mỗi lượt, nên chỗ đặt chân không được do xúc xắc quyết.
+				r.queueTransfer(transfer{playerID: p.ID, from: z, to: to, at: to.G.SpotAwayFromGates(), destGate: -1})
+				p.GateReadyAt = to.G.Time + to.G.Cfg.Gates.CooldownSecs
 			}
+		case "invuln":
+			// Miễn sát thương n giây (lệnh test). `dbg die` vẫn giết được — nó không đi
+			// qua đường va chạm.
+			//
+			// Cùng lý do với `nogate`: bài rò rỉ §13.9 v6.57 đặt ra ĐÚNG 10 lượt chết, mà
+			// bot thì chém thật. Một lượt bị bot hạ giữa chừng là thêm một lần hồi sinh và
+			// một lần rơi vào khu khác (§8.0 thả người vào khu ít người nhất) — hai lượt đo
+			// khác nhau ở đúng chỗ không ai ghi lại.
+			p.InvulnUntil = z.G.Time + float64(max(0, d.N))
+		case "nogate":
+			// Tắt cổng cho RIÊNG nhân vật này trong n giây (lệnh test).
+			//
+			// Bài rò rỉ §13.9 v6.57 phải đổi khu đúng 50 lần và kết thúc ở đúng một khu.
+			// Nhưng nhân vật còn đi lại 45 giây mỗi chu kỳ, và cổng thường từ v6.56 bắn đi
+			// NGẪU NHIÊN khắp mạng — đạp trúng một cái là lượt đo ấy có thêm một lần đổi
+			// khu không ai đếm, và kết thúc ở một khu khác lượt trước. Dùng chính cơ chế
+			// nghỉ cổng có sẵn (`GateReadyAt`), không thêm đường rẽ nào vào luật chơi.
+			z.G.SetGateCooldown(p, float64(max(0, d.N)))
 		case "panic":
 			// LỖI GIẢ để nghiệm thu §13.8 (checklist §17). Không có nó thì lớp chống sập chỉ
 			// được thử lần đầu bằng một lỗi thật, giữa trận, trên máy người chơi.

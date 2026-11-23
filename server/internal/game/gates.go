@@ -114,3 +114,45 @@ func (g *Game) updateTransit(p *Player) {
 		p.GateReadyAt = g.Time + gc.CooldownSecs
 	}
 }
+
+// SpotAwayFromGates trả một chỗ đặt chân XA MỌI CỔNG trong khu này.
+//
+// Lệnh test "nhảy khu" (§13.9: bài rò rỉ phải đổi khu 50 lần) trước đây thả nhân vật vào
+// đúng GIỮA bản đồ, và giữa bản đồ thường có cổng. Từ v6.56 cổng bắn đi NGẪU NHIÊN khắp
+// mạng, nên nhân vật vừa đặt chân là bị hút đi ngay sang một khu bất kỳ: xin sang khu 1 thì
+// đo được là đã đứng ở khu 0. Một kịch bản "cố định" mà khu kết thúc do xúc xắc quyết định
+// thì không so được hai lượt với nhau — mà so hai lượt là toàn bộ lý do của bài đo.
+//
+// Chọn trong một danh sách điểm CỐ ĐỊNH (giữa + các điểm 1/4, 1/3, 2/3) lấy điểm xa cổng
+// nhất; không bốc ngẫu nhiên, vì lượt nào cũng phải ra đúng chỗ đó.
+func (g *Game) SpotAwayFromGates() Vec {
+	s := g.Map.Size
+	best := Vec{X: s / 2, Y: s / 2}
+	if len(g.Map.Gates) == 0 {
+		return best
+	}
+	fr := []float64{0.5, 0.25, 0.75, 0.33, 0.67}
+	bestD := -1.0
+	for _, fx := range fr {
+		for _, fy := range fr {
+			c := Vec{X: s * fx, Y: s * fy}
+			d := math.Inf(1)
+			for _, gate := range g.Map.Gates {
+				d = math.Min(d, c.Dist(Vec{X: gate.X, Y: gate.Y}))
+			}
+			if d > bestD {
+				best, bestD = c, d
+			}
+		}
+	}
+	return best
+}
+
+// SetGateCooldown cho nhân vật nghỉ cổng `secs` giây (lệnh test, §13.9 v6.57).
+//
+// Dùng lại đúng đồng hồ nghỉ cổng của luật chơi, không thêm cờ riêng: một cờ "miễn cổng"
+// mới sẽ phải được nhớ tới ở mọi chỗ đọc cổng sau này, còn `GateReadyAt` thì mọi chỗ đó
+// vốn đã đọc rồi (`checkGate`, bot).
+func (g *Game) SetGateCooldown(p *Player, secs float64) {
+	p.GateReadyAt = g.Time + secs
+}

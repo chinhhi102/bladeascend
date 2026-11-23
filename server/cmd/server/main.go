@@ -65,6 +65,13 @@ func main() {
 	// Có cờ này để xem được danh sách mà KHÔNG phải đăng nhập trang quản trị và KHÔNG phải
 	// chờ tới 04:30 — đúng yêu cầu "chạy dry-run lần đầu, gửi danh sách trước khi chạy thật".
 	janitorDry := flag.Bool("janitor-dryrun", false, "in danh sách bộ dọn sẽ xoá rồi thoát (không xoá gì)")
+	// Hạt giống cố định cho BÀI ĐO (§13.9 v6.57: "cùng seed, cùng chuỗi hành động").
+	//
+	// 0 = như cũ, mỗi lần chạy một thế giới khác. Khác 0 thì mọi phòng sinh ra giống hệt
+	// nhau giữa các lượt chạy — điều kiện bắt buộc để so dốc bộ nhớ giữa hai đêm, vì vị trí
+	// viên / quái / bot quyết định số đối tượng trên màn hình, tức quyết định chính con số
+	// đang đo. Không dùng cho server thật: người chơi sẽ gặp đúng một thế giới mỗi lần.
+	seed := flag.Int64("seed", 0, "ghim hạt giống sinh phòng cho bài đo (0 = ngẫu nhiên như thường)")
 	flag.Parse()
 
 	if *cpuProf != "" {
@@ -100,6 +107,12 @@ func main() {
 		cfg.Net.MaxConnsPerIP = *maxConns
 	}
 	mgr := room.NewManager(cfg, maps, st)
+	if *seed != 0 {
+		// Ngay sau NewManager: phòng đầu tiên chỉ sinh ra khi có người vào, nên tới đây
+		// chưa phòng nào lấy hạt.
+		mgr.SetSeed(*seed)
+		log.Printf("hạt giống phòng ghim ở %d (-seed) — chỉ dùng cho bài đo", *seed)
+	}
 	mgr.AllowDebug = *debug // công tắc tổng; ai được dùng thì `admin.DebugGate` quyết (§1.1)
 	// Mốc trung vị cho cờ "Tăng điểm bất thường" (ADMIN_SPEC §6.1, QUESTIONS Q29).
 	//

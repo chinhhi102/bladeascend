@@ -57,6 +57,19 @@ func NewManager(cfg *config.Config, maps []*world.Map, rec Recorder) *Manager {
 		Start: func(r *Room) { safe.Go("nen", func() string { return "vòng phòng " + r.ID }, r.Run) }}
 }
 
+// SetSeed ghim hạt giống sinh phòng — dùng cho bài đo cần KỊCH BẢN CỐ ĐỊNH (§13.9 v6.57).
+//
+// Bài rò rỉ client so dốc bộ nhớ giữa các đêm, mà mỗi phòng tự gieo hạt theo `time.Now()`:
+// khác hạt là khác vị trí viên, khác quái, khác bot, tức là khác lượng đối tượng trên màn
+// hình. Sáu lượt đo đầu cho dốc chênh nhau hơn 10 lần phần lớn vì chuyện đó. Phải gọi
+// TRƯỚC khi có phòng nào được tạo (ngay sau `NewManager`); gọi muộn hơn thì phòng đã tạo
+// giữ nguyên hạt cũ.
+func (m *Manager) SetSeed(seed int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.rng = rand.New(rand.NewSource(seed))
+}
+
 // Join matches a client into a room: the fullest room below room_max_humans (giá trị admin
 // đang đặt, spec v6.28 §9.2), ties → oldest.
 func (m *Manager) Join(c *Client, j netproto.Join) *Room {
