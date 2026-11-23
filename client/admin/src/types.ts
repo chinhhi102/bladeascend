@@ -85,6 +85,8 @@ export interface LeakClient {
   at: number;
   build: string;
   verdict: string;
+  /** Phiên bản kịch bản (v6.58): mốc kỷ lục chỉ có nghĩa trong phạm vi một kịch bản. */
+  scenario_version?: string;
   reasons?: string[] | null;
   minutes: number;
   warmup_min: number;

@@ -50,14 +50,18 @@ type LeakNightly struct {
 // lục, và chuỗi dấu 7 đêm gần nhất. Một dòng "ĐỎ/XANH" không nói được build nào bắt đầu
 // trượt, mà đó là câu hỏi đầu tiên mỗi lần cổng đỏ.
 type LeakClient struct {
-	At      int64    `json:"at"`
-	Build   string   `json:"build"`
-	Verdict string   `json:"verdict"`
-	Reasons []string `json:"reasons"`
-	Minutes float64  `json:"minutes"`
-	Warmup  float64  `json:"warmup_min"`
-	Blocks  int      `json:"blocks"`
-	Note    string   `json:"note,omitempty"`
+	At      int64  `json:"at"`
+	Build   string `json:"build"`
+	Verdict string `json:"verdict"`
+	// Scenario: phiên bản KỊCH BẢN (v6.58). Mốc kỷ lục chỉ có nghĩa trong phạm vi một
+	// kịch bản, nên trang quản trị phải hiện nó cạnh con số — không thì hai đêm chạy hai
+	// kịch bản khác nhau trông như hai đêm so được với nhau.
+	ScenarioVersion string   `json:"scenario_version"`
+	Reasons         []string `json:"reasons"`
+	Minutes         float64  `json:"minutes"`
+	Warmup          float64  `json:"warmup_min"`
+	Blocks          int      `json:"blocks"`
+	Note            string   `json:"note,omitempty"`
 
 	Scenario struct {
 		ZoneSwitches       int `json:"zone_switches"`

@@ -341,6 +341,24 @@ if (perCpu > MAX_LOAD_PER_CPU && process.env.IGNORE_LOAD !== '1') {
   process.exit(2);
 }
 
+// HÀNH ĐỘNG CÓ XẢY RA KHÔNG: Gom Đơn có bật thật không (v6.58 mục 4).
+//
+// Không có phép kiểm này thì bài đo có một đường báo XANH giả: nếu phím `G`/`Space` không
+// ăn (hồi chiêu, lệnh test bị bỏ, nhân vật không phải Shipper), nhân vật chỉ đi bộ 195 đv/s
+// — mà đi bộ thì không có khung nào vượt trần, nên bài in "ĐẠT: 0 nhảy cóc". Nó đo đi bộ
+// rồi phát bằng khen cho netcode lúc chạy nhanh. Đúng loại "thành công giả" của lỗi
+// `dbg('zone')`: lệnh gửi đi, không ai báo lỗi, bài xanh.
+//
+// Ngưỡng 50% trần: lúc Gom Đơn bật, tốc dữ liệu là 975 đv/s (5× đi bộ), nên 50% đã là một
+// khoảng rất rộng — nó chỉ cần phân biệt "có chạy nhanh" với "chỉ đi bộ".
+if (!NO_SKILL && res.nhanhNhatTheoVet < CAP * 0.5) {
+  console.error(`\nKHÔNG ĐO ĐƯỢC: nhanh nhất chỉ ${res.nhanhNhatTheoVet} đv/s trên trần ${res.tranToc} — ` +
+    'Gom Đơn gần như không bật, nên bài này đang đo ĐI BỘ.');
+  console.error('Kiểm lại: nhân vật có phải Shipper không, phím G (nạp lượt) có ăn không, server có cho lệnh test không.');
+  await b.close();
+  process.exit(2);
+}
+
 // PHÁN QUYẾT đọc từ VẾT, không từ vòng lấy mẫu.
 //
 // Hai cột `nhayCoc*` cũ đo bằng cách: lấy vị trí sprite ở nhịp `rAF` của bài đo, chia cho

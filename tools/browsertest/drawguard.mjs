@@ -24,6 +24,7 @@
 // mà `scenediff`/`drawbreak` không đi: hai bài kia đứng yên một chỗ trong một khu.
 import { launch } from './browser.mjs';
 import { requireDebug } from './needdebug.mjs';
+import { switchZone } from './zoneswitch.mjs';
 
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const ROUNDS = Number(process.env.ROUNDS ?? 6);
@@ -56,9 +57,16 @@ await p.evaluate(() => {
   };
 });
 
+// Đếm số lượt đổi khu THẬT SỰ xảy ra, không chỉ số lệnh đã gửi (v6.58 mục 4): một bài đo
+// "đổi đủ 5 khu" mà không đổi khu lần nào vẫn báo 0 lỗi vẽ, và báo xanh.
+let switched = 0;
 for (let i = 0; i < ROUNDS; i++) {
   const zone = i % 5;
-  await p.evaluate((z) => window.kx.conn.send({ t: 'dbg', cmd: 'zone', n: z }), zone);
+  if (await switchZone(p, zone, { timeoutMs: 8000, settleMs: 0 })) {
+    switched++;
+  } else {
+    console.log(`  ⚠ lượt ${i + 1}: xin sang khu ${zone} mà client không sang`);
+  }
   // 2,5 giây: đủ cho khu mới dựng xong, tải nhóm asset của nó, và vẽ hàng trăm khung —
   // nếu mesh nền đang mang geometry sai thì mỗi khung một lỗi, không thể lọt.
   await sleep(2500);
@@ -73,7 +81,7 @@ const byKind = {};
 for (const g of got) {
   byKind[g.kind] = (byKind[g.kind] ?? 0) + 1;
 }
-console.log(`\nđổi khu ${ROUNDS} lượt · khu cuối ${zones}`);
+console.log(`\nđổi khu ${switched}/${ROUNDS} lượt THẬT SỰ xảy ra · khu cuối ${zones}`);
 console.log(`sự kiện lớp chống sập: ${got.length ? JSON.stringify(byKind) : 'không có'}`);
 for (const g of got.slice(0, 5)) {
   console.log(`  ${g.kind}: ${g.err}`);
@@ -82,4 +90,13 @@ if (got.length > 0) {
   console.error(`\n✗ ĐỔI KHU SINH LỖI VẼ: ${got.length} sự kiện. Người chơi sẽ thấy đứng hình rồi văng ra.`);
   process.exit(1);
 }
-console.log('\n✓ đổi khu sạch: 0 lỗi vẽ.');
+// Bài đo không làm được việc của chính nó thì phải ĐỎ, không được báo xanh (v6.58 mục 4).
+//
+// "0 lỗi vẽ khi đổi khu" chỉ có nghĩa nếu đã đổi khu. Trước đây hai câu đó không phân biệt
+// được, và đúng chỗ ấy là nơi lỗi `dbg('zone')` sống suốt nhiều lượt đo.
+if (switched < ROUNDS) {
+  console.error(`\n✗ BÀI ĐO KHÔNG CHẠY ĐƯỢC: chỉ ${switched}/${ROUNDS} lượt đổi khu xảy ra thật.`);
+  console.error('  "0 lỗi vẽ" ở trên không chứng minh được gì — nó có thể chỉ là không đổi khu.');
+  process.exit(1);
+}
+console.log(`\n✓ đổi khu sạch: ${switched}/${ROUNDS} lượt đổi thật, 0 lỗi vẽ.`);

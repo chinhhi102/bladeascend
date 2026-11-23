@@ -211,6 +211,7 @@ function LeakNumbers({ c }: { c: LeakClient }): ReactNode {
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
         {`Kịch bản cố định: ${sc?.zone_switches_window ?? 0} lượt đổi khu + ${sc?.deaths_window ?? 0} lượt chết trong cửa sổ `}
         {`phút ${c.warmup_min}–${c.minutes}, kết thúc ở khu ${sc?.end_zone ?? '?'} · build ${c.build || '?'}`}
+        {c.scenario_version ? ` · kịch bản ${c.scenario_version}` : ''}
       </Typography.Text>
       <table style={{ fontSize: 12, borderSpacing: '10px 2px' }}>
         <thead>

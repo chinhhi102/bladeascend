@@ -11,6 +11,7 @@
 // nén. Rồi canh: vào trận được, 0 placeholder, 0 lỗi vẽ, và KHÔNG tệp .ktx2 nào được tải.
 import { launch } from './browser.mjs';
 import { requireDebug } from './needdebug.mjs';
+import { switchZone } from './zoneswitch.mjs';
 
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -64,8 +65,10 @@ await p.evaluate(() => {
 });
 await sleep(9000);
 // Đổi một khu: đây là đường đã làm hỏng build 13/11, và nó cũng ép tải thêm asset.
-await p.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'zone', n: 2 }));
-await sleep(6000);
+//
+// Xác nhận đã sang thật (v6.58 mục 4): nếu không sang thì phần kiểm "không tải tệp .ktx2
+// nào" ở dưới chỉ đang nói về khu đầu, mà khu đầu đã nạp xong từ trước.
+const zoneOK = await switchZone(p, 2, { timeoutMs: 10000, settleMs: 6000 });
 
 const got = await p.evaluate(() => ({
   draw: window.__kxDraw,
@@ -86,6 +89,9 @@ check('nhận ra máy KHÔNG hỗ trợ nén khối', got.fmt.ktxOn === false, `
 check('không tải tệp .ktx2 nào', ktx.length === 0, ktx.length ? `${ktx.length} tệp: ${ktx.slice(0, 3).join(', ')}` : 'đúng, chỉ webp');
 check('0 placeholder', got.stats.placeholder === false, `${got.stats.charsInView} nhân vật`);
 check('0 lỗi vẽ (kể cả lúc đổi khu)', got.draw === 0, String(got.draw));
+// Hành động của bài đo có xảy ra thật không — hỏi SAU các phép kiểm trên, vì nếu nó sai
+// thì mấy phép kiểm kia không nói về cái chúng tưởng (v6.58 mục 4).
+check('đổi khu xảy ra thật', zoneOK, zoneOK ? 'đã sang khu 2' : 'lệnh gửi rồi mà client không sang khu 2');
 console.log('');
 if (fails > 0) {
   console.error(`✗ đường lùi WebP: ${fails} điều TRƯỢT — máy không hỗ trợ nén khối sẽ không chơi được.`);

@@ -94,6 +94,24 @@ const ZONES = 5;
 const PER_CYCLE = Math.max(1, Math.round(60 / STEP_SECS));
 /** DEATH_EVERY: cứ ngần này chu kỳ thì một lượt chết → 10 lượt trong cửa sổ 50 phút. */
 const DEATH_EVERY = 5;
+/**
+ * ZONE_MODE: `cycle` = đổi khu mỗi chu kỳ (kịch bản chuẩn, 50 lượt trong cửa sổ) ·
+ * `none` = KHÔNG đổi khu lần nào sau lượt neo đầu tiên.
+ *
+ * `none` là bên thứ hai của phép so "heap có tăng theo SỐ LƯỢT ĐỔI KHU không" (B38). Spec
+ * v6.57 đòi ≥ 3 lượt mỗi bên, và hai bên phải khác nhau ĐÚNG MỘT THỨ — nên nó là một công
+ * tắc của chính kịch bản này, không phải một bài đo riêng.
+ */
+const ZONE_MODE = process.env.ZONE_MODE === 'none' ? 'none' : 'cycle';
+/**
+ * SCENARIO_VERSION: tên phiên bản kịch bản, ghi kèm mốc kỷ lục và sổ đêm (v6.58).
+ *
+ * Mốc kỷ lục chỉ có nghĩa trong phạm vi MỘT kịch bản. Lỗi `dbg('zone')` thiếu tham số cho
+ * thấy rõ vì sao: sáu lượt đo cũ chạy trên một kịch bản gần như không đổi khu, mức nền của
+ * nó thấp hơn hẳn — giữ mốc đó lại thì mọi lượt của kịch bản thật đỏ ngay, mà đỏ vì lý do
+ * sai. Đổi kịch bản → mốc cũ hết giá trị, chuỗi dấu bắt đầu lại.
+ */
+const SCENARIO_VERSION = `v6.58|win${WARMUP_MIN}-${MINUTES}|step${STEP_SECS}s|zone-${ZONE_MODE}|die1of${DEATH_EVERY}`;
 const totalSamples = Math.round((MINUTES * 60) / STEP_SECS);
 const totalCycles = Math.floor(totalSamples / PER_CYCLE);
 
@@ -352,9 +370,15 @@ let zones = 0;
 let deaths = 0;
 let zonesInWindow = 0;
 let deathsInWindow = 0;
-console.log(`KỊCH BẢN CỐ ĐỊNH (§13.9 v6.57): ${MINUTES} phút · chu kỳ 60 s · mẫu mỗi ${STEP_SECS} s`);
-console.log(`khởi động phút 0–${WARMUP_MIN} (không tính) · cửa sổ đo phút ${WARMUP_MIN}–${MINUTES} · ${BLOCKS} khối`);
-console.log('mỗi chu kỳ đổi sang khu kế tiếp; cứ 5 chu kỳ một lượt chết + vào lại\n');
+/** revivesUnplanned: số lần thấy màn Tổng kết mà kịch bản KHÔNG hẹn trước (bị bot hạ). */
+let revivesUnplanned = 0;
+/** revivesPlanned: số lượt chết theo kịch bản mà bấm được "Chơi tiếp" thật. */
+let revivesPlanned = 0;
+console.log(`KỊCH BẢN CỐ ĐỊNH (§13.9 v6.58): ${SCENARIO_VERSION}`);
+console.log(`${MINUTES} phút · chu kỳ 60 s · mẫu mỗi ${STEP_SECS} s · khởi động phút 0–${WARMUP_MIN} (không tính) · cửa sổ phút ${WARMUP_MIN}–${MINUTES} · ${BLOCKS} khối`);
+console.log(ZONE_MODE === 'none'
+  ? 'KHÔNG đổi khu sau lượt neo đầu tiên (bên "0 lượt đổi khu" của phép so B38); cứ 5 chu kỳ một lượt chết\n'
+  : 'mỗi chu kỳ đổi sang khu kế tiếp; cứ 5 chu kỳ một lượt chết + vào lại\n');
 console.log('phút   khu  texture    texMB   heapMB    nodes  fps');
 
 const t0 = Date.now();
@@ -374,9 +398,18 @@ for (let i = 0; i <= totalSamples; i++) {
   }
 
   // Việc của chu kỳ, luôn theo đúng thứ tự này.
-  await revive();
-  if (phase === 0 && cycle < totalCycles) {
-    await dbg('zone', zoneAtCycle(cycle));
+  //
+  // `revive()` ở đầu bước là lưới an toàn: nếu nhân vật chết ngoài kế hoạch thì không được
+  // nằm ở màn Tổng kết suốt phần còn lại. Nhưng mỗi lần nó bắt được một cái chết không hẹn
+  // trước là kịch bản đã lệch, nên phải ĐẾM, không phải lặng lẽ chữa (v6.58 mục 4).
+  if (await revive()) {
+    revivesUnplanned++;
+    console.log(`  ⚠ phút ${min}: chết ngoài kế hoạch (đã bấm Chơi tiếp) — kịch bản lệch`);
+  }
+  // Chu kỳ 0 luôn nhảy khu một lần để chỗ đứng ban đầu không do xúc xắc quyết (khu vào
+  // trận là khu ít người nhất, §8.0). Ở chế độ `none` thì đó là lượt duy nhất.
+  if (phase === 0 && cycle < totalCycles && (ZONE_MODE === 'cycle' || cycle === 0)) {
+    await dbg('zone', ZONE_MODE === 'none' ? 1 : zoneAtCycle(cycle));
     // Tắt cổng cho riêng nhân vật này cả chu kỳ: từ v6.56 cổng bắn đi NGẪU NHIÊN khắp
     // mạng, nên đi lại 45 giây mà đạp trúng một cái là lượt đo có thêm một lần đổi khu
     // không ai đếm và kết thúc ở một khu khác lượt trước — hỏng đúng thứ v6.57 đòi.
@@ -397,11 +430,17 @@ for (let i = 0; i <= totalSamples; i++) {
       deathsInWindow++;
     }
     await sleep(1800);
-    await revive();
+    // Lượt chết theo kịch bản PHẢI bấm được "Chơi tiếp". Không bấm được nghĩa là lệnh
+    // `die` rơi vào hư vô — đúng loại "thành công giả" mà v6.58 mục 4 bắt phải phát hiện.
+    if (await revive()) {
+      revivesPlanned++;
+    } else {
+      console.log(`  ⚠ phút ${min}: gửi lệnh chết mà KHÔNG thấy màn Tổng kết`);
+    }
     // Hồi sinh thả người vào khu ÍT NGƯỜI NHẤT (§8.0), không phải khu đang đứng — nên
     // kéo về đúng khu của chu kỳ này rồi mới đi tiếp. Lệnh này là no-op khi đã đúng khu,
     // nên nó không được tính vào số lượt đổi khu của kịch bản.
-    await dbg('zone', zoneAtCycle(cycle));
+    await dbg('zone', ZONE_MODE === 'none' ? 1 : zoneAtCycle(cycle));
     await dbg('nogate', 120);
     // Và không để bot hạ giữa chừng: kịch bản đặt ra đúng 10 lượt chết, mỗi lượt chết
     // ngoài kế hoạch là một lần hồi sinh sang khu khác mà không lượt đo nào khác có.
@@ -423,8 +462,50 @@ const busyRows = win.filter((r) => r.load > MAX_LOAD);
 const busyFrac = win.length ? busyRows.length / win.length : 0;
 const loadMax = win.length ? Math.max(...win.map((r) => r.load)) : 0;
 const fpsMin = win.length ? Math.min(...win.map((r) => r.fps)) : 0;
-const noisy = !IGNORE_LOAD && busyFrac > BUSY_TOL;
+const busyMachine = !IGNORE_LOAD && busyFrac > BUSY_TOL;
 console.log(`tải máy trong cửa sổ: ${(busyFrac * 100).toFixed(0)}% số mẫu vượt ${MAX_LOAD}/nhân · đỉnh ${loadMax.toFixed(2)}/nhân · FPS thấp nhất ${fpsMin.toFixed(0)}`);
+
+// ── Hành động đã XẢY RA chưa? (v6.58 mục 4) ─────────────────────────────────────────────
+//
+// Đếm số lệnh đã GỬI là không đủ — đó đúng là cách sáu lượt đo cũ tự nhận "50 lượt đổi khu"
+// trong khi lệnh thiếu tham số nên gần như không đổi khu lần nào, và không ai biết. Nay đếm
+// số lần khu THẬT SỰ đổi trong bảng mẫu, rồi so với số mong đợi; lệch là KHÔNG KẾT LUẬN.
+let zoneSeen = 0;
+let zoneSeenWindow = 0;
+for (let i = 1; i < rows.length; i++) {
+  if (rows[i].zone !== rows[i - 1].zone) {
+    zoneSeen++;
+    if (rows[i].min >= WARMUP_MIN) {
+      zoneSeenWindow++;
+    }
+  }
+}
+const scenarioProblems = [];
+if (zoneSeenWindow !== zonesInWindow) {
+  scenarioProblems.push(`đổi khu trong cửa sổ: gửi ${zonesInWindow} lệnh nhưng bảng mẫu thấy ${zoneSeenWindow} lần đổi thật`);
+}
+if (revivesPlanned !== deaths) {
+  scenarioProblems.push(`chết theo kịch bản: gửi ${deaths} lệnh nhưng chỉ ${revivesPlanned} lần thấy màn Tổng kết`);
+}
+if (revivesUnplanned > 0) {
+  scenarioProblems.push(`${revivesUnplanned} lần chết NGOÀI kế hoạch (bot hạ được dù đã bật miễn đòn)`);
+}
+console.log(`kiểm hành động: ${zoneSeenWindow}/${zonesInWindow} lượt đổi khu thật trong cửa sổ (cả bài ${zoneSeen}/${zones})`
+  + ` · ${revivesPlanned}/${deaths} lượt chết theo kịch bản · ${revivesUnplanned} lượt chết ngoài kế hoạch`);
+if (scenarioProblems.length) {
+  // Không chặn deploy: đây là bài đo tự khai mình chạy sai, không phải build sai.
+  console.log('\n== KỊCH BẢN LỆCH — KHÔNG KẾT LUẬN ==');
+  for (const s of scenarioProblems) {
+    console.log(`  · ${s}`);
+  }
+}
+/**
+ * invalid: lượt đo này KHÔNG được phép kết luận gì — máy bận, hoặc kịch bản lệch.
+ *
+ * Hai lý do khác nhau nhưng hệ quả giống nhau, và hệ quả ấy là điều quan trọng: không chặn
+ * deploy (build không có lỗi gì ở đây), và **không ghi vào mốc kỷ lục lẫn sổ đêm** (v6.58).
+ */
+const invalid = busyMachine || scenarioProblems.length > 0;
 if (pageErrors.length) {
   console.log(`\n${pageErrors.length} lỗi trang (xem lớp chống sập §13.8):`);
   for (const e of [...new Set(pageErrors)].slice(0, 5)) {
@@ -499,11 +580,23 @@ for (const [name, get, unit] of METRICS) {
 const ratchetOut = {};
 const signsOut = {};
 let yellow = false;
-if (STATE_DIR && !noisy) {
+if (STATE_DIR && !invalid) {
   const ratchetPath = join(STATE_DIR, 'leak-ratchet.json');
   const nightsPath = join(STATE_DIR, 'leak-nights.json');
-  const ratchet = readJSON(ratchetPath, {});
-  const nights = readJSON(nightsPath, []);
+  const ratchetFile = readJSON(ratchetPath, {});
+  const nightsFile = readJSON(nightsPath, {});
+  // Đổi kịch bản → MỐC CŨ HẾT GIÁ TRỊ, chuỗi dấu bắt đầu lại (v6.58).
+  //
+  // Số của hai kịch bản khác nhau không so với nhau được. Lỗi `dbg('zone')` là ví dụ đắt
+  // nhất: sáu lượt cũ chạy trên một kịch bản gần như không đổi khu nên mức nền thấp hơn
+  // hẳn — giữ mốc đó lại thì mọi lượt của kịch bản thật đỏ ngay, mà đỏ vì lý do sai.
+  const sameScenario = ratchetFile.scenario_version === SCENARIO_VERSION;
+  const ratchet = sameScenario ? ratchetFile : {};
+  const nights = nightsFile.scenario_version === SCENARIO_VERSION ? (nightsFile.nights ?? []) : [];
+  if (!sameScenario && ratchetFile.scenario_version) {
+    console.log(`\nkịch bản đổi: "${ratchetFile.scenario_version}" → "${SCENARIO_VERSION}"`);
+    console.log('→ mốc kỷ lục cũ hết giá trị, chuỗi dấu bắt đầu lại từ lượt này (v6.58).');
+  }
 
   // Mốc kỷ lục: gác MỨC NỀN của heap.
   //
@@ -564,8 +657,9 @@ if (STATE_DIR && !noisy) {
     console.log(`  ${name.padEnd(15)} ${s.signs.join(' ')}   chuỗi dương hiện tại: ${s.streak}${s.streak >= 4 ? ' → ĐỎ' : s.streak === 3 ? ' → VÀNG' : ''}`);
   }
 
+  ratchet.scenario_version = SCENARIO_VERSION;
   writeJSONAtomic(ratchetPath, ratchet);
-  writeJSONAtomic(nightsPath, kept);
+  writeJSONAtomic(nightsPath, { scenario_version: SCENARIO_VERSION, nights: kept });
 }
 
 // ── 3. Sổ tài nguyên: dốc tại CÙNG MỘT ĐIỂM trong chu kỳ ────────────────────────────────
@@ -627,12 +721,13 @@ const HEAP_TARGET = Number(process.env.HEAP_TARGET ?? 80);
 console.log(`\nJS heap mức nền ${metrics.heapMB.baseline.toFixed(1)} / mục tiêu ${HEAP_TARGET} MB (§13.10) `
   + `${metrics.heapMB.baseline <= HEAP_TARGET ? 'ĐẠT' : '— trên đích, nhưng cổng chặn là MỐC KỶ LỤC, không phải 80 MB (v6.57)'}`);
 
-const verdict = noisy ? 'chua_ket_luan' : red ? 'do' : yellow ? 'vang' : 'xanh';
+const verdict = invalid ? 'chua_ket_luan' : red ? 'do' : yellow ? 'vang' : 'xanh';
 if (JSON_OUT) {
   writeJSONAtomic(JSON_OUT, {
     at: Math.floor(Date.now() / 1000), build: BUILD, verdict, reasons,
     load: { busy_frac: +busyFrac.toFixed(3), max: +loadMax.toFixed(2), fps_min: +fpsMin.toFixed(0), limit: MAX_LOAD },
-    note: noisy ? `máy bận ${(busyFrac * 100).toFixed(0)}% số mẫu trong cửa sổ` : undefined,
+    scenario_version: SCENARIO_VERSION,
+    note: invalid ? [busyMachine ? `máy bận ${(busyFrac * 100).toFixed(0)}% số mẫu trong cửa sổ` : '', ...scenarioProblems].filter(Boolean).join(' · ') : undefined,
     minutes: MINUTES, warmup_min: WARMUP_MIN, step_secs: STEP_SECS, blocks: BLOCKS,
     scenario: {
       zone_switches: zones, zone_switches_window: zonesInWindow,
@@ -646,11 +741,17 @@ if (JSON_OUT) {
 }
 
 await b.close();
-if (noisy) {
-  // Đặt TRƯỚC phán quyết đỏ: một lượt đo trên máy bận không được phép chặn deploy, và
-  // cũng không được phép "chứng minh" là build sạch. Nó chỉ được phép nói "đo lại đi".
-  console.log(`\nKHÔNG KẾT LUẬN — máy bận ${(busyFrac * 100).toFixed(0)}% số mẫu trong cửa sổ (luật 16, ngưỡng ${MAX_LOAD}/nhân).`);
-  console.log(`Số ở trên chỉ để xem, không dùng để gác: FPS tụt xuống ${fpsMin.toFixed(0)} thì client tự hạ chất lượng, mà hạ chất lượng đổi chính những thứ bài này đếm.`);
+if (invalid) {
+  // Đặt TRƯỚC phán quyết đỏ: một lượt đo trên máy bận — hoặc chạy sai kịch bản — không được
+  // phép chặn deploy, và cũng không được phép "chứng minh" là build sạch. Nó chỉ được phép
+  // nói "đo lại đi".
+  console.log('\nKHÔNG KẾT LUẬN — số ở trên chỉ để xem, không dùng để gác:');
+  if (busyMachine) {
+    console.log(`  · máy bận ${(busyFrac * 100).toFixed(0)}% số mẫu trong cửa sổ (luật 16, ngưỡng ${MAX_LOAD}/nhân); FPS tụt xuống ${fpsMin.toFixed(0)} thì client tự hạ chất lượng, mà hạ chất lượng đổi chính những thứ bài này đếm`);
+  }
+  for (const s of scenarioProblems) {
+    console.log(`  · ${s}`);
+  }
   console.log('Chạy lại lúc máy rảnh (tools/leakrepeat.sh tự chờ), hoặc IGNORE_LOAD=1 nếu chỉ muốn xem bài đo còn chạy.');
   process.exit(3);
 }

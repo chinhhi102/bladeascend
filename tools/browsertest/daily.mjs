@@ -20,6 +20,7 @@
 // Ba bài hỏi ba câu khác nhau.
 import { launch } from './browser.mjs';
 import { requireDebug } from './needdebug.mjs';
+import { switchZone } from './zoneswitch.mjs';
 
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -172,7 +173,12 @@ await sleep(6000);
 await check('mạng rớt 4 giây rồi có lại');
 
 // ── 7. Qua cổng sang khu khác ───────────────────────────────────────────────────────────
-await p.evaluate(() => window.kx.conn.send({ t: 'dbg', cmd: 'zone', n: 4 }));
+// Xác nhận đã sang thật, không chỉ "đã gửi lệnh" (v6.58 mục 4): bước này tồn tại vì đổi
+// khu là đường đã làm ba người chơi văng khỏi trận ngày 13/11 — gửi lệnh mà không sang thì
+// bước này chỉ đang kiểm lại khu cũ.
+if (!(await switchZone(p, 4, { timeoutMs: 10000, settleMs: 1000 }))) {
+  fail('qua khu Thiên Đình', 'lệnh gửi rồi mà client không sang khu 4');
+}
 await check('qua khu Thiên Đình');
 
 // ── 8. Chết rồi bấm "Chơi tiếp" ─────────────────────────────────────────────────────────
