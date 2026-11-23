@@ -406,17 +406,24 @@ for (let i = 0; i <= totalSamples; i++) {
     revivesUnplanned++;
     console.log(`  ⚠ phút ${min}: chết ngoài kế hoạch (đã bấm Chơi tiếp) — kịch bản lệch`);
   }
+  // Giữ hai lá chắn SỐNG mỗi chu kỳ, không gắn vào việc đổi khu.
+  //
+  // - `nogate`: từ v6.56 cổng bắn đi NGẪU NHIÊN khắp mạng, nên đi lại 45 giây mà đạp trúng
+  //   một cái là lượt đo có thêm một lần đổi khu không ai đếm, và kết thúc ở khu khác.
+  // - `invuln`: kịch bản đặt ra đúng 10 lượt chết; bị bot hạ giữa chừng là thêm một lần
+  //   hồi sinh sang khu khác mà lượt đo kia không có.
+  //
+  // Cả hai hết hạn sau 120 giây. Trước đây chúng nằm trong nhánh đổi khu — đúng ở chế độ
+  // `cycle` (đổi khu mỗi chu kỳ) nhưng ở chế độ `none` thì chúng chỉ được đặt một lần rồi
+  // hết hạn, và bên "0 lượt đổi khu" của phép so B38 sẽ đầy cái chết ngoài kế hoạch.
+  if (phase === 0) {
+    await dbg('nogate', 120);
+    await dbg('invuln', 120);
+  }
   // Chu kỳ 0 luôn nhảy khu một lần để chỗ đứng ban đầu không do xúc xắc quyết (khu vào
   // trận là khu ít người nhất, §8.0). Ở chế độ `none` thì đó là lượt duy nhất.
   if (phase === 0 && cycle < totalCycles && (ZONE_MODE === 'cycle' || cycle === 0)) {
     await dbg('zone', ZONE_MODE === 'none' ? 1 : zoneAtCycle(cycle));
-    // Tắt cổng cho riêng nhân vật này cả chu kỳ: từ v6.56 cổng bắn đi NGẪU NHIÊN khắp
-    // mạng, nên đi lại 45 giây mà đạp trúng một cái là lượt đo có thêm một lần đổi khu
-    // không ai đếm và kết thúc ở một khu khác lượt trước — hỏng đúng thứ v6.57 đòi.
-    await dbg('nogate', 120);
-    // Và không để bot hạ giữa chừng: kịch bản đặt ra đúng 10 lượt chết, mỗi lượt chết
-    // ngoài kế hoạch là một lần hồi sinh sang khu khác mà không lượt đo nào khác có.
-    await dbg('invuln', 120);
     zones++;
     if (min >= WARMUP_MIN) {
       zonesInWindow++;
