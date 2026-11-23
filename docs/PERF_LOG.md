@@ -2327,11 +2327,39 @@ XUẤT HIỆN", không phải "nút Ở LẠI"; nếu số bị huỷ cũng xấ
 
 **Bài học về phép đo:** hiệu hai ảnh heap trả lời "cái gì vừa sinh ra", còn "cái gì đang tích
 lại" thì phải đọc từ một con số ĐẾM theo thời gian (sổ tài nguyên). Hai câu hỏi khác nhau,
-và một cửa sổ 20 phút không tách được chúng. Thứ còn dốc lên đều ở cả ba lượt là **vật mượn
-từ `BigPool` mà không trả: +11,8 / +13,9 / +14,4 mỗi phút** (~800/giờ) — nhưng chia ra
-~58 KB/vật thì quá lớn cho một `Batch`, nên nó CHƯA giải thích được 0,7 MB/phút. Không đoán
-thêm: đang chạy cặp ảnh heap với cửa sổ **50 phút** (phút 10 → 60), ở đó phần tích luỹ thật
-(~35 MB) nổi hẳn trên nền luân chuyển.
+và một cửa sổ 20 phút không tách được chúng.
+
+#### Nguyên nhân 4 (khoanh được, chưa sửa): buffer gom lô của Pixi, `shrinkToFit: false`
+
+Chạy lại cặp ảnh heap với cửa sổ **50 phút** (phút 10 → 60) để phần tích luỹ nổi lên trên nền
+luân chuyển: `JSArrayBufferData` **+35,8 MB mà chỉ +74 đối tượng** — tức buffer **phình ra**,
+không sinh thêm. Rồi đọc **nhãn mà chính Pixi đặt cho từng buffer**:
+
+| nhãn | số cái | MB (phút 10 → 60) |
+|---|---|---|
+| `attribute-batch-buffer` | 105 → 141 | **9,18 → 38,60 (+29,4)** |
+| `index-batch-buffer` | 105 → 141 | 2,11 → 8,33 (+6,2) |
+| mesh · particle (mọi nhãn còn lại) | ~đứng | ~0,00 |
+
+**35,6 trên 35,8 MB nằm ở đúng hai dòng đó.** Chúng là buffer hình học của **Batcher** của
+Pixi, tạo với `shrinkToFit: false`: mỗi batcher giữ lô lớn nhất nó từng gặp và không bao giờ
+nhả bớt — trung bình 87 KB → **274 KB/cái** sau 50 phút. Bộ dọn rác của Pixi (mặc định
+`gcMaxUnusedTime` 60 s) không giúp được, vì chúng được dùng mỗi khung nên không bao giờ "rỗi".
+Số batcher tăng theo số **GraphicsContext còn sống**, mà cảnh đang giữ **330–400** context
+(riêng `mapView.under` 157: bùn, đường, nước — mỗi hình một `Graphics`).
+
+**Và nó có thể KHÔNG phải rò rỉ.** Dốc giảm dần theo từng khối (lượt 2: 1,60 · 0,77 · 0,60 ·
+0,43 · 0,34) — dạng của một đại lượng đang **bão hoà**. Nếu nó dừng quanh ~40 MB thì đây là
+**mức nền cao**, không phải rò rỉ vô hạn, và cách xử lý khác hẳn.
+
+→ **Q57**: đo một lượt **2 giờ** để biết có bão hoà hay không, TRƯỚC khi đụng tới cách vẽ.
+Sửa VFX/decor dựa trên một đường cong chưa biết có bão hoà hay không là đúng thứ quy tắc 12
+cấm ("nút thắt phải có số đo làm bằng chứng, không ghi phỏng đoán").
+
+**Công cụ thêm trong lượt này** (cả hai nằm ở `tools/browsertest/heapgrow.mjs`): `--owners`
+(đếm MỌI cung trỏ tới một lớp, để biết một đối tượng còn ai dùng hay đã mồ côi) và bảng
+**byte theo NHÃN buffer** — chính bảng nhãn này là thứ cắt được 35,6 MB về đúng một hệ thống
+sau khi ba vòng suy luận trước đó chỉ khoanh được "ở đâu đó trong ArrayBuffer".
 
 
 ## 6. Nút thắt đang mở (cập nhật liên tục)
