@@ -83,7 +83,14 @@ type Ping struct {
 type Debug struct {
 	T   string `msgpack:"t"`
 	Cmd string `msgpack:"cmd"`
-	N   int    `msgpack:"n"`
+	// N là CON TRỎ để phân biệt "không truyền tham số" với "truyền số 0" (v6.58).
+	//
+	// Với `int` thường, gói thiếu `n` giải mã ra 0 — và 0 là một giá trị hợp lệ của gần
+	// hết các lệnh. Đó là gốc của một lỗi đã chạy suốt nhiều lượt đo: bài rò rỉ gọi
+	// `dbg('zone')` không tham số, server đọc n = 0 nên hiểu là "sang khu 0", mà lệnh bỏ
+	// qua khi đã ở đúng khu đó → "50 lượt đổi khu" thật ra gần như không đổi khu lần nào,
+	// và không có một dòng lỗi nào. Nil thì `debug.go` báo lỗi thay vì đoán.
+	N *int `msgpack:"n"`
 }
 
 // ObstacleState is sent in Welcome for obstacles that are not intact.

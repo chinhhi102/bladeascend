@@ -196,7 +196,7 @@ func (s *server) dispatch(c *room.Client, t string, data []byte, ipHash string) 
 			log.Printf("dbg bỏ qua: gói hỏng (%d byte)", len(data))
 		case rm == nil:
 			log.Printf("dbg bỏ qua: client %d chưa ở trong phòng nào", c.PlayerID)
-		case d.Cmd == "panic" && d.N == 1:
+		case d.Cmd == "panic" && d.N != nil && *d.N == 1:
 			// Lỗi giả NGAY TRONG đường xử lý gói (§13.8, checklist §17). Phải ném ở đây chứ
 			// không trong `rm.Debug`: `Debug` xếp việc vào hộp thư phòng và chạy ở goroutine
 			// phòng, tức là đi qua ranh giới "tick" chứ không phải ranh giới "gói tin".

@@ -25,9 +25,30 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 				map[bool]string{true: "đã chết", false: "không còn trong phòng"}[ok])
 			return
 		}
+		// n: tham số của lệnh, 0 khi gói không có. `needN` dành cho những lệnh mà THIẾU
+		// tham số là một lệnh khác hẳn chứ không phải một mặc định hợp lý (v6.58).
+		//
+		// Luật: lệnh nào có mặc định ĐƯỢC GHI RÕ (sword/tien = 1, summon = cảnh giới của
+		// mình, max = đánh nhau thật, panic = tick khu) thì vẫn chạy khi thiếu n. Lệnh nào
+		// mà n quyết định việc làm — zone, killid, buff, exp, invuln, nogate — thì thiếu n
+		// là LỖI và phải nói ra. "Thành công giả" tốn nhiều lượt đo hơn là một dòng lỗi.
+		n := 0
+		if d.N != nil {
+			n = *d.N
+		}
+		needN := func() bool {
+			if d.N == nil {
+				log.Printf("dbg %q LỖI: lệnh này cần tham số n mà gói không có — không làm gì (v6.58)", d.Cmd)
+				return false
+			}
+			return true
+		}
 		switch d.Cmd {
 		case "exp":
-			z.G.GainExpFrom(p, float64(d.N), false, game.ExpDebug)
+			if !needN() {
+				return
+			}
+			z.G.GainExpFrom(p, float64(n), false, game.ExpDebug)
 		case "realm":
 			// Jump to the start of the next realm. Từ Đại Thừa tầng 10 trở lên không hấp thụ
 			// Linh khí nữa (§3.4) nên phải cấp thẳng Tiên khí, không thì phím test tắc ở đó
@@ -50,7 +71,7 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// bấm phím "realm" 14 lần rồi "sword" 105 lần thì vừa chậm vừa hay lệch.
 			top := z.G.Prog.TienLevel(len(r.cfg.Cultivation.TienRealms)-1, z.G.Prog.TienTiers()-1)
 			z.G.ForceState(p, top, z.G.Prog.MaxSwords(z.G.Prog.Realm(top)), p.Pos)
-			if d.N == 0 {
+			if n == 0 {
 				p.InvulnUntil = 0 // mặc định: đánh nhau thật
 			}
 			// n = 1 → giữ bất tử. Công cụ đo cần giữ nguyên cảnh NẶNG NHẤT suốt pha đo;
@@ -58,9 +79,9 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// đo thành vô nghĩa (đã dính đúng lỗi này một lần).
 		case "tien":
 			// Nạp Tiên khí để thử luật Tiên giới (đổi dư sang Uy Danh, cướp đoạt §3.4).
-			z.G.GainTienKhi(p, float64(max(1, d.N)))
+			z.G.GainTienKhi(p, float64(max(1, n)))
 		case "sword":
-			z.G.AddSwords(p, max(1, d.N))
+			z.G.AddSwords(p, max(1, n))
 		case "skill":
 			// Hồi đầy lượt ngay, khỏi chờ hồi chiêu khi thử kỹ năng (v6.25: không còn Bí Kíp).
 			z.G.FillSkillCharges(p)
@@ -78,9 +99,12 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			//
 			// Quét cả 5 khu vì người bị chém có thể không ở cùng khu với người gửi lệnh. An
 			// toàn trong `r.Do`: không khu nào đang tick.
+			if !needN() {
+				return
+			}
 			killed := false
 			for _, tz := range r.zones {
-				if t, ok := tz.G.Players[uint32(d.N)]; ok && !t.Dead {
+				if t, ok := tz.G.Players[uint32(n)]; ok && !t.Dead {
 					tz.G.DebugKill(t)
 					killed = true
 					break
@@ -93,7 +117,7 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// đó `killid` im lặng không làm gì, bài rejoin báo đỏ, và nguyên nhân trông
 			// hệt như một lỗi của §7.1 — đã mất một lượt deploy đúng vì chuyện này.
 			if !killed {
-				killed = r.mgr.killElsewhere(r, uint32(d.N))
+				killed = r.mgr.killElsewhere(r, uint32(n))
 			}
 			// Nói ra KẾT QUẢ, không chỉ im lặng làm.
 			//
@@ -101,14 +125,17 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// thấy màn Tổng kết" — không phân biệt được "chém hụt" (lỗi bài đo) với "chém
 			// trúng mà client vẫn vào thẳng trận" (lỗi §7.1 thật). Một dòng log ở đây tách
 			// hẳn hai khả năng đó.
-			log.Printf("dbg killid %d: %s", d.N,
+			log.Printf("dbg killid %d: %s", n,
 				map[bool]string{true: "đã chém chết", false: "KHÔNG tìm thấy (không còn trong phòng nào, hoặc đã chết sẵn)"}[killed])
 		case "buff":
-			if d.N >= 0 && d.N < game.BuffCount {
-				z.G.ApplyBuff(p, game.BuffNames[d.N])
+			if !needN() {
+				return
+			}
+			if n >= 0 && n < game.BuffCount {
+				z.G.ApplyBuff(p, game.BuffNames[n])
 			}
 		case "summon":
-			r.debugSummon(z, p, float64(d.N))
+			r.debugSummon(z, p, float64(n))
 		case "zone":
 			// Nhảy sang khu khác NGAY, không cần đi tìm cổng. Chỉ cho lệnh test.
 			//
@@ -116,9 +143,18 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// một cổng 50 lần thì bài đo dài gấp mấy lần và hay hỏng vì nhân vật kẹt vật
 			// cản — tức là một bài đo không ai chạy. Đây là cùng một đường chuyển khu với
 			// cổng (`queueTransfer`), nên nó vẫn kiểm đúng thứ cần kiểm.
-			next := d.N
+			// Thiếu n là LỖI, không phải "khu kế tiếp".
+			//
+			// Đây đúng là chỗ đã sinh ra lỗi của v6.58: mặc định cũ `(z.Index+1)%n` chỉ chạy
+			// khi n NGOÀI khoảng hợp lệ, mà gói thiếu `n` cho ra 0 — một chỉ số hợp lệ. Nên
+			// lệnh im lặng hiểu thành "sang khu 0", và bỏ qua khi đã ở khu 0.
+			if !needN() {
+				return
+			}
+			next := n
 			if next < 0 || next >= len(r.zones) {
-				next = (z.Index + 1) % len(r.zones)
+				log.Printf("dbg zone LỖI: khu %d không tồn tại (có %d khu) — không làm gì", next, len(r.zones))
+				return
 			}
 			if next != z.Index {
 				to := r.zones[next]
@@ -139,7 +175,10 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// bot thì chém thật. Một lượt bị bot hạ giữa chừng là thêm một lần hồi sinh và
 			// một lần rơi vào khu khác (§8.0 thả người vào khu ít người nhất) — hai lượt đo
 			// khác nhau ở đúng chỗ không ai ghi lại.
-			p.InvulnUntil = z.G.Time + float64(max(0, d.N))
+			if !needN() {
+				return
+			}
+			p.InvulnUntil = z.G.Time + float64(max(0, n))
 		case "nogate":
 			// Tắt cổng cho RIÊNG nhân vật này trong n giây (lệnh test).
 			//
@@ -148,7 +187,10 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// NGẪU NHIÊN khắp mạng — đạp trúng một cái là lượt đo ấy có thêm một lần đổi
 			// khu không ai đếm, và kết thúc ở một khu khác lượt trước. Dùng chính cơ chế
 			// nghỉ cổng có sẵn (`GateReadyAt`), không thêm đường rẽ nào vào luật chơi.
-			z.G.SetGateCooldown(p, float64(max(0, d.N)))
+			if !needN() {
+				return
+			}
+			z.G.SetGateCooldown(p, float64(max(0, n)))
 		case "panic":
 			// LỖI GIẢ để nghiệm thu §13.8 (checklist §17). Không có nó thì lớp chống sập chỉ
 			// được thử lần đầu bằng một lỗi thật, giữa trận, trên máy người chơi.
@@ -156,7 +198,7 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			// n = 0 → panic trong tick của khu đang đứng; n = 2 → panic trong một goroutine
 			// nền. (n = 1, panic khi xử lý gói, bắt ở cmd/server/ws.go — chỗ này đã nằm
 			// trong hộp thư phòng rồi nên không thử được đường đó.)
-			switch d.N {
+			switch n {
 			case 2:
 				safe.Go("nen", func() string { return "lỗi giả từ lệnh test" }, func() {
 					panic("lỗi giả: goroutine nền (lệnh test)")
@@ -166,7 +208,7 @@ func (r *Room) Debug(c *Client, d netproto.Debug) {
 			}
 		case "bot":
 			// Thả một bot ngay cạnh mình để thử đánh nhau; d.N = cảnh giới (0 = như mình).
-			realm := d.N
+			realm := n
 			if realm <= 0 {
 				realm = z.G.Prog.Realm(p.Level)
 			}
