@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.58:** sửa dòng "Lịch chạy" 30 → 60 phút; lượt đo trên máy bận là KHÔNG KẾT LUẬN (không ghi mốc/sổ đêm); mốc kỷ lục gắn `scenario_version`, đổi kịch bản thì mốc và chuỗi dấu bắt đầu lại (§13.9).
+
 **Thay đổi v6.57:** bài kiểm rò rỉ client đổi cách đo — kịch bản cố định, cửa sổ 60 phút, xét dốc theo 5 khối + khoảng tin cậy, mốc kỷ lục cho mức nền, thẻ vàng 3 đêm cùng dấu (§13.9); nói rõ 80 MB JS heap là đích chứ không phải cổng (§13.10).
 
 **Thay đổi v6.56:** mọi cổng đều hai chiều, đích ngẫu nhiên toàn mạng — bỏ luật Thiên Môn một chiều và 4 bến cố định ở Thiên Đình (§8.4a); Sư Phụ Mì tích 2 lượt (§6.3).
@@ -1618,8 +1620,10 @@ Thêm bước CI `npm run assets:budget`: vượt ngân sách → build fail, in
   - **VÀNG (cảnh báo, không chặn)**: cận dưới KTC ≤ 0 nhưng **3 đêm liên tiếp dốc cùng dấu dương** → thẻ vàng trên dashboard + mở việc điều tra; **đêm thứ 4 vẫn dương → chuyển ĐỎ**. Đây là lưới bắt rò rỉ chậm (< 0,3 MB/phút) mà một đêm không phân giải nổi.
   - **Mốc kỷ lục (ratchet)**: ghi lại **mức nền ổn định thấp nhất từng đo** (giá trị tại phút 10). Build mới vượt mốc đó > 10% → ĐỎ. Mốc chỉ đi xuống; hạ mốc cần 2 đêm xác nhận. Đây là cổng chặn thật sự cho mức nền — **không** dùng con số 80 MB ở §13.10 làm cổng (xem lý do ở đó).
   - Sổ tài nguyên xét theo **dốc**, lấy mẫu tại **cùng một điểm trong chu kỳ kịch bản** (vd luôn ngay sau khi vào khu thứ k). So hai mẫu tức thời chỉ đo "lượt này kết thúc ở khu đông hay khu vắng".
+  - **Máy bận thì không kết luận (v6.58)**: bài đo đọc loadavg ở **từng mẫu**; bận quá 10% số mẫu → kết quả là **KHÔNG KẾT LUẬN** — không chặn deploy, **không ghi vào mốc kỷ lục, không ghi vào sổ đêm**. Một lượt bị nhiễu không được phép hạ mốc hay cắt chuỗi dấu.
+  - **Mốc kỷ lục gắn với phiên bản kịch bản (v6.58)**: `leak-ratchet.json` lưu kèm `scenario_version`. Đổi kịch bản → **mốc cũ hết giá trị**, bắt đầu lại từ lượt hợp lệ đầu tiên của kịch bản mới; sổ đêm cũng bắt đầu lại chuỗi dấu. Số đo giữa hai kịch bản khác nhau không so với nhau được.
   - **So hai kịch bản** (vd "heap tăng theo số lần đổi khu") cần **≥ 3 lượt mỗi bên** trên kịch bản cố định. Hai lượt không đủ kết luận gì.
-- **Lịch chạy**: bài rò rỉ client 30 phút + server 60 phút chạy **hằng đêm 03:00** (khi 0 người thật online và máy rảnh theo luật 16), không nằm trong cổng deploy. Kết quả lên dashboard admin; đỏ → thẻ cảnh báo + chặn deploy kế tiếp cho tới khi xem lại. Cổng deploy chỉ giữ các bài nhanh (crashtest, rejoin, gomdon-smooth, test đơn vị).
+- **Lịch chạy**: bài rò rỉ client **60 phút** (v6.57 — sửa con số 30 sót lại) + server 60 phút chạy **hằng đêm 03:00** (khi 0 người thật online và máy rảnh theo luật 16), không nằm trong cổng deploy. Kết quả lên dashboard admin; đỏ → thẻ cảnh báo + chặn deploy kế tiếp cho tới khi xem lại. Cổng deploy chỉ giữ các bài nhanh (crashtest, rejoin, gomdon-smooth, test đơn vị).
 
 **Server**
 - Mọi map theo người chơi/kết nối (AOI `known*`, cooldown, rate limit, cờ nghi hack, sổ kiếm bể 10 s, buffer gửi) **xoá khi người đó rời** + quét định kỳ mỗi 60 s xoá mục mồ côi.
