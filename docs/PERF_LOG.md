@@ -1974,6 +1974,73 @@ chém ngay lúc đang F5 rồi quay lại sau nửa giây là rơi vào khe đó
 `p.Dead` với `h.dead` còn `nil` nên bỏ luôn hold → người chơi vào một TRẬN MỚI, mất cả ván.
 Bài test cũ không bao giờ chạm khe này vì nó tick qua hết hoạt ảnh chết rồi mới vào lại.
 
+---
+
+### Lượt 55 — 23/11/2026 · Bài rò rỉ client đo lại từ đầu theo spec v6.57
+
+Chủ dự án viết lại §13.9 sau khi đọc B40. Chẩn đoán của tôi hôm 21/11 — "cổng chập chờn vì
+cửa sổ 10 phút quá ngắn" — **chỉ đúng một nửa và tôi đã rút lại nửa kia**: cửa sổ ngắn thật,
+nhưng thứ làm sáu lượt đo chênh nhau hơn mười lần (dốc heap 0,19 → 2,00 MB/phút) là **kịch
+bản trôi nổi**, không phải nhiễu máy. Mỗi lượt khác số lượt đổi khu, khác khu kết thúc, khác
+mật độ người — mà đó chính là những thứ quyết định số đối tượng đang sống.
+
+Kéo dài cửa sổ trên một kịch bản trôi nổi thì chỉ được **một con số nhiễu ít hơn của một thứ
+đang đo sai**. Nên việc số 1 là kịch bản, không phải cửa sổ.
+
+#### Ba nguồn xúc xắc phải diệt trước
+
+| nguồn | trước | nay |
+|---|---|---|
+| Thế giới | mỗi phòng gieo hạt theo `time.Now()` — khác vị trí viên, khác quái, khác bot | cờ `-seed` (0 = ngẫu nhiên như cũ), bài đo luôn truyền 20261123 |
+| Lệnh "nhảy khu" | thả người vào GIỮA bản đồ, mà giữa bản đồ có cổng — từ v6.56 cổng bắn đi ngẫu nhiên khắp mạng. Đo thật: **xin sang khu 1 thì đang đứng ở khu 0, 2/4 lần thử** | đặt chân ở điểm xa cổng nhất trong danh sách điểm cố định + nghỉ cổng như vừa qua cổng thật. Đo lại **5/5 đúng khu** |
+| Nhân vật đo | đi lại 45 giây mỗi chu kỳ thì đạp trúng cổng, hoặc bị bot hạ → thêm một lần đổi khu và một lần hồi sinh mà kịch bản không đếm | hai lệnh test `nogate` và `invuln`, làm mới mỗi chu kỳ |
+
+Kịch bản cố định sau khi diệt: **chu kỳ 60 giây = 4 mẫu**; đầu chu kỳ nhảy sang khu kế tiếp
+(0→1→2→3→4→0…); cứ 5 chu kỳ một lượt chết + vào lại. Cửa sổ đo phút 10–60 chứa **đúng 50
+lượt đổi khu và 10 lượt chết**, luôn kết thúc ở **khu 0**. Mỗi khối 10 phút chứa đúng 2 chu
+kỳ-chết, nên không khối nào "nặng" hơn khối khác vì rơi vào pha khác của kịch bản.
+
+#### Phép xét: dốc 5 khối + khoảng tin cậy
+
+Không fit một dốc duy nhất trên cả 200 mẫu: sai số chuẩn của OLS giả định mẫu độc lập, mà
+heap là tín hiệu răng cưa — hai mẫu cách nhau 15 giây tương quan rất mạnh, nên KTC tính kiểu
+đó hẹp giả tạo và cổng sẽ đỏ với mọi build. Năm dốc khối là năm quan sát gần như độc lập, và
+**độ phân tán giữa các khối** mới là thước đo thật.
+
+- **ĐỎ**: cận dưới KTC 95% > 0 **và** dốc × 60 phút > 10% mức nền; hoặc mức nền vượt **mốc
+  kỷ lục** > 10%; hoặc GPU MB vượt ngân sách thiết bị.
+- **VÀNG**: KTC còn ôm qua 0 nhưng dốc dương **3 đêm liên tiếp** → cảnh báo + mở việc điều
+  tra, không chặn; đêm thứ 4 vẫn dương → ĐỎ. Đây là lưới bắt rò rỉ chậm (< 0,3 MB/phút) mà
+  một đêm không phân giải nổi.
+- **Mốc kỷ lục** (`server/data/leak-ratchet.json`): mức nền thấp nhất từng đo, chỉ đi xuống,
+  hạ mốc cần 2 đêm xác nhận. Đây mới là cổng chặn cho mức nền — **80 MB ở §13.10 là ĐÍCH**,
+  bật nó thành cổng lúc nền đang 137–152 MB thì mọi build đều đỏ (Q54).
+- **Sổ tài nguyên** xét bằng dốc tại **cùng một điểm trong chu kỳ** (luôn ngay sau khi vào
+  khu 1), kèm KTC. Mọi con số kiểu "n_sprite +1 094 (+31%)" tính bằng hai mẫu tức thời nay
+  **ghi là chưa kết luận** — hai mẫu đó chỉ đo "lượt này kết thúc ở khu đông hay khu vắng".
+
+#### Luật 16 đi thẳng vào bài đo
+
+Lượt chạy đầu tiên của hôm nay bắt đầu lúc máy ở 0,44/nhân rồi **rơi vào giữa một đợt
+`vitest` của dự án khác chiếm 690% CPU** — FPS tụt từ 55 xuống 20 ngay giữa cửa sổ đo. Mà
+tụt FPS thì client tự hạ chất lượng, và hạ chất lượng đổi chính những thứ bài này đếm.
+
+Nay bài đo đọc `loadavg` ở **từng mẫu**: bận > 10% số mẫu trong cửa sổ → in "KHÔNG KẾT LUẬN",
+mã thoát 3, **không chặn deploy và cũng không ghi gì vào mốc kỷ lục lẫn sổ đêm**. Một đêm
+nhiễu mà hạ được mốc kỷ lục thì mọi đêm sau đều đỏ oan. `tools/leakrepeat.sh` chờ máy rảnh
+trước TỪNG lượt và tự chạy lại lượt nào bị nhiễu.
+
+#### Công cụ mới
+
+| công cụ | việc |
+|---|---|
+| `tools/leakrepeat.sh` | chạy N lượt cùng commit, tự chờ máy rảnh, tự chạy lại lượt nhiễu |
+| `tools/browsertest/leakcompare.mjs` | in N dốc + tỉ lệ chênh; > 3 lần = kịch bản chưa cố định thật |
+| `tools/browsertest/heapgrow.mjs` | chụp hai ảnh heap đầu/cuối cửa sổ rồi so theo LỚP — bước đi tìm nguyên nhân (việc 7 của v6.57) |
+
+Ba lượt nghiệm thu 60 phút trên cùng commit: **xem phần kết quả ghi bổ sung bên dưới khi
+chạy xong** (chạy trên máy rảnh, `tools/leakrepeat.sh 3 60`).
+
 
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 

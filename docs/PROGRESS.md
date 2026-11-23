@@ -1,6 +1,6 @@
 # Tiến độ — BladeAscend (Đạo Hữu Xin Dừng Bước)
 
-_Cập nhật: 2026-11-12 (v6.54 bài rò rỉ hằng đêm 03:00, cửa sổ phút 20–30; Q52+Q53 đóng) · 2026-11-05 (bong bóng mặt §12.5 v6.38, Q44 đóng) · 2026-11-02 (v6.31–v6.36, mở công khai, logo, hiển thị kỹ năng; trang chủ + bộ đo + telemetry theo build). Nhật ký đầy đủ các phiên trước (22/10 → 01/11, 1 677 dòng):
+_Cập nhật: 2026-11-23 (v6.57 bài rò rỉ client: kịch bản cố định, cửa sổ 60 phút, dốc 5 khối + KTC, mốc kỷ lục; Q54 đóng) · 2026-11-12 (v6.54 bài rò rỉ hằng đêm 03:00, cửa sổ phút 20–30; Q52+Q53 đóng) · 2026-11-05 (bong bóng mặt §12.5 v6.38, Q44 đóng) · 2026-11-02 (v6.31–v6.36, mở công khai, logo, hiển thị kỹ năng; trang chủ + bộ đo + telemetry theo build). Nhật ký đầy đủ các phiên trước (22/10 → 01/11, 1 677 dòng):
 `docs/history/PROGRESS_den_2026-11-01.md` — chuyển nguyên văn, không xoá._
 
 ## Cách chạy (máy dev)
@@ -925,6 +925,51 @@ lặng lẽ chạy vào server CŨ và nghiệm thu một bản build không ph�
   máy bàn; số byte mỗi điểm ảnh bằng nhau nên dùng được, nhưng nó không thay được một lượt
   chơi thật.
 
+## Lượt 23/11 — spec v6.57: bài rò rỉ client đo lại từ đầu
+
+> Chủ dự án trả lời câu hỏi "80 MB là đích hay cổng" và sửa thẳng §13.9 + §13.10
+> (`docs/_raw/CHANGES_v6_38.md`). Phần này là thi hành. Chi tiết số má: `PERF_LOG` lượt #55.
+
+**Chốt của anh:** 80 MB **là đích, không phải cổng** — nền thật đang 137–152 MB nên bật lên
+là mọi build đều đỏ. Cổng chặn cho mức nền là **mốc kỷ lục** (mức nền thấp nhất từng đo,
+vượt > 10% là đỏ, mốc chỉ đi xuống, hạ mốc cần 2 đêm). Và **việc số 1 không phải kéo dài cửa
+sổ** mà là làm **kịch bản cố định**: sáu lượt đo chênh nhau hơn mười lần chủ yếu vì mỗi lượt
+chơi một kiểu, không phải vì nhiễu máy.
+
+**Ba nguồn xúc xắc đã diệt** (cái thứ hai là một lỗi thật của lệnh test, không ai biết):
+
+1. Thế giới gieo hạt theo `time.Now()` → thêm cờ `-seed`.
+2. **Lệnh test "nhảy khu" thả người vào giữa bản đồ, mà giữa bản đồ có cổng.** Từ v6.56 cổng
+   bắn đi ngẫu nhiên khắp mạng, nên *xin sang khu 1 thì đang đứng ở khu 0* — 2/4 lần thử.
+   Nay đặt chân ở điểm xa cổng nhất và nghỉ cổng như vừa qua cổng thật: **5/5 đúng khu**.
+   Nhân đây cũng thấy bài đo cũ gọi `dbg('zone')` không tham số, tức là luôn xin về **khu
+   0** — và lệnh bỏ qua khi đã ở đúng khu đó, nên "50 lượt đổi khu" của những lượt trước
+   phần lớn là lệnh rỗng.
+3. Nhân vật đo đạp trúng cổng / bị bot hạ giữa chừng → hai lệnh test `nogate`, `invuln`.
+
+**Kịch bản nay:** chu kỳ 60 giây = 4 mẫu, đầu chu kỳ nhảy sang khu kế tiếp, cứ 5 chu kỳ một
+lượt chết + vào lại. Cửa sổ phút 10–60 chứa **đúng 50 lượt đổi khu, 10 lượt chết, luôn kết
+thúc ở khu 0**. **Xét bằng dốc 5 khối + KTC 95%** (t, df = 4), bỏ hẳn kiểu so hai mẫu và
+ngưỡng 5%. Thêm **thẻ vàng**: dốc dương 3 đêm liên tiếp → cảnh báo, đêm thứ 4 → đỏ.
+
+**Luật 16 vào thẳng bài đo.** Lượt chạy đầu hôm nay bắt đầu lúc máy 0,44/nhân rồi rơi vào
+giữa một đợt `vitest` của dự án khác chiếm 690% CPU — FPS tụt 55 → 20 ngay giữa cửa sổ. Nay
+bài đọc `loadavg` ở từng mẫu; bận > 10% số mẫu thì "KHÔNG KẾT LUẬN" (mã thoát 3), **không
+chặn deploy và cũng không ghi gì vào mốc kỷ lục lẫn sổ đêm** — một đêm nhiễu mà hạ được mốc
+thì mọi đêm sau đỏ oan.
+
+**Trang quản trị** hiện 5 dốc khối, dốc TB, KTC, mốc kỷ lục, chuỗi dấu 7 đêm — và hiện **cả
+lúc xanh**, vì chúng dùng để thấy đà tăng chậm TRƯỚC khi nó thành đỏ.
+
+**Công cụ mới:** `tools/leakrepeat.sh` (chạy N lượt cùng commit, tự chờ máy rảnh, tự chạy
+lại lượt nhiễu) · `leakcompare.mjs` (in N dốc + tỉ lệ chênh) · `heapgrow.mjs` (chụp hai ảnh
+heap rồi so theo LỚP — bước đi tìm nguyên nhân thật, việc 7 của v6.57).
+
+**Còn treo đúng như anh dặn:** giả thuyết "heap tăng theo số lượt đổi khu" (B38) để ở **chưa
+xác nhận**; mọi con số hai-mẫu kiểu `n_sprite +1 094 (+31%)` ghi là chưa kết luận. Rò rỉ thì
+vẫn có thật (6/6 lượt dốc dương) và vẫn phải tìm — cách đo mới là để biết chắc, không phải
+để mở cổng.
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
@@ -946,3 +991,9 @@ lặng lẽ chạy vào server CŨ và nghiệm thu một bản build không ph�
    bàn — B13b.
 8. **K8s §3/§4** (Kustomize base + overlays, GitHub Actions + Argo CD, `docs/K8S_RUNBOOK.md`,
    `docs/K8S_SETUP.md`) — §1 đã xong, phần còn lại hoãn sau đợt VRAM và chưa bắt đầu.
+9. **Tìm nguyên nhân rò rỉ heap** (B38, việc 7 của v6.57) — công cụ đã có
+   (`heapgrow.mjs`), cần một lúc máy rảnh dài: chụp hai ảnh heap đầu/cuối cửa sổ, xem lớp
+   nào phình, rồi đọc retainer của lớp đó trong DevTools. Sau đó mới thử lại giả thuyết
+   "tăng theo số lượt đổi khu" bằng ≥ 3 lượt mỗi bên (`tools/leakrepeat.sh`).
+10. **Sửa một dòng spec** (Q55): §13.9 mục "Lịch chạy" còn ghi "bài rò rỉ client 30 phút",
+    v6.57 đã đổi thành 60. Code đang chạy theo 60.

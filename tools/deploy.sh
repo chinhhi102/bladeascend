@@ -466,9 +466,9 @@ fi
 
 # ── Cổng rò rỉ bộ nhớ: ĐỌC kết quả đêm qua, không tự chạy (GAME_SPEC §13.9 v6.54) ──────
 #
-# Bài client chạy 30 phút THẬT. Để nó trong cổng deploy nghĩa là mỗi lần sửa một dòng chữ
-# cũng phải chờ nửa tiếng — và cái giá đó không được trả bằng sự kiên nhẫn, nó được trả
-# bằng `SKIP_LEAK=1`. Một cổng ai cũng bỏ qua là một cổng không tồn tại.
+# Bài client chạy 60 phút THẬT (v6.57; trước là 30). Để nó trong cổng deploy nghĩa là mỗi
+# lần sửa một dòng chữ cũng phải chờ một tiếng — và cái giá đó không được trả bằng sự kiên
+# nhẫn, nó được trả bằng `SKIP_LEAK=1`. Một cổng ai cũng bỏ qua là một cổng không tồn tại.
 #
 # Nên từ v6.54: `tools/leaknightly.sh` chạy hai bài lúc 03:00 (khi 0 người online và máy
 # rảnh), ghi kết quả vào `server/data/leak-nightly.json`. Chỗ này chỉ ĐỌC tệp đó. Đỏ thì
@@ -488,16 +488,23 @@ if [ "${SKIP_LEAK:-0}" != "1" ] && [ -f "$LEAK_JSON" ]; then
   leak_field() { sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\([^,}]*\).*/\1/p" "$LEAK_JSON" | head -1 | tr -d ' "'; }
   leak_ok="$(leak_field ok)"
   leak_ack="$(leak_field ack)"
+  leak_verdict="$(leak_field verdict)"
   if [ "$leak_ok" = "false" ] && [ "$leak_ack" != "true" ]; then
     echo "" >&2
-    echo "LỖI: bài kiểm rò rỉ ĐÊM QUA báo đỏ và chưa ai xem lại (§13.9 v6.54)." >&2
+    echo "LỖI: bài kiểm rò rỉ ĐÊM QUA báo đỏ và chưa ai xem lại (§13.9 v6.57)." >&2
     grep -o '"note":"[^"]*"' "$LEAK_JSON" >&2 || true
     echo "  Nhật ký: server/data/leak-logs/" >&2
     echo "  Xem xong thì xác nhận ở trang quản trị (Dashboard → thẻ rò rỉ)," >&2
     echo "  hoặc chạy lại bài: tools/leaknightly.sh --force" >&2
     exit 1
   fi
-  echo "   rò rỉ đêm qua: ${leak_ok:-?} (server/data/leak-nightly.json)"
+  # VÀNG đi tiếp được (spec v6.57 nói rõ vàng không chặn), nhưng phải NÓI RA ở đây: nó có
+  # nghĩa là dốc bộ nhớ dương 3 đêm liên tiếp, và đêm thứ 4 vẫn dương thì lượt deploy sau
+  # sẽ bị chặn. Biết trước một đêm vẫn hơn là sáng mai mới biết.
+  if [ "$leak_verdict" = "vang" ]; then
+    echo "   ⚠ rò rỉ đêm qua VÀNG: dốc bộ nhớ dương 3 đêm liên tiếp — không chặn lượt này, nhưng đêm thứ 4 vẫn dương là ĐỎ."
+  fi
+  echo "   rò rỉ đêm qua: ${leak_verdict:-${leak_ok:-?}} (server/data/leak-nightly.json)"
 fi
 
 
