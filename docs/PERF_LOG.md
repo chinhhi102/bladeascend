@@ -2086,7 +2086,53 @@ Sổ tài nguyên (dốc tại cùng điểm chu kỳ, 10 điểm): **`n_sprite`
 **`n_graphics` +3,02/phút [1,88; 4,15]** — hai dòng duy nhất có KTC không ôm qua 0. Đây là
 đầu dây đầu tiên có bằng chứng thống kê cho B38, thay cho con số hai-mẫu đã rút lại.
 
-Lượt 2 và 3: **đang chạy** (kết quả ghi bổ sung ngay dưới khi xong).
+**Ba lượt xong — kịch bản ĐÃ cố định thật.** Phép nghiệm thu spec đòi là "3 dốc chênh
+≤ 3 lần":
+
+| | dốc heap (MB/phút) | KTC 95% | mức nền | một giờ | máy bận | FPS min |
+|---|---:|---|---:|---:|---:|---:|
+| lượt 1 | **+1,565** | [0,57; 2,56] | 88,0 | +107% nền | 0% | 42 |
+| lượt 2 | **+1,317** | [0,40; 2,24] | 112,2 | +70% nền | 2% | 30 |
+| lượt 3 | **+1,424** | [0,65; 2,20] | 115,1 | +74% nền | 2% | 35 |
+| | **chênh 1,2 lần ✓** | cả ba KTC đều > 0 | chênh **1,31 lần ⚠** | | | |
+
+So với sáu lượt kiểu cũ: **0,19 → 2,00 MB/phút, chênh 10,5 lần**. Cùng một thứ đang đo, chỉ
+khác chỗ kịch bản có cố định hay không.
+
+Cả ba lượt: 50/50 lượt đổi khu THẬT trong cửa sổ, 12/12 lượt chết theo kịch bản, **0 lượt
+chết ngoài kế hoạch**, kết thúc khu 0, cùng build `01c9408`. Phép kiểm hành động của v6.58
+chạy thật trên lượt 3 và xanh — tức là nó không chỉ bắt lỗi trên giấy.
+
+**Cái gì KHÔNG tái lập được, và đó là tin quan trọng:**
+
+- **`texture` không phải tín hiệu.** Lượt 1 dốc +0,726 [0,08; 1,37] (ĐỎ), lượt 2 **−0,567
+  [−1,04; −0,09]** (dốc XUỐNG, KTC cũng không ôm 0), lượt 3 +0,607 [−1,29; 2,50]. Ba lượt
+  cùng kịch bản cho hai dấu ngược nhau → "texture ĐỎ" ở lượt 1 là nhiễu, không phải rò rỉ.
+  Cách đo mới tự chỉ ra điều đó trong ba lượt; cách cũ sẽ chặn deploy vì nó.
+- **Mức nền thì CHƯA tái lập được: 88,0 · 112,2 · 115,1 MB (chênh 31%).** Lượt 2 và lượt 3
+  khớp nhau tới ~3% (đường heap 10 phút đầu của hai lượt này gần như trùng nhau), riêng lượt
+  1 thấp hơn ~24% từ phút 4 trở đi. Hệ quả **đụng thẳng vào cổng mốc kỷ lục**: nếu lượt 1 đặt
+  mốc 88 thì lượt 2 và 3 — cùng build, cùng kịch bản, máy rảnh — đều ĐỎ vì "vượt mốc 28%".
+  Đã ghi **Q56** để chủ dự án chốt; phương án đang dùng là giữ đúng luật v6.58 (mốc vẫn gác)
+  và đề xuất đối xứng hoá: hạ mốc cần 2 đêm, thì **vượt mốc cũng cần 2 đêm** mới đỏ.
+
+**Rò rỉ heap là thật, và nay có con số dùng được:** +1,32…+1,57 MB/phút, KTC của cả ba lượt
+đều nằm trên 0, trên một kịch bản 50 lượt đổi khu/giờ. Một ca chơi 2 tiếng là +170 MB.
+
+**Đầu dây duy nhất tái lập được qua cả ba lượt — `n_sprite`:**
+
+| | dốc `n_sprite`/phút | KTC 95% |
+|---|---:|---|
+| lượt 1 | +8,79 | [3,75; 13,84] |
+| lượt 2 | +5,79 | [0,36; 11,22] |
+| lượt 3 | +5,84 | [2,77; 8,92] |
+
+`n_graphics` chỉ dương ở lượt 1 ([1,88; 4,15]) rồi mất hẳn ở lượt 2 (+0,28, ôm 0) → không
+phải tín hiệu. Vậy thứ đáng đi tiếp là **số sprite ĐANG SỐNG trong cây cảnh tăng ~6/phút tại
+cùng một điểm của kịch bản** (~300 sprite sau 50 phút). Lưu ý để khỏi đuổi sai: điểm neo là
+"ngay sau khi vào khu 1", nên một phần có thể là khu đó đông dần — đây là đầu dây, chưa phải
+nguyên nhân. Bước phân giải: `heapgrow.mjs` (ảnh heap theo lớp) rồi mới tới phép so
+`ZONE_MODE=none` ≥ 3 lượt mỗi bên.
 
 
 ## 6. Nút thắt đang mở (cập nhật liên tục)
@@ -2097,8 +2143,8 @@ Lượt 2 và 3: **đang chạy** (kết quả ghi bổ sung ngay dưới khi xo
 | B33 | **Chữ tốn 6,71 MB VRAM / trần 2 MB** | Đòn bẩy VRAM lớn nhất còn lại; cũng là phần tốn nhất khi hạ trần xuống 32 MB cho điện thoại | #51: móc ngăn xếp vào `document.createElement` → 6 tấm 512² đều do `CanvasPool` cấp cho `Text`; Pixi làm tròn cỡ canvas chữ lên luỹ thừa 2 nên một dòng tên 300×40 ăn trọn 512² | **Mở** — cách sửa là mục 5 của §13.10: gom chữ/số bay/emote vào MỘT atlas động trần 2 MB (hoặc `BitmapText` dùng chung một font atlas) | – |
 | B31 | **Hai bài đo cũ KHÔNG dùng để so hai bản build** | Một lượt tối ưu có thể "chứng minh" được bất cứ điều gì | #39: `ringcost` ba lượt cùng build cho 19,79 · 0,55 · −0,40 ms; `weakperf` hai lượt liên tiếp cho 185 lô vẽ / 47 FPS rồi 447 lô / 23 FPS | **Đóng (#39)** — mọi phép so A/B chuyển sang cảnh thử (`scenebench.mjs`, `scenediff.mjs`). `weakperf`/`ringcost` giữ nguyên vai trò "người chơi thật gặp gì" | #39 |
 | B39 | **JS heap nền ~137 MB — mục tiêu §13.10 là ≤ 80 MB** | Vượt gần gấp đôi NGAY TỪ LÚC MỚI ỔN ĐỊNH, không cần rò rỉ gì thêm | Lượt 30 phút chuẩn, máy rảnh (0,4/nhân): heap cửa sổ ổn định **TB 136,9 · đỉnh 153,5**. Trước 21/11 **không bài đo nào canh con số này** — cổng §13.9 chỉ hỏi "có tăng không", nên một build đứng yên ở 190 MB vẫn qua | **Mở** — chủ dự án chốt (v6.57, Q54): 80 MB là **đích**, KHÔNG phải cổng; cổng chặn cho mức nền là **mốc kỷ lục ±10%** (`server/data/leak-ratchet.json`, chỉ đi xuống, hạ mốc cần 2 đêm). Bật 80 MB thành cổng lúc nền đang 137–152 MB thì mọi build đều đỏ và cổng hết tác dụng báo hiệu. Chuyển thành cổng cứng khi nền < 88 MB ba đêm liền | #55 |
-| B40 | **Cửa sổ 10 phút quá ngắn để kết luận về heap — cổng sẽ chập chờn** | Cùng một build, cùng kịch bản, lúc ĐẠT lúc TRƯỢT | Sáu lượt cùng kịch bản 30 phút/50 lượt đổi khu: dốc heap **0,19 · 0,25 · 0,61 · 0,92 · 1,17 · 2,00 MB/phút**, trong khi nhiễu trong cửa sổ luôn ±13–15 MB. Tức tín hiệu 10–20 MB nằm gọn trong biên nhiễu 30 MB | **Đóng về cách làm (#55), chờ số nghiệm thu** — chủ dự án chốt v6.57: nguyên nhân chính KHÔNG phải cửa sổ ngắn mà là **kịch bản trôi nổi** (mỗi lượt khác số lượt đổi khu, khác khu kết thúc), nên việc số 1 là kịch bản cố định; cửa sổ kéo lên 60 phút và xét bằng **dốc 5 khối + KTC 95%** thay cho "tăng > 5%". Bằng chứng nghiệm thu: 3 lượt cùng commit, dốc chênh ≤ 3 lần (`tools/leakrepeat.sh`) | #55 |
-| B38 | **Heap JS tăng theo SỐ LƯỢT ĐỔI KHU, không phải theo thời gian** | Phiên đổi khu nhiều thì phình; phiên bình thường gần như phẳng | Hai lượt cùng build, máy rảnh: **50 lượt đổi khu / 30 phút → +0,19 MB/phút** (nhiễu ±13,9 — tức gần như phẳng, ĐẠT); **100 lượt / 52 phút → +1,17 MB/phút** (+37,4 MB). Chia ra ≈ **0,6 MB mỗi lượt đổi khu**. Texture và GPU MB sạch ở cả hai lượt | **Mở, giả thuyết TREO Ở "CHƯA XÁC NHẬN"** (chủ dự án chốt v6.57) — rò rỉ CÓ THẬT: sáu lượt đo độc lập cho dốc heap **dương cả sáu** (xác suất ngẫu nhiên 1/64), trung bình ≈ 0,9 MB/phút. Nhưng **"tăng theo số lượt đổi khu" vẫn chỉ là giả thuyết**: nó dựng trên 2 lượt, mà hai lượt đó còn khác nhau cả thời lượng lẫn khu kết thúc. Mọi con số kiểu "n_sprite +1 094 (+31%)" (hai mẫu tức thời) nay **ghi là chưa kết luận** — sổ tài nguyên chỉ được xét bằng DỐC tại cùng điểm chu kỳ. Chỉ thử lại sau khi có kịch bản cố định, **≥ 3 lượt mỗi bên** (`tools/leakrepeat.sh`, `leakcompare.mjs`) | #55 |
+| B40 | **Cửa sổ 10 phút quá ngắn để kết luận về heap — cổng sẽ chập chờn** | Cùng một build, cùng kịch bản, lúc ĐẠT lúc TRƯỢT | Sáu lượt cùng kịch bản 30 phút/50 lượt đổi khu: dốc heap **0,19 · 0,25 · 0,61 · 0,92 · 1,17 · 2,00 MB/phút**, trong khi nhiễu trong cửa sổ luôn ±13–15 MB. Tức tín hiệu 10–20 MB nằm gọn trong biên nhiễu 30 MB | **ĐÓNG (#55)** — nguyên nhân chính KHÔNG phải cửa sổ ngắn mà là **kịch bản trôi nổi**; cố định kịch bản + cửa sổ 60 phút + dốc 5 khối với KTC. Nghiệm thu 3 lượt cùng commit: dốc heap **+1,565 · +1,317 · +1,424 MB/phút, chênh 1,2 lần** (kiểu cũ: 0,19–2,00, chênh 10,5 lần). Cổng nay phân biệt được tín hiệu với nhiễu — `texture` đỏ ở lượt 1 nhưng dốc XUỐNG ở lượt 2, tức nó chưa bao giờ là rò rỉ. **Còn một phần chưa tái lập: MỨC NỀN chênh 31% giữa ba lượt → đụng cổng mốc kỷ lục, xem Q56** | #55 |
+| B38 | **Heap JS tăng theo SỐ LƯỢT ĐỔI KHU, không phải theo thời gian** | Phiên đổi khu nhiều thì phình; phiên bình thường gần như phẳng | Hai lượt cùng build, máy rảnh: **50 lượt đổi khu / 30 phút → +0,19 MB/phút** (nhiễu ±13,9 — tức gần như phẳng, ĐẠT); **100 lượt / 52 phút → +1,17 MB/phút** (+37,4 MB). Chia ra ≈ **0,6 MB mỗi lượt đổi khu**. Texture và GPU MB sạch ở cả hai lượt | **Mở — nay có con số dùng được, giả thuyết "theo lượt đổi khu" vẫn TREO** (chủ dự án chốt v6.57/58). Kịch bản cố định, 3 lượt 60 phút cùng commit, máy rảnh: dốc heap **+1,32…+1,57 MB/phút, KTC của cả ba đều > 0** → một ca chơi 2 tiếng là +170 MB. Đầu dây duy nhất tái lập qua cả ba lượt: **`n_sprite` +5,8…+8,8/phút** (KTC > 0 cả ba), tức ~300 sprite sống thêm sau 50 phút tại CÙNG một điểm kịch bản; `n_graphics` chỉ dương ở lượt 1 nên không phải tín hiệu. Bước phân giải: `heapgrow.mjs` (ảnh heap theo lớp), rồi phép so `ZONE_MODE=none` ≥ 3 lượt mỗi bên | #55 |
 | B37 | **`gomdon-smooth` thỉnh thoảng thấy 1 khung đứng hình trên 300** | Chặn một lượt deploy dù mã client không đổi | 16/11: lượt deploy của `7c1a3e0` (chỉ sửa tài liệu + một chốt chỉ chạy ở dev) trượt với "1 đứng hình", máy ở 0,35/nhân. Chạy lại cùng build, máy rảnh: 0/300 và 0/138 | **Mở** — KHÔNG nới ngưỡng 0/0: một khung đứng giữa lúc chạy nhanh là thứ người chơi thấy. Cần tìm xem nó có cùng họ với B36 không (cùng là "vòng vẽ mất một khung mà không có lỗi nào"). Trước mắt: trượt thì chạy lại, và ghi lại mỗi lần gặp | – |
 | B36 | **Khựng 8–87 giây, không lỗi, không đổi khu, VRAM bình thường** | Người chơi đứng hình giữa trận; chưa biết vì sao nên chưa sửa được gì | 13/11: 3 mẫu trong một phiên (29 139 / 7 942 / 1 618 ms `frame_p95`). 14/11: 1 mẫu nữa (87 679 ms), 30 giây sau một `watchdog_restart` cùng phiên | **Mở** — 14/11 thêm sự kiện `long_frame` (khung > 2 giây, bỏ qua quanh lúc tab ẩn/hiện) kèm breadcrumb 30 việc gần nhất, vì số liệu mẫu nói "lúc đó có một khung 87 giây" rồi dừng ở đó. **Không đoán thêm cho tới khi bắt được một lần tái diễn có breadcrumb.** | – |
 | B35 | **`frame_max` một mình là chỉ số VÔ DỤNG** | Đã suýt kết luận sai về "đứng hình" hai lần | Có mẫu `frame_max = 56 844 164 ms` = 15,8 giờ — một tab để qua đêm. Trình duyệt dừng `requestAnimationFrame` khi tab chạy nền, nên khung đầu tiên lúc quay lại dài bằng cả quãng vắng mặt | **Đóng (#54)** — mọi phép lọc "đứng hình" phải dùng `frame_p95`, bỏ 30 giây đầu phiên và bỏ mẫu cách `tab_hidden`/`tab_visible` dưới 25 giây. `long_frame` áp đúng luật đó ngay trong client | #54 |

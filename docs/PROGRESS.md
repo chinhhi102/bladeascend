@@ -993,12 +993,36 @@ chạy trên một kịch bản gần như không đổi khu**:
 | `leakcheck` | đếm lệnh đã gửi → nay đếm số lần khu đổi thật + số lần bấm được "Chơi tiếp" |
 | `crashtest`, `rejoin` | đã tự xác nhận từ trước (bộ đếm `guard`, màn Tổng kết) — rà lại, không phải sửa |
 
-**Lượt 1 trong ba lượt nghiệm thu đã xong và nó ĐỎ** — heap dốc **+1,565 MB/phút**, KTC
-[0,570; 2,560], một giờ +93,9 MB (+107% mức nền 88 MB); texture +0,726/phút. Đúng như anh
-dặn trước: **dốc cao hơn sáu lượt cũ là bình thường**, vì giờ mới có 50 lượt đổi khu thật —
-không phải tụt lùi của commit nào. Sổ tài nguyên chỉ đúng hai dòng có KTC không ôm qua 0:
-**`n_sprite` +8,79/phút** và **`n_graphics` +3,02/phút**. Đó là đầu dây đầu tiên có bằng
-chứng thống kê cho B38.
+### 23/11 (tối) — ba lượt nghiệm thu: kịch bản ĐÃ cố định, rò rỉ heap là thật
+
+| | dốc heap | KTC 95% | mức nền | máy bận |
+|---|---:|---|---:|---:|
+| lượt 1 | +1,565 MB/phút | [0,57; 2,56] | 88,0 | 0% |
+| lượt 2 | +1,317 | [0,40; 2,24] | 112,2 | 2% |
+| lượt 3 | +1,424 | [0,65; 2,20] | 115,1 | 2% |
+
+**Dốc chênh 1,2 lần → ĐẠT phép nghiệm thu của anh (≤ 3 lần).** Kiểu đo cũ: 0,19–2,00, chênh
+10,5 lần. Cả ba lượt: 50/50 lượt đổi khu thật, 12/12 lượt chết, 0 lượt chết ngoài kế hoạch,
+kết thúc khu 0, cùng build.
+
+**Cách đo mới tự loại được một báo động sai:** `texture` đỏ ở lượt 1 (+0,726, KTC > 0) nhưng
+lượt 2 dốc **xuống** (−0,567, KTC cũng không ôm 0). Ba lượt cùng kịch bản cho hai dấu ngược
+nhau → nó chưa bao giờ là rò rỉ. Cổng cũ sẽ chặn deploy vì nó.
+
+**Hai điều phải báo anh:**
+
+1. **Rò rỉ heap là thật và nay đo được:** +1,32…+1,57 MB/phút, KTC của cả ba lượt đều trên 0.
+   Một ca chơi 2 tiếng là +170 MB. Đầu dây duy nhất tái lập qua cả ba lượt là **`n_sprite`
+   +5,8…+8,8/phút** (~300 sprite sống thêm sau 50 phút tại cùng một điểm kịch bản);
+   `n_graphics` chỉ dương ở lượt 1 nên bỏ.
+2. **Mức nền chênh 31% giữa ba lượt giống hệt nhau** (88 · 112 · 115) — lượt 2 và 3 khớp
+   nhau ~3%, lượt 1 thấp hơn 24%. Nó đụng thẳng vào cổng **mốc kỷ lục**: nếu lượt 1 đặt mốc
+   88 thì lượt 2 và 3 đều ĐỎ vì "vượt mốc 28%" dù không rò rỉ gì thêm. **Q56** ghi câu hỏi và
+   đề xuất đối xứng hoá: hạ mốc cần 2 đêm thì vượt mốc cũng cần 2 đêm mới đỏ.
+
+Và đúng như anh dặn trước: **dốc cao hơn sáu lượt cũ là bình thường**, vì giờ mới có 50 lượt
+đổi khu thật — không phải tụt lùi của commit nào. Deploy vẫn bị chặn; không chạy lại để mong
+ra xanh.
 
 ## Việc tiếp theo
 
@@ -1021,9 +1045,10 @@ chứng thống kê cho B38.
    bàn — B13b.
 8. **K8s §3/§4** (Kustomize base + overlays, GitHub Actions + Argo CD, `docs/K8S_RUNBOOK.md`,
    `docs/K8S_SETUP.md`) — §1 đã xong, phần còn lại hoãn sau đợt VRAM và chưa bắt đầu.
-9. **Tìm nguyên nhân rò rỉ heap** (B38, việc 7 của v6.57) — công cụ đã có
-   (`heapgrow.mjs`), cần một lúc máy rảnh dài: chụp hai ảnh heap đầu/cuối cửa sổ, xem lớp
-   nào phình, rồi đọc retainer của lớp đó trong DevTools. Sau đó mới thử lại giả thuyết
-   "tăng theo số lượt đổi khu" bằng ≥ 3 lượt mỗi bên (`tools/leakrepeat.sh`).
+9. **Tìm nguyên nhân rò rỉ heap** (B38) — nay đã có con số chắc chắn để truy: **+1,32…+1,57
+   MB/phút** và **`n_sprite` +5,8…+8,8/phút**, cả hai tái lập qua 3 lượt. Hai bước, theo
+   thứ tự: (a) `heapgrow.mjs` chụp hai ảnh heap rồi so theo LỚP → đọc retainer của lớp phình
+   nhất trong DevTools; (b) phép so `ZONE_MODE=none` ≥ 3 lượt mỗi bên để chốt hay bỏ giả
+   thuyết "tăng theo số lượt đổi khu". Cả hai cần máy rảnh (mỗi lượt 30–60 phút).
 10. **Sửa một dòng spec** (Q55): §13.9 mục "Lịch chạy" còn ghi "bài rò rỉ client 30 phút",
     v6.57 đã đổi thành 60. Code đang chạy theo 60.
