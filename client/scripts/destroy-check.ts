@@ -70,3 +70,56 @@ if (bad.length > 0) {
   process.exit(1);
 }
 console.log('check:destroy: mọi lời gọi huỷ sâu đều đã nói rõ về `context`.');
+
+// ── Phần 2: destroyDeep phải phân biệt context RIÊNG với context DÙNG CHUNG ─────────────
+//
+// Đã thử bài có răng: đổi `destroyDeep` thành luôn truyền `context: true` thì điều thứ ba
+// đỏ ngay; bỏ vòng lặp con thì điều thứ nhất đỏ.
+//
+// Phần trên là lint (không ai gọi `destroy({children:true})` nữa). Phần này canh HÀNH VI
+// của bản thay thế, vì chính chỗ này đã sai một lần: bản đầu truyền `context: true` cho mọi
+// nút và làm vỡ hình trong 15 giây (texture về 0, FPS 16) — `entities.ts` cố ý dùng context
+// dùng chung cho hàng trăm viên Linh khí cùng hình.
+//
+// Dùng nút GIẢ, không dùng Pixi: luật cần canh là "truyền cờ nào cho ai", không phải Pixi
+// huỷ ra sao — và một bài test không cần WebGL thì chạy được trong mọi cổng.
+const { destroyDeep } = await import('../src/render/destroydeep.ts');
+
+interface Call { who: string; opts: { children: boolean; context?: boolean } }
+const calls: Call[] = [];
+const node = (who: string, owned: boolean, children: unknown[] = []): unknown => ({
+  children,
+  _ownedContext: owned ? {} : undefined,
+  destroy: (opts: { children: boolean; context?: boolean }) => calls.push({ who, opts }),
+});
+
+const own = node('riêng', true);
+const shared = node('dùng chung', false);
+const parent = node('cha', false, [own, shared]);
+destroyDeep(parent as Parameters<typeof destroyDeep>[0]);
+
+let fails = 0;
+const expect = (name: string, got: unknown, want: unknown): void => {
+  const ok = JSON.stringify(got) === JSON.stringify(want);
+  if (!ok) {
+    fails++;
+  }
+  console.log(`${ok ? 'đạt ' : 'TRƯỢT'}  ${name}: ${JSON.stringify(got)}${ok ? '' : ` (mong ${JSON.stringify(want)})`}`);
+};
+
+expect('huỷ con trước, cha sau', calls.map((c) => c.who), ['riêng', 'dùng chung', 'cha']);
+expect('nút có context RIÊNG được huỷ context', calls[0]?.opts, { children: false, context: true });
+expect('nút dùng context CHUNG thì không', calls[1]?.opts, { children: false });
+expect('không ai được nhận children: true (tự huỷ con, không nhờ Pixi)',
+  calls.every((c) => c.opts.children === false), true);
+
+// Không nổ khi nút rỗng / không có children / không có destroy.
+destroyDeep(null);
+destroyDeep(undefined);
+destroyDeep({} as Parameters<typeof destroyDeep>[0]);
+console.log('đạt   nút rỗng không làm nổ');
+
+if (fails > 0) {
+  console.error(`\ncheck:destroy TRƯỢT — ${fails} điều về hành vi destroyDeep`);
+  process.exit(1);
+}
