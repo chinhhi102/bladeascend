@@ -743,5 +743,14 @@ export class PlayerSprite {
     this.plate.destroy();
     destroyDeep(this.root);
     this.swordRing.destroy();
+    // `shadow` KHÔNG nằm trong `root` (nó sống ở lớp `Scene.shadows` để gom lô vẽ), nên
+    // `destroyDeep(this.root)` không chạm tới nó. Thiếu dòng này thì mỗi lần một view bị
+    // huỷ — và `Scene.clear()` huỷ MỌI view mỗi lần đổi khu — là bỏ lại một cái bóng mồ
+    // côi NẰM NGUYÊN trong lớp bóng: còn trong cây cảnh, còn giữ texture, còn được vẽ.
+    //
+    // Đo được (§13.9, bộ đếm theo lớp 23/11): `L_shadows` **+5,35 nút/phút, KTC
+    // [4,64; 6,06]** — khớp gần đúng toàn bộ phần `n_sprite` tăng thêm (+5,46/phút), và là
+    // khoảng tin cậy chặt nhất trong cả sổ tài nguyên.
+    this.shadow.destroy();
   }
 }

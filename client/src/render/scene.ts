@@ -535,6 +535,14 @@ export class GameScene {
     this.items.clear();
     this.entities.removeChildren();
     this.rings.removeChildren();
+    // Lớp BÓNG phải dọn ở đây nữa.
+    //
+    // Mỗi `PlayerSprite` nay tự huỷ cái bóng của nó (xem `PlayerSprite.destroy`), nên dòng
+    // này là lưới thứ hai: bất cứ thứ gì còn nằm trong lớp bóng mà không ai nhận thì rời
+    // đây. Hai lớp `entities` và `rings` ngay trên đã được dọn từ đầu, còn `shadows` thì
+    // bị quên — và vì bóng sống ở lớp dùng chung chứ không dưới `sp.root`, cái quên đó
+    // không nhìn ra được từ chỗ huỷ view.
+    this.shadows.removeChildren();
   }
 
   /** render one frame; dt in seconds. */
@@ -1255,6 +1263,28 @@ export class GameScene {
     ledgerSet('beasts', this.beasts.length);
     ledgerSet('auras', this.auras.size);
     ledgerSet('flying', this.flying.length);
+    // Số nút theo TỪNG LỚP của cảnh (§13.9 chẩn đoán).
+    //
+    // Sổ nói "sprite đang sống tăng 5,5 cái mỗi phút" nhưng không nói lớp nào, mà cảnh có
+    // 14 lớp — không có con số theo lớp thì bước kế tiếp là đoán, và đoán sai một lần là
+    // mất một tiếng đo. Mỗi lớp một dòng `L_*`, xét bằng dốc như mọi dòng khác.
+    ledgerSet('L_entities', countNodes(this.entities));
+    ledgerSet('L_rings', countNodes(this.rings));
+    ledgerSet('L_shadows', countNodes(this.shadows));
+    ledgerSet('L_glow', countNodes(this.glow.root));
+    ledgerSet('L_vfx', countNodes(this.vfx.layer));
+    ledgerSet('L_ambient', countNodes(this.ambient.root));
+    ledgerSet('L_floatText', countNodes(this.floatText.layer));
+    ledgerSet('L_stall', countNodes(this.stallView.layer));
+    ledgerSet('L_orbs', countNodes(this.orbs.root));
+    ledgerSet('L_skill', this.skill.layers.reduce((a, l) => a + countNodes(l), 0));
+    if (this.mapView) {
+      ledgerSet('L_mapGround', countNodes(this.mapView.ground));
+      ledgerSet('L_mapDecor', countNodes(this.mapView.decor));
+      ledgerSet('L_mapUnder', countNodes(this.mapView.under));
+      ledgerSet('L_mapOver', countNodes(this.mapView.over));
+      ledgerSet('L_mapGates', countNodes(this.mapView.gateLayer));
+    }
     // Số Buffer GPU mà renderer ĐANG GIỮ (`BufferSystem._managedBuffers`).
     //
     // Khai con số này vì nó vừa là nơi một rò rỉ THẬT trốn được suốt nhiều lượt đo: mỗi
