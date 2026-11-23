@@ -2038,8 +2038,55 @@ trước TỪNG lượt và tự chạy lại lượt nào bị nhiễu.
 | `tools/browsertest/leakcompare.mjs` | in N dốc + tỉ lệ chênh; > 3 lần = kịch bản chưa cố định thật |
 | `tools/browsertest/heapgrow.mjs` | chụp hai ảnh heap đầu/cuối cửa sổ rồi so theo LỚP — bước đi tìm nguyên nhân (việc 7 của v6.57) |
 
-Ba lượt nghiệm thu 60 phút trên cùng commit: **xem phần kết quả ghi bổ sung bên dưới khi
-chạy xong** (chạy trên máy rảnh, `tools/leakrepeat.sh 3 60`).
+#### v6.58 — ba điều nữa, đều sinh ra từ lỗi `dbg('zone')`
+
+Chủ dự án đọc lỗi đó rồi chốt: nó quan trọng hơn vẻ ngoài, vì **sáu lượt đo cũ chạy trên một
+kịch bản gần như không đổi khu**. Ba hệ quả:
+
+1. **Mốc kỷ lục gắn `scenario_version`.** `leak-ratchet.json` và `leak-nights.json` lưu kèm
+   tên phiên bản kịch bản; đổi kịch bản → mốc cũ **hết giá trị**, chuỗi dấu bắt đầu lại. Giữ
+   mốc của kịch bản dễ thì mọi lượt của kịch bản thật đỏ ngay — đỏ vì lý do sai, và đó là
+   cách nhanh nhất để một cổng gác bị tắt.
+2. **Lượt đo trên máy bận là KHÔNG KẾT LUẬN, thành luật.** Không chặn deploy, và **không ghi
+   mốc kỷ lục, không ghi sổ đêm**: một đêm nhiễu không được hạ mốc hay cắt chuỗi dấu.
+3. **Soát cả họ lỗi "thành công giả"**, không chỉ chỗ vừa gãy.
+
+| chỗ | lỗi im lặng | nay |
+|---|---|---|
+| `netproto.Debug.N` | `int`, nên gói thiếu `n` thành 0 — một giá trị hợp lệ của gần hết các lệnh | `*int`; `zone`, `killid`, `buff`, `exp`, `invuln`, `nogate` **thiếu n là LỖI** và ghi log. Lệnh có mặc định ghi rõ (`sword`/`tien` = 1, `summon`, `max`, `panic`) giữ nguyên |
+| `dbg zone` khu không tồn tại | lặng lẽ hiểu thành "khu kế tiếp" | LỖI, không làm gì |
+| `drawguard` | đổi khu 6 lượt mà không hỏi lại đã đổi chưa — "0 lỗi vẽ" có thể chỉ là "không đổi khu" | đếm số lượt đổi THẬT (`__stats().zone`); thiếu lượt nào là **ĐỎ** |
+| `daily` bước 7, `nocompress` | cùng lỗi, cùng chỗ | đi qua `zoneswitch.mjs`, xác nhận đã sang |
+| `gomdon-smooth` | phím `G`/`Space` không ăn → nhân vật đi bộ 195 đv/s → không khung nào vượt trần → in **"ĐẠT: 0 nhảy cóc"**. Bài đo đi bộ rồi phát bằng khen cho netcode lúc chạy nhanh | nhanh nhất < 50% trần → **KHÔNG ĐO ĐƯỢC** (mã 2) |
+| `leakcheck` | đếm số LỆNH đã gửi | đếm số lần khu đổi thật trong bảng mẫu + số lần bấm được "Chơi tiếp"; lệch là **KHÔNG KẾT LUẬN** |
+| `crashtest`, `rejoin` | — | đã xác nhận hành động từ trước (bộ đếm `guard`, màn Tổng kết); rà lại, không phải sửa |
+
+Bài test mới `debug_needn_v658_test.go` canh đúng cái im lặng đó: `zone` thiếu n không bê
+người đi đâu, `zone` có n đi đúng khu, khu không tồn tại không làm gì, `invuln`/`nogate`
+thiếu n không đặt mốc nào.
+
+**Và một điều phải nói trước khi đọc số:** lượt đầu của kịch bản mới sẽ cho dốc **cao hơn**
+sáu lượt cũ, vì giờ mới có 50 lượt đổi khu thật. Đó không phải tụt lùi của commit nào, và
+không được so với khoảng 0,19–2,00 MB/phút cũ.
+
+#### Ba lượt nghiệm thu 60 phút, cùng commit, máy rảnh
+
+Lượt 1 (`20261123_1000-run1`): kịch bản đúng như thiết kế — **50 lượt đổi khu thật trong cửa
+sổ** (đếm lại từ bảng mẫu), 10 lượt chết, kết thúc khu 0; máy rảnh suốt (0% mẫu vượt
+1,5/nhân, đỉnh 1,31; FPS thấp nhất 42).
+
+| chỉ số | mức nền | 5 dốc khối | dốc TB | KTC 95% | 60 phút |
+|---|---:|---|---:|---|---:|
+| heapMB | 88,0 | 2,24 · 2,28 · 1,90 · 0,60 · 0,81 | **+1,565** | [0,570; 2,560] | +93,9 MB (+106,7% nền) **ĐỎ** |
+| texMB | 29,8 | 0,52 · 0,05 · 0,24 · 0,06 · −0,11 | +0,152 | [−0,149; 0,452] | +9,1 MB — không kết luận |
+| texture | 150,2 | 0,98 · 0,64 · 0,42 · 1,47 · 0,12 | **+0,726** | [0,081; 1,370] | +43,5 (+29,0% nền) **ĐỎ** |
+| display object | 5 566 | −50,8 · −8,9 · +3,1 · −11,0 · −42,6 | −22,1 | [−51,0; 6,9] | — không kết luận |
+
+Sổ tài nguyên (dốc tại cùng điểm chu kỳ, 10 điểm): **`n_sprite` +8,79/phút [3,75; 13,84]** và
+**`n_graphics` +3,02/phút [1,88; 4,15]** — hai dòng duy nhất có KTC không ôm qua 0. Đây là
+đầu dây đầu tiên có bằng chứng thống kê cho B38, thay cho con số hai-mẫu đã rút lại.
+
+Lượt 2 và 3: **đang chạy** (kết quả ghi bổ sung ngay dưới khi xong).
 
 
 ## 6. Nút thắt đang mở (cập nhật liên tục)

@@ -970,6 +970,36 @@ xác nhận**; mọi con số hai-mẫu kiểu `n_sprite +1 094 (+31%)` ghi là 
 vẫn có thật (6/6 lượt dốc dương) và vẫn phải tìm — cách đo mới là để biết chắc, không phải
 để mở cổng.
 
+### 23/11 (chiều) — spec v6.58: ba việc sinh ra từ chính lỗi `dbg('zone')`
+
+Anh chốt Q55 (giữ 60 phút) và thêm ba việc, vì lỗi lệnh test có nghĩa là **sáu lượt đo cũ
+chạy trên một kịch bản gần như không đổi khu**:
+
+1. **Mốc kỷ lục gắn `scenario_version`** — đổi kịch bản thì mốc cũ hết giá trị, chuỗi dấu
+   bắt đầu lại. Giữ mốc của kịch bản dễ thì mọi lượt của kịch bản thật đỏ ngay, mà đỏ vì lý
+   do sai.
+2. **Máy bận = KHÔNG KẾT LUẬN, thành luật** — không chặn deploy, không ghi mốc, không ghi sổ
+   đêm. (Tôi đã làm trước đó, nay nó là luật trong spec.)
+3. **Soát cả họ lỗi "thành công giả"**, không chỉ chỗ vừa gãy. `netproto.Debug.N` thành
+   `*int` nên **thiếu tham số là LỖI có log** với `zone`, `killid`, `buff`, `exp`, `invuln`,
+   `nogate`; lệnh nào có mặc định ghi rõ thì giữ nguyên. Và mỗi bài đo phải **xác nhận hành
+   động đã xảy ra**:
+
+| bài | đường báo xanh giả đã bịt |
+|---|---|
+| `drawguard` | "0 lỗi vẽ khi đổi khu" có thể chỉ là "không đổi khu" → đếm số lượt đổi THẬT, thiếu là ĐỎ |
+| `daily`, `nocompress` | cùng lỗi → đi qua `zoneswitch.mjs`, xác nhận đã sang khu |
+| `gomdon-smooth` | phím kỹ năng không ăn → đi bộ 195 đv/s → không khung nào vượt trần → in "ĐẠT: 0 nhảy cóc". Nay nhanh nhất < 50% trần là KHÔNG ĐO ĐƯỢC |
+| `leakcheck` | đếm lệnh đã gửi → nay đếm số lần khu đổi thật + số lần bấm được "Chơi tiếp" |
+| `crashtest`, `rejoin` | đã tự xác nhận từ trước (bộ đếm `guard`, màn Tổng kết) — rà lại, không phải sửa |
+
+**Lượt 1 trong ba lượt nghiệm thu đã xong và nó ĐỎ** — heap dốc **+1,565 MB/phút**, KTC
+[0,570; 2,560], một giờ +93,9 MB (+107% mức nền 88 MB); texture +0,726/phút. Đúng như anh
+dặn trước: **dốc cao hơn sáu lượt cũ là bình thường**, vì giờ mới có 50 lượt đổi khu thật —
+không phải tụt lùi của commit nào. Sổ tài nguyên chỉ đúng hai dòng có KTC không ôm qua 0:
+**`n_sprite` +8,79/phút** và **`n_graphics` +3,02/phút**. Đó là đầu dây đầu tiên có bằng
+chứng thống kê cho B38.
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
