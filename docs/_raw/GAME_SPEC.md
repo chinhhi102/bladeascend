@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.57:** bài kiểm rò rỉ client đổi cách đo — kịch bản cố định, cửa sổ 60 phút, xét dốc theo 5 khối + khoảng tin cậy, mốc kỷ lục cho mức nền, thẻ vàng 3 đêm cùng dấu (§13.9); nói rõ 80 MB JS heap là đích chứ không phải cổng (§13.10).
+
 **Thay đổi v6.56:** mọi cổng đều hai chiều, đích ngẫu nhiên toàn mạng — bỏ luật Thiên Môn một chiều và 4 bến cố định ở Thiên Đình (§8.4a); Sư Phụ Mì tích 2 lượt (§6.3).
 
 **Thay đổi v6.55:** ngân sách bộ nhớ GPU ≤ 50 MB máy tính / ≤ 32 MB điện thoại: KTX2, tối đa 6 atlas nhân vật, nền vẽ bằng shader trộn (bỏ bake + mask), bộ lọc nửa độ phân giải, cổng kiểm VRAM (§13.10).
@@ -1608,7 +1610,15 @@ Thêm bước CI `npm run assets:budget`: vượt ngân sách → build fail, in
 - Pool có **trần** (vd 2× số dùng đỉnh); cache chữ (bảng tên, số bay) là LRU có trần; atlas nhân vật không ai dùng thì nhả (B23 đã làm) — giữ.
 - Mảng lịch sử đều có trần: kill feed 20, chat 50, lỗi 20, mẫu telemetry chưa gửi 200, vết netcode 2 s.
 - Gỡ event listener khi đóng UI; `setInterval`/`setTimeout` có chỗ huỷ.
-- **Bài kiểm rò rỉ client** (Q53, v6.54): chơi 30 phút giả lập + đổi khu 50 lần + chết/vào lại 10 lần. **20 phút đầu là khởi động** (atlas nhân vật, art 5 khu, pool giãn tới đỉnh) — không tính. Chặn khi trong **cửa sổ ổn định phút 20–30** bất kỳ chỉ số nào (số Texture, GPU MB, JS heap, display object) **tăng > 5%**, hoặc GPU MB vượt ngân sách thiết bị. Mốc phút 5 chỉ in ra để tham khảo.
+- **Bài kiểm rò rỉ client** (Q53, v6.57 — thay cách đo của v6.54):
+  - **Kịch bản cố định**, giống hệt nhau mỗi lượt: cùng seed, cùng chuỗi hành động, cùng số lần đổi khu (50) và chết/vào lại (10), **kết thúc ở cùng một khu**. Đây là điều kiện bắt buộc — dốc đo được ở 6 lượt đầu chênh nhau hơn 10 lần (0,19 → 2,00 MB/phút) phần lớn vì mỗi lượt chơi một kiểu, không phải vì nhiễu máy.
+  - **60 phút**: phút 0–10 khởi động (không tính), **cửa sổ đo phút 10–60**. Lấy mẫu **mỗi 15 s**: JS heap, GPU MB, số Texture, display object, và **từng dòng của sổ tài nguyên**.
+  - **Cách xét = dốc có khoảng tin cậy, không phải chênh lệch 2 mẫu**: chia cửa sổ 50 phút thành **5 khối 10 phút**, mỗi khối fit 1 dốc (OLS) → 5 dốc → khoảng tin cậy 95% của dốc trung bình (t, df = 4). Nhiễu trong cửa sổ là ±13–15 MB nên mọi kết luận từ 2 mẫu tức thời đều vô nghĩa, kể cả cho sổ tài nguyên.
+  - **ĐỎ (chặn deploy kế tiếp)** khi một trong các điều sau đúng: cận dưới KTC 95% của dốc > 0 **và** dốc trung bình × 60 phút > **10% mức nền**; hoặc mức nền cuối cửa sổ vượt **mốc kỷ lục** (dưới); hoặc GPU MB vượt ngân sách thiết bị (§13.10).
+  - **VÀNG (cảnh báo, không chặn)**: cận dưới KTC ≤ 0 nhưng **3 đêm liên tiếp dốc cùng dấu dương** → thẻ vàng trên dashboard + mở việc điều tra; **đêm thứ 4 vẫn dương → chuyển ĐỎ**. Đây là lưới bắt rò rỉ chậm (< 0,3 MB/phút) mà một đêm không phân giải nổi.
+  - **Mốc kỷ lục (ratchet)**: ghi lại **mức nền ổn định thấp nhất từng đo** (giá trị tại phút 10). Build mới vượt mốc đó > 10% → ĐỎ. Mốc chỉ đi xuống; hạ mốc cần 2 đêm xác nhận. Đây là cổng chặn thật sự cho mức nền — **không** dùng con số 80 MB ở §13.10 làm cổng (xem lý do ở đó).
+  - Sổ tài nguyên xét theo **dốc**, lấy mẫu tại **cùng một điểm trong chu kỳ kịch bản** (vd luôn ngay sau khi vào khu thứ k). So hai mẫu tức thời chỉ đo "lượt này kết thúc ở khu đông hay khu vắng".
+  - **So hai kịch bản** (vd "heap tăng theo số lần đổi khu") cần **≥ 3 lượt mỗi bên** trên kịch bản cố định. Hai lượt không đủ kết luận gì.
 - **Lịch chạy**: bài rò rỉ client 30 phút + server 60 phút chạy **hằng đêm 03:00** (khi 0 người thật online và máy rảnh theo luật 16), không nằm trong cổng deploy. Kết quả lên dashboard admin; đỏ → thẻ cảnh báo + chặn deploy kế tiếp cho tới khi xem lại. Cổng deploy chỉ giữ các bài nhanh (crashtest, rejoin, gomdon-smooth, test đơn vị).
 
 **Server**
@@ -1620,7 +1630,9 @@ Thêm bước CI `npm run assets:budget`: vượt ngân sách → build fail, in
 
 ### 13.10 Ngân sách bộ nhớ GPU ≤ 50 MB (v6.55)
 
-**Mục tiêu**: bộ nhớ GPU của tab game (cột "GPU Memory" trong Task Manager của Chrome, Shift+Esc) **≤ 50 MB trên máy tính, ≤ 32 MB trên điện thoại**, ở cảnh đông (phòng đầy, 6 loại nhân vật trên màn hình, có người Tiên giới), chất lượng Vừa, độ phân giải 1080p tỉ lệ điểm ảnh 1. JS heap mục tiêu ≤ 80 MB (đo riêng).
+**Mục tiêu**: bộ nhớ GPU của tab game (cột "GPU Memory" trong Task Manager của Chrome, Shift+Esc) **≤ 50 MB trên máy tính, ≤ 32 MB trên điện thoại**, ở cảnh đông (phòng đầy, 6 loại nhân vật trên màn hình, có người Tiên giới), chất lượng Vừa, độ phân giải 1080p tỉ lệ điểm ảnh 1. JS heap **mục tiêu** ≤ 80 MB (đo riêng).
+
+> **80 MB là đích, không phải cổng chặn (v6.57).** Mức nền đo thật hiện là **137–152 MB** (B39) — biến nó thành cổng thì mọi build đều đỏ và cổng mất tác dụng báo hiệu. Cổng chặn cho mức nền là **mốc kỷ lục ±10% ở §13.9**; 80 MB là mục tiêu phải kéo xuống dần, mỗi lần hạ được thì mốc kỷ lục tự hạ theo. Khi mức nền ổn định < 88 MB trong 3 đêm thì chuyển 80 MB thành cổng cứng.
 
 **Bảng ngân sách** (sổ VRAM trong F3/admin phải cộng đúng các dòng này):
 
