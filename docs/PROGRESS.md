@@ -1075,6 +1075,18 @@ Kèm một lỗi của chính công cụ so, đã sửa: `leakcompare` chấm "c
 cố định" cho `texture`, trong khi cả ba lượt texture đều có KTC ôm qua 0 — tỉ lệ giữa hai con
 nhiễu thì muốn bao nhiêu cũng được. Nay chỉ so tỉ lệ cho chỉ số CÓ tín hiệu.
 
+**Nguyên nhân 3 — lớp BÓNG ĐỔ.** Thêm một dòng sổ cho mỗi lớp cảnh rồi chạy 36 phút: chỉ
+đúng một chỗ dốc lên, và với KTC chặt nhất cả sổ — **`L_shadows` +5,35 nút/phút
+[4,64; 6,06]**, gần như toàn bộ phần `n_sprite` tăng thêm. Cái bóng của mỗi nhân vật không
+nằm dưới `sp.root` mà ở lớp `Scene.shadows` dùng chung (cố ý, để gom lô vẽ), nên
+`PlayerSprite.destroy()` không chạm tới nó và `Scene.clear()` — chạy **mỗi lần đổi khu** —
+dọn `entities`, `rings` mà quên `shadows`. Sửa xong: lớp bóng từ TB **119 nút còn 4**, dốc
+**+0,01/phút**, và heap lần đầu **không còn kết luận được là dốc lên** trong bài chẩn đoán.
+
+Ba nguyên nhân, và mỗi cái chỉ nhìn ra được sau khi thêm một bộ đếm mới: Buffer không nằm
+trong cây cảnh · GraphicsContext cũng không · cái bóng thì nằm trong cây nhưng ở một lớp
+không ai quy trách nhiệm. Cổng 3×60 phút trên bản sửa cả ba đang chạy.
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có

@@ -2266,6 +2266,43 @@ cho chỉ số CÓ tín hiệu (ít nhất một lượt có KTC không ôm 0).
 trỏ về code của mình, không phải thư viện. Bước sau: quy số sprite về TỪNG LỚP của cảnh
 (`entities` · `rings` · `vfx` · `ambient` · …) để biết lớp nào phình, thay vì đoán giữa 14 lớp.
 
+#### Nguyên nhân 3: lớp BÓNG ĐỔ dùng chung, không ai dọn khi đổi khu
+
+Thêm một dòng sổ cho mỗi lớp cảnh (`L_entities`, `L_rings`, `L_shadows`, `L_vfx`, `L_ambient`,
+`L_mapUnder`…) rồi chạy một bài 36 phút. Nó chỉ đúng một chỗ, và với **khoảng tin cậy chặt
+nhất trong cả sổ**:
+
+| dòng | TB | dốc/phút | KTC 95% |
+|---|---:|---:|---|
+| **`n_L_shadows`** | 119 | **+5,35** | **[4,64; 6,06]** |
+| `n_sprite` (tổng) | 3 884 | +5,46 | [−6,60; 17,53] — tự nó không kết luận được |
+| `n_L_mapDecor` | 2 133 | 0,00 | — |
+| `n_L_ambient` | 151 | 0,00 | — |
+
+Gần như TOÀN BỘ phần sprite tăng thêm nằm ở lớp bóng. Lý do: cái bóng của mỗi nhân vật
+**không nằm dưới `sp.root`** — nó sống ở `Scene.shadows`, một lớp dùng chung, cố ý, để mọi
+cái bóng gom chung một lô vẽ (đo hồi #52: để trong `root` thì lô vẽ không giảm mà còn nhích
+lên). Hệ quả không ai thấy được từ chỗ huỷ view:
+
+- `PlayerSprite.destroy()` huỷ `root` → **không chạm tới cái bóng**;
+- `Scene.clear()` — chạy **mỗi lần đổi khu** — dọn `entities` và `rings` nhưng **quên
+  `shadows`**.
+
+50 lượt đổi khu/giờ × ~5 người đang thấy ≈ đúng +5,35 nút/phút đo được. Mỗi cái bóng mồ côi
+vẫn **nằm trong cây cảnh, vẫn giữ texture, vẫn được vẽ**.
+
+Sửa: `PlayerSprite` tự huỷ cái bóng nó sở hữu (`Sprite.destroy()` không tham số nên không
+đụng texture dùng chung), và `Scene.clear()` dọn lớp bóng làm lưới thứ hai.
+
+**Đo lại (bài 36 phút, cùng kịch bản, máy rảnh):** `L_shadows` từ TB **119 nút xuống 4**, dốc
+**+0,01/phút [−0,21; 0,23]** — đóng hẳn. Và `heapMB` lần đầu **không còn kết luận được là dốc
+lên** (+0,924 với KTC [−0,035; 1,882] ôm qua 0).
+
+> **Hai bài 36 phút này là bài CHẨN ĐOÁN, không phải cổng.** Cửa sổ của chúng chỉ 26 phút với
+> khối 5,2 phút, nên phần nạp atlas lúc đầu chiếm tỉ lệ lớn hơn hẳn — và đúng ở đó cả hai
+> bài đều chấm `texture` ĐỎ (+2,1 và +2,7/phút) trong khi **sáu lượt 60 phút cho 0,1–0,4/phút
+> và không kết luận được**. Phán quyết chỉ lấy từ bài 60 phút.
+
 
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
