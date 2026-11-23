@@ -1085,7 +1085,26 @@ dọn `entities`, `rings` mà quên `shadows`. Sửa xong: lớp bóng từ TB *
 
 Ba nguyên nhân, và mỗi cái chỉ nhìn ra được sau khi thêm một bộ đếm mới: Buffer không nằm
 trong cây cảnh · GraphicsContext cũng không · cái bóng thì nằm trong cây nhưng ở một lớp
-không ai quy trách nhiệm. Cổng 3×60 phút trên bản sửa cả ba đang chạy.
+không ai quy trách nhiệm.
+
+**Bộ ba 60 phút trên bản sửa cả ba:** dốc +0,979 · +0,749 · +0,588 (2 ĐỎ, 1 "đạt"). Lượt
+"đạt" KHÔNG phải bằng chứng đã hết: dốc vẫn dương cùng cỡ, chỉ là KTC tình cờ ôm qua 0 → theo
+luật v6.58 thì ba đêm cùng dấu dương là **thẻ vàng**. Gộp sáu lượt sau khi sửa: **≈ 0,69
+MB/phút, −52%** so với 1,435. **Cổng vẫn chưa xanh, deploy vẫn bị chặn.**
+
+**Một kết luận giữa đường tôi phải rút lại:** đọc ảnh heap 20 phút ra "200 Buffer mồ côi" là
+sai — sổ tài nguyên của ba lượt 60 phút cho `glBuffers` dốc **−0,53 / −0,30 / −0,07**, tức
+phẳng. Ảnh heap trả lời "cái gì vừa sinh ra"; "cái gì đang tích lại" phải đọc từ một con số
+ĐẾM theo thời gian. Hai câu hỏi khác nhau.
+
+**Nguyên nhân 4 — khoanh được, CHƯA sửa (Q57).** Chạy lại cặp ảnh heap với cửa sổ 50 phút rồi
+đọc **nhãn Pixi đặt cho từng buffer**: `attribute-batch-buffer` 9,18 → 38,60 MB và
+`index-batch-buffer` 2,11 → 8,33 MB, tức **35,6 trên 35,8 MB** nằm ở buffer gom lô của Pixi
+(`shrinkToFit: false` — mỗi batcher giữ lô lớn nhất từng gặp, 87 → 274 KB/cái). Nhưng dốc
+**giảm dần theo từng khối**, dạng của một đại lượng đang **bão hoà** — nếu đúng thì đây là
+mức nền cao chứ không phải rò rỉ. **Q57 đề nghị đo một lượt 2 giờ trước khi đụng tới cách
+vẽ**, vì sửa VFX/decor dựa trên một đường cong chưa biết có bão hoà hay không là đúng thứ
+quy tắc 12 cấm.
 
 ## Việc tiếp theo
 
@@ -1108,10 +1127,9 @@ không ai quy trách nhiệm. Cổng 3×60 phút trên bản sửa cả ba đang
    bàn — B13b.
 8. **K8s §3/§4** (Kustomize base + overlays, GitHub Actions + Argo CD, `docs/K8S_RUNBOOK.md`,
    `docs/K8S_SETUP.md`) — §1 đã xong, phần còn lại hoãn sau đợt VRAM và chưa bắt đầu.
-9. **Rò rỉ heap còn một nửa** (B38) — đã sửa hai nguyên nhân, dốc 1,435 → 0,613 MB/phút,
-   nhưng cổng vẫn ĐỎ. Thứ còn lại đã khoanh được: `n_sprite` +5,5/phút và vật mượn từ bể
-   Pixi không trả +9/phút. Bước kế tiếp: **quy số sprite về TỪNG LỚP của cảnh**
-   (`entities` · `rings` · `vfx` · `ambient` · …) để biết lớp nào phình thay vì đoán giữa
-   14 lớp; rồi mới tới phép so `ZONE_MODE=none` cho giả thuyết "theo lượt đổi khu".
+9. **Rò rỉ heap: đã sửa 3 nguyên nhân (−52%), còn nguyên nhân 4 chờ anh quyết (Q57)** —
+   35,6/35,8 MB phần còn lại là buffer gom lô của Pixi. Việc tiếp theo là **một lượt đo 2
+   giờ** để biết nó bão hoà hay không; chỉ khi KHÔNG bão hoà mới đụng tới cách vẽ (gom decor
+   tĩnh / `batchMode`), và cả hai hướng đó cần anh duyệt vì chúng đổi hình.
 10. **Sửa một dòng spec** (Q55): §13.9 mục "Lịch chạy" còn ghi "bài rò rỉ client 30 phút",
     v6.57 đã đổi thành 60. Code đang chạy theo 60.
