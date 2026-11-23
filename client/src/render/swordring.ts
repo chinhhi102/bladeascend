@@ -7,6 +7,7 @@ import { assets } from './assets';
 import { REALM_COLORS } from './palette';
 import { bladeLen, hiltR, ringCap, type RingGeom, ringGeom, ringOf, ringStart, slotAngle, tipDist } from './ringgeom';
 import { declareTexture } from './gpumem';
+import { destroyDeep } from './destroydeep';
 
 // Drawing proportions (visual only, not balance numbers).
 const HILT_ANCHOR = 0.95; // blade art: hilt sits at 95% of the canvas height, tip at the top
@@ -515,6 +516,6 @@ export class SwordRing {
   }
 
   destroy(): void {
-    this.root.destroy({ children: true });
+    destroyDeep(this.root);
   }
 }

@@ -2,6 +2,7 @@ import { Container, Graphics, Sprite } from 'pixi.js';
 
 import type { ClientWorld } from '../net/state';
 import { assets } from './assets';
+import { destroyDeep } from './destroydeep';
 
 /**
  * StallView vẽ dãy sạp tạm của Cô Ba (spec v6.10 §6.3) và vỏ chuối dưới chân chúng.
@@ -59,7 +60,7 @@ export class StallView {
       if (have && have.cutDrawn === canCut) {
         continue;
       }
-      have?.node.destroy({ children: true });
+      destroyDeep(have?.node);
       const n = this.build(st.shape, canCut, have?.born ?? ctx.now);
       this.addPeel(n, ctx.owner(st.owner));
       this.layer.addChild(n.node);
@@ -157,7 +158,7 @@ export class StallView {
       const { n, at } = this.dying[i];
       const k = (now - at) / COLLAPSE_SECS;
       if (k >= 1) {
-        n.node.destroy({ children: true });
+        destroyDeep(n.node);
         this.dying.splice(i, 1);
         continue;
       }
@@ -169,10 +170,10 @@ export class StallView {
 
   clear(): void {
     for (const n of this.nodes.values()) {
-      n.node.destroy({ children: true });
+      destroyDeep(n.node);
     }
     for (const d of this.dying) {
-      d.n.node.destroy({ children: true });
+      destroyDeep(d.n.node);
     }
     this.nodes.clear();
     this.dying.length = 0;

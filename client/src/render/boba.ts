@@ -2,6 +2,7 @@ import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 
 import { qualityFor } from './quality';
 import { declareTexture } from './gpumem';
+import { destroyDeep } from './destroydeep';
 
 /**
  * Trân châu dính màn hình — kỹ năng Phun Trân Châu của Thằng Mập (spec §6.3).
@@ -152,7 +153,7 @@ export class BobaOverlay {
 
   clear(): void {
     for (const b of this.blobs) {
-      b.node.destroy({ children: true });
+      destroyDeep(b.node);
     }
     this.blobs.length = 0;
     this.root.visible = false;

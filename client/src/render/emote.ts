@@ -3,6 +3,7 @@ import { Container, Graphics, Sprite } from 'pixi.js';
 import { assets } from './assets';
 import { DEFAULT_HEAD_BOX, headBox } from './headbox';
 import { quality } from './quality';
+import { destroyDeep } from './destroydeep';
 
 /**
  * Bong bóng mặt — GAME_SPEC §12.5 (v6.38, quyết định Q44).
@@ -179,6 +180,6 @@ export class Emote {
   }
 
   destroy(): void {
-    this.root.destroy({ children: true });
+    destroyDeep(this.root);
   }
 }

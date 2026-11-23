@@ -5,6 +5,7 @@ import { STR } from '../ui/strings';
 import { FONT_NAME, FONT_REALM, FONT_TITLE, TITLE_SKEW } from './fonts';
 import { hslToHex, REALM_BADGE } from './palette';
 import { quality } from './quality';
+import { destroyDeep } from './destroydeep';
 
 /**
  * Bảng tên trên đầu nhân vật (spec §12.3): danh hiệu · cảnh giới · tên.
@@ -335,7 +336,7 @@ export class Nameplate {
   }
 
   destroy(): void {
-    this.root.destroy({ children: true });
+    destroyDeep(this.root);
   }
 }
 

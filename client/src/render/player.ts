@@ -17,6 +17,7 @@ import { StatusView } from './statusview';
 import { SwordRing } from './swordring';
 import { probeSub, probeSubMark } from './probe';
 import { declareTexture } from './gpumem';
+import { destroyDeep } from './destroydeep';
 
 // Visual proportions relative to the body hitbox radius (not balance numbers).
 const CHAR_HEIGHT_PER_R = 2.6; // drawn character height = 2.6 × body radius
@@ -272,7 +273,7 @@ export class PlayerSprite {
     this.bornAt = 0;
     this.fadeSecs = ART_SWAP_FADE_SECS;
     if (this.body) {
-      this.body.destroy({ children: true });
+      destroyDeep(this.body);
       this.body = null;
     }
     return true;
@@ -655,7 +656,7 @@ export class PlayerSprite {
   }
 
   private buildBubble(text: string, now: number): void {
-    this.bubble?.destroy({ children: true });
+    destroyDeep(this.bubble);
     const c = new Container();
     const t = new Text({ text, style: { fontFamily: 'system-ui, sans-serif', fontSize: 16, fontWeight: '800', fill: 0x111111, wordWrap: true, wordWrapWidth: BUBBLE_MAX_TEXT_W, align: 'center' } });
     t.anchor.set(0.5);
@@ -683,7 +684,7 @@ export class PlayerSprite {
       return;
     }
     if (now > this.bubbleUntil) {
-      this.bubble.destroy({ children: true });
+      destroyDeep(this.bubble);
       this.bubble = null;
       return;
     }
@@ -740,7 +741,7 @@ export class PlayerSprite {
   destroy(): void {
     this.faceEmote.destroy();
     this.plate.destroy();
-    this.root.destroy({ children: true });
+    destroyDeep(this.root);
     this.swordRing.destroy();
   }
 }

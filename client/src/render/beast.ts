@@ -5,6 +5,7 @@ import { hslToHex } from './palette';
 import { particle } from './particles';
 import { BEAST_SEGMENTS, qualityFor, TRAIL_RATE } from './quality';
 import { declareTexture } from './gpumem';
+import { destroyDeep } from './destroydeep';
 
 /**
  * Thần thú Tiên giới (spec §3.5): mỗi cảnh giới Tiên một con, dựng bằng **chuỗi đốt** chứ
@@ -464,7 +465,7 @@ export class Beast {
   }
 
   destroy(): void {
-    this.back.destroy({ children: true });
-    this.front.destroy({ children: true });
+    destroyDeep(this.back);
+    destroyDeep(this.front);
   }
 }

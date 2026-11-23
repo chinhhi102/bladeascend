@@ -5,7 +5,7 @@
 // nhân vật về placeholder và mặt đất thành một mảng xanh trơn — tức là ART HỎNG HẾT, nhưng
 // không có lỗi nào được ném và bài đo VRAM lại báo con số ĐẸP HƠN vì chẳng còn texture nào.
 import 'pixi.js/ktx2';
-import { Application, Container, setKTXTranscoderPath, Texture, type Ticker, UPDATE_PRIORITY } from 'pixi.js';
+import { Application, BigPool, Container, setKTXTranscoderPath, Texture, type Ticker, UPDATE_PRIORITY } from 'pixi.js';
 import { AnimViewer } from './animviewer';
 import { guardLines, isFake, killFilters, markFake, noteDrawError, noteSysError, sysOffList, sysRun } from './guard';
 import { census, type Census, censusFlat, censusLine, ledgerSet } from './ledger';
@@ -1275,6 +1275,45 @@ export class GameScene {
         }
       }
       ledgerSet('glBuffers', live);
+    }
+    // Bể dùng lại CỦA PIXI (`BigPool`): tổng số vật đã cấp phát và số đang rảnh.
+    //
+    // Khai ra vì ảnh heap 23/11 chỉ ra nó là chỗ giữ phần lớn bộ nhớ tăng thêm SAU khi sửa
+    // lỗi geometry nền: 192 batcher mới trong 20 phút, mỗi cái kéo theo một bộ đệm đỉnh
+    // ~143 KB, và `Pool` của Pixi KHÔNG BAO GIỜ CO LẠI (`_pool[_index++] = item`). Tức là
+    // nó giữ mãi mức dùng ĐỈNH — đúng thứ §13.9 đòi phải có trần, nhưng nằm trong thư
+    // viện nên ta không đặt trần được; chỉ đo được và tránh tạo nhiều.
+    //
+    // Hai con số tách nhau mới đọc được: `poolTotal` tăng mà `poolFree` cũng tăng theo là
+    // mức đỉnh đang nhích lên; `poolTotal` tăng mà `poolFree` phẳng là có vật mượn rồi
+    // không trả — rò rỉ thật, không phải mức đỉnh.
+    // Số GraphicsContext mà renderer đang giữ (`GraphicsContextSystem._managedContexts`).
+    //
+    // Mỗi context còn sống kéo theo `GraphicsContextRenderData` → `Batcher` → geometry →
+    // bộ đệm đỉnh ~143 KB. Đo 23/11: 192 context mới trong 20 phút vì `destroy({children:
+    // true})` không huỷ context (xem `check:destroy`). Đếm ra đây để lần sau thấy ngay.
+    const ctxs = (this.app.renderer as unknown as {
+      graphicsContext?: { _managedContexts?: { items?: Record<string, unknown> } };
+    }).graphicsContext?._managedContexts?.items;
+    if (ctxs) {
+      let live = 0;
+      for (const k in ctxs) {
+        if (ctxs[k]) {
+          live++;
+        }
+      }
+      ledgerSet('gfxContexts', live);
+    }
+    const pools = (BigPool as unknown as { _poolsByClass?: Map<unknown, { totalSize: number; totalFree: number }> })._poolsByClass;
+    if (pools) {
+      let total = 0;
+      let free = 0;
+      for (const pool of pools.values()) {
+        total += pool.totalSize;
+        free += pool.totalFree;
+      }
+      ledgerSet('poolTotal', total);
+      ledgerSet('poolFree', free);
     }
     this.lastCensus = census(this.app.stage as unknown as Parameters<typeof census>[0]);
   }

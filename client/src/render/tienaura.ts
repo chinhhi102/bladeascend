@@ -4,6 +4,7 @@ import type { GameConfig } from '../config';
 import { hslToHex } from './palette';
 import { particle } from './particles';
 import { qualityFor } from './quality';
+import { destroyDeep } from './destroydeep';
 
 /**
  * Hào quang Tiên giới (spec §3.6).
@@ -180,6 +181,6 @@ export class TienAura {
   }
 
   destroy(): void {
-    this.root.destroy({ children: true });
+    destroyDeep(this.root);
   }
 }

@@ -206,6 +206,84 @@ ${v.n} đối tượng · ${(v.bytes / 1048576).toFixed(1)} MB`);
   }
 }
 
+/**
+ * owners: MỌI tham chiếu TRỎ TỚI các đối tượng mới của một lớp.
+ *
+ * `--retainers` cho đường ngắn nhất từ gốc — tốt để biết "ai đang giữ", nhưng nó chỉ cho
+ * MỘT đường. Câu hỏi kế tiếp luôn là: cái Buffer này còn ai dùng nữa không? Một Buffer mà
+ * chỉ còn sổ `_managedBuffers` trỏ tới là đồ mồ côi (rò rỉ); một Buffer vẫn được một
+ * Geometry trỏ tới thì nó đang dùng, và thứ rò rỉ là cái Geometry kia.
+ *
+ * Nên chỗ này đếm TẤT CẢ cung đi vào, gom theo (lớp của cha, tên cung).
+ */
+function owners(bPath, { cls, aPath, limit = Number(process.env.LIMIT ?? 100000) } = {}) {
+  const snap = JSON.parse(readFileSync(bPath, 'utf8'));
+  const meta = snap.snapshot.meta;
+  const NF = meta.node_fields.length;
+  const iType = meta.node_fields.indexOf('type');
+  const iName = meta.node_fields.indexOf('name');
+  const iId = meta.node_fields.indexOf('id');
+  const iSize = meta.node_fields.indexOf('self_size');
+  const iEdges = meta.node_fields.indexOf('edge_count');
+  const nodeTypes = meta.node_types[iType];
+  const EF = meta.edge_fields.length;
+  const eType = meta.edge_fields.indexOf('type');
+  const eName = meta.edge_fields.indexOf('name_or_index');
+  const eTo = meta.edge_fields.indexOf('to_node');
+  const edgeTypes = meta.edge_types[eType];
+  const { nodes, edges, strings } = snap;
+  const count = nodes.length / NF;
+  const label = (i) => {
+    const t = nodeTypes[nodes[i * NF + iType]];
+    const n = strings[nodes[i * NF + iName]];
+    return t === 'string' || t === 'number' ? `(${t})` : `${t}:${n}`;
+  };
+  let oldIds = null;
+  if (aPath) {
+    const a = JSON.parse(readFileSync(aPath, 'utf8'));
+    const aNF = a.snapshot.meta.node_fields.length;
+    const aIId = a.snapshot.meta.node_fields.indexOf('id');
+    oldIds = new Set();
+    for (let i = 0; i < a.nodes.length; i += aNF) {
+      oldIds.add(a.nodes[i + aIId]);
+    }
+  }
+  const target = new Uint8Array(count);
+  const sizes = [];
+  let hit = 0;
+  for (let i = 0; i < count && hit < limit; i++) {
+    if (label(i) !== cls || (oldIds && oldIds.has(nodes[i * NF + iId]))) {
+      continue;
+    }
+    target[i] = 1;
+    sizes.push(nodes[i * NF + iSize]);
+    hit++;
+  }
+  const by = new Map();
+  let e = 0;
+  for (let i = 0; i < count; i++) {
+    const ec = nodes[i * NF + iEdges];
+    for (let k = 0; k < ec; k++, e++) {
+      const to = edges[e * EF + eTo] / NF;
+      if (!target[to]) {
+        continue;
+      }
+      const t = edgeTypes[edges[e * EF + eType]];
+      const nm = t === 'element' || t === 'hidden' ? '[i]' : String(strings[edges[e * EF + eName]] ?? '');
+      const key = `${label(i)}  --${nm}-->`;
+      by.set(key, (by.get(key) ?? 0) + 1);
+    }
+  }
+  sizes.sort((x, y) => y - x);
+  const mb = (v) => (v / 1048576).toFixed(2);
+  console.log(`\n== ${hit} đối tượng MỚI lớp "${cls}" · ${mb(sizes.reduce((a, v) => a + v, 0))} MB ==`);
+  console.log(`cỡ: lớn nhất ${mb(sizes[0] ?? 0)} MB · trung vị ${mb(sizes[Math.floor(sizes.length / 2)] ?? 0)} MB · nhỏ nhất ${mb(sizes[sizes.length - 1] ?? 0)} MB`);
+  console.log('\nMỌI cung trỏ tới chúng, gom theo (lớp cha → tên cung):');
+  for (const [k, n] of [...by.entries()].sort((x, y) => y[1] - x[1]).slice(0, 20)) {
+    console.log(`${String(n).padStart(7)}  ${k}`);
+  }
+}
+
 /** compare in bảng lớp nào phình giữa hai ảnh. */
 function compare(aPath, bPath) {
   console.log(`đọc ${aPath} (${(statSync(aPath).size / 1048576).toFixed(0)} MB) …`);
@@ -237,6 +315,14 @@ if (args[0] === '--analyze') {
   process.exit(0);
 }
 // --retainers <b.heapsnapshot> --class "<lớp>" [--of <a.heapsnapshot>]
+if (args[0] === '--owners') {
+  const flag = (name, dflt) => {
+    const i = args.indexOf(name);
+    return i >= 0 ? args[i + 1] : dflt;
+  };
+  owners(args[1], { cls: flag('--class', 'object:Pt'), aPath: flag('--of', '') });
+  process.exit(0);
+}
 if (args[0] === '--retainers') {
   const flag = (name, dflt) => {
     const i = args.indexOf(name);

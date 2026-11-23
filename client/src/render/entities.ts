@@ -4,6 +4,7 @@ import type { ItemState, MonsterState } from '../net/protocol';
 import { assets } from './assets';
 import { FONT_NAME } from './fonts';
 import { BUFF_COLORS, MONSTER_COLORS, MONSTER_VARIANTS } from './palette';
+import { destroyDeep } from './destroydeep';
 
 const MONSTER_HEIGHT_PER_R = 2.4;
 const ITEM_SIZE_PER_R = 2.6;
@@ -117,7 +118,7 @@ export class MonsterSprite {
   }
 
   destroy(): void {
-    this.root.destroy({ children: true });
+    destroyDeep(this.root);
   }
 }
 
@@ -307,6 +308,6 @@ export class ItemSprite {
   }
 
   destroy(): void {
-    this.root.destroy({ children: true });
+    destroyDeep(this.root);
   }
 }

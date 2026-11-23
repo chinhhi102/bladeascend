@@ -5,6 +5,7 @@ import { STATUS, statusOn, type StatusEv } from '../net/protocol';
 import { quality } from './quality';
 import { type StatusIconKey, statusIconTexture } from './statusicons';
 import { statusTracker } from './statustrack';
+import { destroyDeep } from './destroydeep';
 
 /**
  * StatusView: lớp ③ và ④ của spec v6.36 §6.5 trên MỘT nhân vật — dấu hiệu suốt thời gian
@@ -190,7 +191,7 @@ export class StatusView {
     this.kState = this.kPhase = this.kGeom = -1;
     this.trail.length = 0;
     this.iconKey = '';
-    this.iconRow.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.iconRow.removeChildren().forEach((c) => destroyDeep(c));
     this.icons = [];
   }
 
@@ -416,7 +417,7 @@ export class StatusView {
   }
 
   private rebuildIcons(keys: StatusIconKey[]): void {
-    this.iconRow.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.iconRow.removeChildren().forEach((c) => destroyDeep(c));
     this.icons = keys.map((key) => {
       const node = new Container();
       const sprite = new Sprite();

@@ -1,6 +1,7 @@
 import { AnimatedSprite, Container, Graphics } from 'pixi.js';
 
 import { assets } from './assets';
+import { destroyDeep } from './destroydeep';
 
 interface Effect {
   node: Container;
@@ -88,7 +89,7 @@ export class Vfx {
   private add(e: Effect): void {
     while (this.effects.length >= MAX_EFFECTS) {
       const old = this.effects.shift();
-      old?.node.destroy({ children: true });
+      destroyDeep(old?.node);
     }
     this.layer.addChild(e.node);
     this.effects.push(e);
@@ -97,7 +98,7 @@ export class Vfx {
   update(now: number): void {
     this.effects = this.effects.filter((e) => {
       if (now >= e.until) {
-        e.node.destroy({ children: true });
+        destroyDeep(e.node);
         return false;
       }
       e.update?.(now);

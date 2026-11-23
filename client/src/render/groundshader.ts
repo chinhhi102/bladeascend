@@ -22,6 +22,7 @@
 import { BufferImageSource, ColorMatrixFilter, Mesh, MeshGeometry, Shader, Texture } from 'pixi.js';
 
 import { declareTexture } from './gpumem';
+import { destroyDeep } from './destroydeep';
 
 const VERT = `
 in vec2 aPosition;
@@ -464,7 +465,7 @@ export class GroundField {
     // và huỷ kèm buffer, cùng lý do với `old.destroy(true)` ở trên. Đây là đường đi lúc
     // ĐỔI KHU: không có dòng này thì cả lưới ô của khu cũ ở lại trong `_managedBuffers`.
     this.mesh.geometry?.destroy(true);
-    this.mesh.destroy({ children: true });
+    destroyDeep(this.mesh);
     this.atlasTex.destroy(true);
   }
 }

@@ -360,7 +360,7 @@ async function sample() {
       guard: (window.kx?.guard?.()?.systems ?? []).filter((x) => x.dead).map((x) => x.key).join(','),
       // Sổ tài nguyên theo LOẠI (§13.9 "một sổ tài nguyên đếm số đang sống theo loại").
       kinds: Object.fromEntries(Object.entries(s).filter(([k]) =>
-        k.startsWith('n_') || ['pool', 'poolText', 'beasts', 'auras', 'flying', 'filters', 'glBuffers'].includes(k))),
+        k.startsWith('n_') || ['pool', 'poolText', 'beasts', 'auras', 'flying', 'filters', 'glBuffers', 'poolTotal', 'poolFree', 'gfxContexts'].includes(k))),
     };
   }));
 }
@@ -379,7 +379,7 @@ console.log(`${MINUTES} phút · chu kỳ 60 s · mẫu mỗi ${STEP_SECS} s · 
 console.log(ZONE_MODE === 'none'
   ? 'KHÔNG đổi khu sau lượt neo đầu tiên (bên "0 lượt đổi khu" của phép so B38); cứ 5 chu kỳ một lượt chết\n'
   : 'mỗi chu kỳ đổi sang khu kế tiếp; cứ 5 chu kỳ một lượt chết + vào lại\n');
-console.log('phút   khu  texture    texMB   heapMB    nodes  fps');
+console.log('phút   khu  texture    texMB   heapMB    nodes  fps  glBuf  poolT   ctx');
 
 const t0 = Date.now();
 for (let i = 0; i <= totalSamples; i++) {
@@ -392,7 +392,10 @@ for (let i = 0; i <= totalSamples; i++) {
   const cycle = Math.floor(i / PER_CYCLE);
   const phase = i % PER_CYCLE;
   rows.push({ min, cycle, phase, ...s });
-  console.log(`${String(min).padStart(5)} ${String(s.zone).padStart(5)} ${String(s.tex).padStart(8)} ${s.texMB.toFixed(1).padStart(8)} ${s.heapMB.toFixed(1).padStart(8)} ${String(s.nodes).padStart(8)} ${s.fps.toFixed(0).padStart(4)}`);
+  // `glBuf` và `poolT` in thẳng ra từng dòng, không chỉ nằm trong sổ tài nguyên: hai con
+  // số này là nơi rò rỉ 23/11 trốn, và một bài đo ngắn (không đủ điểm neo để fit dốc) vẫn
+  // phải đọc được chúng bằng mắt.
+  console.log(`${String(min).padStart(5)} ${String(s.zone).padStart(5)} ${String(s.tex).padStart(8)} ${s.texMB.toFixed(1).padStart(8)} ${s.heapMB.toFixed(1).padStart(8)} ${String(s.nodes).padStart(8)} ${s.fps.toFixed(0).padStart(4)} ${String(s.kinds.n_glBuffers ?? '-').padStart(6)} ${String(s.kinds.n_poolTotal ?? '-').padStart(6)} ${String(s.kinds.n_gfxContexts ?? '-').padStart(5)}`);
   if (i === totalSamples) {
     break;
   }
@@ -742,6 +745,13 @@ if (JSON_OUT) {
     },
     metrics, ratchet: ratchetOut, signs: signsOut, ledger: ledger.slice(0, 20),
     gpu: { peak_mb: +peakMB.toFixed(1), budget_mb: budget },
+    // Nguyên mẫu thô. Một lượt đo mất một giờ, nên mọi câu hỏi phát sinh sau đó phải trả
+    // lời được từ tệp này thay vì chạy lại — ngày 23/11 đã mất một lượt 14 phút chỉ vì
+    // bảng in ra không có hai cột cần xem.
+    samples: rows.map((r) => ({
+      min: r.min, zone: r.zone, tex: r.tex, texMB: +r.texMB.toFixed(1), heapMB: +r.heapMB.toFixed(1),
+      nodes: r.nodes, fps: Math.round(r.fps), load: +r.load.toFixed(2), kinds: r.kinds,
+    })),
     heap_target: HEAP_TARGET,
     page_errors: [...new Set(pageErrors)].slice(0, 5),
   });

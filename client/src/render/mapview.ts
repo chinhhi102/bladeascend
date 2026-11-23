@@ -8,6 +8,7 @@ import { buildDecals, type DecalLayer, obstacleSkirt } from './decals';
 import { type ChunkSpec, GroundField } from './groundshader';
 import { GATE_COLORS } from './palette';
 import { emergency } from './quality';
+import { destroyDeep } from './destroydeep';
 
 /**
  * Mỗi biome 2–3 texture nền, trộn bằng mặt nạ nhiễu (spec §8.6 mục 1). Lớp đầu phủ kín, các
@@ -323,10 +324,10 @@ export class MapView {
     this.field?.destroy();
     this.field = null;
     for (const c of [this.ground, this.decor, this.under, this.over, this.gateLayer]) {
-      c.destroy({ children: true });
+      destroyDeep(c);
     }
     for (const n of this.obstacleNodes.values()) {
-      n.node.destroy({ children: true });
+      destroyDeep(n.node);
     }
     this.obstacleNodes.clear();
   }
