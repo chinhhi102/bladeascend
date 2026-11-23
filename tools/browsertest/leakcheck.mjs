@@ -1,56 +1,250 @@
-// Bài kiểm RÒ RỈ phía CLIENT — GAME_SPEC §13.9.
+// Bài kiểm RÒ RỈ phía CLIENT — GAME_SPEC §13.9 (v6.57).
 //
-//   cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9998 -debug=true
+//   cd server && APP_ENV=dev go run ./cmd/server -addr 127.0.0.1:9998 -debug=true -seed 20261123
 //   node tools/browsertest/leakcheck.mjs http://127.0.0.1:9998
 //
-// Spec v6.54 (Q53): "chơi 30 phút giả lập + đổi khu 50 lần + chết/vào lại 10 lần. **20 phút
-// đầu là khởi động** — không tính. Chặn khi trong **cửa sổ ổn định phút 20–30** bất kỳ chỉ
-// số nào (số Texture, GPU MB, JS heap, display object) **tăng > 5%**, hoặc GPU MB vượt ngân
-// sách thiết bị. Mốc phút 5 chỉ in ra để tham khảo."
+// Spec v6.57 chốt bốn điều, và cả bốn đều là PHÉP ĐO chứ không phải luật chơi:
 //
-// 16/11: mức tăng trong cửa sổ tính bằng ĐƯỜNG DỐC trên toàn bộ mẫu, không bằng hiệu hai
-// mẫu đầu–cuối. Lý do ở ghi chú hàm `trend`.
+//   1. KỊCH BẢN CỐ ĐỊNH — cùng seed, cùng chuỗi hành động, cùng số lượt đổi khu (50) và
+//      chết/vào lại (10), kết thúc ở cùng một khu.
+//   2. 60 PHÚT — phút 0–10 là khởi động (không tính), cửa sổ đo phút 10–60, mẫu mỗi 15 s.
+//   3. XÉT BẰNG DỐC CÓ KHOẢNG TIN CẬY — chia cửa sổ thành 5 khối 10 phút, mỗi khối fit một
+//      dốc OLS, rồi lấy KTC 95% của dốc trung bình (t, df = 4). Bỏ hẳn kiểu so hai mẫu và
+//      ngưỡng "tăng > 5%" của v6.54.
+//   4. MỐC KỶ LỤC cho mức nền — build mới vượt mức nền thấp nhất từng đo > 10% là ĐỎ.
 //
-// ── Vì sao 20 phút đầu không tính ────────────────────────────────────────────────────────
+// ── Vì sao v6.54 phải bỏ ─────────────────────────────────────────────────────────────────
 //
-// Bộ làm việc của game vẫn đang LỚN LÊN tới tận đó: 11 atlas nhân vật nạp dần khi gặp
-// người mới, art của 5 khu nạp dần qua 50 lượt đổi khu, pool chữ và pool view giãn tới mức
-// dùng đỉnh. Đo 12/11 trên build sạch: so với phút 5 thì texture +24,5% và JS heap +37,3%,
-// nhưng `texMB` phẳng tuyệt đối và từ phút 20 trở đi mọi chỉ số đứng yên (phút 20–25 ↔
-// 25–30: texture +1,0%, heap −0,5%). Đó là một TRẦN, không phải một đường dốc.
+// Sáu lượt đo cùng kịch bản, cùng build, máy rảnh cho dốc heap 0,19 · 0,25 · 0,61 · 0,92 ·
+// 1,17 · 2,00 MB/phút — chênh nhau HƠN MƯỜI LẦN. Nhiễu máy ±13–15 MB không giải thích nổi
+// khoảng đó. Thứ giải thích được: mỗi lượt chơi một kiểu. Số lượt đổi khu khác nhau, khu
+// kết thúc khác nhau, mật độ người/quái khác nhau — mà chính những thứ đó quyết định số
+// đối tượng đang sống, tức quyết định con số đang đo.
 //
-// Rò rỉ thật thì KHÔNG có trần — xem lượt #33 trong PERF_LOG: +91 texture/phút, một chiều,
-// cho tới khi tab chết. Nên cửa sổ sau khi chạm trần mới là chỗ nhìn ra rò rỉ, và ở đó
-// ngưỡng siết được xuống 5%.
+// Nên bài này không còn "đi lang thang 30 phút rồi so đầu với cuối". Nó chạy một CHU KỲ
+// lặp lại chính xác tới từng mốc 15 giây:
+//
+//   • một chu kỳ = 60 giây = 4 mẫu. Đầu chu kỳ đổi sang khu kế tiếp (0→1→2→3→4→0…), phần
+//     còn lại đi lại theo một chuỗi phím sinh từ hạt giống cố định.
+//   • cứ 5 chu kỳ (5 phút) thì có một lượt chết + vào lại, luôn rơi vào cùng một khu.
+//   • 60 chu kỳ = 60 phút. Cửa sổ đo (phút 10–60) chứa ĐÚNG 50 lượt đổi khu và 10 lượt
+//     chết, đúng hai con số của spec; 10 chu kỳ khởi động nằm ngoài cửa sổ nên không tính.
+//   • 5 khối × 10 phút = 10 chu kỳ/khối = 2 chu kỳ-chết/khối, nên mọi khối có cùng thành
+//     phần hành động. Không khối nào "nặng" hơn khối nào vì rơi vào pha khác của kịch bản.
+//
+// Và thế giới cũng phải cố định: server nhận `-seed`, nếu không thì vị trí viên, quái và
+// bot đổi theo từng lần chạy.
 //
 // ── Khác gì `texleak.mjs` ────────────────────────────────────────────────────────────────
 //
-// `texleak` chỉ đếm TEXTURE và chỉ đi lại. Bài này đếm đủ bốn chỉ số của spec và chạy đúng
+// `texleak` chỉ đếm TEXTURE và chỉ đi lại. Bài này đếm đủ các chỉ số của spec và chạy đúng
 // ba việc mà spec chỉ đích danh — đổi khu, chết, vào lại — vì đó là ba đường tạo và huỷ
 // hàng loạt đối tượng, và cũng là ba đường từng rò rỉ thật (181 lượt đổi khu → 1,4 GB).
+import { readFileSync, writeFileSync, renameSync, mkdirSync } from 'node:fs';
+import { cpus, loadavg } from 'node:os';
+import { dirname, join } from 'node:path';
 import { launch } from './browser.mjs';
 
 const TARGET = process.argv[2] ?? 'http://127.0.0.1:9998';
-/** MINUTES: tổng thời gian chơi. Spec chốt 30; hạ xuống khi chỉ muốn thử nhanh bài đo. */
-const MINUTES = Number(process.env.MINUTES ?? 30);
-/** BASE_MIN: mốc phút 5 — chỉ IN RA tham khảo, không chặn (v6.54). */
-const BASE_MIN = Number(process.env.BASE_MIN ?? 5);
-/** ZONE_SWITCHES / DEATHS: spec chốt 50 và 10. */
-const ZONE_SWITCHES = Number(process.env.ZONE_SWITCHES ?? 50);
-const DEATHS = Number(process.env.DEATHS ?? 10);
-/** TOL: ngưỡng tăng cho phép trong cửa sổ ổn định, % (v6.54 chốt 5). */
-const TOL = Number(process.env.TOL ?? 5);
-/** STEADY_MIN: đầu cửa sổ ổn định (v6.54 chốt phút 20). */
-const STEADY_MIN = Number(process.env.STEADY_MIN ?? 20);
-/** STEP_SECS: nhịp lấy mẫu. */
+/** MINUTES: tổng thời gian chơi. Spec v6.57 chốt 60; hạ xuống khi chỉ muốn thử bài đo còn chạy. */
+const MINUTES = Number(process.env.MINUTES ?? 60);
+/** WARMUP_MIN: phút 0–10 là khởi động, KHÔNG tính (v6.57). */
+const WARMUP_MIN = Number(process.env.WARMUP_MIN ?? 10);
+/** STEP_SECS: nhịp lấy mẫu, spec chốt 15 s. */
 const STEP_SECS = Number(process.env.STEP_SECS ?? 15);
+/** BLOCKS: số khối chia cửa sổ, spec chốt 5 (mỗi khối 10 phút). */
+const BLOCKS = Number(process.env.BLOCKS ?? 5);
+/** RISE_PCT: dốc × 60 phút vượt ngần này % mức nền thì ĐỎ (spec chốt 10). */
+const RISE_PCT = Number(process.env.RISE_PCT ?? 10);
+/** RATCHET_PCT: mức nền vượt mốc kỷ lục ngần này % thì ĐỎ (spec chốt 10). */
+const RATCHET_PCT = Number(process.env.RATCHET_PCT ?? 10);
+/**
+ * STATE_DIR: nơi giữ MỐC KỶ LỤC và SỔ ĐÊM. Rỗng = không đọc, không ghi.
+ *
+ * Chỉ bài hằng đêm (`tools/leaknightly.sh`) truyền vào. Một lượt chạy tay — thường là bài
+ * 6 phút để xem bài đo còn sống — không được phép hạ mốc kỷ lục hay ghi thêm một đêm vào
+ * chuỗi dấu, vì cả hai thứ đó là trí nhớ dài hạn của cổng gác.
+ */
+const STATE_DIR = process.env.STATE_DIR ?? '';
+/** JSON_OUT: ghi toàn bộ số liệu lượt này ra tệp (trang quản trị đọc). */
+const JSON_OUT = process.env.JSON_OUT ?? (STATE_DIR ? join(STATE_DIR, 'leak-client.json') : '');
+/** BUILD: mã build đang đo, chỉ để ghi vào sổ. */
+const BUILD = process.env.BUILD ?? '';
+/**
+ * MAX_LOAD / IGNORE_LOAD: luật 16 của CLAUDE.md — máy bận thì KHÔNG kết luận.
+ *
+ * Bài này đo bộ nhớ chứ không đo thời gian, nên nghe như ít nhạy với tải. Không đúng: máy
+ * quá tải kéo FPS trình duyệt xuống dưới ngưỡng tự hạ chất lượng, mà hạ chất lượng ĐỔI
+ * chính những thứ đang đếm (bớt bộ lọc, bớt texture, bớt sprite). Ngày 23/11 một lượt đo
+ * rơi từ 55 FPS xuống 20 FPS giữa chừng vì việc của dự án khác chiếm 690% CPU.
+ *
+ * Đo bằng `loadavg` chứ không bằng thời gian khung của chính tab đang đo — tab headless vẽ
+ * nhẹ nên khung vẫn đều trong khi máy đã chìm (bài học của `gomdon-smooth`, 10/11).
+ */
+const MAX_LOAD = Number(process.env.MAX_LOAD ?? 1.5);
+const IGNORE_LOAD = process.env.IGNORE_LOAD === '1';
+/** BUSY_TOL: tỉ lệ mẫu được phép bận trong cửa sổ trước khi bài đo từ chối kết luận. */
+const BUSY_TOL = Number(process.env.BUSY_TOL ?? 0.1);
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const steps = Math.max(2, Math.round((MINUTES * 60) / STEP_SECS));
-// Rải đều việc đổi khu và việc chết trên cả bài đo: dồn hết vào cuối thì mốc phút 5 không
-// bao giờ thấy chúng, và dồn hết vào đầu thì phần sau chỉ là đứng yên.
-const zoneEvery = Math.max(1, Math.round(steps / ZONE_SWITCHES));
-const deathEvery = Math.max(1, Math.round(steps / DEATHS));
+const sleep = (ms) => new Promise((r) => setTimeout(r, Math.max(0, ms)));
+
+// ── Kịch bản cố định ────────────────────────────────────────────────────────────────────
+const ZONES = 5;
+/** Số mẫu trong một chu kỳ 60 giây. */
+const PER_CYCLE = Math.max(1, Math.round(60 / STEP_SECS));
+/** DEATH_EVERY: cứ ngần này chu kỳ thì một lượt chết → 10 lượt trong cửa sổ 50 phút. */
+const DEATH_EVERY = 5;
+const totalSamples = Math.round((MINUTES * 60) / STEP_SECS);
+const totalCycles = Math.floor(totalSamples / PER_CYCLE);
+
+/**
+ * mulberry32: nguồn ngẫu nhiên GIEO ĐƯỢC, để chuỗi phím đi lại giống hệt nhau giữa các lượt.
+ *
+ * `Math.random()` thì mỗi lượt một đường đi khác, mà đường đi quyết định gặp bao nhiêu
+ * người và bao nhiêu quái — tức quyết định chính con số đang đo.
+ */
+function mulberry32(a) {
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** zoneAtCycle: khu mà chu kỳ thứ c nhảy tới. Chu kỳ cuối (59) → khu 0, luôn luôn. */
+const zoneAtCycle = (c) => (c + 1) % ZONES;
+
+// ── Thống kê ────────────────────────────────────────────────────────────────────────────
+
+/** ols: dốc bình phương tối thiểu của (x, y), kèm hệ số chặn. */
+function ols(pts) {
+  const n = pts.length;
+  if (n < 2) {
+    return { slope: 0, intercept: n ? pts[0][1] : 0, n };
+  }
+  const mx = pts.reduce((a, [x]) => a + x, 0) / n;
+  const my = pts.reduce((a, [, y]) => a + y, 0) / n;
+  const den = pts.reduce((a, [x]) => a + (x - mx) ** 2, 0);
+  const slope = den > 0 ? pts.reduce((a, [x, y]) => a + (x - mx) * (y - my), 0) / den : 0;
+  return { slope, intercept: my - slope * mx, n };
+}
+
+/**
+ * T95: điểm tới hạn t hai phía, mức 95%, theo bậc tự do.
+ *
+ * df = 4 (năm khối) là ca chính của spec → 2,776. Bảng này viết thẳng ra thay vì gọi một
+ * thư viện thống kê: thêm một phụ thuộc cho một hằng số là cái giá không đáng.
+ */
+const T95 = { 1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228, 11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131, 16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086 };
+const tcrit = (df) => (df <= 0 ? Infinity : (T95[df] ?? (df >= 60 ? 2.0 : 2.042)));
+
+/**
+ * blockTrend: dốc theo 5 khối + KTC 95% của dốc trung bình — phép xét CHẶN của v6.57.
+ *
+ * Vì sao không fit một dốc duy nhất trên cả 200 mẫu: sai số chuẩn của một OLS giả định các
+ * mẫu độc lập, mà heap là tín hiệu RĂNG CƯA — hai mẫu cách nhau 15 giây tương quan rất
+ * mạnh, nên KTC tính kiểu đó hẹp giả tạo và cổng sẽ đỏ với mọi build. Năm dốc khối là năm
+ * quan sát gần như độc lập (mỗi khối 10 phút, chứa 2 chu kỳ-chết trọn vẹn), và độ phân tán
+ * GIỮA các khối mới là thước đo thật của việc "lượt này có đang dốc lên không".
+ */
+function blockTrend(rows, get, winFrom, winTo) {
+  const span = (winTo - winFrom) / BLOCKS;
+  const slopes = [];
+  for (let b = 0; b < BLOCKS; b++) {
+    const lo = winFrom + b * span;
+    const hi = lo + span;
+    // Mép phải của khối cuối phải lấy cả mẫu đúng phút 60, nên dùng `<=` ở khối cuối.
+    const pts = rows
+      .filter((r) => r.min >= lo && (b === BLOCKS - 1 ? r.min <= hi : r.min < hi))
+      .map((r) => [r.min, get(r)]);
+    slopes.push(ols(pts).slope);
+  }
+  const n = slopes.length;
+  const mean = slopes.reduce((a, v) => a + v, 0) / n;
+  const sd = n > 1 ? Math.sqrt(slopes.reduce((a, v) => a + (v - mean) ** 2, 0) / (n - 1)) : 0;
+  const half = tcrit(n - 1) * (sd / Math.sqrt(n));
+  return { slopes, mean, sd, lo: mean - half, hi: mean + half };
+}
+
+/**
+ * baselineAt: mức nền tại phút `at`, đọc từ ĐƯỜNG FIT của khối đầu, không từ một mẫu.
+ *
+ * Spec nói "giá trị tại phút 10". Lấy đúng mẫu ở phút 10 thì mốc kỷ lục phụ thuộc vào việc
+ * bộ dọn rác vừa chạy hay chưa — ba đêm liên tiếp từng cho mẫu phút 20 lệch nhau 22 MB
+ * trong khi mức thật không đổi. Fit qua cả khối đầu (40 mẫu) rồi đọc giá trị ở phút 10 là
+ * cùng một con số nhưng không phụ thuộc chỗ rơi của một mẫu.
+ */
+function baselineAt(rows, get, at, span) {
+  const pts = rows.filter((r) => r.min >= at && r.min <= at + span).map((r) => [r.min, get(r)]);
+  const { slope, intercept } = ols(pts);
+  return intercept + slope * at;
+}
+
+/** singleTrend: một dốc OLS + KTC 95% từ sai số dư — dùng cho sổ tài nguyên (ít điểm). */
+function singleTrend(pts) {
+  const n = pts.length;
+  const { slope, intercept } = ols(pts);
+  if (n < 3) {
+    return { slope, lo: -Infinity, hi: Infinity, n };
+  }
+  const mx = pts.reduce((a, [x]) => a + x, 0) / n;
+  const sxx = pts.reduce((a, [x]) => a + (x - mx) ** 2, 0);
+  const sse = pts.reduce((a, [x, y]) => a + (y - (intercept + slope * x)) ** 2, 0);
+  const se = sxx > 0 ? Math.sqrt(sse / (n - 2) / sxx) : Infinity;
+  const half = tcrit(n - 2) * se;
+  return { slope, lo: slope - half, hi: slope + half, n };
+}
+
+// ── Trí nhớ dài hạn: mốc kỷ lục + sổ đêm ────────────────────────────────────────────────
+
+const readJSON = (p, dflt) => {
+  try {
+    return JSON.parse(readFileSync(p, 'utf8'));
+  } catch {
+    return dflt;
+  }
+};
+
+/** writeJSONAtomic: ghi tệp tạm rồi đổi tên — server và deploy.sh có thể đọc đúng lúc này. */
+function writeJSONAtomic(p, obj) {
+  mkdirSync(dirname(p), { recursive: true });
+  writeFileSync(`${p}.tmp`, `${JSON.stringify(obj, null, 2)}\n`);
+  renameSync(`${p}.tmp`, p);
+}
+
+/**
+ * ratchetStep: mốc kỷ lục cho mức nền (§13.9 v6.57).
+ *
+ * Mốc CHỈ đi xuống, và hạ mốc cần 2 đêm xác nhận. Một đêm thấp bất thường (máy rảnh khác
+ * thường, một khu vắng người) không được phép hạ mốc — hạ rồi thì đêm sau mọi build đều
+ * đỏ, và cổng sẽ bị tắt thay vì được sửa. Giữ lại `pending` chính là chỗ chờ xác nhận đó.
+ *
+ * Khi hạ, lấy mức CAO HƠN trong hai đêm xác nhận: mốc là thứ build phải sống dưới nó, nên
+ * chọn bên thận trọng.
+ */
+function ratchetStep(state, value) {
+  const prev = state.record ?? null;
+  if (prev === null) {
+    return { record: value, pending: null, first: true, exceeded: 0 };
+  }
+  const exceeded = ((value - prev) / prev) * 100;
+  if (value >= prev) {
+    // Không xuống thì không có gì để xác nhận; xoá lần chờ dở dang.
+    return { record: prev, pending: null, first: false, exceeded };
+  }
+  const pend = state.pending;
+  if (!pend) {
+    return { record: prev, pending: { value, nights: 1 }, first: false, exceeded };
+  }
+  const merged = Math.max(pend.value, value);
+  if (pend.nights + 1 >= 2) {
+    return { record: merged, pending: null, first: false, exceeded, lowered: true };
+  }
+  return { record: prev, pending: { value: merged, nights: pend.nights + 1 }, first: false, exceeded };
+}
+
+// ── Chạy ────────────────────────────────────────────────────────────────────────────────
 
 const b = await launch({
   headless: true,
@@ -77,8 +271,8 @@ const gc = async () => {
 };
 
 // `?textrace=1`: ghi NƠI CẤP PHÁT của từng texture (render/gpumem.ts). Bật mặc định —
-// khi bài đo đỏ, câu hỏi tiếp theo luôn là "nhóm nào phình", và chạy lại 30 phút chỉ để
-// biết điều đó là 30 phút mất không.
+// khi bài đo đỏ, câu hỏi tiếp theo luôn là "nhóm nào phình", và chạy lại 60 phút chỉ để
+// biết điều đó là một giờ mất không.
 await p.goto(`${TARGET}/?debug=true&textrace=1`, { waitUntil: 'domcontentloaded' });
 await p.waitForSelector('input', { timeout: 30000 });
 await p.fill('input', 'KiemTraRoRi');
@@ -99,27 +293,40 @@ async function revive() {
   }
   await p.locator('.summary .btn.primary').click();
   await p.waitForSelector('.room-board', { timeout: 30000 });
-  await sleep(2500);
+  await sleep(2000);
   return true;
 }
 
-/** wander: đi lại để người và quái liên tục vào/ra tầm nhìn — đứng yên thì không đo gì cả. */
-async function wander(ms) {
-  const keys = ['KeyW', 'KeyA', 'KeyS', 'KeyD'];
-  const t0 = Date.now();
-  while (Date.now() - t0 < ms) {
-    const k = keys[Math.floor(((Date.now() - t0) / 1100) % 4)];
+/**
+ * wanderUntil: đi lại tới đúng mốc thời gian `deadline`, theo chuỗi phím GIEO TỪ `seed`.
+ *
+ * Đứng yên thì không đo được gì (không ai vào/ra tầm nhìn), nhưng đi lại ngẫu nhiên thì
+ * mỗi lượt một kịch bản. Gieo theo chỉ số mẫu nên lượt nào cũng đi đúng đường đó.
+ */
+const KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD'];
+async function wanderUntil(deadline, seed) {
+  const rnd = mulberry32(seed);
+  while (Date.now() < deadline) {
+    const k = KEYS[Math.floor(rnd() * KEYS.length) % KEYS.length];
+    const hold = Math.min(520, deadline - Date.now());
+    if (hold <= 0) {
+      break;
+    }
     await p.keyboard.down(k);
-    await sleep(550);
+    await sleep(hold);
     await p.keyboard.up(k);
-    await sleep(120);
+    await sleep(Math.min(80, Math.max(0, deadline - Date.now())));
   }
 }
 
-/** sample đọc bốn chỉ số của spec cùng một lúc. */
+/** loadPerCPU: tải máy trên mỗi nhân, ngay lúc lấy mẫu (luật 16). */
+const loadPerCPU = () => loadavg()[0] / Math.max(1, cpus().length);
+
+/** sample đọc các chỉ số của spec cùng một lúc. */
 async function sample() {
   await gc();
-  return p.evaluate(() => {
+  const load = loadPerCPU();
+  return Object.assign({ load }, await p.evaluate(() => {
     const s = window.__stats();
     const m = performance.memory;
     return {
@@ -129,56 +336,95 @@ async function sample() {
       nodes: Number(s.nodes ?? s.sprites ?? 0),
       heapMB: m ? m.usedJSHeapSize / 1048576 : 0,
       fps: Number(s.fps ?? 0),
+      zone: Number(s.zone ?? -1),
       // `__stats()` chỉ chở SỐ (nó là bảng số liệu), nên danh sách hệ thống đã tắt phải
       // lấy qua cửa debug `kx` — cùng chỗ với `kx.fault` của §13.8.
       guard: (window.kx?.guard?.()?.systems ?? []).filter((x) => x.dead).map((x) => x.key).join(','),
       // Sổ tài nguyên theo LOẠI (§13.9 "một sổ tài nguyên đếm số đang sống theo loại").
-      //
-      // Không có nó thì bài đo chỉ nói được "display object tăng 19,8%" rồi dừng — mà câu
-      // cần trả lời là tăng Ở LOẠI NÀO. Mọi khoá bắt đầu bằng `n_` (sprite, graphics,
-      // text…) và các khoá pool/cache do từng lớp tự khai.
       kinds: Object.fromEntries(Object.entries(s).filter(([k]) =>
         k.startsWith('n_') || ['pool', 'poolText', 'beasts', 'auras', 'flying', 'filters'].includes(k))),
     };
-  });
+  }));
 }
 
 const rows = [];
-let baseSites = [];
 let zones = 0;
 let deaths = 0;
-console.log(`đo ${MINUTES} phút · mốc so sánh phút ${BASE_MIN} · ${ZONE_SWITCHES} lượt đổi khu · ${DEATHS} lượt chết\n`);
-console.log('phút   texture    texMB   heapMB    nodes  fps');
-for (let i = 0; i <= steps; i++) {
+let zonesInWindow = 0;
+let deathsInWindow = 0;
+console.log(`KỊCH BẢN CỐ ĐỊNH (§13.9 v6.57): ${MINUTES} phút · chu kỳ 60 s · mẫu mỗi ${STEP_SECS} s`);
+console.log(`khởi động phút 0–${WARMUP_MIN} (không tính) · cửa sổ đo phút ${WARMUP_MIN}–${MINUTES} · ${BLOCKS} khối`);
+console.log('mỗi chu kỳ đổi sang khu kế tiếp; cứ 5 chu kỳ một lượt chết + vào lại\n');
+console.log('phút   khu  texture    texMB   heapMB    nodes  fps');
+
+const t0 = Date.now();
+for (let i = 0; i <= totalSamples; i++) {
+  // Mốc lấy mẫu tính từ t0 chứ không cộng dồn: một lần chết mất 3 giây không được phép
+  // đẩy lệch cả lưới mẫu còn lại, nếu không thì "khối 10 phút" của lượt này không còn
+  // cùng nội dung với lượt khác.
+  await sleep(t0 + i * STEP_SECS * 1000 - Date.now());
   const s = await sample();
   const min = +((i * STEP_SECS) / 60).toFixed(2);
-  rows.push({ min, ...s });
-  console.log(`${String(min).padStart(5)} ${String(s.tex).padStart(9)} ${s.texMB.toFixed(1).padStart(8)} ${s.heapMB.toFixed(1).padStart(8)} ${String(s.nodes).padStart(8)} ${s.fps.toFixed(0).padStart(4)}`);
-  if (min >= BASE_MIN && baseSites.length === 0) {
-    baseSites = await p.evaluate(() => window.__texsites?.(200) ?? []);
-  }
-  if (i === steps) {
+  const cycle = Math.floor(i / PER_CYCLE);
+  const phase = i % PER_CYCLE;
+  rows.push({ min, cycle, phase, ...s });
+  console.log(`${String(min).padStart(5)} ${String(s.zone).padStart(5)} ${String(s.tex).padStart(8)} ${s.texMB.toFixed(1).padStart(8)} ${s.heapMB.toFixed(1).padStart(8)} ${String(s.nodes).padStart(8)} ${s.fps.toFixed(0).padStart(4)}`);
+  if (i === totalSamples) {
     break;
   }
+
+  // Việc của chu kỳ, luôn theo đúng thứ tự này.
   await revive();
-  if (i > 0 && i % zoneEvery === 0 && zones < ZONE_SWITCHES) {
-    await dbg('zone');
+  if (phase === 0 && cycle < totalCycles) {
+    await dbg('zone', zoneAtCycle(cycle));
+    // Tắt cổng cho riêng nhân vật này cả chu kỳ: từ v6.56 cổng bắn đi NGẪU NHIÊN khắp
+    // mạng, nên đi lại 45 giây mà đạp trúng một cái là lượt đo có thêm một lần đổi khu
+    // không ai đếm và kết thúc ở một khu khác lượt trước — hỏng đúng thứ v6.57 đòi.
+    await dbg('nogate', 120);
+    // Và không để bot hạ giữa chừng: kịch bản đặt ra đúng 10 lượt chết, mỗi lượt chết
+    // ngoài kế hoạch là một lần hồi sinh sang khu khác mà không lượt đo nào khác có.
+    await dbg('invuln', 120);
     zones++;
+    if (min >= WARMUP_MIN) {
+      zonesInWindow++;
+    }
     await sleep(1200);
   }
-  if (i > 0 && i % deathEvery === 0 && deaths < DEATHS) {
+  if (phase === 2 && cycle % DEATH_EVERY === DEATH_EVERY - 1) {
     await dbg('die');
     deaths++;
-    await sleep(2000);
+    if (min >= WARMUP_MIN) {
+      deathsInWindow++;
+    }
+    await sleep(1800);
     await revive();
+    // Hồi sinh thả người vào khu ÍT NGƯỜI NHẤT (§8.0), không phải khu đang đứng — nên
+    // kéo về đúng khu của chu kỳ này rồi mới đi tiếp. Lệnh này là no-op khi đã đúng khu,
+    // nên nó không được tính vào số lượt đổi khu của kịch bản.
+    await dbg('zone', zoneAtCycle(cycle));
+    await dbg('nogate', 120);
+    // Và không để bot hạ giữa chừng: kịch bản đặt ra đúng 10 lượt chết, mỗi lượt chết
+    // ngoài kế hoạch là một lần hồi sinh sang khu khác mà không lượt đo nào khác có.
+    await dbg('invuln', 120);
+    await sleep(1200);
   }
-  await wander(STEP_SECS * 1000);
+  await wanderUntil(t0 + (i + 1) * STEP_SECS * 1000 - 300, 0x9e3779b9 ^ i);
 }
 
-// So mốc phút BASE_MIN với mốc cuối.
-const base = rows.find((r) => r.min >= BASE_MIN) ?? rows[0];
 const last = rows[rows.length - 1];
-console.log(`\n${zones} lượt đổi khu · ${deaths} lượt chết · mốc so sánh: phút ${base.min}`);
+const win = rows.filter((r) => r.min >= WARMUP_MIN);
+const blockSpan = (MINUTES - WARMUP_MIN) / BLOCKS;
+console.log(`\nkịch bản: ${zones} lượt đổi khu (${zonesInWindow} trong cửa sổ) · ${deaths} lượt chết (${deathsInWindow} trong cửa sổ) · khu kết thúc ${last.zone}`);
+
+// Luật 16: máy bận thì KHÔNG kết luận — và "bận" phải đo trong SUỐT cửa sổ, không phải
+// lúc bấm nút chạy. Một bài 60 phút bắt đầu lúc máy rảnh vẫn có thể chạy xuyên qua một
+// đợt build của việc khác.
+const busyRows = win.filter((r) => r.load > MAX_LOAD);
+const busyFrac = win.length ? busyRows.length / win.length : 0;
+const loadMax = win.length ? Math.max(...win.map((r) => r.load)) : 0;
+const fpsMin = win.length ? Math.min(...win.map((r) => r.fps)) : 0;
+const noisy = !IGNORE_LOAD && busyFrac > BUSY_TOL;
+console.log(`tải máy trong cửa sổ: ${(busyFrac * 100).toFixed(0)}% số mẫu vượt ${MAX_LOAD}/nhân · đỉnh ${loadMax.toFixed(2)}/nhân · FPS thấp nhất ${fpsMin.toFixed(0)}`);
 if (pageErrors.length) {
   console.log(`\n${pageErrors.length} lỗi trang (xem lớp chống sập §13.8):`);
   for (const e of [...new Set(pageErrors)].slice(0, 5)) {
@@ -189,182 +435,235 @@ if (last.guard) {
   console.log(`\n⚠ client đã phải TẮT hệ thống: ${last.guard} (§13.8)`);
 }
 
-// Nhóm texture nào phình so với mốc — in TRƯỚC phần kết luận, vì khi đỏ thì đây mới là
-// thứ người đọc cần.
-const sites = await p.evaluate(() => window.__texsites?.(200) ?? []);
-if (sites.length) {
-  const base = new Map(baseSites.map((x) => [x.site, x.count]));
-  const grown = sites
-    .map((x) => ({ site: x.site, d: x.count - (base.get(x.site) ?? 0), mb: x.mb }))
-    .filter((x) => x.d > 0)
-    .sort((a, c) => c.d - a.d)
-    .slice(0, 12);
-  if (grown.length) {
-    console.log('\n== texture TĂNG so với mốc, gom theo nơi cấp phát ==');
-    for (const x of grown) {
-      console.log(`${String('+' + x.d).padStart(6)}  ${String(x.mb).padStart(8)} MB  ${x.site.slice(0, 160)}`);
-    }
-  }
-}
-
-/** pctOf: mức tăng theo %, 0 khi mốc đầu bằng 0. */
-const pctOf = (from, to) => (from > 0 ? ((to - from) / from) * 100 : 0);
-/**
- * Sàn tiếng ồn: mức tăng TUYỆT ĐỐI nhỏ hơn ngần này thì bỏ qua, vì phần trăm trên một nền
- * nhỏ là vô nghĩa.
- *
- * Phải nhỏ hơn hẳn ngưỡng 5% của v6.54 trên số đo thật, nếu không chính cái sàn thành
- * ngưỡng. Số đo 12/11 ở cửa sổ ổn định: texture ~420 (5% = 21), texMB ~245 (12), heap
- * ~114 MB (5,7), display object ~4 400 (220) — nên sàn 80 cho display object, không phải
- * 200 như bản 10% trước đó.
- */
-const FLOOR = { texture: 5, texMB: 4, heapMB: 3, 'display object': 80 };
-
-/**
- * trend: dốc bình phương tối thiểu của một chỉ số trong cửa sổ, kèm trung bình và biên độ.
- *
- * ── Vì sao không so hai mẫu đầu–cuối nữa ────────────────────────────────────────────────
- *
- * JS heap là tín hiệu RĂNG CƯA: nó lớn dần tới khi GC chạy rồi tụt, nên hai mẫu tức thời
- * cách nhau 10 phút có thể rơi vào bất kỳ chỗ nào của răng cưa. Ba đêm liên tiếp cho thấy
- * rõ điều đó — heap CUỐI gần như không đổi (132,6 · 131,4 · 138,4 MB, tức không phình qua
- * từng đêm), nhưng mẫu ở phút 20 nhảy 139,2 · 116,8 · 127,8, lệch nhau 22 MB. Phán quyết
- * đi theo: ĐẠT (−4,7%) · TRƯỢT (+12,6%) · TRƯỢT (+8,3%). Tức là cổng đang đo chỗ rơi của
- * MỘT mẫu, không đo xu hướng.
- *
- * Dốc trên toàn cửa sổ dùng cả 41 mẫu: nhiễu lấy mẫu triệt tiêu, còn một đà tăng thật thì
- * hiện nguyên vẹn. Đây là phép đo CHẶT HƠN, không phải nới lỏng — một build rò rỉ đều đặn
- * vẫn trượt, chỉ là một build sạch không còn trượt vì GC chạy sai nhịp.
- */
-function trend(win, get) {
-  const pts = win.map((r) => [r.min, get(r)]);
-  const n = pts.length;
-  const mx = pts.reduce((a, [t]) => a + t, 0) / n;
-  const my = pts.reduce((a, [, v]) => a + v, 0) / n;
-  const den = pts.reduce((a, [t]) => a + (t - mx) ** 2, 0);
-  const slope = den > 0 ? pts.reduce((a, [t, v]) => a + (t - mx) * (v - my), 0) / den : 0;
-  return {
-    slope,
-    mean: my,
-    lo: Math.min(...pts.map(([, v]) => v)),
-    hi: Math.max(...pts.map(([, v]) => v)),
-  };
-}
-
 const METRICS = [
-  ['texture', (r) => r.tex, '   '],
-  ['texMB', (r) => r.texMB, 'MB '],
-  ['heapMB', (r) => r.heapMB, 'MB '],
-  ['display object', (r) => r.nodes, '   '],
+  ['heapMB', (r) => r.heapMB, 'MB'],
+  ['texMB', (r) => r.texMB, 'MB'],
+  ['texture', (r) => r.tex, ''],
+  ['display object', (r) => r.nodes, ''],
 ];
 
-// ── 1. Mốc phút 5 — CHỈ THAM KHẢO (v6.54) ───────────────────────────────────────────────
-console.log(`\n== tham khảo: so với phút ${base.min} (KHÔNG chặn) ==`);
-for (const [name, get, unit] of METRICS) {
-  const from = get(base);
-  const to = get(last);
-  const pct = pctOf(from, to);
-  console.log(`${name.padEnd(16)} ${from.toFixed(1).padStart(9)} → ${to.toFixed(1).padStart(9)} ${unit}  (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)`);
-}
-
-// ── 2. Cửa sổ ổn định phút 20–30 — PHÉP SO CHẶN (v6.54) ─────────────────────────────────
-//
 // Bài quá ngắn thì KHÔNG kết luận gì, và nói thẳng ra là không kết luận. Một lượt 8 phút
 // không chứng minh được "không rò rỉ": cửa sổ của nó nằm trọn trong giai đoạn khởi động,
-// nên nó đỏ với MỌI build, kể cả build sạch — và một cổng đỏ với mọi build sẽ bị tắt.
-const steady = rows.find((r) => r.min >= STEADY_MIN);
-let bad = false;
-if (!steady || last.min - steady.min < 4) {
-  console.log(`\n== cửa sổ ổn định: KHÔNG KẾT LUẬN (bài chỉ ${last.min} phút) ==`);
-  console.log(`Cần chạy tới ít nhất ${STEADY_MIN + 4} phút thì mới có cửa sổ để so.`);
+// nên nó sẽ đỏ với MỌI build, kể cả build sạch — và một cổng đỏ với mọi build sẽ bị tắt.
+// Ít nhất 2 phút mỗi khối thì dốc khối mới có nghĩa. `MIN_WINDOW` hạ được xuống để thử
+// đường đi của bài đo trong vài phút — nhưng mặc định phải là con số gác thật, vì một
+// ngưỡng dễ dãi đặt sẵn trong tệp là ngưỡng sẽ được dùng.
+const MIN_WINDOW = Number(process.env.MIN_WINDOW ?? BLOCKS * 2);
+if (MINUTES - WARMUP_MIN < MIN_WINDOW || win.length < BLOCKS * 4) {
+  console.log(`\n== KHÔNG KẾT LUẬN — cửa sổ chỉ ${(MINUTES - WARMUP_MIN).toFixed(1)} phút / ${win.length} mẫu ==`);
+  console.log(`Cần ít nhất ${WARMUP_MIN + MIN_WINDOW} phút (spec chốt ${WARMUP_MIN + 50}) thì mới có ${BLOCKS} khối để fit dốc.`);
   console.log('Bài ngắn chỉ dùng để xem bài đo còn chạy được, không dùng để gác.');
+  if (JSON_OUT) {
+    writeJSONAtomic(JSON_OUT, {
+      at: Math.floor(Date.now() / 1000), build: BUILD, verdict: 'chua_ket_luan',
+      minutes: MINUTES, warmup_min: WARMUP_MIN, step_secs: STEP_SECS,
+      note: `cửa sổ chỉ ${(MINUTES - WARMUP_MIN).toFixed(1)} phút`,
+    });
+  }
+  await b.close();
+  process.exit(3);
+}
+
+// ── 1. Dốc theo khối + KTC 95% ──────────────────────────────────────────────────────────
+console.log(`\n== dốc theo ${BLOCKS} khối × ${blockSpan} phút · KTC 95% (t, df = ${BLOCKS - 1}) ==`);
+const metrics = {};
+const reasons = [];
+let red = false;
+for (const [name, get, unit] of METRICS) {
+  const t = blockTrend(rows, get, WARMUP_MIN, MINUTES);
+  const base = baselineAt(rows, get, WARMUP_MIN, blockSpan);
+  const rise = t.mean * 60;
+  const risePct = base > 0 ? (rise / base) * 100 : 0;
+  // ĐỎ khi cận dưới KTC > 0 (chắc chắn đang dốc lên) VÀ mức tăng một giờ vượt 10% mức nền
+  // (dốc lên đủ nhiều để đáng gọi là rò rỉ). Thiếu một trong hai thì chưa đủ để chặn.
+  const isRed = t.lo > 0 && risePct > RISE_PCT;
+  if (isRed) {
+    red = true;
+    reasons.push(`${name}: dốc ${t.mean.toFixed(3)}/phút, KTC [${t.lo.toFixed(3)}; ${t.hi.toFixed(3)}] > 0, một giờ +${risePct.toFixed(1)}% mức nền`);
+  }
+  metrics[name] = {
+    blocks: t.slopes.map((v) => +v.toFixed(4)),
+    mean: +t.mean.toFixed(4), ci_lo: +t.lo.toFixed(4), ci_hi: +t.hi.toFixed(4),
+    baseline: +base.toFixed(2), rise60: +rise.toFixed(2), rise_pct: +risePct.toFixed(2),
+    red: isRed,
+  };
+  console.log(`${name.padEnd(15)} nền ${base.toFixed(1).padStart(8)} ${unit.padEnd(2)} · dốc ${t.slopes.map((v) => v.toFixed(2).padStart(6)).join(' ')}`);
+  console.log(`${''.padEnd(15)} TB ${(t.mean >= 0 ? '+' : '') + t.mean.toFixed(3)}/phút · KTC 95% [${t.lo.toFixed(3)}; ${t.hi.toFixed(3)}] · 60 phút ${(rise >= 0 ? '+' : '') + rise.toFixed(1)} ${unit} (${risePct >= 0 ? '+' : ''}${risePct.toFixed(1)}% nền)  ${isRed ? 'ĐỎ' : t.lo > 0 ? 'dốc lên nhưng < ngưỡng' : 'không kết luận được là dốc lên'}`);
+}
+
+// ── 2. Mốc kỷ lục cho mức nền + chuỗi dấu nhiều đêm ─────────────────────────────────────
+//
+// Hai luật này cần TRÍ NHỚ giữa các đêm, nên chỉ chạy khi có STATE_DIR — và KHÔNG chạy
+// khi máy bận: một đêm nhiễu mà hạ được mốc kỷ lục thì mọi đêm sau đều đỏ oan, còn một
+// dấu dốc nhiễu thì làm hỏng chuỗi 3 đêm. Trí nhớ dài hạn chỉ được nhận số sạch.
+const ratchetOut = {};
+const signsOut = {};
+let yellow = false;
+if (STATE_DIR && !noisy) {
+  const ratchetPath = join(STATE_DIR, 'leak-ratchet.json');
+  const nightsPath = join(STATE_DIR, 'leak-nights.json');
+  const ratchet = readJSON(ratchetPath, {});
+  const nights = readJSON(nightsPath, []);
+
+  // Mốc kỷ lục: gác MỨC NỀN của heap.
+  //
+  // Vì sao chỉ heap: §13.10 đã có một cổng tuyệt đối cho GPU MB (ngân sách thiết bị), còn
+  // mức nền đang là vấn đề mở thì là JS heap — 137–152 MB trên mục tiêu 80 (B39). Mốc kỷ
+  // lục của texMB vẫn được ghi lại để có số liệu, nhưng không chặn: thêm một cổng chặn mà
+  // spec không nêu là tự sửa luật (CLAUDE.md luật 4).
+  for (const key of ['heapMB', 'texMB']) {
+    const value = metrics[key].baseline;
+    const step = ratchetStep(ratchet[key] ?? {}, value);
+    const gated = key === 'heapMB';
+    const over = step.exceeded > RATCHET_PCT && !step.first;
+    if (gated && over) {
+      red = true;
+      reasons.push(`${key}: mức nền ${value.toFixed(1)} vượt mốc kỷ lục ${(ratchet[key]?.record ?? 0).toFixed(1)} tới ${step.exceeded.toFixed(1)}% (> ${RATCHET_PCT}%)`);
+    }
+    ratchetOut[key] = {
+      record: +step.record.toFixed(2), value, exceeded_pct: +step.exceeded.toFixed(2),
+      pending: step.pending, lowered: !!step.lowered, first: !!step.first, gate: gated,
+    };
+    ratchet[key] = { record: step.record, pending: step.pending, at: Math.floor(Date.now() / 1000), build: BUILD };
+    console.log(`\nmốc kỷ lục ${key}: nền lượt này ${value.toFixed(1)} / mốc ${step.record.toFixed(1)} `
+      + `(${step.exceeded >= 0 ? '+' : ''}${step.exceeded.toFixed(1)}%)`
+      + `${step.first ? ' — lượt đầu, đặt mốc' : ''}${step.lowered ? ' — HẠ MỐC (đã đủ 2 đêm xác nhận)' : ''}`
+      + `${step.pending ? ` — chờ xác nhận ${step.pending.nights}/2 đêm ở ${step.pending.value.toFixed(1)}` : ''}`
+      + `${gated ? (over ? '  ĐỎ' : '  ĐẠT') : '  (ghi sổ, không chặn)'}`);
+  }
+
+  // Chuỗi dấu nhiều đêm: lưới bắt rò rỉ CHẬM mà một đêm không phân giải nổi.
+  //
+  // Một dốc +0,2 MB/phút có KTC ôm qua 0 ở mọi đêm riêng lẻ, nhưng nếu nó dương ở cả ba
+  // đêm liên tiếp thì xác suất ngẫu nhiên chỉ còn 1/8 — đủ để mở việc điều tra, chưa đủ
+  // để chặn deploy. Đêm thứ tư vẫn dương: 1/16, lúc đó chặn.
+  const night = {
+    at: Math.floor(Date.now() / 1000), build: BUILD,
+    mean: Object.fromEntries(Object.entries(metrics).map(([k, v]) => [k, v.mean])),
+    baseline: Object.fromEntries(Object.entries(metrics).map(([k, v]) => [k, v.baseline])),
+  };
+  nights.push(night);
+  const kept = nights.slice(-30);
+  for (const [name] of METRICS) {
+    const signs = kept.map((n) => ((n.mean?.[name] ?? 0) > 0 ? '+' : '−'));
+    let streak = 0;
+    for (let i = signs.length - 1; i >= 0 && signs[i] === '+'; i--) {
+      streak++;
+    }
+    signsOut[name] = { signs: signs.slice(-7), streak };
+    if (streak >= 4) {
+      red = true;
+      reasons.push(`${name}: dốc dương ${streak} đêm liên tiếp (đêm thứ 4 trở đi → ĐỎ)`);
+    } else if (streak === 3) {
+      yellow = true;
+    }
+  }
+  console.log('\nchuỗi dấu dốc 7 đêm gần nhất (dấu của đêm cũ → đêm nay):');
+  for (const [name] of METRICS) {
+    const s = signsOut[name];
+    console.log(`  ${name.padEnd(15)} ${s.signs.join(' ')}   chuỗi dương hiện tại: ${s.streak}${s.streak >= 4 ? ' → ĐỎ' : s.streak === 3 ? ' → VÀNG' : ''}`);
+  }
+
+  writeJSONAtomic(ratchetPath, ratchet);
+  writeJSONAtomic(nightsPath, kept);
+}
+
+// ── 3. Sổ tài nguyên: dốc tại CÙNG MỘT ĐIỂM trong chu kỳ ────────────────────────────────
+//
+// §13.9 v6.57: "lấy mẫu tại cùng một điểm trong chu kỳ kịch bản (vd luôn ngay sau khi vào
+// khu thứ k). So hai mẫu tức thời chỉ đo lượt này kết thúc ở khu đông hay khu vắng."
+//
+// Điểm neo ở đây: mẫu thứ hai của chu kỳ (15 giây sau khi vào khu) trong những chu kỳ vừa
+// nhảy sang khu 1. Mỗi 5 phút một điểm → 10 điểm trong cửa sổ. Ít điểm, nên KTC tính từ
+// sai số dư của chính đường fit (t, df = n−2) chứ không chia khối.
+const ledger = [];
+const anchors = rows.filter((r) => r.min >= WARMUP_MIN && r.phase === 1 && r.cycle % DEATH_EVERY === 0 && r.kinds);
+if (anchors.length >= 3) {
+  const keys = [...new Set(anchors.flatMap((r) => Object.keys(r.kinds)))].sort();
+  for (const k of keys) {
+    const pts = anchors.map((r) => [r.min, r.kinds[k] ?? 0]);
+    const t = singleTrend(pts);
+    const mean = pts.reduce((a, [, v]) => a + v, 0) / pts.length;
+    ledger.push({ key: k, slope: +t.slope.toFixed(3), ci_lo: +t.lo.toFixed(3), ci_hi: +t.hi.toFixed(3), mean: Math.round(mean), n: t.n, rising: t.lo > 0 });
+  }
+  ledger.sort((a, c) => c.slope - a.slope);
+  console.log(`\n== sổ tài nguyên: dốc tại cùng điểm chu kỳ (${anchors.length} điểm, ngay sau khi vào khu 1) ==`);
+  console.log('loại              TB    dốc/phút   KTC 95%              kết luận');
+  for (const d of ledger.slice(0, 14)) {
+    console.log(`  ${d.key.padEnd(14)} ${String(d.mean).padStart(6)} ${(d.slope >= 0 ? '+' : '') + d.slope.toFixed(2).padStart(8)}   [${d.ci_lo.toFixed(2)}; ${d.ci_hi.toFixed(2)}]`.padEnd(66)
+      + (d.rising ? 'đang tăng' : 'chưa kết luận'));
+  }
 } else {
-  console.log(`\n== cửa sổ ổn định phút ${steady.min} → ${last.min} · ngưỡng ${TOL}% (PHÉP SO CHẶN) ==`);
-  const win = rows.filter((r) => r.min >= steady.min);
-  const span = last.min - steady.min;
-  for (const [name, get, unit] of METRICS) {
-    const { slope, mean, lo, hi } = trend(win, get);
-    // Mức tăng của CẢ CỬA SỔ theo đường dốc, không phải hiệu hai mẫu đầu–cuối.
-    const rise = slope * span;
-    const pct = mean > 0 ? (rise / mean) * 100 : 0;
-    const ok = pct <= TOL || rise <= FLOOR[name];
-    if (!ok) {
-      bad = true;
-    }
-    console.log(`${name.padEnd(16)} dốc ${(slope >= 0 ? '+' : '') + slope.toFixed(2)}/phút → ${(rise >= 0 ? '+' : '') + rise.toFixed(1)} ${unit} trên ${span} phút `
-      + `(${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% của TB ${mean.toFixed(1)}) · nhiễu ±${((hi - lo) / 2).toFixed(1)}  ${ok ? 'ĐẠT' : 'TRƯỢT'}`);
+  console.log('\n== sổ tài nguyên: chưa đủ điểm neo để fit dốc ==');
+}
+
+// Nhóm texture nào phình, gom theo nơi cấp phát — chỉ để chỉ đường khi đỏ, không phải phép
+// xét (nó là hai mẫu tức thời, đúng thứ v6.57 cấm dùng để kết luận).
+const sites = await p.evaluate(() => window.__texsites?.(12) ?? []);
+if (sites.length) {
+  console.log('\n== texture đang giữ, gom theo nơi cấp phát (chỉ đường, KHÔNG phải phép xét) ==');
+  for (const x of sites.slice(0, 8)) {
+    console.log(`${String(x.count).padStart(6)}  ${String(x.mb).padStart(8)} MB  ${x.site.slice(0, 140)}`);
   }
 }
 
-// ── 2b. Loại nào phình: so sổ tài nguyên đầu và cuối cửa sổ ─────────────────────────────
+// ── 4. Ngân sách bộ nhớ đồ hoạ của THIẾT BỊ ─────────────────────────────────────────────
 //
-// §13.9 đòi "sổ tài nguyên đếm số đang sống theo loại"; đây là chỗ đọc nó. Một dòng
-// "display object +19,8%" không sửa được gì — "n_graphics +1 200" thì sửa được.
-if (steady && steady.kinds && last.kinds) {
-  // Dốc trên cả cửa sổ, KHÔNG phải hiệu hai mẫu đầu–cuối.
-  //
-  // Cùng bài học với heapMB: `n_sprite` đếm cây cảnh ĐANG SỐNG, mà số sprite trên màn phụ
-  // thuộc lúc đó có mấy người trong tầm. Lượt 21/11 11:49 cho `n_sprite +1 094 (+31%)` theo
-  // hai mẫu — nghe như rò rỉ, nhưng cùng lượt đó `display object` chỉ +3,7% so với mốc phút
-  // 5. Hai mẫu tức thời đang đo "kết thúc ở khu đông hay khu vắng", không đo tích luỹ.
-  const winRows = rows.filter((r) => r.min >= steady.min && r.kinds);
-  const keys = [...new Set(winRows.flatMap((r) => Object.keys(r.kinds)))].sort();
-  const diffs = keys
-    .map((k) => {
-      const { slope, mean } = trend(winRows, (r) => r.kinds[k] ?? 0);
-      return { k, from: Math.round(mean), to: Math.round(mean + slope * span), d: Math.round(slope * span) };
-    })
-    .filter((d) => Math.abs(d.d) >= 5)
-    .sort((a, b) => b.d - a.d);
-  if (diffs.length) {
-    console.log('\n== loại nào phình trong cửa sổ ổn định (theo DỐC, không phải hai mẫu) ==');
-    for (const d of diffs) {
-      const pct = d.from > 0 ? ((d.d / d.from) * 100).toFixed(0) : '—';
-      console.log(`  ${d.k.padEnd(16)} TB ${String(d.from).padStart(6)} · dốc cả cửa sổ ${d.d >= 0 ? '+' : ''}${d.d} (${pct}%)`);
-    }
-  }
-}
-
-// ── 3. Ngân sách bộ nhớ đồ hoạ của THIẾT BỊ (v6.54) ─────────────────────────────────────
-//
-// Phép so phần trăm mù với một thứ: một build có thể đứng yên tuyệt đối mà vẫn đứng yên ở
+// Phép xét theo dốc mù với một thứ: một build có thể đứng yên tuyệt đối mà vẫn đứng yên ở
 // mức 300 MB trên iPhone — tức là tab sẽ bị Safari giết, chỉ là không giết thêm. Ngưỡng
-// tuyệt đối này bắt đúng trường hợp đó. Con số lấy từ chính trang đang chạy
-// (`device.gpuBudgetMB`), không chép tay vào bài đo.
-// ── 2c. JS heap ≤ 80 MB — mục tiêu §13.10, trước nay KHÔNG bài nào canh ────────────────
-//
-// §13.10 ghi rõ: "JS heap mục tiêu ≤ 80 MB (đo riêng)". Cổng rò rỉ cũ chỉ hỏi "có TĂNG
-// không", nên một build đứng yên ở 190 MB vẫn qua — đứng yên ở mức gấp đôi mục tiêu thì
-// vẫn là hỏng, chỉ là hỏng mà không nhúc nhích. Đo trên cửa sổ ổn định (20 phút đầu là
-// khởi động, không tính).
-const HEAP_TARGET = Number(process.env.HEAP_TARGET ?? 80);
-if (steady) {
-  const win = rows.filter((r) => r.min >= steady.min);
-  const avg = win.reduce((a, r) => a + r.heapMB, 0) / win.length;
-  const peak = Math.max(...win.map((r) => r.heapMB));
-  const okHeap = avg <= HEAP_TARGET;
-  // CẢNH BÁO, KHÔNG CHẶN.
-  //
-  // §13.10 gọi 80 MB là "mục tiêu", còn §13.9 liệt kê đích danh những gì CHẶN: cửa sổ ổn
-  // định tăng > 5%, hoặc GPU MB vượt ngân sách thiết bị. Thêm một điều kiện chặn mới là tự
-  // sửa luật trong spec (luật 4) — việc của tôi là làm con số hiện ra, việc đặt nó thành
-  // cổng là của chủ dự án. Đã ghi câu hỏi vào docs/QUESTIONS.md.
-  console.log(`\nJS heap cửa sổ ổn định: TB ${avg.toFixed(1)} · đỉnh ${peak.toFixed(1)} / mục tiêu ${HEAP_TARGET} MB  ${okHeap ? 'ĐẠT' : '⚠ VƯỢT MỤC TIÊU (cảnh báo, không chặn)'}`);
-}
-
+// tuyệt đối này bắt đúng trường hợp đó. Con số lấy từ chính trang đang chạy, không chép tay.
 const peakMB = Math.max(...rows.map((r) => r.texMB));
 const budget = last.budgetMB || 0;
+if (budget > 0 && peakMB >= budget) {
+  red = true;
+  reasons.push(`GPU MB đỉnh ${peakMB.toFixed(1)} vượt ngân sách thiết bị ${budget}`);
+}
 if (budget > 0) {
-  const okBudget = peakMB < budget;
-  if (!okBudget) {
-    bad = true;
-  }
-  console.log(`\nngân sách GPU thiết bị: đỉnh ${peakMB.toFixed(1)} / ${budget} MB  ${okBudget ? 'ĐẠT' : 'TRƯỢT'}`);
+  console.log(`\nngân sách GPU thiết bị: đỉnh ${peakMB.toFixed(1)} / ${budget} MB  ${peakMB < budget ? 'ĐẠT' : 'TRƯỢT'}`);
+}
+
+// JS heap so với MỤC TIÊU §13.10 — in ra, KHÔNG chặn (v6.57 nói rõ 80 MB là đích).
+const HEAP_TARGET = Number(process.env.HEAP_TARGET ?? 80);
+console.log(`\nJS heap mức nền ${metrics.heapMB.baseline.toFixed(1)} / mục tiêu ${HEAP_TARGET} MB (§13.10) `
+  + `${metrics.heapMB.baseline <= HEAP_TARGET ? 'ĐẠT' : '— trên đích, nhưng cổng chặn là MỐC KỶ LỤC, không phải 80 MB (v6.57)'}`);
+
+const verdict = noisy ? 'chua_ket_luan' : red ? 'do' : yellow ? 'vang' : 'xanh';
+if (JSON_OUT) {
+  writeJSONAtomic(JSON_OUT, {
+    at: Math.floor(Date.now() / 1000), build: BUILD, verdict, reasons,
+    load: { busy_frac: +busyFrac.toFixed(3), max: +loadMax.toFixed(2), fps_min: +fpsMin.toFixed(0), limit: MAX_LOAD },
+    note: noisy ? `máy bận ${(busyFrac * 100).toFixed(0)}% số mẫu trong cửa sổ` : undefined,
+    minutes: MINUTES, warmup_min: WARMUP_MIN, step_secs: STEP_SECS, blocks: BLOCKS,
+    scenario: {
+      zone_switches: zones, zone_switches_window: zonesInWindow,
+      deaths, deaths_window: deathsInWindow, end_zone: last.zone, cycles: totalCycles,
+    },
+    metrics, ratchet: ratchetOut, signs: signsOut, ledger: ledger.slice(0, 20),
+    gpu: { peak_mb: +peakMB.toFixed(1), budget_mb: budget },
+    heap_target: HEAP_TARGET,
+    page_errors: [...new Set(pageErrors)].slice(0, 5),
+  });
 }
 
 await b.close();
-if (bad) {
-  console.log(`\nTRƯỢT: §13.9 v6.54 — cửa sổ ổn định tăng quá ${TOL}%, hoặc GPU MB vượt ngân sách.`);
+if (noisy) {
+  // Đặt TRƯỚC phán quyết đỏ: một lượt đo trên máy bận không được phép chặn deploy, và
+  // cũng không được phép "chứng minh" là build sạch. Nó chỉ được phép nói "đo lại đi".
+  console.log(`\nKHÔNG KẾT LUẬN — máy bận ${(busyFrac * 100).toFixed(0)}% số mẫu trong cửa sổ (luật 16, ngưỡng ${MAX_LOAD}/nhân).`);
+  console.log(`Số ở trên chỉ để xem, không dùng để gác: FPS tụt xuống ${fpsMin.toFixed(0)} thì client tự hạ chất lượng, mà hạ chất lượng đổi chính những thứ bài này đếm.`);
+  console.log('Chạy lại lúc máy rảnh (tools/leakrepeat.sh tự chờ), hoặc IGNORE_LOAD=1 nếu chỉ muốn xem bài đo còn chạy.');
+  process.exit(3);
+}
+if (red) {
+  console.log('\nĐỎ (§13.9 v6.57) — chặn deploy kế tiếp:');
+  for (const r of reasons) {
+    console.log(`  · ${r}`);
+  }
   process.exit(1);
 }
-console.log(`\nĐẠT: cửa sổ ổn định không chỉ số nào tăng quá ${TOL}%, GPU MB trong ngân sách (§13.9 v6.54).`);
+if (yellow) {
+  console.log('\nVÀNG (§13.9 v6.57): dốc dương 3 đêm liên tiếp nhưng KTC vẫn ôm qua 0 — mở việc điều tra, KHÔNG chặn deploy.');
+  console.log('Đêm thứ 4 vẫn dương thì chuyển ĐỎ.');
+  process.exit(0);
+}
+console.log('\nĐẠT (§13.9 v6.57): không chỉ số nào có dốc chắc chắn dương vượt ngưỡng, mức nền trong mốc kỷ lục, GPU MB trong ngân sách.');
