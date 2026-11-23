@@ -2303,6 +2303,36 @@ lên** (+0,924 với KTC [−0,035; 1,882] ôm qua 0).
 > bài đều chấm `texture` ĐỎ (+2,1 và +2,7/phút) trong khi **sáu lượt 60 phút cho 0,1–0,4/phút
 > và không kết luận được**. Phán quyết chỉ lấy từ bài 60 phút.
 
+#### Bộ ba thứ ba (sửa cả 3), và một kết luận của tôi phải RÚT LẠI
+
+| lượt | dốc heap | KTC 95% | mức nền | phán quyết |
+|---|---:|---|---:|---|
+| 1 | +0,979 | [0,54; 1,42] | 80,2 | ĐỎ |
+| 2 | +0,749 | [0,12; 1,38] | 93,0 | ĐỎ |
+| 3 | +0,588 | [−0,07; 1,25] | 90,2 | ĐẠT |
+
+**Lượt 3 "đạt" không phải bằng chứng rò rỉ đã hết**: dốc của nó vẫn dương và cùng cỡ hai lượt
+kia, chỉ là khối thứ ba tình cờ bằng 0,04 nên KTC nới ra ôm qua 0. Ba dốc đều dương → theo
+luật thẻ vàng v6.58 thì đây là **thẻ vàng**, và đêm thứ tư còn dương là ĐỎ.
+
+Gộp sáu lượt sau khi sửa: **≈ 0,69 MB/phút, −52%** so với 1,435 trước khi sửa. Bản sửa bóng
+đổ **không làm dốc giảm thêm** — nó đóng rò rỉ theo SỐ NÚT, không theo byte: mỗi cái bóng mồ
+côi là một `Sprite` dùng chung texture, 300 cái ≈ 0,5 MB.
+
+**Chỗ phải rút lại:** ảnh heap 20 phút cho "200 Buffer mới mà đường giữ duy nhất là
+`_managedBuffers`", và tôi đọc nó thành "200 Buffer mồ côi". Sai. Sổ tài nguyên của ba lượt
+60 phút cho `glBuffers` dốc **−0,53 / −0,30 / −0,07** — phẳng. Thứ tôi đếm được là "nút MỚI
+XUẤT HIỆN", không phải "nút Ở LẠI"; nếu số bị huỷ cũng xấp xỉ bằng đó thì sổ không phình.
+Đường Buffer đã đóng; phần +20,7 MB trong ảnh 20 phút phần lớn là **luân chuyển**.
+
+**Bài học về phép đo:** hiệu hai ảnh heap trả lời "cái gì vừa sinh ra", còn "cái gì đang tích
+lại" thì phải đọc từ một con số ĐẾM theo thời gian (sổ tài nguyên). Hai câu hỏi khác nhau,
+và một cửa sổ 20 phút không tách được chúng. Thứ còn dốc lên đều ở cả ba lượt là **vật mượn
+từ `BigPool` mà không trả: +11,8 / +13,9 / +14,4 mỗi phút** (~800/giờ) — nhưng chia ra
+~58 KB/vật thì quá lớn cho một `Batch`, nên nó CHƯA giải thích được 0,7 MB/phút. Không đoán
+thêm: đang chạy cặp ảnh heap với cửa sổ **50 phút** (phút 10 → 60), ở đó phần tích luỹ thật
+(~35 MB) nổi hẳn trên nền luân chuyển.
+
 
 ## 6. Nút thắt đang mở (cập nhật liên tục)
 
