@@ -116,6 +116,18 @@ JSON
   mv "$OUT.tmp" "$OUT"
 }
 
+# ── Cổng 0: có bài đo DÀI đang chạy thì nhường ──────────────────────────────────────────
+#
+# `tools/leaklongrun.sh` (bài 2 giờ của Q57) đặt khoá này. Hai bài cùng chạy thì cả hai đều
+# là số nhiễu — nhưng một cổng gác bị bỏ qua phải NÓI RA, không được im lặng, nên đêm đó
+# vẫn ghi kết quả kèm lý do.
+LONGRUN_LOCK="$REPO/server/data/leak-longrun.lock"
+if [ -f "$LONGRUN_LOCK" ]; then
+  echo "bỏ qua: đang có bài đo dài chạy ($(cat "$LONGRUN_LOCK" 2>/dev/null))"
+  write_result true "nhường bài đo dài" "bỏ qua, chạy lại đêm sau" "chua_ket_luan"
+  exit 0
+fi
+
 # ── Cổng 1: không có ai đang chơi ───────────────────────────────────────────────────────
 humans="$(curl -s --max-time 5 "$GAME_URL/api/rooms" 2>/dev/null \
   | grep -o '"humans":[0-9]*' | cut -d: -f2 | awk '{s+=$1} END {print s+0}')"

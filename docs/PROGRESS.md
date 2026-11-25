@@ -1106,6 +1106,46 @@ mức nền cao chứ không phải rò rỉ. **Q57 đề nghị đo một lư�
 vẽ**, vì sửa VFX/decor dựa trên một đường cong chưa biết có bão hoà hay không là đúng thứ
 quy tắc 12 cấm.
 
+### 25/11 — spec v6.59: trả lời Q56, Q57 (thi hành xong, bài 2 giờ đã hẹn 02:00)
+
+**Q56 — mốc kỷ lục.** Đề xuất "vượt mốc cũng cần 2 đêm" được duyệt, nhưng chủ dự án chốt sửa
+cả ba chỗ, vì chênh 31% mà ngưỡng 10% thì hai đêm liên tiếp đỏ oan vẫn xảy ra:
+
+1. **Mức nền = phân vị 10 của khối 1** (không phải một mẫu ở phút 10), GC cưỡng bức trước
+   mỗi mẫu — bài đo vốn đã gọi `HeapProfiler.collectGarbage`, nên điều kiện này có sẵn.
+2. **Mốc = trung vị mức nền 3 đêm hợp lệ gần nhất**, không phải "thấp nhất từng đo" (chủ dự
+   án gọi đây là lỗi thiết kế của v6.57: trên phép đo còn nhiễu, "thấp nhất" bám vào lượt
+   may mắn rồi làm mọi lượt sau đỏ oan). Hạ mốc 2 đêm, **vượt mốc cũng 2 đêm**.
+3. **Ngưỡng ≥ 2× độ chênh 3 lượt cùng commit, tối thiểu 10%.** Còn > 10% thì cổng mức nền
+   **chỉ cảnh báo**; cổng dốc vẫn chặn.
+
+**Đo lại bằng cách mới — không phải chạy lại, mà tính từ mẫu thô đã lưu** (đó là lý do hôm
+qua ghi nguyên mẫu vào JSON): độ chênh mức nền **16,0% → 13,5%**. Vẫn trên 10% → cổng mức
+nền đang ở chế độ cảnh báo, đúng luật. Và nguồn nhiễu còn lại lộ ra trong cùng bộ dữ liệu:
+`n_poolTotal` chênh **40%** giữa ba lượt ở khối 1 trong khi mọi chỉ số khác chỉ chênh 1–7% —
+tức cùng cơ chế với nguyên nhân 4, nên chặn trần lô sẽ sửa cả hai chuyện.
+
+**Q57 — bài 2 giờ: duyệt, và đã hẹn.** `tools/leaklongrun.sh` (mới) chạy **02:00 đêm nay**
+bằng một mục cron MỘT LẦN tự xoá sau khi chạy. 02:00 chứ không 03:00 vì 03:00 là giờ bài hằng
+đêm và 04:30 là job dọn dữ liệu — 02:00 → 04:10 là khoảng duy nhất không đè lên cái nào. Nó
+đặt một khoá để bài hằng đêm **tự nhường và ghi rõ lý do** (`leaknightly.sh` có cổng 0 mới).
+
+**Luật phân định viết thành CODE, không để trong đầu** (`tools/browsertest/leaksaturation.mjs`):
+bão hoà = `glBatchKB` đứng yên ≥ 40 phút cuối **và** kịch bản vẫn chạy trong 40 phút đó.
+Thêm bộ đếm `glBatchKB`/`glBufferKB` (BYTE, tách riêng nhãn `*-batch-*`) vì số CÁI không trả
+lời được câu này — buffer gom lô **phình ra** chứ không sinh thêm.
+
+Và chính lúc thử bài phân định trên một tệp cũ, nó tuyên "BÃO HOÀ" vì build đó chưa có bộ
+đếm nên mọi mẫu bằng 0 — **đúng cái lỗi "thành công giả" của v6.58, lần này nằm ngay trong
+luật phán quyết**. Đã bịt: bộ đếm vắng mặt là KHÔNG KẾT LUẬN.
+
+**CLAUDE.md thêm luật 17 và 18** (chủ dự án chốt từ hai chỗ tôi rút lại): kết luận rò rỉ chỉ
+từ **dốc theo thời gian**, không từ một ảnh heap; và sau mỗi lần sửa rò rỉ phải **đo lại toàn
+bộ bộ đếm**, không chỉ bộ đếm vừa sửa.
+
+**Đã push** toàn bộ 23 commit của phiên 23/11 (remote `main` ở `56e9899`) — chủ dự án chốt:
+commit không phải deploy, cổng đỏ chặn deploy chứ không chặn push.
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có

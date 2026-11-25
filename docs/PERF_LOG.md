@@ -2352,7 +2352,24 @@ Số batcher tăng theo số **GraphicsContext còn sống**, mà cảnh đang g
 0,43 · 0,34) — dạng của một đại lượng đang **bão hoà**. Nếu nó dừng quanh ~40 MB thì đây là
 **mức nền cao**, không phải rò rỉ vô hạn, và cách xử lý khác hẳn.
 
-→ **Q57**: đo một lượt **2 giờ** để biết có bão hoà hay không, TRƯỚC khi đụng tới cách vẽ.
+→ **Q57 — chủ dự án duyệt (v6.59): đo một lượt 2 giờ TRƯỚC, không đụng VFX/decor.**
+
+**Phân định, ghi TRƯỚC khi chạy** (yêu cầu của chủ dự án: "để lượt đo không kết thúc bằng
+*có vẻ như*"):
+
+| kết quả | định nghĩa | nghĩa là | làm gì |
+|---|---|---|---|
+| **BÃO HOÀ** | `glBatchKB` đứng yên trong **≥ 40 phút cuối** dù vẫn đổi khu và vẫn chết | **không phải rò rỉ** — là một khoản đỉnh MỘT LẦN (~35,6 MB) | thêm một **dòng riêng trong bảng ngân sách §13.10**; cách sửa là **chặn trần kích thước lô**, KHÔNG đụng VFX/decor |
+| **KHÔNG BÃO HOÀ** | còn dốc dương sau 2 giờ | rò rỉ thật | lúc đó mới bàn tới cách vẽ (gom decor tĩnh / `batchMode`) |
+
+Đo bằng gì: sổ tài nguyên nay khai **`glBatchKB`** — tổng BYTE của buffer có nhãn
+`*-batch-*` trong sổ `_managedBuffers`, lấy mẫu mỗi 15 giây. Số CÁI không trả lời được câu
+này: ảnh heap 50 phút cho thấy buffer **phình ra** (87 → 274 KB/cái) chứ không sinh thêm.
+
+Dự đoán của chủ dự án: nó bão hoà, vì số vật thể trên màn hình có trần nên lô cũng có trần.
+Dự đoán của tôi cùng chiều, nhưng dốc giảm dần theo khối (1,60 · 0,77 · 0,60 · 0,43 · 0,34)
+mới chỉ là *gợi ý* bão hoà — một cửa sổ 50 phút không phân biệt được "bão hoà" với "chậm dần
+nhưng không dừng".
 Sửa VFX/decor dựa trên một đường cong chưa biết có bão hoà hay không là đúng thứ quy tắc 12
 cấm ("nút thắt phải có số đo làm bằng chứng, không ghi phỏng đoán").
 
