@@ -1298,13 +1298,31 @@ export class GameScene {
       buffer?: { _managedBuffers?: { items?: Record<string, unknown> } };
     }).buffer?._managedBuffers?.items;
     if (bufs) {
+      // Đếm cả SỐ CÁI và SỐ BYTE, và tách riêng buffer của bộ gom lô.
+      //
+      // Số cái không đủ để trả lời câu hỏi của Q57: ảnh heap 50 phút cho thấy buffer gom lô
+      // **phình ra** (87 → 274 KB/cái) chứ không sinh thêm — `shrinkToFit: false` nên mỗi
+      // batcher giữ lô lớn nhất nó từng gặp. Muốn biết nó BÃO HOÀ hay không thì phải đo
+      // byte theo thời gian, và phải tách hai nhãn `*-batch-*` ra khỏi phần còn lại
+      // (mesh, particle) vốn đã đứng yên.
       let live = 0;
+      let kb = 0;
+      let batchKb = 0;
       for (const k in bufs) {
-        if (bufs[k]) {
-          live++;
+        const b = bufs[k] as { data?: { byteLength?: number }; descriptor?: { label?: string } } | null;
+        if (!b) {
+          continue;
+        }
+        live++;
+        const bytes = b.data?.byteLength ?? 0;
+        kb += bytes / 1024;
+        if ((b.descriptor?.label ?? '').includes('batch')) {
+          batchKb += bytes / 1024;
         }
       }
       ledgerSet('glBuffers', live);
+      ledgerSet('glBufferKB', Math.round(kb));
+      ledgerSet('glBatchKB', Math.round(batchKb));
     }
     // Bể dùng lại CỦA PIXI (`BigPool`): tổng số vật đã cấp phát và số đang rảnh.
     //

@@ -29,6 +29,8 @@ MINUTES="${2:-60}"
 PORT="${LEAK_PORT:-9996}"
 SEED="${LEAK_SEED:-20261123}"
 OUTDIR="${OUTDIR:-$REPO/server/data/leak-repeat}"
+# STATE_DIR: nơi ghi `leak-spread.json` (sàn nhiễu cho cổng mức nền, v6.59).
+STATE_DIR="${STATE_DIR:-$REPO/server/data}"
 MAX_LOAD="${MAX_LOAD:-1.5}"
 WAIT_IDLE="${WAIT_IDLE:-1}"
 # Chờ tối đa 8 tiếng rồi bỏ cuộc: im lặng chờ mãi thì sáng hôm sau không có số mà cũng
@@ -113,4 +115,7 @@ done
 
 echo ""
 echo "═══ $RUNS dốc, cùng commit $BUILD ═══"
-node tools/browsertest/leakcompare.mjs "$OUTDIR/$STAMP"-run*.json
+# `--write-spread`: ghi lại ĐỘ CHÊNH mức nền của bộ lượt này vào `leak-spread.json`.
+# Đó là sàn nhiễu của cổng mốc kỷ lục — §13.9 v6.59 bắt ngưỡng vượt mốc phải ≥ 2× con số
+# này, nên nó phải được đo lại mỗi khi có bộ ba mới, không phải gõ tay một lần rồi quên.
+node tools/browsertest/leakcompare.mjs "$OUTDIR/$STAMP"-run*.json --write-spread "$STATE_DIR"

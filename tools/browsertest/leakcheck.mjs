@@ -186,17 +186,39 @@ function blockTrend(rows, get, winFrom, winTo) {
 }
 
 /**
- * baselineAt: mức nền tại phút `at`, đọc từ ĐƯỜNG FIT của khối đầu, không từ một mẫu.
+ * baselineAt: MỨC NỀN = phân vị 10 của toàn bộ mẫu trong khối 1 (§13.9 v6.59).
  *
- * Spec nói "giá trị tại phút 10". Lấy đúng mẫu ở phút 10 thì mốc kỷ lục phụ thuộc vào việc
- * bộ dọn rác vừa chạy hay chưa — ba đêm liên tiếp từng cho mẫu phút 20 lệch nhau 22 MB
- * trong khi mức thật không đổi. Fit qua cả khối đầu (40 mẫu) rồi đọc giá trị ở phút 10 là
- * cùng một con số nhưng không phụ thuộc chỗ rơi của một mẫu.
+ * Ba đời của con số này, và vì sao đổi lần nữa:
+ *
+ *  1. **Một mẫu ở phút 10** (v6.57). Heap là tín hiệu răng cưa theo nhịp GC, nên một mẫu
+ *     tức thời chủ yếu đo "lúc đó GC vừa chạy hay chưa".
+ *  2. **Đường fit của khối 1** (bản tôi làm 23/11): đỡ hơn, nhưng fit chạy qua GIỮA răng
+ *     cưa — nó trả về mức trung bình, trong đó có cả phần rác chưa dọn.
+ *  3. **Phân vị 10 của khối 1** (đây): ĐÁY sau GC mới là phần thật sự bị giữ lại. Lấy phân
+ *     vị 10 chứ không lấy min để một mẫu lạc không quyết định cả con số.
+ *
+ * Bài đo vốn đã gọi `HeapProfiler.collectGarbage` NGAY TRƯỚC mỗi mẫu (xem `gc()`), nên mọi
+ * mẫu đều là mẫu sau GC — điều kiện mà v6.59 đòi.
+ *
+ * Đo lại trên 3 lượt cùng commit: độ chênh mức nền **16,0% → 13,5%**. Vẫn trên 10%, nên
+ * theo chính luật v6.59 thì cổng mức nền còn ở chế độ CẢNH BÁO. Nguồn nhiễu còn lại tìm
+ * được trong cùng bộ dữ liệu: `n_poolTotal` chênh **40%** giữa ba lượt ở khối 1 trong khi
+ * mọi chỉ số khác chỉ chênh 1–7% — tức là cùng cơ chế với nguyên nhân 4 (buffer gom lô).
  */
+function percentile(values, q) {
+  const s2 = [...values].sort((a, b) => a - b);
+  if (s2.length === 0) {
+    return 0;
+  }
+  const i = (s2.length - 1) * q;
+  const lo = Math.floor(i);
+  const hi = Math.ceil(i);
+  return s2[lo] + (s2[hi] - s2[lo]) * (i - lo);
+}
+
 function baselineAt(rows, get, at, span) {
-  const pts = rows.filter((r) => r.min >= at && r.min <= at + span).map((r) => [r.min, get(r)]);
-  const { slope, intercept } = ols(pts);
-  return intercept + slope * at;
+  const block1 = rows.filter((r) => r.min >= at && r.min <= at + span).map(get);
+  return percentile(block1, 0.10);
 }
 
 /** singleTrend: một dốc OLS + KTC 95% từ sai số dư — dùng cho sổ tài nguyên (ít điểm). */
@@ -232,34 +254,48 @@ function writeJSONAtomic(p, obj) {
 }
 
 /**
- * ratchetStep: mốc kỷ lục cho mức nền (§13.9 v6.57).
+ * ratchetStep: mốc kỷ lục cho mức nền — §13.9 v6.59.
  *
- * Mốc CHỈ đi xuống, và hạ mốc cần 2 đêm xác nhận. Một đêm thấp bất thường (máy rảnh khác
- * thường, một khu vắng người) không được phép hạ mốc — hạ rồi thì đêm sau mọi build đều
- * đỏ, và cổng sẽ bị tắt thay vì được sửa. Giữ lại `pending` chính là chỗ chờ xác nhận đó.
+ * Ba luật, và cả ba đều sinh ra từ một phép đo còn nhiễu:
  *
- * Khi hạ, lấy mức CAO HƠN trong hai đêm xác nhận: mốc là thứ build phải sống dưới nó, nên
- * chọn bên thận trọng.
+ *  1. **Mốc = TRUNG VỊ mức nền của 3 đêm hợp lệ gần nhất**, không phải "mức thấp nhất từng
+ *     đo". Chủ dự án gọi đây là lỗi thiết kế của v6.57: trên một phép đo còn nhiễu, "thấp
+ *     nhất từng đo" sẽ bám vào lượt may mắn nhất rồi khiến mọi lượt sau đỏ oan. Đo thật:
+ *     ba lượt cùng commit cho mức nền 82,4 · 93,5 · 91,2 — nếu lượt đầu đặt mốc thì hai
+ *     lượt sau đỏ vì "vượt mốc 11–14%" dù không rò rỉ gì thêm.
+ *  2. **Mốc chỉ đi xuống**, và ĐỐI XỨNG: hạ mốc cần 2 đêm xác nhận, **vượt mốc cũng cần 2
+ *     đêm** mới ĐỎ (đêm đầu là vàng).
+ *  3. **Ngưỡng không được thấp hơn sàn nhiễu của chính nó**: ngưỡng vượt mốc = ≥ 2× độ
+ *     chênh của 3 lượt cùng commit, tối thiểu 10%. Khi độ chênh còn > 10% thì cổng mức nền
+ *     chỉ CẢNH BÁO — một cổng có ngưỡng nằm dưới sàn nhiễu của nó không phải cổng, chỉ là
+ *     tung xúc xắc. Cổng DỐC (KTC) không dùng mức nền nên vẫn chặn bình thường.
  */
-function ratchetStep(state, value) {
+function ratchetStep(state, value, pastBaselines, thresholdPct) {
   const prev = state.record ?? null;
+  // Mốc ứng viên: trung vị mức nền 3 đêm hợp lệ gần nhất (không tính đêm nay — đêm nay là
+  // thứ đang bị xét).
+  const last3 = pastBaselines.slice(-3).filter((v) => typeof v === 'number' && v > 0);
+  const candidate = last3.length ? percentile(last3, 0.5) : null;
   if (prev === null) {
-    return { record: value, pending: null, first: true, exceeded: 0 };
+    return { record: candidate ?? value, pending: null, over: 0, first: true, exceeded: 0 };
   }
   const exceeded = ((value - prev) / prev) * 100;
-  if (value >= prev) {
-    // Không xuống thì không có gì để xác nhận; xoá lần chờ dở dang.
-    return { record: prev, pending: null, first: false, exceeded };
+  const overNow = exceeded > thresholdPct;
+  const over = overNow ? (state.over ?? 0) + 1 : 0;
+  // Hạ mốc: ứng viên thấp hơn mốc thì chờ 2 đêm xác nhận, và hạ về mức CAO HƠN trong hai
+  // đêm đó — mốc là thứ build phải sống dưới nó, nên chọn bên thận trọng.
+  if (candidate !== null && candidate < prev) {
+    const pend = state.pending;
+    if (!pend) {
+      return { record: prev, pending: { value: candidate, nights: 1 }, over, first: false, exceeded };
+    }
+    const merged = Math.max(pend.value, candidate);
+    if (pend.nights + 1 >= 2) {
+      return { record: merged, pending: null, over, first: false, exceeded, lowered: true };
+    }
+    return { record: prev, pending: { value: merged, nights: pend.nights + 1 }, over, first: false, exceeded };
   }
-  const pend = state.pending;
-  if (!pend) {
-    return { record: prev, pending: { value, nights: 1 }, first: false, exceeded };
-  }
-  const merged = Math.max(pend.value, value);
-  if (pend.nights + 1 >= 2) {
-    return { record: merged, pending: null, first: false, exceeded, lowered: true };
-  }
-  return { record: prev, pending: { value: merged, nights: pend.nights + 1 }, first: false, exceeded };
+  return { record: prev, pending: null, over, first: false, exceeded };
 }
 
 // ── Chạy ────────────────────────────────────────────────────────────────────────────────
@@ -360,7 +396,7 @@ async function sample() {
       guard: (window.kx?.guard?.()?.systems ?? []).filter((x) => x.dead).map((x) => x.key).join(','),
       // Sổ tài nguyên theo LOẠI (§13.9 "một sổ tài nguyên đếm số đang sống theo loại").
       kinds: Object.fromEntries(Object.entries(s).filter(([k]) =>
-        k.startsWith('n_') || k.startsWith('n_L_') || ['pool', 'poolText', 'beasts', 'auras', 'flying', 'filters', 'glBuffers', 'poolTotal', 'poolFree', 'gfxContexts'].includes(k))),
+        k.startsWith('n_') || k.startsWith('n_L_') || ['pool', 'poolText', 'beasts', 'auras', 'flying', 'filters', 'glBuffers', 'glBufferKB', 'glBatchKB', 'poolTotal', 'poolFree', 'gfxContexts'].includes(k))),
     };
   }));
 }
@@ -379,7 +415,7 @@ console.log(`${MINUTES} phút · chu kỳ 60 s · mẫu mỗi ${STEP_SECS} s · 
 console.log(ZONE_MODE === 'none'
   ? 'KHÔNG đổi khu sau lượt neo đầu tiên (bên "0 lượt đổi khu" của phép so B38); cứ 5 chu kỳ một lượt chết\n'
   : 'mỗi chu kỳ đổi sang khu kế tiếp; cứ 5 chu kỳ một lượt chết + vào lại\n');
-console.log('phút   khu  texture    texMB   heapMB    nodes  fps  glBuf  poolT   ctx');
+console.log('phút   khu  texture    texMB   heapMB    nodes  fps  glBuf  poolT   ctx  batchKB');
 
 const t0 = Date.now();
 for (let i = 0; i <= totalSamples; i++) {
@@ -395,7 +431,7 @@ for (let i = 0; i <= totalSamples; i++) {
   // `glBuf` và `poolT` in thẳng ra từng dòng, không chỉ nằm trong sổ tài nguyên: hai con
   // số này là nơi rò rỉ 23/11 trốn, và một bài đo ngắn (không đủ điểm neo để fit dốc) vẫn
   // phải đọc được chúng bằng mắt.
-  console.log(`${String(min).padStart(5)} ${String(s.zone).padStart(5)} ${String(s.tex).padStart(8)} ${s.texMB.toFixed(1).padStart(8)} ${s.heapMB.toFixed(1).padStart(8)} ${String(s.nodes).padStart(8)} ${s.fps.toFixed(0).padStart(4)} ${String(s.kinds.n_glBuffers ?? '-').padStart(6)} ${String(s.kinds.n_poolTotal ?? '-').padStart(6)} ${String(s.kinds.n_gfxContexts ?? '-').padStart(5)}`);
+  console.log(`${String(min).padStart(5)} ${String(s.zone).padStart(5)} ${String(s.tex).padStart(8)} ${s.texMB.toFixed(1).padStart(8)} ${s.heapMB.toFixed(1).padStart(8)} ${String(s.nodes).padStart(8)} ${s.fps.toFixed(0).padStart(4)} ${String(s.kinds.n_glBuffers ?? '-').padStart(6)} ${String(s.kinds.n_poolTotal ?? '-').padStart(6)} ${String(s.kinds.n_gfxContexts ?? '-').padStart(5)} ${String(s.kinds.n_glBatchKB ?? '-').padStart(7)}`);
   if (i === totalSamples) {
     break;
   }
@@ -614,25 +650,47 @@ if (STATE_DIR && !invalid) {
   // mức nền đang là vấn đề mở thì là JS heap — 137–152 MB trên mục tiêu 80 (B39). Mốc kỷ
   // lục của texMB vẫn được ghi lại để có số liệu, nhưng không chặn: thêm một cổng chặn mà
   // spec không nêu là tự sửa luật (CLAUDE.md luật 4).
+  //
+  // NGƯỠNG lấy từ ĐỘ CHÊNH ĐO ĐƯỢC của 3 lượt cùng commit (v6.59 luật 3): ngưỡng = max(10%,
+  // 2× độ chênh). `leak-spread.json` do `tools/leakrepeat.sh` ghi sau mỗi bộ ba; chưa có tệp
+  // đó thì coi như chưa đo được sàn nhiễu và cổng mức nền chỉ cảnh báo.
+  const spreadFile = readJSON(join(STATE_DIR, 'leak-spread.json'), null);
+  const spreadPct = spreadFile?.spread_pct ?? null;
+  const baseThreshold = Math.max(RATCHET_PCT, 2 * (spreadPct ?? 0));
+  // Cổng mức nền chỉ CHẶN khi sàn nhiễu đã nằm dưới ngưỡng tối thiểu.
+  const baseGateBlocks = spreadPct !== null && spreadPct <= RATCHET_PCT;
+  console.log(`\nsàn nhiễu mức nền: ${spreadPct === null ? 'CHƯA ĐO' : `${spreadPct.toFixed(1)}% (3 lượt cùng commit)`}`
+    + ` → ngưỡng vượt mốc ${baseThreshold.toFixed(1)}%`
+    + ` · cổng mức nền ${baseGateBlocks ? 'CHẶN' : 'chỉ CẢNH BÁO (sàn nhiễu còn trên ' + RATCHET_PCT + '%)'}`);
   for (const key of ['heapMB', 'texMB']) {
     const value = metrics[key].baseline;
-    const step = ratchetStep(ratchet[key] ?? {}, value);
+    const past = nights.map((n) => n.baseline?.[key]).filter((v) => typeof v === 'number');
+    const step = ratchetStep(ratchet[key] ?? {}, value, past, baseThreshold);
     const gated = key === 'heapMB';
-    const over = step.exceeded > RATCHET_PCT && !step.first;
-    if (gated && over) {
-      red = true;
-      reasons.push(`${key}: mức nền ${value.toFixed(1)} vượt mốc kỷ lục ${(ratchet[key]?.record ?? 0).toFixed(1)} tới ${step.exceeded.toFixed(1)}% (> ${RATCHET_PCT}%)`);
+    const over = step.exceeded > baseThreshold && !step.first;
+    // Vượt mốc cần HAI đêm liên tiếp mới ĐỎ (v6.59, đối xứng với hạ mốc). Đêm đầu là vàng.
+    if (gated && over && step.over >= 2) {
+      if (baseGateBlocks) {
+        red = true;
+        reasons.push(`${key}: mức nền ${value.toFixed(1)} vượt mốc ${(ratchet[key]?.record ?? 0).toFixed(1)} tới ${step.exceeded.toFixed(1)}% (> ${baseThreshold.toFixed(1)}%), ${step.over} đêm liên tiếp`);
+      } else {
+        yellow = true;
+      }
+    } else if (gated && over) {
+      yellow = true;
     }
     ratchetOut[key] = {
       record: +step.record.toFixed(2), value, exceeded_pct: +step.exceeded.toFixed(2),
-      pending: step.pending, lowered: !!step.lowered, first: !!step.first, gate: gated,
+      pending: step.pending, over_nights: step.over, lowered: !!step.lowered, first: !!step.first,
+      gate: gated && baseGateBlocks, threshold_pct: +baseThreshold.toFixed(1), spread_pct: spreadPct,
     };
-    ratchet[key] = { record: step.record, pending: step.pending, at: Math.floor(Date.now() / 1000), build: BUILD };
-    console.log(`\nmốc kỷ lục ${key}: nền lượt này ${value.toFixed(1)} / mốc ${step.record.toFixed(1)} `
+    ratchet[key] = { record: step.record, pending: step.pending, over: step.over, at: Math.floor(Date.now() / 1000), build: BUILD };
+    console.log(`mốc ${key}: nền lượt này ${value.toFixed(1)} / mốc ${step.record.toFixed(1)} `
       + `(${step.exceeded >= 0 ? '+' : ''}${step.exceeded.toFixed(1)}%)`
-      + `${step.first ? ' — lượt đầu, đặt mốc' : ''}${step.lowered ? ' — HẠ MỐC (đã đủ 2 đêm xác nhận)' : ''}`
-      + `${step.pending ? ` — chờ xác nhận ${step.pending.nights}/2 đêm ở ${step.pending.value.toFixed(1)}` : ''}`
-      + `${gated ? (over ? '  ĐỎ' : '  ĐẠT') : '  (ghi sổ, không chặn)'}`);
+      + `${step.first ? ' — lượt đầu, đặt mốc' : ''}${step.lowered ? ' — HẠ MỐC (đủ 2 đêm xác nhận)' : ''}`
+      + `${step.pending ? ` — chờ hạ mốc ${step.pending.nights}/2 đêm ở ${step.pending.value.toFixed(1)}` : ''}`
+      + `${over ? ` — vượt mốc ${step.over}/2 đêm` : ''}`
+      + `${gated ? (over ? (step.over >= 2 && baseGateBlocks ? '  ĐỎ' : '  VÀNG') : '  ĐẠT') : '  (ghi sổ, không chặn)'}`);
   }
 
   // Chuỗi dấu nhiều đêm: lưới bắt rò rỉ CHẬM mà một đêm không phân giải nổi.

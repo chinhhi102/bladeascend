@@ -83,6 +83,17 @@ Người sở hữu dự án KHÔNG rành setup kỹ thuật → giải thích n
     min/max/TB vào `docs/PERF_LOG.md`. Máy bận → ghi "nhiễu", đo lại sau, **không** rút kết
     luận. Bài đo trình duyệt phải mở qua `tools/browsertest/browser.mjs` để trình duyệt được
     đóng cả khi bài đo ném lỗi.
+17. **Kết luận về RÒ RỈ chỉ được rút ra từ DỐC THEO THỜI GIAN, không từ một ảnh heap.**
+    Hiệu hai ảnh heap trả lời "cái gì vừa sinh ra"; "cái gì đang tích lại" là một câu hỏi
+    khác, và chỉ một con số ĐẾM theo thời gian trả lời được. Ngày 23/11 tôi đọc "200 Buffer
+    mới mà đường giữ duy nhất là sổ renderer" thành "200 Buffer mồ côi" — rồi sổ tài nguyên
+    của ba lượt 60 phút cho dốc **−0,53 / −0,30 / −0,07**, tức phẳng: chúng là luân chuyển,
+    sinh ra rồi bị huỷ. Ảnh heap dùng để CHỈ CHỖ, dốc dùng để KẾT LUẬN.
+18. **Sau mỗi lần sửa rò rỉ, đo lại TOÀN BỘ bộ đếm, không chỉ bộ đếm vừa sửa.** Nguyên nhân
+    sau có thể bị nguyên nhân trước che. Ngày 23/11: sửa `Geometry.destroy()` thiếu tham số
+    (một lỗi thật, 21,4 MB) rồi đo lại thấy **không giảm gì** — vì nguyên nhân thứ hai
+    (`destroy({children:true})` không huỷ `GraphicsContext`, 717 context) lớn hơn và đang
+    che nó. Ba nguyên nhân tiếp theo cũng chỉ lộ ra sau khi thêm một bộ đếm mới.
 
 > **Tệp này là bản DUY NHẤT.** Thỉnh thoảng một bản `CLAUDE.md` cũ hơn lọt vào ngữ cảnh
 > phiên chat — chỉ đọc nó để nhặt DÒNG MỚI, không bao giờ chép đè, vì bản đó thường là
