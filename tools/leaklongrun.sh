@@ -48,7 +48,7 @@ case "${1:-}" in
     ( crontab -l 2>/dev/null | grep -v "$CRON_TAG"; echo "$LINE" ) | crontab -
     echo "đã đặt mục cron MỘT LẦN cho 02:00:"
     echo "  $LINE"
-    echo "Bài tự xoá mục này sau khi chạy xong (dù đạt hay trượt)."
+    echo "Mục này tự xoá khi bài ĐO THẬT bắt đầu — máy bận lúc 02:00 thì lần hẹn còn nguyên cho đêm sau."
     exit 0
     ;;
   --cancel)
@@ -57,10 +57,6 @@ case "${1:-}" in
     exit 0
     ;;
 esac
-
-# Tự xoá mục cron NGAY khi bắt đầu chạy: đây là bài một lần, và một mục cron sót lại sẽ
-# chiếm máy mỗi đêm mà không ai nhớ vì sao.
-crontab -l 2>/dev/null | grep -v "$CRON_TAG" | crontab - 2>/dev/null || true
 
 mkdir -p "$OUTDIR"
 STAMP="$(date +%Y%m%d_%H%M)"
@@ -86,6 +82,13 @@ if awk -v p="$per" -v m="$MAX_LOAD" 'BEGIN{exit !(p>m)}'; then
   echo "bỏ qua: máy đang bận ($per/nhân > $MAX_LOAD) — luật 16"
   exit 0
 fi
+
+# Tự xoá mục cron — CHỈ khi đã qua hết cổng và sắp đo thật.
+#
+# Bản đầu tôi xoá ngay lúc khởi động, trước khi kiểm cổng: máy bận lúc 02:00 là mục cron bị
+# tiêu mà phép đo không chạy, và sáng ra chỉ có một dòng "bỏ qua" trong log. Một lần hẹn
+# phải sống tới khi nó đo được.
+crontab -l 2>/dev/null | grep -v "$CRON_TAG" | crontab - 2>/dev/null || true
 
 # Khoá để bài hằng đêm 03:00 biết mà nhường.
 echo "$$ $(date -Is) longrun ${MINUTES}m" > "$LOCK"
