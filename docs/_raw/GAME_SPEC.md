@@ -4,6 +4,8 @@
 > Mọi con số nằm trong `config/game.json` (mục 16) — **không hardcode**.
 > Art/animation prompts: `docs/ART_PROMPTS.md`. Hướng dẫn setup: `docs/SETUP_GUIDE.md`.
 
+**Thay đổi v6.59:** mức nền đo bằng phân vị 10 của khối 1 sau GC cưỡng bức (không phải 1 mẫu ở phút 10); mốc kỷ lục = trung vị 3 đêm hợp lệ gần nhất, vượt mốc cũng cần 2 đêm xác nhận; ngưỡng vượt mốc phải ≥ 2× độ chênh 3 lượt cùng commit, chưa đạt thì cổng mức nền chỉ cảnh báo (§13.9).
+
 **Thay đổi v6.58:** sửa dòng "Lịch chạy" 30 → 60 phút; lượt đo trên máy bận là KHÔNG KẾT LUẬN (không ghi mốc/sổ đêm); mốc kỷ lục gắn `scenario_version`, đổi kịch bản thì mốc và chuỗi dấu bắt đầu lại (§13.9).
 
 **Thay đổi v6.57:** bài kiểm rò rỉ client đổi cách đo — kịch bản cố định, cửa sổ 60 phút, xét dốc theo 5 khối + khoảng tin cậy, mốc kỷ lục cho mức nền, thẻ vàng 3 đêm cùng dấu (§13.9); nói rõ 80 MB JS heap là đích chứ không phải cổng (§13.10).
@@ -1618,7 +1620,9 @@ Thêm bước CI `npm run assets:budget`: vượt ngân sách → build fail, in
   - **Cách xét = dốc có khoảng tin cậy, không phải chênh lệch 2 mẫu**: chia cửa sổ 50 phút thành **5 khối 10 phút**, mỗi khối fit 1 dốc (OLS) → 5 dốc → khoảng tin cậy 95% của dốc trung bình (t, df = 4). Nhiễu trong cửa sổ là ±13–15 MB nên mọi kết luận từ 2 mẫu tức thời đều vô nghĩa, kể cả cho sổ tài nguyên.
   - **ĐỎ (chặn deploy kế tiếp)** khi một trong các điều sau đúng: cận dưới KTC 95% của dốc > 0 **và** dốc trung bình × 60 phút > **10% mức nền**; hoặc mức nền cuối cửa sổ vượt **mốc kỷ lục** (dưới); hoặc GPU MB vượt ngân sách thiết bị (§13.10).
   - **VÀNG (cảnh báo, không chặn)**: cận dưới KTC ≤ 0 nhưng **3 đêm liên tiếp dốc cùng dấu dương** → thẻ vàng trên dashboard + mở việc điều tra; **đêm thứ 4 vẫn dương → chuyển ĐỎ**. Đây là lưới bắt rò rỉ chậm (< 0,3 MB/phút) mà một đêm không phân giải nổi.
-  - **Mốc kỷ lục (ratchet)**: ghi lại **mức nền ổn định thấp nhất từng đo** (giá trị tại phút 10). Build mới vượt mốc đó > 10% → ĐỎ. Mốc chỉ đi xuống; hạ mốc cần 2 đêm xác nhận. Đây là cổng chặn thật sự cho mức nền — **không** dùng con số 80 MB ở §13.10 làm cổng (xem lý do ở đó).
+  - **Đo mức nền (v6.59 — sửa cách đo của v6.57)**: mức nền **không phải một mẫu tức thời ở phút 10**. Heap răng cưa theo nhịp GC nên một mẫu đo chủ yếu đo "lúc đó GC vừa chạy hay chưa". Mức nền = **phân vị 10 của toàn bộ mẫu trong khối 1** (phút 10–20), và bài đo **gọi GC cưỡng bức** ngay trước mỗi mẫu nếu được (`--js-flags=--expose-gc`, hoặc CDP `HeapProfiler.collectGarbage`). Đáy sau GC mới là phần thật sự bị giữ lại.
+  - **Mốc kỷ lục (ratchet, v6.59)**: mốc = **trung vị mức nền của 3 đêm hợp lệ gần nhất**, **không** phải mức thấp nhất từng đo. Lý do: trên một phép đo còn nhiễu, "thấp nhất từng đo" sẽ bám vào một lượt may mắn rồi khiến mọi lượt sau đỏ oan. Mốc chỉ đi xuống; **hạ mốc cần 2 đêm xác nhận, vượt mốc cũng cần 2 đêm xác nhận** (đối xứng). Đây là cổng chặn thật sự cho mức nền — **không** dùng con số 80 MB ở §13.10 làm cổng (xem lý do ở đó).
+  - **Ngưỡng không được thấp hơn nhiễu của chính nó (v6.59)**: trước khi bật cổng mức nền, đo **độ chênh mức nền của 3 lượt giống hệt nhau trên cùng commit**. Ngưỡng vượt mốc phải **≥ 2× độ chênh đó**, tối thiểu 10%. Nếu độ chênh còn > 10% thì cổng mức nền **chỉ cảnh báo (vàng)**, chưa chặn, cho tới khi sửa được phép đo — một cổng có ngưỡng nằm dưới sàn nhiễu của nó không phải cổng, chỉ là tung xúc xắc. Cổng **dốc** (KTC) vẫn chặn bình thường vì nó không dùng mức nền.
   - Sổ tài nguyên xét theo **dốc**, lấy mẫu tại **cùng một điểm trong chu kỳ kịch bản** (vd luôn ngay sau khi vào khu thứ k). So hai mẫu tức thời chỉ đo "lượt này kết thúc ở khu đông hay khu vắng".
   - **Máy bận thì không kết luận (v6.58)**: bài đo đọc loadavg ở **từng mẫu**; bận quá 10% số mẫu → kết quả là **KHÔNG KẾT LUẬN** — không chặn deploy, **không ghi vào mốc kỷ lục, không ghi vào sổ đêm**. Một lượt bị nhiễu không được phép hạ mốc hay cắt chuỗi dấu.
   - **Mốc kỷ lục gắn với phiên bản kịch bản (v6.58)**: `leak-ratchet.json` lưu kèm `scenario_version`. Đổi kịch bản → **mốc cũ hết giá trị**, bắt đầu lại từ lượt hợp lệ đầu tiên của kịch bản mới; sổ đêm cũng bắt đầu lại chuỗi dấu. Số đo giữa hai kịch bản khác nhau không so với nhau được.
@@ -1636,7 +1640,7 @@ Thêm bước CI `npm run assets:budget`: vượt ngân sách → build fail, in
 
 **Mục tiêu**: bộ nhớ GPU của tab game (cột "GPU Memory" trong Task Manager của Chrome, Shift+Esc) **≤ 50 MB trên máy tính, ≤ 32 MB trên điện thoại**, ở cảnh đông (phòng đầy, 6 loại nhân vật trên màn hình, có người Tiên giới), chất lượng Vừa, độ phân giải 1080p tỉ lệ điểm ảnh 1. JS heap **mục tiêu** ≤ 80 MB (đo riêng).
 
-> **80 MB là đích, không phải cổng chặn (v6.57).** Mức nền đo thật hiện là **137–152 MB** (B39) — biến nó thành cổng thì mọi build đều đỏ và cổng mất tác dụng báo hiệu. Cổng chặn cho mức nền là **mốc kỷ lục ±10% ở §13.9**; 80 MB là mục tiêu phải kéo xuống dần, mỗi lần hạ được thì mốc kỷ lục tự hạ theo. Khi mức nền ổn định < 88 MB trong 3 đêm thì chuyển 80 MB thành cổng cứng.
+> **80 MB là đích, không phải cổng chặn (v6.57).** Mức nền đo thật hiện là **137–152 MB** (B39) — biến nó thành cổng thì mọi build đều đỏ và cổng mất tác dụng báo hiệu. Cổng chặn cho mức nền là **mốc kỷ lục ±10% ở §13.9**; 80 MB là mục tiêu phải kéo xuống dần, mỗi lần hạ được thì mốc kỷ lục tự hạ theo. Khi mức nền ổn định < 88 MB trong 3 đêm **đo bằng cách của v6.59** (phân vị 10 sau GC cưỡng bức) thì chuyển 80 MB thành cổng cứng. Con số nền đo bằng cách cũ không dùng để xét điều kiện này.
 
 **Bảng ngân sách** (sổ VRAM trong F3/admin phải cộng đúng các dòng này):
 
