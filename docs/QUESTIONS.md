@@ -24,7 +24,11 @@ cũng chính là đường làm Bà Tám mất chiêu trên mặt băng — ch�
 **Sau bản sửa, còn ba đường huỷ:** chết · qua cổng · **bị ĐẨY** (Loa của Bà Tám khác, Bung Cơ
 của Bé Tí, sóng ra mai của Cụ Rùa, sạp Cô Ba, và cú đẩy khi khiên Kim Cang vỡ).
 
-**Phương án đang dùng (không đổi luật):** giữ nguyên — bị đẩy thì mất chiêu.
+**Phương án đang dùng (không đổi luật):** giữ nguyên — bị đẩy thì mất chiêu. Hành vi đó nay
+có **test khoá** (`TestPushCancelsChannel`, 3 lượt con): nếu một lượt làm sau gỡ luật đi thì
+bài test đỏ và chỉ thẳng vào câu hỏi này, thay vì luật biến mất trong im lặng. Test cũng
+canh hai điều đi kèm: huỷ chiêu **không hoàn lượt**, và luôn phát `<chiêu>_huy` để người chơi
+biết vì sao mất lượt.
 
 **Đề xuất:** GIỮ, và ghi vào spec. Nó là "cách chống lại" mà §6.3 mục 3 đòi mỗi kỹ năng phải
 có, và nó đối xứng: Bà Tám hét được thì Bà Tám cũng bị hét. Nhưng nó đang là luật ngầm, nên

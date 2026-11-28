@@ -1186,7 +1186,15 @@ lại sau khi chiêu xong.
 
 **Còn một luật ngầm cần anh chốt — Q58:** `updateChannel` huỷ chiêu khi người dùng bị ĐẨY,
 nhưng §6.3 chỉ cho mất chiêu khi "bị chém chết". Tôi giữ nguyên (nó là cách chống lại kỹ
-năng, và đối xứng), nhưng nó đang là luật không có trong spec.
+năng, và đối xứng) và **khoá bằng test** `TestPushCancelsChannel` — gỡ luật thì bài test đỏ
+và chỉ thẳng vào Q58, chứ không biến mất trong im lặng. Test canh ba điều: chiêu không phát,
+lượt không được hoàn, và luôn có `<chiêu>_huy` cho người chơi biết.
+
+**Hai lần tôi viết sai chính bài test đó**, ghi lại vì cả hai là bẫy chung của repo này:
+(1) dùng `step` — nó chỉ chạy `updateSkillState`, còn cú đẩy chỉ đặt `KnockVel` nên người
+không bao giờ dịch, bài "đạt" vì cú đẩy không xảy ra; (2) đo "chiêu có phát không" qua NẠN
+NHÂN (kiếm địch tụt) — va kiếm thường cũng mài mất kiếm, nên bài đỏ oan ba lượt liền. Bản
+cuối không có nạn nhân nào: đọc thẳng SỰ KIỆN kết thúc mà server phát ra.
 
 ## Việc tiếp theo
 
