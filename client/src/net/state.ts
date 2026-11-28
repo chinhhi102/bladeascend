@@ -747,7 +747,10 @@ export class ClientWorld {
       }
     }
     return moveStep(this.cfg, map, from, angle, me.sc, dt,
-      (id: number) => this.brokenObstacles.get(id) === true, { bonus, cap, frozen }, vel, moving,
+      (id: number) => this.brokenObstacles.get(id) === true,
+      // `pinned`: đang trong nhịp chờ của chiêu (Loa Phường / Ru Ngủ / Hút Mì). Khác
+      // `frozen` ở chỗ nó ghim cả quán tính trên băng — xem `SpeedTerms.pinned`.
+      { bonus, cap, frozen, pinned: statusOn(me.st, 'sing') }, vel, moving,
       statusOn(me.st, 'ghost'), this.blockingStalls(me));
   }
 

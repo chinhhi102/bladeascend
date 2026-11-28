@@ -225,9 +225,22 @@ func (g *Game) movePlayer(p *Player, dt float64) {
 	if p.Moving {
 		p.Facing = p.InputAngle
 	}
-	// Trượt vì vệt trái cây của Cô Ba cũng dùng đúng cơ chế mặt băng (spec §6.3) — một
-	// luật quán tính, hai nguồn gây ra.
-	if g.OnIce(p.Pos) || p.HasStatus(StSlip, g.Time) {
+	// Chiêu "phải chờ" GHIM người tại chỗ, kể cả trên băng (§6.3: "Lấy hơi 0.8s — **đứng
+	// yên**", "hát ru 1 câu — đứng yên 0.5s", "húp 0.6s — đứng yên").
+	//
+	// Dòng này phải nằm TRƯỚC nhánh băng, và đó là cả nội dung của bản sửa: `frozen()` chỉ
+	// khoá được `MoveSpeed`, mà trên băng người đi bằng QUÁN TÍNH `p.Vel`, không qua
+	// `MoveSpeed`. Thiếu nó thì người đang lấy hơi vẫn trôi, trôi quá `BodyR` là
+	// `updateChannel` huỷ chiêu — bấm kỹ năng, mất lượt, không có gì xảy ra.
+	//
+	// Đo được (`TestChannelSkillsSurviveIce`): Bà Tám trôi **47,4 đơn vị** trong 0,8 giây
+	// lấy hơi với `BodyR` 43,5 → mất chiêu. Ông Ba (0,5s) và Sư Phụ (0,6s) trôi chưa tới
+	// `BodyR` nên thoát — đúng vì sao người chơi chỉ báo Bà Tám.
+	if p.HasStatus(StSing, g.Time) {
+		p.Vel = Vec{}
+	} else if g.OnIce(p.Pos) || p.HasStatus(StSlip, g.Time) {
+		// Trượt vì vệt trái cây của Cô Ba cũng dùng đúng cơ chế mặt băng (spec §6.3) — một
+		// luật quán tính, hai nguồn gây ra.
 		g.slideOnIce(p, dt)
 	} else if p.Moving {
 		dir := geom.FromAngle(p.InputAngle)
@@ -432,9 +445,22 @@ func (g *Game) MoveStepForTest(from, vel Vec, angle, scale, dt float64, moving, 
 // movePlayerForTest chạy đúng phần DI CHUYỂN của movePlayer (không có đẩy văng, không có
 // va kiếm) để công cụ đối chiếu so với client.
 func (g *Game) movePlayerForTest(p *Player, dt float64) {
-	// Trượt vì vệt trái cây của Cô Ba cũng dùng đúng cơ chế mặt băng (spec §6.3) — một
-	// luật quán tính, hai nguồn gây ra.
-	if g.OnIce(p.Pos) || p.HasStatus(StSlip, g.Time) {
+	// Chiêu "phải chờ" GHIM người tại chỗ, kể cả trên băng (§6.3: "Lấy hơi 0.8s — **đứng
+	// yên**", "hát ru 1 câu — đứng yên 0.5s", "húp 0.6s — đứng yên").
+	//
+	// Dòng này phải nằm TRƯỚC nhánh băng, và đó là cả nội dung của bản sửa: `frozen()` chỉ
+	// khoá được `MoveSpeed`, mà trên băng người đi bằng QUÁN TÍNH `p.Vel`, không qua
+	// `MoveSpeed`. Thiếu nó thì người đang lấy hơi vẫn trôi, trôi quá `BodyR` là
+	// `updateChannel` huỷ chiêu — bấm kỹ năng, mất lượt, không có gì xảy ra.
+	//
+	// Đo được (`TestChannelSkillsSurviveIce`): Bà Tám trôi **47,4 đơn vị** trong 0,8 giây
+	// lấy hơi với `BodyR` 43,5 → mất chiêu. Ông Ba (0,5s) và Sư Phụ (0,6s) trôi chưa tới
+	// `BodyR` nên thoát — đúng vì sao người chơi chỉ báo Bà Tám.
+	if p.HasStatus(StSing, g.Time) {
+		p.Vel = Vec{}
+	} else if g.OnIce(p.Pos) || p.HasStatus(StSlip, g.Time) {
+		// Trượt vì vệt trái cây của Cô Ba cũng dùng đúng cơ chế mặt băng (spec §6.3) — một
+		// luật quán tính, hai nguồn gây ra.
 		g.slideOnIce(p, dt)
 	} else if p.Moving {
 		dir := geom.FromAngle(p.InputAngle)

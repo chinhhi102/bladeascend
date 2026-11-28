@@ -107,11 +107,17 @@ export function resolveBlocking(
 /**
  * SpeedTerms: phần tốc độ KHÔNG thuộc địa hình (buff, Thiêu Đốt, kỹ năng) — bản port của
  * `Game.speedBonus`. `frozen` = khống chế đứng im (tốc 0, không áp sàn).
+ *
+ * `pinned` KHÁC `frozen`: nó ghim cả QUÁN TÍNH. `frozen` chỉ đưa tốc về 0, mà trên băng
+ * người đi bằng quán tính chứ không bằng tốc — nên một người "frozen" vẫn trôi tiếp. Chiêu
+ * "phải chờ" (§6.3: Lấy hơi 0.8s **đứng yên**) phải đứng yên THẬT, nếu không nó tự huỷ vì
+ * dịch chuyển: Bà Tám trôi 47,4 đơn vị trong 0,8 giây trên băng, quá `BodyR` 43,5.
  */
 export interface SpeedTerms {
   bonus: number;
   cap: number;
   frozen: boolean;
+  pinned?: boolean;
 }
 
 /** speedFactor: clamp(1 + Σ, floor, cap) — spec v6.25 §4.1, khớp `Game.speedFactor`. */
@@ -252,6 +258,11 @@ export function moveStep(
     return out;
   };
   const terms = speed ?? plainSpeed(cfg);
+  // Ghim tại chỗ (đang lấy hơi / hát ru / húp mì) — phải đứng TRƯỚC nhánh băng, khớp
+  // `game.movePlayer`. Xem `SpeedTerms.pinned`.
+  if (terms.pinned) {
+    return { pos: settle(from), vel: { x: 0, y: 0 } };
+  }
   // Trên băng: gia tốc nhân theo tốc KHÔNG tính địa hình, như `slideOnIce` (MoveSpeed/base).
   const iceMult = terms.frozen ? 0 : speedFactor(cfg, terms.bonus, terms.cap);
   if (onIce(map, from)) {

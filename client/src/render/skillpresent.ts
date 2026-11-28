@@ -196,9 +196,7 @@ export class SkillPresenter {
       case 'trom_kiem_hit':
         this.onSteal(e, at, now);
         return;
-      case 'ru_ngu_huy':
-        this.host.floatText.show(STR.skillCancelled, e.x, e.y, now, 0xffb3b3);
-        return;
+
       case 'sap_bat_hoai':
         // "Cạch" — kiếm chém vào sạp bất hoại (v6.48). Một tia trắng nhỏ, không phá gì.
         this.vfx.wave(e.x, e.y, 40, 0xffffff, now, 0.18);
@@ -212,6 +210,20 @@ export class SkillPresenter {
         this.host.floatText.show(STR.minionBye, e.x, e.y - 60, now, 0xe0c3f5);
         return;
       default:
+        // MỌI chiêu "phải chờ" bị huỷ đều phải nói ra, không chỉ Ru Ngủ.
+        //
+        // Server phát `<tên chiêu>_huy` cho cả ba chiêu có nhịp chờ (`loa_huy`,
+        // `ru_ngu_huy`, `hut_mi_huy`), nhưng chỗ này trước đây chỉ bắt `ru_ngu_huy`. Hệ quả
+        // từ ghế người chơi: Bà Tám bấm kỹ năng, thấy vòng lấy hơi, rồi KHÔNG CÓ GÌ — mất
+        // lượt, không một dòng giải thích. Đó chính là "dùng skill mà không ăn" mà chủ dự
+        // án báo.
+        //
+        // Bắt theo ĐUÔI `_huy` chứ không liệt kê ba cái: thêm chiêu có nhịp chờ thứ tư thì
+        // nó tự có thông báo, không phải nhớ sửa thêm chỗ này.
+        if (typeof e.s === 'string' && e.s.endsWith('_huy')) {
+          this.host.floatText.show(STR.skillCancelled, e.x, e.y, now, 0xffb3b3);
+          return;
+        }
     }
     // Từ đây trở xuống cần người dùng trong khung nhìn: vùng vẽ theo U của CHÍNH họ —
     // không biết scale thì thà không vẽ còn hơn vẽ một vòng sai cỡ.

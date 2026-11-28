@@ -1146,6 +1146,48 @@ bộ bộ đếm**, không chỉ bộ đếm vừa sửa.
 **Đã push** toàn bộ 23 commit của phiên 23/11 (remote `main` ở `56e9899`) — chủ dự án chốt:
 commit không phải deploy, cổng đỏ chặn deploy chứ không chặn push.
 
+### 28/11 — Bà Tám "dùng skill mà không ăn": HAI lỗi, và cả hai đều im lặng
+
+Chủ dự án báo Bà Tám mất hiệu ứng, bấm kỹ năng mà không ăn. Tái hiện được bằng test, không
+phải đoán.
+
+**Lỗi 1 — mặt băng ăn mất chiêu.** `movePlayer` chia hai nhánh: trên băng thì đi bằng QUÁN
+TÍNH (`slideOnIce`), ngoài băng thì đi bằng `MoveSpeed`. Mà `frozen()` — thứ khoá người đang
+"lấy hơi / hát ru / húp mì" — nằm TRONG `MoveSpeed`, nên nó chỉ khoá được nhánh thứ hai.
+Trên băng, người đang lấy hơi vẫn trôi; trôi quá `BodyR` là `updateChannel` huỷ chiêu, lượt
+đã trừ không hoàn.
+
+Vì sao chỉ Bà Tám bị báo, trong khi cả ba chiêu đều có nhịp chờ:
+
+| nhân vật | nhịp chờ | trôi trong nhịp đó | kết quả |
+|---|---:|---:|---|
+| **Bà Tám Loa** | **0,8 s** | **47,4 đơn vị** > `BodyR` 43,5 | **mất chiêu** |
+| Sư Phụ Mì | 0,6 s | chưa tới `BodyR` | thoát, nhưng sát mép |
+| Ông Ba Võng | 0,5 s | chưa tới `BodyR` | thoát |
+
+Bản đồ **Băng Nguyệt Hồ** có vùng băng thật, nên đây là chuyện xảy ra trong trận — và nó
+phụ thuộc chỗ đứng, nên với người chơi nó trông như "thỉnh thoảng mất chiêu".
+
+Sửa: đang trong nhịp chờ thì GHIM tại chỗ, kể cả trên băng — đúng chữ §6.3 ("Lấy hơi 0.8s,
+**đứng yên**"). Sửa cả hai phía: server `movePlayer` và client `movestep.ts` (cờ `pinned`,
+khác `frozen` ở chỗ nó ghim cả quán tính). `check:collision` sau khi sửa: **1 000 bước, lệch
+lớn nhất 0,0000**, nên client vẫn dự đoán khớp server.
+
+**Lỗi 2 — huỷ chiêu KHÔNG nói gì với người chơi.** Server phát `loa_huy` / `ru_ngu_huy` /
+`hut_mi_huy`, nhưng client chỉ bắt `ru_ngu_huy`. Nên khi chiêu của Bà Tám bị huỷ (dù vì
+băng hay vì bị đẩy), người chơi thấy vòng lấy hơi rồi **không có gì** — mất lượt, không một
+dòng giải thích. Đó đúng là nửa "mất hiệu ứng" của lời báo. Nay bắt theo ĐUÔI `_huy` để chiêu
+có nhịp chờ thứ tư cũng tự có thông báo.
+
+**Bài test có răng:** `TestChannelSkillsSurviveIce` đỏ đúng ở `ba_tam_loa` khi gỡ bản sửa,
+xanh khi có. Và chính bài test của tôi lúc đầu đo sai thứ — nó canh `KnockUntil` (chỉ sống
+0,3 s) sau khi chờ thêm 0,3 s, nên luôn thấy "không bị đẩy". Nay canh khoảng cách, thứ còn
+lại sau khi chiêu xong.
+
+**Còn một luật ngầm cần anh chốt — Q58:** `updateChannel` huỷ chiêu khi người dùng bị ĐẨY,
+nhưng §6.3 chỉ cho mất chiêu khi "bị chém chết". Tôi giữ nguyên (nó là cách chống lại kỹ
+năng, và đối xứng), nhưng nó đang là luật không có trong spec.
+
 ## Việc tiếp theo
 
 > Chỉ để ở đây việc CHƯA xong. Mục đã chốt thì xoá ngay — một dòng cũ sót lại là lần sau có
